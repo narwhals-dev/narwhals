@@ -11,12 +11,14 @@
         - alias
         - all
         - any
+        - any_value
         - arg_max
         - arg_min
         - arg_true
         - cast
         - ceil
         - clip
+        - cos
         - count
         - cum_count
         - cum_max
@@ -78,6 +80,7 @@
         - scatter
         - shape
         - shift
+        - sin
         - skew
         - sort
         - sqrt

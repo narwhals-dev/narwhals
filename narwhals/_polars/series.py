@@ -83,6 +83,7 @@ INHERITED_METHODS = frozenset(
         "arg_true",
         "ceil",
         "clip",
+        "cos",
         "count",
         "cum_max",
         "cum_min",
@@ -123,6 +124,7 @@ INHERITED_METHODS = frozenset(
         "round",
         "sample",
         "shift",
+        "sin",
         "skew",
         "sqrt",
         "std",
@@ -502,8 +504,8 @@ class PolarsSeries:
 
         return self._with_native(result)
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        s = self.native.clone().scatter(indices, extract_native(values))
+    def scatter(self, indices: Self, values: Self) -> Self:
+        s = self.native.clone().scatter(indices.native, values.native)
         return self._with_native(s)
 
     def value_counts(
@@ -664,6 +666,9 @@ class PolarsSeries:
             return self.native.item(-1) if len(self) else None
         return self.native.last()  # type: ignore[return-value]
 
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)
@@ -706,6 +711,7 @@ class PolarsSeries:
     arg_true: Method[Self]
     ceil: Method[Self]
     count: Method[int]
+    cos: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
     cum_prod: Method[Self]
@@ -742,6 +748,7 @@ class PolarsSeries:
     round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
+    sin: Method[Self]
     skew: Method[float | None]
     sqrt: Method[Self]
     std: Method[float]
@@ -815,6 +822,12 @@ class PolarsSeriesStringNamespace(
         value_native = extract_native(value)
         return self.compliant._with_native(
             self.native.str.replace_all(pattern, value_native, literal=literal)  # type: ignore[arg-type]
+        )
+
+    def contains(self, pattern: PolarsSeries, *, literal: bool) -> PolarsSeries:
+        pattern_native = extract_native(pattern)
+        return self.compliant._with_native(
+            self.native.str.contains(pattern_native, literal=literal)  # type: ignore[arg-type]
         )
 
 

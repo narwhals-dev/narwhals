@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
+from narwhals._exceptions import issue_warning
+from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -50,20 +52,38 @@ from narwhals.dtypes import (
     UInt128,
     Unknown,
 )
+from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
+from narwhals.stable.v2.typing import (
+    DataFrameT,
+    IntoDataFrameT,
+    IntoFrame,
+    IntoLazyFrameT,
+    IntoSeries,
+    IntoSeriesT,
+    LazyFrameT,
+    SeriesT,
+)
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
-from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, Sequence
 
-    from typing_extensions import ParamSpec, Self
+    from typing_extensions import ParamSpec, Self, Unpack
 
-    from narwhals._translate import IntoArrowTable
+    from narwhals._translate import (
+        AllowAny,
+        AllowLazy,
+        AllowSeries,
+        ExcludeSeries,
+        IntoArrowTable,
+        OnlySeries,
+        PassThroughUnknown,
+    )
     from narwhals._typing import (
         Arrow,
         Backend,
@@ -78,24 +98,18 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoDType,
         IntoExpr,
-        IntoFrame,
         IntoSchema,
-        IntoSeries,
         NonNestedLiteral,
+        PythonLiteral,
         SingleColSelector,
         SingleIndexSelector,
         _1DArray,
         _2DArray,
     )
 
-    DataFrameT = TypeVar("DataFrameT", bound="DataFrame[Any]")
-    LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
-    SeriesT = TypeVar("SeriesT", bound="Series[Any]")
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
-
-IntoSeriesT = TypeVar("IntoSeriesT", bound="IntoSeries", default=Any)
 
 
 class DataFrame(NwDataFrame[IntoDataFrameT]):
@@ -191,7 +205,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     ) -> Series[Any] | Self | Any:
         return super().__getitem__(item)
 
-    def get_column(self, name: str) -> Series:
+    def get_column(self, name: str) -> Series[Any]:
         # Type checkers complain that `nw.Series` is not assignable to `nw.v2.stable.Series`.
         # However the return type actually is `nw.v2.stable.Series`, check `tests/v2_test.py`.
         return super().get_column(name)  # type: ignore[return-value]
@@ -303,8 +317,33 @@ class Series(NwSeries[IntoSeriesT]):
     # Too unstable to consider including here.
     hist: Any = not_implemented()
 
+    def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
+        msg = (
+            "`Series.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return super().any_value(ignore_nulls=ignore_nulls)
 
-class Expr(NwExpr): ...
+
+class Expr(NwExpr):
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        msg = (
+            "`Expr.any_value` is being called from the stable API although considered "
+            "an unstable feature."
+        )
+        issue_warning(msg, NarwhalsUnstableWarning)
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
+        )
+
+    def first(self) -> Self:  # type: ignore[override]
+        """Get the first value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+
+    def last(self) -> Self:  # type: ignore[override]
+        """Get the last value."""
+        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
 
 
 class Schema(NwSchema):
@@ -345,155 +384,42 @@ def _stableify(
 
 
 @overload
-def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[OnlySeries]) -> SeriesT: ...
 @overload
-def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
-
-
-@overload
-def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeries]) -> SeriesT: ...
 @overload
 def from_native(
-    native_object: DataFrameT | LazyFrameT, **kwds: Any
-) -> DataFrameT | LazyFrameT: ...
-
-
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrameT: ...
+# Closer to *intended* than https://github.com/narwhals-dev/narwhals/issues/3226
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeries,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
+    native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
+    native_object: IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> Series[IntoSeriesT]: ...
 @overload
 def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 @overload
 def from_native(
-    native_object: IntoFrame | IntoSeries,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 @overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
+def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
 # All params passed in as variables
 @overload
 def from_native(
@@ -504,13 +430,11 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-
-
-def from_native(  # noqa: D417
-    native_object: IntoDataFrameT
-    | IntoLazyFrameT
-    | IntoFrame
+def from_native(
+    native_object: IntoLazyFrameT
+    | IntoDataFrameT
     | IntoSeriesT
+    | IntoFrame
     | IntoSeries
     | T,
     *,
@@ -518,7 +442,6 @@ def from_native(  # noqa: D417
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-    **kwds: Any,
 ) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
@@ -555,10 +478,6 @@ def from_native(  # noqa: D417
         return native_object
     if isinstance(native_object, Series) and (series_only or allow_series):
         return native_object
-
-    if kwds:
-        msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
-        raise TypeError(msg)
 
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
@@ -653,7 +572,7 @@ def narwhalify(
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            args = [
+            args_nw = [
                 from_native(
                     arg,
                     pass_through=pass_through,
@@ -662,9 +581,9 @@ def narwhalify(
                     allow_series=allow_series,
                 )
                 for arg in args
-            ]  # type: ignore[assignment]
+            ]
 
-            kwargs = {
+            kwargs_nw = {
                 name: from_native(
                     value,
                     pass_through=pass_through,
@@ -677,7 +596,7 @@ def narwhalify(
 
             backends = {
                 b()
-                for v in (*args, *kwargs.values())
+                for v in (*args_nw, *kwargs_nw.values())
                 if (b := getattr(v, "__native_namespace__", None))
             }
 
@@ -685,7 +604,7 @@ def narwhalify(
                 msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
                 raise ValueError(msg)
 
-            result = func(*args, **kwargs)
+            result = func(*args_nw, **kwargs_nw)
 
             return to_native(result, pass_through=pass_through)
 
@@ -742,9 +661,11 @@ def lit(value: NonNestedLiteral, dtype: IntoDType | None = None) -> Expr:
     """Return an expression representing a literal value.
 
     Arguments:
-        value: The value to use as literal.
+        value: The value to use as literal. Can be a scalar value, list, tuple, or dict.
+            Lists and tuples are converted to `List` dtype, dicts to `Struct` dtype.
         dtype: The data type of the literal value. If not provided, the data type will
-            be inferred by the native library.
+            be inferred by the native library. For empty lists/dicts, dtype must be
+            specified explicitly.
     """
     return _stableify(nw.lit(value, dtype))
 
@@ -890,6 +811,19 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
             expression input.
     """
     return _stableify(nw.max_horizontal(*exprs))
+
+
+def corr(
+    a: IntoExpr, b: IntoExpr, method: Literal["pearson", "spearman"] = "pearson"
+) -> Expr:
+    """Compute the Pearson's or Spearman rank correlation between two columns.
+
+    Arguments:
+        a: Column name or Expression
+        b: Column name or Expression
+        method: Correlation method ('pearson' or 'spearman')
+    """
+    return _stableify(nw.corr(a, b, method=method))
 
 
 def concat_str(
@@ -1096,7 +1030,11 @@ def from_numpy(
 
 
 def read_csv(
-    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: str,
+    *,
+    backend: IntoBackend[EagerAllowed],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -1109,15 +1047,18 @@ def read_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.read_csv('file.csv', backend='pandas', engine='pyarrow')`.
     """
-    return _stableify(nw_f.read_csv(source, backend=backend, **kwargs))
+    return _stableify(
+        nw_f.read_csv(source, backend=backend, separator=separator, **kwargs)
+    )
 
 
 def scan_csv(
-    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: str, *, backend: IntoBackend[Backend], separator: str = ",", **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1133,11 +1074,14 @@ def scan_csv(
                 `POLARS`, `MODIN` or `CUDF`.
             - As a string: `"pandas"`, `"pyarrow"`, `"polars"`, `"modin"` or `"cudf"`.
             - Directly as a module `pandas`, `pyarrow`, `polars`, `modin` or `cudf`.
+        separator: Single byte character to use as separator in the file.
         kwargs: Extra keyword arguments which are passed to the native CSV reader.
             For example, you could use
             `nw.scan_csv('file.csv', backend=pd, engine='pyarrow')`.
     """
-    return _stableify(nw_f.scan_csv(source, backend=backend, **kwargs))
+    return _stableify(
+        nw_f.scan_csv(source, backend=backend, separator=separator, **kwargs)
+    )
 
 
 def read_parquet(
@@ -1241,6 +1185,7 @@ __all__ = [
     "col",
     "concat",
     "concat_str",
+    "corr",
     "dependencies",
     "dtypes",
     "dtypes",

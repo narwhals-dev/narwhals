@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Literal, cast
-
-import numpy as np
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
@@ -13,7 +12,9 @@ from narwhals._pandas_like.series_list import PandasLikeSeriesListNamespace
 from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
+    NUMPY_VERSION,
     align_and_extract_native,
+    broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
     narwhals_to_native_dtype,
@@ -24,7 +25,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, no_default, parse_version
+from narwhals._utils import Implementation, is_list_of, no_default
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -42,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.series import HistData
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
+    from narwhals._pandas_like.typing import NativeSeriesT
     from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
@@ -181,6 +183,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             if implementation.is_pandas():
                 kwds["copy"] = False
+            else:  # pragma: no cover
+                pass
             if index is not None and len(index):
                 kwds["index"] = index
         return cls.from_native(ns.Series(data, name=name, **kwds), context=context)
@@ -211,8 +215,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         reindexed = []
         for s in series:
             if s._broadcast:
-                native = Series(
-                    s.native.iloc[0], index=idx, name=s.name, dtype=s.native.dtype
+                native = broadcast_series_to_index(
+                    s.native, idx, is_nested=s.dtype.is_nested(), series_class=Series
                 )
                 compliant = s._with_native(native)
             elif s.native.index is not idx:
@@ -277,29 +281,36 @@ class PandasLikeSeries(EagerSeries[Any]):
         result[mask_na] = None
         return self._with_native(result)
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        if isinstance(values, self.__class__):
-            values = set_index(
-                values.native,
-                self.native.index[indices],
-                implementation=self._implementation,
-            )
-        s = self.native.copy(deep=True)
-        s.iloc[indices] = values
-        s.name = self.name
-        return self._with_native(s)
+    @overload
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[True]
+    ) -> None: ...
+    @overload
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: Literal[False] = False
+    ) -> Self: ...
 
-    def _scatter_in_place(self, indices: Self, values: Self) -> None:
-        # Scatter, modifying original Series. Use with care!
-        implementation = self._implementation
+    def scatter(
+        self, indices: Self, values: Self, *, in_place: bool = False
+    ) -> Self | None:
+        # !NOTE: See conversation at https://github.com/narwhals-dev/narwhals/pull/3444#discussion_r2787546529
+        # to understand why signature differs from `CompliantSeries`
+        impl = self._implementation
+        native_series, indices_native = self.native, indices.native
         values_native = set_index(
-            values.native,
-            self.native.index[indices.native],
-            implementation=implementation,
+            values.native, native_series.index[indices_native], implementation=impl
         )
-        if implementation is Implementation.PANDAS and parse_version(np) < (2,):
-            values_native = values_native.copy()  # pragma: no cover
-        self.native.iloc[indices.native] = values_native
+        series = native_series if in_place else native_series.copy(deep=True)
+
+        if impl.is_pandas():
+            if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
+                values_native = values_native.copy()
+            if self._backend_version < (1, 2):
+                indices_native = indices_native.to_numpy()
+
+        series.iloc[indices_native] = values_native
+
+        return None if in_place else self._with_native(series)
 
     def cast(self, dtype: IntoDType) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":
@@ -393,6 +404,15 @@ class PandasLikeSeries(EagerSeries[Any]):
     def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
+        if (
+            str(self.native.dtype) == "large_string[pyarrow]"
+            and isinstance(other_native, str)
+            and op.__name__ == "add"
+        ):
+            # https://github.com/pandas-dev/pandas/issues/64393
+            import pyarrow as pa  # ignore-banned-import
+
+            other_native = pa.scalar(other_native, type=pa.large_string())
         return self._with_native(
             op(ser, other_native), preserve_broadcast=preserve_broadcast
         ).alias(self.name)
@@ -584,6 +604,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return res_ser
 
     def fill_nan(self, value: float | None) -> Self:
+        if self._implementation.is_cudf() and (value is None):
+            # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/3231
+            msg = "`fill_nan(value=None)` is not support for CuDF backend"
+            raise NotImplementedError(msg)
         if not self.dtype.is_numeric():  # pragma: no cover
             msg = f"`.fill_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.fill_null`?"
             raise InvalidOperationError(msg)
@@ -811,58 +835,24 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def floor(self) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
-
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.floor(ca))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.floor)
         else:
-            array_funcs = self._array_funcs
-            result_arr = array_funcs.floor(self.native)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            array_func = self._array_funcs.floor
+            result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 
     def ceil(self) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
-
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.ceil(ca))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.ceil)
         else:
-            array_funcs = self._array_funcs
-            result_arr = array_funcs.ceil(self.native)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            array_func = self._array_funcs.ceil
+            result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 
     def to_dummies(self, *, separator: str, drop_first: bool) -> PandasLikeDataFrame:
@@ -904,7 +894,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         kwargs: dict[str, Any] = {"axis": 0} if impl.is_modin() else {}
         result = self.native
 
-        if not impl.is_pandas():
+        if not impl.is_pandas():  # pragma: no cover
             # Workaround for both cudf and modin when clipping with a series
             #   * cudf: https://github.com/rapidsai/cudf/issues/17682
             #   * modin: https://github.com/modin-project/modin/issues/7415
@@ -1022,6 +1012,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result)
 
     def __iter__(self) -> Iterator[Any]:
+        if self._implementation.is_cudf():
+            msg = (
+                "Iterating over a cuDF Series, DataFrame or Index is not supported. "
+                "For more information see: https://docs.rapids.ai/api/cudf/stable/user_guide/pandas-comparison/#iteration"
+            )
+            raise NotImplementedError(msg)
+
         yield from self.native.__iter__()
 
     def __contains__(self, other: Any) -> bool:
@@ -1088,65 +1085,99 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def log(self, base: float) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
+            def pc_log(ca: ChunkedArrayAny) -> ChunkedArrayAny:
+                return pc.logb(ca, base)  # type: ignore[return-value]
 
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.logb(ca, base))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc_log)
         else:
-            array_funcs = self._array_funcs
-            result_arr = array_funcs.log(native) / array_funcs.log(base)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            log_func = self._array_funcs.log
 
+            def array_log(arr: NativeSeriesT) -> NativeSeriesT:
+                return log_func(arr) / log_func(base)  # pyright: ignore[reportArgumentType, reportCallIssue]
+
+            result_native = self._apply_array_func(native, array_log)
         return self._with_native(result_native)
 
     def exp(self) -> Self:
         native = self.native
-        native_cls = type(native)
-        implementation = self._implementation
-
-        if get_dtype_backend(native.dtype, implementation=implementation) == "pyarrow":
+        if self.is_native_dtype_pyarrow(native.dtype):
             import pyarrow.compute as pc
 
-            from narwhals._arrow.utils import native_to_narwhals_dtype
-
-            ca = native.array._pa_array
-            result_arr = cast("ChunkedArrayAny", pc.exp(ca))
-            nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
-            out_dtype = narwhals_to_native_dtype(
-                nw_dtype, "pyarrow", self._implementation, self._version
-            )
-            result_native = native_cls(
-                result_arr, dtype=out_dtype, index=native.index, name=native.name
-            )
+            result_native = self._apply_pyarrow_compute_func(native, pc.exp)
         else:
-            result_arr = self._array_funcs.exp(native)
-            result_native = (
-                native_cls(result_arr, index=native.index, name=native.name)
-                if implementation.is_cudf()
-                else result_arr
-            )
+            array_func = self._array_funcs.exp
+            result_native = self._apply_array_func(native, array_func)
 
         return self._with_native(result_native)
 
     def sqrt(self) -> Self:
         return self._with_native(self.native.pow(0.5))
+
+    def sin(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.sin,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.sin
+            result_native = self._apply_array_func(native, array_func)
+
+        return self._with_native(result_native)
+
+    def cos(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.cos,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.cos
+            result_native = self._apply_array_func(native, array_func)
+
+        return self._with_native(result_native)
+
+    def is_native_dtype_pyarrow(self, native_dtype: Any) -> bool:
+        impl = self._implementation
+        return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
+
+    def _apply_pyarrow_compute_func(
+        self, native: NativeSeriesT, pc_func: Callable[[ChunkedArrayAny], ChunkedArrayAny]
+    ) -> NativeSeriesT:
+        from narwhals._arrow.utils import native_to_narwhals_dtype
+
+        native_cls = type(native)
+        result_arr = pc_func(native.array._pa_array)  # type: ignore[attr-defined]
+        nw_dtype = native_to_narwhals_dtype(result_arr.type, self._version)
+        out_dtype = narwhals_to_native_dtype(
+            nw_dtype, "pyarrow", self._implementation, self._version
+        )
+        return native_cls(
+            result_arr, dtype=out_dtype, index=native.index, name=native.name
+        )
+
+    def _apply_array_func(
+        self, native: NativeSeriesT, array_func: Callable[[NativeSeriesT], NativeSeriesT]
+    ) -> NativeSeriesT:
+        native_cls = type(native)
+        result_arr = array_func(native)
+        return (
+            native_cls(result_arr, index=native.index, name=native.name)
+            if self._implementation.is_cudf()
+            else result_arr
+        )
+
+    def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
 
     @property
     def str(self) -> PandasLikeSeriesStringNamespace:

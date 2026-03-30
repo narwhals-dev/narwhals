@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
     from narwhals._utils import Version
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
 
 
 class ArrowNamespace(
@@ -64,7 +64,7 @@ class ArrowNamespace(
             version=self._version,
         )
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> ArrowExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> ArrowExpr:
         def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:
             arrow_series = ArrowSeries.from_iterable(
                 data=[value], name="literal", context=self
@@ -184,8 +184,7 @@ class ArrowNamespace(
     def _concat_vertical(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         cols_0 = dfs[0].column_names
         for i, df in enumerate(dfs[1:], start=1):
-            cols_current = df.column_names
-            if cols_current != cols_0:
+            if (cols_current := df.column_names) != cols_0:
                 msg = (
                     "unable to vstack, column names don't match:\n"
                     f"   - dataframe 0: {cols_0}\n"
@@ -253,4 +252,38 @@ class ArrowNamespace(
         otherwise: ChunkedArrayAny | None = None,
     ) -> ChunkedArrayAny:
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
-        return pc.if_else(when, then, otherwise)
+        return pc.if_else(when.fill_null(pa.scalar(False)), then, otherwise)
+
+    def corr(self, a: ArrowExpr, b: ArrowExpr, *, method: CorrelationMethod) -> ArrowExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Pyarrow."
+            raise NotImplementedError(msg)
+
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            arr1 = a_series.native
+            arr2 = df._evaluate_single_output_expr(b).native
+            mean1 = pc.mean(arr1)
+            mean2 = pc.mean(arr2)
+
+            dev1 = pc.subtract(arr1, mean1)
+            dev2 = pc.subtract(arr2, mean2)
+
+            covariance = pc.mean(pc.multiply(dev1, dev2))
+
+            std1 = pc.stddev(arr1)
+            std2 = pc.stddev(arr2)
+
+            correlation = pc.divide(covariance, pc.multiply(std1, std2))
+            return [
+                ArrowSeries.from_iterable(
+                    data=[correlation], name=a_series.name, context=self
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )

@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -130,8 +130,12 @@ class DuckDBNamespace(
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DuckDBExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> DuckDBExpr:
         def func(df: DuckDBLazyFrame) -> list[Expression]:
+            if isinstance(value, dict) and not value:
+                msg = "Cannot create an empty struct type for DuckDB backend"
+                raise NotImplementedError(msg)
+
             tz = DeferredTimeZone(df.native)
             if dtype is not None:
                 target = narwhals_to_native_dtype(dtype, self._version, tz)
@@ -159,5 +163,24 @@ class DuckDBNamespace(
             call=func,
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
+            version=self._version,
+        )
+
+    def corr(
+        self, a: DuckDBExpr, b: DuckDBExpr, *, method: CorrelationMethod
+    ) -> DuckDBExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for DuckDB."
+            raise NotImplementedError(msg)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F("corr", a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )

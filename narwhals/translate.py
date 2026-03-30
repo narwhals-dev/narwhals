@@ -40,6 +40,16 @@ from narwhals.dependencies import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from typing_extensions import Unpack
+
+    from narwhals._translate import (
+        AllowAny,
+        AllowLazy,
+        AllowSeries,
+        ExcludeSeries,
+        OnlySeries,
+        PassThroughUnknown,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -110,149 +120,42 @@ def to_native(
 
 
 @overload
-def from_native(native_object: SeriesT, **kwds: Any) -> SeriesT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[OnlySeries]) -> SeriesT: ...
 @overload
-def from_native(native_object: DataFrameT, **kwds: Any) -> DataFrameT: ...
-
-
-@overload
-def from_native(native_object: LazyFrameT, **kwds: Any) -> LazyFrameT: ...
-
-
+def from_native(native_object: SeriesT, **kwds: Unpack[AllowSeries]) -> SeriesT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
-
-
+    native_object: DataFrameT, **kwds: Unpack[ExcludeSeries]
+) -> DataFrameT: ...
+# Closer to *intended* than https://github.com/narwhals-dev/narwhals/issues/3226
+@overload
+def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
-@overload
-def from_native(
-    native_object: T,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> T: ...
-
-
-@overload
-def from_native(
-    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[True],
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
+    native_object: IntoSeriesT, **kwds: Unpack[OnlySeries]
 ) -> Series[IntoSeriesT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoLazyFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
+    native_object: IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
-
-
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
+    native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
+) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
 @overload
 def from_native(
-    native_object: IntoDataFrameT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[True],
-    series_only: Literal[False] = ...,
-    allow_series: None = ...,
-) -> DataFrame[IntoDataFrameT]: ...
-
-
+    native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT]: ...
 @overload
-def from_native(
-    native_object: IntoFrame | IntoSeries,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[False] = ...,
-    allow_series: Literal[True],
-) -> DataFrame[Any] | LazyFrame[Any] | Series[Any]: ...
-
-
-@overload
-def from_native(
-    native_object: IntoSeriesT,
-    *,
-    pass_through: Literal[False] = ...,
-    eager_only: Literal[False] = ...,
-    series_only: Literal[True],
-    allow_series: None = ...,
-) -> Series[IntoSeriesT]: ...
-
-
+def from_native(native_object: T, **kwds: Unpack[PassThroughUnknown]) -> T: ...
 # All params passed in as variables
 @overload
 def from_native(
@@ -263,9 +166,7 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-
-
-def from_native(  # noqa: D417
+def from_native(
     native_object: IntoLazyFrameT
     | IntoDataFrameT
     | IntoSeriesT
@@ -277,7 +178,6 @@ def from_native(  # noqa: D417
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-    **kwds: Any,
 ) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
@@ -309,10 +209,6 @@ def from_native(  # noqa: D417
         DataFrame, LazyFrame, Series, or original object, depending
             on which combination of parameters was passed.
     """
-    if kwds:
-        msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
-        raise TypeError(msg)
-
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
@@ -542,7 +438,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
     # Interchange protocol
-    if supports_dataframe_interchange(native_object):
+    if version is Version.V1 and supports_dataframe_interchange(native_object):
         from narwhals._interchange.dataframe import InterchangeFrame
 
         if eager_only or series_only:
@@ -553,21 +449,9 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        if version is not Version.V1:
-            if pass_through:
-                return native_object
-            msg = (
-                "The Dataframe Interchange Protocol is no longer supported in the main `narwhals` namespace.\n\n"
-                "You may want to:\n"
-                " - Use `narwhals.stable.v1`, where it is still supported.\n"
-                "    - See https://narwhals-dev.github.io/narwhals/backcompat\n"
-                " - Use `pass_through=True` to pass the object through without raising."
-            )
-            raise TypeError(msg)
         return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
 
-    compliant_object = plugins.from_native(native_object, version)
-    if compliant_object is not None:
+    if (compliant_object := plugins.from_native(native_object, version)) is not None:
         return _translate_if_compliant(
             compliant_object,
             pass_through=pass_through,
@@ -687,7 +571,7 @@ def narwhalify(
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            args = [
+            args_nw = [
                 from_native(
                     arg,
                     pass_through=pass_through,
@@ -696,9 +580,9 @@ def narwhalify(
                     allow_series=allow_series,
                 )
                 for arg in args
-            ]  # type: ignore[assignment]
+            ]
 
-            kwargs = {
+            kwargs_nw = {
                 name: from_native(
                     value,
                     pass_through=pass_through,
@@ -711,7 +595,7 @@ def narwhalify(
 
             backends = {
                 b()
-                for v in (*args, *kwargs.values())
+                for v in (*args_nw, *kwargs_nw.values())
                 if (b := getattr(v, "__native_namespace__", None))
             }
 
@@ -719,7 +603,7 @@ def narwhalify(
                 msg = "Found multiple backends. Make sure that all dataframe/series inputs come from the same backend."
                 raise ValueError(msg)
 
-            result = func(*args, **kwargs)
+            result = func(*args_nw, **kwargs_nw)
 
             return to_native(result, pass_through=pass_through)
 

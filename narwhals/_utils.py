@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 from collections.abc import (
     Callable,
     Collection,
@@ -17,6 +18,7 @@ from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
 from operator import attrgetter
+from pathlib import Path
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
@@ -46,8 +48,10 @@ from narwhals.dependencies import (
     get_pyspark_sql,
     get_sqlframe,
     is_narwhals_series,
+    is_narwhals_series_bool,
     is_narwhals_series_int,
     is_numpy_array_1d,
+    is_numpy_array_1d_bool,
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
     is_pandas_like_series,
@@ -118,7 +122,9 @@ if TYPE_CHECKING:
         FileSource,
         IntoSeriesT,
         MultiIndexSelector,
+        NestedLiteral,
         SingleIndexSelector,
+        SizedMultiBoolSelector,
         SizedMultiIndexSelector,
         SizeUnit,
         SupportsNativeNamespace,
@@ -585,6 +591,13 @@ class Implementation(NoAutoEnum):
     def _backend_version(self) -> tuple[int, ...]:
         """Returns backend version."""
         return backend_version(self)
+
+
+def is_pyspark_pre_4(implementation: Implementation) -> bool:
+    """Whether implementation is PySpark (or PySpark Connect) with version < 4.0."""
+    return (
+        implementation.is_pyspark() or implementation.is_pyspark_connect()
+    ) and implementation._backend_version() < (4, 0)
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
@@ -1122,20 +1135,16 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> import pandas as pd
         >>> import polars as pl
         >>> data = ["x", "y"]
-        >>> s_pd = pd.Series(data, dtype=pd.CategoricalDtype(ordered=True))
-        >>> s_pl = pl.Series(data, dtype=pl.Categorical(ordering="lexical"))
-
-        Let's define a library-agnostic function:
-
-        >>> @nw.narwhalify
-        ... def func(s):
-        ...     return nw.is_ordered_categorical(s)
-
-        Then, we can pass any supported library to `func`:
-
-        >>> func(s_pd)
+        >>>
+        >>> s_pd = nw.from_native(
+        ...     pd.Series(data, dtype=pd.CategoricalDtype(ordered=True)), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pd)
         True
-        >>> func(s_pl)
+        >>> s_pl = nw.from_native(
+        ...     pl.Series(data, dtype=pl.Categorical()), series_only=True
+        ... )
+        >>> nw.is_ordered_categorical(s_pl)
         False
     """
     from narwhals._interchange.series import InterchangeSeries
@@ -1212,8 +1221,7 @@ def generate_temporary_column_name(
     """
     counter = 0
     while True:
-        token = f"{prefix}{token_hex(n_bytes - 1)}"
-        if token not in columns:
+        if (token := f"{prefix}{token_hex(n_bytes - 1)}") not in columns:
             return token
 
         counter += 1
@@ -1250,7 +1258,7 @@ def is_sized_multi_index_selector(
     return (
         (
             is_sequence_but_not_str(obj)
-            and ((len(obj) > 0 and isinstance(obj[0], int)) or (len(obj) == 0))
+            and ((len(obj) > 0 and is_single_index_selector(obj[0])) or (len(obj) == 0))
         )
         or is_numpy_array_1d_int(obj)
         or is_narwhals_series_int(obj)
@@ -1273,7 +1281,11 @@ def is_slice_index(obj: Any) -> TypeIs[_SliceIndex]:
     return isinstance(obj, slice) and (
         isinstance(obj.start, int)
         or isinstance(obj.stop, int)
-        or (isinstance(obj.step, int) and obj.start is None and obj.stop is None)
+        or (
+            isinstance(obj.step, (int, NoneType))
+            and obj.start is None
+            and obj.stop is None
+        )
     )
 
 
@@ -1295,6 +1307,17 @@ def is_index_selector(
     )
 
 
+def is_boolean_selector(
+    obj: Any,
+) -> TypeIs[SizedMultiBoolSelector[Series[Any] | CompliantSeries[Any]]]:
+    return (
+        (is_sequence_but_not_str(obj) and (len(obj) > 0 and isinstance(obj[0], bool)))
+        or is_numpy_array_1d_bool(obj)
+        or is_narwhals_series_bool(obj)
+        or is_compliant_series_bool(obj)
+    )
+
+
 def is_list_of(obj: Any, tp: type[_T]) -> TypeIs[list[_T]]:
     # Check if an object is a list of `tp`, only sniffing the first element.
     return bool(isinstance(obj, list) and obj and isinstance(obj[0], tp))
@@ -1313,6 +1336,10 @@ def is_sequence_of(obj: Any, tp: type[_T]) -> TypeIs[Sequence[_T]]:
         and (first := next(iter(obj), None))
         and isinstance(first, tp)
     )
+
+
+def is_nested_literal(obj: Any) -> TypeIs[NestedLiteral]:
+    return isinstance(obj, (list, tuple, dict))
 
 
 def validate_strict_and_pass_though(
@@ -1534,6 +1561,12 @@ def is_compliant_series_int(
     return is_compliant_series(obj) and obj.dtype.is_integer()
 
 
+def is_compliant_series_bool(
+    obj: CompliantSeries[NativeSeriesT_co] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT_co]]:
+    return is_compliant_series(obj) and obj.dtype.is_boolean()
+
+
 def _is_namespace_accessor(obj: _IntoContext) -> TypeIs[NamespaceAccessor[_FullContext]]:
     # NOTE: Only `compliant` has false positives **internally**
     # - https://github.com/narwhals-dev/narwhals/blob/cc69bac35eb8c81a1106969c49bfba9fd569b856/narwhals/_compliant/group_by.py#L44-L49
@@ -1629,7 +1662,6 @@ def unstable(fn: _Fn, /) -> _Fn:
         Decorated function (unchanged).
 
     Examples:
-        >>> from narwhals._utils import unstable
         >>> @unstable
         ... def a_work_in_progress_feature(*args):
         ...     return args
@@ -1675,7 +1707,6 @@ class not_implemented:  # noqa: N801
         - Allows us to use `isinstance(...)` instead of monkeypatching an attribute to the function
 
     Examples:
-        >>> from narwhals._utils import not_implemented
         >>> class Thing:
         ...     def totally_ready(self) -> str:
         ...         return "I'm ready!"
@@ -1763,7 +1794,6 @@ class requires:  # noqa: N801
         _hint: Optional suggested alternative.
 
     Examples:
-        >>> from narwhals._utils import requires, Implementation
         >>> class SomeBackend:
         ...     _implementation = Implementation.PYARROW
         ...     _backend_version = 20, 0, 0
@@ -1896,7 +1926,6 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         TypeError: If `obj` is not an instance of any of the provided `valid_types`.
 
     Examples:
-        >>> from narwhals._utils import ensure_type
         >>> ensure_type(42, int, float)
         >>> ensure_type("hello", str)
 
@@ -1912,7 +1941,7 @@ def ensure_type(obj: Any, /, *valid_types: type[Any], param_name: str = "") -> N
         >>> ensure_type(df, pd.DataFrame, param_name="df")
         Traceback (most recent call last):
             ...
-        TypeError: Expected 'pandas.core.frame.DataFrame', got: 'polars.dataframe.frame.DataFrame'
+        TypeError: Expected 'pandas.DataFrame', got: 'polars.dataframe.frame.DataFrame'
             df=polars.dataframe.frame.DataFrame(...)
                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     """
@@ -2052,12 +2081,19 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
-def normalize_path(source: FileSource, /) -> str:
-    if isinstance(source, str):
-        return source
-    from pathlib import Path
+if sys.platform != "win32":
 
-    return str(Path(source))
+    def normalize_path(source: FileSource, /) -> str:
+        return source if isinstance(source, str) else str(Path(source))
+else:  # pragma: no cover
+    # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
+    # This module is an example of the issue:
+    #     `WindowsPath('/narwhals/narwhals/_utils.py')`
+    # If we stringify that, we get:
+    #     `'\\narwhals\\narwhals\\_utils.py'`
+    # Which contains 2x `"\n"` characters
+    def normalize_path(source: FileSource, /) -> str:
+        return Path(source).as_posix()
 
 
 def extend_bool(
@@ -2083,3 +2119,6 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 no_default = _NoDefault.no_default
+
+# Can be imported from types in Python 3.10
+NoneType = type(None)

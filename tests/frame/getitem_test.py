@@ -387,3 +387,29 @@ def test_select_rows_by_name(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager({"a": [0, 2, 1]}), eager_only=True)
     with pytest.raises(TypeError, match="Unexpected type"):
         df["a", :]  # type: ignore[index]
+
+
+def test_getitem_boolean_columns(constructor_eager: ConstructorEager) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    df = nw.from_native(
+        constructor_eager({"ab": [1, 2, 3], "bc": [4, 5, 6], "cd": [3, 2, 1]}),
+        eager_only=True,
+    )
+    result = df[:, [False, True, True]]
+    expected = {"bc": [4, 5, 6], "cd": [3, 2, 1]}
+    assert_equal_data(result, expected)
+    result = df[:, np.array([False, True, True])]
+    assert_equal_data(result, expected)
+    result = df[:, df["ab"] > 1]
+    assert_equal_data(result, expected)
+
+
+def test_getitem_single_boolean_column(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(
+        constructor_eager({"ab": [1, 2, 3], "bc": [4, 5, 6], "cd": [3, 2, 1]}),
+        eager_only=True,
+    )
+    with pytest.raises(TypeError):
+        df[:, True]

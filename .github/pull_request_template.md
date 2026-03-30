@@ -1,7 +1,13 @@
 
 <!--
-# Thanks for contributing a pull request! 
+# Thanks for contributing a pull request!
 ## Please make sure you see our contribution guidelines: https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md
+-->
+
+# Description
+
+<!--
+## If you have comments or want to explain your changes, please do so in this section
 -->
 
 ## What type of PR is this? (check all applicable)
@@ -24,5 +30,3 @@
 - [ ] Code follows style guide (ruff)
 - [ ] Tests added
 - [ ] Documented the changes
-
-## If you have comments or can explain your changes, please do so below

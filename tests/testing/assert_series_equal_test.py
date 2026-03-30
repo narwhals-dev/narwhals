@@ -32,9 +32,15 @@ def series_from_native(native: IntoSeriesT) -> nw.Series[IntoSeriesT]:
 
 
 def test_self_equal(
-    constructor_eager: ConstructorEager, testing_data: Data, testing_schema: IntoSchema
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    testing_data: Data,
+    testing_schema: IntoSchema,
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
+    if "cudf" in str(constructor_eager):
+        # TODO(FBruzzesi): Investigate which conversion is failing aside from nested dtypes
+        request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
@@ -53,10 +59,13 @@ def test_self_equal(
 
     if "pyarrow_table" in str(constructor_eager):
         # Replace Enum with Categorical, since Pyarrow does not support Enum
+        data = dict(testing_data)
         schema = {**testing_schema, "enum": nw.Categorical()}
     else:
-        schema = dict(testing_schema)  # make a copy
-    df = nw.from_native(constructor_eager(testing_data), eager_only=True)
+        data = dict(testing_data)
+        schema = dict(testing_schema)
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     for name, dtype in schema.items():
         assert_series_equal(df[name].cast(dtype), df[name].cast(dtype))
 
@@ -133,6 +142,7 @@ def test_metadata_checks_with_flags(
     ],
 )
 def test_check_order(
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     dtype: nw.dtypes.DType,
     *,
@@ -140,6 +150,10 @@ def test_check_order(
     context: AbstractContextManager[Any],
 ) -> None:
     """Test check_order behavior with nested and simple data."""
+    if "cudf" in str(constructor_eager) and dtype.is_nested():
+        reason = "NotImplementedError"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2) and dtype.is_nested():  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
@@ -245,6 +259,7 @@ def test_numeric(
     ],
 )
 def test_list_like(
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     l_vals: list[list[Any]],
     r_vals: list[list[Any]],
@@ -253,6 +268,10 @@ def test_list_like(
     context: AbstractContextManager[Any],
     dtype: nw.dtypes.DType,
 ) -> None:
+    if "cudf" in str(constructor_eager):
+        reason = "NotImplementedError"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
@@ -301,6 +320,7 @@ def test_list_like(
     ],
 )
 def test_struct(
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     l_vals: list[dict[str, Any]],
     r_vals: list[dict[str, Any]],
@@ -308,6 +328,10 @@ def test_struct(
     check_exact: bool,
     context: AbstractContextManager[Any],
 ) -> None:
+    if "cudf" in str(constructor_eager):
+        reason = "NotImplementedError"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"

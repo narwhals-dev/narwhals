@@ -185,6 +185,18 @@ class PolarsExpr:
         )
         return self._with_native(native)
 
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        if order_by:
+            # Can't use `min_by` / `max_by` as they skip nulls.
+            return self._with_native(self.native.sort_by(*order_by).first())
+        return self._with_native(self.native.first())
+
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        if order_by:
+            # Can't use `min_by` / `max_by` as they skip nulls.
+            return self._with_native(self.native.sort_by(*order_by).last())
+        return self._with_native(self.native.last())
+
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         kwds = self._renamed_min_periods(min_samples)
         native = self.native.rolling_sum(window_size=window_size, center=center, **kwds)
@@ -299,6 +311,9 @@ class PolarsExpr:
         result = self.native.mode()
         return self._with_native(result.first() if keep == "any" else result)
 
+    def any_value(self, *, ignore_nulls: bool) -> Self:
+        return self.drop_nulls().first() if ignore_nulls else self.first()
+
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
         return PolarsExprDateTimeNamespace(self)
@@ -333,6 +348,7 @@ class PolarsExpr:
     arg_true: Method[Self]
     ceil: Method[Self]
     count: Method[Self]
+    cos: Method[Self]
     cum_max: Method[Self]
     cum_min: Method[Self]
     cum_prod: Method[Self]
@@ -342,9 +358,7 @@ class PolarsExpr:
     exp: Method[Self]
     fill_null: Method[Self]
     fill_nan: Method[Self]
-    first: Method[Self]
     floor: Method[Self]
-    last: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
     is_between: Method[Self]
@@ -368,6 +382,7 @@ class PolarsExpr:
     round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
+    sin: Method[Self]
     skew: Method[Self]
     sqrt: Method[Self]
     std: Method[Self]
@@ -454,6 +469,12 @@ class PolarsExprStringNamespace(
         value_native = extract_native(value)
         return self.compliant._with_native(
             self.native.str.replace_all(pattern, value_native, literal=literal)
+        )
+
+    def contains(self, pattern: PolarsExpr, *, literal: bool) -> PolarsExpr:
+        pattern_native = extract_native(pattern)
+        return self.compliant._with_native(
+            self.native.str.contains(pattern_native, literal=literal)
         )
 
 

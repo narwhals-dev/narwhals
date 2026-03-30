@@ -8,6 +8,8 @@
         - ends_with
         - head
         - len_chars
+        - pad_end
+        - pad_start
         - replace
         - replace_all
         - slice

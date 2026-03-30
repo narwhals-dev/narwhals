@@ -70,7 +70,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.replace",
-                value,
+                exprs=(value,),
                 pattern=pattern,
                 literal=literal,
                 n=n,
@@ -106,7 +106,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(
                 ExprKind.ELEMENTWISE,
                 "str.replace_all",
-                value,
+                exprs=(value,),
                 pattern=pattern,
                 literal=literal,
                 str_as_lit=True,
@@ -148,14 +148,14 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> df_native = pd.DataFrame({"fruits": ["apple", "mango", None]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(has_prefix=nw.col("fruits").str.starts_with("app"))
-            ┌───────────────────┐
-            |Narwhals DataFrame |
-            |-------------------|
-            |  fruits has_prefix|
-            |0  apple       True|
-            |1  mango      False|
-            |2   None       None|
-            └───────────────────┘
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |  fruits  has_prefix|
+            |0  apple        True|
+            |1  mango       False|
+            |2    NaN       False|
+            └────────────────────┘
         """
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.starts_with", prefix=prefix)
@@ -173,26 +173,32 @@ class ExprStringNamespace(Generic[ExprT]):
             >>> df_native = pd.DataFrame({"fruits": ["apple", "mango", None]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(has_suffix=nw.col("fruits").str.ends_with("ngo"))
-            ┌───────────────────┐
-            |Narwhals DataFrame |
-            |-------------------|
-            |  fruits has_suffix|
-            |0  apple      False|
-            |1  mango       True|
-            |2   None       None|
-            └───────────────────┘
+            ┌────────────────────┐
+            | Narwhals DataFrame |
+            |--------------------|
+            |  fruits  has_suffix|
+            |0  apple       False|
+            |1  mango        True|
+            |2    NaN       False|
+            └────────────────────┘
         """
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
         )
 
-    def contains(self, pattern: str, *, literal: bool = False) -> ExprT:
+    def contains(self, pattern: str | IntoExpr, *, literal: bool = False) -> ExprT:
         r"""Check if string contains a substring that matches a pattern.
 
         Arguments:
-            pattern: A Character sequence or valid regular expression pattern.
+            pattern: A Character sequence, valid regular expression pattern, or another
+                Expr.
             literal: If True, treats the pattern as a literal string.
-                     If False, assumes the pattern is a regular expression.
+                If False, assumes the pattern is a regular expression.
+
+        Warning:
+            Passing an expression as `pattern` is only supported by DuckDB, Ibis, Polars,
+            PySpark and SQLFrame. Other backends, such as pandas and PyArrow, will raise
+            a `TypeError`.
 
         Examples:
             >>> import pyarrow as pa
@@ -214,7 +220,11 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr._append_node(
             ExprNode(
-                ExprKind.ELEMENTWISE, "str.contains", pattern=pattern, literal=literal
+                ExprKind.ELEMENTWISE,
+                "str.contains",
+                exprs=(pattern,),
+                literal=literal,
+                str_as_lit=True,
             )
         )
 
@@ -237,7 +247,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |------------------|
             |        s s_sliced|
             |0    pear         |
-            |1    None     None|
+            |1     NaN      NaN|
             |2  papaya       ya|
             └──────────────────┘
         """
@@ -415,7 +425,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |------------------|
             |  fruits upper_col|
             |0  apple     APPLE|
-            |1   None      None|
+            |1    NaN       NaN|
             └──────────────────┘
         """
         return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_uppercase"))
@@ -434,7 +444,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |------------------|
             |  fruits lower_col|
             |0  APPLE     apple|
-            |1   None      None|
+            |1    NaN       NaN|
             └──────────────────┘
         """
         return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "str.to_lowercase"))
@@ -501,9 +511,69 @@ class ExprStringNamespace(Generic[ExprT]):
             |0     +1       +01|
             |1     -1       -01|
             |2      1       001|
-            |3   None      None|
+            |3    NaN       NaN|
             └──────────────────┘
         """
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
+        )
+
+    def pad_start(self, length: int, fill_char: str = " ") -> ExprT:
+        """Pad the start of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(padded=nw.col("a").str.pad_start(8, "*"))
+            ┌─────────────────────────────┐
+            |     Narwhals DataFrame      |
+            |-----------------------------|
+            |              a        padded|
+            |0           cow      *****cow|
+            |1        monkey      **monkey|
+            |2  hippopotamus  hippopotamus|
+            |3           NaN           NaN|
+            └─────────────────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
+            )
+        )
+
+    def pad_end(self, length: int, fill_char: str = " ") -> ExprT:
+        """Pad the end of the string until it reaches the given length.
+
+        Arguments:
+            length: Pad the string until it reaches this length. Strings with
+                length equal to or greater than this value are returned as-is.
+            fill_char: The character to pad the string with.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": ["cow", "monkey", "hippopotamus", None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(padded=nw.col("a").str.pad_end(8, "*"))
+            ┌─────────────────────────────┐
+            |     Narwhals DataFrame      |
+            |-----------------------------|
+            |              a        padded|
+            |0           cow      cow*****|
+            |1        monkey      monkey**|
+            |2  hippopotamus  hippopotamus|
+            |3           NaN           NaN|
+            └─────────────────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char
+            )
         )

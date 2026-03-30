@@ -12,7 +12,7 @@ If you've got experience with open source contributions, the following instructi
 - `git remote add origin <your fork goes here>`
 - `uv venv -p 3.12`
 - `. .venv/bin/activate`
-- `uv pip install -U -e . --group local-dev`
+- `uv pip install -U -e . --group local-dev -e test-plugin`
 - To run tests: `pytest`
 - To run all linting checks: `pre-commit run --all-files`
 - To run static typing checks: `make typing`
@@ -124,7 +124,7 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
 
-2. Install Narwhals: `uv pip install -e . --group local-dev`. This will include fast-ish core libraries and dev dependencies.
+2. Install Narwhals: `uv pip install -e . --group local-dev -e test-plugin`. This will include fast-ish core libraries and dev dependencies.
    If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
    `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
 
@@ -158,7 +158,14 @@ If you add code that should be tested, please add tests.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
 
-### Backend-specific advice
+### General considerations
+
+In general we assume that dataframes are used to store and process columnar data. Therefore:
+
+- Iterating over rows in Python is never allowed. Assume that there's an infinite number of rows.
+- Iterating over columns is acceptable (though native APIs that do the iteration in a low-level language are preferred if possible!).
+
+### Backend-specific considerations
 
 - pandas:
 
@@ -175,6 +182,9 @@ If you add code that should be tested, please add tests.
       deprecated/removed, but please keep it for older pandas versions
       https://github.com/pandas-dev/pandas/pull/51466/files.
     - Instead of `rename`, prefer `alias` at the compliant level.
+  - pandas supports any hashable object as a column name, whereas other libraries tend to only support
+    strings. We tend to just type `: str` in places which accept column names, with the understanding
+    that for pandas, other data types will silently work.
 
 - Polars:
 

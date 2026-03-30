@@ -101,6 +101,7 @@ if TYPE_CHECKING:
 _ShapeT = TypeVar("_ShapeT", bound="tuple[int, ...]")
 _NDArray: TypeAlias = "np.ndarray[_ShapeT, Any]"
 _1DArray: TypeAlias = "_NDArray[tuple[int]]"
+_1DArrayBool: TypeAlias = "np.ndarray[tuple[bool], np.dtype[np.bool_]]"
 _1DArrayInt: TypeAlias = "np.ndarray[tuple[int], np.dtype[np.integer[Any]]]"
 _2DArray: TypeAlias = "_NDArray[tuple[int, int]]"  # noqa: PYI047
 _AnyDArray: TypeAlias = "_NDArray[tuple[int, ...]]"  # noqa: PYI047
@@ -243,6 +244,8 @@ RollingInterpolationMethod: TypeAlias = Literal[
 ]
 """Interpolation method."""
 
+CorrelationMethod: TypeAlias = Literal["pearson", "spearman"]
+
 UniqueKeepStrategy: TypeAlias = Literal["any", "first", "last", "none"]
 """Which of the duplicate rows to keep.
 
@@ -269,7 +272,8 @@ TemporalLiteral: TypeAlias = "dt.date | dt.datetime | dt.time | dt.timedelta"
 NonNestedLiteral: TypeAlias = (
     "NumericLiteral | TemporalLiteral | str | bool | bytes | None"
 )
-PythonLiteral: TypeAlias = "NonNestedLiteral | list[Any] | tuple[Any, ...]"
+NestedLiteral: TypeAlias = "list[Any] | tuple[Any, ...] | dict[str, Any]"
+PythonLiteral: TypeAlias = "NonNestedLiteral | NestedLiteral"
 
 NonNestedDType: TypeAlias = "dtypes.NumericType | dtypes.TemporalType | dtypes.String | dtypes.Boolean | dtypes.Binary | dtypes.Categorical | dtypes.Unknown | dtypes.Object"
 """Any Narwhals DType that does not have required arguments."""
@@ -351,6 +355,8 @@ Either a string or an object that implements [`__fspath__`], such as [`pathlib.P
 _T = TypeVar("_T")
 _Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
+# Boolean positions
+SizedMultiBoolSelector: TypeAlias = "Sequence[bool] | _T | _1DArrayBool"
 # Index/column positions
 SingleIndexSelector: TypeAlias = int
 _SliceIndex: TypeAlias = "_Slice[int] | _SliceNone"
@@ -364,7 +370,9 @@ SizedMultiNameSelector: TypeAlias = "Sequence[str] | _T | _1DArray"
 MultiNameSelector: TypeAlias = "_SliceName | SizedMultiNameSelector[_T]"
 # Mixed selectors
 SingleColSelector: TypeAlias = "SingleIndexSelector | SingleNameSelector"
-MultiColSelector: TypeAlias = "MultiIndexSelector[_T] | MultiNameSelector[_T]"
+MultiColSelector: TypeAlias = (
+    "MultiIndexSelector[_T] | MultiNameSelector[_T] | SizedMultiBoolSelector[_T]"
+)
 
 
 __all__ = [

@@ -49,6 +49,7 @@ Get started!
   - [Roadmap](#roadmap)
   - [Used by](#used-by)
   - [Sponsors and institutional partners](#sponsors-and-institutional-partners)
+  - [Support](#support)
   - [Appears on](#appears-on)
   - [Why "Narwhals"?](#why-narwhals)
 
@@ -213,9 +214,31 @@ provided some funding / development time:
 If you contribute to Narwhals on your organization's time, please let us know. We'd be happy to add your employer
 to this list!
 
+## Support
+
+If you'd like to say "thank you", please give us a ⭐ star ⭐.
+
+Please contact [hello_narwhals@proton.me](hello_narwhals@proton.me) if you would like to:
+
+- Receive professional support (e.g., if you're using or would like to use Narwhals at your company).
+- Have any Narwhals fixes / features prioritised.
+- Commission any Narwhals plugins for new backends.
+
 ## Appears on
 
 Narwhals has been featured in several talks, podcasts, and blog posts:
+
+- [Inspiring Computing Podcast](https://www.inspiringcomputing.com/2107763/episodes/16702460-the-rise-of-narwhals-in-open-source)
+  The Rise of Narwhals in Open-Source
+
+- [PyCon DE & PyData 2025](https://youtu.be/DJk782DWcss)
+  How Narwhals is silently bringing pandas, Polars, DuckDB, PyArrow, and more together
+
+- [The Python Exchange March 2025](https://youtu.be/TvFWFlK-2po)
+  What Can Narwhals Do for You?
+
+- [PyData London 2025](https://youtu.be/r2PxJlO7_QA)
+  How Narwhals brings Polars, DuckDB, PyArrow, & pandas together
 
 - [Talk Python to me Podcast](https://youtu.be/FSH7BZ0tuE0)
   Ahoy, Narwhals are bridging the data science APIs
@@ -232,10 +255,10 @@ Narwhals has been featured in several talks, podcasts, and blog posts:
 - [The Real Python Podcast](https://www.youtube.com/watch?v=w5DFZbFYzCM)
   Narwhals: Expanding DataFrame Compatibility Between Libraries
 
-- [Pycon Lithuania](https://www.youtube.com/watch?v=-mdx7Cn6_6E)  
+- [Pycon Lithuania 2024](https://www.youtube.com/watch?v=-mdx7Cn6_6E)  
   Marco Gorelli - DataFrame interoperatiblity - what's been achieved, and what comes next?
 
-- [Pycon Italy](https://www.youtube.com/watch?v=3IqUli9XsmQ)  
+- [Pycon Italy 2024](https://www.youtube.com/watch?v=3IqUli9XsmQ)  
   How you can write a dataframe-agnostic library - Marco Gorelli
 
 - [Polars Blog Post](https://pola.rs/posts/lightweight_plotting/)  

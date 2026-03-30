@@ -33,6 +33,7 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
+    corr: Method[PolarsExpr]
 
     _implementation: Implementation = Implementation.POLARS
     _version: Version

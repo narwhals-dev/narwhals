@@ -10,6 +10,7 @@ from narwhals._compliant import EagerDataFrame
 from narwhals._pandas_like.series import PANDAS_TO_NUMPY_DTYPE_MISSING, PandasLikeSeries
 from narwhals._pandas_like.utils import (
     align_and_extract_native,
+    broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
     iter_dtype_backends,
@@ -307,14 +308,18 @@ class PandasLikeDataFrame(
     def _extract_comparand(self, other: PandasLikeSeries) -> pd.Series[Any]:
         index = self.native.index
         if other._broadcast:
-            s = other.native
-            return type(s)(s.iloc[0], index=index, dtype=s.dtype, name=s.name)
+            native = other.native
+            is_nested = other.dtype.is_nested()
+            return broadcast_series_to_index(
+                native, index, is_nested=is_nested, series_class=type(native)
+            )
+
         if (len_other := len(other)) != (len_idx := len(index)):
             msg = f"Expected object of length {len_idx}, got: {len_other}."
             raise ShapeError(msg)
         if other.native.index is not index:
             return set_index(other.native, index, implementation=other._implementation)
-        return other.native
+        return other.native  # pragma: no cover
 
     @property
     def _array_funcs(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -568,7 +573,7 @@ class PandasLikeDataFrame(
                 "version": self._version,
                 "validate_column_names": False,
             }
-            if backend is not self._implementation:
+            if backend is not self._implementation:  # pragma: no cover
                 kwds.update(validate_backend_version=True)
             return PandasLikeDataFrame(self.to_pandas(), **kwds)
 
@@ -603,7 +608,7 @@ class PandasLikeDataFrame(
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other.native,
             left_on=left_on,
             right_on=right_on,
@@ -615,7 +620,7 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
         result_native = self.native.merge(
-            other.native,
+            other.native.dropna(subset=right_on, how="any"),
             how="left",
             left_on=left_on,
             right_on=right_on,
@@ -635,16 +640,32 @@ class PandasLikeDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> pd.DataFrame:
         # Pandas coalesces keys in full joins unless there's no collision
+        ns = self.__narwhals_namespace__()
+        self_native = self.native
         right_on_mapper = _remap_full_join_keys(left_on, right_on, suffix)
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
         right_suffixed = list(right_on_mapper.values())
-        return self.native.merge(
-            other_native,
+
+        left_null_mask = self_native[list(left_on)].isna().any(axis=1)
+        right_null_mask = other_native[right_suffixed].isna().any(axis=1)
+
+        # We need to add suffix to `other` columns overlapping in `self` if not in keys
+        to_rename = set(other.columns).intersection(self.columns).difference(right_on)
+        right_null_rows = other_native[right_null_mask].rename(
+            columns={col: f"{col}{suffix}" for col in to_rename}
+        )
+
+        join_result = self_native[~left_null_mask].merge(
+            other_native[~right_null_mask],
             left_on=left_on,
             right_on=right_suffixed,
             how="outer",
             suffixes=("", suffix),
+        )
+
+        return ns._concat_diagonal(
+            [join_result, self_native[left_null_mask], right_null_rows]
         )
 
     def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
@@ -677,7 +698,7 @@ class PandasLikeDataFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on, strict=True)),
         )
-        return self.native.merge(
+        return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
         )
 
@@ -688,7 +709,10 @@ class PandasLikeDataFrame(
 
         if implementation.is_cudf():
             return self.native.merge(
-                other.native, how="leftanti", left_on=left_on, right_on=right_on
+                other.native.dropna(subset=left_on, how="any"),
+                how="leftanti",
+                left_on=left_on,
+                right_on=right_on,
             )
 
         indicator_token = generate_temporary_column_name(
@@ -701,7 +725,7 @@ class PandasLikeDataFrame(
             columns_mapping=dict(zip(right_on, left_on, strict=True)),
         )
         result_native = self.native.merge(
-            other_native,
+            other_native.dropna(subset=left_on, how="any"),
             # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
             how="left" if implementation.is_pandas() else "outer",
             indicator=indicator_token,
@@ -993,11 +1017,10 @@ class PandasLikeDataFrame(
 
     def item(self, row: int | None, column: int | str | None) -> Any:
         if row is None and column is None:
-            if self.shape != (1, 1):
+            if (shape := self.shape) != (1, 1):
                 msg = (
-                    "can only call `.item()` if the dataframe is of shape (1, 1),"
-                    " or if explicit row/col values are provided;"
-                    f" frame has shape {self.shape!r}"
+                    'can only call `.item()` without "row" or "column" values if the '
+                    f"DataFrame has a single element; shape={shape!r}"
                 )
                 raise ValueError(msg)
             return self.native.iloc[0, 0]

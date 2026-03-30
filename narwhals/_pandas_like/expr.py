@@ -109,7 +109,13 @@ def window_kwargs_to_pandas_equivalent(  # noqa: C901
             "min_periods": kwargs["min_samples"],
             "ignore_na": kwargs["ignore_nulls"],
         }
-    elif function_name in {"first", "last"}:
+    elif function_name in {"first", "last", "any_value"}:
+        if kwargs.get("ignore_nulls"):
+            msg = (
+                "`Expr.any_value(ignore_nulls=True)` is not supported in a `over` "
+                "context for pandas-like backend."
+            )
+            raise NotImplementedError(msg)
         pandas_kwargs = {
             "n": _REMAP_ORDERED_INDEX[cast("NarwhalsAggregation", function_name)]
         }
@@ -232,7 +238,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
 
             sorting_indices = df.get_column(token)
             for s in results:
-                s._scatter_in_place(sorting_indices, s)
+                s.scatter(sorting_indices, s, in_place=True)
             return results
 
         return self.__class__(
@@ -349,17 +355,16 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     msg = "Safety check failed, please report a bug."
                     raise AssertionError(msg)
                 res_native = grouped.transform("size").to_frame(aliases[0])
-            elif function_name in {"first", "last"}:
+            elif function_name in {"first", "last", "any_value"}:
                 with warnings.catch_warnings():
                     # Ignore settingwithcopy warnings/errors, they're false-positives here.
                     warnings.filterwarnings("ignore", message="\n.*copy of a slice")
-                    _nth = getattr(
+                    _agg = getattr(
                         grouped[[*partition_by, *aliases]], pandas_function_name
                     )(**pandas_kwargs)
-                _nth.reset_index(drop=True, inplace=True)
-                res_native = df.native[list(partition_by)].merge(
-                    _nth, on=list(partition_by)
-                )[list(aliases)]
+                _agg.reset_index(drop=True, inplace=True)
+                keys = list(partition_by)
+                res_native = df.native[keys].merge(_agg, on=keys)[list(aliases)]
             else:
                 res_native = grouped[list(aliases)].transform(
                     pandas_function_name, **pandas_kwargs
@@ -371,7 +376,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     # Ignore settingwithcopy warnings/errors, they're false-positives here.
                     warnings.filterwarnings("ignore", message="\n.*copy of a slice")
                     for s in results:
-                        s._scatter_in_place(sorting_indices, s)
+                        s.scatter(sorting_indices, s, in_place=True)
                     return results
             if reverse:
                 return [s._gather_slice(slice(None, None, -1)) for s in results]

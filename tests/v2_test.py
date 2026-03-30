@@ -12,7 +12,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 from narwhals._utils import Implementation
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import NarwhalsUnstableWarning, ShapeError
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
@@ -46,6 +46,7 @@ def test_toplevel() -> None:
         max=nw_v2.max("a"),
         mean=nw_v2.mean("a"),
         median=nw_v2.median("a"),
+        corr=nw_v2.corr("a", "a"),
         sum=nw_v2.sum("a"),
         sum_h=nw_v2.sum_horizontal("a"),
         min_h=nw_v2.min_horizontal("a"),
@@ -65,6 +66,7 @@ def test_toplevel() -> None:
         "max": [3, 3, 3],
         "mean": [2.0, 2.0, 2.0],
         "median": [2.0, 2.0, 2.0],
+        "corr": [1, 1, 1],
         "sum": [6, 6, 6],
         "sum_h": [1, 2, 3],
         "min_h": [1, 2, 3],
@@ -509,3 +511,38 @@ def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
     df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw_v2.col("a", "b").mode())
+
+
+def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        reason = "sample does not allow n, use frac instead"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {
+        "a": [1, 1, 1, 2, 2, 3],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, None, 1, None, 2, None],
+    }
+    df = nw_v2.from_native(constructor(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df.select(nw_v2.col("a", "b").any_value())
+
+
+def test_any_value_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 3]}
+    df = nw_v2.from_native(constructor_eager(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df["a"].any_value()
+
+
+def test_first_last() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [0, 0, 2, -1]}
+    df = nw_v2.from_native(pd.DataFrame(data), eager_only=True)
+    result = df.select(b=nw_v2.col("a").first(), c=nw_v2.col("a").last())
+    expected = {"b": [0], "c": [-1]}
+    assert_equal_data(result, expected)

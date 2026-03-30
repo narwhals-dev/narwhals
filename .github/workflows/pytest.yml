@@ -2,13 +2,11 @@ name: PyTest
 
 on:
   pull_request:
-  push:
-    branches: [main]
 
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-
+  UV_SYSTEM_PYTHON: 1
 jobs:
   pytest-310:
     strategy:
@@ -17,7 +15,7 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -28,13 +26,13 @@ jobs:
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests --system
+        run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
       - name: install-test-plugin
-        run: uv pip install -e test-plugin/. --system  
+        run: uv pip install -e test-plugin/.
 
   pytest-windows:
     strategy:
@@ -43,7 +41,7 @@ jobs:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -55,14 +53,14 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e ".[ibis]" --group core-tests --group extra --system
+        run: uv pip install -e "." --group core-tests --group extra
       - name: install-test-plugin
-        run: uv pip install -e test-plugin/. --system
+        run: uv pip install -e test-plugin/.
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe,ibis --durations=30
+          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
 
   pytest-full-coverage:
     strategy:
@@ -76,7 +74,7 @@ jobs:
     env:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -87,13 +85,13 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask, modin, ibis]" --group core-tests --group extra --system
+        run: uv pip install -e ".[dask]" --group core-tests --group extra
       - name: install-test-plugin
-        run: uv pip install -e test-plugin/. --system
+        run: uv pip install -e test-plugin/.
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,modin[pyarrow],polars[eager],polars[lazy],dask,duckdb,sqlframe,ibis --durations=30
+        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
@@ -107,7 +105,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -119,20 +117,20 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: |
-          uv pip install -e ".[pandas]" --group tests --system
+          uv pip install -e ".[pandas]" --group tests
           uv pip freeze
       - name: Run pytest (pandas and pandas[nullable])
         run: pytest tests --runslow --constructors=pandas,pandas[nullable]
       - name: install-more-reqs
         run: |
-          uv pip install -U pyarrow --system
+          uv pip install -U pyarrow
           uv pip freeze
       - name: Run pytest (pandas[pyarrow] and pyarrow)
         run: pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
       - name: install-polars
         run: |
-          uv pip uninstall pandas pyarrow --system
-          uv pip install polars --system
+          uv pip uninstall pandas pyarrow
+          uv pip install polars
           uv pip freeze
       - name: Run pytest (polars)
         run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
@@ -144,7 +142,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -155,8 +153,7 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        # Use `--pre` as duckdb stable not compatible with 3.14
-        run: uv pip install -e . --group tests --pre pandas polars pyarrow duckdb sqlframe  --system
+        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -171,7 +168,7 @@ jobs:
     env:
         PYTHON_GIL: 0
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
@@ -182,7 +179,7 @@ jobs:
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e . --group tests --pre pandas pyarrow --system
+        run: uv pip install -e . --group tests --pre pandas pyarrow
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest

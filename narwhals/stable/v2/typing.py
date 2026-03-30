@@ -71,6 +71,8 @@ Examples:
     ...     return df.with_columns(c=df["a"] + 1)
 """
 
+LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[Any]")
+SeriesT = TypeVar("SeriesT", bound="Series[Any]")
 
 __all__ = [
     "DataFrameT",
@@ -85,4 +87,6 @@ __all__ = [
     "IntoLazyFrameT",
     "IntoSeries",
     "IntoSeriesT",
+    "LazyFrameT",
+    "SeriesT",
 ]

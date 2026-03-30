@@ -236,7 +236,7 @@ class ArrowDataFrame(
         return len(self.native)
 
     def row(self, index: int) -> tuple[Any, ...]:
-        return tuple(col[index] for col in self.native.itercolumns())
+        return tuple(self.native.take([index]).to_pylist()[0].values())
 
     @overload
     def rows(self, *, named: Literal[True]) -> list[dict[str, Any]]: ...
@@ -673,11 +673,10 @@ class ArrowDataFrame(
         from narwhals._arrow.series import maybe_extract_py_scalar
 
         if row is None and column is None:
-            if self.shape != (1, 1):
+            if (shape := self.shape) != (1, 1):
                 msg = (
-                    "can only call `.item()` if the dataframe is of shape (1, 1),"
-                    " or if explicit row/col values are provided;"
-                    f" frame has shape {self.shape!r}"
+                    'can only call `.item()` without "row" or "column" values if the '
+                    f"DataFrame has a single element; shape={shape!r}"
                 )
                 raise ValueError(msg)
             return maybe_extract_py_scalar(self.native[0][0], return_py_scalar=True)

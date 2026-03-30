@@ -6,7 +6,7 @@ pytest.importorskip("pandas", minversion="1.5.0")
 import pandas as pd
 
 import narwhals.stable.v1 as nw_v1
-from tests.utils import PANDAS_VERSION
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION
 
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 
@@ -23,9 +23,6 @@ def test_interchange_ibis_to_pandas(
 ) -> None:  # pragma: no cover
     if PANDAS_VERSION < (1, 5, 0):
         pytest.skip()
-    if PANDAS_VERSION >= (3,):
-        # https://github.com/duckdb/duckdb/issues/18297
-        request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("ibis")
     import ibis
@@ -49,7 +46,7 @@ def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    if PANDAS_VERSION >= (3,):
+    if PANDAS_VERSION >= (3,) and DUCKDB_VERSION < (1, 4, 4):
         # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)
 

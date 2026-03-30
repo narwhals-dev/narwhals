@@ -22,7 +22,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, is_nested_literal
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -30,7 +30,12 @@ if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NonNestedLiteral,
+    )
 
 
 class DaskNamespace(
@@ -55,6 +60,10 @@ class DaskNamespace(
         self._version = version
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
+        if is_nested_literal(value):
+            msg = f"Nested structures are not supported for Dask backend, found {type(value).__name__}"
+            raise NotImplementedError(msg)
+
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             if dtype is not None:
                 native_dtype = narwhals_to_native_dtype(dtype, self._version)
@@ -314,5 +323,18 @@ class DaskNamespace(
                 then, "_evaluate_output_names", lambda _df: ["literal"]
             ),
             alias_output_names=getattr(then, "_alias_output_names", None),
+            version=self._version,
+        )
+
+    def corr(self, a: DaskExpr, b: DaskExpr, *, method: CorrelationMethod) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [a_.corr(b_, method=method).to_series()]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )

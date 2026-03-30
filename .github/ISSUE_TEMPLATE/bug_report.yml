@@ -44,7 +44,7 @@ body:
     required: true
 - type: textarea
   attributes:
-    label: Please run narwhals.show_version() and enter the output below.
+    label: Please run narwhals.show_versions() and enter the output below.
     render: shell
     description: |
       You could do:

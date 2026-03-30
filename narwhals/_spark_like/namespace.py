@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import ConcatMethod, IntoDType, NonNestedLiteral, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 # Adjust slight SQL vs PySpark differences
 FUNCTION_REMAPPINGS = {
@@ -91,9 +91,31 @@ class SparkLikeNamespace(
     def _coalesce(self, *exprs: Column) -> Column:
         return self._F.coalesce(*exprs)
 
-    def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> SparkLikeExpr:
+    def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> SparkLikeExpr:
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            column = df._F.lit(value)
+            F = df._F
+
+            if isinstance(value, (list, tuple)):
+                lit_values = [F.lit(v) for v in value]
+                column = F.lit(F.array(lit_values))
+            elif isinstance(value, dict):
+                if not value:
+                    impl = self._implementation
+                    if impl.is_sqlframe():
+                        msg = f"Cannot create an empty struct type for {self._implementation} backend"
+                        raise NotImplementedError(msg)
+
+                    column = (  # pragma: no cover
+                        F.from_json(F.lit("{}"), df._native_dtypes.StructType())
+                        if impl._backend_version() < (4, 0)
+                        else F.struct([])
+                    )
+                else:
+                    lit_values = [F.lit(v).alias(k) for k, v in value.items()]
+                    column = F.struct(*lit_values)
+            else:
+                column = F.lit(value)
+
             if dtype:
                 native_dtype = narwhals_to_native_dtype(
                     dtype, self._version, df._native_dtypes, df.native.sparkSession
@@ -193,6 +215,27 @@ class SparkLikeNamespace(
             call=func,
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def corr(
+        self, a: SparkLikeExpr, b: SparkLikeExpr, *, method: CorrelationMethod
+    ) -> SparkLikeExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F.corr(a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
             implementation=self._implementation,
         )

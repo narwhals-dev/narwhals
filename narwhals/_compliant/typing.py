@@ -194,11 +194,11 @@ NarwhalsAggregation: TypeAlias = Literal[
     "any",
     "first",
     "last",
+    "any_value",
 ]
 """`Expr` methods we aim to support in `DepthTrackingGroupBy`.
 
 Be sure to update me if you're working on one of these:
-- https://github.com/narwhals-dev/narwhals/issues/981
 - https://github.com/narwhals-dev/narwhals/issues/2385
 - https://github.com/narwhals-dev/narwhals/issues/2484
 - https://github.com/narwhals-dev/narwhals/issues/2526

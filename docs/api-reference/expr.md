@@ -8,9 +8,11 @@
         - alias
         - all
         - any
+        - any_value
         - cast
         - ceil
         - clip
+        - cos
         - count
         - cum_count
         - cum_max
@@ -59,6 +61,7 @@
         - rolling_var
         - round
         - shift
+        - sin
         - skew
         - sqrt
         - std

@@ -12,7 +12,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals._utils import Implementation
-from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.exceptions import InvalidOperationError, NarwhalsUnstableWarning, ShapeError
 from narwhals.stable.v1.dependencies import (
     is_cudf_dataframe,
     is_cudf_series,
@@ -39,6 +39,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    assert_equal_hash,
     assert_equal_series,
 )
 
@@ -531,10 +532,10 @@ def test_dtypes() -> None:
         pd.DataFrame({"a": [1], "b": [datetime(2020, 1, 1)], "c": [timedelta(1)]})
     )
     dtype = df.collect_schema()["b"]
-    assert dtype in {nw_v1.Datetime}
+    assert_equal_hash(dtype, nw_v1.Datetime)
     assert isinstance(dtype, nw_v1.Datetime)
     dtype = df.lazy().schema["c"]
-    assert dtype in {nw_v1.Duration}
+    assert_equal_hash(dtype, nw_v1.Duration)
     assert isinstance(dtype, nw_v1.Duration)
 
 
@@ -958,6 +959,17 @@ def test_deprecated_expr_methods() -> None:
     assert_equal_data(result, expected)
 
 
+def test_first_last() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    data = {"a": [0, 0, 2, -1]}
+    df = nw_v1.from_native(pd.DataFrame(data), eager_only=True)
+    result = df.select(b=nw_v1.col("a").first(), c=nw_v1.col("a").last())
+    expected = {"b": [0], "c": [-1]}
+    assert_equal_data(result, expected)
+
+
 def test_dask_order_dependent_ops() -> None:
     # Preserve these for narwhals.stable.v1, even though they
     # raise after stable.v1.
@@ -1160,3 +1172,27 @@ def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
 def test_dtype___slots__(dtype: DType) -> None:
     with pytest.raises(AttributeError):
         dtype.i_also_dont_exist = 528329  # type: ignore[attr-defined]
+
+
+def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        reason = "sample does not allow n, use frac instead"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    data = {
+        "a": [1, 1, 1, 2, 2, 3],
+        "b": [1, 2, 3, 4, 5, 6],
+        "c": [None, None, 1, None, 2, None],
+    }
+    df = nw_v1.from_native(constructor(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df.select(nw_v1.col("a", "b").any_value())
+
+
+def test_any_value_series(constructor_eager: ConstructorEager) -> None:
+    data = {"a": [1, 1, 1, 2, 2, 3]}
+    df = nw_v1.from_native(constructor_eager(data))
+
+    with pytest.warns(NarwhalsUnstableWarning):
+        df["a"].any_value()

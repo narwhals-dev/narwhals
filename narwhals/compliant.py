@@ -17,14 +17,19 @@ from narwhals._compliant.any_namespace import (
     StringNamespace,
     StructNamespace,
 )
+from narwhals._compliant.expr import CompliantExprNameNamespace
+from narwhals._compliant.selectors import CompliantSelector, CompliantSelectorNamespace
 
 __all__ = [
     "CatNamespace",
     "CompliantDataFrame",
     "CompliantExpr",
+    "CompliantExprNameNamespace",
     "CompliantGroupBy",
     "CompliantLazyFrame",
     "CompliantNamespace",
+    "CompliantSelector",
+    "CompliantSelectorNamespace",
     "CompliantSeries",
     "DateTimeNamespace",
     "ListNamespace",

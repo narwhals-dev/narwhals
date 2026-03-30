@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
 from typing import TYPE_CHECKING
@@ -103,3 +105,40 @@ def test_pyarrow_string_type(
         .schema
     )
     assert expected_function(result.field("store_item").type)
+
+
+@pytest.mark.skipif(
+    PANDAS_VERSION < (2, 2), reason='"add" was not implemented yet for large-string'
+)
+def test_concat_str_with_large_string() -> None:
+    # https://github.com/pandas-dev/pandas/issues/64393
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    native_pa = pa.table(
+        {"store": ["foo", "bar"], "item": ["axe", "saw"]},
+        schema=pa.schema([("store", pa.large_string()), ("item", pa.large_string())]),
+    )
+    native_pd = native_pa.to_pandas(types_mapper=pd.ArrowDtype)
+
+    expr = nw.concat_str("store", "item", separator="-").alias("store_item")
+    result: nw.DataFrame[Any] = nw.from_native(native_pa).with_columns(expr)
+    expected = {
+        "store": ["foo", "bar"],
+        "item": ["axe", "saw"],
+        "store_item": ["foo-axe", "bar-saw"],
+    }
+    assert_equal_data(result, expected)
+    result = nw.from_native(native_pd).with_columns(expr)
+    assert_equal_data(result, expected)
+
+    expr = nw.concat_str("store", nw.lit("item"), separator="-").alias("store_item")
+    result = nw.from_native(native_pa).with_columns(expr)
+    expected = {
+        "store": ["foo", "bar"],
+        "item": ["axe", "saw"],
+        "store_item": ["foo-item", "bar-item"],
+    }
+    assert_equal_data(result, expected)
+    result = nw.from_native(native_pd).with_columns(expr)
+    assert_equal_data(result, expected)

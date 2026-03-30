@@ -17,7 +17,14 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._sql.typing import SQLLazyFrameT
-from narwhals._utils import Implementation, Version, extend_bool, not_implemented
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    is_pyspark_pre_4,
+    not_implemented,
+)
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -188,7 +195,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def _count_star(self) -> NativeExprT: ...
     def _first(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
     def _last(self, expr: NativeExprT, *order_by: str) -> NativeExprT: ...
-
+    def _any_value(self, expr: NativeExprT, *, ignore_nulls: bool) -> NativeExprT: ...
     def _when(
         self,
         condition: NativeExprT,
@@ -571,8 +578,12 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
 
     def round(self, decimals: int) -> Self:
+        # PySpark < 4.0's `round` expects a raw Python int for `scale`,
+        # not a Column literal.
+        _is_pre4 = is_pyspark_pre_4(self._implementation)
+        round_decimals = decimals if _is_pre4 else self._lit(decimals)
         return self._with_elementwise(
-            lambda expr: self._function("round", expr, self._lit(decimals))
+            lambda expr: self._function("round", expr, round_decimals)
         )
 
     def floor(self) -> Self:
@@ -580,6 +591,12 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def ceil(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("ceil", expr))
+
+    def sin(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("sin", expr))
+
+    def cos(self) -> Self:
+        return self._with_elementwise(lambda expr: self._function("cos", expr))
 
     def sqrt(self) -> Self:
         def _sqrt(expr: NativeExprT) -> NativeExprT:
@@ -733,31 +750,60 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
         return self._with_window_function(func)
 
-    def first(self) -> Self:
-        def func(
+    def first(self, order_by: Sequence[str] = ()) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            if not order_by:  # pragma: no cover
+                msg = "Expected `order_by` to be specified"
+                raise InvalidOperationError(msg)
+            return self._first(expr, *order_by)
+
+        def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            if order_by and inputs.order_by:  # pragma: no cover
+                msg = "Can't specify both `order_by` in `over` and `first`."
+                raise InvalidOperationError(msg)
+            if not order_by and not inputs.order_by:  # pragma: no cover
+                msg = "Must specify `order_by` either in `over` or `first`."
+                raise InvalidOperationError(msg)
             return [
                 self._window_expression(
-                    self._first(expr, *inputs.order_by), inputs.partition_by
+                    self._first(expr, *(inputs.order_by or order_by)), inputs.partition_by
                 )
                 for expr in self(df)
             ]
 
-        return self._with_window_function(func)
+        return self._with_callable(f, window_f)
 
-    def last(self) -> Self:
-        def func(
+    def last(self, order_by: Sequence[str] = ()) -> Self:
+        def f(expr: NativeExprT) -> NativeExprT:
+            if not order_by:  # pragma: no cover
+                msg = "Expected `order_by` to be specified"
+                raise InvalidOperationError(msg)
+            return self._last(expr, *order_by)
+
+        def window_f(
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
+            if order_by and inputs.order_by:  # pragma: no cover
+                msg = "Can't specify both `order_by` in `over` and `last`."
+                raise InvalidOperationError(msg)
+            if not order_by and not inputs.order_by:  # pragma: no cover
+                msg = "Must specify `order_by` either in `over` or `last`."
+                raise InvalidOperationError(msg)
             return [
                 self._window_expression(
-                    self._last(expr, *inputs.order_by), inputs.partition_by
+                    self._last(expr, *(inputs.order_by or order_by)), inputs.partition_by
                 )
                 for expr in self(df)
             ]
 
-        return self._with_window_function(func)
+        return self._with_callable(f, window_f)
+
+    def any_value(self, *, ignore_nulls: bool) -> Self:
+        return self._with_callable(
+            lambda expr: self._any_value(expr, ignore_nulls=ignore_nulls)
+        )
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         if method in {"min", "max", "average"}:

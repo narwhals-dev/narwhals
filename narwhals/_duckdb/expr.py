@@ -105,6 +105,15 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def _last(self, expr: Expression, *order_by: str) -> Expression:
         return self._first_last("last", expr, order_by)
 
+    def _any_value(self, expr: Expression, *, ignore_nulls: bool) -> Expression:
+        # !NOTE: DuckDB `any_value` returns the first non-null value
+        # See: https://duckdb.org/docs/stable/sql/functions/aggregates#any_valuearg
+        return (
+            self._function("any_value", expr)
+            if ignore_nulls
+            else self._function("first", expr)
+        )
+
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 

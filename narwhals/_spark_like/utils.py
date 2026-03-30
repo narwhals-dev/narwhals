@@ -96,8 +96,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, native.TimestampType):
         return dtypes.Datetime(time_zone=fetch_session_time_zone(session))
     if isinstance(dtype, native.DecimalType):
-        # TODO(marco): cover this
-        return dtypes.Decimal()  # pragma: no cover
+        return dtypes.Decimal(precision=dtype.precision, scale=dtype.scale)
     if isinstance(dtype, native.ArrayType):
         return dtypes.List(
             inner=native_to_narwhals_dtype(
@@ -156,7 +155,7 @@ UNSUPPORTED_DTYPES = (
 )
 
 
-def narwhals_to_native_dtype(
+def narwhals_to_native_dtype(  # noqa: C901
     dtype: IntoDType, version: Version, spark_types: ModuleType, session: SparkSession
 ) -> _NativeDType:
     dtypes = version.dtypes
@@ -195,6 +194,9 @@ def narwhals_to_native_dtype(
                 for field in dtype.fields
             ]
         )
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
+        return native.DecimalType(precision=dtype.precision, scale=dtype.scale)
+
     if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
         msg = f"Converting to {base_type.__name__} dtype is not supported for Spark-Like backend."
         raise UnsupportedDTypeError(msg)

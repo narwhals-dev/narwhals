@@ -160,8 +160,8 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance_or_issubclass(dtype, pl.Array):
         outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
         return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
-    if dtype == pl.Decimal:
-        return dtypes.Decimal()
+    if isinstance_or_issubclass(dtype, pl.Decimal):
+        return dtypes.Decimal(dtype.precision, dtype.scale)
     if dtype == pl.Time:
         return dtypes.Time()
     if dtype == pl.Binary:
@@ -200,7 +200,6 @@ NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
     dtypes.Unknown: pl.Unknown(),
     **_version_dependent_dtypes(),
 }
-UNSUPPORTED_DTYPES = (dtypes.Decimal,)
 
 
 def narwhals_to_native_dtype(  # noqa: C901
@@ -234,9 +233,8 @@ def narwhals_to_native_dtype(  # noqa: C901
         size = dtype.size
         kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
-    if issubclass(base_type, UNSUPPORTED_DTYPES):
-        msg = f"Converting to {base_type.__name__} dtype is not supported for Polars."
-        raise NotImplementedError(msg)
+    if isinstance_or_issubclass(dtype, dtypes.Decimal):
+        return pl.Decimal(dtype.precision, dtype.scale)
     return pl.Unknown()  # pragma: no cover
 
 
@@ -345,6 +343,8 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     to_datetime: Method[CompliantT]
     to_lowercase: Method[CompliantT]
     to_uppercase: Method[CompliantT]
+    pad_start: Method[CompliantT]
+    pad_end: Method[CompliantT]
 
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
@@ -361,6 +361,18 @@ class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     get: Method[CompliantT]
 
     unique: Method[CompliantT]
+
+    max: Method[CompliantT]
+
+    mean: Method[CompliantT]
+
+    median: Method[CompliantT]
+
+    min: Method[CompliantT]
+
+    sort: Method[CompliantT]
+
+    sum: Method[CompliantT]
 
 
 class PolarsStructNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

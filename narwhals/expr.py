@@ -5,7 +5,13 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
-from narwhals._utils import _validate_rolling_arguments, ensure_type, flatten, no_default
+from narwhals._utils import (
+    _validate_rolling_arguments,
+    ensure_type,
+    flatten,
+    no_default,
+    unstable,
+)
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.expr_cat import ExprCatNamespace
@@ -185,7 +191,7 @@ class Expr:
 
     # --- binary ---
     def _with_binary(self, attr: str, other: Self | Any) -> Self:
-        node = ExprNode(ExprKind.ELEMENTWISE, attr, other, str_as_lit=True)
+        node = ExprNode(ExprKind.ELEMENTWISE, attr, exprs=(other,), str_as_lit=True)
         return self._append_node(node)
 
     def __eq__(self, other: Self | Any) -> Self:  # type: ignore[override]
@@ -920,7 +926,7 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
-                default,
+                exprs=(default,),
                 old=old,
                 new=new,
                 return_dtype=return_dtype,
@@ -960,7 +966,10 @@ class Expr:
             └──────────────────┘
         """
         node = ExprNode(
-            ExprKind.ELEMENTWISE, "is_between", lower_bound, upper_bound, closed=closed
+            ExprKind.ELEMENTWISE,
+            "is_between",
+            exprs=(lower_bound, upper_bound),
+            closed=closed,
         )
         return self._append_node(node)
 
@@ -1023,7 +1032,9 @@ class Expr:
             |     5  7  12     |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.FILTRATION, "filter", *predicates))
+        return self._append_node(
+            ExprNode(ExprKind.FILTRATION, "filter", exprs=predicates)
+        )
 
     def is_null(self) -> Self:
         """Returns a boolean Series indicating which values are null.
@@ -1184,7 +1195,7 @@ class Expr:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "fill_null",
-                value,
+                exprs=(value,),
                 strategy=strategy,
                 limit=limit,
                 str_as_lit=True,
@@ -1601,22 +1612,21 @@ class Expr:
         """
         if upper_bound is None:
             return self._append_node(
-                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", lower_bound)
+                ExprNode(ExprKind.ELEMENTWISE, "clip_lower", exprs=(lower_bound,))
             )
         if lower_bound is None:
             return self._append_node(
-                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", upper_bound)
+                ExprNode(ExprKind.ELEMENTWISE, "clip_upper", exprs=(upper_bound,))
             )
         return self._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "clip", lower_bound, upper_bound)
+            ExprNode(ExprKind.ELEMENTWISE, "clip", exprs=(lower_bound, upper_bound))
         )
 
-    def first(self) -> Self:
+    def first(self, order_by: str | Iterable[str] | None = None) -> Self:
         """Get the first value.
 
         Notes:
-            For lazy backends, this can only be used with `over`. We may introduce
-            `min_by` in the future so it can be used as an aggregation.
+            For lazy backends, this can only be used with `over` or with `order_by`.
 
         Examples:
             >>> import pandas as pd
@@ -1636,19 +1646,26 @@ class Expr:
             ┌──────────────────┐
             |Narwhals DataFrame|
             |------------------|
-            |       a     b    |
-            |    0  1   foo    |
-            |    1  2  None    |
+            |       a    b     |
+            |    0  1  foo     |
+            |    1  2  NaN     |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        if order_by is None:
+            return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "first"))
+        return self._append_node(
+            ExprNode(
+                ExprKind.AGGREGATION,
+                "first",
+                order_by=[order_by] if isinstance(order_by, str) else order_by,
+            )
+        )
 
-    def last(self) -> Self:
+    def last(self, order_by: str | Iterable[str] | None = None) -> Self:
         """Get the last value.
 
         Notes:
-            For lazy backends, this can only be used with `over`. We may introduce
-            `max_by` in the future so it can be used as an aggregation.
+            For lazy backends, this can only be used with `over` or with `order_by`.
 
         Examples:
             >>> import pyarrow as pa
@@ -1680,7 +1697,15 @@ class Expr:
             |b: [[null,"baz"]] |
             └──────────────────┘
         """
-        return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+        if order_by is None:
+            return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+        return self._append_node(
+            ExprNode(
+                ExprKind.AGGREGATION,
+                "last",
+                order_by=[order_by] if isinstance(order_by, str) else order_by,
+            )
+        )
 
     def mode(self, *, keep: ModeKeepStrategy = "all") -> Self:
         r"""Compute the most occurring value(s).
@@ -1764,15 +1789,15 @@ class Expr:
             ...     nw.col("a").cum_count().alias("a_cum_count"),
             ...     nw.col("a").cum_count(reverse=True).alias("a_cum_count_reverse"),
             ... )
-            ┌─────────────────────────────────────────┐
-            |           Narwhals DataFrame            |
-            |-----------------------------------------|
-            |      a  a_cum_count  a_cum_count_reverse|
-            |0     x            1                    3|
-            |1     k            2                    2|
-            |2  None            2                    1|
-            |3     d            3                    1|
-            └─────────────────────────────────────────┘
+            ┌────────────────────────────────────────┐
+            |           Narwhals DataFrame           |
+            |----------------------------------------|
+            |     a  a_cum_count  a_cum_count_reverse|
+            |0    x            1                    3|
+            |1    k            2                    2|
+            |2  NaN            2                    1|
+            |3    d            3                    1|
+            └────────────────────────────────────────┘
         """
         return self._append_node(
             ExprNode(ExprKind.ORDERABLE_WINDOW, "cum_count", reverse=reverse)
@@ -2223,8 +2248,58 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "exp"))
 
+    def sin(self) -> Self:
+        r"""Compute the element-wise value for the sine.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> df_native = pa.table({"values": [0, pi / 2, 3 * pi / 2]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(sin=nw.col("values").sin())
+            >>> result
+            ┌─────────────────────────────────────────────────┐
+            |               Narwhals DataFrame                |
+            |-------------------------------------------------|
+            |pyarrow.Table                                    |
+            |values: double                                   |
+            |sin: double                                      |
+            |----                                             |
+            |values: [[0,1.5707963267948966,4.71238898038469]]|
+            |sin: [[0,1,-1]]                                  |
+            └─────────────────────────────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "sin"))
+
+    def cos(self) -> Self:
+        r"""Compute the element-wise value for the cosine.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> from math import pi
+            >>> df_native = pa.table({"values": [0, pi / 2, pi]})
+            >>> df = nw.from_native(df_native)
+            >>> result = df.with_columns(cos=nw.col("values").cos()).select(
+            ...     nw.all().round(4)
+            ... )
+            >>> result
+            ┌───────────────────────────┐
+            |    Narwhals DataFrame     |
+            |---------------------------|
+            |pyarrow.Table              |
+            |values: double             |
+            |cos: double                |
+            |----                       |
+            |values: [[0,1.5708,3.1416]]|
+            |cos: [[1,0,-1]]            |
+            └───────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cos"))
+
     def sqrt(self) -> Self:
-        r"""Compute the square root.
+        r"""Compute the square root of the elements.
 
         Examples:
             >>> import pyarrow as pa
@@ -2318,18 +2393,24 @@ class Expr:
 
         from decimal import Decimal
 
+        other_f: Expr | Series[Any] | NumericLiteral
         other_abs: Expr | Series[Any] | NumericLiteral
         other_is_nan: Expr | Series[Any] | bool
         other_is_inf: Expr | Series[Any] | bool
         other_is_not_inf: Expr | Series[Any] | bool
 
+        # Promote to float to handle non-float numeric types (e.g. Decimal, integers).
+        # Adding 0.0 lets each backend decide the appropriate float type.
+        self_f = self + 0.0
+
         if isinstance(other, (float, int, Decimal)):
             from math import isinf, isnan
 
+            other_f = float(other)
             # NOTE: See https://discuss.python.org/t/inferred-type-of-function-that-calls-dunder-abs-abs/101447
-            other_abs = other.__abs__()
-            other_is_nan = isnan(other)
-            other_is_inf = isinf(other)
+            other_abs = other_f.__abs__()
+            other_is_nan = isnan(other_f)
+            other_is_inf = isinf(other_f)
 
             # Define the other_is_not_inf variable to prevent triggering the following warning:
             # > DeprecationWarning: Bitwise inversion '~' on bool is deprecated and will be
@@ -2337,23 +2418,26 @@ class Expr:
             other_is_not_inf = not other_is_inf
 
         else:
-            other_abs, other_is_nan = other.abs(), other.is_nan()
-            other_is_not_inf = other.is_finite() | other_is_nan
+            other_f = other + 0.0
+            other_abs, other_is_nan = other_f.abs(), other_f.is_nan()
+            other_is_not_inf = other_f.is_finite() | other_is_nan
             other_is_inf = ~other_is_not_inf
 
-        rel_threshold = self.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol
+        rel_threshold = (
+            self_f.abs().clip(lower_bound=other_abs, upper_bound=None) * rel_tol
+        )
         tolerance = rel_threshold.clip(lower_bound=abs_tol, upper_bound=None)
 
-        self_is_nan = self.is_nan()
-        self_is_not_inf = self.is_finite() | self_is_nan
+        self_is_nan = self_f.is_nan()
+        self_is_not_inf = self_f.is_finite() | self_is_nan
 
         # Values are close if abs_diff <= tolerance, and both finite
         is_close = (
-            ((self - other).abs() <= tolerance) & self_is_not_inf & other_is_not_inf
+            ((self_f - other_f).abs() <= tolerance) & self_is_not_inf & other_is_not_inf
         )
 
         # Handle infinity cases: infinities are close/equal if they have the same sign
-        self_sign, other_sign = self > 0, other > 0
+        self_sign, other_sign = self_f > 0, other_f > 0
         is_same_inf = (~self_is_not_inf) & other_is_inf & (self_sign == other_sign)
 
         # Handle nan cases:
@@ -2367,6 +2451,53 @@ class Expr:
             result = result | both_nan
 
         return result
+
+    @unstable
+    def any_value(self, *, ignore_nulls: bool = False) -> Self:
+        """Get a random value from the column.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
+
+        Arguments:
+            ignore_nulls: Whether to ignore null values or not.
+                If `True` and there are no not-null elements, then `None` is returned.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> data = {"a": [1, 1, 2, 2], "b": [None, "foo", "baz", None]}
+            >>> df_native = pa.table(data)
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.all().any_value(ignore_nulls=False))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  pyarrow.Table   |
+            |  a: int64        |
+            |  b: null         |
+            |  ----            |
+            |  a: [[1]]        |
+            |  b: [1 nulls]    |
+            └──────────────────┘
+
+            >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |pyarrow.Table     |
+            |a: int64          |
+            |b: string         |
+            |----              |
+            |a: [[1,2]]        |
+            |b: [["foo","baz"]]|
+            └──────────────────┘
+
+        """
+        return self._append_node(
+            ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
+        )
 
     @property
     def str(self) -> ExprStringNamespace[Self]:

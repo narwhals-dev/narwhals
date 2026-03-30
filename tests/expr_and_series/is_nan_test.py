@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import os
-from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import NarwhalsError
 from tests.conftest import (
     dask_lazy_p1_constructor,
     dask_lazy_p2_constructor,
@@ -58,16 +55,7 @@ def test_nan(constructor: Constructor) -> None:
             "float_na": [True, False, None],
         }
 
-    context = (
-        pytest.raises(
-            NarwhalsError,
-            match="NAN is not supported in a Non-floating point type column",
-        )
-        if "polars_lazy" in str(constructor) and os.environ.get("NARWHALS_POLARS_GPU")
-        else does_not_raise()
-    )
-    with context:
-        assert_equal_data(result, expected)
+    assert_equal_data(result, expected)
 
 
 def test_nan_series(constructor_eager: ConstructorEager) -> None:
