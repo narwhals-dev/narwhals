@@ -15,7 +15,6 @@ from itertools import chain, product
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any
 
-from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
 from narwhals._dispatch import just_dispatch
 from narwhals._typing_compat import TypeVar
 from narwhals.dtypes._classes import (
@@ -58,7 +57,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals.dtypes._classes import _Bits
-    from narwhals.typing import TimeUnit
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -95,6 +93,7 @@ _CACHE_SIZE = 32
 - Pairwise comparisons, but order (of classes) is not important
 """
 
+DEC128_MAX_PREC = 38
 
 SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
 UNSIGNED_INTEGER: DTypeGroup = frozenset((UInt8, UInt16, UInt32, UInt64, UInt128))
@@ -109,18 +108,6 @@ _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
     frozen_dtypes(Decimal, Float64): Float64,
     frozen_dtypes(Decimal, Float32): Float64,
 }
-
-
-_TIME_UNIT_PER_SECOND: Mapping[TimeUnit, int] = {
-    "s": 1,
-    "ms": MS_PER_SECOND,
-    "us": US_PER_SECOND,
-    "ns": NS_PER_SECOND,
-}
-
-
-def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
-    return _TIME_UNIT_PER_SECOND[obj.time_unit]
 
 
 @lru_cache(maxsize=_CACHE_SIZE // 2)
@@ -191,13 +178,6 @@ def same_supertype(left: DType, right: DType, /) -> DType | None:
     return left if dtype_eq(left, right) else None
 
 
-@same_supertype.register(Duration, DurationV1)
-@lru_cache(maxsize=_CACHE_SIZE * 2)
-def downcast_time_unit(left: SameTemporalT, right: SameTemporalT, /) -> SameTemporalT:
-    """Return the operand with the lowest precision time unit."""
-    return min(left, right, key=_key_fn_time_unit)
-
-
 def _struct_fields_union(
     left: Collection[Field], right: Collection[Field], /
 ) -> Struct | None:
@@ -251,15 +231,6 @@ def list_supertype(left: List, right: List, /) -> List | None:
     return None
 
 
-@same_supertype.register(Datetime, DatetimeV1)
-def datetime_supertype(
-    left: SameDatetimeT, right: SameDatetimeT, /
-) -> SameDatetimeT | None:
-    if left.time_zone != right.time_zone:
-        return None
-    return downcast_time_unit(left, right)
-
-
 @same_supertype.register(Enum)
 def enum_supertype(left: Enum, right: Enum, /) -> Enum | None:
     return left if left.categories == right.categories else None
@@ -273,27 +244,10 @@ def decimal_supertype(left: Decimal, right: Decimal, /) -> Decimal:
     return Decimal(precision=precision, scale=scale)
 
 
-DEC128_MAX_PREC = 38
-# Precomputing powers of 10 up to 10^38
-POW10_LIST = tuple(10**i for i in range(DEC128_MAX_PREC + 1))
-INT_MAX_MAP: Mapping[Int, int] = {
-    UInt8(): (2**8) - 1,
-    UInt16(): (2**16) - 1,
-    UInt32(): (2**32) - 1,
-    UInt64(): (2**64) - 1,
-    Int8(): (2**7) - 1,
-    Int16(): (2**15) - 1,
-    Int32(): (2**31) - 1,
-    Int64(): (2**63) - 1,
-}
-
-
 def _integer_fits_in_decimal(value: int, precision: int, scale: int) -> bool:
     """Scales an integer and checks if it fits the target precision."""
     # !NOTE: Indexing is safe since `scale <= precision <= 38`
-    return (precision == DEC128_MAX_PREC) or (
-        value * POW10_LIST[scale] < POW10_LIST[precision]
-    )
+    return (precision == DEC128_MAX_PREC) or (value * (10**scale) < (10**precision))
 
 
 def _decimal_integer_supertyping(decimal: Decimal, integer: Int) -> DType | None:
@@ -301,11 +255,13 @@ def _decimal_integer_supertyping(decimal: Decimal, integer: Int) -> DType | None
 
     if integer in {UInt128(), Int128()}:
         fits_orig_prec_scale = False
-    elif value := INT_MAX_MAP.get(integer, None):
+    else:
+        bits: int = integer._bits
+        if isinstance(integer, SignedIntegerType):
+            bits = bits - 1
+
+        value = (1 << bits) - 1
         fits_orig_prec_scale = _integer_fits_in_decimal(value, precision, scale)
-    else:  # pragma: no cover
-        msg = "Unreachable integer type"
-        raise ValueError(msg)
 
     precision = precision if fits_orig_prec_scale else DEC128_MAX_PREC
     return Decimal(precision, scale)

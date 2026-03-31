@@ -74,8 +74,8 @@ def test_identical_dtype(dtype: DType) -> None:
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
     [
-        (nw.Datetime("ns"), nw.Datetime("us"), nw.Datetime("us")),
-        (nw.Datetime("s"), nw.Datetime("us"), nw.Datetime("s")),
+        (nw.Datetime("ns"), nw.Datetime("us"), None),
+        (nw.Datetime("s"), nw.Datetime("us"), None),
         (nw.Datetime("s"), nw.Datetime("s", "Africa/Accra"), None),
         (nw.Datetime(time_zone="Asia/Kathmandu"), nw.Datetime(), None),
         (
@@ -121,7 +121,7 @@ def test_same_class(left: DType, right: DType, expected: DType | None) -> None:
     [
         (
             {"f0": nw.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64},
-            {"f0": nw.Duration("us"), "f1": nw.Int64()},
+            {"f0": nw.Duration("ms"), "f1": nw.Int64()},
             {"f0": nw.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()},
         ),
         (
@@ -330,7 +330,7 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType) -> None:
     ("left", "right", "expected"),
     [
         (nw_v1.Datetime(), nw_v1.Datetime(), nw_v1.Datetime()),
-        (nw_v1.Datetime("ns"), nw_v1.Datetime("s"), nw_v1.Datetime("s")),
+        (nw_v1.Datetime("ns"), nw_v1.Datetime("s"), None),
         (
             nw_v1.Datetime(time_zone="Europe/Berlin"),
             nw_v1.Datetime(time_zone="Europe/Berlin"),
@@ -339,13 +339,13 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType) -> None:
         (
             nw_v1.Datetime(time_zone="Europe/Berlin"),
             nw_v1.Datetime("ms", "Europe/Berlin"),
-            nw_v1.Datetime("ms", "Europe/Berlin"),
+            None,
         ),
         (nw_v1.Datetime(time_zone="Europe/Berlin"), nw_v1.Datetime(), None),
         (nw_v1.Datetime("s"), nw_v1.Datetime("s", "Africa/Accra"), None),
-        (nw_v1.Duration("ns"), nw_v1.Duration("ms"), nw_v1.Duration("ms")),
+        (nw_v1.Duration("ns"), nw_v1.Duration("ms"), None),
         (nw_v1.Duration(), nw_v1.Duration(), nw_v1.Duration()),
-        (nw_v1.Duration("s"), nw_v1.Duration(), nw_v1.Duration("s")),
+        (nw_v1.Duration("s"), nw_v1.Duration(), None),
         (nw_v1.Duration(), nw_v1.Datetime(), None),
         (nw_v1.Enum(), nw_v1.Enum(), nw_v1.Enum()),
         (nw_v1.Enum(), nw_v1.String(), nw_v1.String()),
@@ -356,7 +356,7 @@ def test_numeric_and_bool_promotion(numeric_dtype: NumericType) -> None:
         ),
         (
             nw.Struct({"f0": nw_v1.Duration("ms"), "f1": nw.Int64, "f2": nw.Int64}),
-            nw.Struct({"f0": nw_v1.Duration("us"), "f1": nw.Int64()}),
+            nw.Struct({"f0": nw_v1.Duration("ms"), "f1": nw.Int64()}),
             nw.Struct({"f0": nw_v1.Duration("ms"), "f1": nw.Int64(), "f2": nw.Int64()}),
         ),
         (
