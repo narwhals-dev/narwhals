@@ -263,6 +263,15 @@ def list(inner: Selector | None = None) -> Selector:
 
 
 def matches(pattern: str | re.Pattern[str]) -> Selector:
+    """Select all columns that match the given regex pattern.
+
+    Arguments:
+        pattern: A valid regular expression string (compatible with [`re`]),
+            or a compiled pattern if [flags] are required.
+
+    [`re`]: https://docs.python.org/3/library/re.html
+    [flags]: https://docs.python.org/3/library/re.html#re.RegexFlag
+    """
     tp = s_ir.Matches
     p = pattern
     return (tp.from_string(p) if isinstance(p, str) else tp(pattern=p)).to_narwhals()

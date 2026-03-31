@@ -270,8 +270,18 @@ class ByName(RootSelector):
 
 
 class Matches(RootSelector):
+    """Select columns that match the given regex pattern.
+
+    Important:
+        Matching uses [`re.search`], meaning the pattern can appear anywhere
+        in the string if anchors are not provided.
+
+    [`re.search`]: https://docs.python.org/3/library/re.html#re.search
+    """
+
     __slots__ = ("pattern",)
     pattern: re.Pattern[str]
+    """Compiled regular expression object returned."""
 
     @staticmethod
     def from_string(pattern: str, /) -> Matches:
