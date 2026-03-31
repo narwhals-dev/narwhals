@@ -89,9 +89,10 @@ class BinarySelector(
         return BinarySelector(left=left, op=self.op, right=right)
 
 
-# TODO @dangotbanned: Class-level short description
 @final
 class InvertSelector(SelectorIR, Generic[SelectorT_co]):
+    """The complement of a selector."""
+
     __slots__ = ("selector",)
     selector: SelectorT_co  # type: ignore[misc]
 
@@ -180,7 +181,6 @@ class ByIndex(RootSelector):
     # TODO @dangotbanned: Replace `flatten_hash_safe`
     @staticmethod
     def _iter_validate(indices: tuple[OneOrIterable[int], ...], /) -> Iterator[int]:
-
         for idx in flatten_hash_safe(indices):
             if not isinstance(idx, int):
                 msg = f"invalid index value: {idx!r}"
