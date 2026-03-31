@@ -312,7 +312,6 @@ class ByDType(DTypeSelector, selects=DType):
     __slots__ = ("dtypes",)
     dtypes: frozenset[DType | type[DType]]
 
-    # TODO @dangotbanned: Review if repr trick still needed since `DTypeClass`
     def __repr__(self) -> str:
         if not self.dtypes:
             return "ncs.empty()"
@@ -321,7 +320,7 @@ class ByDType(DTypeSelector, selects=DType):
     def _matches(self, dtype: DType | type[DType]) -> bool:
         return dtype in self.dtypes
 
-    # TODO @dangotbanned: Consider splitting out empty and using a singleton
+    # TODO @dangotbanned: Consider splitting out `empty` and using a singleton
     # - Could have `~all() -> empty()` and `~empty() -> all()`
     # - V nice to have for lazy/plans
     @staticmethod
@@ -329,7 +328,7 @@ class ByDType(DTypeSelector, selects=DType):
         return ByDType(dtypes=frozenset())
 
 
-# TODO @dangobanned: Probably should make this a singleton
+# NOTE: See `ByDType.empty` plan
 empty = ByDType.empty
 
 

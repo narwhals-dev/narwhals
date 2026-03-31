@@ -59,6 +59,7 @@ def _is_expr_column(obj: Any) -> TypeIs[Expr]:
 class Selector(Expr):
     _ir: ir.SelectorIR
 
+    # TODO @dangotbanned: Make the repr "class chrome" opt-in/out, less annoying, or both
     def __repr__(self) -> str:
         return f"nw._plan.Selector({self.version.name.lower()}):\n{self._ir!r}"
 
@@ -68,6 +69,7 @@ class Selector(Expr):
         obj._ir = selector_ir
         return obj
 
+    # TODO @dangotbanned: Use `into_version`
     def as_expr(self) -> Expr:
         tp = Expr if self.version is Version.MAIN else ExprV1
         return tp._from_ir(self._ir)
