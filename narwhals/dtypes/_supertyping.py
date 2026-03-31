@@ -95,6 +95,7 @@ _CACHE_SIZE = 32
 - Pairwise comparisons, but order (of classes) is not important
 """
 
+DEC128_MAX_PREC = 38
 
 SIGNED_INTEGER: DTypeGroup = frozenset((Int8, Int16, Int32, Int64, Int128))
 UNSIGNED_INTEGER: DTypeGroup = frozenset((UInt8, UInt16, UInt32, UInt64, UInt128))
@@ -273,27 +274,10 @@ def decimal_supertype(left: Decimal, right: Decimal, /) -> Decimal:
     return Decimal(precision=precision, scale=scale)
 
 
-DEC128_MAX_PREC = 38
-# Precomputing powers of 10 up to 10^38
-POW10_LIST = tuple(10**i for i in range(DEC128_MAX_PREC + 1))
-INT_MAX_MAP: Mapping[Int, int] = {
-    UInt8(): (2**8) - 1,
-    UInt16(): (2**16) - 1,
-    UInt32(): (2**32) - 1,
-    UInt64(): (2**64) - 1,
-    Int8(): (2**7) - 1,
-    Int16(): (2**15) - 1,
-    Int32(): (2**31) - 1,
-    Int64(): (2**63) - 1,
-}
-
-
 def _integer_fits_in_decimal(value: int, precision: int, scale: int) -> bool:
     """Scales an integer and checks if it fits the target precision."""
     # !NOTE: Indexing is safe since `scale <= precision <= 38`
-    return (precision == DEC128_MAX_PREC) or (
-        value * POW10_LIST[scale] < POW10_LIST[precision]
-    )
+    return (precision == DEC128_MAX_PREC) or (value * (10**scale) < (10**precision))
 
 
 def _decimal_integer_supertyping(decimal: Decimal, integer: Int) -> DType | None:
@@ -301,11 +285,13 @@ def _decimal_integer_supertyping(decimal: Decimal, integer: Int) -> DType | None
 
     if integer in {UInt128(), Int128()}:
         fits_orig_prec_scale = False
-    elif value := INT_MAX_MAP.get(integer, None):
+    else:
+        bits = integer._bits
+        if isinstance(integer, UnsignedIntegerType):
+            bits = bits - 1
+
+        value = (1 << bits) - 1
         fits_orig_prec_scale = _integer_fits_in_decimal(value, precision, scale)
-    else:  # pragma: no cover
-        msg = "Unreachable integer type"
-        raise ValueError(msg)
 
     precision = precision if fits_orig_prec_scale else DEC128_MAX_PREC
     return Decimal(precision, scale)
