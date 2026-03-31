@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Backend, IntoBackend, IntoDType, IntoSchema
 
 ExprMethod: TypeAlias = Literal["filter", "sort_by"]
-
+SelectorValue: TypeAlias = Literal["index", "name"]
 # NOTE: Using verbose names to start with
 # TODO @dangotbanned: Think about something better/more consistent once the new messages are finalized
 
@@ -270,6 +270,14 @@ def column_index_error(
     max_nth = f"`nth({n_names - 1})`" if index >= 0 else f"`nth(-{n_names})`"
     msg = f"Invalid column index {index!r}\nHint: The schema's last column is {max_nth}"
     return ColumnNotFoundError(msg)
+
+
+def one_or_iterable_type_error(
+    kind: SelectorValue, inner: object, outer: Iterable[object] | None = None, /
+) -> TypeError:
+    msg = f"invalid {kind}: {inner!r}"
+    msg = msg if outer is None else f"{msg} in {outer!r}"
+    return TypeError(msg)
 
 
 # TODO @dangotbanned: Remove or get coverage for failing:

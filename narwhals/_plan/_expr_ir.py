@@ -580,8 +580,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
 # TODO @dangotbanned: Class-level doc
 class SelectorIR(ExprIR, dispatch="no_dispatch"):
+    # TODO @dangotbanned: Use `into_version`
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        # TODO @dangotbanned: Use `into_version`
         from narwhals._plan.selectors import Selector, SelectorV1
 
         tp = Selector if version is Version.MAIN else SelectorV1

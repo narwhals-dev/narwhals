@@ -256,6 +256,9 @@ def test_selector_by_index_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_index(["two", "three"])  # type: ignore[list-item]
 
+    with pytest.raises(TypeError):
+        ncs.by_index(ncs.by_index(1))  # type: ignore[arg-type]
+
 
 def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
@@ -322,6 +325,8 @@ def test_selector_by_name_not_found(schema_non_nested: nw.Schema) -> None:
 def test_selector_by_name_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_name(999)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        ncs.by_name(("a", "b", 55))  # type: ignore[arg-type]
 
 
 def test_selector_first_last(schema_non_nested: nw.Schema) -> None:

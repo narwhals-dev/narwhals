@@ -11,12 +11,16 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, final
 
 import narwhals.dtypes as nw_dtypes
 from narwhals._plan._expr_ir import ExprIR, SelectorIR
-from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.exceptions import column_index_error, column_not_found_error
+from narwhals._plan.exceptions import (
+    column_index_error,
+    column_not_found_error,
+    one_or_iterable_type_error,
+)
 from narwhals._plan.typing import (
     LeftSelectorT_co,
     RightSelectorT_co,
@@ -178,14 +182,21 @@ class ByIndex(RootSelector):
             return f"ncs.{name}()"
         return f"ncs.by_index({list(self.indices)}, require_all={self.require_all})"
 
-    # TODO @dangotbanned: Replace `flatten_hash_safe`
     @staticmethod
     def _iter_validate(indices: tuple[OneOrIterable[int], ...], /) -> Iterator[int]:
-        for idx in flatten_hash_safe(indices):
-            if not isinstance(idx, int):
-                msg = f"invalid index value: {idx!r}"
-                raise TypeError(msg)
-            yield idx
+        for outer in indices:
+            if isinstance(outer, int):
+                yield outer
+            elif not isinstance(outer, Iterable):
+                raise one_or_iterable_type_error("index", outer)
+            elif isinstance(outer, range):
+                yield from outer
+            else:
+                for inner in outer:
+                    if isinstance(inner, int):
+                        yield inner
+                    else:
+                        raise one_or_iterable_type_error(inner, outer)
 
     @staticmethod
     def from_indices(*indices: OneOrIterable[int], require_all: bool = True) -> ByIndex:
@@ -224,14 +235,19 @@ class ByName(RootSelector):
         els = ", ".join(f"{nm!r}" for nm in self.names)
         return f"ncs.by_name({els}, require_all={self.require_all})"
 
-    # TODO @dangotbanned: Replace `flatten_hash_safe`
     @staticmethod
     def _iter_validate(names: tuple[OneOrIterable[str], ...], /) -> Iterator[str]:
-        for name in flatten_hash_safe(names):
-            if not isinstance(name, str):
-                msg = f"invalid name: {name!r}"
-                raise TypeError(msg)
-            yield name
+        for outer in names:
+            if isinstance(outer, str):
+                yield outer
+            elif isinstance(outer, Iterable):
+                for inner in outer:
+                    if isinstance(inner, str):
+                        yield inner
+                    else:
+                        raise one_or_iterable_type_error("name", inner, outer)
+            else:
+                raise one_or_iterable_type_error("name", outer)
 
     @staticmethod
     def from_names(*names: OneOrIterable[str], require_all: bool = True) -> ByName:
