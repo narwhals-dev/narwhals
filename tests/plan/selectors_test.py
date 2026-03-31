@@ -669,7 +669,7 @@ def test_selector_array(schema_nested_2: nw.Schema) -> None:
 def test_selector_non_dtype_inside_dtype(
     outer: Callable[[Selector | None], Selector], inner: Selector
 ) -> None:
-    with pytest.raises(TypeError, match=r"expected datatype based expression"):
+    with pytest.raises(TypeError, match=r"expected data type based selector"):
         outer(inner)
 
 

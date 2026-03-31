@@ -144,7 +144,7 @@ class DTypeSelector(RootSelector):
 
     def _matches(self, dtype: IntoDType) -> bool:
         if isinstance(dtype, type):
-            return issubclass(dtype, self._dtype)
+            return issubclass(dtype, self._dtype)  # pragma: no cover
         return isinstance(dtype, self._dtype)
 
     def iter_expand_names(

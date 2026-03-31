@@ -622,9 +622,35 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         msg = f"{type(self).__name__}._matches"
         raise NotImplementedError(msg)
 
-    # TODO @dangotbanned: Explain `to_dtype_selector`
     def to_dtype_selector(self) -> SelectorIR:
-        msg = f"expected datatype based expression got {self!r}"
+        """Try to convert this `SelectorIR` into a `DTypeSelector`.
+
+        This helps us enforce what you can use inside a nested selector:
+        >>> import narwhals as nw
+        >>> import narwhals._plan.selectors as ncs
+
+        We allow existing dtype selectors:
+        >>> ncs.list(ncs.integer())._ir
+        ncs.list(ncs.integer())
+
+        Selectors that can be converted into dtype selectors:
+        >>> ncs.list(ncs.all())._ir
+        ncs.list(ncs.all())
+        >>> ncs.list(ncs.empty())._ir
+        ncs.list(ncs.empty())
+
+        Compositions where each sub-selector satisfies the above:
+        >>> ncs.list(~ncs.float())._ir
+        ncs.list(~ncs.float())
+        >>> ncs.list(ncs.enum() | ncs.list(ncs.struct()))._ir
+        ncs.list([ncs.enum() | ncs.list(ncs.struct())])
+
+        Everything else will raise:
+        >>> ncs.list(ncs.float() | ncs.matches("inner"))
+        Traceback (most recent call last):
+        TypeError: expected data type based selector got `ncs.matches('inner')`
+        """
+        msg = f"expected data type based selector got `{self!r}`"
         raise TypeError(msg)
 
     def to_selector_ir(self) -> Self:
