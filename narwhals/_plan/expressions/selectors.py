@@ -1,12 +1,4 @@
-"""Expressions for selecting columns.
-
-## Implementation Notes
-- `by_name` and `by_index` are uniquely able to reorder the output of column names
-  - However, that does not extend to use *inside* a `{Binary,Invert}Selector`, see [pola-rs/polars#19384]
-- All other selectors yield column names in schema order
-
-[pola-rs/polars#19384]: https://github.com/pola-rs/polars/issues/19384
-"""
+"""Expressions for selecting columns."""
 
 from __future__ import annotations
 
@@ -58,7 +50,11 @@ class RootSelector(SelectorIR):
 class BinarySelector(
     SelectorIR, Generic[LeftSelectorT_co, SelectorOperatorT, RightSelectorT_co]
 ):
-    """A set operation applied to two selectors."""
+    """A set operation applied to two selectors.
+
+    Important:
+        Matches are returned in schema order.
+    """
 
     __slots__ = ("left", "op", "right")
     left: LeftSelectorT_co  # type: ignore[misc]
@@ -95,7 +91,11 @@ class BinarySelector(
 
 @final
 class InvertSelector(SelectorIR, Generic[SelectorT_co]):
-    """The complement of a selector."""
+    """The complement of a selector.
+
+    Important:
+        Matches are returned in schema order.
+    """
 
     __slots__ = ("selector",)
     selector: SelectorT_co  # type: ignore[misc]
@@ -124,6 +124,9 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
 
 class DTypeSelector(RootSelector):
     """A selector that (exclusively) operates on data types.
+
+    Important:
+        Matches are returned in schema order.
 
     Adapted from [upstream].
 
@@ -164,6 +167,12 @@ class DTypeAll(DTypeSelector, selects=DType):
 
 
 class All(RootSelector):
+    """Select all columns.
+
+    Important:
+        Matches are returned in schema order.
+    """
+
     def to_dtype_selector(self) -> DTypeAll:
         return DTypeAll()
 
@@ -177,6 +186,12 @@ class All(RootSelector):
 
 
 class ByIndex(RootSelector):
+    """Select all columns matching the given indices.
+
+    Important:
+        Matches are returned in the order declared in `indices`.
+    """
+
     __slots__ = ("indices", "require_all")
     indices: Seq[int]
     require_all: bool
@@ -232,6 +247,12 @@ class ByIndex(RootSelector):
 
 
 class ByName(RootSelector):
+    """Select all columns matching the given names.
+
+    Important:
+        Matches are returned in the order declared in `names`.
+    """
+
     __slots__ = ("names", "require_all")
     names: Seq[str]
     require_all: bool
@@ -278,8 +299,11 @@ class Matches(RootSelector):
     """Select columns that match the given regex pattern.
 
     Important:
-        Matching uses [`re.search`], meaning the pattern can appear anywhere
-        in the string if anchors are not provided.
+        Matches are returned in schema order.
+
+    Note:
+        Pattern matching uses [`re.search`], so the pattern can appear *anywhere*
+        in the column name if anchors are not provided.
 
     [`re.search`]: https://docs.python.org/3/library/re.html#re.search
     """

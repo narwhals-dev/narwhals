@@ -587,28 +587,21 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         tp = Selector if version is Version.MAIN else SelectorV1
         return tp._from_ir(self)
 
-    # TODO @dangotbanned: Docs should use markdown that renders better w/ pylance
     # TODO @dangotbanned: Docs example?
     # TODO @dangotbanned: Relax `schema: FrozenSchema` to `Mapping[str, DType]`
     # - re-expose and use `_freeze_columns(schema)` where indexing is needed
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
-        """Yield column names that match the selector, in `schema` order[^1].
-
-        Adapted from [upstream].
+        """Yield column names that match the selector in schema order [^1].
 
         Arguments:
             schema: Target scope to expand the selector in.
-            ignored_columns: Names of `group_by` columns, which are excluded[^2] from the result.
+            ignored_columns: Names of `group_by` key columns.
+                These columns will be excluded [^1] from the result.
 
-        Note:
-            [^1]: `ByName`, `ByIndex` return their inputs in given order not in schema order.
-
-        Note:
-            [^2]: `ByName`, `ByIndex` will never be ignored.
-
-        [upstream]: https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L188-L198
+        Notes:
+            [^1]: Except `ByName`, `ByIndex`.
         """
         msg = f"{type(self).__name__}.iter_expand_names"
         raise NotImplementedError(msg)

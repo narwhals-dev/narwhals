@@ -187,9 +187,11 @@ The return type of `closed_kwds`.
 """
 
 Ignored: TypeAlias = Container[str]
-"""Names of `group_by` columns, which are excluded[^1] when expanding a `Selector`.
+"""Names of `group_by` key columns.
 
-[^1]: `ByName`, `ByIndex` will never be ignored.
+When expanding a selector, these columns will be excluded [^1] from the result.
+
+[^1]: Except `ByName`, `ByIndex`.
 """
 
 
