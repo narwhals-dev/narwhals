@@ -256,8 +256,8 @@ def _decimal_integer_supertyping(decimal: Decimal, integer: Int) -> DType | None
     if integer in {UInt128(), Int128()}:
         fits_orig_prec_scale = False
     else:
-        bits = integer._bits
-        if isinstance(integer, UnsignedIntegerType):
+        bits: int = integer._bits
+        if isinstance(integer, SignedIntegerType):
             bits = bits - 1
 
         value = (1 << bits) - 1
