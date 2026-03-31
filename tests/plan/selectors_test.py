@@ -41,7 +41,7 @@ def schema_nested_1() -> nw.Schema:
             "a": nw.Int32(),
             "b": nw.List(nw.Int32()),
             "c": nw.List(nw.UInt32),
-            "d": nw.Array(nw.Int32(), 3),
+            "d": nw.Array(nw.Int32, 3),
             "e": nw.List(nw.String),
             "f": nw.Struct({"x": nw.Int32()}),
         }
@@ -104,7 +104,7 @@ def schema_mixed() -> nw.Schema:
             "p": nw.Categorical(),
             "q": nw.Duration(),
             "r": nw.Enum(["A", "B", "C"]),
-            "s": nw.List(nw.String()),
+            "s": nw.List(nw.String),
             "u": nw.Struct({"a": nw.Int64(), "k": nw.String}),
         }
     )
