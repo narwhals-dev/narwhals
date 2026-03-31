@@ -77,14 +77,8 @@ class Selector(Expr):
     def exclude(self, *names: OneOrIterable[str]) -> Selector:
         return self - by_name(*names)  # pyright: ignore[reportReturnType]
 
-    # TODO @dangotbanned: Add `SelectorIR.invert()`
-    # - Default to this
-    # - But a couple of classes can "simplify" when called
-    #   - All -> Empty
-    #   - Empty -> All
-    #   - InvertSelector[SelectorIR] -> SelectorIR
     def __invert__(self) -> Self:
-        return self._from_ir(ir.InvertSelector(selector=self._ir))
+        return self._from_ir(self._ir.invert())
 
     def __add__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, type(self)):

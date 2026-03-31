@@ -671,6 +671,16 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
 
         return reduce(Or().to_binary_selector, others, self)
 
+    def invert(self) -> SelectorIR:
+        """Return the complement of this selector."""
+        # NOTE: We have a few special simplifications:
+        # - All                        -> Empty
+        # - Empty                      -> All
+        # - InvertSelector[SelectorIR] -> SelectorIR
+        from narwhals._plan.expressions.selectors import InvertSelector
+
+        return InvertSelector(selector=self)
+
 
 # TODO @dangotbanned: Final polish on class-level doc
 @final

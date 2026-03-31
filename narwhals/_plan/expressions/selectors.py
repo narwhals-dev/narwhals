@@ -121,6 +121,9 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
             return self
         return InvertSelector(selector=after)
 
+    def invert(self) -> SelectorT_co:
+        return self.selector
+
 
 class DTypeSelector(RootSelector):
     """A selector that (exclusively) operates on data types.
@@ -184,11 +187,11 @@ class All(RootSelector):
         else:
             yield from schema
 
+    def invert(self) -> Empty:
+        return Empty()
+
 
 # TODO @dangotbanned: Singletons for `All`, `Empty`, + dtype equivalent
-# TODO @dangotbanned: Implement `.invert()`
-# `~all()   -> empty()`
-# `~empty() -> all()`
 class Empty(RootSelector):
     """Select no columns.
 
@@ -204,6 +207,9 @@ class Empty(RootSelector):
     ) -> Iterator[str]:
         # NOTE: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/selector.rs#L274
         yield from ()
+
+    def invert(self) -> All:
+        return All()
 
 
 class EmptyDType(DTypeSelector, selects=DType):

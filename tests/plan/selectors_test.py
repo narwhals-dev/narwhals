@@ -552,10 +552,13 @@ def test_selector_set_ops(schema_non_nested: nw.Schema, schema_mixed: nw.Schema)
         nwp.col("colx") - ncs.matches("[yz]$")
 
     # complement
-    selector = ~ncs.by_dtype([nw.Duration, nw.Time])
+    base = ncs.by_dtype([nw.Duration, nw.Time])
+    invert = ~base
+    invert_x2 = ~invert
     df.assert_selects(
-        selector, "abc", "bbb", "cde", "def", "eee", "fgg", "JJK", "opp", "qqR"
+        invert, "abc", "bbb", "cde", "def", "eee", "fgg", "JJK", "opp", "qqR"
     )
+    df.assert_selects(invert_x2, "ghi", "Lmn")
 
     # exclusive or
     expected = "abc", "bbb", "eee", "fgg", "ghi"
@@ -651,6 +654,13 @@ def test_selector_list(schema_nested_1: nw.Schema) -> None:
     )
     # inner InvertSelector
     df.assert_selects(ncs.list(~ncs.all()))
+
+    # mixed bag
+    df.assert_selects(ncs.list(~(ncs.all() - ncs.string())), "e")
+    oh_boy = (
+        ~((ncs.empty() ^ ncs.list(ncs.empty())) ^ ~ncs.list(~ncs.empty()))
+    ) - ncs.list(ncs.by_dtype(nw.UInt32))
+    df.assert_selects(oh_boy, "b", "e")
 
 
 def test_selector_array(schema_nested_2: nw.Schema) -> None:
