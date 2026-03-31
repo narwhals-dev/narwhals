@@ -146,9 +146,12 @@ class DTypeSelector(RootSelector):
         return self
 
     def _matches_dtype(self, dtype: IntoDType) -> bool:
-        if isinstance(dtype, type):
-            return issubclass(dtype, self._dtype)
-        return isinstance(dtype, self._dtype)
+        # NOTE @dangotbanned: Coverage is flaky (somehow?) for the `issubclass` branch
+        return (
+            issubclass(dtype, self._dtype)
+            if isinstance(dtype, type)
+            else isinstance(dtype, self._dtype)
+        )
 
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
