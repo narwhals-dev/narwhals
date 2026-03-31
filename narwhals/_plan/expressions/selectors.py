@@ -122,9 +122,14 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
         return InvertSelector(selector=after)
 
 
-# TODO @dangotbanned: Class-level short description
 class DTypeSelector(RootSelector):
-    # https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L110-L172
+    """A selector that (exclusively) operates on data types.
+
+    Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/2b241543851800595efd343be016b65cdbdd3c9f/crates/polars-plan/src/dsl/selector.rs#L110-L172
+    """
+
     _dtype: ClassVar[type[DType]]
 
     def __init_subclass__(cls: type[Self], *, selects: type[DType], **_: Any) -> None:
