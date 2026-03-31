@@ -606,21 +606,37 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         msg = f"{type(self).__name__}.iter_expand_names"
         raise NotImplementedError(msg)
 
-    # TODO @dangotbanned: Doc needs another pass since moving up a level
     @final
-    def matches(self, dtype: IntoDType) -> bool:
-        """Return True if this selector matches `dtype`.
+    def matches(self, dtype: IntoDType, /) -> bool:
+        """Return True if this selector matches the data type.
+
+        Arguments:
+            dtype: Anything that can be converted into a Narwhals DType.
 
         Important:
-            The result will *only* be cached if this method is **not overridden**.
-            Instead, use `SelectorIR._matches` to customize the check.
+            This method **must not be overridden**, as it ensures the result is cached
+            *without* storing it on the instance.
+            Instead, override `SelectorIR._matches_dtype` to customize the check.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import narwhals._plan.selectors as ncs
+            >>> ncs.numeric()._ir.matches(nw.Float32)
+            True
+            >>> ncs.enum()._ir.matches(nw.String)
+            False
+            >>> (ncs.numeric() | ncs.temporal())._ir.matches(nw.Datetime())
+            True
         """
         return _matches_dtype(self, dtype)
 
-    # TODO @dangotbanned: Explain `_matches`
     def _matches_dtype(self, dtype: IntoDType) -> bool:
-        """_summary_."""
-        msg = f"{type(self).__name__}._matches"
+        """Return True if this selector matches the data type.
+
+        Arguments:
+            dtype: Anything that can be converted into a Narwhals DType.
+        """
+        msg = f"{type(self).__name__}._matches_dtype"
         raise NotImplementedError(msg)
 
     def to_dtype_selector(self) -> SelectorIR:
