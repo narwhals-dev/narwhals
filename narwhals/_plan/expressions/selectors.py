@@ -58,7 +58,7 @@ class RootSelector(SelectorIR):
 class BinarySelector(
     SelectorIR, Generic[LeftSelectorT_co, SelectorOperatorT, RightSelectorT_co]
 ):
-    """Application of two selectors via a set operator."""
+    """A set operation applied to two selectors."""
 
     __slots__ = ("left", "op", "right")
     left: LeftSelectorT_co  # type: ignore[misc]
