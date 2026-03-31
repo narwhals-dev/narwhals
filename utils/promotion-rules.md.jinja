@@ -142,39 +142,42 @@ https://github.com/narwhals-dev/narwhals/pull/3377
 
 ### Duration
 
-Two `Duration` types always have a supertype, namely the type with the **less precise** (coarser) time unit.
-For example:
+Two `Duration` types have a supertype only if share the **same time unit** (hence are the same):
 
 ```python exec="1" session="promotion-rules" result="python"
+st(nw.Duration('us'), nw.Duration('us'))
 st(nw.Duration('us'), nw.Duration('ms'))
-st(nw.Duration('s'), nw.Duration('ms'))
 ```
 
-Time unit precision order (from coarsest to finest): `s` < `ms` < `us` < `ns`
+!!! warning "Difference with Polars"
+
+    Polars promotes two `Duration` types with different time units to the **less precise** (coarser) one,
+    while other backends, such as pandas, promote to the **most precise** (finest) one.
+
+    Since these two behaviors are contradictory, Narwhals does not attempt to reconcile them and instead
+    returns no supertype when the time units differ.
 
 ### Datetime
 
-Two `Datetime` types have a supertype only if they share the **same time zone**:
+Two `Datetime` types have a supertype only if they are the same, hence
+if they share both the **same time zone** and the **same time unit**:
 
 ```python exec="1" session="promotion-rules" result="python"
-st(nw.Datetime('us'), nw.Datetime('ns'))
+st(nw.Datetime('us'), nw.Datetime('us'))
 
 tz = "Europe/Berlin"
 print(f"{tz = !r}")
 st(nw.Datetime(time_zone=tz), nw.Datetime(time_zone=tz))
 ```
 
-The resulting time unit is the **less precise** (coarser) of the two as defined in the previous section on `Duration`.
+!!! warning "Difference with Polars"
 
-If they do not share the same time zone, no supertype exists:
+    Polars promotes two `Datetime` types with different time units to the **less precise** (coarser) one,
+    while other backends, such as pandas, promote to the **most precise** (finest) one.
 
-```python exec="1" session="promotion-rules" result="python"
-tz1 = "Europe/Berlin"
-tz2 = "Europe/Paris"
-print(f"{tz1 = !r}")
-print(f"{tz2 = !r}")
-st(nw.Datetime(time_zone=tz1), nw.Datetime(time_zone=tz2))
-```
+    Since these two behaviors are contradictory, Narwhals does not attempt to reconcile them and instead
+    returns no supertype when the time units differ.
+
 
 ### Datetime and Date
 

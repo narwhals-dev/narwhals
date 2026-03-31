@@ -15,7 +15,6 @@ from itertools import chain, product
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any
 
-from narwhals._constants import MS_PER_SECOND, NS_PER_SECOND, US_PER_SECOND
 from narwhals._dispatch import just_dispatch
 from narwhals._typing_compat import TypeVar
 from narwhals.dtypes._classes import (
@@ -58,7 +57,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals.dtypes._classes import _Bits
-    from narwhals.typing import TimeUnit
 
     _Fn = TypeVar("_Fn", bound=Callable[..., Any])
 
@@ -110,18 +108,6 @@ _FLOAT_PROMOTE: Mapping[FrozenDTypes, type[Float64]] = {
     frozen_dtypes(Decimal, Float64): Float64,
     frozen_dtypes(Decimal, Float32): Float64,
 }
-
-
-_TIME_UNIT_PER_SECOND: Mapping[TimeUnit, int] = {
-    "s": 1,
-    "ms": MS_PER_SECOND,
-    "us": US_PER_SECOND,
-    "ns": NS_PER_SECOND,
-}
-
-
-def _key_fn_time_unit(obj: Datetime | Duration, /) -> int:
-    return _TIME_UNIT_PER_SECOND[obj.time_unit]
 
 
 @lru_cache(maxsize=_CACHE_SIZE // 2)
@@ -192,13 +178,6 @@ def same_supertype(left: DType, right: DType, /) -> DType | None:
     return left if dtype_eq(left, right) else None
 
 
-@same_supertype.register(Duration, DurationV1)
-@lru_cache(maxsize=_CACHE_SIZE * 2)
-def downcast_time_unit(left: SameTemporalT, right: SameTemporalT, /) -> SameTemporalT:
-    """Return the operand with the lowest precision time unit."""
-    return min(left, right, key=_key_fn_time_unit)
-
-
 def _struct_fields_union(
     left: Collection[Field], right: Collection[Field], /
 ) -> Struct | None:
@@ -250,15 +229,6 @@ def list_supertype(left: List, right: List, /) -> List | None:
     if inner := get_supertype(left.inner(), right.inner()):
         return List(inner)
     return None
-
-
-@same_supertype.register(Datetime, DatetimeV1)
-def datetime_supertype(
-    left: SameDatetimeT, right: SameDatetimeT, /
-) -> SameDatetimeT | None:
-    if left.time_zone != right.time_zone:
-        return None
-    return downcast_time_unit(left, right)
 
 
 @same_supertype.register(Enum)
