@@ -1,3 +1,13 @@
+"""Expressions for selecting columns.
+
+## Implementation Notes
+- `by_name` and `by_index` are uniquely able to reorder the output of column names
+  - However, that does not extend to use *inside* a `{Binary,Invert}Selector`, see [pola-rs/polars#19384]
+- All other selectors yield column names in schema order
+
+[pola-rs/polars#19384]: https://github.com/pola-rs/polars/issues/19384
+"""
+
 from __future__ import annotations
 
 import re
@@ -18,7 +28,7 @@ from narwhals.dtypes import DType, FloatType, IntegerType, NumericType, Temporal
 from narwhals.typing import IntoDType, TimeUnit
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
     from datetime import timezone
 
     from typing_extensions import Self
@@ -57,22 +67,13 @@ class BinarySelector(
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
-        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
-        # (As designed) https://github.com/pola-rs/polars/issues/19384
-        names = schema.names
         left = frozenset(self.left.iter_expand_names(schema, ignored_columns))
         right = frozenset(self.right.iter_expand_names(schema, ignored_columns))
-        remaining: frozenset[str] = self.op(left, right)
-        target: Iterable[str]
-        if remaining:
-            target = (
-                names
-                if len(remaining) == len(names)
-                else (nm for nm in names if nm in remaining)
-            )
-        else:
-            target = ()
-        yield from target
+        keep: frozenset[str]
+        if (keep := self.op(left, right)) and len(keep) == len(schema):
+            yield from schema
+        elif keep:
+            yield from (nm for nm in schema if nm in keep)
 
     def _matches(self, dtype: IntoDType) -> bool:
         left = self.left.matches(dtype)
@@ -100,21 +101,11 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
     ) -> Iterator[str]:
-        # by_name, by_index (upstream) lose their ability to reorder when used as a binary op
-        # that includes invert, which is implemented as Difference(All, Selector)
-        # (As designed) https://github.com/pola-rs/polars/issues/19384
-        names = schema.names
-        ignore = frozenset(self.selector.iter_expand_names(schema, ignored_columns))
-        target: Iterable[str]
-        if ignore:
-            target = (
-                ()
-                if len(ignore) == len(names)
-                else (nm for nm in names if nm not in ignore)
-            )
-        else:
-            target = names
-        yield from target
+        expand = self.selector.iter_expand_names
+        if not (ignore := frozenset(expand(schema, ignored_columns))):
+            yield from schema
+        elif len(ignore) != len(schema):
+            yield from (nm for nm in schema if nm not in ignore)
 
     def _matches(self, dtype: IntoDType) -> bool:
         return not self.selector.matches(dtype)
