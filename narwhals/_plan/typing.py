@@ -97,6 +97,19 @@ RightSelectorT_co = TypeVar(
 SelectorOperatorT = TypeVar(
     "SelectorOperatorT", bound="ops.SelectorOperator", default="ops.SelectorOperator"
 )
+"""An `Operator` used in a `BinarySelector`.
+
+One of:
+
+    ┌─────────────┬────────────┬──────────────────────┐
+    │ Operator    ┆ Expression ┆ set operation        │
+    ╞═════════════╪════════════╪══════════════════════╡
+    │ And         ┆ A & B      ┆ intersection         │
+    │ Or          ┆ A | B      ┆ union                │
+    │ Sub         ┆ A - B      ┆ difference           │
+    │ ExclusiveOr ┆ A ^ B      ┆ symmetric_difference │
+    └─────────────┴────────────┴──────────────────────┘
+"""
 IRNamespaceT = TypeVar("IRNamespaceT", bound="IRNamespace")
 Accessor: TypeAlias = t.Literal[
     "arr", "cat", "dt", "list", "meta", "name", "str", "bin", "struct"
