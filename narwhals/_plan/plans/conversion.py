@@ -627,7 +627,7 @@ class Resolver:
                 msg = f"duplicate column name {nm!r}"
                 raise DuplicateError(msg)
         # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/lazyframe/frame.py#L8484-L8488
-        if f.index == s_ir.empty():
+        if f.index == s_ir.Empty():
             index: tuple[str, ...] = ()
         else:
             index = expand_selectors((f.index,), schema=input_schema)

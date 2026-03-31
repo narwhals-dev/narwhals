@@ -312,7 +312,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         # then finally filled in for `UnpivotArgsIR::new`
         # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-core/src/frame/explode.rs#L34-L49
         options = options or UnpivotOptions.default()
-        return self._map(Unpivot(on=on, index=index or s_ir.empty(), options=options))
+        return self._map(Unpivot(on=on, index=index or s_ir.Empty(), options=options))
 
     def with_columns(self, exprs: Seq[ExprIR]) -> WithColumns:
         return WithColumns(input=self, exprs=exprs)

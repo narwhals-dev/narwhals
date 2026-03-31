@@ -181,6 +181,14 @@ def test_selector_by_dtype_empty(schema_non_nested: nw.Schema) -> None:
     df.assert_selects(ncs.by_dtype([]))
 
 
+def test_selector_empty(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(ncs.empty())
+    df.assert_selects(ncs.empty() | ncs.empty())
+    df.assert_selects(~ncs.empty(), *df.columns)
+    df.assert_selects(ncs.empty() | ncs.duration(), "Lmn")
+
+
 @pytest.mark.parametrize(
     ("dtypes", "expected"),
     [
@@ -631,8 +639,9 @@ def test_selector_list(schema_nested_1: nw.Schema) -> None:
 
     # inner None
     df.assert_selects(ncs.list(), "b", "c", "e")
-    # Inner All (as a DTypeSelector)
+    # inner converted to DTypeSelector
     df.assert_selects(ncs.list(ncs.all()), "b", "c", "e")
+    df.assert_selects(ncs.list(ncs.empty()))
     # inner DTypeSelector
     df.assert_selects(ncs.list(ncs.integer()), "b", "c")
     df.assert_selects(ncs.list(inner=ncs.string()), "e")

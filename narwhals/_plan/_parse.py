@@ -283,7 +283,7 @@ def into_selector_ir(
         return _into_selector_ir(first_input, require_all=require_all)
     flat = _flatten_column_names_or_selectors((first_input, *more_inputs))
     if (first := next(flat, None)) is None:
-        return s_ir.empty()
+        return s_ir.Empty()
     if (second := next(flat, None)) is None:
         return _into_selector_ir(first, require_all=require_all)
 

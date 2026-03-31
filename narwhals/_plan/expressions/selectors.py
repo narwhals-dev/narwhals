@@ -158,7 +158,7 @@ class DTypeSelector(RootSelector):
             yield from (name for name, dtype in schema.items() if self.matches(dtype))
 
 
-class DTypeAll(DTypeSelector, selects=DType):
+class AllDType(DTypeSelector, selects=DType):
     def __repr__(self) -> str:
         return "ncs.all()"
 
@@ -173,8 +173,8 @@ class All(RootSelector):
         Matches are returned in schema order.
     """
 
-    def to_dtype_selector(self) -> DTypeAll:
-        return DTypeAll()
+    def to_dtype_selector(self) -> AllDType:
+        return AllDType()
 
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
@@ -183,6 +183,35 @@ class All(RootSelector):
             yield from (name for name in schema if name not in ignored_columns)
         else:
             yield from schema
+
+
+# TODO @dangotbanned: Singletons for `All`, `Empty`, + dtype equivalent
+# TODO @dangotbanned: Implement `.invert()`
+# `~all()   -> empty()`
+# `~empty() -> all()`
+class Empty(RootSelector):
+    """Select no columns.
+
+    Important:
+        Matches nothing, including when used in `group_by`.
+    """
+
+    def to_dtype_selector(self) -> EmptyDType:
+        return EmptyDType()
+
+    def iter_expand_names(
+        self, schema: FrozenSchema, ignored_columns: Ignored
+    ) -> Iterator[str]:
+        # NOTE: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/selector.rs#L274
+        yield from ()
+
+
+class EmptyDType(DTypeSelector, selects=DType):
+    def __repr__(self) -> str:
+        return "ncs.empty()"
+
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
+        return False
 
 
 class ByIndex(RootSelector):
@@ -373,23 +402,10 @@ class ByDType(DTypeSelector, selects=DType):
     dtypes: frozenset[DType | type[DType]]
 
     def __repr__(self) -> str:
-        if not self.dtypes:
-            return "ncs.empty()"
         return f"ncs.by_dtype([{', '.join(sorted(map(repr, self.dtypes)))}])"
 
     def _matches_dtype(self, dtype: DType | type[DType]) -> bool:
         return dtype in self.dtypes
-
-    # TODO @dangotbanned: Consider splitting out `empty` and using a singleton
-    # - Could have `~all() -> empty()` and `~empty() -> all()`
-    # - V nice to have for lazy/plans
-    @staticmethod
-    def empty() -> ByDType:
-        return ByDType(dtypes=frozenset())
-
-
-# NOTE: See `ByDType.empty` plan
-empty = ByDType.empty
 
 
 class Datetime(DTypeSelector, selects=nw_dtypes.Datetime):
