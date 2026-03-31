@@ -192,6 +192,11 @@ class ByIndex(RootSelector):
         Matches are returned in the order declared in `indices`.
     """
 
+    # TODO @dangotbanned: (low-priority) Specialize a `ByIndex` that preserves `range` instead of converting to `tuple`
+    # - hashable
+    # - runtime guarantees `Sequence[int]` (less work for us)
+    # - expansion loop doesn't need to `abs` every element
+    #   - given we know ahead of time it is mono asc/desc and the start/end
     __slots__ = ("indices", "require_all")
     indices: Seq[int]
     require_all: bool
