@@ -715,7 +715,7 @@ def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
 
     # fmt: off
     expr = re.escape(
-        "ncs.numeric() / [(ncs.numeric()) - (ncs.by_dtype([Int64]))]\n"
+        "ncs.numeric() / [ncs.numeric() - ncs.by_dtype([Int64])]\n"
         "^^^^^^^^^^^^^"
     )
     # fmt: on

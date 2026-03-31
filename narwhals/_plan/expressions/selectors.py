@@ -62,7 +62,7 @@ class BinarySelector(
     right: RightSelectorT_co  # type: ignore[misc]
 
     def __repr__(self) -> str:
-        return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
+        return f"[{self.left!r} {self.op!r} {self.right!r}]"
 
     def iter_expand_names(
         self, schema: FrozenSchema, ignored_columns: Ignored
