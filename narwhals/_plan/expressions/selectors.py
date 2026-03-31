@@ -75,7 +75,7 @@ class BinarySelector(
         elif keep:
             yield from (nm for nm in schema if nm in keep)
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         left = self.left.matches(dtype)
         right = self.right.matches(dtype)
         return bool(self.op(left, right))
@@ -112,7 +112,7 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
         elif len(ignore) != len(schema):
             yield from (nm for nm in schema if nm not in ignore)
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         return not self.selector.matches(dtype)
 
     def to_dtype_selector(self) -> Self | InvertSelector[SelectorIR]:
@@ -142,7 +142,7 @@ class DTypeSelector(RootSelector):
     def to_dtype_selector(self) -> Self:
         return self
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         if isinstance(dtype, type):
             return issubclass(dtype, self._dtype)
         return isinstance(dtype, self._dtype)
@@ -162,7 +162,7 @@ class DTypeAll(DTypeSelector, selects=DType):
     def __repr__(self) -> str:
         return "ncs.all()"
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         return True
 
 
@@ -346,7 +346,7 @@ class Array(DTypeSelector, selects=nw_dtypes.Array):
         size = self.size or "*"
         return f"ncs.array({inner}, size={size})"
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         return (
             isinstance(dtype, nw_dtypes.Array)
             and ((s := self.inner) is None or s.matches(dtype.inner))
@@ -362,7 +362,7 @@ class List(DTypeSelector, selects=nw_dtypes.List):
         inner = "" if not self.inner else repr(self.inner)
         return f"ncs.list({inner})"
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         return isinstance(dtype, nw_dtypes.List) and (
             (s := self.inner) is None or s.matches(dtype.inner)
         )
@@ -377,7 +377,7 @@ class ByDType(DTypeSelector, selects=DType):
             return "ncs.empty()"
         return f"ncs.by_dtype([{', '.join(sorted(map(repr, self.dtypes)))}])"
 
-    def _matches(self, dtype: DType | type[DType]) -> bool:
+    def _matches_dtype(self, dtype: DType | type[DType]) -> bool:
         return dtype in self.dtypes
 
     # TODO @dangotbanned: Consider splitting out `empty` and using a singleton
@@ -411,7 +411,7 @@ class Datetime(DTypeSelector, selects=nw_dtypes.Datetime):
         time_zone = "*" if self.time_zones == {"*", None} else list(self.time_zones)
         return f"ncs.datetime(time_unit={time_unit}, time_zone={time_zone})"
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         units, zones = self.time_units, self.time_zones
         return (
             isinstance(dtype, (nw_dtypes.Datetime, type(nw_dtypes.Datetime)))
@@ -440,7 +440,7 @@ class Duration(DTypeSelector, selects=nw_dtypes.Duration):
         time_unit = "*" if self.time_units == _ALL_TIME_UNITS else list(self.time_units)
         return f"ncs.duration(time_unit={time_unit})"
 
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
         return isinstance(dtype, (nw_dtypes.Duration, type(nw_dtypes.Duration))) and (
             dtype.time_unit in self.time_units
         )

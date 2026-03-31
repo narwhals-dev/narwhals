@@ -615,10 +615,11 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
             The result will *only* be cached if this method is **not overridden**.
             Instead, use `SelectorIR._matches` to customize the check.
         """
-        return _selector_matches(self, dtype)
+        return _matches_dtype(self, dtype)
 
     # TODO @dangotbanned: Explain `_matches`
-    def _matches(self, dtype: IntoDType) -> bool:
+    def _matches_dtype(self, dtype: IntoDType) -> bool:
+        """_summary_."""
         msg = f"{type(self).__name__}._matches"
         raise NotImplementedError(msg)
 
@@ -846,8 +847,5 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
 
 @functools.lru_cache(maxsize=128)
-def _selector_matches(selector: SelectorIR, dtype: IntoDType, /) -> bool:
-    # `SelectorIR.matches`       (uncached)
-    # -> `_selector_matches`     (cached)
-    # -> `SelectorIR._matches`   (impl)
-    return selector._matches(dtype)
+def _matches_dtype(selector: SelectorIR, dtype: IntoDType, /) -> bool:
+    return selector._matches_dtype(dtype)
