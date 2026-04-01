@@ -24,3 +24,9 @@ typing: ## Run typing checks
 	$(VENV_BIN)/uv pip install -U -e . --group typing
 	$(VENV_BIN)/pyright
 	$(VENV_BIN)/mypy
+
+.PHONY: docs-serve
+docs-serve:  # Build and serve the docs locally
+	python utils/generate_backend_completeness.py
+	python utils/generate_zen_content.py
+	zensical serve
