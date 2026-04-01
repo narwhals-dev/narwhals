@@ -17,6 +17,7 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.schema import Schema
 
 if TYPE_CHECKING:
+    import decimal
     from collections.abc import Callable, Iterable
 
     import polars as pl
@@ -328,8 +329,8 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     def any(self) -> bool:
         return fn.any(self.native).as_py()
 
-    def sum(self) -> float:
-        result: float = fn.sum(self.native).as_py()
+    def sum(self) -> float | decimal.Decimal:
+        result: float | decimal.Decimal = fn.sum(self.native).as_py()
         return result
 
     def count(self) -> int:

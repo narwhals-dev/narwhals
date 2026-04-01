@@ -20,6 +20,7 @@ from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
+    import decimal
     from collections.abc import Callable, Iterable
 
     from typing_extensions import Self, TypeAlias
@@ -393,7 +394,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
             )
         return self._with_native(result)
 
-    def sum(self) -> float:
+    def sum(self) -> float | decimal.Decimal:
         return self.native.sum()
 
     def unique(self, *, maintain_order: bool = False) -> Self:

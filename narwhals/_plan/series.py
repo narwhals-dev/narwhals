@@ -19,6 +19,7 @@ from narwhals.dependencies import is_polars_series, is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    import decimal
     from collections.abc import Iterator
 
     import polars as pl
@@ -257,7 +258,7 @@ class Series(Generic[NativeSeriesT_co]):
     def any(self) -> bool:
         return self._compliant.any()
 
-    def sum(self) -> float:
+    def sum(self) -> float | decimal.Decimal:
         return self._compliant.sum()
 
     def count(self) -> int:
