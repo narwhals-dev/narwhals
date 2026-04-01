@@ -103,7 +103,7 @@ def prepare_projection(
 
 
 def expand_selectors(
-    selectors: Sequence[SelectorIR],
+    selectors: Iterable[SelectorIR],
     /,
     *,
     schema: IntoFrozenSchema,
@@ -118,11 +118,9 @@ def expand_selectors(
         selectors: IRs that **only** contain subclasses of `SelectorIR`.
         schema: Scope to expand selectors in.
         require_any: If True (default) raise if the entire expansion selected zero columns.
+            If False, we can always defer iterator collection until finishing expansion.
     """
-    expander = Expander(schema)
-    if (names := expander.expand_selectors(selectors)) or not require_any:
-        return names
-    raise selectors_not_found_error(selectors, expander.schema)
+    return Expander(schema).expand_selectors(selectors, require_any=require_any)
 
 
 def parse_expand_selectors(
@@ -149,22 +147,8 @@ def parse_expand_selectors(
         require_any: If True (default) raise if the entire expansion selected zero columns.
             If False, we can always defer iterator collection until finishing expansion.
     """
-    expander = Expander(schema)
-    expand = expander.expand_selectors
-    first, more = first_input, more_inputs
-
-    if not require_any:
-        return expand(into_iter_selector_ir(first, more))
-    # Balancing act to keep enough context for an error message,
-    # but avoid collection if we can just repeat on fail
-    if not isinstance(first, Iterator) and (
-        names := expand(into_iter_selector_ir(first, more))
-    ):
-        return names
-    parsed = tuple(into_iter_selector_ir(first, more))
-    if names := expand(parsed):
-        return names
-    raise selectors_not_found_error(parsed, expander.schema)
+    parsed = into_iter_selector_ir(first_input, more_inputs)
+    return expand_selectors(parsed, schema=schema, require_any=require_any)
 
 
 def is_duplicated(names: Collection[str]) -> bool:
@@ -208,9 +192,19 @@ class Expander:
             yield from s.iter_expand_selector(self.schema, self.ignored)
 
     def expand_selectors(
-        self, selectors: Iterable[SelectorIR], /, *, check_unique: bool = True
+        self,
+        selectors: Iterable[SelectorIR],
+        /,
+        *,
+        check_unique: bool = True,
+        require_any: bool = True,
     ) -> OutputNames:
+        if require_any and isinstance(selectors, Iterator):
+            # Ensure we can show the original selectors in `ColumnNotFoundError`
+            selectors = tuple(selectors)
         names = tuple(self.iter_expand_selectors(selectors))
+        if require_any and not names:
+            raise selectors_not_found_error(selectors, self.schema)
         if check_unique and is_duplicated(names):
             raise duplicate_names_error(names)
         return names

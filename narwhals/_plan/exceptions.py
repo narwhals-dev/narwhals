@@ -295,8 +295,9 @@ def format_expressions(*exprs: ir.ExprIR, indent: int = 2) -> str:
 
 
 def selectors_not_found_error(
-    selectors: Collection[ir.SelectorIR], schema: IntoSchema | FrozenSchema
+    selectors: Iterable[ir.SelectorIR], schema: IntoSchema | FrozenSchema
 ) -> ColumnNotFoundError:
+    selectors = tuple(selectors)
     msg = "Found no columns when expanding:"
     if len(selectors) == 1:
         msg = f"{msg} {next(iter(selectors))!r}"
