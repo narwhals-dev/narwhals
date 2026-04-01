@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, final
 
 import narwhals.dtypes as nw_dtypes
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Ignored, OneOrIterable, Seq
 
 
@@ -65,7 +64,7 @@ class BinarySelector(
         return f"[{self.left!r} {self.op!r} {self.right!r}]"
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
+        self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         left = frozenset(self.left.iter_expand_selector(schema, ignored_columns))
         right = frozenset(self.right.iter_expand_selector(schema, ignored_columns))
@@ -104,7 +103,7 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
         return f"~{self.selector!r}"
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
+        self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         expand = self.selector.iter_expand_selector
         if not (ignore := frozenset(expand(schema, ignored_columns))):
@@ -154,7 +153,7 @@ class DTypeSelector(RootSelector):
         )
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
+        self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         if ignored_columns:
             for name, dtype in schema.items():
@@ -183,7 +182,7 @@ class All(RootSelector):
         return AllDType()
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
+        self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         if ignored_columns:
             yield from (name for name in schema if name not in ignored_columns)
@@ -205,7 +204,9 @@ class Empty(RootSelector):
     def to_dtype_selector(self) -> EmptyDType:
         return EmptyDType()
 
-    def iter_expand_selector(self, _: FrozenSchema, __: Ignored = (), /) -> Iterator[str]:
+    def iter_expand_selector(
+        self, _: Mapping[str, DType], __: Ignored = (), /
+    ) -> Iterator[str]:
         # NOTE: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/selector.rs#L274
         yield from ()
 
@@ -270,14 +271,12 @@ class ByIndex(RootSelector):
         return ByIndex(indices=(index,), require_all=require_all)
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, _: Ignored = (), /
+        self, schema: Mapping[str, DType], _: Ignored = (), /
     ) -> Iterator[str]:
-        names = schema.names
+        names = tuple(schema)
         n_fields = len(names)
         if not self.require_all:
-            if n_fields == 0:
-                yield from ()
-            else:
+            if n_fields != 0:
                 yield from (names[idx] for idx in self.indices if abs(idx) < n_fields)
         else:
             for idx in self.indices:
@@ -325,7 +324,7 @@ class ByName(RootSelector):
         return ByName(names=(name,), require_all=require_all)
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, _: Ignored = (), /
+        self, schema: Mapping[str, DType], _: Ignored = (), /
     ) -> Iterator[str]:
         if not self.require_all:
             keys = schema.keys()
@@ -361,7 +360,7 @@ class Matches(RootSelector):
         return f"ncs.matches({self.pattern.pattern!r})"
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
+        self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         search = self.pattern.search
         if ignored_columns:

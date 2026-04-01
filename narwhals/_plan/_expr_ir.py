@@ -54,7 +54,7 @@ from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
     from typing import Any, ClassVar
 
     from typing_extensions import Self
@@ -587,10 +587,8 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         tp = Selector if version is Version.MAIN else SelectorV1
         return tp._from_ir(self)
 
-    # TODO @dangotbanned: Relax `schema: FrozenSchema` to `Mapping[str, DType]`
-    # - re-expose and use `_freeze_columns(schema)` where indexing is needed
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
+        self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         """Yield column names that match the selector in schema order [^1].
 
