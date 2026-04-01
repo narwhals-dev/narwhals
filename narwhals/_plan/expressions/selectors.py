@@ -65,7 +65,7 @@ class BinarySelector(
         return f"[{self.left!r} {self.op!r} {self.right!r}]"
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored, /
+        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         left = frozenset(self.left.iter_expand_selector(schema, ignored_columns))
         right = frozenset(self.right.iter_expand_selector(schema, ignored_columns))
@@ -104,7 +104,7 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
         return f"~{self.selector!r}"
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored, /
+        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         expand = self.selector.iter_expand_selector
         if not (ignore := frozenset(expand(schema, ignored_columns))):
@@ -154,7 +154,7 @@ class DTypeSelector(RootSelector):
         )
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored, /
+        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         if ignored_columns:
             for name, dtype in schema.items():
@@ -183,7 +183,7 @@ class All(RootSelector):
         return AllDType()
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored, /
+        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         if ignored_columns:
             yield from (name for name in schema if name not in ignored_columns)
@@ -205,7 +205,7 @@ class Empty(RootSelector):
     def to_dtype_selector(self) -> EmptyDType:
         return EmptyDType()
 
-    def iter_expand_selector(self, _: FrozenSchema, __: Ignored, /) -> Iterator[str]:
+    def iter_expand_selector(self, _: FrozenSchema, __: Ignored = (), /) -> Iterator[str]:
         # NOTE: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/selector.rs#L274
         yield from ()
 
@@ -269,7 +269,9 @@ class ByIndex(RootSelector):
     def from_index(index: int, /, *, require_all: bool = True) -> ByIndex:
         return ByIndex(indices=(index,), require_all=require_all)
 
-    def iter_expand_selector(self, schema: FrozenSchema, _: Ignored, /) -> Iterator[str]:
+    def iter_expand_selector(
+        self, schema: FrozenSchema, _: Ignored = (), /
+    ) -> Iterator[str]:
         names = schema.names
         n_fields = len(names)
         if not self.require_all:
@@ -322,7 +324,9 @@ class ByName(RootSelector):
     def from_name(name: str, /, *, require_all: bool = True) -> ByName:
         return ByName(names=(name,), require_all=require_all)
 
-    def iter_expand_selector(self, schema: FrozenSchema, _: Ignored, /) -> Iterator[str]:
+    def iter_expand_selector(
+        self, schema: FrozenSchema, _: Ignored = (), /
+    ) -> Iterator[str]:
         if not self.require_all:
             keys = schema.keys()
             yield from (name for name in self.names if name in keys)
@@ -357,7 +361,7 @@ class Matches(RootSelector):
         return f"ncs.matches({self.pattern.pattern!r})"
 
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored, /
+        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         search = self.pattern.search
         if ignored_columns:

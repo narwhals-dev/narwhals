@@ -587,11 +587,10 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         tp = Selector if version is Version.MAIN else SelectorV1
         return tp._from_ir(self)
 
-    # TODO @dangotbanned: Docs example?
     # TODO @dangotbanned: Relax `schema: FrozenSchema` to `Mapping[str, DType]`
     # - re-expose and use `_freeze_columns(schema)` where indexing is needed
     def iter_expand_selector(
-        self, schema: FrozenSchema, ignored_columns: Ignored, /
+        self, schema: FrozenSchema, ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
         """Yield column names that match the selector in schema order [^1].
 
@@ -602,6 +601,38 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
 
         Notes:
             [^1]: Except `ByName`, `ByIndex`.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> import narwhals._plan.selectors as ncs
+            >>> from narwhals._plan.schema import FrozenSchema
+            >>> schema = FrozenSchema(x=nw.String(), y=nw.Int64(), z=nw.Float64())
+
+            >>> s = ncs.numeric()._ir
+            >>> list(s.iter_expand_selector(schema))
+            ['y', 'z']
+            >>> s = (ncs.first() | ncs.last())._ir
+            >>> list(s.iter_expand_selector(schema))
+            ['x', 'z']
+            >>> s = (~(ncs.first() | ncs.last()))._ir
+            >>> list(s.iter_expand_selector(schema))
+            ['y']
+
+            Most selectors are non-strict and yield empty without a match:
+            >>> s = ncs.boolean()._ir
+            >>> list(s.iter_expand_selector(schema))
+            []
+
+            By default, `by_name` and `by_index` will raise without a full match:
+            >>> s = ncs.by_name("oops", "z")._ir
+            >>> list(s.iter_expand_selector(schema))
+            Traceback (most recent call last):
+            narwhals.exceptions.ColumnNotFoundError: The following columns were not found: ['oops']...
+
+            But that can be relaxed if needed:
+            >>> s = ncs.by_name("oops", "z", require_all=False)._ir
+            >>> list(s.iter_expand_selector(schema))
+            ['z']
         """
         msg = f"{self.iter_expand_selector.__qualname__}"
         raise NotImplementedError(msg)
