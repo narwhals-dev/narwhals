@@ -116,7 +116,6 @@ def expand_selectors(
 
     Arguments:
         selectors: IRs that **only** contain subclasses of `SelectorIR`.
-        ignored: Names of `group_by` columns.
         schema: Scope to expand selectors in.
         require_any: If True (default) raise if the entire expansion selected zero columns.
     """
@@ -206,7 +205,7 @@ class Expander:
 
     def iter_expand_selectors(self, selectors: Iterable[SelectorIR], /) -> Iterator[str]:
         for s in selectors:
-            yield from s.iter_expand_names(self.schema, self.ignored)
+            yield from s.iter_expand_selector(self.schema, self.ignored)
 
     def expand_selectors(
         self, selectors: Iterable[SelectorIR], /, *, check_unique: bool = True
@@ -261,7 +260,7 @@ class Expander:
         if isinstance(origin, _EXPAND_NONE):
             yield origin
         elif isinstance(origin, ir.SelectorIR):
-            names = origin.iter_expand_names(self.schema, self.ignored)
+            names = origin.iter_expand_selector(self.schema, self.ignored)
             yield from (ir.Column(name=name) for name in names)
         elif isinstance(origin, _EXPAND_SINGLE):
             for expr in self._expand_recursive(origin.expr):
