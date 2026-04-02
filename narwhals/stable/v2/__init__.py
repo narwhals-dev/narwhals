@@ -98,6 +98,8 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoDType,
         IntoExpr,
+        IntoFrame,
+        IntoFrameT,
         IntoSchema,
         NonNestedLiteral,
         PythonLiteral,
@@ -111,8 +113,10 @@ if TYPE_CHECKING:
     P = ParamSpec("P")
     R = TypeVar("R")
 
+FrameT = TypeVar("FrameT", bound="IntoFrame")
 
-class DataFrame(NwDataFrame[IntoDataFrameT]):
+
+class DataFrame(NwDataFrame[FrameT]):
     _version = Version.V2
 
     @inherit_doc(NwDataFrame)
@@ -240,7 +244,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         return _stableify(super().is_unique())
 
 
-class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
+class LazyFrame(NwLazyFrame[FrameT]):
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V2  # noqa: S101
@@ -396,6 +400,10 @@ def from_native(
 def from_native(native_object: LazyFrameT, **kwds: Unpack[AllowLazy]) -> LazyFrameT: ...
 @overload
 def from_native(
+    native_object: LazyFrameT | DataFrameT, **kwds: Unpack[AllowLazy]
+) -> LazyFrameT | DataFrameT: ...
+@overload
+def from_native(
     native_object: IntoDataFrameT, **kwds: Unpack[ExcludeSeries]
 ) -> DataFrame[IntoDataFrameT]: ...
 @overload
@@ -411,9 +419,17 @@ def from_native(
     native_object: IntoLazyFrameT, **kwds: Unpack[AllowLazy]
 ) -> LazyFrame[IntoLazyFrameT]: ...
 @overload
-def from_native(
+def from_native(  # type: ignore[overload-overlap]
     native_object: IntoDataFrameT | IntoSeriesT, **kwds: Unpack[AllowSeries]
 ) -> DataFrame[IntoDataFrameT] | Series[IntoSeriesT]: ...
+@overload
+def from_native(
+    native_object: IntoDataFrameT | IntoLazyFrameT, **kwds: Unpack[AllowLazy]
+) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT]: ...
+@overload
+def from_native(  # type: ignore[overload-overlap]
+    native_object: IntoFrameT, **kwds: Unpack[AllowLazy]
+) -> DataFrame[IntoFrameT] | LazyFrame[IntoFrameT]: ...
 @overload
 def from_native(
     native_object: IntoDataFrameT | IntoLazyFrameT | IntoSeriesT, **kwds: Unpack[AllowAny]
@@ -430,7 +446,7 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-def from_native(
+def from_native(  # pyright: ignore[reportInconsistentOverload]
     native_object: IntoLazyFrameT
     | IntoDataFrameT
     | IntoSeriesT
