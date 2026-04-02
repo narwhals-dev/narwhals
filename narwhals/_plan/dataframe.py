@@ -77,6 +77,9 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
+# TODO @dangotbanned: (Probably) remove `BaseFrame` and reintroduce later if needed
+# - `DataFrame` and `LazyFrame` work in fundamentally different ways
+# - `LazyFrame` isn't finished, but likely will not wrap a `CompliantLazyFrame` (directly)
 class BaseFrame(Generic[NativeFrameT_co]):
     _compliant: CompliantFrame[NativeFrameT_co]
     _version: ClassVar[Version] = Version.MAIN
@@ -213,6 +216,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         by_names = parse_expand_selectors(order_by, schema=self)
         return self._with_compliant(self._compliant.with_row_index_by(name, by_names))
 
+    # TODO @dangotbanned: Accept selectors in `on`, `left_on`, `right_on`
     def join(
         self,
         other: Incomplete,
@@ -236,6 +240,9 @@ class BaseFrame(Generic[NativeFrameT_co]):
             left.join(right, how=how, left_on=left_on, right_on=right_on, suffix=suffix)
         )
 
+    # TODO @dangotbanned: Accept selectors in `on`, `left_on`, `right_on`
+    # `by*` isn't supported upstream?
+    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/lazyframe/frame.py#L5676-L5681
     def join_asof(
         self,
         other: Incomplete,
@@ -530,6 +537,7 @@ class DataFrame(
         for series in self._compliant.iter_columns():
             yield self._series(series)
 
+    # TODO @dangotbanned: Accept selectors in `on`, `left_on`, `right_on`
     def join(
         self,
         other: Self,
@@ -544,6 +552,9 @@ class DataFrame(
             other, how=how, left_on=left_on, right_on=right_on, on=on, suffix=suffix
         )
 
+    # TODO @dangotbanned: Accept selectors in `on`, `left_on`, `right_on`
+    # `by*` isn't supported upstream?
+    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/lazyframe/frame.py#L5676-L5681
     def join_asof(
         self,
         other: Self,
