@@ -89,6 +89,24 @@ class Alias(ExprIR, dispatch="no_dispatch"):
 
 
 class Column(ExprIR, dispatch=namespaced("col")):
+    """An expression that selects exactly one column.
+
+    Arguments:
+        name: A single column name.
+
+    Examples:
+        >>> import narwhals._plan as nw
+        >>> expr = nw.col("one")
+        >>> expr._ir
+        col('one')
+        >>> print(expr._ir)
+        Column(name='one')
+
+        A `Column` is not a selector, but can be converted into one:
+        >>> expr.meta.as_selector()._ir
+        ncs.by_name('one', require_all=True)
+    """
+
     __slots__ = ("name",)
     name: str
 

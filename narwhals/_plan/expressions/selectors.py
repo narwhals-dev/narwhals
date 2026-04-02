@@ -173,6 +173,27 @@ class All(RootSelector):
 
     Important:
         Matches are returned in schema order.
+
+    ## Examples
+    Represents both variants of `all()`:
+    >>> import narwhals._plan as nw
+    >>> import narwhals._plan.selectors as ncs
+    >>> expr = nw.all()
+    >>> expr._ir
+    ncs.all()
+    >>> selector = ncs.all()
+    >>> selector._ir
+    ncs.all()
+
+    While they are *internally* identical:
+    >>> expr._ir == selector._ir
+    True
+
+    The *outer* container defines binary operator behavior:
+    >>> not isinstance(expr, nw.Selector)
+    True
+    >>> isinstance(selector, nw.Selector)
+    True
     """
 
     def to_dtype_selector(self) -> AllDType:
@@ -224,6 +245,41 @@ class ByIndex(RootSelector):
 
     Important:
         Matches are returned in the order declared in `indices`.
+
+    Arguments:
+        indices: Positions of columns to select.
+            Negative indexing is supported.
+        require_all: Raise (default) if any index is out-of-bounds.
+            If set to `False`, out-of-bounds indices are ignored.
+
+    Examples:
+        We've got 4 ways to get here:
+        >>> import narwhals._plan as nw
+        >>> import narwhals._plan.selectors as ncs
+
+        Only one starts it's life as an expression:
+        >>> expr = nw.nth(5)
+        >>> expr._ir
+        ncs.by_index([5], require_all=True)
+        >>> not isinstance(expr, nw.Selector)
+        True
+
+        The rest are selectors all the way down:
+        >>> selector = ncs.by_index(0, 1)
+        >>> selector._ir
+        ncs.by_index([0, 1], require_all=True)
+        >>> isinstance(selector, nw.Selector)
+        True
+
+        With these two being pure syntax sugar:
+        >>> first = ncs.first()
+        >>> last = ncs.last()
+        >>> first._ir
+        ncs.first()
+        >>> print(first._ir)
+        ByIndex(indices=[0], require_all=True)
+        >>> print(last._ir)
+        ByIndex(indices=[-1], require_all=True)
     """
 
     # TODO @dangotbanned: (low-priority) Specialize a `ByIndex` that preserves `range` instead of converting to `tuple`
@@ -288,6 +344,23 @@ class ByName(RootSelector):
 
     Important:
         Matches are returned in the order declared in `names`.
+
+    Arguments:
+        names: Names of columns to select.
+        require_all: Raise (default) if any name did not match.
+            If set to `False`, failed matches are ignored.
+
+    Examples:
+        >>> import narwhals._plan as nw
+        >>> import narwhals._plan.selectors as ncs
+        >>> selector = ncs.by_name("one", "two")
+        >>> selector._ir
+        ncs.by_name('one', 'two', require_all=True)
+
+        Also represents multi-output `col(...)`:
+        >>> expr = nw.col("one", "two")
+        >>> print(expr._ir)
+        ByName(names=['one', 'two'], require_all=True)
     """
 
     __slots__ = ("names", "require_all")
