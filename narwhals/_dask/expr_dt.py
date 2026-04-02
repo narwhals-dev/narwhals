@@ -57,11 +57,11 @@ class DaskExprDateTimeNamespace(
         )
 
     def ordinal_day(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.dt.dayofyear)
+        return self.compliant._with_callable(lambda expr: expr.dt.day_of_year)
 
     def weekday(self) -> DaskExpr:
         return self.compliant._with_callable(
-            lambda expr: expr.dt.weekday + 1  # Dask is 0-6
+            lambda expr: expr.dt.day_of_week + 1  # Dask is 0-6
         )
 
     def to_string(self, format: str) -> DaskExpr:
