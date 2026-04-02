@@ -41,9 +41,6 @@ class RootSelector(SelectorIR):
     def __repr__(self) -> str:
         return f"ncs.{type(self).__name__.lower()}()"
 
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield self
-
 
 @final
 class BinarySelector(
@@ -333,6 +330,10 @@ class ByName(RootSelector):
             if not set(schema).issuperset(self.names):
                 raise column_not_found_error(self.names, schema)
             yield from self.names
+
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        # NOTE: Valid for `ByName.from_name`-only
+        yield self
 
 
 class Matches(RootSelector):
