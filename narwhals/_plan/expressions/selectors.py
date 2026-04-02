@@ -91,6 +91,9 @@ class InvertSelector(SelectorIR, Generic[SelectorT_co]):
 
     Important:
         Matches are returned in schema order.
+
+    Arguments:
+        selector: A selector to invert.
     """
 
     __slots__ = ("selector",)
@@ -415,16 +418,16 @@ class Matches(RootSelector):
     Important:
         Matches are returned in schema order.
 
-    Note:
-        Pattern matching uses [`re.search`], so the pattern can appear *anywhere*
-        in the column name if anchors are not provided.
+    Arguments:
+        pattern: A compiled regular expression object.
+            Uses [`re.search`] which matches *anywhere* in the column name,
+            if anchors are not provided.
 
     [`re.search`]: https://docs.python.org/3/library/re.html#re.search
     """
 
     __slots__ = ("pattern",)
     pattern: re.Pattern[str]
-    """Compiled regular expression object returned."""
 
     @staticmethod
     def from_string(pattern: str, /) -> Matches:

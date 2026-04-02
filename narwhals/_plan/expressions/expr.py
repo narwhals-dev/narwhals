@@ -67,6 +67,10 @@ def col(name: str, /) -> Column:
 class Alias(ExprIR, dispatch="no_dispatch"):
     """Rename an expression.
 
+    Arguments:
+        expr: An expression with a root of exactly one `Column`.
+        name: The new name.
+
     Important:
         All expressions that change the output name are
         resolved and removed following expression expansion.
@@ -77,9 +81,7 @@ class Alias(ExprIR, dispatch="no_dispatch"):
 
     __slots__ = ("expr", "name")
     expr: ExprIR = node()
-    """The expression to rename."""
     name: str
-    """The new name."""
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self

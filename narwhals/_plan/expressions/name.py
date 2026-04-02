@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 class KeepName(ExprIR, dispatch="no_dispatch"):
     """Keep the original root name of an expression.
 
+    Arguments:
+        expr: An expression with at least one `Column`.
+
     Important:
         All expressions that change the output name are
         resolved and removed following expression expansion.
@@ -26,7 +29,6 @@ class KeepName(ExprIR, dispatch="no_dispatch"):
 
     __slots__ = ("expr",)
     expr: ExprIR = node()
-    """An expression with at least one `Column`."""
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
@@ -38,6 +40,10 @@ class KeepName(ExprIR, dispatch="no_dispatch"):
 class RenameAlias(ExprIR, dispatch="no_dispatch"):
     """Rename an expression by mapping a function over the root name.
 
+    Arguments:
+        expr: An expression or selector to rename.
+        function: A function that maps a root name to a new name.
+
     Important:
         All expressions that change the output name are
         resolved and removed following expression expansion.
@@ -48,9 +54,7 @@ class RenameAlias(ExprIR, dispatch="no_dispatch"):
 
     __slots__ = ("expr", "function")
     expr: ExprIR = node()
-    """The expression to rename."""
     function: AliasName
-    """Function that maps a root name to a new name."""
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
