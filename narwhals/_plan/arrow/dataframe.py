@@ -11,6 +11,7 @@ import pyarrow.compute as pc  # ignore-banned-import
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan._namespace import namespace
+from narwhals._plan._version import into_version
 from narwhals._plan.arrow import acero, compat, functions as fn
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
@@ -26,7 +27,6 @@ from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.exceptions import shape_error
 from narwhals._utils import Version, generate_repr, requires, supports_arrow_c_stream
-from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -141,7 +141,9 @@ class ArrowDataFrame(
         schema: IntoSchema | None = None,
         version: Version = MAIN,
     ) -> Self:
-        pa_schema = Schema(schema).to_arrow() if schema is not None else schema
+        pa_schema = (
+            schema if schema is None else into_version(version).schema(schema).to_arrow()
+        )
         native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native, version=version)
 

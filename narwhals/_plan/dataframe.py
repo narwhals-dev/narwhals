@@ -11,6 +11,7 @@ from narwhals._plan._expansion import (
 )
 from narwhals._plan._guards import is_series
 from narwhals._plan._namespace import eager_implementation, namespace_from_backend
+from narwhals._plan._version import into_version
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.compliant.translate import can_from_dict
 from narwhals._plan.exceptions import unsupported_backend_operation_error
@@ -40,7 +41,6 @@ from narwhals._utils import (
     qualified_type_name,
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
-from narwhals.schema import Schema
 from narwhals.typing import (
     AsofJoinStrategy,
     EagerAllowed,
@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.polars.typing import NativePolarsDataFrame
     from narwhals._typing import Arrow, Polars, _EagerAllowedImpl
+    from narwhals.schema import Schema
 
 
 Incomplete: TypeAlias = Any
@@ -90,7 +91,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
 
     @property
     def schema(self) -> Schema:
-        return Schema(self._compliant.schema.items())
+        return into_version(self._version).schema(self._compliant.schema.items())
 
     @property
     def columns(self) -> list[str]:

@@ -6,8 +6,9 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 from narwhals._plan import expressions as ir
+from narwhals._plan._version import into_version
 from narwhals._plan.common import flatten_hash_safe
-from narwhals._plan.expr import Expr, ExprV1
+from narwhals._plan.expr import Expr
 from narwhals._plan.expressions import operators as ops, selectors as s_ir
 from narwhals._utils import Version
 from narwhals.dtypes import DType
@@ -69,10 +70,8 @@ class Selector(Expr):
         obj._ir = selector_ir
         return obj
 
-    # TODO @dangotbanned: Use `into_version`
     def as_expr(self) -> Expr:
-        tp = Expr if self.version is Version.MAIN else ExprV1
-        return tp._from_ir(self._ir)
+        return into_version(self.version).expr._from_ir(self._ir)
 
     def exclude(self, *names: OneOrIterable[str]) -> Selector:
         return self - by_name(*names)  # pyright: ignore[reportReturnType]

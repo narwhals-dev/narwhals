@@ -9,13 +9,13 @@ import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan import expressions as ir
+from narwhals._plan._version import into_version
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.compliant.translate import FromDict, FromIterable
 from narwhals._utils import Implementation, Version
 from narwhals.exceptions import InvalidOperationError
-from narwhals.schema import Schema
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.typing import NonNestedLiteralT
     from narwhals.dtypes import IntegerType
+    from narwhals.schema import Schema
     from narwhals.typing import (
         ClosedInterval,
         FileSource,
@@ -370,10 +371,10 @@ class ArrowNamespace(
         return self._dataframe.from_native(native, version=self.version)
 
     def read_csv_schema(self, source: FileSource, /, **kwds: Any) -> Schema:
-        return Schema.from_arrow(io.read_csv_schema(source, **kwds))
+        return into_version(self).schema.from_arrow(io.read_csv_schema(source, **kwds))
 
     def read_parquet_schema(self, source: IOSource, /) -> Schema:
-        return Schema.from_arrow(io.read_parquet_schema(source))
+        return into_version(self).schema.from_arrow(io.read_parquet_schema(source))
 
     scan_csv = todo()
     scan_parquet = todo()

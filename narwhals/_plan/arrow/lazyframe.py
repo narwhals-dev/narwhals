@@ -61,9 +61,7 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
     @property
     def input_schema(self) -> Schema:
         if self._input_schema is None:
-            self._input_schema = into_version(self.version).schema.from_arrow(
-                self.native.schema
-            )
+            self._input_schema = into_version(self).schema.from_arrow(self.native.schema)
         return self._input_schema
 
     @property

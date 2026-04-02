@@ -48,6 +48,7 @@ from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._immutable import _OBJ_SETATTR, Immutable
 from narwhals._plan._meta import ExprIRMeta
 from narwhals._plan._nodes import ExprTraverser
+from narwhals._plan._version import into_version
 from narwhals._plan.typing import ExprIRT_co
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
@@ -293,10 +294,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         Arguments:
             version: API version to export into.
         """
-        from narwhals._plan import expr
-
-        tp = expr.Expr if version is Version.MAIN else expr.ExprV1
-        return tp._from_ir(self)
+        return into_version(version).expr._from_ir(self)
 
     def to_selector_ir(self) -> SelectorIR:
         """Try to convert this `ExprIR` into a `SelectorIR`.
@@ -580,12 +578,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
 # TODO @dangotbanned: Class-level doc
 class SelectorIR(ExprIR, dispatch="no_dispatch"):
-    # TODO @dangotbanned: Use `into_version`
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
-        from narwhals._plan.selectors import Selector, SelectorV1
-
-        tp = Selector if version is Version.MAIN else SelectorV1
-        return tp._from_ir(self)
+        return into_version(version).selector._from_ir(self)
 
     def iter_expand_selector(
         self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
