@@ -132,7 +132,7 @@ def test_special_aliases_single(expr: nwp.Expr, expected: str) -> None:
 def test_keep_name_no_names(df_1: Frame) -> None:
     with pytest.raises(
         InvalidOperationError,
-        match=r"expected at least one.+name.+got.+lit.+1.+name.keep",
+        match=r"name.keep` expected at least one.+name.+got.+lit.+1.+name.keep",
     ):
         df_1.project(nwp.lit(1).name.keep())
 

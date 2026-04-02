@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Generic, Literal, TypeVar, get_args
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
@@ -12,7 +12,7 @@ from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._duration import IntervalUnit
     from narwhals._plan.expressions import FunctionExpr as FExpr
@@ -21,16 +21,12 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
 
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
+_POLARS_TIME_UNIT = frozenset[PolarsTimeUnit](("ns", "us", "ms"))
 Tz = TypeVar("Tz", str, "str | None")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 ELEMENTWISE = FunctionFlags.ELEMENTWISE
 same_dtype = ResolveDType.function.same_dtype
-
-
-# TODO @dangotbanned: Turn this and the error into a single `_ensure_*` function
-def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
-    return obj in {"ns", "us", "ms"}
 
 
 # fmt: off
@@ -88,10 +84,12 @@ class Timestamp(_TemporalInt64):
     time_unit: PolarsTimeUnit
     @staticmethod
     def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
-        if not _is_polars_time_unit(time_unit):
-            msg = f"invalid `time_unit`\n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
-            raise TypeError(msg)
-        return Timestamp(time_unit=time_unit)
+        if time_unit in _POLARS_TIME_UNIT:
+            # Needs `mypy>=1.20`
+            # https://mypy.readthedocs.io/en/stable/changelog.html#better-type-narrowing
+            return Timestamp(time_unit=time_unit) # type: ignore[arg-type]
+        msg = f"Only the following time units are supported: {get_args(PolarsTimeUnit)}.\nGot: {time_unit!r}."
+        raise TypeError(msg)
     def __repr__(self) -> str:
         return f"{super().__repr__()}[{self.time_unit!r}]"
 # fmt: on

@@ -162,10 +162,9 @@ def remove_alias(origin: ExprIR, /) -> ExprIR:
     return origin.map_ir(fn)
 
 
-# TODO @dangotbanned: Update error message to use `name.keep`, (`KeepName` is the variant name only)
 def replace_keep_name(origin: ExprIR, /) -> ExprIR:
     if (name := next(meta.iter_root_names(origin), None)) is None:
-        msg = f"`name.keep_name` expected at least one column name, got `{origin!r}`"
+        msg = f"`name.keep` expected at least one column name, got `{origin!r}`"
         raise InvalidOperationError(msg)
 
     def fn(child: ExprIR, /) -> ExprIR:

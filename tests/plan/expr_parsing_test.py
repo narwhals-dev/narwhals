@@ -792,7 +792,7 @@ def test_then_equal() -> None:
 def test_dt_timestamp_invalid() -> None:
     assert nwp.col("a").dt.timestamp()
     with pytest.raises(
-        TypeError, match=re_compile(r"invalid.+time_unit.+expected.+got 's'")
+        TypeError, match=re_compile(r"only.+time unit.+supported.+Got: 's'")
     ):
         nwp.col("a").dt.timestamp("s")
 
