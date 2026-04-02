@@ -576,11 +576,76 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         return self.__repr__()
 
 
-# TODO @dangotbanned: Class-level doc
 class SelectorIR(ExprIR, dispatch="no_dispatch"):
+    """An expression that selects zero or more columns.
+
+    All functions that return a `Selector` are backed by a `SelectorIR`.
+
+    The `selectors` module is the usual entry point:
+    >>> import narwhals._plan as nw
+    >>> import narwhals._plan.selectors as ncs
+
+    And selectors created this way support set operations:
+    >>> selector = ncs.first() | ncs.boolean()
+    >>> isinstance(selector, nw.Selector)
+    True
+    >>> selector._ir
+    [ncs.first() | ncs.boolean()]
+
+    Some expressions are simply selectors in disguise:
+    >>> expr = nw.col("a", "b", "c")
+    >>> isinstance(expr, nw.Selector)
+    False
+    >>> expr._ir
+    ncs.by_name('a', 'b', 'c', require_all=True)
+
+    We can use selectors almost anywhere that column names are expected:
+    >>> data = {
+    ...     "A": ["dog", "cat", "dog", "cat", "dog"],
+    ...     "B": [1, 2, 1, 4, 0],
+    ...     "C": [30.0, 40.5, 10.0, 20.5, 2.0],
+    ...     "D": ["a", "b", "a", "a", "b"],
+    ... }
+    >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
+    >>> result = (
+    ...     df.group_by(ncs.string())
+    ...     .agg(ncs.float().sum(), ncs.integer())
+    ...     .with_columns(ncs.matches("C") / ncs.list().list.len())
+    ...     .explode(ncs.list())
+    ...     .sort(ncs.by_index(0, 1), descending=True)
+    ... )
+    >>> result.to_polars()
+    shape: (5, 4)
+    ┌─────┬─────┬──────┬─────┐
+    │ A   ┆ D   ┆ C    ┆ B   │
+    │ --- ┆ --- ┆ ---  ┆ --- │
+    │ str ┆ str ┆ f64  ┆ i64 │
+    ╞═════╪═════╪══════╪═════╡
+    │ dog ┆ b   ┆ 2.0  ┆ 0   │
+    │ dog ┆ a   ┆ 20.0 ┆ 1   │
+    │ dog ┆ a   ┆ 20.0 ┆ 1   │
+    │ cat ┆ b   ┆ 40.5 ┆ 2   │
+    │ cat ┆ a   ┆ 20.5 ┆ 4   │
+    └─────┴─────┴──────┴─────┘
+
+    Selectors are schema-dependent, with column names determined during expression expansion:
+    >>> middle = (~(ncs.first() | ncs.last()))._ir
+    >>> list(middle.iter_expand_selector(result.schema))
+    ['D', 'C']
+    >>> list(middle.iter_expand_selector(df.schema))
+    ['B', 'C']
+
+    Unlike `col`, a selector can still be valid if it matches zero columns:
+    >>> result.drop(ncs.struct()).columns == ["A", "D", "C", "B"]
+    True
+    """
+
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
         return into_version(version).selector._from_ir(self)
 
+    # TODO @dangotbanned: (low-priority) Add `SelectorIR.expand_selector`
+    # - Would accept the flags for duplicates & any, but skip `ignored_columns`
+    # - Return a tuple, while still getting validation (if needed)
     def iter_expand_selector(
         self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
