@@ -106,7 +106,7 @@ class Column(ExprIR, dispatch=namespaced("col")):
 
 
 class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):
-    """Application of two exprs via an `Operator`."""
+    """A binary operation applied to two expressions."""
 
     __slots__ = ("left", "op", "right")
     left: LeftT = node()
