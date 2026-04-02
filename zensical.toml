@@ -3,6 +3,8 @@ site_name = "Narwhals"
 site_description = "Narwhals documentation"
 site_url = "https://narwhals-dev.github.io/narwhals/"
 site_author = "hello_narwhals@proton.me"
+repo_url = "https://github.com/narwhals-dev/narwhals"
+repo_name = "narwhals-dev/narwhals"
 
 nav = [
     { "Home" = "index.md" },
