@@ -816,3 +816,20 @@ def test_from_eager_or_lazy_polars() -> None:
         assert_type(r2_lf, nw.LazyFrame[pl.LazyFrame])
         assert_type(r2_df, nw.DataFrame[pl.DataFrame])
         assert_type(r2_either, nw.DataFrame[pl.DataFrame] | nw.LazyFrame[pl.LazyFrame])
+
+
+def test_into_frame_t_incompatible_apis() -> None:
+    def _agnostic_function(  # pragma: no cover
+        df_native: IntoFrameT,
+    ) -> IntoFrameT:
+        nw.from_native(df_native).sink_parquet("...")  # type: ignore[union-attr]
+        _ = (
+            nw.from_native(df_native)
+            .with_row_index()  # type: ignore[call-arg]
+            .to_native()
+        )
+        return (
+            nw.from_native(df_native)
+            .unique(maintain_order=True)  # type: ignore[call-arg]
+            .to_native()
+        )
