@@ -285,6 +285,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         if native_object._version is version:
             return native_object
 
+        raise ValueError("Cannot Do That!")
         real_native_object = native_object.to_native()
         return (
             version.namespace.from_native_object(real_native_object)
