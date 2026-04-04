@@ -101,7 +101,14 @@ class PandasLikeSeriesDateTimeNamespace(
 
     def weekday(self) -> PandasLikeSeries:
         # Pandas is 0-6 while Polars is 1-7
-        return self.with_native(self.native.dt.weekday) + 1
+        impl = self.compliant._implementation
+        native = self.native
+        result = (
+            native.dt.day_of_week
+            if impl.is_pandas() and impl._backend_version() >= (1, 5)
+            else native.dt.weekday
+        )
+        return self.with_native(result) + 1
 
     def _is_pyarrow(self) -> bool:
         return is_dtype_pyarrow(self.native.dtype)
