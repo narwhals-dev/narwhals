@@ -6,23 +6,10 @@ from narwhals._plan import _parse
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.expr import Expr
 from narwhals._plan.expressions import ternary_expr
-from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
-
-
-def _multi_output_error(expr: ExprIR) -> MultiOutputExpressionError:
-    msg = f"Multi-output expressions are not supported in a `when-then-otherwise` context: `{expr!r}`"
-    return MultiOutputExpressionError(msg)
-
-
-def _parse_into_expr_ir(statement: IntoExpr, /) -> ExprIR:
-    expr_ir = _parse.into_expr_ir(statement)
-    if expr_ir.meta.has_multiple_outputs():
-        raise _multi_output_error(expr_ir)
-    return expr_ir
 
 
 class When(Immutable):
@@ -30,7 +17,7 @@ class When(Immutable):
     condition: ExprIR
 
     def then(self, expr: IntoExpr, /) -> Then:
-        return Then(condition=self.condition, statement=_parse_into_expr_ir(expr))
+        return Then(condition=self.condition, statement=_parse.into_expr_ir(expr))
 
     @staticmethod
     def _from_ir(expr_ir: ExprIR, /) -> When:
@@ -55,7 +42,7 @@ class Then(Immutable, Expr):
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
         return ternary_expr(
-            self.condition, self.statement, _parse_into_expr_ir(statement)
+            self.condition, self.statement, _parse.into_expr_ir(statement)
         )
 
     @property
@@ -78,7 +65,7 @@ class ChainedWhen(Immutable):
     def then(self, statement: IntoExpr, /) -> ChainedThen:
         return ChainedThen(
             conditions=self.conditions,
-            statements=(*self.statements, _parse_into_expr_ir(statement)),
+            statements=(*self.statements, _parse.into_expr_ir(statement)),
         )
 
 
@@ -99,7 +86,7 @@ class ChainedThen(Immutable, Expr):
         return self._from_ir(self._otherwise(statement))
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
-        otherwise = _parse_into_expr_ir(statement)
+        otherwise = _parse.into_expr_ir(statement)
         for cond, stmt in zip(reversed(self.conditions), reversed(self.statements)):
             otherwise = ternary_expr(cond, stmt, otherwise)
         return otherwise

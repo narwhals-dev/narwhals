@@ -126,9 +126,6 @@ def _predicates_constraints_into_expr_ir(
         raise at_least_one_error("filter")
     if second := next(predicates, None):
         return ir.all_horizontal(first, second, *predicates)
-    if first.meta.has_multiple_outputs():
-        # NOTE: Safeguarding against https://github.com/pola-rs/polars/issues/25022
-        return ir.all_horizontal(first)
     return first
 
 
