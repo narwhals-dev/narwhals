@@ -504,8 +504,8 @@ class PolarsSeries:
 
         return self._with_native(result)
 
-    def scatter(self, indices: int | Sequence[int], values: Any) -> Self:
-        s = self.native.clone().scatter(indices, extract_native(values))
+    def scatter(self, indices: Self, values: Self) -> Self:
+        s = self.native.clone().scatter(indices.native, values.native)
         return self._with_native(s)
 
     def value_counts(
@@ -822,6 +822,12 @@ class PolarsSeriesStringNamespace(
         value_native = extract_native(value)
         return self.compliant._with_native(
             self.native.str.replace_all(pattern, value_native, literal=literal)  # type: ignore[arg-type]
+        )
+
+    def contains(self, pattern: PolarsSeries, *, literal: bool) -> PolarsSeries:
+        pattern_native = extract_native(pattern)
+        return self.compliant._with_native(
+            self.native.str.contains(pattern_native, literal=literal)  # type: ignore[arg-type]
         )
 
 

@@ -785,11 +785,7 @@ def test_join_duplicate_column_names(
         from pandas.errors import MergeError
 
         exception = MergeError
-    elif "sqlframe" in str(constructor):
-        import duckdb
-
-        exception = duckdb.BinderException
-    elif "pyspark" in str(constructor):
+    elif "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         from pyspark.errors import AnalysisException
 
         exception = AnalysisException

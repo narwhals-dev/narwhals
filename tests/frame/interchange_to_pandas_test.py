@@ -23,9 +23,6 @@ def test_interchange_ibis_to_pandas(
 ) -> None:  # pragma: no cover
     if PANDAS_VERSION < (1, 5, 0):
         pytest.skip()
-    if PANDAS_VERSION >= (3,):
-        # https://github.com/duckdb/duckdb/issues/18297
-        request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("ibis")
     import ibis
