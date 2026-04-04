@@ -3254,7 +3254,7 @@ class LazyFrame(BaseFrame[FrameT]):
             suffix=suffix,
         )
 
-    def lazy(self) -> LazyFrame[Any]:
+    def lazy(self) -> Self:
         """Restrict available API methods to lazy-only ones.
 
         This is a no-op, and exists only for compatibility with `DataFrame.lazy`.
