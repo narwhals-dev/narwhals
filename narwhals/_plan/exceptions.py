@@ -30,11 +30,11 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.operators import Operator
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import IntoExpr, Seq
+    from narwhals._plan.typing import IntoExpr, LeftT, OperatorT, RightT, Seq
     from narwhals.dtypes import DType
     from narwhals.typing import Backend, IntoBackend, IntoDType, IntoSchema
 
-ExprMethod: TypeAlias = Literal["filter", "sort_by"]
+ExprFunction: TypeAlias = Literal["filter", "when", "sort_by"]
 SelectorValue: TypeAlias = Literal["index", "name"]
 # NOTE: Using verbose names to start with
 # TODO @dangotbanned: Think about something better/more consistent once the new messages are finalized
@@ -115,13 +115,38 @@ def binary_expr_shape_error(
     return ShapeError(msg)
 
 
-def binary_expr_multi_output_error(
-    origin: ir.BinaryExpr, left_expand: Seq[ir.ExprIR], right_expand: Seq[ir.ExprIR]
+def combination_multi_output_error(
+    origin: ir.BinaryExpr[LeftT, OperatorT, RightT] | ir.TernaryExpr,
+    lengths: Sequence[int],
 ) -> MultiOutputExpressionError:
-    len_left, len_right = len(left_expand), len(right_expand)
+    """Dispatcher so that these two can share the same impl, but get nice errors individually."""
+    from narwhals._plan import expressions as ir
+
+    if isinstance(origin, ir.TernaryExpr):
+        return ternary_expr_multi_output_error(origin, lengths)
+    return binary_expr_multi_output_error(origin, lengths)
+
+
+def binary_expr_multi_output_error(
+    origin: ir.BinaryExpr[LeftT, OperatorT, RightT], lengths: Sequence[int]
+) -> MultiOutputExpressionError:
+    len_left, len_right = lengths
     lhs, op, rhs = origin.left, origin.op, origin.right
     expr = _binary_underline(lhs, op, rhs, underline_right=len_left < len_right)
     msg = f"Cannot combine selectors that produce a different number of columns ({len_left} != {len_right}).\n{expr}"
+    return MultiOutputExpressionError(msg)
+
+
+# TODO @dangobanned: Make fancier error for `when`
+# - the lengths should display with the order
+#   - GOAL:     `(predicate, truthy, falsy)`
+#   - CURRENT:  `(truthy, predicate, falsy)`
+# - *maybe* underline things
+def ternary_expr_multi_output_error(
+    origin: ir.TernaryExpr, lengths: Sequence[int]
+) -> MultiOutputExpressionError:
+    inequal = " != ".join(map(repr, lengths))
+    msg = f"Cannot combine selectors that produce a different number of columns ({inequal}).\n{origin!r}"
     return MultiOutputExpressionError(msg)
 
 
@@ -207,8 +232,9 @@ def invalid_into_expr_error(
     return InvalidIntoExprError(msg)
 
 
-def at_least_one_error(method: ExprMethod, /) -> TypeError:
-    kind = {"filter": "predicate or constraint", "sort_by": "sort key"}[method]
+def at_least_one_error(method: ExprFunction, /) -> TypeError:
+    predicate = "predicate or constraint"
+    kind = {"filter": predicate, "when": predicate, "sort_by": "sort key"}[method]
     msg = f"at least one {kind} must be provided"
     return TypeError(msg)
 

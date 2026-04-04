@@ -22,7 +22,6 @@ from narwhals.exceptions import (
     ComputeError,
     InvalidOperationError,
     InvalidOperationError as LengthChangingExprError,
-    MultiOutputExpressionError,
     ShapeError,
 )
 from tests.plan.utils import assert_equal_data, assert_expr_ir_equal, re_compile
@@ -40,6 +39,7 @@ if TYPE_CHECKING:
         OperatorFn,
         Seq,
     )
+    from narwhals._plan.when_then import ChainedWhen, When
     from narwhals.typing import IntoDType, PythonLiteral
 
 
@@ -754,23 +754,30 @@ def test_into_expr_invalid() -> None:
     with pytest.raises(
         TypeError, match=re_compile(r"expected.+narwhals.+got.+polars.+hint")
     ):
-        nwp.col("a").max().over(pl.col("b"))  # type: ignore[arg-type]
+        nwp.min("a").over(pl.col("b"))  # type: ignore[arg-type]
 
 
-def test_when_invalid() -> None:
-    pattern = re_compile(r"multi-output expr.+not supported in.+when.+context")
-
-    when = nwp.when(nwp.col("a", "b", "c").is_finite())
-    when_then = when.then(nwp.col("d").is_unique())
-    when_then_when = when_then.when(
-        (nwp.median("a", "b", "c") > 2) | nwp.col("d").is_nan()
-    )
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        when.then(nwp.max("c", "d"))
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        when_then.otherwise(nwp.min("h", "i", "j"))
-    with pytest.raises(MultiOutputExpressionError, match=pattern):
-        when_then_when.then(nwp.col(["b", "y", "e"]))
+@pytest.mark.parametrize(
+    "base",
+    [
+        nwp.when,
+        nwp.when(a="b").then(1).when,
+        nwp.when(nwp.col("a").is_finite())
+        .then(1)
+        .when((nwp.median("a", "b", "c") > 2) | nwp.col("d").is_nan())
+        .then(2)
+        .when,
+    ],
+    ids=["when", "Then", "ChainedThen"],
+)
+def test_when_empty(base: Callable[..., When | ChainedWhen]) -> None:
+    at_least_one = pytest.raises(TypeError, match=re_compile(r"at least one predicate"))
+    with at_least_one:
+        base()
+    with at_least_one:
+        base([])
+    with at_least_one:
+        base(iter(()))
 
 
 # NOTE: `Then`, `ChainedThen` use multi-inheritance, but **need** to use `Expr.__eq__`

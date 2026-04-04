@@ -728,6 +728,98 @@ def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
         df_1.project(ten_to_nine)
 
 
+def test_exclude_when_then_21352() -> None:
+    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/tests/unit/operations/test_selectors.py#L1090-L1096
+    df = Frame.from_mapping({"A": nw.Int64(), "B": nw.Int64()})
+    exclude_b = nwp.all().exclude("B")
+    combination = nwp.when(nwp.lit(True)).then(nwp.all()).otherwise(exclude_b)
+    df.assert_selects(exclude_b, "A")
+    actuals = df.project(combination)
+    expected = (
+        named_ir("A", nwp.when(nwp.lit(True)).then("A").otherwise("A")),
+        named_ir("B", nwp.when(nwp.lit(True)).then("B").otherwise("A")),
+    )
+
+    for actual, expect in zip_strict(actuals, expected):
+        assert_expr_ir_equal(actual, expect)
+
+
+def test_expand_ternary_expr_combination_1(df_1: Frame) -> None:
+    less_than_5_flip = nwp.when(nwp.col("a", "b", "c") <= 5).then(nwp.nth(2, 1, 0))
+    expected = (
+        named_ir("c", nwp.when(nwp.col("a") <= 5).then("c")),
+        named_ir("b", nwp.when(nwp.col("b") <= 5).then("b")),
+        named_ir("a", nwp.when(nwp.col("c") <= 5).then("a")),
+    )
+    actuals = df_1.project(less_than_5_flip)
+    for actual, expect in zip_strict(actuals, expected):
+        assert_expr_ir_equal(actual, expect)
+
+
+def test_expand_ternary_expr_combination_2(df_1: Frame) -> None:
+    integer = ncs.integer()
+    signed_integer = integer - ncs.by_dtype(
+        nw.UInt64, nw.UInt32, nw.UInt16, nw.UInt8, nw.UInt128
+    )
+    unsigned_integer = integer - ncs.by_dtype(
+        nw.Int64, nw.Int32, nw.Int16, nw.Int8, nw.Int128
+    )
+    field = nwp.col("u").struct.field("a")
+    explode_brain = (
+        nwp.when((unsigned_integer.is_null().as_expr()) & nwp.nth(2).is_not_null())
+        .then(signed_integer.name.suffix("_after"))
+        .when(ncs.by_dtype(nw.Int16).is_null())
+        .then(field)
+    )
+
+    c_not_null = nwp.col("c").is_not_null()
+    c_is_null = nwp.col("c").is_null()
+
+    def expands(output_name: str, lhs_predicate_name: str, then_name: str) -> ir.NamedIR:
+        return named_ir(
+            output_name,
+            nwp.when(nwp.col(lhs_predicate_name).is_null() & c_not_null)
+            .then(then_name)
+            .when(c_is_null)
+            .then(field),
+        )
+
+    expected = (
+        expands("a_after", "e", "a"),
+        expands("b_after", "f", "b"),
+        expands("c_after", "g", "c"),
+        expands("d_after", "h", "d"),
+    )
+    actuals = df_1.project(explode_brain)
+    for actual, expect in zip_strict(actuals, expected):
+        assert_expr_ir_equal(actual, expect)
+
+
+def test_expand_ternary_expr_combination_invalid(df_1: Frame) -> None:
+    with _raises_when_multi(2, 3, 1):
+        df_1.project(nwp.when(nwp.col("a", "b", "c").is_finite()).then(nwp.max("c", "d")))
+
+    with _raises_when_multi(2, 1, 3):
+        df_1.project(
+            nwp.when(nwp.len() >= 1).then(ncs.float()).otherwise(nwp.nth(1, 2, 3))
+        )
+
+    with _raises_when_multi(1, 8, 2):
+        df_1.project(
+            nwp.when(ncs.integer().cast(nw.Boolean))
+            .then(nwp.lit("truthy"))
+            .otherwise((ncs.string() | ncs.enum()).cast(nw.String))
+        )
+
+
+# TODO @dangotbanned: Replace order and message after updating `ternary_expr_multi_output_error`
+def _raises_when_multi(
+    truthy: int, predicate: int, falsy: int
+) -> pytest.RaisesExc[MultiOutputExpressionError]:
+    shapes = f"({truthy} != {predicate} != {falsy})"
+    return pytest.raises(MultiOutputExpressionError, match=re.escape(shapes))
+
+
 def test_expand_function_expr_multi_invalid(df_1: Frame) -> None:
     first_column = re.escape("col('a')")
     last_selected_column = re.escape("col('h')")

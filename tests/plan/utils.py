@@ -197,6 +197,12 @@ class Frame:
         return tuple(e.name for e in named_irs)
 
     def assert_selects(self, selector: Selector | Expr, *column_names: str) -> None:
+        """Assert that the selector expands into column names.
+
+        Arguments:
+            selector: The selector to compare.
+            column_names: Zero or more expected column names.
+        """
         result = self.project_names(selector)
         expected = column_names
         assert result == expected, (
