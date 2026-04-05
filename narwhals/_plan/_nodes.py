@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final,
 from narwhals._plan.exceptions import combination_multi_output_error
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Collection, Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
 
     from typing_extensions import Self, TypeAlias
 
@@ -381,11 +381,12 @@ class ExprTraverser:
         - Excluding the `value`-based methods
     """
 
-    __slots__ = ("_nodes",)
+    __slots__ = ("_names", "_nodes")
     _nodes: ExprNodes
 
     def __init__(self, nodes: ExprNodes, /) -> None:
         self._nodes = nodes
+        self._names: Seq[str] | None = None
 
     def __repr__(self) -> str:
         return self._repr_with("\n", " ")
@@ -461,9 +462,6 @@ class ExprTraverser:
             yield instance.__replace__(**{name: expanded})
 
     # TODO @dangotbanned: (Impl) Finish cleaning up
-    # - Still probably some more to be squeezed out, but it's looking fairly reasonable
-    # - There are some similarities to `ExprTraverser.iter_expand`
-    # - Ideally, get rid of `_replace_many`
     # TODO @dangotbanned: (Docs) Show what it does in a simple example
     def iter_expand_by_combination(
         self, instance: ExprIR, ctx: Expander, /
@@ -488,44 +486,46 @@ class ExprTraverser:
         [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         [polars#25317]: https://github.com/pola-rs/polars/issues/25317
         """
-        #  BinaryExpr, TernaryExpr
-        names = tuple(self.names())
-        iterators = tuple(e_node.iter_expand(instance, ctx) for e_node in self)
-        # NOTE: `(1, ...)` Where none are selectors
-        # Fast-path that doesn't require collection
+        # BinaryExpr, TernaryExpr
+        # NOTE: There may be another version of this that relies more on indices
+        seen_multi = set[int]()
         if not instance.meta.has_multiple_outputs():
-            yield from _replace_many(instance, names, iterators)
+            # NOTE: `(1, ...)` Where none are selectors
+            # Fast-path, doesn't require collection
+            changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
+            yield instance.__replace__(**changes)
             return
 
-        # NOTE: `(M, ...)`
-        # NOTE: `(1, ...)` Where at least one was a selector
-        collections = tuple(tuple(it) for it in iterators)
-        lengths = tuple(len(el) for el in collections)
-        max_len = max(lengths)
-        if max_len == 1 or len(unique_lengths := set(lengths)) == 1:
-            yield from _replace_many(instance, names, collections)
-
-        # NOTE: `(M1, M2, ...)`
-        elif unique_lengths.difference((1,)) != {max_len}:
-            raise combination_multi_output_error(instance, lengths)  # type: ignore[arg-type]
-
-        # NOTE: `(M | 1, ...)`
+        zip_exprs: list[Seq[ExprIR]] = []
+        zip_names: list[str] = []
+        for it, name in zip((e.iter_expand(instance, ctx) for e in self), self.names):
+            expanded = tuple(it)
+            if (length := len(expanded)) == 1:
+                # NOTE: `(1 | ?, ...)`
+                # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass, if we get there)
+                instance = instance.__replace__(**{name: expanded[0]})
+            elif not seen_multi or length in seen_multi:
+                # NOTE: `(M | ?, ...)`
+                zip_exprs.append(expanded)
+                zip_names.append(name)
+                seen_multi.add(length)
+            else:
+                # NOTE: `(M1, M2, ...)`
+                # We only need the length of all expansions & in order, for the error message
+                lengths = tuple(len(tuple(e.iter_expand(instance, ctx))) for e in self)
+                raise combination_multi_output_error(instance, lengths)  # type: ignore[arg-type]
+        if not seen_multi:
+            # NOTE: `(1, ...)` Where at least one was a selector
+            yield instance
         else:
-            todo: list[Seq[ExprIR]] = []
-            todo_names: list[str] = []
-            # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass)
-            for exprs, length, name in zip(collections, lengths, names):
-                if length == 1:
-                    instance = instance.__replace__(**{name: exprs[0]})
-                else:
-                    todo.append(exprs)
-                    todo_names.append(name)
-
+            # NOTE: `(M | 1, ...)` or `(M, ...)`
             # Pass 2 (A fancy zip)
             # `In    : (col("a", "b"), col("c", "d"), col("e"))`
             # `Out[1]: (col("a"), col("c"), col("e"))`
             # `Out[2]: (col("b"), col("d"), col("e"))`
-            yield from _replace_many(instance, todo_names, todo)
+            zipped: zip[Seq[ExprIR]] = zip(*zip_exprs)
+            for expanded in zipped:
+                yield instance.__replace__(**dict(zip(zip_names, expanded)))
 
     def is_scalar(self, instance: ExprIR, /) -> bool:
         # NOTE: Acrobatics because `all(...)` returns True on an empty iterable,
@@ -546,11 +546,12 @@ class ExprTraverser:
             instance = instance.__replace__(**changes)
         return function(instance)
 
-    # TODO @dangotbanned: Replace with a lazy property that stores a tuple
-    def names(self) -> Iterator[str]:
-        """Yield the attribute name for each node."""
-        for node in self:
-            yield node.name
+    @property
+    def names(self) -> Seq[str]:
+        """The name of each field that stores an expression."""
+        if self._names is None:
+            self._names = tuple(node.name for node in self)
+        return self._names
 
     # NOTE: `Sequence[_ExprNode]` API
     @overload
@@ -569,35 +570,6 @@ class ExprTraverser:
     def __reversed__(self) -> Iterator[_ExprNode]:
         if self:
             yield from reversed(self._nodes)
-
-
-_S = TypeVar("_S")
-_R_co = TypeVar("_R_co", covariant=True)
-
-
-# NOTE: Copied from https://github.com/python/typeshed/pull/14786
-# `mypy==1.15.0` is using an older version of the stubs
-class _SupportsReplace(Protocol[_R_co]):
-    # In reality doesn't support args, but there's no great way to express this.
-    def __replace__(self, /, *_: Any, **changes: Any) -> _R_co: ...
-
-
-def _replace_many(
-    obj: _SupportsReplace[_R_co],
-    field_names: Collection[str],
-    replacements: Iterable[Iterable[_S]],
-    /,
-) -> Iterator[_R_co]:
-    """Yields `len(replacements)` versions of `obj`.
-
-    Quite unsafe wrapper around `copy.replace`.
-
-    Important:
-        The length of `field_names` and each iterable in `replacements` must match.
-    """
-    zipped: zip[tuple[_S, ...]] = zip(*replacements)
-    for values in zipped:
-        yield obj.__replace__(**dict(zip(field_names, values)))
 
 
 _EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)
