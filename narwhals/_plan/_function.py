@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr
+    from narwhals._plan.expressions.expr import HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
 
@@ -285,6 +286,11 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
     [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
     """
 
+    def to_function_expr(self, *inputs: ExprIR) -> HorizontalExpr[Self]:
+        return _import_horizontal_expr()(
+            input=self._validate_input(inputs), function=self
+        )
+
 
 @cache
 def _import_function_expr() -> type[FunctionExpr[Any]]:
@@ -292,3 +298,10 @@ def _import_function_expr() -> type[FunctionExpr[Any]]:
     from narwhals._plan.expressions.expr import FunctionExpr
 
     return FunctionExpr
+
+
+@cache
+def _import_horizontal_expr() -> type[HorizontalExpr[Any]]:
+    from narwhals._plan.expressions.expr import HorizontalExpr
+
+    return HorizontalExpr

@@ -15,13 +15,16 @@ With a helping hand from [field specifiers] ([PEP 681]), all expressions can be 
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final, overload
+
+from narwhals._plan.exceptions import combination_multi_output_error
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator
+    from collections.abc import Callable, Collection, Iterable, Iterator
 
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan._expansion import Expander
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.typing import MapIR, Seq
 
@@ -35,6 +38,8 @@ _OBSERVE: Final = IsScalar.OBSERVE
 _SKIP: Final = IsScalar.SKIP
 
 NodeT = TypeVar("NodeT")
+
+# TODO @dangotbanned: Rename `Get` -> `Storage`?
 Get = TypeVar("Get", covariant=True)  # noqa: PLC0105
 _ExprNode: TypeAlias = "SingleExpr[Literal[IsScalar.OBSERVE]] | SingleExpr[Literal[IsScalar.SKIP]] | MultipleExpr"
 ExprNodes: TypeAlias = "Seq[_ExprNode]"
@@ -228,6 +233,50 @@ class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
         """
         ...
 
+    def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
+        """Yield the expression(s) that the current node expands into."""
+        ...
+
+    # NOTE: These are defining how this node should behave when *it is the first in `ExprTraverser*
+    # The term `root` is a bit overloaded, since the root from here could also mean:
+    # - `SingleExpr.get(instance) | MultipleExpr.get(instance)[0]`
+    # - `next(ExprNode.iter_left())`
+    def expand_as_non_root(self, instance: ExprIR, ctx: Expander, /) -> Get:
+        """Return the expanded replacement for a non-root node.
+
+        Default non-root expansion rules:
+
+            # Restricted to a single expansion
+            ExprIR             -> ExprIR
+            Integer            -> Column              # Ok
+            All                -> tuple[Column, ...]  # Error
+
+            # Expands freely within the container
+            tuple[ExprIR, ...] -> tuple[ExprIR, ...]
+            tuple[Integer]     -> tuple[Column]       # Ok
+            tuple[All]         -> tuple[Column, ...]  # Ok
+        """
+        ...
+
+    def iter_expand_as_root(self, instance: ExprIR, ctx: Expander, /) -> Iterator[Get]:
+        """Yield the expanded replacement(s) for a root node.
+
+        Default root expansion rules:
+
+            # Unrestricted expansion
+            # Each becomes a root in a new expression
+            ExprIR             -> Iterator[ExprIR]
+            Integer            -> Iterator[Column]
+            All                -> Iterator[Column]
+
+            # Expands freely within the container
+            # Always yields a single expression
+            tuple[ExprIR, ...] -> Iterator[tuple[ExprIR, ...]]
+            tuple[Integer]     -> Iterator[tuple[Column]]
+            tuple[All]         -> Iterator[tuple[Column, ...]]
+        """
+        ...
+
 
 class SingleExpr(ExprNode["ExprIR", IsScalarT]):
     """Representation for `node(...)`."""
@@ -258,6 +307,15 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
 
     def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
         yield from self.get(instance).iter_output_name()
+
+    def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
+        yield from self.get(instance).iter_expand(ctx)
+
+    def expand_as_non_root(self, instance: ExprIR, ctx: Expander, /) -> ExprIR:
+        return ctx.only(instance, self.get(instance))
+
+    def iter_expand_as_root(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
+        yield from self.iter_expand(instance, ctx)
 
     def is_scalar(self, instance: ExprIR) -> bool:
         return self.get(instance).is_scalar()
@@ -293,6 +351,18 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
     def iter_output_name(self, instance: ExprIR) -> Iterator[ExprIR]:
         for lhs in self.get(instance)[:1]:
             yield from lhs.iter_output_name()
+
+    def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
+        for expr in self.get(instance):
+            yield from expr.iter_expand(ctx)
+
+    def expand_as_non_root(self, instance: ExprIR, ctx: Expander, /) -> Seq[ExprIR]:
+        return tuple(self.iter_expand(instance, ctx))
+
+    def iter_expand_as_root(
+        self, instance: ExprIR, ctx: Expander, /
+    ) -> Iterator[Seq[ExprIR]]:
+        yield tuple(self.iter_expand(instance, ctx))
 
     def map_nodes(self, instance: ExprIR, function: MapIR, /) -> Seq[ExprIR] | None:
         if before := self.get(instance):
@@ -363,6 +433,100 @@ class ExprTraverser:
         if self:
             yield from self[0].iter_output_name(instance)
 
+    def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
+        # not covered: FunctionExpr (similar to `Filter`)
+        #   `input_root, *non_root = FunctionExpr.input`
+        #   `input_root, non_root  = Filter.expr, Filter.by`
+        if not self:
+            # Column, Lit, LitSeries, Len
+            yield instance
+            return
+
+        # Filter
+        # SortBy, Over, OverOrdered
+        if len(self) > 1 and (
+            changes := {
+                node.name: expanded
+                for node in reversed(self[1:])
+                if (expanded := node.expand_as_non_root(instance, ctx))
+            }
+        ):
+            instance = instance.__replace__(**changes)
+
+        # Filter, SortBy, Over, OverOrdered
+        # Alias, Cast, AggExpr, Sort, KeepName, RenameAlias, HorizontalExpr
+        node = self[0]
+        name = node.name
+        for expanded in node.iter_expand_as_root(instance, ctx):
+            yield instance.__replace__(**{name: expanded})
+
+    # TODO @dangotbanned: (Impl) Finish cleaning up
+    # - Still probably some more to be squeezed out, but it's looking fairly reasonable
+    # - There are some similarities to `ExprTraverser.iter_expand`
+    # - Ideally, get rid of `_replace_many`
+    # TODO @dangotbanned: (Docs) Show what it does in a simple example
+    def iter_expand_by_combination(
+        self, instance: ExprIR, ctx: Expander, /
+    ) -> Iterator[ExprIR]:
+        """Expand an expression, with broadcasting and/or zipping of it's inputs as needed.
+
+        Adapted from [`expand_expression_by_combination`].
+
+        Arguments:
+            instance: The expression to expand.
+            ctx: The expansion context to resolve the operation in.
+
+        Important:
+            This may be *conceptually* tricky to understand as it is not (yet?)
+            well-documented upstream. See ([polars#25022]), ([polars#25317]).
+
+        Notes:
+            - Implemented for (BinaryExpr, TernaryExpr), but not all of the
+              11+ expressions that polars does it on
+
+        [`expand_expression_by_combination`]: https://github.com/pola-rs/polars/blob/bb93ba8e67a1f38951506ce044245560009fe55a/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L129-L197
+        [polars#25022]: https://github.com/pola-rs/polars/issues/25022
+        [polars#25317]: https://github.com/pola-rs/polars/issues/25317
+        """
+        #  BinaryExpr, TernaryExpr
+        names = tuple(self.names())
+        iterators = tuple(e_node.iter_expand(instance, ctx) for e_node in self)
+        # NOTE: `(1, ...)` Where none are selectors
+        # Fast-path that doesn't require collection
+        if not instance.meta.has_multiple_outputs():
+            yield from _replace_many(instance, names, iterators)
+            return
+
+        # NOTE: `(M, ...)`
+        # NOTE: `(1, ...)` Where at least one was a selector
+        collections = tuple(tuple(it) for it in iterators)
+        lengths = tuple(len(el) for el in collections)
+        max_len = max(lengths)
+        if max_len == 1 or len(unique_lengths := set(lengths)) == 1:
+            yield from _replace_many(instance, names, collections)
+
+        # NOTE: `(M1, M2, ...)`
+        elif unique_lengths.difference((1,)) != {max_len}:
+            raise combination_multi_output_error(instance, lengths)  # type: ignore[arg-type]
+
+        # NOTE: `(M | 1, ...)`
+        else:
+            todo: list[Seq[ExprIR]] = []
+            todo_names: list[str] = []
+            # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass)
+            for exprs, length, name in zip(collections, lengths, names):
+                if length == 1:
+                    instance = instance.__replace__(**{name: exprs[0]})
+                else:
+                    todo.append(exprs)
+                    todo_names.append(name)
+
+            # Pass 2 (A fancy zip)
+            # `In    : (col("a", "b"), col("c", "d"), col("e"))`
+            # `Out[1]: (col("a"), col("c"), col("e"))`
+            # `Out[2]: (col("b"), col("d"), col("e"))`
+            yield from _replace_many(instance, todo_names, todo)
+
     def is_scalar(self, instance: ExprIR, /) -> bool:
         # NOTE: Acrobatics because `all(...)` returns True on an empty iterable,
         # and there's 2 ways we can get there
@@ -382,8 +546,18 @@ class ExprTraverser:
             instance = instance.__replace__(**changes)
         return function(instance)
 
+    # TODO @dangotbanned: Replace with a lazy property that stores a tuple
+    def names(self) -> Iterator[str]:
+        """Yield the attribute name for each node."""
+        for node in self:
+            yield node.name
+
     # NOTE: `Sequence[_ExprNode]` API
-    def __getitem__(self, key: int, /) -> _ExprNode:
+    @overload
+    def __getitem__(self, key: int, /) -> _ExprNode: ...
+    @overload
+    def __getitem__(self, key: slice, /) -> Seq[_ExprNode]: ...
+    def __getitem__(self, key: int | slice, /) -> _ExprNode | Seq[_ExprNode]:
         return self._nodes.__getitem__(key)
 
     def __iter__(self) -> Iterator[_ExprNode]:
@@ -395,6 +569,35 @@ class ExprTraverser:
     def __reversed__(self) -> Iterator[_ExprNode]:
         if self:
             yield from reversed(self._nodes)
+
+
+_S = TypeVar("_S")
+_R_co = TypeVar("_R_co", covariant=True)
+
+
+# NOTE: Copied from https://github.com/python/typeshed/pull/14786
+# `mypy==1.15.0` is using an older version of the stubs
+class _SupportsReplace(Protocol[_R_co]):
+    # In reality doesn't support args, but there's no great way to express this.
+    def __replace__(self, /, *_: Any, **changes: Any) -> _R_co: ...
+
+
+def _replace_many(
+    obj: _SupportsReplace[_R_co],
+    field_names: Collection[str],
+    replacements: Iterable[Iterable[_S]],
+    /,
+) -> Iterator[_R_co]:
+    """Yields `len(replacements)` versions of `obj`.
+
+    Quite unsafe wrapper around `copy.replace`.
+
+    Important:
+        The length of `field_names` and each iterable in `replacements` must match.
+    """
+    zipped: zip[tuple[_S, ...]] = zip(*replacements)
+    for values in zipped:
+        yield obj.__replace__(**dict(zip(field_names, values)))
 
 
 _EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)

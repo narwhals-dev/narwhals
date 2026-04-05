@@ -1,5 +1,7 @@
 """Top-level `Expr` nodes."""
 
+# mypy: disable-error-code="misc"
+# NOTE: Sadly no way to disable *just* the variance inference part
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Generic
@@ -14,10 +16,11 @@ from narwhals._plan.exceptions import over_order_by_names_error
 from narwhals._plan.expressions.selectors import ByName
 from narwhals._plan.typing import (
     FunctionT_co,
-    LeftT,
+    HorizontalT_co,
+    LeftT_co,
     OperatorT,
     RangeT_co,
-    RightT,
+    RightT_co,
     RollingT_co,
     Seq,
     StructT_co,
@@ -28,11 +31,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._plan._expansion import Expander
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.options import SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
+
 
 __all__ = [
     "Alias",
@@ -125,13 +130,13 @@ class Column(ExprIR, dispatch=namespaced("col")):
         yield self
 
 
-class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):
+class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
     """A binary operation applied to two expressions."""
 
     __slots__ = ("left", "op", "right")
-    left: LeftT = node()
+    left: LeftT_co = node()
     op: OperatorT
-    right: RightT = node()
+    right: RightT_co = node()
 
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
@@ -147,6 +152,9 @@ class BinaryExpr(ExprIR, Generic[LeftT, OperatorT, RightT]):
         - `Modulus`
         """
         return self.op.resolve_dtype(self, schema)
+
+    def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
+        yield from self.__expr_ir_nodes__.iter_expand_by_combination(self, ctx)
 
 
 class Cast(ExprIR, dtype=get_dtype()):
@@ -193,7 +201,6 @@ class SortBy(ExprIR, dtype=same_dtype()):
 
 # TODO @dangotbanned: Docs should complement `Function`
 # - The two are very tightly coupled
-# mypy: disable-error-code="misc"
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     """**Representing `Expr::Function`**.
 
@@ -243,6 +250,13 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """
         return self.function.resolve_dtype(self, schema)
 
+    def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
+        # NOTE: `ROOT_ONLY` (nodes)
+        input_root, *non_root = self.input
+        children = tuple(ctx.only(self, child) for child in non_root) if non_root else ()
+        for root in input_root.iter_expand(ctx):
+            yield self.__replace__(input=(root, *children))
+
 
 class RollingExpr(FunctionExpr[RollingT_co]):
     def dispatch(
@@ -267,6 +281,10 @@ class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches"))
         if dtype := self.function.return_dtype:
             return dtype
         return super().resolve_dtype(schema)
+
+
+class HorizontalExpr(FunctionExpr[HorizontalT_co]):
+    iter_expand = ExprIR.iter_expand
 
 
 class RangeExpr(FunctionExpr[RangeT_co]):
@@ -380,6 +398,9 @@ class TernaryExpr(ExprIR):
         " - https://github.com/narwhals-dev/narwhals/pull/3396\n\n"
         "See Also: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L257-L273"
         raise NotImplementedError(msg)
+
+    def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
+        yield from self.__expr_ir_nodes__.iter_expand_by_combination(self, ctx)
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:

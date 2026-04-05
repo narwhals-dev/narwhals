@@ -60,10 +60,11 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._plan._expansion import Expander
     from narwhals._plan.compliant.column import ExprDispatch
     from narwhals._plan.compliant.typing import FrameT_contra, R_co
     from narwhals._plan.expr import Expr
-    from narwhals._plan.expressions.expr import Alias, BinaryExpr, Cast
+    from narwhals._plan.expressions.expr import Alias, BinaryExpr, Cast, Column
     from narwhals._plan.expressions.operators import Eq
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
@@ -541,6 +542,14 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         """
         yield from self.__expr_ir_nodes__.iter_output_name(self)
 
+    def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
+        """Yield the expression(s) that the current node expands into.
+
+        Arguments:
+            ctx: The expansion context to resolve the operation in.
+        """
+        yield from self.__expr_ir_nodes__.iter_expand(self, ctx)
+
     @property
     def meta(self) -> MetaNamespace:
         """Methods to traverse and introspect existing expressions."""
@@ -693,6 +702,13 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
         """
         msg = f"{self.iter_expand_selector.__qualname__}"
         raise NotImplementedError(msg)
+
+    def iter_expand(self, ctx: Expander, /) -> Iterator[Column]:
+        Column = _import_column()
+        yield from (
+            Column(name=name)
+            for name in self.iter_expand_selector(ctx.schema, ctx.ignored)
+        )
 
     @final
     def matches(self, dtype: IntoDType, /) -> bool:
@@ -939,8 +955,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         Arguments:
             allow_aliasing: If False (default), any aliasing is not considered to be column selection.
         """
-        from narwhals._plan.expressions import Column
-
+        Column = _import_column()
         ir = self.expr
         return isinstance(ir, Column) and ((self.name == ir.name) or allow_aliasing)
 
@@ -963,3 +978,10 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 @functools.lru_cache(maxsize=128)
 def _matches_dtype(selector: SelectorIR, dtype: IntoDType, /) -> bool:
     return selector._matches_dtype(dtype)
+
+
+@functools.cache
+def _import_column() -> type[Column]:
+    from narwhals._plan.expressions import Column
+
+    return Column

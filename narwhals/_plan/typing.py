@@ -20,7 +20,7 @@ if TYPE_CHECKING:
         NativeSeries,
     )
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
-    from narwhals._plan._function import Function
+    from narwhals._plan._function import Function, HorizontalFunction
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
@@ -74,9 +74,17 @@ RangeT_co = TypeVar(
 StructT_co = TypeVar(
     "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
 )
+HorizontalT_co = TypeVar(
+    "HorizontalT_co",
+    bound="HorizontalFunction",
+    default="HorizontalFunction",
+    covariant=True,
+)
 LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
-OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
+LeftT_co = TypeVar("LeftT_co", bound="ExprIR", default="ExprIR", covariant=True)
+RightT_co = TypeVar("RightT_co", bound="ExprIR", default="ExprIR", covariant=True)
+OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 OperatorFn: TypeAlias = "Callable[[t.Any, t.Any], t.Any]"
 ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
 ExprIRT_co = TypeVar("ExprIRT_co", bound="ExprIR", default="ExprIR", covariant=True)
