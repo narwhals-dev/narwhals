@@ -487,7 +487,6 @@ class ExprTraverser:
         [polars#25317]: https://github.com/pola-rs/polars/issues/25317
         """
         # BinaryExpr, TernaryExpr
-        # NOTE: There may be another version of this that relies more on indices
         if not instance.meta.has_multiple_outputs():
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
             yield instance.__replace__(**changes)
