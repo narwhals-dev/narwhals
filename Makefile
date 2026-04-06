@@ -20,13 +20,21 @@ help:  ## Display this help screen
 
 .PHONY: typing
 typing: ## Run typing checks
-	$(VENV_BIN)/uv pip install -e test-plugin/.
-	$(VENV_BIN)/uv pip install -U -e . --group typing
-	$(VENV_BIN)/pyright
-	$(VENV_BIN)/mypy
+	$(VENV_BIN)/uv pip install \
+		--upgrade \
+		--editable test-plugin/. \
+		--editable . \
+		--group typing
+	$(VENV_BIN)/uv run --no-sync pyright
+	$(VENV_BIN)/uv run --no-sync mypy
 
 .PHONY: docs-serve
 docs-serve:  # Build and serve the docs locally
-	python utils/generate_backend_completeness.py
-	python utils/generate_zen_content.py
-	zensical serve
+	$(VENV_BIN)/uv pip install \
+		--upgrade \
+		--editable test-plugin/. \
+		--editable . \
+		--group docs
+	$(VENV_BIN)/uv run --no-sync utils/generate_backend_completeness.py
+	$(VENV_BIN)/uv run --no-sync utils/generate_zen_content.py
+	$(VENV_BIN)/uv run --no-sync zensical serve

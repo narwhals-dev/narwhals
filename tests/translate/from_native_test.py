@@ -206,12 +206,14 @@ def test_pandas_like_validate() -> None:
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
-def test_init_already_narwhals() -> None:
-    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
-    result = nw.from_native(df)
+def test_init_already_narwhals_stable() -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    df = nw_v1.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    result = nw_v1.from_native(df)
     assert result is df
     s = df["a"]
-    result_s = nw.from_native(s, allow_series=True)
+    result_s = nw_v1.from_native(s, allow_series=True)
     assert result_s is s
 
 
@@ -223,6 +225,38 @@ def test_init_already_narwhals_unstable() -> None:
     s = df["a"]
     result_s = nw.from_native(s, allow_series=True)
     assert result_s is s
+
+
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_init_already_narwhals_unstable_to_stable() -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    native = pl.DataFrame({"a": [1, 2, 3]})
+
+    unstable_df = nw.from_native(native)
+    stablified_df = nw_v1.from_native(unstable_df)
+    assert isinstance(stablified_df, nw_v1.DataFrame)
+
+    s = native["a"]
+    unstable_s = nw.from_native(s, allow_series=True)
+    stablified_s = nw_v1.from_native(unstable_s, allow_series=True)  # type: ignore[var-annotated]
+    assert isinstance(stablified_s, nw_v1.Series)
+
+
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_init_already_narwhals_stable_to_unstable() -> None:
+    from narwhals.stable import v1 as nw_v1
+
+    native = pl.DataFrame({"a": [1, 2, 3]})
+
+    stable_df = nw_v1.from_native(native)
+    unstablified_df = nw.from_native(stable_df)
+    assert isinstance(unstablified_df, nw.DataFrame)
+
+    s = native["a"]
+    stable_s = nw_v1.from_native(s, allow_series=True)  # type: ignore[var-annotated]
+    unstablified_s = nw.from_native(stable_s, allow_series=True)  # type: ignore[var-annotated]
+    assert isinstance(unstablified_s, nw.Series)
 
 
 @pytest.mark.skipif(df_pd is None, reason="pandas not found")

@@ -258,6 +258,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
 
 
 class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
+    _version = Version.V1
+
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V1  # noqa: S101
