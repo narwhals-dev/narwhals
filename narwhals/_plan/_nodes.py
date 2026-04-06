@@ -517,6 +517,12 @@ class ExprTraverser:
         if not seen_multi:
             # NOTE: `(1, ...)` Where at least one was a selector
             yield instance
+        # NOTE: `(M | 1, ...)` or `(M, ...)`
+        elif (length := len(zip_names)) == 1:
+            # `(M, *(1, ...))` fastpath
+            name = zip_names[0]
+            for expr in zip_exprs[0]:
+                yield instance.__replace__(**{name: expr})
         else:
             # NOTE: `(M | 1, ...)` or `(M, ...)`
             # Pass 2 (A fancy zip)
