@@ -20,7 +20,10 @@ help:  ## Display this help screen
 
 .PHONY: typing
 typing: ## Run typing checks
-	$(VENV_BIN)/uv pip install -e test-plugin/.
-	$(VENV_BIN)/uv pip install -U -e . --group typing
-	$(VENV_BIN)/pyright
-	$(VENV_BIN)/mypy
+	$(VENV_BIN)/uv pip install \
+		--upgrade \
+		--editable test-plugin/. \
+		--editable . \
+		--group typing
+	$(VENV_BIN)/uv run --no-sync pyright
+	$(VENV_BIN)/uv run --no-sync mypy

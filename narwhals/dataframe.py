@@ -2360,6 +2360,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         ```
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
     @property
     def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
         return self._compliant_frame

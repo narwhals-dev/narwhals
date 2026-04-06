@@ -621,7 +621,7 @@ def test_lazyframe_recursive_v1() -> None:
 
     pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
     nw_frame = nw_v1.from_native(pl_frame)
-    with pytest.raises(AttributeError):
+    with pytest.raises(AssertionError):
         nw_v1.LazyFrame(nw_frame, level="lazy")
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
