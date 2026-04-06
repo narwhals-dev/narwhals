@@ -169,6 +169,10 @@ class ExprKind(Enum):
         }
 
     @property
+    def preserves_length(self) -> bool:
+        return self.is_elementwise or self in {ExprKind.WINDOW, ExprKind.ORDERABLE_WINDOW}
+
+    @property
     def is_scalar_like(self) -> bool:
         return self in {
             ExprKind.AGGREGATION,
@@ -427,14 +431,11 @@ class ExprMetadata:
         )
 
     @classmethod
-    def from_aggregation(cls, node: ExprNode) -> ExprMetadata:
-        return cls(
-            ExpansionKind.SINGLE,
-            is_elementwise=False,
-            preserves_length=False,
-            is_scalar_like=True,
-            current_node=node,
-            prev=None,
+    def from_aggregation(
+        cls, node: ExprNode, *compliant_exprs: CompliantExprAny
+    ) -> ExprMetadata:
+        return combine_metadata(
+            *compliant_exprs, to_single_output=True, current_node=node, prev=None
         )
 
     @classmethod
@@ -736,15 +737,12 @@ def combine_metadata(
         prev: ExprMetadata of previous node.
     """
     n_filtrations = 0
+    n_scalar_like = 0
     result_expansion_kind = ExpansionKind.SINGLE
     result_has_windows = False
     result_n_orderable_ops = 0
-    # result preserves length if at least one input does
-    result_preserves_length = False
-    # result is elementwise if all inputs are elementwise
-    result_is_elementwise = True
-    # result is scalar-like if all inputs are scalar-like
-    result_is_scalar_like = True
+    # result is elementwise if all inputs are elementwise, and if current operation is elementwise
+    result_is_elementwise = current_node.kind.is_elementwise
     # result is literal if all inputs are literal
     result_is_literal = True
 
@@ -760,17 +758,31 @@ def combine_metadata(
 
         result_has_windows |= metadata.has_windows
         result_n_orderable_ops += metadata.n_orderable_ops
-        result_preserves_length |= metadata.preserves_length
         result_is_elementwise &= metadata.is_elementwise
-        result_is_scalar_like &= metadata.is_scalar_like
         result_is_literal &= metadata.is_literal
         n_filtrations += int(metadata.is_filtration)
-    if n_filtrations > 1:
+        n_scalar_like += int(metadata.is_scalar_like)
+
+    # result is scalar-like if all inputs are scalar-like, or if current operation is an aggregation
+    result_is_scalar_like = current_node.kind.is_scalar_like or (
+        n_scalar_like == len(compliant_exprs)
+    )
+    # result preserves length if:
+    # - the current operation preserves length
+    # - there are no filtrations
+    # - the result is not scalar-like
+    result_preserves_length = (
+        current_node.kind.preserves_length
+        and n_filtrations == 0
+        and not result_is_scalar_like
+    )
+
+    if n_filtrations and (
+        (n_filtrations > 1) or (n_filtrations + n_scalar_like < len(compliant_exprs))
+    ):
         msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation"
         raise InvalidOperationError(msg)
-    if result_preserves_length and n_filtrations:
-        msg = "Cannot combine length-changing expressions with length-preserving ones or aggregations"
-        raise InvalidOperationError(msg)
+
     return ExprMetadata(
         result_expansion_kind,
         has_windows=result_has_windows,

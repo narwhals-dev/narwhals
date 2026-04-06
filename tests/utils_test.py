@@ -410,7 +410,7 @@ def test_not_implemented() -> None:
         unique = not_implemented()
 
         # NOTE: Only `mypy` has an issue with this?
-        # error: Cannot override writeable attribute with read-only property
+        # error: Cannot override writable attribute with read-only property
         @property
         def str(self) -> PolarsExprStringNamespace:  # type: ignore[override]
             pl_expr = cast("PolarsExpr", self)
