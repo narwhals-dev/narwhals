@@ -461,7 +461,6 @@ class ExprTraverser:
         for expanded in node.iter_expand_as_root(instance, ctx):
             yield instance.__replace__(**{name: expanded})
 
-    # TODO @dangotbanned: (Impl) Finish cleaning up
     # TODO @dangotbanned: (Docs) Show what it does in a simple example
     def iter_expand_by_combination(
         self, instance: ExprIR, ctx: Expander, /
@@ -486,47 +485,43 @@ class ExprTraverser:
         [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         [polars#25317]: https://github.com/pola-rs/polars/issues/25317
         """
-        # BinaryExpr, TernaryExpr
         if not instance.meta.has_multiple_outputs():
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
             yield instance.__replace__(**changes)
             return
 
-        seen_multi_length = set[int]()
-        zip_exprs: list[Seq[ExprIR]] = []
-        zip_names: list[str] = []
-        for it, name in zip((e.iter_expand(instance, ctx) for e in self), self.names):
-            expanded = tuple(it)
-            if (length := len(expanded)) == 1:
-                # NOTE: `(1 | ?, ...)`
-                # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass, if we get there)
+        # TODO @dangotbanned: Adapt into a docstring example
+        # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass, if we get there)
+        # Pass 2 (A fancy zip)
+        # `In    : (col("a", "b"), col("c", "d"), col("e"))`
+        # `Out[1]: (col("a"), col("c"), col("e"))`
+        # `Out[2]: (col("b"), col("d"), col("e"))`
+        expansion_sizes = set[int]()
+        expansions: dict[str, Seq[ExprIR]] = {}
+        for node, name in zip(self, self.names):
+            expanded = tuple(node.iter_expand(instance, ctx))
+            if (expansion_size := len(expanded)) == 1:
                 instance = instance.__replace__(**{name: expanded[0]})
-            elif not seen_multi_length or length in seen_multi_length:
-                # NOTE: `(M | ?, ...)`
-                zip_exprs.append(expanded)
-                zip_names.append(name)
-                seen_multi_length.add(length)
+            elif not expansion_sizes or expansion_size in expansion_sizes:
+                expansions[name] = expanded
+                expansion_sizes.add(expansion_size)
             else:
-                lengths = tuple(len(tuple(e.iter_expand(instance, ctx))) for e in self)
-                raise combination_mixed_multi_output_error(instance, lengths)
-        if not seen_multi_length:
-            # NOTE: `(1, ...)`
+                expand_all = (tuple(e.iter_expand(instance, ctx)) for e in self)
+                mixed_sizes = tuple(len(exprs) for exprs in expand_all)
+                raise combination_mixed_multi_output_error(instance, mixed_sizes)
+
+        if not expansion_sizes:
             yield instance
-        # NOTE: `(M | 1, ...)` or `(M, ...)`
-        elif (length := len(zip_names)) == 1:
-            # `(M, *(1, ...))` fastpath
-            name = zip_names[0]
-            for expr in zip_exprs[0]:
-                yield instance.__replace__(**{name: expr})
+            return
+
+        as_expansion = instance.__replace__
+        if len(expansions) == 1:
+            name, expanded = next(iter(expansions.items()))
+            yield from (as_expansion(**{name: expr}) for expr in expanded)
         else:
-            # NOTE: `(M | 1, ...)` or `(M, ...)`
-            # Pass 2 (A fancy zip)
-            # `In    : (col("a", "b"), col("c", "d"), col("e"))`
-            # `Out[1]: (col("a"), col("c"), col("e"))`
-            # `Out[2]: (col("b"), col("d"), col("e"))`
-            zipped: zip[Seq[ExprIR]] = zip(*zip_exprs)
-            for expanded in zipped:
-                yield instance.__replace__(**dict(zip(zip_names, expanded)))
+            names = tuple(expansions)
+            values_per_expansion: zip[Seq[ExprIR]] = zip(*expansions.values())
+            yield from (as_expansion(**dict(zip(names, v))) for v in values_per_expansion)
 
     def is_scalar(self, instance: ExprIR, /) -> bool:
         # NOTE: Acrobatics because `all(...)` returns True on an empty iterable,
