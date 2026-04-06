@@ -461,41 +461,69 @@ class ExprTraverser:
         for expanded in node.iter_expand_as_root(instance, ctx):
             yield instance.__replace__(**{name: expanded})
 
-    # TODO @dangotbanned: (Docs) Show what it does in a simple example
+    # TODO @dangotbanned: (Docs) Turn most of this into examples, trim down the fat on the rest
     def iter_expand_by_combination(
         self, instance: ExprIR, ctx: Expander, /
     ) -> Iterator[ExprIR]:
         """Expand an expression, with broadcasting and/or zipping of it's inputs as needed.
 
+        <!--TODO @dangotbanned: Move stray section to *Notes*, after turning that into *Examples*-->
+
         Adapted from [`expand_expression_by_combination`].
+
+        Here, we only implement it for 2 of the 11+ expressions that polars does it on:
+
+            BinaryExpr, TernaryExpr
 
         Arguments:
             instance: The expression to expand.
             ctx: The expansion context to resolve the operation in.
 
         Important:
-            This may be *conceptually* tricky to understand as it is not (yet?)
-            well-documented upstream. See ([polars#25022]), ([polars#25317]).
+            This feature is not (*yet?*) well-documented upstream (see ([polars#25022]), ([polars#25317])).
+            The algorithm is similar to [`more_itertools.zip_broadcast`],
+            if you replace *scalar* with *length-1-tuple*.
 
         Notes:
-            - Implemented for (BinaryExpr, TernaryExpr), but not all of the
-              11+ expressions that polars does it on
+            - How it works
+                - **First pass**: Expand expression(s) for each node, observing how many plopped out the other side:
+                    - `1` means we can broadcast a replacement(s) through by overwriting our `in_progress`
+                    - `>1` the first one we see becomes the target (`expansion_size`) that all others need to get in line with
+                    - Then error on anything new that tries to join the party
+                - **Intermission**: Fast paths for all 1s or a single multi-output expansion
+                - **Second pass**: Unzipping expanded values together, yielding the combinations
+            - Related
+                - [`Expr.fill_nan`] convinced me on supporting this for `when`
+
+        Examples:
+            >>> from tests.plan.utils import Frame
+            >>> import narwhals._plan as nw
+            >>> df = Frame.from_names("a", "b", "c", "d", "e", "f")
+
+            >>> # TODO @dangotbanned: Discuss M:M case
+            >>> expr = (nw.col("a", "b") + nw.col("c", "d")).name.suffix("_add_zip")
+            >>> expr._ir
+            [(ncs.by_name('a', 'b', require_all=True)) + (ncs.by_name('c', 'd', require_all=True))].name.suffix('_add_zip')
+
+            >>> first, second = df.project(expr)
+            >>> first
+            a_add_zip=[(col('a')) + (col('c'))]
+
+            >>> second
+            b_add_zip=[(col('b')) + (col('d'))]
+
+            >>> # TODO @dangotbanned: Show M:M:1 / M:1:1
 
         [`expand_expression_by_combination`]: https://github.com/pola-rs/polars/blob/bb93ba8e67a1f38951506ce044245560009fe55a/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L129-L197
         [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         [polars#25317]: https://github.com/pola-rs/polars/issues/25317
+        [`more_itertools.zip_broadcast`]: https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.zip_broadcast
+        [`Expr.fill_nan`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/mod.rs#L908-L916
         """
         if not instance.meta.has_multiple_outputs():
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
             yield instance.__replace__(**changes)
             return
-
-        # TODO @dangotbanned: Adapt into a docstring example
-        # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass, if we get there)
-        # Pass 2 (A fancy zip)
-        # `In    : (col("a", "b"), col("c", "d"), col("e"))`
-        # `Out[1]: (col("a"), col("c"), col("e"))`
-        # `Out[2]: (col("b"), col("d"), col("e"))`
 
         in_progress = instance
         expansion_size: int = 0
