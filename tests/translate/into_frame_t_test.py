@@ -3,13 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from typing_extensions import assert_type
 
 import narwhals as nw
-
-if TYPE_CHECKING:
-    from typing_extensions import assert_type
-
-    from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoFrameT
 
 
 def test_readme_example() -> None:
@@ -17,13 +14,17 @@ def test_readme_example() -> None:
     def _agnostic_function(  # pragma: no cover
         df_native: IntoFrameT, date_column: str, price_column: str
     ) -> IntoFrameT:
-        return (
-            nw.from_native(df_native)
-            .group_by(nw.col(date_column).dt.truncate("1mo"))
+        df = nw.from_native(df_native)
+        assert_type(df, nw.DataFrame[IntoFrameT] | nw.LazyFrame[IntoFrameT])
+        res = (
+            df.group_by(nw.col(date_column).dt.truncate("1mo"))
             .agg(nw.col(price_column).mean())
             .sort(date_column)
-            .to_native()
         )
+        assert_type(res, nw.DataFrame[IntoFrameT] | nw.LazyFrame[IntoFrameT])
+        native = res.to_native()
+        assert_type(native, IntoFrameT)
+        return res.to_native()
 
 
 def test_from_eager_or_lazy_polars() -> None:
