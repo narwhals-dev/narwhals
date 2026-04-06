@@ -813,15 +813,15 @@ def test_expand_ternary_expr_combination_3(df_1: Frame) -> None:
 
 
 def test_expand_ternary_expr_combination_invalid(df_1: Frame) -> None:
-    with _raises_when_multi(2, 3, 1):
+    with _raises_when_multi(3, 2, 1):
         df_1.project(nwp.when(nwp.col("a", "b", "c").is_finite()).then(nwp.max("c", "d")))
 
-    with _raises_when_multi(2, 1, 3):
+    with _raises_when_multi(1, 2, 3):
         df_1.project(
             nwp.when(nwp.len() >= 1).then(ncs.float()).otherwise(nwp.nth(1, 2, 3))
         )
 
-    with _raises_when_multi(1, 8, 2):
+    with _raises_when_multi(8, 1, 2):
         df_1.project(
             nwp.when(ncs.integer().cast(nw.Boolean))
             .then(nwp.lit("truthy"))
@@ -829,11 +829,10 @@ def test_expand_ternary_expr_combination_invalid(df_1: Frame) -> None:
         )
 
 
-# TODO @dangotbanned: Replace order and message after updating `ternary_expr_multi_output_error`
 def _raises_when_multi(
-    truthy: int, predicate: int, falsy: int
+    predicate: int, truthy: int, falsy: int
 ) -> pytest.RaisesExc[MultiOutputExpressionError]:
-    shapes = f"({truthy} != {predicate} != {falsy})"
+    shapes = f"({predicate} != {truthy} != {falsy})"
     return pytest.raises(MultiOutputExpressionError, match=re.escape(shapes))
 
 

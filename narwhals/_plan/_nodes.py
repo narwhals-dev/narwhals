@@ -17,7 +17,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final, overload
 
-from narwhals._plan.exceptions import combination_multi_output_error
+from narwhals._plan.exceptions import combination_mixed_multi_output_error
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
@@ -507,10 +507,8 @@ class ExprTraverser:
                 zip_names.append(name)
                 seen_multi_length.add(length)
             else:
-                # NOTE: `(M1, M2, ...)`
-                # We only need the length of all expansions & in order, for the error message
                 lengths = tuple(len(tuple(e.iter_expand(instance, ctx))) for e in self)
-                raise combination_multi_output_error(instance, lengths)  # type: ignore[arg-type]
+                raise combination_mixed_multi_output_error(instance, lengths)
         if not seen_multi_length:
             # NOTE: `(1, ...)`
             yield instance
