@@ -488,12 +488,12 @@ class ExprTraverser:
         """
         # BinaryExpr, TernaryExpr
         # NOTE: There may be another version of this that relies more on indices
-        seen_multi = set[int]()
         if not instance.meta.has_multiple_outputs():
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
             yield instance.__replace__(**changes)
             return
 
+        seen_multi_length = set[int]()
         zip_exprs: list[Seq[ExprIR]] = []
         zip_names: list[str] = []
         for it, name in zip((e.iter_expand(instance, ctx) for e in self), self.names):
@@ -502,17 +502,17 @@ class ExprTraverser:
                 # NOTE: `(1 | ?, ...)`
                 # Pass 1 (Unwrap the `1`s so they broadcast in the 2nd pass, if we get there)
                 instance = instance.__replace__(**{name: expanded[0]})
-            elif not seen_multi or length in seen_multi:
+            elif not seen_multi_length or length in seen_multi_length:
                 # NOTE: `(M | ?, ...)`
                 zip_exprs.append(expanded)
                 zip_names.append(name)
-                seen_multi.add(length)
+                seen_multi_length.add(length)
             else:
                 # NOTE: `(M1, M2, ...)`
                 # We only need the length of all expansions & in order, for the error message
                 lengths = tuple(len(tuple(e.iter_expand(instance, ctx))) for e in self)
                 raise combination_multi_output_error(instance, lengths)  # type: ignore[arg-type]
-        if not seen_multi:
+        if not seen_multi_length:
             # NOTE: `(1, ...)`
             yield instance
         # NOTE: `(M | 1, ...)` or `(M, ...)`
