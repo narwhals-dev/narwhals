@@ -496,25 +496,27 @@ class ExprTraverser:
         # `In    : (col("a", "b"), col("c", "d"), col("e"))`
         # `Out[1]: (col("a"), col("c"), col("e"))`
         # `Out[2]: (col("b"), col("d"), col("e"))`
-        expansion_sizes = set[int]()
+
+        in_progress = instance
+        expansion_size: int = 0
         expansions: dict[str, Seq[ExprIR]] = {}
         for node, name in zip(self, self.names):
             expanded = tuple(node.iter_expand(instance, ctx))
-            if (expansion_size := len(expanded)) == 1:
-                instance = instance.__replace__(**{name: expanded[0]})
-            elif not expansion_sizes or expansion_size in expansion_sizes:
+            if (size := len(expanded)) == 1:
+                in_progress = in_progress.__replace__(**{name: expanded[0]})
+            elif not expansion_size or size == expansion_size:
                 expansions[name] = expanded
-                expansion_sizes.add(expansion_size)
+                expansion_size = size
             else:
                 expand_all = (tuple(e.iter_expand(instance, ctx)) for e in self)
                 mixed_sizes = tuple(len(exprs) for exprs in expand_all)
                 raise combination_mixed_multi_output_error(instance, mixed_sizes)
 
-        if not expansion_sizes:
-            yield instance
+        if not expansion_size:
+            yield in_progress
             return
 
-        as_expansion = instance.__replace__
+        as_expansion = in_progress.__replace__
         if len(expansions) == 1:
             name, expanded = next(iter(expansions.items()))
             yield from (as_expansion(**{name: expr}) for expr in expanded)
