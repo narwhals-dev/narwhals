@@ -28,7 +28,14 @@ class MetaNamespace(IRNamespace):
     """Methods to traverse and introspect existing expressions."""
 
     def has_multiple_outputs(self) -> bool:
-        """Indicate if this expression expands into multiple expressions."""
+        """Indicate if this expression **can** expand into multiple expressions.
+
+        Important:
+            Guarantees the expression **will not** expand in the negative case,
+            see ([polars#23708](https://github.com/pola-rs/polars/issues/23708))
+        """
+        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/meta.rs#L53-L64
+        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/expr/meta.py#L81-L91
         return any(isinstance(e, ir.SelectorIR) for e in self._ir.iter_left())
 
     def is_column(self) -> bool:

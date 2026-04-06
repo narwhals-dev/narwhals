@@ -490,8 +490,6 @@ class ExprTraverser:
         # NOTE: There may be another version of this that relies more on indices
         seen_multi = set[int]()
         if not instance.meta.has_multiple_outputs():
-            # NOTE: `(1, ...)` Where none are selectors
-            # Fast-path, doesn't require collection
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
             yield instance.__replace__(**changes)
             return
@@ -515,7 +513,7 @@ class ExprTraverser:
                 lengths = tuple(len(tuple(e.iter_expand(instance, ctx))) for e in self)
                 raise combination_multi_output_error(instance, lengths)  # type: ignore[arg-type]
         if not seen_multi:
-            # NOTE: `(1, ...)` Where at least one was a selector
+            # NOTE: `(1, ...)`
             yield instance
         # NOTE: `(M | 1, ...)` or `(M, ...)`
         elif (length := len(zip_names)) == 1:
