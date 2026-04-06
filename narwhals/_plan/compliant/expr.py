@@ -83,9 +83,6 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra]):
     def fill_null_with_strategy(
         self, node: FunctionExpr[F.FillNullWithStrategy], frame: FrameT_contra, name: str
     ) -> Self: ...
-    def fill_nan(
-        self, node: FunctionExpr[F.FillNan], frame: FrameT_contra, name: str
-    ) -> Self: ...
     def floor(
         self, node: FunctionExpr[F.Floor], frame: FrameT_contra, name: str
     ) -> Self: ...

@@ -99,7 +99,6 @@ if TYPE_CHECKING:
         Abs,
         CumAgg,
         Diff,
-        FillNan,
         FillNull,
         NullCount,
         Pow,
@@ -144,12 +143,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = expr.dispatch(self, frame, name).native
         value_ = value.dispatch(self, frame, "value").native
         return self._with_native(pc.fill_null(native, value_), name)
-
-    def fill_nan(self, node: FExpr[FillNan], frame: Frame, name: str) -> StoresNativeT_co:
-        expr, value = node.function.unwrap_input(node)
-        native = expr.dispatch(self, frame, name).native
-        value_ = value.dispatch(self, frame, "value").native
-        return self._with_native(fn.fill_nan(native, value_), name)
 
     def is_between(
         self, node: FExpr[IsBetween], frame: Frame, name: str
