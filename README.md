@@ -99,16 +99,14 @@ import narwhals as nw
 from narwhals.typing import IntoFrameT
 
 
-def agnostic_function(
-    df_native: IntoFrameT,
-    date_column: str,
-    price_column: str,
-) -> IntoFrameT:
+def agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
     return (
         nw.from_native(df_native)
-        .group_by(nw.col(date_column).dt.truncate("1mo"))
-        .agg(nw.col(price_column).mean())
-        .sort(date_column)
+        .with_columns(
+            category=nw.when(nw.col("animal").str.contains("whale"))
+            .then(nw.lit("whale"))
+            .otherwise(nw.lit("other"))
+        )
         .to_native()
     )
 ```
@@ -118,37 +116,61 @@ You can then pass `pandas.DataFrame`, `polars.DataFrame`, `polars.LazyFrame`, `d
 dependencies will be required, and computation will stay native to the input library:
 
 ```python
-import pandas as pd
+import duckdb
 import polars as pl
-from datetime import datetime
+import pandas as pd
 
 data = {
-    "date": [datetime(2020, 1, 1), datetime(2020, 1, 8), datetime(2020, 2, 3)],
-    "price": [1, 4, 3],
+    "animal": ["blue whale", "orca", "dolphin", "humpback whale", "seal"],
+    "length_m": [30.0, 8, 2.5, 17, 2.2],
+    "weight_kg": [150000, 4000, 200, 30000, 85],
 }
-print("pandas result:")
-print(agnostic_function(pd.DataFrame(data), "date", "price"))
-print()
-print("Polars result:")
-print(agnostic_function(pl.DataFrame(data), "date", "price"))
+
+print("Polars result")
+df_pl = pl.DataFrame(data)
+print(agnostic_function(df_pl))
+
+print("DuckDB result")
+print(agnostic_function(duckdb.sql("select * from df_pl")))
+
+print("pandas result")
+df_pd = pd.DataFrame(data)
+print(agnostic_function(df_pd))
 ```
 
 ```terminal
-pandas result:
-        date  price
-0 2020-01-01    2.5
-1 2020-02-01    3.0
+Polars result
+shape: (5, 4)
+┌────────────────┬──────────┬───────────┬──────────┐
+│ animal         ┆ length_m ┆ weight_kg ┆ category │
+│ ---            ┆ ---      ┆ ---       ┆ ---      │
+│ str            ┆ f64      ┆ i64       ┆ str      │
+╞════════════════╪══════════╪═══════════╪══════════╡
+│ blue whale     ┆ 30.0     ┆ 150000    ┆ whale    │
+│ orca           ┆ 8.0      ┆ 4000      ┆ other    │
+│ dolphin        ┆ 2.5      ┆ 200       ┆ other    │
+│ humpback whale ┆ 17.0     ┆ 30000     ┆ whale    │
+│ seal           ┆ 2.2      ┆ 85        ┆ other    │
+└────────────────┴──────────┴───────────┴──────────┘
+DuckDB result
+┌────────────────┬──────────┬───────────┬──────────┐
+│     animal     │ length_m │ weight_kg │ category │
+│    varchar     │  double  │   int64   │ varchar  │
+├────────────────┼──────────┼───────────┼──────────┤
+│ blue whale     │     30.0 │    150000 │ whale    │
+│ orca           │      8.0 │      4000 │ other    │
+│ dolphin        │      2.5 │       200 │ other    │
+│ humpback whale │     17.0 │     30000 │ whale    │
+│ seal           │      2.2 │        85 │ other    │
+└────────────────┴──────────┴───────────┴──────────┘
 
-Polars result:
-shape: (2, 2)
-┌─────────────────────┬───────┐
-│ date                ┆ price │
-│ ---                 ┆ ---   │
-│ datetime[μs]        ┆ f64   │
-╞═════════════════════╪═══════╡
-│ 2020-01-01 00:00:00 ┆ 2.5   │
-│ 2020-02-01 00:00:00 ┆ 3.0   │
-└─────────────────────┴───────┘
+pandas result
+           animal  length_m  weight_kg category
+0      blue whale      30.0     150000    whale
+1            orca       8.0       4000    other
+2         dolphin       2.5        200    other
+3  humpback whale      17.0      30000    whale
+4            seal       2.2         85    other
 ```
 
 See the [tutorial](https://narwhals-dev.github.io/narwhals/basics/dataframe/) for several examples!
