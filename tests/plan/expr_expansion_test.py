@@ -745,6 +745,23 @@ def test_exclude_when_then_21352() -> None:
 
 
 def test_expand_ternary_expr_combination_1(df_1: Frame) -> None:
+    expr = (
+        nwp.when(ncs.boolean())
+        .then(ncs.matches(r"[ji]"))
+        .otherwise(nwp.col("j", "i"))
+        .name.to_uppercase()
+    )
+    expected = (
+        # `Matches` doesn't define column order, but `ByName` can
+        named_ir("I", nwp.when("m").then("i").otherwise("j")),
+        named_ir("J", nwp.when("m").then("j").otherwise("i")),
+    )
+    actuals = df_1.project(expr)
+    for actual, expect in zip_strict(actuals, expected):
+        assert_expr_ir_equal(actual, expect)
+
+
+def test_expand_ternary_expr_combination_2(df_1: Frame) -> None:
     less_than_5_flip = nwp.when(nwp.col("a", "b", "c") <= 5).then(nwp.nth(2, 1, 0))
     expected = (
         named_ir("c", nwp.when(nwp.col("a") <= 5).then("c")),
@@ -756,7 +773,7 @@ def test_expand_ternary_expr_combination_1(df_1: Frame) -> None:
         assert_expr_ir_equal(actual, expect)
 
 
-def test_expand_ternary_expr_combination_2(df_1: Frame) -> None:
+def test_expand_ternary_expr_combination_3(df_1: Frame) -> None:
     integer = ncs.integer()
     signed_integer = integer - ncs.by_dtype(
         nw.UInt64, nw.UInt32, nw.UInt16, nw.UInt8, nw.UInt128
