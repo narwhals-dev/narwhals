@@ -67,8 +67,7 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
     )
     before = _over(nwp.col("b", "c").last().replace_strict({1: 2}), "d").to_narwhals()
     assert_expr_ir_equal(
-        before,
-        "ncs.by_name('b', 'c', require_all=True).last().replace_strict().over([col('d')])",
+        before, "ncs.by_name('b', 'c').last().replace_strict().over([col('d')])"
     )
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 2

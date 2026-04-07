@@ -111,7 +111,7 @@ class Column(ExprIR, dispatch=namespaced("col")):
 
         A `Column` is not a selector, but can be converted into one:
         >>> expr.meta.as_selector()._ir
-        ncs.by_name('one', require_all=True)
+        ncs.by_name('one')
     """
 
     __slots__ = ("name",)

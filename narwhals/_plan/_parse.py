@@ -259,9 +259,9 @@ def into_selector_ir(
     Examples:
         The goal is for the final selector to be as simple as possible:
         >>> into_selector_ir("a")
-        ncs.by_name('a', require_all=True)
+        ncs.by_name('a')
         >>> into_selector_ir("a", ("b",))
-        ncs.by_name('a', 'b', require_all=True)
+        ncs.by_name('a', 'b')
         >>> into_selector_ir(["a"], ("b", "c", ["d", "e"]), require_all=False)
         ncs.by_name('a', 'b', 'c', 'd', 'e', require_all=False)
         >>> into_selector_ir(())
@@ -272,7 +272,7 @@ def into_selector_ir(
         And saving `__or__` for just the bits we can't (cheaply) reduce:
         >>> import narwhals._plan.selectors as ncs
         >>> into_selector_ir(("a", "b"), (ncs.integer(), ncs.float(), "c"))
-        [[ncs.by_name('a', 'b', 'c', ...) | ncs.integer()] | ncs.float()]
+        [[ncs.by_name('a', 'b', 'c') | ncs.integer()] | ncs.float()]
     """
     if not more_inputs and (
         isinstance(first_input, str) or not isinstance(first_input, Iterable)

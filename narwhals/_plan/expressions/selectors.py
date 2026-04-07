@@ -263,14 +263,14 @@ class ByIndex(RootSelector):
         Only one starts it's life as an expression:
         >>> expr = nw.nth(5)
         >>> expr._ir
-        ncs.by_index([5], require_all=True)
+        ncs.by_index([5])
         >>> not isinstance(expr, nw.Selector)
         True
 
         The rest are selectors all the way down:
         >>> selector = ncs.by_index(0, 1)
         >>> selector._ir
-        ncs.by_index([0, 1], require_all=True)
+        ncs.by_index([0, 1])
         >>> isinstance(selector, nw.Selector)
         True
 
@@ -298,7 +298,8 @@ class ByIndex(RootSelector):
         if len(self.indices) == 1 and self.indices[0] in {0, -1}:
             name = "first" if self.indices[0] == 0 else "last"
             return f"ncs.{name}()"
-        return f"ncs.by_index({list(self.indices)}, require_all={self.require_all})"
+        args = "" if self.require_all else ", require_all=False"
+        return f"ncs.by_index({list(self.indices)}{args})"
 
     @staticmethod
     def _iter_validate(indices: tuple[OneOrIterable[int], ...], /) -> Iterator[int]:
@@ -358,7 +359,7 @@ class ByName(RootSelector):
         >>> import narwhals._plan.selectors as ncs
         >>> selector = ncs.by_name("one", "two")
         >>> selector._ir
-        ncs.by_name('one', 'two', require_all=True)
+        ncs.by_name('one', 'two')
 
         Also represents multi-output `col(...)`:
         >>> expr = nw.col("one", "two")
@@ -372,7 +373,8 @@ class ByName(RootSelector):
 
     def __repr__(self) -> str:
         els = ", ".join(f"{nm!r}" for nm in self.names)
-        return f"ncs.by_name({els}, require_all={self.require_all})"
+        args = "" if self.require_all else ", require_all=False"
+        return f"ncs.by_name({els}{args})"
 
     @staticmethod
     def _iter_validate(names: tuple[OneOrIterable[str], ...], /) -> Iterator[str]:

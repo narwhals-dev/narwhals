@@ -321,7 +321,7 @@ class DispatcherOptions:
     TypeError: 'ByName' should not appear at the compliant-level.
     <BLANKLINE>
     Make sure to expand all expressions first, got:
-    ncs.by_name('a', 'b', 'c', require_all=True)
+    ncs.by_name('a', 'b', 'c')
     """
 
     is_namespaced: bool

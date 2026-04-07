@@ -503,7 +503,7 @@ class ExprTraverser:
             >>> # TODO @dangotbanned: Discuss M:M case
             >>> expr = (nw.col("a", "b") + nw.col("c", "d")).name.suffix("_add_zip")
             >>> expr._ir
-            [(ncs.by_name('a', 'b', require_all=True)) + (ncs.by_name('c', 'd', require_all=True))].name.suffix('_add_zip')
+            [(ncs.by_name('a', 'b')) + (ncs.by_name('c', 'd'))].name.suffix('_add_zip')
 
             >>> first, second = df.project(expr)
             >>> first

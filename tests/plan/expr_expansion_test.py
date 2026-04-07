@@ -690,7 +690,7 @@ def test_expand_binary_expr_combination(
 def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
     # fmt: off
     expr = re.escape(
-        "ncs.all() + ncs.by_name('b', 'c', require_all=True)\n"
+        "ncs.all() + ncs.by_name('b', 'c')\n"
         "^^^^^^^^^"
     )
     # fmt: on
@@ -701,8 +701,8 @@ def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
         df_1.project(all_to_two)
 
     expr = re.escape(
-        "ncs.by_name('a', 'b', require_all=True).abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10, 11], require_all=True).cast(Int64).sort(asc)\n"
-        "                                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        "ncs.by_name('a', 'b').abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10, 11]).cast(Int64).sort(asc)\n"
+        "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     shapes = "(2 != 3)"
     pattern = rf"{shapes}.+\n{expr}"

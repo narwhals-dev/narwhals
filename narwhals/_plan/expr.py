@@ -597,7 +597,7 @@ class Expr:
 
         >>> import narwhals._plan as nw
         >>> nw.col("a", "b").name.suffix("_changed")._ir
-        ncs.by_name('a', 'b', require_all=True).name.suffix('_changed')
+        ncs.by_name('a', 'b').name.suffix('_changed')
         """
         return ExprNameNamespace(_expr=self)
 

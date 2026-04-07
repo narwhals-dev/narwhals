@@ -351,7 +351,7 @@ def test_selector_by_name_multiple() -> None:
     with pytest.raises(
         ComputeError,
         match=re.escape(
-            "unable to find root column name for expr 'ncs.by_name('foo', 'bar', require_all=True)' when calling 'output_name'"
+            "unable to find root column name for expr 'ncs.by_name('foo', 'bar')' when calling 'output_name'"
         ),
     ):
         ncs.by_name(["foo", "bar"]).meta.output_name()

@@ -309,11 +309,11 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         >>> selector = column.to_selector_ir()
         >>> selector
-        ncs.by_name('a', require_all=True)
+        ncs.by_name('a')
 
         For a `SelectorIR`, this is a noop:
         >>> selector.to_selector_ir()
-        ncs.by_name('a', require_all=True)
+        ncs.by_name('a')
 
         Everything else will raise:
         >>> alias = nw.col("a").alias("bad")._ir
@@ -606,7 +606,7 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
     >>> isinstance(expr, nw.Selector)
     False
     >>> expr._ir
-    ncs.by_name('a', 'b', 'c', require_all=True)
+    ncs.by_name('a', 'b', 'c')
 
     We can use selectors almost anywhere that column names are expected:
     >>> data = {
@@ -853,7 +853,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
     - a renaming operation
     - another selector inside a window
     >>> expr._ir
-    ncs.by_name('weight', 'height', require_all=True).mean().name.prefix('avg_').over([ncs.matches('date').str.slice()])
+    ncs.by_name('weight', 'height').mean().name.prefix('avg_').over([ncs.matches('date').str.slice()])
 
     After expansion, its `col`(s) all the way down, multiple outputs + the names are ready too:
     >>> df.project(expr)  # doctest: +NORMALIZE_WHITESPACE
