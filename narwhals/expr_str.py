@@ -406,6 +406,41 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.to_date", format=format)
         )
 
+    def to_time(self, format: str | None = None) -> ExprT:
+        """Convert to Time dtype.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": ["12:59:21", "18:42:12"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").str.to_time(format="%H:%M:%S"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 1)   |
+            |  ┌──────────┐    |
+            |  │ a        │    |
+            |  │ ---      │    |
+            |  │ time     │    |
+            |  ╞══════════╡    |
+            |  │ 12:59:21 │    |
+            |  │ 18:42:12 │    |
+            |  └──────────┘    |
+            └──────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.to_time", format=format)
+        )
+
     def to_uppercase(self) -> ExprT:
         r"""Transform string to uppercase variant.
 

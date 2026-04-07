@@ -19,6 +19,7 @@
         - tail
         - to_date
         - to_datetime
+        - to_time
         - to_lowercase
         - to_titlecase
         - to_uppercase
