@@ -63,7 +63,11 @@ def test_to_time_infer_fmt(
     expected: str,
 ) -> None:
     if (
-        ("polars" in str(constructor) and POLARS_VERSION < (1, 30) and data["a"][0].count(":") < 2)
+        (
+            "polars" in str(constructor)
+            and POLARS_VERSION < (1, 30)
+            and data["a"][0].count(":") < 2
+        )
         or ("pandas" in str(constructor) and "pyarrow" not in str(constructor))
         or "pyspark" in str(constructor)
         or "dask" in str(constructor)
@@ -91,8 +95,14 @@ def test_to_time_series_infer_fmt(
     expected: str,
 ) -> None:
     if (
-        ("polars" in str(constructor_eager) and POLARS_VERSION < (1, 30) and data["a"][0].count(":") < 2)
-        or ("pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager))
+        (
+            "polars" in str(constructor_eager)
+            and POLARS_VERSION < (1, 30)
+            and data["a"][0].count(":") < 2
+        )
+        or (
+            "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager)
+        )
         or "pyspark" in str(constructor_eager)
     ):
         request.applymarker(pytest.mark.xfail)
