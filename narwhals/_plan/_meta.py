@@ -190,7 +190,7 @@ class ExprIRMeta(ImmutableMeta):
 
     # TODO @dangotbanned: Move out of metaclass, since `ExprIR` also gets this as a `staticmethod`
     @staticmethod
-    def _pop_nodes(cls_name: str, namespace: Ns) -> tuple[Ns, _nodes.IntoExprNodes]:
+    def _pop_nodes(cls_name: str, namespace: Ns) -> tuple[Ns, _nodes.IntoTraverser]:
         """Extract any field specifiers from the class namespace.
 
         ## What?

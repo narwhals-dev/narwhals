@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan._expansion import Expander
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.typing import MapIR, Seq
+    from narwhals._plan.typing import MapIR, OneOrSeq, Seq
 
 
 class IsScalar(enum.Enum):
@@ -36,16 +36,14 @@ class IsScalar(enum.Enum):
 
 _OBSERVE: Final = IsScalar.OBSERVE
 _SKIP: Final = IsScalar.SKIP
+_Observe: TypeAlias = Literal[IsScalar.OBSERVE]
+_Skip: TypeAlias = Literal[IsScalar.SKIP]
 
 NodeT = TypeVar("NodeT")
-
 # TODO @dangotbanned: Rename `Get` -> `Storage`?
 Get = TypeVar("Get", covariant=True)  # noqa: PLC0105
-_ExprNode: TypeAlias = "SingleExpr[Literal[IsScalar.OBSERVE]] | SingleExpr[Literal[IsScalar.SKIP]] | MultipleExpr"
-ExprNodes: TypeAlias = "Seq[_ExprNode]"
-IntoExprNodes: TypeAlias = "Iterable[_ExprNode]"
 IsScalarT = TypeVar(  # noqa: PLC0105
-    "IsScalarT", Literal[IsScalar.OBSERVE], Literal[IsScalar.SKIP], covariant=True
+    "IsScalarT", _Observe, _Skip, covariant=True
 )
 
 
@@ -156,7 +154,9 @@ def nodes() -> Any:
     return MultipleExpr()
 
 
-def into_expr_node(assigned_name: str, node: Any, cls_name: str) -> _ExprNode:
+def into_expr_node(
+    assigned_name: str, node: ExprNodeAny, cls_name: str
+) -> MultipleExpr | SingleExpr[_Observe] | SingleExpr[_Skip]:
     if not isinstance(node, (SingleExpr, MultipleExpr)):
         raise _into_expr_node_error(assigned_name, node, cls_name)
     return node.with_name(assigned_name)
@@ -317,9 +317,6 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
     def iter_expand_as_root(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
         yield from self.iter_expand(instance, ctx)
 
-    def is_scalar(self, instance: ExprIR) -> bool:
-        return self.get(instance).is_scalar()
-
     def map_nodes(self, instance: ExprIR, function: MapIR, /) -> ExprIR | None:
         before = self.get(instance)
         after = before.map_ir(function)
@@ -371,20 +368,28 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
         return None
 
 
+# NOTE: This is very intentional typing, be careful if changing in the future:
+# - Do docstrings for `ExprNode` methods show in an IDE, when viewing from `ExprTraverser`?
+# - Are we able to safely call this, after narrowing with an enum?
+#     `node.get(instance).is_scalar()`
+ExprNodeAny: TypeAlias = "ExprNode[ExprIR, _Observe] | ExprNode[OneOrSeq[ExprIR], _Skip]"
+IntoTraverser: TypeAlias = "Iterable[ExprNodeAny]"
+
+
 @final
 class ExprTraverser:
     """Field specifier-based iteration backend for `ExprIR`.
 
     ## Notes
     - Methods *accepting* an `instance` correspond to those in `ExprIR` with the same name
-    - The rest expose a subset of `Sequence[_ExprNode]`
+    - The rest expose a subset of `Sequence[ExprNode]`
         - Excluding the `value`-based methods
     """
 
     __slots__ = ("_names", "_nodes")
-    _nodes: ExprNodes
+    _nodes: Seq[ExprNodeAny]
 
-    def __init__(self, nodes: ExprNodes, /) -> None:
+    def __init__(self, nodes: Seq[ExprNodeAny], /) -> None:
         self._nodes = nodes
         self._names: Seq[str] | None = None
 
@@ -403,7 +408,7 @@ class ExprTraverser:
             return f"{tp_name}[{len(self)}]{new_line}{members}"
         return f"{tp_name}[]"
 
-    def extend_with(self, nodes: IntoExprNodes, /) -> ExprTraverser:
+    def extend_with(self, nodes: Iterable[ExprNodeAny], /) -> ExprTraverser:
         """Create a new traverser, extending with `nodes`.
 
         Arguments:
@@ -554,12 +559,11 @@ class ExprTraverser:
             yield from (as_expansion(**dict(zip(names, v))) for v in values_per_expansion)
 
     def is_scalar(self, instance: ExprIR, /) -> bool:
-        # NOTE: Acrobatics because `all(...)` returns True on an empty iterable,
-        # and there's 2 ways we can get there
-        it = (
-            node.is_scalar(instance) for node in self if node.observe_scalar is _OBSERVE
+        return _all_empty_false(
+            node.get(instance).is_scalar()
+            for node in self
+            if node.observe_scalar is _OBSERVE
         )
-        return (next(it, False)) and all(it)
 
     def map_ir(self, instance: ExprIR, function: MapIR, /) -> ExprIR:
         if self and (
@@ -579,23 +583,32 @@ class ExprTraverser:
             self._names = tuple(node.name for node in self)
         return self._names
 
-    # NOTE: `Sequence[_ExprNode]` API
+    # NOTE: `Sequence[ExprNode]` API
     @overload
-    def __getitem__(self, key: int, /) -> _ExprNode: ...
+    def __getitem__(self, key: int, /) -> ExprNodeAny: ...
     @overload
-    def __getitem__(self, key: slice, /) -> Seq[_ExprNode]: ...
-    def __getitem__(self, key: int | slice, /) -> _ExprNode | Seq[_ExprNode]:
+    def __getitem__(self, key: slice, /) -> Seq[ExprNodeAny]: ...
+    def __getitem__(self, key: int | slice, /) -> ExprNodeAny | Seq[ExprNodeAny]:
         return self._nodes.__getitem__(key)
 
-    def __iter__(self) -> Iterator[_ExprNode]:
+    def __iter__(self) -> Iterator[ExprNodeAny]:
         yield from self._nodes
 
     def __len__(self) -> int:
         return self._nodes.__len__()
 
-    def __reversed__(self) -> Iterator[_ExprNode]:
+    def __reversed__(self) -> Iterator[ExprNodeAny]:
         if self:
             yield from reversed(self._nodes)
+
+
+def _all_empty_false(iterable: Iterable[bool], /) -> bool:
+    """Return True if bool(x) is True for all values x in the iterable.
+
+    If the iterable is empty, return False.
+    """
+    it = iter(iterable)
+    return (next(it, False)) and all(it)
 
 
 _EXPR_FIELD_SPECIFIER_NAMES: Final = (node.__name__, nodes.__name__)
