@@ -40,6 +40,8 @@ You could think of these sharing a role in lowering an IR:
 from __future__ import annotations
 
 import functools
+
+# ruff: noqa: N806
 from functools import reduce
 from typing import TYPE_CHECKING, Generic, Literal, final
 
@@ -547,6 +549,24 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         Arguments:
             ctx: The expansion context to resolve the operation in.
+
+        Examples:
+            <!-- Ported from old `Expander` docs-->
+            >>> from narwhals._plan import col
+            >>> import narwhals as nw
+            >>> from narwhals._plan._expansion import Expander
+            >>> ctx = Expander({"a": nw.Int64(), "b": nw.Int64(), "c": nw.Int64()})
+            >>> expr = col("a", "b").cast(nw.String)
+            >>> e_ir = expr._ir
+
+            When we say expansion, we're talking about taking a single expression:
+            >>> print(e_ir)
+            Cast(expr=ByName(names=['a', 'b'], require_all=True), dtype=String)
+
+            And transforming it into zero or more new one's:
+            >>> print(*e_ir.iter_expand(ctx), sep="\n")
+            Cast(expr=Column(name='a'), dtype=String)
+            Cast(expr=Column(name='b'), dtype=String)
         """
         yield from self.__expr_ir_nodes__.iter_expand(self, ctx)
 

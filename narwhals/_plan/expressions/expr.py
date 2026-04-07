@@ -158,7 +158,7 @@ class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
 
 
 class Cast(ExprIR, dtype=get_dtype()):
-    __slots__ = ("dtype", "expr")
+    __slots__ = ("expr", "dtype")  # noqa: RUF023
     expr: ExprIR = node()
     dtype: DType
 
