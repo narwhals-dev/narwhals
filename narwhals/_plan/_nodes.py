@@ -431,6 +431,9 @@ class ExprTraverser:
         for node in reversed(self):
             yield from node.iter_right(instance)
 
+    # TODO @dangotbanned: Think about how to reuse this logic for expansion rules:
+    #   `input_root, *non_root = FunctionExpr.input`
+    #   `input_root, non_root  = Filter.expr, Filter.by`
     def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]:
         """Follow the **left-hand-side** of the graph until we can derive an output name.
 
@@ -439,17 +442,35 @@ class ExprTraverser:
         if self:
             yield from self[0].iter_output_name(instance)
 
+    # TODO @dangotbanned: Integrate `FunctionExpr`
+    # TODO @dangotbanned: (Docs) Figure out which bits to focus on in each level:
+    # - `ExprNode.iter_expand` (abstract expr field)
+    #   - `expand_as_non_root`, `iter_expand_as_root`
+    # - `ExprTraverser.iter_expand` (abstract expr)
+    # - `ExprIR.iter_expand` (single expr)
+    # - `Expander.iter_expand_expressions` (multiple exprs)
     def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
-        # not covered: FunctionExpr (similar to `Filter`)
-        #   `input_root, *non_root = FunctionExpr.input`
-        #   `input_root, non_root  = Filter.expr, Filter.by`
+        """Expand an expression, using the default strategy.
+
+        Arguments:
+            instance: The expression to expand.
+            ctx: The expansion context to resolve the operation in.
+
+        Notes:
+            - `node()` expands into multiple independent expressions
+                - This is restricted to the first field, raising otherwise
+                    - `Filter`
+                - `Alias`, `Cast`, `AggExpr`, `Sort`, `KeepName`, `RenameAlias`, `Over`, `OverOrdered`
+            - `nodes()` expands into itself
+                - `Over`, `OverOrdered`, `HorizontalExpr`, `SortBy`
+            - Expressions without node input have nothing to expand
+                - `Column`, `Lit`, `LitSeries`, `Len`
+            - Selectors expand into `Column`(s), and then follow the above
+        """
         if not self:
-            # Column, Lit, LitSeries, Len
             yield instance
             return
 
-        # Filter
-        # SortBy, Over, OverOrdered
         if len(self) > 1 and (
             changes := {
                 node.name: expanded
@@ -459,8 +480,6 @@ class ExprTraverser:
         ):
             instance = instance.__replace__(**changes)
 
-        # Filter, SortBy, Over, OverOrdered
-        # Alias, Cast, AggExpr, Sort, KeepName, RenameAlias, HorizontalExpr
         node = self[0]
         name = node.name
         for expanded in node.iter_expand_as_root(instance, ctx):
