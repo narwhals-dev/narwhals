@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._native import IntoSeries
+from narwhals._native import IntoSeries, NativeDuckDB
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -25,7 +25,7 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = "NativeDataFrame | DataFrameLike"
+IntoDataFrame: TypeAlias = "NativeDataFrame | DataFrameLike | NativeDuckDB"
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.
