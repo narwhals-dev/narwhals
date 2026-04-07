@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 VARCHAR = duckdb_dtypes.VARCHAR
@@ -188,7 +187,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
-    def struct(self, *exprs: DuckDBExpr, schema: Schema | None = None) -> DuckDBExpr:
+    def struct(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         version = self._version
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
@@ -199,24 +198,10 @@ class DuckDBNamespace(
                     expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
             }
-
-            if schema:
-                nw_dtype = version.dtypes.Struct(schema)
-                tz = DeferredTimeZone(df.native)
-                dtype = narwhals_to_native_dtype(nw_dtype, version, tz)
-
-                field_args = ", ".join(
-                    f'"{name}" := {names_to_cols.get(name, lit(None))}' for name in schema
-                )
-                result = sql_expression(f"struct_pack({field_args})").cast(dtype)
-
-            else:
-                field_args = ", ".join(
-                    f'"{name}" := {col}' for name, col in names_to_cols.items()
-                )
-                result = sql_expression(f"struct_pack({field_args})")
-
-            return [result]
+            field_args = ", ".join(
+                f'"{name}" := {col}' for name, col in names_to_cols.items()
+            )
+            return [sql_expression(f"struct_pack({field_args})")]
 
         return self._expr(
             call=func,

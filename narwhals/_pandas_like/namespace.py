@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._utils import Implementation, Version
-    from narwhals.schema import Schema
     from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
 
 
@@ -365,9 +364,7 @@ class PandasLikeNamespace(
             context=self,
         )
 
-    def struct(
-        self, *exprs: PandasLikeExpr, schema: Schema | None = None
-    ) -> PandasLikeExpr:
+    def struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             try:
                 import pandas as pd  # ignore-banned-import
@@ -390,15 +387,6 @@ class PandasLikeNamespace(
             result = pa.chunked_array([struct_array])
 
             version = self._version
-            if schema:
-                from narwhals._arrow.utils import (
-                    narwhals_to_native_dtype as _to_arrow_dtype,
-                )
-
-                nw_dtype = version.dtypes.Struct(schema)
-                dtype = _to_arrow_dtype(nw_dtype, version)
-                result = result.cast(dtype)
-
             impl = self._implementation
             ns = impl.to_native_namespace()
 

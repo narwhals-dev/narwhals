@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from narwhals._utils import Version
-    from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 
@@ -161,7 +160,7 @@ class IbisNamespace(
             version=self._version,
         )
 
-    def struct(self, *exprs: IbisExpr, schema: Schema | None = None) -> IbisExpr:
+    def struct(self, *exprs: IbisExpr) -> IbisExpr:
         version = self._version
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
@@ -172,16 +171,7 @@ class IbisNamespace(
                     expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
             }
-
-            if schema:
-                nw_dtype = version.dtypes.Struct(schema)
-                dtype = narwhals_to_native_dtype(nw_dtype, version)
-                result = ibis.struct(
-                    {name: names_to_cols.get(name, lit(None)) for name in schema}
-                ).cast(dtype)  # pyright: ignore[reportArgumentType, reportCallIssue]
-            else:
-                result = ibis.struct(names_to_cols)
-            return [result]
+            return [ibis.struct(names_to_cols)]
 
         return self._expr(
             call=func,

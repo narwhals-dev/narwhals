@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._utils import Implementation, Version
-    from narwhals.schema import Schema
     from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 # Adjust slight SQL vs PySpark differences
@@ -243,9 +242,7 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def struct(
-        self, *exprs: SparkLikeExpr, schema: Schema | None = None
-    ) -> SparkLikeExpr:
+    def struct(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         version = self._version
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
@@ -257,21 +254,8 @@ class SparkLikeNamespace(
                     expr(df), *evaluate_output_names_and_aliases(expr, df, [])
                 )
             }
-            if schema:
-                nw_dtype = version.dtypes.Struct(schema)
-                dtype = narwhals_to_native_dtype(
-                    nw_dtype, version, self._native_dtypes, df.native.sparkSession
-                )
-                aliased = (
-                    names_to_cols.get(name, F.lit(None)).alias(name) for name in schema
-                )
-                result = F.struct(*aliased).cast(dtype)
-
-            else:
-                aliased = (col.alias(name) for name, col in names_to_cols.items())
-                result = F.struct(*aliased)
-
-            return [result]
+            aliased = (col.alias(name) for name, col in names_to_cols.items())
+            return [F.struct(*aliased)]
 
         return self._expr(
             call=func,

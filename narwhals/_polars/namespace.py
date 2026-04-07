@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.schema import Schema
     from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
@@ -200,10 +199,9 @@ class PolarsNamespace:
             version=self._version,
         )
 
-    def struct(self, *exprs: PolarsExpr, schema: Schema | None = None) -> PolarsExpr:
+    def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
-        pl_schema = schema.to_polars() if schema is not None else None
-        return self._expr(pl.struct(pl_exprs, schema=pl_schema), version=self._version)
+        return self._expr(pl.struct(pl_exprs), version=self._version)
 
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None

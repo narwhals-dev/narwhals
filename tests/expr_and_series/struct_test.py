@@ -146,7 +146,7 @@ def test_struct_raise_no_exprs(constructor: Constructor) -> None:
         df.select(nw.struct().alias("struct"))
 
     with pytest.raises(ValueError, match="expected at least 1 expression in 'struct'"):
-        df.select(nw.struct(schema={"x": nw.Float32()}).alias("struct"))
+        df.select(nw.struct().alias("struct"))
 
 
 def test_struct_with_schema(
@@ -160,7 +160,7 @@ def test_struct_with_schema(
     data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
     schema = {"a": nw.Float64(), "b": nw.Float32()}
     df = nw.from_native(constructor(data_numeric))
-    result = df.select(nw.struct("a", "b", schema=schema).alias("struct"))
+    result = df.select(nw.struct("a", "b").cast(nw.Struct(schema)).alias("struct"))
     assert result.collect_schema()["struct"] == nw.Struct(schema)
 
     expected = {
@@ -191,7 +191,7 @@ def test_struct_schema_mismatch(
     maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
-    result = df.select(nw.struct(nw.all(), schema=schema).alias("struct"))
+    result = df.select(nw.struct(nw.all()).cast(nw.Struct(schema)).alias("struct"))
 
     assert_equal_data(result, {"struct": expected})
 

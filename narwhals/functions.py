@@ -1837,7 +1837,6 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
 
 def struct(
     *exprs: IntoExpr | NonNestedLiteral | Sequence[IntoExpr | NonNestedLiteral],
-    schema: IntoSchema | None = None,
     **named_exprs: IntoExpr | NonNestedLiteral,
 ) -> Expr:
     """Collect columns into a struct column.
@@ -1846,7 +1845,6 @@ def struct(
         *exprs: Column(s) to collect into a struct column, specified as
             positional arguments. Accepts expression input. Strings are parsed
             as column names, other non-expression inputs are parsed as literals.
-        schema: Optional schema that explicitly defines the struct field dtypes.
         **named_exprs: Additional columns to collect into the struct column,
             specified as keyword arguments.
             The columns will be renamed to the keyword used.
@@ -1892,8 +1890,6 @@ def struct(
         |└────────────────────────────────────────────┘|
         └──────────────────────────────────────────────┘
     """
-    from narwhals.schema import Schema
-
     flat_exprs = [
         *(_parse_into_expr(e) for e in flatten(exprs)),
         *(_parse_into_expr(e).alias(n) for n, e in named_exprs.items()),
@@ -1902,13 +1898,8 @@ def struct(
         msg = "expected at least 1 expression in 'struct'"
         raise ValueError(msg)
 
-    schema = Schema(schema) if schema is not None else None
     return Expr(
         ExprNode(
-            ExprKind.ELEMENTWISE,
-            "struct",
-            exprs=flat_exprs,
-            schema=schema,
-            allow_multi_output=True,
+            ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, allow_multi_output=True
         )
     )
