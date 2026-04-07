@@ -244,37 +244,6 @@ class Expander:
             raise column_not_found_error(roots, self.schema)
         return tuple(named_irs), output_names
 
-    # TODO @dangotbanned: Find a new home for some version of this doc
-    def inner(self, children: Seq[ExprIR], /) -> Seq[ExprIR]:  # pragma: no cover
-        """Expand a non-root node, *without* duplicating the root.
-
-        If we wrote:
-
-            col("a").over(col("c", "d", "e"))
-
-        Then the expanded version should be:
-
-            col("a").over(col("c"), col("d"), col("e"))
-
-        An **incorrect** output would cause an error without aliasing:
-
-            col("a").over(col("c"))
-            col("a").over(col("d"))
-            col("a").over(col("e"))
-
-        This would also cause an error if we needed to expand both sides:
-
-            col("a", "b").over(col("c", "d", "e"))
-
-        Since that would become:
-
-            col("a").over(col("c"))
-            col("b").over(col("d"))
-            col(<MISSING>).over(col("e"))  # InvalidOperationError: cannot combine selectors that produce a different number of columns (3 != 2)
-        """
-        iterable = (child.iter_expand(self) for child in children)
-        return tuple(e for sub in iterable for e in sub)
-
     # TODO @dangotbanned: Does it still make sense for this to live here?
     def only(self, origin: ExprIR, child: ExprIR, /) -> ExprIR:
         """Expand a node, ensuring it produces a single output.

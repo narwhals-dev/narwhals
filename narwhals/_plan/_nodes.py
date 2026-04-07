@@ -216,6 +216,10 @@ class Node(Protocol[NodeT, Get]):
         ...
 
 
+# TODO @dangotbanned: (Docs) Turn code blocks into literate examples
+# - `expand_as_non_root`
+#    - has material from `Expander` as a starting point
+# - `iter_expand_as_root`
 class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
     """Extensions to `Node` for `ExprIR`."""
 
@@ -255,6 +259,33 @@ class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
             tuple[ExprIR, ...] -> tuple[ExprIR, ...]
             tuple[Integer]     -> tuple[Column]       # Ok
             tuple[All]         -> tuple[Column, ...]  # Ok
+
+
+        <!-- Ripped from old `Expander.inner`-->
+
+        If we wrote:
+
+            col("a").over(col("c", "d", "e"))
+
+        Then the expanded version should be:
+
+            col("a").over(col("c"), col("d"), col("e"))
+
+        An **incorrect** output would cause an error without aliasing:
+
+            col("a").over(col("c"))
+            col("a").over(col("d"))
+            col("a").over(col("e"))
+
+        This would also cause an error if we needed to expand both sides:
+
+            col("a", "b").over(col("c", "d", "e"))
+
+        Since that would become:
+
+            col("a").over(col("c"))
+            col("b").over(col("d"))
+            col(<MISSING>).over(col("e"))  # InvalidOperationError: cannot combine selectors that produce a different number of columns (3 != 2)
         """
         ...
 
