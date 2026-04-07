@@ -545,7 +545,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         yield from self.__expr_ir_nodes__.iter_output_name(self)
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
-        """Yield the expression(s) that the current node expands into.
+        r"""Yield the expression(s) that the current node expands into.
 
         Arguments:
             ctx: The expansion context to resolve the operation in.

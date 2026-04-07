@@ -175,6 +175,13 @@ class Expander:
         self.ignored = ignored
 
     def iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
+        """Expand multiple expressions within this context.
+
+        Matches selectors, converts them to columns and yields the transformed results.
+
+        Use `prepare_projection` for full validation (duplicates, missing columns) and
+        resolving renaming operations.
+        """
         for expr in exprs:
             if any(e.needs_expansion() for e in expr.iter_left()):
                 yield from expr.iter_expand(self)
@@ -207,6 +214,9 @@ class Expander:
         named_irs, _ = self._prepare_projection(exprs)
         return named_irs
 
+    # NOTE: Making this private was a hack to expose the collected `output_names`,
+    # without changing the signature of `prepare_projection`
+    # https://github.com/narwhals-dev/narwhals/commit/cef6c4673b2955d311ee5ecc091777b84ba9b73e
     def _prepare_projection(
         self, exprs: Collection[ExprIR], /
     ) -> tuple[Seq[NamedIR], deque[str]]:
@@ -252,7 +262,7 @@ class Expander:
             col("a").over(col("d"))
             col("a").over(col("e"))
 
-        And cause an error if we needed to expand both sides:
+        This would also cause an error if we needed to expand both sides:
 
             col("a", "b").over(col("c", "d", "e"))
 
