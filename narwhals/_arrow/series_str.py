@@ -12,7 +12,6 @@ from narwhals._arrow.utils import (
     lit,
     parse_datetime_format,
     parse_time_format,
-    narwhals_to_native_dtype,
 )
 from narwhals._compliant.any_namespace import StringNamespace
 

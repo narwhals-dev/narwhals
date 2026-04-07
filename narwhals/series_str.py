@@ -415,7 +415,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pl.Series(["12:59:21", "18:42:12"])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.to_time(format="%H:%M:%S").to_native()  # doctest: +NORMALIZE_WHITESPACE
+            >>> s.str.to_time(
+            ...     format="%H:%M:%S"
+            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
             Series: '' [time]
             [
