@@ -216,10 +216,6 @@ class Node(Protocol[NodeT, Get]):
         ...
 
 
-# TODO @dangotbanned: (Docs) Turn code blocks into literate examples
-# - `expand_as_non_root`
-#    - has material from `Expander` as a starting point
-# - `iter_expand_as_root`
 class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
     """Extensions to `Node` for `ExprIR`."""
 
@@ -238,73 +234,81 @@ class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
         ...
 
     def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
-        """Yield the expression(s) that the current node expands into."""
-        ...
+        """Yield the expression(s) that the current node expands into.
 
-    # NOTE: These are defining how this node should behave when *it is the first in `ExprTraverser*
-    # The term `root` is a bit overloaded, since the root from here could also mean:
-    # - `SingleExpr.get(instance) | MultipleExpr.get(instance)[0]`
-    # - `next(ExprNode.iter_left())`
-    def expand_as_non_root(self, instance: ExprIR, ctx: Expander, /) -> Get:
-        """Return the expanded replacement for a non-root node.
-
-        Default non-root expansion rules:
-
-            # Restricted to a single expansion
-            ExprIR             -> ExprIR
-            Integer            -> Column              # Ok
-            All                -> tuple[Column, ...]  # Error
-
-            # Expands freely within the container
-            tuple[ExprIR, ...] -> tuple[ExprIR, ...]
-            tuple[Integer]     -> tuple[Column]       # Ok
-            tuple[All]         -> tuple[Column, ...]  # Ok
-
-
-        <!-- Ripped from old `Expander.inner`-->
-
-        If we wrote:
-
-            col("a").over(col("c", "d", "e"))
-
-        Then the expanded version should be:
-
-            col("a").over(col("c"), col("d"), col("e"))
-
-        An **incorrect** output would cause an error without aliasing:
-
-            col("a").over(col("c"))
-            col("a").over(col("d"))
-            col("a").over(col("e"))
-
-        This would also cause an error if we needed to expand both sides:
-
-            col("a", "b").over(col("c", "d", "e"))
-
-        Since that would become:
-
-            col("a").over(col("c"))
-            col("b").over(col("d"))
-            col(<MISSING>).over(col("e"))  # InvalidOperationError: cannot combine selectors that produce a different number of columns (3 != 2)
+        Exposes expansion - *without constraints* - as a building block for `expand_as_*`.
         """
         ...
 
-    def iter_expand_as_root(self, instance: ExprIR, ctx: Expander, /) -> Iterator[Get]:
-        """Yield the expanded replacement(s) for a root node.
+    def expand_as_first_child(self, instance: ExprIR, ctx: Expander, /) -> Iterator[Get]:
+        """Expand the first field in an expression.
 
-        Default root expansion rules:
+        Note:
+            Related to `expand_as_next_sibling`, see [first child-next sibling].
 
-            # Unrestricted expansion
-            # Each becomes a root in a new expression
-            ExprIR             -> Iterator[ExprIR]
-            Integer            -> Iterator[Column]
-            All                -> Iterator[Column]
+        ## Examples
+        >>> import narwhals as nw
+        >>> import narwhals._plan as nwp
+        >>> import narwhals._plan.selectors as ncs
+        >>> from tests.plan.utils import Frame
+        >>> schema = {"a": nw.Int64(), "b": nw.Float64(), "c": nw.Int64()}
+        >>> df = Frame.from_mapping(schema)
 
-            # Expands freely within the container
-            # Always yields a single expression
-            tuple[ExprIR, ...] -> Iterator[tuple[ExprIR, ...]]
-            tuple[Integer]     -> Iterator[tuple[Column]]
-            tuple[All]         -> Iterator[tuple[Column, ...]]
+        When the first field is a `node()`, multiple inputs expand into multiple outputs:
+        >>> list(df.project(ncs.float().sum()))
+        [b=col('b').sum()]
+        >>> list(df.project(ncs.integer().sum()))
+        [a=col('a').sum(), c=col('c').sum()]
+
+        Whereas `nodes()` expands within container they describe, reducing to a single output:
+        >>> list(df.project(nwp.sum_horizontal(ncs.float(), ncs.integer())))
+        [b=col('b').sum_horizontal([col('a'), col('c')])]
+
+        [first child-next sibling]: https://xlinux.nist.gov/dads/HTML/binaryTreeRepofTree.html
+        """
+        ...
+
+    def expand_as_next_sibling(self, instance: ExprIR, ctx: Expander, /) -> Get:
+        r"""Expand a field in an expression (excluding the first).
+
+        Note:
+            Related to `expand_as_first_child`, see [first child-next sibling].
+
+        ## Examples
+        >>> import narwhals as nw
+        >>> import narwhals._plan as nwp
+        >>> import narwhals._plan.selectors as ncs
+        >>> from tests.plan.utils import Frame
+        >>> i64 = nw.Int64()
+        >>> schema = {"a": i64, "b": nw.Float64(), "c": i64, "d": nw.String()}
+        >>> df = Frame.from_mapping(schema)
+        >>> a = nwp.col("a")
+
+        A `node()` supports selectors in this position *iff* they select a single column:
+        >>> list(df.project(a.filter(ncs.float())))
+        [a=col('a').filter(col('b'))]
+
+        >>> list(df.project(a.filter(ncs.integer())))
+        Traceback (most recent call last):
+        narwhals.exceptions.MultiOutputExpressionError: ...
+        Got `col('a').filter(ncs.integer())`, but `ncs.integer()` expanded into 2 outputs:
+          col('a')
+          col('c')
+
+        Whereas `nodes()` expand within the container they describe:
+        >>> agg = nwp.col("a").first()
+        >>> floats, ints = ncs.float(), ncs.integer()
+        >>> expanded = df.project(
+        ...     agg.over(floats).alias("p1"),
+        ...     agg.over(floats, ints).alias("p3"),
+        ...     agg.over(floats, ints, order_by=[ncs.string(), "a"]).alias("p3_o2"),
+        ... )
+        >>> print(*map(repr, expanded), sep="\n")
+        p1=col('a').first().over([col('b')])
+        p3=col('a').first().over([col('b'), col('a'), col('c')])
+        p3_o2=col('a').first().over(partition_by=[col('b'), col('a'), col('c')], order_by=[col('d'), col('a')])
+
+        [first child-next sibling]: https://xlinux.nist.gov/dads/HTML/binaryTreeRepofTree.html
         """
         ...
 
@@ -342,11 +346,13 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
     def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
         yield from self.get(instance).iter_expand(ctx)
 
-    def expand_as_non_root(self, instance: ExprIR, ctx: Expander, /) -> ExprIR:
-        return ctx.only(instance, self.get(instance))
-
-    def iter_expand_as_root(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
+    def expand_as_first_child(
+        self, instance: ExprIR, ctx: Expander, /
+    ) -> Iterator[ExprIR]:
         yield from self.iter_expand(instance, ctx)
+
+    def expand_as_next_sibling(self, instance: ExprIR, ctx: Expander, /) -> ExprIR:
+        return ctx.only(instance, self.get(instance))
 
     def map_nodes(self, instance: ExprIR, function: MapIR, /) -> ExprIR | None:
         before = self.get(instance)
@@ -384,13 +390,13 @@ class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
         for expr in self.get(instance):
             yield from expr.iter_expand(ctx)
 
-    def expand_as_non_root(self, instance: ExprIR, ctx: Expander, /) -> Seq[ExprIR]:
-        return tuple(self.iter_expand(instance, ctx))
-
-    def iter_expand_as_root(
+    def expand_as_first_child(
         self, instance: ExprIR, ctx: Expander, /
     ) -> Iterator[Seq[ExprIR]]:
         yield tuple(self.iter_expand(instance, ctx))
+
+    def expand_as_next_sibling(self, instance: ExprIR, ctx: Expander, /) -> Seq[ExprIR]:
+        return tuple(self.iter_expand(instance, ctx))
 
     def map_nodes(self, instance: ExprIR, function: MapIR, /) -> Seq[ExprIR] | None:
         if before := self.get(instance):
@@ -473,8 +479,7 @@ class ExprTraverser:
             yield instance
 
     # TODO @dangotbanned: (Docs) Figure out which bits to focus on at each level:
-    # - [ ] `ExprNode.iter_expand` (abstract expr field)
-    #   - `expand_as_non_root`, `iter_expand_as_root`
+    # - [x] `ExprNode.iter_expand` (abstract expr field)
     # - [ ] `ExprTraverser.iter_expand` (abstract expr)
     # - [ ] `ExprIR.iter_expand` (single expr)
     # - [x] `Expander.iter_expand_expressions` (multiple exprs)
@@ -505,14 +510,14 @@ class ExprTraverser:
             changes := {
                 node.name: expanded
                 for node in reversed(self[1:])
-                if (expanded := node.expand_as_non_root(instance, ctx))
+                if (expanded := node.expand_as_next_sibling(instance, ctx))
             }
         ):
             instance = instance.__replace__(**changes)
 
         node = self[0]
         name = node.name
-        for expanded in node.iter_expand_as_root(instance, ctx):
+        for expanded in node.expand_as_first_child(instance, ctx):
             yield instance.__replace__(**{name: expanded})
 
     # TODO @dangotbanned: (Docs) Turn most of this into examples, trim down the fat on the rest
