@@ -98,6 +98,19 @@ def test_array_valid() -> None:
         nw.Array(nw.Int64(), shape="invalid_type")  # type: ignore[arg-type]
 
 
+def test_map_valid() -> None:
+    from collections import OrderedDict
+
+    dtype = nw.Map(nw.Int64, nw.String)
+    assert dtype == nw.Map(nw.Int64, nw.String)
+    assert dtype == nw.Map
+    assert dtype != nw.Map(nw.Int64, nw.Int64)
+    assert dtype != nw.Duration
+    assert repr(dtype) == "Map(Int64, String)"
+    assert_equal_hash(dtype, nw.Map(nw.Int64, nw.String))
+    assert dtype.to_schema() == OrderedDict({"key": nw.Int64, "value": nw.String})
+
+
 def test_struct_valid() -> None:
     dtype = nw.Struct([nw.Field("a", nw.Int64)])
     assert dtype == nw.Struct([nw.Field("a", nw.Int64)])

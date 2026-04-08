@@ -223,6 +223,11 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
         return dtypes.Array(
             native_to_narwhals_dtype(dtype.value_type, version), dtype.list_size
         )
+    if pa.types.is_map(dtype):
+        return dtypes.Map(
+            native_to_narwhals_dtype(dtype.key_type, version),
+            native_to_narwhals_dtype(dtype.item_type, version),
+        )
     if pa.types.is_decimal128(dtype):
         return dtypes.Decimal(precision=dtype.precision, scale=dtype.scale)
     if pa.types.is_time32(dtype) or pa.types.is_time64(dtype):
@@ -278,6 +283,11 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
         return pa.list_(inner, list_size=list_size)
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        return pa.map_(
+            narwhals_to_native_dtype(dtype.key, version=version),
+            narwhals_to_native_dtype(dtype.value, version=version),
+        )
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         return pa.decimal128(precision=dtype.precision, scale=dtype.scale)
     if issubclass(base_type, UNSUPPORTED_DTYPES):
