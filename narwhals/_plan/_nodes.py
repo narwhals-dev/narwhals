@@ -480,7 +480,7 @@ class ExprTraverser:
 
     # TODO @dangotbanned: (Docs) Figure out which bits to focus on at each level:
     # - [x] `ExprNode.iter_expand` (abstract expr field)
-    # - [ ] `ExprTraverser.iter_expand` (abstract expr)
+    # - [x] `ExprTraverser.iter_expand` (abstract expr)
     # - [ ] `ExprIR.iter_expand` (single expr)
     # - [x] `Expander.iter_expand_expressions` (multiple exprs)
     # TODO @dangotbanned: (low priority) integrate `FunctionExpr`
@@ -492,15 +492,17 @@ class ExprTraverser:
             ctx: The expansion context to resolve the operation in.
 
         Notes:
+            This strategy is applies the following rules:
+
             - `node()` expands into multiple independent expressions
-                - This is restricted to the first field, raising otherwise
-                    - `Filter`
-                - `Alias`, `Cast`, `AggExpr`, `Sort`, `KeepName`, `RenameAlias`, `Over`, `OverOrdered`
-            - `nodes()` expands into itself
-                - `Over`, `OverOrdered`, `HorizontalExpr`, `SortBy`
-            - Expressions without node input have nothing to expand
-                - `Column`, `Lit`, `LitSeries`, `Len`
+                - Which is permitted only at `self[0]`
+            - `nodes()` expands within the container it describes
+            - Expressions without inputs (e.g. `Column`) have nothing to expand
             - Selectors expand into `Column`(s), and then follow the above
+
+        See Also:
+            `ExprNode.expand_as_first_child`
+            `ExprNode.expand_as_next_sibling`
         """
         if not self:
             yield instance
@@ -508,16 +510,16 @@ class ExprTraverser:
 
         if len(self) > 1 and (
             changes := {
-                node.name: expanded
-                for node in reversed(self[1:])
-                if (expanded := node.expand_as_next_sibling(instance, ctx))
+                sibling.name: expanded
+                for sibling in reversed(self[1:])
+                if (expanded := sibling.expand_as_next_sibling(instance, ctx))
             }
         ):
             instance = instance.__replace__(**changes)
 
-        node = self[0]
-        name = node.name
-        for expanded in node.expand_as_first_child(instance, ctx):
+        child = self[0]
+        name = child.name
+        for expanded in child.expand_as_first_child(instance, ctx):
             yield instance.__replace__(**{name: expanded})
 
     # TODO @dangotbanned: (Docs) Turn most of this into examples, trim down the fat on the rest
@@ -546,7 +548,7 @@ class ExprTraverser:
         Notes:
             - How it works
                 - **First pass**: Expand expression(s) for each node, observing how many plopped out the other side:
-                    - `1` means we can broadcast a replacement(s) through by overwriting our `in_progress`
+                    - `1` means we can broadcast replacement(s) through by overwriting our `in_progress`
                     - `>1` the first one we see becomes the target (`expansion_size`) that all others need to get in line with
                     - Then error on anything new that tries to join the party
                 - **Intermission**: Fast paths for all 1s or a single multi-output expansion
