@@ -346,6 +346,67 @@ def test_struct(
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
 
 
+@pytest.mark.parametrize("backend", ["pyarrow", "polars", "pandas"])
+@pytest.mark.parametrize(
+    ("l_vals", "r_vals", "check_exact", "context"),
+    [
+        ([[("a", 0.0)], [], None], [[("a", 1e-10)], [], None], False, does_not_raise()),
+        (
+            [[("a", 0.0)], [], None],
+            [[("a", 1e-10)], [], None],
+            True,
+            _assertion_error("nested value mismatch"),
+        ),
+        (
+            [[("a", 0.0)]],
+            [[("b", 0.0)]],
+            False,
+            _assertion_error("nested value mismatch"),
+        ),
+        (
+            [[("a", 0.0), ("b", 1.0)]],
+            [[("b", 1.0), ("a", 0.0)]],
+            False,
+            _assertion_error("nested value mismatch"),
+        ),
+        (
+            [[("a", 0.0)]],
+            [[("a", 0.0), ("b", 1.0)]],
+            False,
+            _assertion_error("nested value mismatch"),
+        ),
+    ],
+)
+def test_map(
+    backend: str,
+    l_vals: list[Any],
+    r_vals: list[Any],
+    *,
+    check_exact: bool,
+    context: AbstractContextManager[Any],
+) -> None:
+    pa = pytest.importorskip("pyarrow")
+    if backend == "polars" and POLARS_VERSION < PkgVersion("2"):  # pragma: no cover
+        pytest.skip(reason="native Map dtype requires Polars 2.0.0")
+    if backend == "pandas" and PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
+        pytest.skip(reason="Pandas too old for nested dtypes")
+
+    def to_series(values: list[Any]) -> nw.Series[Any]:
+        native = pa.chunked_array([values], type=pa.map_(pa.string(), pa.float32()))
+        if backend == "polars":
+            import polars as pl
+
+            return series_from_native(pl.Series(native))
+        if backend == "pandas":
+            import pandas as pd
+
+            return series_from_native(pd.Series(native, dtype=pd.ArrowDtype(native.type)))
+        return series_from_native(native)
+
+    with context:
+        assert_series_equal(to_series(l_vals), to_series(r_vals), check_exact=check_exact)
+
+
 def test_non_nw_series() -> None:
     pytest.importorskip("pandas")
 

@@ -170,6 +170,11 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
                 ibis_dtype.length,
             )
         return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
+    if is_map(ibis_dtype):
+        return dtypes.Map(
+            native_to_narwhals_dtype(ibis_dtype.key_type, version),
+            native_to_narwhals_dtype(ibis_dtype.value_type, version),
+        )
     if is_struct(ibis_dtype):
         return dtypes.Struct(
             [
@@ -207,6 +212,10 @@ def is_array(obj: IbisDataType) -> TypeIs[ibis_dtypes.Array[Any]]:
 
 def is_struct(obj: IbisDataType) -> TypeIs[ibis_dtypes.Struct]:
     return obj.is_struct()
+
+
+def is_map(obj: IbisDataType) -> TypeIs[ibis_dtypes.Map[Any, Any]]:
+    return obj.is_map()
 
 
 def is_floating(obj: IbisDataType) -> TypeIs[ibis_dtypes.Floating]:
@@ -252,6 +261,11 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner)
+    if isinstance_or_issubclass(dtype, dtypes.Map):
+        return ibis_dtypes.Map(
+            key_type=narwhals_to_native_dtype(dtype.key, version),
+            value_type=narwhals_to_native_dtype(dtype.value, version),
+        )
     if isinstance_or_issubclass(dtype, dtypes.Struct):
         fields = [
             (field.name, narwhals_to_native_dtype(field.dtype, version))
