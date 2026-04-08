@@ -247,7 +247,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """
         return self.function.resolve_dtype(self, schema)
 
-    # TODO @dangotbanned: Integrate `FunctionExpr` (similar to `Filter`)
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
         input_root, *non_root = self.input
         children = tuple(ctx.only(self, child) for child in non_root) if non_root else ()

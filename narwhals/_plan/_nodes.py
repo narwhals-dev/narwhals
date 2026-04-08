@@ -462,9 +462,6 @@ class ExprTraverser:
         for node in reversed(self):
             yield from node.iter_right(instance)
 
-    # TODO @dangotbanned: Think about how to reuse this logic for expansion rules:
-    #   `input_root, *non_root = FunctionExpr.input`
-    #   `input_root, non_root  = Filter.expr, Filter.by`
     def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]:
         """Follow the **left-hand-side** of the graph until we can derive an output name.
 
@@ -475,13 +472,13 @@ class ExprTraverser:
         else:
             yield instance
 
-    # TODO @dangotbanned: Integrate `FunctionExpr`
-    # TODO @dangotbanned: (Docs) Figure out which bits to focus on in each level:
-    # - `ExprNode.iter_expand` (abstract expr field)
+    # TODO @dangotbanned: (Docs) Figure out which bits to focus on at each level:
+    # - [ ] `ExprNode.iter_expand` (abstract expr field)
     #   - `expand_as_non_root`, `iter_expand_as_root`
-    # - `ExprTraverser.iter_expand` (abstract expr)
-    # - `ExprIR.iter_expand` (single expr)
-    # - `Expander.iter_expand_expressions` (multiple exprs)
+    # - [ ] `ExprTraverser.iter_expand` (abstract expr)
+    # - [ ] `ExprIR.iter_expand` (single expr)
+    # - [x] `Expander.iter_expand_expressions` (multiple exprs)
+    # TODO @dangotbanned: (low priority) integrate `FunctionExpr`
     def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
         """Expand an expression, using the default strategy.
 
