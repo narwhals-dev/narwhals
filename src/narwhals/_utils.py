@@ -729,6 +729,11 @@ def is_iterator(val: Iterable[_T] | Any) -> TypeIs[Iterator[_T]]:
     return isinstance(val, Iterator)
 
 
+def polars_supports_map() -> bool:
+    # Map was added after 2.0.0rc1 without changing the development version.
+    return hasattr(get_polars(), "Map")
+
+
 def parse_version(version: str | ModuleType | _SupportsVersion) -> tuple[int, ...]:
     """Simple version parser; split into a tuple of ints for comparison.
 
