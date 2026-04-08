@@ -255,6 +255,14 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(input=(root, *children))
 
 
+# TODO @dangotbanned: How big is the benefit of keeping this?
+# - https://github.com/narwhals-dev/narwhals/blob/a4d550a2e316f1e3aed80e9fe27720f61e5c703d/narwhals/_plan/arrow/expr.py#L692-L713
+# - It isn't consistent with polars
+#   - Uses the name to represent `Expr.rolling`
+# - Added it very early (before dispatch)
+#   - `CumAgg` works fine without `CumExpr`
+#   - The other `FunctionExpr`s have more motivation than grouping
+# - complication for `get_dispatch_name`
 class RollingExpr(FunctionExpr[RollingT_co]):
     def dispatch(
         self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
