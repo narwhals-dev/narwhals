@@ -730,6 +730,9 @@ class SelectorIR(ExprIR, dispatch="no_dispatch"):
             for name in self.iter_expand_selector(ctx.schema, ctx.ignored)
         )
 
+    def iter_output_name(self) -> Iterator[ExprIR]:
+        yield from ()
+
     @final
     def matches(self, dtype: IntoDType, /) -> bool:
         """Return True if this selector matches the data type.

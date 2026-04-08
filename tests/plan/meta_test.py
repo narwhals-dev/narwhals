@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 import string
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -16,6 +16,9 @@ from tests.utils import POLARS_VERSION
 
 pytest.importorskip("polars")
 import polars as pl
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 if POLARS_VERSION >= (1, 0):  # https://github.com/pola-rs/polars/pull/16743
     if POLARS_VERSION >= (1, 36):  # pragma: no cover
@@ -211,6 +214,20 @@ def test_meta_output_name(nw_expr: nwp.Expr, pl_expr: pl.Expr, expected: str) ->
     assert nw_result == pl_result
 
 
+@pytest.mark.parametrize(
+    "selector",
+    [(ncs.string() | ncs.last()), ~ncs.list(), ncs.first()],
+    ids=["BinarySelector", "InvertSelector", "ByIndex"],
+)
+@pytest.mark.parametrize("function", [None, nwp.Expr.cum_count])
+def test_meta_output_name_invalid(
+    selector: nwp.Selector, function: Callable[[nwp.Expr], nwp.Expr] | None
+) -> None:
+    expr = selector if not function else function(selector.as_expr())
+    with pytest.raises(ComputeError):
+        expr.meta.output_name()
+
+
 def test_root_and_output_names() -> None:
     e = nwp.col("foo") * nwp.col("bar")
     assert e.meta.output_name() == "foo"
@@ -231,22 +248,13 @@ def test_root_and_output_names() -> None:
     e = nwp.len()
     assert e.meta.output_name() == "len"
 
-    with pytest.raises(
-        ComputeError,
-        match=re.escape(
-            "unable to find root column name for expr 'ncs.all()' when calling 'output_name'"
-        ),
-    ):
-        nwp.all().name.suffix("_").meta.output_name()
-
-    assert (
-        nwp.all().name.suffix("_").meta.output_name(raise_if_undetermined=False) is None
+    pattern = re.escape(
+        "unable to find root column name for expr 'ncs.all()' when calling 'output_name'"
     )
-
-    with pytest.raises(ComputeError):
-        (ncs.string() | ncs.last()).meta.output_name()
-    with pytest.raises(ComputeError):
-        (~ncs.list()).cum_count().meta.output_name()
+    e = nwp.all().name.suffix("_")
+    assert e.meta.output_name(raise_if_undetermined=False) is None
+    with pytest.raises(ComputeError, match=pattern):
+        e.meta.output_name()
 
 
 def test_meta_has_multiple_outputs() -> None:

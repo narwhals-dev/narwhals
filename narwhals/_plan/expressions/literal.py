@@ -59,9 +59,6 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
     def name(self) -> str:
         return "literal"
 
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield self
-
 
 @final
 class Lit(LiteralExpr[PythonLiteralT_co], dispatch=namespaced()):

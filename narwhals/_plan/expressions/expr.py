@@ -126,9 +126,6 @@ class Column(ExprIR, dispatch=namespaced("col")):
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         return schema[self.name]
 
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield self
-
 
 class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
     """A binary operation applied to two expressions."""
@@ -371,9 +368,6 @@ class Len(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
 
     def __repr__(self) -> str:
         return "len()"
-
-    def iter_output_name(self) -> Iterator[ExprIR]:
-        yield self
 
 
 # TODO @dangotbanned: `get_supertype`, `nw.Null`

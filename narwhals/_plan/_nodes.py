@@ -472,6 +472,8 @@ class ExprTraverser:
         """
         if self:
             yield from self[0].iter_output_name(instance)
+        else:
+            yield instance
 
     # TODO @dangotbanned: Integrate `FunctionExpr`
     # TODO @dangotbanned: (Docs) Figure out which bits to focus on in each level:
