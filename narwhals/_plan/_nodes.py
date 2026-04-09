@@ -478,11 +478,6 @@ class ExprTraverser:
         else:
             yield instance
 
-    # TODO @dangotbanned: (Docs) Figure out which bits to focus on at each level:
-    # - [x] `ExprNode.iter_expand` (abstract expr field)
-    # - [x] `ExprTraverser.iter_expand` (abstract expr)
-    # - [ ] `ExprIR.iter_expand` (single expr)
-    # - [x] `Expander.iter_expand_expressions` (multiple exprs)
     # TODO @dangotbanned: (low priority) integrate `FunctionExpr`
     def iter_expand(self, instance: ExprIR, ctx: Expander, /) -> Iterator[ExprIR]:
         """Expand an expression, using the default strategy.
@@ -492,7 +487,7 @@ class ExprTraverser:
             ctx: The expansion context to resolve the operation in.
 
         Notes:
-            This strategy is applies the following rules:
+            This strategy applies the following rules:
 
             - `node()` expands into multiple independent expressions
                 - Which is permitted only at `self[0]`

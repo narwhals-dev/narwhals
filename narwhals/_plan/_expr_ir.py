@@ -551,22 +551,94 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             ctx: The expansion context to resolve the operation in.
 
         Examples:
-            <!-- Ported from old `Expander` docs-->
-            >>> from narwhals._plan import col
             >>> import narwhals as nw
+            >>> from narwhals._plan import col, selectors as ncs, sum_horizontal
             >>> from narwhals._plan._expansion import Expander
-            >>> ctx = Expander({"a": nw.Int64(), "b": nw.Int64(), "c": nw.Int64()})
-            >>> expr = col("a", "b").cast(nw.String)
-            >>> e_ir = expr._ir
 
-            When we say expansion, we're talking about taking a single expression:
-            >>> print(e_ir)
+            >>> def show(nodes: Iterator[ExprIR], *, use_repr: bool = False) -> None:
+            ...     print(*(map(repr, nodes) if use_repr else nodes), sep="\n")
+
+            >>> i64 = nw.Int64()
+            >>> schema_1 = {"a": i64, "b": i64, "c": i64, "d": nw.Float64()}
+            >>> schema_2 = {"a": nw.Datetime(), "b": i64, "c": nw.Datetime("ns")}
+
+            When we say *expansion*, we're talking about taking a single expression:
+            >>> cast_ab = col("a", "b").cast(nw.String)._ir
+            >>> print(cast_ab)
             Cast(expr=ByName(names=['a', 'b'], require_all=True), dtype=String)
 
-            And transforming it into zero or more new one's:
-            >>> print(*e_ir.iter_expand(ctx), sep="\n")
+            And transforming it into *zero or more* new expressions:
+            >>> ctx_1 = Expander(schema_1)
+            >>> show(cast_ab.iter_expand(ctx_1))
             Cast(expr=Column(name='a'), dtype=String)
             Cast(expr=Column(name='b'), dtype=String)
+
+            Yep, zero is possible:
+            >>> cast_datetime = ncs.datetime().cast(nw.String)._ir
+            >>> show(cast_datetime.iter_expand(ctx_1))
+            <BLANKLINE>
+
+            It's all contextual:
+            >>> ctx_2 = Expander(schema_2)
+            >>> show(cast_datetime.iter_expand(ctx_2))
+            Cast(expr=Column(name='a'), dtype=String)
+            Cast(expr=Column(name='c'), dtype=String)
+
+            There are a few different kinds of expansion:
+            >>> standard = ncs.all().sum()._ir
+            >>> into_input = sum_horizontal(ncs.all())._ir
+            >>> broadcasting = (col("a") + col("b", "c", "d"))._ir
+            >>> zipping = (col("a", "b") + col("c", "d"))._ir
+            >>> mixed = (
+            ...     ncs.all()
+            ...     .cum_sum()
+            ...     .over(ncs.integer() - ncs.first(), order_by=ncs.last())
+            ...     ._ir
+            ... )
+
+            The one you all know and love:
+            >>> standard
+            ncs.all().sum()
+            >>> show(standard.iter_expand(ctx_1), use_repr=True)
+            col('a').sum()
+            col('b').sum()
+            col('c').sum()
+            col('d').sum()
+
+            Another that might feel familiar:
+            >>> into_input
+            ncs.all().sum_horizontal()
+            >>> show(into_input.iter_expand(ctx_1), use_repr=True)
+            col('a').sum_horizontal([col('b'), col('c'), col('d')])
+
+            One for the more adventurous:
+            >>> broadcasting
+            [(col('a')) + (ncs.by_name('b', 'c', 'd'))]
+            >>> show(broadcasting.iter_expand(ctx_1), use_repr=True)
+            [(col('a')) + (col('b'))]
+            [(col('a')) + (col('c'))]
+            [(col('a')) + (col('d'))]
+
+            Did you know about this one though?:
+            >>> zipping
+            [(ncs.by_name('a', 'b')) + (ncs.by_name('c', 'd'))]
+            >>> show(zipping.iter_expand(ctx_1), use_repr=True)
+            [(col('a')) + (col('c'))]
+            [(col('b')) + (col('d'))]
+
+            Some fancy expressions use different strategies per-field [^1]:
+            >>> mixed
+            ncs.all().cum_sum().over(partition_by=[[ncs.integer() - ncs.first()]], order_by=[ncs.last()])
+            >>> show(mixed.iter_expand(ctx_1), use_repr=True)
+            col('a').cum_sum().over(partition_by=[col('b'), col('c')], order_by=[col('d')])
+            col('b').cum_sum().over(partition_by=[col('b'), col('c')], order_by=[col('d')])
+            col('c').cum_sum().over(partition_by=[col('b'), col('c')], order_by=[col('d')])
+            col('d').cum_sum().over(partition_by=[col('b'), col('c')], order_by=[col('d')])
+
+
+        [^1]: This is an intentional deviation from polars (see [polars#25022]).
+
+        [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         """
         yield from self.__expr_ir_nodes__.iter_expand(self, ctx)
 
