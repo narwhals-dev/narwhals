@@ -519,7 +519,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             LitSeries
             Len
 
-        A leaf node with a `name`:
+        A branch node with a `name`:
 
             Alias
 
@@ -533,11 +533,11 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             #                                     ^^^^
             #    Same idea, but with a `Struct` schema
 
-        A leaf node that transforms the name of the above:
+        A branch node that transforms the name of the above:
 
             RenameAlias
 
-        A leaf node that requires schema context for expansion, raising
+        A branch node that requires schema context for expansion, raising
         instead of recursing further:
 
             KeepName
