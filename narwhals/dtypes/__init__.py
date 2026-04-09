@@ -6,8 +6,11 @@ from narwhals.dtypes._classes import (
     Boolean,
     Categorical,
     Date,
+    Datetime,
     Decimal,
     DType,
+    Duration,
+    Enum,
     Field,
     Float32,
     Float64,
@@ -25,6 +28,7 @@ from narwhals.dtypes._classes import (
     SignedIntegerType,
     String,
     Struct,
+    TemporalType,
     Time,
     UInt8,
     UInt16,
@@ -34,7 +38,6 @@ from narwhals.dtypes._classes import (
     Unknown,
     UnsignedIntegerType,
 )
-from narwhals.dtypes._classes_v1 import Datetime, Duration, Enum
 
 __all__ = [
     "Array",
@@ -64,6 +67,7 @@ __all__ = [
     "SignedIntegerType",
     "String",
     "Struct",
+    "TemporalType",
     "Time",
     "UInt8",
     "UInt16",
