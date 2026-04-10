@@ -78,8 +78,16 @@ class Selector(Expr):
         obj._ir = selector_ir
         return obj
 
-    def as_expr(self) -> Expr:
+    def _as_expr(self) -> Expr:
         return into_version(self.version).expr._from_ir(self._ir)
+
+    def as_expr(self) -> Expr:
+        """Materialize the selector as a normal expression.
+
+        This ensures that the operators `|`, `&`, `~` and `-`
+        are applied on the data and not on the selector sets.
+        """
+        return self._as_expr()
 
     def exclude(self, *names: OneOrIterable[str]) -> Selector:
         return self - by_name(*names)  # pyright: ignore[reportReturnType]

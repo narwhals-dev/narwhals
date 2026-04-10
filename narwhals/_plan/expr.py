@@ -98,6 +98,16 @@ class Expr:
         obj._ir = expr_ir
         return obj
 
+    def _as_expr(self) -> Expr:
+        # NOTE: (slight) hack for a cheap [`pl.Expr.meta.as_expression`]
+        # 1. Here, `MetaNamespace` wraps `ExprIR`
+        # 2. Don't want to expose `Version` on public API
+        # 3. Can avoid unwrapping `Expr` in the first place - when it already is one
+        # 4. `Selector.as_expr` is part of polars, `Expr.as_expr` is not
+        #    (next best is this boi)
+        # [`pl.Expr.meta.as_expression`]: https://github.com/pola-rs/polars/blob/py-1.39.3/py-polars/src/polars/expr/meta.py#L284-L286
+        return self
+
     @property
     def version(self) -> Version:
         return self._version
@@ -246,11 +256,12 @@ class Expr:
     def null_count(self) -> Self:
         return self._with_unary(F.NullCount())
 
-    def fill_nan(self, value: float | Self | None) -> Self:
+    def fill_nan(self, value: float | Expr | None) -> Expr:
         # https://github.com/pola-rs/polars/blob/e1d6f294218a36497255e2d872c223e19a47e2ec/crates/polars-plan/src/dsl/mod.rs#L894-L902
         fill_value = _parse.into_expr_ir(value, str_as_lit=True)
-        predicate = self.is_not_nan() | self.is_null()
-        return self._from_ir(ir.ternary_expr(predicate._ir, self._ir, fill_value))
+        expr = self._as_expr()
+        predicate = expr.is_not_nan() | expr.is_null()
+        return expr._from_ir(ir.ternary_expr(predicate._ir, self._ir, fill_value))
 
     def fill_null(
         self,
