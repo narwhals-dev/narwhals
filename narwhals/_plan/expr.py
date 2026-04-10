@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, LiteralString, TypeVar
 
 from narwhals._plan import _parse, common, expressions as ir
 from narwhals._plan._guards import is_series
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import TypeVar
 
-    from typing_extensions import Concatenate, ParamSpec, Self
+    from typing_extensions import Concatenate, LiteralString, ParamSpec, Self
 
     from narwhals._plan._function import Function
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
@@ -53,21 +53,44 @@ if TYPE_CHECKING:
     R = TypeVar("R")
 
 
-# TODO @dangotbanned: (low-prio) Remove repr/str headers, or make them opt-in?
+# TODO @dangotbanned: (low-prio) Make the repr header opt-in
 # Using `Expr._ir` a lot in doctests to work around the fact I don't like it
 class Expr:
     _ir: ir.ExprIR
     _version: ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
-        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!r}"
+        return self._repr_temporary(fmt=repr)
 
     def __str__(self) -> str:
         """Use `print(self)` for formatting."""
-        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!s}"
+        return self._repr_temporary(fmt=str)
 
     def _repr_html_(self) -> str:
         return self._ir._repr_html_()
+
+    def _repr_temporary(
+        self,
+        *,
+        package: LiteralString = "nw._plan",
+        tp_name: LiteralString = "Expr",
+        fmt: Callable[[Any], str] = repr,
+        include_header: bool = True,
+    ) -> str:
+        """Needs replacing with registering to a repr/format module's dispatch table.
+
+        Want to make the header:
+        - available by configuration
+        - off by default
+        - usable by any class, instead of just `Expr`
+
+        https://github.com/narwhals-dev/narwhals/pull/3213#discussion_r2437352419
+        """
+        formatted = fmt(self._ir)
+        if not include_header:  # pragma: no cover
+            return formatted
+        v = self.version
+        return f"{package}.{tp_name}{'' if v is Version.MAIN else f'[{v.name.lower()}]'}:\n{formatted}"
 
     @classmethod
     def _from_ir(cls, expr_ir: ir.ExprIR, /) -> Self:

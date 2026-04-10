@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from datetime import timezone
 
-    from typing_extensions import Never, Self, TypeIs
+    from typing_extensions import LiteralString, Never, Self, TypeIs
 
     from narwhals._plan.typing import OneOrIterable
     from narwhals.typing import TimeUnit
@@ -60,9 +60,17 @@ def _is_expr_column(obj: Any) -> TypeIs[Expr]:
 class Selector(Expr):
     _ir: ir.SelectorIR
 
-    # TODO @dangotbanned: Make the repr "class chrome" opt-in/out, less annoying, or both
-    def __repr__(self) -> str:
-        return f"nw._plan.Selector({self.version.name.lower()}):\n{self._ir!r}"
+    def _repr_temporary(
+        self,
+        *,
+        package: LiteralString = "nw._plan",
+        tp_name: LiteralString = "Selector",
+        fmt: Callable[[Any], str] = repr,
+        include_header: bool = True,
+    ) -> str:
+        return super()._repr_temporary(
+            package=package, tp_name=tp_name, fmt=fmt, include_header=include_header
+        )
 
     @classmethod
     def _from_ir(cls, selector_ir: ir.SelectorIR, /) -> Self:  # type: ignore[override]

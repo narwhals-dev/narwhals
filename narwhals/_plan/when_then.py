@@ -110,7 +110,7 @@ def when(*predicates: OneOrIterable[IntoExprColumn], **constraints: Any) -> When
         >>> from narwhals import _plan as nw
 
         >>> nw.when(nw.col("y") == "b").then(1)
-        nw._plan.Expr(main):
+        nw._plan.Expr:
         .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
     """
     condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
