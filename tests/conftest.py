@@ -191,7 +191,6 @@ def pyspark_lazy_constructor() -> Callable[[Data], NativePySpark]:  # pragma: no
             "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
         )
         session = pyspark_session()
-        session.sql("SET spark.sql.timeType.enabled = true")
 
         register(session.stop)
 
