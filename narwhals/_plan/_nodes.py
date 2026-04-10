@@ -517,70 +517,113 @@ class ExprTraverser:
         for expanded in child.expand_as_first_child(instance, ctx):
             yield instance.__replace__(**{name: expanded})
 
-    # TODO @dangotbanned: (Docs) Turn most of this into examples, trim down the fat on the rest
     def iter_expand_by_combination(
         self, instance: ExprIR, ctx: Expander, /
     ) -> Iterator[ExprIR]:
-        """Expand an expression, with broadcasting and/or zipping of it's inputs as needed.
-
-        <!--TODO @dangotbanned: Move stray section to *Notes*, after turning that into *Examples*-->
-
-        Adapted from [`expand_expression_by_combination`].
-
-        Here, we only implement it for 2 of the 11+ expressions that polars does it on:
-
-            BinaryExpr, TernaryExpr
+        r"""Expand an expression, with broadcasting and/or zipping of it's inputs.
 
         Arguments:
             instance: The expression to expand.
             ctx: The expansion context to resolve the operation in.
 
         Important:
-            This feature is not (*yet?*) well-documented upstream (see ([polars#25022]), ([polars#25317])).
-            The algorithm is similar to [`more_itertools.zip_broadcast`],
-            if you replace *scalar* with *length-1-tuple*.
-
-        Notes:
-            - How it works
-                - **First pass**: Expand expression(s) for each node, observing how many plopped out the other side:
-                    - `1` means we can broadcast replacement(s) through by overwriting our `in_progress`
-                    - `>1` the first one we see becomes the target (`expansion_size`) that all others need to get in line with
-                    - Then error on anything new that tries to join the party
-                - **Intermission**: Fast paths for all 1s or a single multi-output expansion
-                - **Second pass**: Unzipping expanded values together, yielding the combinations
-            - Related
-                - [`Expr.fill_nan`] convinced me on supporting this for `when`
+            Adapted from [upstream].
+            The algorithm is similar to [`more_itertools.zip_broadcast`].
 
         Examples:
-            >>> from tests.plan.utils import Frame
             >>> import narwhals._plan as nw
-            >>> df = Frame.from_names("a", "b", "c", "d", "e", "f")
+            >>> from narwhals import Boolean, Float64, Int64, UInt8
+            >>> from narwhals._plan import selectors as ncs
+            >>> from narwhals._plan._expansion import Expander
+            >>> from tests.plan.utils import Frame
 
-            >>> # TODO @dangotbanned: Discuss M:M case
-            >>> expr = (nw.col("a", "b") + nw.col("c", "d")).name.suffix("_add_zip")
-            >>> expr._ir
-            [(ncs.by_name('a', 'b')) + (ncs.by_name('c', 'd'))].name.suffix('_add_zip')
+            >>> def show(nodes: Iterable[Any]) -> None:
+            ...     print(*(map(repr, nodes)), sep="\n")
 
-            >>> first, second = df.project(expr)
-            >>> first
-            a_add_zip=[(col('a')) + (col('c'))]
+            >>> i64, u8, f64, bool = Int64(), UInt8(), Float64(), Boolean()
+            >>> schema = {"a": bool, "b": i64, "c": u8, "d": f64, "e": bool, "f": f64}
+            >>> ctx = Expander(schema)
+            >>> df = Frame.from_mapping(schema)
 
-            >>> second
-            b_add_zip=[(col('b')) + (col('d'))]
+            Combination expansion is used for `BinaryExpr` and `TernaryExpr` [^1].
 
-            >>> # TODO @dangotbanned: Show M:M:1 / M:1:1
+            Selectors are supported in each position, with nothing fancy on single-outputs:
+            >>> singles = (nw.when(ncs.first()).then(ncs.last()).otherwise(nw.nth(2)))._ir
+            >>> singles
+            .when(ncs.first()).then(ncs.last()).otherwise(ncs.by_index([2]))
+            >>> show(singles.iter_expand(ctx))
+            .when(col('a')).then(col('f')).otherwise(col('c'))
 
-        [`expand_expression_by_combination`]: https://github.com/pola-rs/polars/blob/bb93ba8e67a1f38951506ce044245560009fe55a/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L129-L197
+            We combine single/multi-outputs via **broadcasting**:
+            >>> broadcasting = (nw.col("b") + nw.col("c", "d", "f"))._ir
+            >>> broadcasting
+            [(col('b')) + (ncs.by_name('c', 'd', 'f'))]
+            >>> show(broadcasting.iter_expand(ctx))
+            [(col('b')) + (col('c'))]
+            [(col('b')) + (col('d'))]
+            [(col('b')) + (col('f'))]
+
+            And this is *not restricted* to any particular sub-expression:
+            >>> show(df.project(nw.when("a").then(ncs.numeric())))
+            b=.when(col('a')).then(col('b')).otherwise(lit(null))
+            c=.when(col('a')).then(col('c')).otherwise(lit(null))
+            d=.when(col('a')).then(col('d')).otherwise(lit(null))
+            f=.when(col('a')).then(col('f')).otherwise(lit(null))
+
+            >>> show(df.project(nw.when(ncs.boolean()).then(1).otherwise(0).name.keep()))
+            a=.when(col('a')).then(lit(int: 1)).otherwise(lit(int: 0))
+            e=.when(col('e')).then(lit(int: 1)).otherwise(lit(int: 0))
+
+            We combine equal-sized multi-outputs by **zipping** them together:
+            >>> zipping = (nw.col("b", "c") + nw.col("d", "f"))._ir
+            >>> zipping
+            [(ncs.by_name('b', 'c')) + (ncs.by_name('d', 'f'))]
+            >>> show(zipping.iter_expand(ctx))
+            [(col('b')) + (col('d'))]
+            [(col('c')) + (col('f'))]
+
+            We can broadcast *and* zip in the same expression:
+            >>> show(
+            ...     nw.when(ncs.boolean())
+            ...     .then(ncs.float())
+            ...     .otherwise(ncs.last().min())
+            ...     ._ir.iter_expand(ctx)
+            ... )
+            .when(col('a')).then(col('d')).otherwise(col('f').min())
+            .when(col('e')).then(col('f')).otherwise(col('f').min())
+
+            [`fill_nan`] makes good use of that under-the-covers:
+            >>> zip_broadcast_2 = ncs.float().fill_nan(0.0)._ir
+            >>> zip_broadcast_2
+            .when([(ncs.float().is_not_nan()) | (ncs.float().is_null())]).then(ncs.float()).otherwise(lit(float: 0.0))
+            >>> show(zip_broadcast_2.iter_expand(ctx))
+            .when([(col('d').is_not_nan()) | (col('d').is_null())]).then(col('d')).otherwise(...)
+            .when([(col('f').is_not_nan()) | (col('f').is_null())]).then(col('f')).otherwise(...)
+
+            This is not magical, and still requires the zipping rule to be followed:
+            >>> bad = nw.when(ncs.boolean()).then(nw.nth(1, 3)).otherwise(nw.all())._ir
+            >>> next(bad.iter_expand(ctx))  # doctest: +IGNORE_EXCEPTION_DETAIL
+            Traceback (most recent call last):
+            MultiOutputExpressionError: Cannot combine selectors that produce a different number of columns (2 != 2 != 6).
+
+        [^1]: `polars` uses this strategy for `over`, `sort_by`, `filter` + others.
+
+              Not convinced that those are intuitive (see [polars#25022], [polars#25317]).
+
+        [upstream]: https://github.com/pola-rs/polars/blob/bb93ba8e67a1f38951506ce044245560009fe55a/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L129-L197
         [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         [polars#25317]: https://github.com/pola-rs/polars/issues/25317
         [`more_itertools.zip_broadcast`]: https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.zip_broadcast
-        [`Expr.fill_nan`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/mod.rs#L908-L916
+        [`fill_nan`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/mod.rs#L908-L916
         """
         if not instance.meta.has_multiple_outputs():
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
             yield instance.__replace__(**changes)
             return
-
+        # **First act**: Expand each node, observing how many exprs plopped out ():
+        # 1. `size==1`: We can broadcast replacement(s) through by overwriting our `in_progress` temporary
+        # 2. `size>=2`: The first one we see becomes the target (`expansion_size`) that all others need to get in line with
+        # 3. `size==?`: Raise on anything new that *tries* to join the party
         in_progress = instance
         expansion_size: int = 0
         expansions: dict[str, Seq[ExprIR]] = {}
@@ -596,15 +639,16 @@ class ExprTraverser:
                 mixed_sizes = tuple(len(exprs) for exprs in expand_all)
                 raise combination_mixed_multi_output_error(instance, mixed_sizes)
 
+        # **Intermission**: Fast paths for all single-output, or only 1 multi-output expansion
         if not expansion_size:
             yield in_progress
             return
-
         as_expansion = in_progress.__replace__
         if len(expansions) == 1:
             name, expanded = next(iter(expansions.items()))
             yield from (as_expansion(**{name: expr}) for expr in expanded)
         else:
+            # **Second act**: Unzipping expanded values together, yielding the combinations
             names = tuple(expansions)
             values_per_expansion: zip[Seq[ExprIR]] = zip(*expansions.values())
             yield from (as_expansion(**dict(zip(names, v))) for v in values_per_expansion)
