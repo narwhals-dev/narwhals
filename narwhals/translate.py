@@ -175,9 +175,10 @@ def from_native(
     series_only: bool,
     allow_series: bool | None,
 ) -> Any: ...
-def from_native(  # pyright: ignore[reportInconsistentOverload]
-    native_object: IntoLazyFrameT
+def from_native(  # type: ignore[misc]
+    native_object: IntoFrameT
     | IntoDataFrameT
+    | IntoLazyFrameT
     | IntoSeriesT
     | IntoFrame
     | IntoSeries
@@ -187,7 +188,14 @@ def from_native(  # pyright: ignore[reportInconsistentOverload]
     eager_only: bool = False,
     series_only: bool = False,
     allow_series: bool | None = None,
-) -> LazyFrame[IntoLazyFrameT] | DataFrame[IntoDataFrameT] | Series[IntoSeriesT] | T:
+) -> (
+    LazyFrame[IntoLazyFrameT]
+    | DataFrame[IntoDataFrameT]
+    | LazyFrame[IntoFrameT]
+    | DataFrame[IntoFrameT]
+    | Series[IntoSeriesT]
+    | T
+):
     """Convert `native_object` to Narwhals Dataframe, Lazyframe, or Series.
 
     Arguments:
