@@ -117,6 +117,11 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         )
     if isinstance(dtype, native.BinaryType):
         return dtypes.Binary()
+    if isinstance(dtype, native.DoubleType):
+        return dtypes.Float64()
+    if hasattr(spark_types, "TimeType") and isinstance(dtype, spark_types.TimeType):
+        return dtypes.Time()
+
     return dtypes.Unknown()  # pragma: no cover
 
 
@@ -151,7 +156,6 @@ UNSUPPORTED_DTYPES = (
     dtypes.UInt8,
     dtypes.Enum,
     dtypes.Categorical,
-    dtypes.Time,
 )
 
 
@@ -196,6 +200,9 @@ def narwhals_to_native_dtype(  # noqa: C901
         )
     if isinstance_or_issubclass(dtype, dtypes.Decimal):  # pragma: no cover
         return native.DecimalType(precision=dtype.precision, scale=dtype.scale)
+
+    if isinstance_or_issubclass(dtype, dtypes.Time) and hasattr(spark_types, "TimeType"):
+        return spark_types.TimeType()
 
     if issubclass(base_type, UNSUPPORTED_DTYPES):  # pragma: no cover
         msg = f"Converting to {base_type.__name__} dtype is not supported for Spark-Like backend."

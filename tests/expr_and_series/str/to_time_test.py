@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
+from tests.utils import POLARS_VERSION, PYSPARK_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -16,7 +16,8 @@ data = {"a": ["12:34:56"]}
 def test_to_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if (
         ("pandas" in str(constructor) and "pyarrow" not in str(constructor))
-        or "pyspark" in str(constructor)
+        or ("pyspark" in str(constructor) and PYSPARK_VERSION < (4, 1))
+        or "sqlframe" in str(constructor)
         or "dask" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
@@ -38,7 +39,8 @@ def test_to_time_series(
 ) -> None:
     if (
         ("pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager))
-        or "pyspark" in str(constructor_eager)
+        or ("pyspark" in str(constructor_eager) and PYSPARK_VERSION < (4, 1))
+        or "sqlframe" in str(constructor_eager)
         or "dask" in str(constructor_eager)
     ):
         request.applymarker(pytest.mark.xfail)
@@ -69,7 +71,8 @@ def test_to_time_infer_fmt(
             and data["a"][0].count(":") < 2
         )
         or ("pandas" in str(constructor) and "pyarrow" not in str(constructor))
-        or "pyspark" in str(constructor)
+        or ("pyspark" in str(constructor) and PYSPARK_VERSION < (4, 1))
+        or "sqlframe" in str(constructor)
         or "dask" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
@@ -103,7 +106,8 @@ def test_to_time_series_infer_fmt(
         or (
             "pandas" in str(constructor_eager) and "pyarrow" not in str(constructor_eager)
         )
-        or "pyspark" in str(constructor_eager)
+        or ("pyspark" in str(constructor_eager) and PYSPARK_VERSION < (4, 1))
+        or "sqlframe" in str(constructor_eager)
     ):
         request.applymarker(pytest.mark.xfail)
 

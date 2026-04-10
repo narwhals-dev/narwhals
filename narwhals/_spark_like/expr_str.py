@@ -36,6 +36,28 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
         )
 
     def to_time(self, format: str | None) -> SparkLikeExpr:
+        impl = self.compliant._implementation
+        pyspark_required_version = (4, 1)
+
+        if impl.is_sqlframe():
+            msg = "`str.to_time` is not available in 'sqlframe'"
+            raise NotImplementedError(msg)
+
+        if (
+            impl.is_pyspark()
+            and (version := impl._backend_version()) < pyspark_required_version
+        ):  # pragma: no cover
+            required_str = requires._unparse_version(pyspark_required_version)
+            found_str = requires._unparse_version(version)
+            msg = (
+                f"`str.to_time` is only available in 'pyspark>={required_str}', "
+                f"found version {found_str!r}."
+            )
+            raise NotImplementedError(msg)
+
+        F = self.compliant._F
+        format = strptime_to_pyspark_format(format)
+        return self.compliant._with_elementwise(F.to_time)
         msg = "spark-like backends do not support the Time type"
         raise ValueError(msg)
 
