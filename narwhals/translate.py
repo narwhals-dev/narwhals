@@ -177,8 +177,8 @@ def from_native(
 ) -> Any: ...
 def from_native(  # type: ignore[misc]
     native_object: IntoFrameT
-    | IntoDataFrameT
     | IntoLazyFrameT
+    | IntoDataFrameT
     | IntoSeriesT
     | IntoFrame
     | IntoSeries
