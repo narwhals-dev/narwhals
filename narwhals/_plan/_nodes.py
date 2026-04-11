@@ -29,6 +29,10 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import MapIR, OneOrSeq, Seq
 
 
+# TODO @dangotbanned: Adapt into something a future `ExprIR.is_elementwise` can use too
+# https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/_parse.py#L227-L237
+# https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/expressions/window.py#L23-L37
+# https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/expressions/operators.py#L81-L82
 class IsScalar(enum.Enum):
     OBSERVE = enum.auto()
     SKIP = enum.auto()
