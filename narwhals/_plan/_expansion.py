@@ -77,7 +77,7 @@ OutputNames: TypeAlias = "Seq[str]"
 
 
 def prepare_projection(
-    exprs: Sequence[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
+    exprs: Collection[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
     """Expand IRs into named column projections.
 
