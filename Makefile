@@ -27,3 +27,14 @@ typing: ## Run typing checks
 		--group typing
 	$(VENV_BIN)/uv run --no-sync pyright
 	$(VENV_BIN)/uv run --no-sync mypy
+
+.PHONY: docs-serve
+docs-serve:  # Build and serve the docs locally
+	$(VENV_BIN)/uv pip install \
+		--upgrade \
+		--editable test-plugin/. \
+		--editable . \
+		--group docs
+	$(VENV_BIN)/uv run --no-sync utils/generate_backend_completeness.py
+	$(VENV_BIN)/uv run --no-sync utils/generate_zen_content.py
+	$(VENV_BIN)/uv run --no-sync zensical serve
