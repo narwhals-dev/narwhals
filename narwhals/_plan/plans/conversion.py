@@ -16,12 +16,7 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._expansion import (
-    Expander,
-    expand_selectors,
-    expressions_to_schema,
-    prepare_projection,
-)
+from narwhals._plan._expansion import Expander, expand_selectors, prepare_projection
 from narwhals._plan._namespace import known_implementation
 from narwhals._plan.common import temp, todo
 from narwhals._plan.dtypes_mapper import IDX_DTYPE
@@ -517,7 +512,7 @@ class Resolver:
     def select(self, plan: lp.Select, /) -> rp.Select:
         input = self.to_resolved(plan.input)
         named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
-        output_schema = expressions_to_schema(named_irs, input_schema)
+        output_schema = input_schema.select_resolved(named_irs)
         return rp.Select(input=input, exprs=named_irs, output_schema=output_schema)
 
     def select_names(self, plan: lp.SelectNames, /) -> rp.SelectNames:

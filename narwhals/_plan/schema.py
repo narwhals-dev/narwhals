@@ -180,7 +180,6 @@ class FrozenSchema(_BaseSchema):
         """
         return FrozenSchema(self._mapping | other._mapping)
 
-    # TODO @dangotbanned: Add resolved variant(s)?
     def select(self, exprs: Seq[NamedIR]) -> FrozenSchema:
         """Return a new schema, equivalent to performing `df.select(*exprs)`.
 
@@ -216,6 +215,26 @@ class FrozenSchema(_BaseSchema):
             if check_exists and not (self.keys() >= requested):
                 raise column_not_found_error(names, self)
         return FrozenSchema((name, self[name]) for name in names)
+
+    @unstable
+    def select_resolved(self, exprs: Iterable[NamedIR], /) -> FrozenSchema:
+        """Determine the output schema of the expressions.
+
+        Arguments:
+            exprs: Expressions that were projected in this schema.
+
+        Notes:
+            [Missing step] at the end of `_expansion.prepare_projection`:
+
+            - *Eager*: not required, uses placeholders
+                - `.select()`, `.with_columns()`
+            - *Lazy*: required to propagate schema changes between plan steps
+                - True understanding needs [`get_supertype` (#3396)]
+
+        [Missing step]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/utils.rs#L218-L245
+        [`get_supertype` (#3396)]: https://github.com/narwhals-dev/narwhals/pull/3396
+        """
+        return FrozenSchema((expr.name, expr.resolve_dtype(self)) for expr in exprs)
 
     def rename(
         self, mapping: Mapping[str, str], /, *, check_exists: bool = True
