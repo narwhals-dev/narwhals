@@ -79,15 +79,17 @@ OutputNames: TypeAlias = "Seq[str]"
 def prepare_projection(
     exprs: Collection[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
-    """Expand IRs into named column projections.
+    """Expand expressions into named column projections.
 
-    **Primary entry-point**, for `select`, `with_columns`,
-    and any other context that requires resolving expression names.
+    Entry-point for a [projection context], which will execute the resolved expressions.
 
     Arguments:
-        exprs: IRs that *may* contain arbitrarily nested expressions.
-        ignored: Names of `group_by` columns.
-        schema: Scope to expand selectors in.
+        exprs: Expressions to project.
+        ignored: Names of `group_by` key columns.
+            Required for projecting aggregations in `group_by`.
+        schema: Scope to expand selectors, validate selections and resolve renaming operations.
+
+    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
     """
     expander = Expander(schema, ignored)
     return expander.prepare_projection(exprs), expander.schema
@@ -100,13 +102,13 @@ def expand_selectors(
     schema: IntoFrozenSchema,
     require_any: bool = True,
 ) -> OutputNames:
-    """Expand selector-only input into the column names that match.
+    """Expand selectors into the column names that match.
 
-    Similar to `prepare_projection`, but intended for allowing a subset of `Expr` and all `Selector`s
-    to be used in more places like `DataFrame.{drop,sort,partition_by}`.
+    Provides selector-support (widely) across frame-level APIs, where the full scope of
+    `prepare_projection` is not required.
 
     Arguments:
-        selectors: IRs that **only** contain subclasses of `SelectorIR`.
+        selectors: Exclusively selector-only input.
         schema: Scope to expand selectors in.
         require_any: If True (default) raise if the entire expansion selected zero columns.
             If False, we can always defer iterator collection until finishing expansion.
