@@ -1,3 +1,6 @@
+# TODO @dangotbanned: (medium-priority) Module doc is a bit dated
+# - Does this still reflect current narwhals?
+# - Is this content useful to see here?
 """Expanding expressions/selectors.
 
 Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
@@ -67,13 +70,10 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
 
-    from typing_extensions import TypeAlias
-
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import Ignored, OneOrIterable, Seq
+    from narwhals._plan.typing import Ignored, OneOrIterable, OutputNames, Seq
 
-OutputNames: TypeAlias = "Seq[str]"
-"""Fully expanded, validated output column names, for `NamedIR`s."""
+__all__ = ["Expander", "expand_selectors", "parse_expand_selectors", "prepare_projection"]
 
 
 def prepare_projection(
@@ -92,7 +92,8 @@ def prepare_projection(
     [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
     """
     expander = Expander(schema, ignored)
-    return expander.prepare_projection(exprs), expander.schema
+    projected, _ = expander.prepare_projection(exprs)
+    return projected, expander.schema
 
 
 def expand_selectors(
@@ -142,18 +143,18 @@ def parse_expand_selectors(
     return expand_selectors(parsed, schema=schema, require_any=require_any)
 
 
-def is_duplicated(names: Collection[str]) -> bool:
+def _is_duplicated(names: Collection[str]) -> bool:
     return len(names) != len(set(names))
 
 
-def remove_alias(origin: ExprIR, /) -> ExprIR:
+def _remove_alias(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         return child.expr if isinstance(child, (Alias, RenameAlias)) else child
 
     return origin.map_ir(fn)
 
 
-def replace_keep_name(origin: ExprIR, /) -> ExprIR:
+def _replace_keep_name(origin: ExprIR, /) -> ExprIR:
     if (name := next(meta.iter_root_names(origin), None)) is None:
         msg = f"`name.keep` expected at least one column name, got `{origin!r}`"
         raise InvalidOperationError(msg)
@@ -174,13 +175,10 @@ class Expander:
         self.schema = FrozenSchema(scope)
         self.ignored = ignored
 
-    def iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
+    def _iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
         """Expand multiple expressions within this context.
 
         Matches selectors, converts them to columns and yields the transformed results.
-
-        Use `prepare_projection` for full validation (duplicates, missing columns) and
-        resolving renaming operations.
         """
         for expr in exprs:
             if any(e.needs_expansion() for e in expr.iter_left()):
@@ -188,7 +186,7 @@ class Expander:
             else:
                 yield expr
 
-    def iter_expand_selectors(self, selectors: Iterable[SelectorIR], /) -> Iterator[str]:
+    def _iter_expand_selectors(self, selectors: Iterable[SelectorIR], /) -> Iterator[str]:
         for s in selectors:
             yield from s.iter_expand_selector(self.schema)
 
@@ -200,44 +198,45 @@ class Expander:
         check_unique: bool = True,
         require_any: bool = True,
     ) -> OutputNames:
+        """Expand selectors into the column names that match."""
         if require_any and isinstance(selectors, Iterator):
             # Ensure we can show the original selectors in `ColumnNotFoundError`
             selectors = tuple(selectors)
-        names = tuple(self.iter_expand_selectors(selectors))
+        names = tuple(self._iter_expand_selectors(selectors))
         if require_any and not names:
             raise selectors_not_found_error(selectors, self.schema)
-        if check_unique and is_duplicated(names):
+        if check_unique and _is_duplicated(names):
             raise duplicate_names_error(names)
         return names
 
-    def prepare_projection(self, exprs: Collection[ExprIR], /) -> Seq[NamedIR]:
-        named_irs, _ = self._prepare_projection(exprs)
-        return named_irs
-
-    # NOTE: Making this private was a hack to expose the collected `output_names`,
-    # without changing the signature of `prepare_projection`
-    # https://github.com/narwhals-dev/narwhals/commit/cef6c4673b2955d311ee5ecc091777b84ba9b73e
-    def _prepare_projection(
+    def prepare_projection(
         self, exprs: Collection[ExprIR], /
     ) -> tuple[Seq[NamedIR], deque[str]]:
+        """Expand expressions into named column projections.
+
+        Provides full validation (duplicates, missing columns) and resolving renaming operations.
+        """
+        # NOTE: Returning a deque was a hack to expose `output_names`,
+        # without changing the signature of `_expansion.prepare_projection`
+        # https://github.com/narwhals-dev/narwhals/commit/cef6c4673b2955d311ee5ecc091777b84ba9b73e
         output_names = deque[str]()
         named_irs = deque[NamedIR]()
         root_names = deque[Iterator[str]]()
-        expand = self.iter_expand_expressions
+        expand = self._iter_expand_expressions
         for e in expand(exprs):
             # NOTE: "" is allowed as a name, but falsy
             if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:
-                target = remove_alias(e)
+                target = _remove_alias(e)
             else:
-                replaced = replace_keep_name(e)
+                replaced = _replace_keep_name(e)
                 name = replaced.meta.output_name()
-                target = remove_alias(replaced)
+                target = _remove_alias(replaced)
             output_names.append(name)
             named_irs.append(ir.NamedIR(name, target))
             root_names.append(meta.iter_root_names(e))
 
         # NOTE: On failure, we repeat the expansion so the happy path doesn't need to collect as much
-        if is_duplicated(output_names):
+        if _is_duplicated(output_names):
             raise duplicate_error(tuple(expand(exprs)))
         if not self.schema.contains_all(root_names):
             roots = chain.from_iterable(meta.iter_root_names(e) for e in expand(exprs))

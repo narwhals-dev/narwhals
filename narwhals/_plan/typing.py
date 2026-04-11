@@ -49,6 +49,7 @@ __all__ = [
     "NonNestedLiteralT",
     "OperatorFn",
     "OperatorT",
+    "OutputNames",
     "RangeT_co",
     "RightSelectorT",
     "RightT",
@@ -193,6 +194,9 @@ ClosedKwds: TypeAlias = "Callable[[], MappingProxyType[str, t.Any]]"
 
 The return type of `closed_kwds`.
 """
+
+OutputNames: TypeAlias = "Seq[str]"
+"""Names of output columns after selectors expansion."""
 
 Ignored: TypeAlias = Container[str]
 """Names of `group_by` key columns.

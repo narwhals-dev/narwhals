@@ -293,7 +293,7 @@ class Resolver:
         # https://github.com/narwhals-dev/narwhals/blob/580142d389950003f3c4538e840b0cba831a457a/narwhals/_plan/compliant/group_by.py#L142-L154
 
         expander = Expander(input_schema)
-        keys, key_names_mut = expander._prepare_projection(plan.keys)
+        keys, key_names_mut = expander.prepare_projection(plan.keys)
 
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1536-L1537
         keys_require_projection: bool = False
@@ -307,7 +307,7 @@ class Resolver:
 
         key_names = tuple(key_names_mut)
         expander.ignored = key_names
-        aggs = expander.prepare_projection(plan.aggs)
+        aggs, _ = expander.prepare_projection(plan.aggs)
 
         # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1586-L1587
         # NOTE: Auto implode is here
