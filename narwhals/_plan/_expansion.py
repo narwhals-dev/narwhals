@@ -166,20 +166,32 @@ def _replace_keep_name(origin: ExprIR, /) -> ExprIR:
 
 
 class Expander:
-    # Based on https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L253-L850
+    """Expand multiple expressions against a target schema.
+
+    Provides a context for resolving and validating these transformations:
+
+        Iterable[SelectorIR] -> tuple[str, ...]
+        Collection[ExprIR]   -> tuple[NamedIR[ExprIR], ...]
+
+    Arguments:
+        schema: Target scope for expansion/validation.
+        ignored: Names of `group_by` key columns.
+
+    Important:
+        Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/3291151b5a0e6fa82658cbad5f9b9c6aec3905a6/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs
+    """
+
     __slots__ = ("ignored", "schema")
     schema: FrozenSchema
     ignored: Ignored
 
-    def __init__(self, scope: IntoFrozenSchema, ignored: Ignored = ()) -> None:
-        self.schema = FrozenSchema(scope)
+    def __init__(self, schema: IntoFrozenSchema, ignored: Ignored = ()) -> None:
+        self.schema = FrozenSchema(schema)
         self.ignored = ignored
 
     def _iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
-        """Expand multiple expressions within this context.
-
-        Matches selectors, converts them to columns and yields the transformed results.
-        """
         for expr in exprs:
             if any(e.needs_expansion() for e in expr.iter_left()):
                 yield from expr.iter_expand(self)
