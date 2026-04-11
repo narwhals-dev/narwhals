@@ -190,7 +190,7 @@ class Expander:
 
     def iter_expand_selectors(self, selectors: Iterable[SelectorIR], /) -> Iterator[str]:
         for s in selectors:
-            yield from s.iter_expand_selector(self.schema, self.ignored)
+            yield from s.iter_expand_selector(self.schema)
 
     def expand_selectors(
         self,
