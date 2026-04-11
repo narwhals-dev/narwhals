@@ -30,7 +30,7 @@ from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TypeVar
 
 import pyarrow as pa
@@ -273,6 +273,13 @@ def is_expr_ir_equal(actual: Expr | ir.ExprIR, expected: Expr | ir.ExprIR, /) ->
 def named_ir(name: str, expr: nwp.Expr | ir.ExprIR, /) -> ir.NamedIR[ir.ExprIR]:
     """Helper constructor for test compare."""
     return ir.NamedIR(expr=expr._ir if isinstance(expr, nwp.Expr) else expr, name=name)
+
+
+def cols(name: str, *names: str) -> Iterator[nwp.Expr]:
+    """Generate one `col` per name."""
+    col = nwp.col
+    yield col(name)
+    yield from (col(name_) for name_ in names)
 
 
 _lock = threading.Lock()

@@ -37,11 +37,11 @@ def schema_2() -> dict[str, DType]:
     }
 
 
-def _over(into_expr: IntoExpr, *partition_by: IntoExpr) -> ir.Over:
+def _over(into_expr: IntoExpr, *partition_by: IntoExpr) -> nwp.Expr:
     return ir.Over(
         expr=_parse.into_expr_ir(into_expr),
         partition_by=tuple(_parse.into_iter_expr_ir(*partition_by)),
-    )
+    ).to_narwhals()
 
 
 def test_rewrite_elementwise_over_simple(schema_2: dict[str, DType]) -> None:
@@ -53,7 +53,7 @@ def test_rewrite_elementwise_over_simple(schema_2: dict[str, DType]) -> None:
     # Later, that error might not be needed if we can do this rewrite.
     # If you're here because of a "Did not raise" - just replace everything with the (previously) erroring expr.
     expected = nwp.col("a").sum().over("b").abs()
-    before = _over(nwp.col("a").sum().abs(), "b").to_narwhals()
+    before = _over(nwp.col("a").sum().abs(), "b")
     assert_expr_ir_equal(before, "col('a').sum().abs().over([col('b')])")
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 1
@@ -65,7 +65,7 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
         nwp.col("b").last().over("d").replace_strict({1: 2}),
         nwp.col("c").last().over("d").replace_strict({1: 2}),
     )
-    before = _over(nwp.col("b", "c").last().replace_strict({1: 2}), "d").to_narwhals()
+    before = _over(nwp.col("b", "c").last().replace_strict({1: 2}), "d")
     assert_expr_ir_equal(
         before, "ncs.by_name('b', 'c').last().replace_strict().over([col('d')])"
     )
@@ -91,18 +91,10 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
     before = (
         nwp.col("a"),
         nwp.col("b").cast(nw.String),
-        (
-            _over(nwp.col("c").max().alias("x").fill_null(50), "a")
-            .to_narwhals()
-            .alias("x2")
-        ),
+        (_over(nwp.col("c").max().alias("x").fill_null(50), "a").alias("x2")),
         ~(nwp.col("d").is_duplicated().alias("d*")).alias("d**").over("b"),
         ncs.string().str.contains("some").name.suffix("_some"),
-        (
-            _over(nwp.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j")
-            .to_narwhals()
-            .name.to_uppercase()
-        ),
+        (_over(nwp.nth(3, 4, 1).null_count().sqrt(), "f", "g", "j").name.to_uppercase()),
     )
     actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == len(expected)
@@ -126,12 +118,11 @@ def test_rewrite_binary_agg_over_simple(schema_2: dict[str, DType]) -> None:
 
 
 def test_rewrite_binary_agg_over_multiple(schema_2: dict[str, DType]) -> None:
-    expected = (
-        named_ir("hi_a", nwp.col("a") / nwp.col("e").drop_nulls().first().over("g")),
-        named_ir("hi_b", nwp.col("b") / nwp.col("e").drop_nulls().first().over("g")),
-        named_ir("hi_c", nwp.col("c") / nwp.col("e").drop_nulls().first().over("g")),
-        named_ir("hi_d", nwp.col("d") / nwp.col("e").drop_nulls().first().over("g")),
-    )
+    def _(name: str, alias: str) -> ir.NamedIR[ir.ExprIR]:
+        col = nwp.col(name)
+        return named_ir(alias, col / nwp.col("e").drop_nulls().first().over("g"))
+
+    expected = _("a", "hi_a"), _("b", "hi_b"), _("c", "hi_c"), _("d", "hi_d")
     before = (
         (nwp.col("a", "b", "c", "d") / nwp.col("e").drop_nulls().first()).over("g")
     ).name.prefix("hi_")
