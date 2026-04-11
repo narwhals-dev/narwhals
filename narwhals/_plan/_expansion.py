@@ -124,12 +124,10 @@ def parse_expand_selectors(
 ) -> OutputNames:
     """Convert input(s) into selector(s), expanding them into the column names that match.
 
-    Semantically equivalent to these independent steps:
+    Equivalent to these independent steps, ensuring things stay lazy as long as possible:
 
         irs: Iterator[SelectorIR] = _parse.into_iter_selector_ir(first_input, more_inputs)
         output_names: tuple[str, ...] = expand_selectors(irs, schema=..., require_any=...)
-
-    With the possibility of performing the entire operation in a single pass.
 
     Arguments:
         first_input: One or more column names or selectors.
