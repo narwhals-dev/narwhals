@@ -16,7 +16,12 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 from narwhals._plan import expressions as ir
-from narwhals._plan._expansion import Expander, expand_selectors, prepare_projection
+from narwhals._plan._expansion import (
+    Expander,
+    expand_selectors,
+    expressions_to_schema,
+    prepare_projection,
+)
 from narwhals._plan._namespace import known_implementation
 from narwhals._plan.common import temp, todo
 from narwhals._plan.dtypes_mapper import IDX_DTYPE
@@ -61,21 +66,6 @@ GET_SUPERTYPE_MSG = (
     "This operation requires `get_supertype` to determine if a valid cast exists.\n"
     "https://github.com/narwhals-dev/narwhals/pull/3396)"
 )
-
-
-def expressions_to_schema(exprs: Iterable[NamedIR], schema: FrozenSchema) -> FrozenSchema:
-    """[`expressions_to_schema`] is a missing step at the end of `prepare_projection`.
-
-    There's some placeholders in `FrozenSchema` ([`.select()`], [`.with_columns()`]).
-
-    Truly understanding the `DType`s will require [#3396].
-
-    [`expressions_to_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/utils.rs#L218-L245
-    [`.select()`]: https://github.com/narwhals-dev/narwhals/blob/ddd93cd4b95d9760fe87cf0d7e29d87b24615777/narwhals/_plan/schema.py#L56-L68
-    [`.with_columns()`]: https://github.com/narwhals-dev/narwhals/blob/ddd93cd4b95d9760fe87cf0d7e29d87b24615777/narwhals/_plan/schema.py#L73-L78
-    [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
-    """
-    return FrozenSchema((expr.name, expr.resolve_dtype(schema)) for expr in exprs)
 
 
 def resolve_dtype_auto_implode(expr: NamedIR, schema: FrozenSchema, /) -> DType:

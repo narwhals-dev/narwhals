@@ -65,7 +65,7 @@ from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Sequence
+    from collections.abc import Collection, Iterable
 
     from typing_extensions import TypeAlias
 
@@ -138,6 +138,30 @@ def parse_expand_selectors(
     """
     parsed = into_iter_selector_ir(first_input, more_inputs)
     return expand_selectors(parsed, schema=schema, require_any=require_any)
+
+
+def expressions_to_schema(
+    exprs: Iterable[NamedIR], schema: FrozenSchema, /
+) -> FrozenSchema:
+    """Determine the output schema of the expressions.
+
+    Arguments:
+        exprs: The expanded expressions.
+        schema: The same schema used to project these expressions.
+
+    Notes:
+        - [Missing step] at the end of `prepare_projection`
+            - *Eager*: not required, uses some placeholders
+                - [`.select()`], [`.with_columns()`]
+            - *Lazy*: required to propagate schema changes between plan steps
+                - True understanding needs [`get_supertype` (#3396)]
+
+    [Missing step]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/utils.rs#L218-L245
+    [`.select()`]: https://github.com/narwhals-dev/narwhals/blob/e86db7913040753c714846464e05ad840444bb03/narwhals/_plan/schema.py#L183-L195
+    [`.with_columns()`]: https://github.com/narwhals-dev/narwhals/blob/e86db7913040753c714846464e05ad840444bb03/narwhals/_plan/schema.py#L240-L260
+    [`get_supertype` (#3396)]: https://github.com/narwhals-dev/narwhals/pull/3396
+    """
+    return FrozenSchema((expr.name, expr.resolve_dtype(schema)) for expr in exprs)
 
 
 def is_duplicated(names: Collection[str]) -> bool:
