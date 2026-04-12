@@ -2,7 +2,7 @@
 
 Polars and PyArrow only allow for string column names. What about pandas?
 
-```python exec="true" source="above" result="python" session="col_names"
+```python exec="yes" source="above" result="python" session="col_names"
 import pandas as pd
 
 df = pd.concat([pd.Series([1, 2], name=0), pd.Series([1, 3], name=0)], axis=1)
