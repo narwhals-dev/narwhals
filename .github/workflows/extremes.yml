@@ -96,7 +96,7 @@ jobs:
       - name: Assert pretty old versions dependencies
         run : |
           DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'pandas==1.4.0'
+          echo "$DEPS" | grep 'pandas==1.4.1'
           echo "$DEPS" | grep 'polars==0.20.4'
           echo "$DEPS" | grep 'numpy==1.22.0'
           echo "$DEPS" | grep 'pyarrow==14.0.0'
