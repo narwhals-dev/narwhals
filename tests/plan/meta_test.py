@@ -123,13 +123,13 @@ def test_meta_root_names(
                 nwp.col("ROOT")
                 .alias("ROOT-ALIAS")
                 .filter(nwp.col("b") >= 30, nwp.col("c").alias("d") == 7)
-                + nwp.col("RHS").alias("RHS-ALIAS")
+                + nwp.col("RHS").first().alias("RHS-ALIAS")
             ),
             (
                 pl.col("ROOT")
                 .alias("ROOT-ALIAS")
                 .filter(pl.col("b") >= 30, pl.col("c").alias("d") == 7)
-                + pl.col("RHS").alias("RHS-ALIAS")
+                + pl.col("RHS").first().alias("RHS-ALIAS")
             ),
             "ROOT-ALIAS",
             id="BinaryExpr-Multiple",

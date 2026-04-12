@@ -326,8 +326,19 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
 
+    # NOTE: Quite aware of how these seem to be at odds:
+    # - `changes_length`, `is_length_preserving`, `is_scalar`
+    def changes_length(self) -> bool:
+        """Return True if this leaf changes the length of input columns, without reducing to a scalar.
+
+        Literals (including series) and aggregations are not considered to be length-changing.
+        """
+        return not self.is_scalar() and not self.is_length_preserving()
+
     def is_length_preserving(self) -> bool:
-        """Return True if this leaf does not change the length of input columns.
+        """Return True if this leaf maintains the length of input columns.
+
+        Literals (including series) and aggregations are not length-preserving.
 
         Implementations adapted from [upstream].
 

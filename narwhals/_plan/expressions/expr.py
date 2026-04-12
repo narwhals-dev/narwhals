@@ -239,6 +239,12 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-stream/src/physical_plan/lower_expr.rs#L364-L374
         return FunctionFlags.LENGTH_PRESERVING in self.flags
 
+    def changes_length(self) -> bool:
+        flags = self.flags
+        return not (
+            FunctionFlags.LENGTH_PRESERVING in flags or FunctionFlags.AGGREGATION in flags
+        )
+
     def __repr__(self) -> str:
         if self.input:
             first = self.input[0]
@@ -343,6 +349,9 @@ class Filter(ExprIR, dtype=same_dtype()):
 
     def is_length_preserving(self) -> bool:
         return False
+
+    def changes_length(self) -> bool:
+        return True
 
 
 class Over(ExprIR, dtype=same_dtype()):

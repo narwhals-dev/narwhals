@@ -19,12 +19,7 @@ from narwhals._plan.expressions import functions as F, operators as ops
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
 from narwhals.dtypes import DType, Int64, List, Struct
-from narwhals.exceptions import (
-    ComputeError,
-    InvalidOperationError,
-    InvalidOperationError as LengthChangingExprError,
-    ShapeError,
-)
+from narwhals.exceptions import ComputeError, InvalidOperationError, ShapeError
 from tests.plan.utils import assert_equal_data, assert_expr_ir_equal, re_compile
 
 if TYPE_CHECKING:
@@ -303,24 +298,51 @@ def test_binary_expr(left: nwp.Expr, right: nwp.Expr) -> None:
     assert _is_expr_ir_binary_expr(right * left)
 
 
-def test_binary_expr_length_changing_invalid() -> None:
-    a = nwp.col("a")
-    b = nwp.col("b").exp()
+a = nwp.col("a")
+b = nwp.col("b").exp()
+filtered = a.filter(a=1)
 
-    with pytest.raises(LengthChangingExprError):
-        a.unique() + b.unique()
 
-    with pytest.raises(LengthChangingExprError):
-        a.mode() * b.unique()
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (a.unique(), b.unique()),
+        (a.mode(), b.unique()),
+        (a.drop_nulls(), b.mode()),
+        (a.gather_every(2, 1), b.drop_nulls()),
+        (a.map_batches(lambda x: x), b.gather_every(1, 0)),
+        (filtered, b.unique()),
+    ],
+)
+def test_binary_expr_multi_length_changing(left: nwp.Expr, right: nwp.Expr) -> None:
+    pattern = re_compile(r"length-changing.+used in isolation.+or.+aggregation")
+    ctx = pytest.raises(InvalidOperationError, match=pattern)
+    with ctx:
+        left + right
+    with ctx:
+        right / left
 
-    with pytest.raises(LengthChangingExprError):
-        a.drop_nulls() - b.mode()
 
-    with pytest.raises(LengthChangingExprError):
-        a.gather_every(2, 1) / b.drop_nulls()
-
-    with pytest.raises(LengthChangingExprError):
-        a.map_batches(lambda x: x) / b.gather_every(1, 0)
+@pytest.mark.parametrize(
+    ("left", "right"),
+    [
+        (a.unique(), b),
+        (a.map_batches(lambda x: x, is_elementwise=True), b.gather_every(1, 0)),
+        (a, b.mode()),
+        (a.gather_every(2, 1), nwp.nth(-1)),
+        (a.hist(bin_count=4), b.rolling_mean(5)),
+        (filtered, b.cum_prod()),
+        (filtered.alias("aaaaa").sort(), b),
+        (b.cum_max(), filtered.cast(nw.Int64)),
+    ],
+)
+def test_binary_expr_mixed_length_changing(left: nwp.Expr, right: nwp.Expr) -> None:
+    pattern = re_compile(r"Cannot.+length-changing.+length-preserving")
+    ctx = pytest.raises(InvalidOperationError, match=pattern)
+    with ctx:
+        left - right
+    with ctx:
+        right * left
 
 
 def _is_expr_ir_binary_expr(expr: nwp.Expr) -> bool:
@@ -342,24 +364,12 @@ def test_binary_expr_length_changing_agg() -> None:
     assert _is_expr_ir_binary_expr(
         b.unique() * a.map_batches(lambda x: x, return_dtype=nw.Unknown).first()
     )
-
-
-def test_binary_expr_shape_invalid() -> None:
-    pattern = re.compile(
-        re.escape("Cannot combine length-changing expressions with length-preserving"),
-        re.IGNORECASE,
+    assert _is_expr_ir_binary_expr(
+        a.filter(a.is_last_distinct()).first() ^ b.filter(b.is_not_null())
     )
-    a = nwp.col("a")
-    b = nwp.col("b")
-
-    with pytest.raises(ShapeError, match=pattern):
-        a.unique() + b
-    with pytest.raises(ShapeError, match=pattern):
-        a.map_batches(lambda x: x, is_elementwise=True) * b.gather_every(1, 0)
-    with pytest.raises(ShapeError, match=pattern):
-        a / b.drop_nulls()
-    with pytest.raises(ShapeError, match=pattern):
-        a.hist(bin_count=4) // b.rolling_mean(5)
+    assert _is_expr_ir_binary_expr(
+        a.filter(a=a.last()) <= b.filter(b.is_not_nan()).median()
+    )
 
 
 def test_map_batches_invalid() -> None:

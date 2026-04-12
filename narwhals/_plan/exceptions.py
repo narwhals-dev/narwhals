@@ -14,7 +14,6 @@ from narwhals.exceptions import (
     DuplicateError,
     InvalidIntoExprError,
     InvalidOperationError,
-    InvalidOperationError as LengthChangingExprError,
     MultiOutputExpressionError,
     ShapeError,
 )
@@ -93,26 +92,21 @@ def _binary_underline(
     right: ir.ExprIR,
     /,
     *,
+    underline_left: bool = False,
     underline_right: bool = True,
 ) -> str:
     lhs, op, rhs = repr(left), repr(operator), repr(right)
-    if underline_right:
+    if underline_right and not underline_left:
         indent = (len(lhs) + len(op) + 2) * " "
         underline = len(rhs) * "^"
+    elif underline_right:
+        indent = ""
+        pad_middle = (2 + len(op)) * " "
+        underline = (len(lhs) * "^") + pad_middle + (len(rhs) * "^")
     else:
         indent = ""
         underline = len(lhs) * "^"
     return f"{lhs} {op} {rhs}\n{indent}{underline}"
-
-
-def binary_expr_shape_error(
-    left: ir.ExprIR, op: Operator, right: ir.ExprIR
-) -> ShapeError:
-    expr = _binary_underline(left, op, right, underline_right=True)
-    msg = (
-        f"Cannot combine length-changing expressions with length-preserving ones.\n{expr}"
-    )
-    return ShapeError(msg)
 
 
 # TODO @dangobanned: Make fancier error for `when`
@@ -138,19 +132,15 @@ def combination_mixed_multi_output_error(
 
 
 def binary_expr_length_changing_error(
-    left: ir.ExprIR, op: Operator, right: ir.ExprIR
-) -> LengthChangingExprError:
-    lhs, rhs = repr(left), repr(right)
-    op_s = f" {op!r} "
-    underline_left = len(lhs) * "^"
-    underline_right = len(rhs) * "^"
-    pad_middle = len(op_s) * " "
-    msg = (
-        "Length-changing expressions can only be used in isolation, "
-        "or followed by an aggregation.\n"
-        f"{lhs}{op_s}{rhs}\n{underline_left}{pad_middle}{underline_right}"
-    )
-    return LengthChangingExprError(msg)
+    left: ir.ExprIR, op: Operator, right: ir.ExprIR, kind: Literal["mixed", "multi"]
+) -> InvalidOperationError:
+    expr = _binary_underline(left, op, right, underline_left=(kind == "multi"))
+    if kind == "mixed":
+        msg = "Cannot combine length-changing expressions with length-preserving ones."
+    else:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation."
+    msg = f"{msg}\n{expr}"
+    return InvalidOperationError(msg)
 
 
 # TODO @dangotbanned: (low-priority) Underline which part is not length-preserving (outer/inner)

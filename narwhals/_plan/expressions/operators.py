@@ -5,19 +5,15 @@ from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._guards import is_function_expr
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.exceptions import (
-    binary_expr_length_changing_error,
-    binary_expr_shape_error,
-)
+from narwhals._plan.exceptions import binary_expr_length_changing_error
 
 if TYPE_CHECKING:
     from typing import Any, ClassVar
 
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.expressions import BinaryExpr, ExprIR
+    from narwhals._plan.expressions import BinaryExpr
     from narwhals._plan.expressions.selectors import BinarySelector
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import (
@@ -60,14 +56,14 @@ class Operator(Immutable):
     ) -> BinaryExpr[LeftT, Self, RightT]:
         from narwhals._plan.expressions.expr import BinaryExpr
 
-        if _is_filtration(left):
-            if _is_filtration(right):
-                raise binary_expr_length_changing_error(left, self, right)
+        if left.changes_length():
+            if right.changes_length():
+                raise binary_expr_length_changing_error(left, self, right, "multi")
             if not right.is_scalar():
-                raise binary_expr_shape_error(left, self, right)
-        elif _is_filtration(right):
+                raise binary_expr_length_changing_error(left, self, right, "mixed")
+        elif right.changes_length():
             if not left.is_scalar():
-                raise binary_expr_shape_error(left, self, right)
+                raise binary_expr_length_changing_error(left, self, right, "mixed")
         return BinaryExpr(left=left, op=self, right=right)
 
     def __call__(self, lhs: Any, rhs: Any) -> Any:
@@ -76,11 +72,6 @@ class Operator(Immutable):
 
     def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:
         return self.__expr_ir_dtype__(node, schema)  # pragma: no cover
-
-
-# TODO @dangotbanned: Review using `ExprIR.is_length_preserving`
-def _is_filtration(ir: ExprIR) -> bool:
-    return not ir.is_scalar() and is_function_expr(ir) and not ir.is_length_preserving()
 
 
 class SelectorOperator(Operator, func=None):

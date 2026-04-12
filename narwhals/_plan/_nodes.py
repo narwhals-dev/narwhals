@@ -47,6 +47,7 @@ IsScalarT = TypeVar(  # noqa: PLC0105
 )
 
 
+# TODO @dangotbanned: Somehow make `changes_length` and `is_length_preserving` coherent
 # TODO @dangotbanned: Adapt for populating `is_length_preserving`:
 # - Slight differences to where `observe_scalar` is used
 # - Overrides with constants are needed for `False`

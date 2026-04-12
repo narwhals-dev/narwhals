@@ -315,10 +315,10 @@ class Expr:
     def cum_min(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumMin(reverse=reverse))
 
-    def cum_max(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_max(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumMax(reverse=reverse))
 
-    def cum_prod(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_prod(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumProd(reverse=reverse))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
