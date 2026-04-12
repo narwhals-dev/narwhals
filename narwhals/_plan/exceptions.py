@@ -153,6 +153,14 @@ def binary_expr_length_changing_error(
     return LengthChangingExprError(msg)
 
 
+# TODO @dangotbanned: (low-priority) Underline which part is not length-preserving (outer/inner)
+# `col('a').first()` (first)
+# `nwp.int_range(2).sort()` (int_range)
+def sort_by_key_length_changing_error(expr: ir.ExprIR) -> InvalidOperationError:
+    msg = f"All `sort_by` expression keys must be length-preserving, got:\n`{expr!r}`"
+    return InvalidOperationError(msg)
+
+
 # TODO @dangotbanned: Use arguments in error message
 def over_nested_error(
     expr: ir.Over,  # noqa: ARG001

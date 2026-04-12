@@ -59,6 +59,9 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
     def name(self) -> str:
         return "literal"
 
+    def is_length_preserving(self) -> bool:
+        return False
+
 
 @final
 class Lit(LiteralExpr[PythonLiteralT_co], dispatch=namespaced()):

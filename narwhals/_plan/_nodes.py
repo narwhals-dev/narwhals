@@ -29,10 +29,6 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import MapIR, OneOrSeq, Seq
 
 
-# TODO @dangotbanned: Adapt into something a future `ExprIR.is_elementwise` can use too
-# https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/_parse.py#L227-L237
-# https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/expressions/window.py#L23-L37
-# https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/expressions/operators.py#L81-L82
 class IsScalar(enum.Enum):
     OBSERVE = enum.auto()
     SKIP = enum.auto()
@@ -51,6 +47,18 @@ IsScalarT = TypeVar(  # noqa: PLC0105
 )
 
 
+# TODO @dangotbanned: Adapt for populating `is_length_preserving`:
+# - Slight differences to where `observe_scalar` is used
+# - Overrides with constants are needed for `False`
+#   - `Filter`,` Over`, `LitSeries`
+# - `FunctionExpr` has an actual flag
+# - `{Binary,Ternary}Expr` use OR on their nodes
+#   > As long as at least one input is length-preserving the other side(s)
+#   > should either broadcast or have the same length.
+# - The others defer to `self.expr`
+# TODO @dangotbanned: Review if `is_elementwise` is needed or can be composed of others
+# - https://github.com/narwhals-dev/narwhals/blob/786bcead79fa4e0fffdb6e5bdf75218b381edb61/narwhals/_plan/expressions/window.py#L33-34
+# - https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/aexpr/properties/general.rs#L15-L46
 def node(*, observe_scalar: bool = True) -> Any:
     """Declare that a field stores a single node.
 

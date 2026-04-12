@@ -6,6 +6,7 @@ import re
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import nullcontext
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -581,9 +582,14 @@ def test_sort_by_empty() -> None:
         nwp.col("a").sort_by(())
 
 
-XFAIL_SORT_BY_PREDICATE = pytest.mark.xfail(
-    reason="TODO @dangotbanned: Review the rejection predicate, this doesn't preserve length"
-)
+a, b = nwp.col("a"), nwp.col("b")
+
+if find_spec("polars"):
+    _s = nwp.Series.from_iterable([1, 2, 3], backend="polars")
+    case_lit_series: Seq[Any] = ((nwp.lit(_s), ()),)
+    id_lit_series: Seq[str] = ("lit-series",)
+else:  # pragma: no cover
+    case_lit_series, id_lit_series = (), ()
 
 
 @pytest.mark.parametrize(
@@ -591,32 +597,41 @@ XFAIL_SORT_BY_PREDICATE = pytest.mark.xfail(
     [
         (1, ()),
         (nwp.len(), ()),
-        (nwp.col("b").first(), ()),
-        (nwp.lit(1), []),
-        ([nwp.len()], ()),
-        ([nwp.col("b"), ncs.last().kurtosis()], ()),
-        (["c", "d", ncs.last(), nwp.col("b").mode(keep="any")], ()),
-        pytest.param(nwp.int_range(2), (), marks=XFAIL_SORT_BY_PREDICATE),
-        pytest.param(nwp.col("b").filter(c=2), (), marks=XFAIL_SORT_BY_PREDICATE),
-        pytest.param(nwp.col("b").drop_nulls(), (), marks=XFAIL_SORT_BY_PREDICATE),
+        (b.first().sort_by("d"), ()),
+        (nwp.lit(1).alias("bad"), []),
+        ([1, 2, 3], ("a", b)),
+        ([(nwp.len() * 1).name.keep()], ()),
+        ([b, nwp.when(a).then(b.alias("c")), ncs.last().kurtosis()], ()),
+        (ncs.last(), ("c", "d", b.mode(keep="any"))),
+        (nwp.int_range(2).sort(), ()),
+        (b.filter(c=2), ()),
+        (b.drop_nulls().name.prefix("before_"), ()),
+        (a + b, (nwp.when(b.min().cast(nw.Boolean)).then(1),)),
+        (b.max().over("c", order_by="d").alias("over"), ()),
+        *case_lit_series,
     ],
     ids=[
         "scalar",
         "len",
         "agg",
         "lit",
+        "lit-list",
         "iterable-len",
         "selector-agg",
         "agg-function",
         "range",
         "filter",
         "row-separable",
+        "when-scalar",
+        "over",
+        *id_lit_series,
     ],
 )
 def test_sort_by_invalid(
-    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
+    by: OneOrIterable[nwp.Expr | nwp.Selector | str],
+    more_by: Iterable[nwp.Expr | nwp.Selector | str],
 ) -> None:
-    pattern = re_compile(r"all.+sort.+must preserve length")
+    pattern = re_compile(r"all.+sort_by.+must be length-preserving")
     a = nwp.col("a")
     with pytest.raises(InvalidOperationError, match=pattern):
         a.sort_by(by, *more_by)

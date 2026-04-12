@@ -78,6 +78,7 @@ class Operator(Immutable):
         return self.__expr_ir_dtype__(node, schema)  # pragma: no cover
 
 
+# TODO @dangotbanned: Review using `ExprIR.is_length_preserving`
 def _is_filtration(ir: ExprIR) -> bool:
     return not ir.is_scalar() and is_function_expr(ir) and not ir.flags.is_elementwise()
 

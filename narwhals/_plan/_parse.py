@@ -27,10 +27,10 @@ from narwhals._plan.exceptions import (
     at_least_one_error,
     invalid_into_expr_error,
     is_iterable_error,
+    sort_by_key_length_changing_error,
 )
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import get_pandas, get_polars
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -41,13 +41,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import (
-        IntoExpr,
-        IntoExprColumn,
-        OneOrIterable,
-        PartialSeries,
-        Seq,
-    )
+    from narwhals._plan.typing import IntoExpr, OneOrIterable, PartialSeries, Seq
 
 
 __all__ = [
@@ -56,7 +50,7 @@ __all__ = [
     "into_iter_selector_ir",  # stable
     "into_selector_ir",  # stable
     "predicates_constraints_into_expr_ir",  # functionality stable, name? eh
-    "sort_by_into_seq_of_expr_ir",  # needs an invasive fix
+    "sort_by_into_iter_expr_ir",  # stable
 ]
 
 T = TypeVar("T")
@@ -129,14 +123,19 @@ def _predicates_constraints_into_expr_ir(
     return first
 
 
-def sort_by_into_seq_of_expr_ir(
-    by: OneOrIterable[IntoExprColumn] = (), *more_by: IntoExprColumn
-) -> Seq[ExprIR]:
-    """Parse `DataFrame.sort` and `Expr.sort_by` keys into a flat sequence of expressions."""
-    it = _sort_by_into_iter_expr_ir(by, more_by)
-    if first := next(it, None):
-        return (first, *it)
-    raise at_least_one_error("sort_by")
+def sort_by_into_iter_expr_ir(
+    by: OneOrIterable[Expr | str], more_by: Seq[Expr | str] = (), /
+) -> Iterator[ExprIR]:
+    it = into_iter_expr_ir(by, *more_by)
+    if (first := next(it, None)) is None:
+        raise at_least_one_error("sort_by")
+    if not first.is_length_preserving():
+        raise sort_by_key_length_changing_error(first)
+    yield first
+    for e in it:
+        if not e.is_length_preserving():
+            raise sort_by_key_length_changing_error(e)
+        yield e
 
 
 def into_iter_expr_ir(
@@ -222,19 +221,6 @@ def _df_filter_into_iter_expr_ir(
             yield ir.col(p)
         else:
             yield lit(into_series(p) if isinstance(p, list) else p)._ir
-
-
-# TODO @dangotbanned: Fix the rejection predicate by adding `ExprIR.is_length_preserving`
-# - This doesn't cover all length-changing expressions, only aggregations/literals
-# - Adapt from `window._is_filtration` and replace that in `over`
-def _sort_by_into_iter_expr_ir(
-    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
-) -> Iterator[ExprIR]:
-    for e in into_iter_expr_ir(by, *more_by):
-        if e.is_scalar():
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"
-            raise InvalidOperationError(msg)
-        yield e
 
 
 # TODO @dangotbanned: Would be cool to have something like:

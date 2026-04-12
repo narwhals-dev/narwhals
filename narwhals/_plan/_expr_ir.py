@@ -326,6 +326,16 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
 
+    def is_length_preserving(self) -> bool:
+        """Return True if this leaf does not change the length of input columns.
+
+        Implementations adapted from [upstream].
+
+        [upstream]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-stream/src/physical_plan/lower_expr.rs#L301-L402
+        """
+        # NOTE: Many can piggyback off the mutual exclusive relationship with `is_scalar`
+        return not self.is_scalar()
+
     def is_scalar(self) -> bool:
         """Return True if this leaf produces a single value.
 

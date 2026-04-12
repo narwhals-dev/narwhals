@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from typing_extensions import Concatenate, LiteralString, ParamSpec, Self
 
     from narwhals._plan._function import Function
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals._typing import NoDefault
     from narwhals.typing import (
@@ -197,14 +198,14 @@ class Expr:
 
     def sort_by(
         self,
-        by: OneOrIterable[IntoExprColumn],
-        *more_by: IntoExprColumn,
+        by: OneOrIterable[Expr | Selector | str],
+        *more_by: Expr | Selector | str,
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        keys = _parse.sort_by_into_seq_of_expr_ir(by, *more_by)
+        keys = _parse.sort_by_into_iter_expr_ir(by, more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
-        return self._from_ir(ir.SortBy(expr=self._ir, by=keys, options=opts))
+        return self._from_ir(ir.SortBy(expr=self._ir, by=tuple(keys), options=opts))
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any

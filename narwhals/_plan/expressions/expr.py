@@ -94,6 +94,9 @@ class Alias(ExprIR, dispatch="no_dispatch"):
     def __repr__(self) -> str:
         return f"{self.expr!r}.alias({self.name!r})"
 
+    def is_length_preserving(self) -> bool:
+        return self.expr.is_length_preserving()
+
 
 class Column(ExprIR, dispatch=namespaced("col")):
     """An expression that selects exactly one column.
@@ -153,6 +156,9 @@ class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
         yield from self.__expr_ir_nodes__.iter_expand_by_combination(self, ctx)
 
+    def is_length_preserving(self) -> bool:
+        return self.left.is_length_preserving() or self.right.is_length_preserving()
+
 
 class Cast(ExprIR, dtype=get_dtype()):
     __slots__ = ("expr", "dtype")  # noqa: RUF023
@@ -161,6 +167,9 @@ class Cast(ExprIR, dtype=get_dtype()):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.cast({self.dtype!r})"
+
+    def is_length_preserving(self) -> bool:
+        return self.expr.is_length_preserving()
 
 
 class Sort(ExprIR, dtype=same_dtype()):
@@ -171,6 +180,9 @@ class Sort(ExprIR, dtype=same_dtype()):
     def __repr__(self) -> str:
         direction = "desc" if self.options.descending else "asc"
         return f"{self.expr!r}.sort({direction})"
+
+    def is_length_preserving(self) -> bool:
+        return self.expr.is_length_preserving()
 
 
 class SortBy(ExprIR, dtype=same_dtype()):
@@ -195,6 +207,9 @@ class SortBy(ExprIR, dtype=same_dtype()):
     def nulls_last(self) -> Seq[bool]:
         return self.options.nulls_last
 
+    def is_length_preserving(self) -> bool:
+        return self.expr.is_length_preserving()
+
 
 # TODO @dangotbanned: Docs should complement `Function`
 # - The two are very tightly coupled
@@ -216,6 +231,13 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 
     def is_scalar(self) -> bool:
         return FunctionFlags.AGGREGATION in self.flags
+
+    def is_length_preserving(self) -> bool:
+        # NOTE: upstream is `... and all(e.is_length_preserving() for e in self.input)`
+        # -but says it's overly conservative.
+        # That won't make sense here as this is pre-expansion
+        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-stream/src/physical_plan/lower_expr.rs#L364-L374
+        return FunctionFlags.LENGTH_PRESERVING in self.flags
 
     def __repr__(self) -> str:
         if self.input:
@@ -319,6 +341,9 @@ class Filter(ExprIR, dtype=same_dtype()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.filter({self.by!r})"
 
+    def is_length_preserving(self) -> bool:
+        return False
+
 
 class Over(ExprIR, dtype=same_dtype()):
     """A fully specified `.over()`, that occurred after another expression.
@@ -336,6 +361,9 @@ class Over(ExprIR, dtype=same_dtype()):
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
+
+    def is_length_preserving(self) -> bool:
+        return False
 
 
 class OverOrdered(Over):
@@ -402,6 +430,13 @@ class TernaryExpr(ExprIR):
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
         yield from self.__expr_ir_nodes__.iter_expand_by_combination(self, ctx)
+
+    def is_length_preserving(self) -> bool:
+        return (
+            self.predicate.is_length_preserving()
+            or self.truthy.is_length_preserving()
+            or self.falsy.is_length_preserving()
+        )
 
 
 def ternary_expr(predicate: ExprIR, truthy: ExprIR, falsy: ExprIR, /) -> TernaryExpr:

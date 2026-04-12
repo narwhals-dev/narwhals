@@ -36,7 +36,12 @@ class KeepName(ExprIR, dispatch="no_dispatch"):
     def __repr__(self) -> str:
         return f"{self.expr!r}.name.keep()"
 
+    def is_length_preserving(self) -> bool:
+        return self.expr.is_length_preserving()
 
+
+# TODO @dangotbanned: `RenameAlias` -> `MapAlias`?
+# TODO @dangotbanned: Give `RenameAlias`, `Alias`, `KeepName` a common parent
 class RenameAlias(ExprIR, dispatch="no_dispatch"):
     """Rename an expression by mapping a function over the root name.
 
@@ -68,6 +73,9 @@ class RenameAlias(ExprIR, dispatch="no_dispatch"):
         else:
             s = "map()"
         return f"{self.expr!r}.name.{s}"
+
+    def is_length_preserving(self) -> bool:
+        return self.expr.is_length_preserving()
 
 
 class Prefix(Immutable):

@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 ROW_SEPARABLE = FunctionFlags.ROW_SEPARABLE
 
 
+# TODO @dangotbanned: Review using `ExprIR.is_length_preserving`
 def _validate_over(
     expr: ExprIR,
     partition_by: Seq[ExprIR],
