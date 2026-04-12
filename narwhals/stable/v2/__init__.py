@@ -1145,19 +1145,16 @@ def scan_parquet(
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
-def struct(
-    *exprs: IntoExpr | NonNestedLiteral | Sequence[IntoExpr | NonNestedLiteral],
-    **named_exprs: IntoExpr | NonNestedLiteral,
-) -> Expr:
+def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Expr:
     """Collect columns into a struct column.
 
     Arguments:
         *exprs: Column(s) to collect into a struct column, specified as
-            positional arguments. Accepts expression input. Strings are parsed
-            as column names, other non-expression inputs are parsed as literals.
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
         **named_exprs: Additional columns to collect into the struct column,
-            specified as keyword arguments.
-            The columns will be renamed to the keyword used.
+            specified as keyword arguments. The columns will be renamed to the
+            keyword used.
     """
     return _stableify(nw_f.struct(*exprs, **named_exprs))
 

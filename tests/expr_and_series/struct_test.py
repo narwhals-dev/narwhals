@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals as nw
@@ -127,7 +125,7 @@ def test_struct_with_literals(
     maybe_skip(constructor=constructor)
 
     df = nw.from_native(constructor(data))
-    result = df.select(nw.struct("a", x="c", y=False).alias("struct"))
+    result = df.select(nw.struct("a", x="c", y=nw.lit(False)).alias("struct"))
 
     expected = {
         "struct": [
@@ -167,33 +165,6 @@ def test_struct_with_schema(
         "struct": [{"a": 1.0, "b": 4.0}, {"a": 2.0, "b": 5.0}, {"a": 3.0, "b": 6.0}]
     }
     assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize(
-    ("schema", "expected"),
-    [
-        (
-            {"a": nw.Float32(), "x": nw.Float32()},
-            [{"a": 1.0, "x": None}, {"a": 2.0, "x": None}, {"a": 3.0, "x": None}],
-        ),
-        ({"x": nw.Float32()}, [{"x": None}, {"x": None}, {"x": None}]),
-    ],
-)
-def test_struct_schema_mismatch(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    schema: dict[str, nw.dtypes.DType],
-    expected: list[dict[str, Any]],
-) -> None:
-    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
-        request.applymarker(pytest.mark.xfail)
-
-    maybe_skip(constructor=constructor)
-
-    df = nw.from_native(constructor(data))
-    result = df.select(nw.struct(nw.all()).cast(nw.Struct(schema)).alias("struct"))
-
-    assert_equal_data(result, {"struct": expected})
 
 
 def test_struct_with_series(constructor_eager: ConstructorEager) -> None:

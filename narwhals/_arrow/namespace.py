@@ -247,12 +247,12 @@ class ArrowNamespace(
 
     def struct(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             name = series[0].name
 
             struct_array = pc.make_struct(
-                *(s.native for s in series), field_names=[s.name for s in series]
+                *(s.native if len(s) > 1 else s.native[0] for s in series),
+                field_names=tuple(s.name for s in series),
             )
             result = pa.chunked_array([struct_array])
             return [ArrowSeries(result, name=name, version=self._version)]

@@ -1835,19 +1835,16 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
     return concat_str(exprs, separator="")
 
 
-def struct(
-    *exprs: IntoExpr | NonNestedLiteral | Sequence[IntoExpr | NonNestedLiteral],
-    **named_exprs: IntoExpr | NonNestedLiteral,
-) -> Expr:
+def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Expr:
     """Collect columns into a struct column.
 
     Arguments:
         *exprs: Column(s) to collect into a struct column, specified as
-            positional arguments. Accepts expression input. Strings are parsed
-            as column names, other non-expression inputs are parsed as literals.
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
         **named_exprs: Additional columns to collect into the struct column,
-            specified as keyword arguments.
-            The columns will be renamed to the keyword used.
+            specified as keyword arguments. The columns will be renamed to the
+            keyword used.
 
     Examples:
         Collect all columns of a dataframe into a struct by passing `pl.all()`.
