@@ -50,7 +50,7 @@ IsScalarT = TypeVar(  # noqa: PLC0105
 # TODO @dangotbanned: Adapt for populating `is_length_preserving`:
 # - Slight differences to where `observe_scalar` is used
 # - Overrides with constants are needed for `False`
-#   - `Filter`,` Over`, `LitSeries`
+#   - `Filter`, `LitSeries`
 # - `FunctionExpr` has an actual flag
 # - `{Binary,Ternary}Expr` use OR on their nodes
 #   > As long as at least one input is length-preserving the other side(s)

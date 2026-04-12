@@ -362,9 +362,6 @@ class Over(ExprIR, dtype=same_dtype()):
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
 
-    def is_length_preserving(self) -> bool:
-        return False
-
 
 class OverOrdered(Over):
     __slots__ = ("order_by", "sort_options")

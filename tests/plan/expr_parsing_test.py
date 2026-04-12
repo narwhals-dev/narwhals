@@ -634,7 +634,6 @@ else:  # pragma: no cover
         (b.filter(c=2), ()),
         (b.drop_nulls().name.prefix("before_"), ()),
         (a + b, (nwp.when(b.min().cast(nw.Boolean)).then(1),)),
-        (b.max().over("c", order_by="d").alias("over"), ()),
         *case_lit_series,
     ],
     ids=[
@@ -650,7 +649,6 @@ else:  # pragma: no cover
         "filter",
         "row-separable",
         "when-scalar",
-        "over",
         *id_lit_series,
     ],
 )
