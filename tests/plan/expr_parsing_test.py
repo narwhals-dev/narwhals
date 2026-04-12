@@ -276,6 +276,33 @@ def test_over_filtration() -> None:
         nwp.col("a").diff().drop_nulls().over("b", order_by="i")
 
 
+@pytest.mark.parametrize(
+    "left",
+    [nwp.col("a"), nwp.len(), nwp.lit(1), nwp.max("a"), nwp.sum_horizontal("a", "b")],
+    ids=["col", "len", "lit", "agg_expr", "horizontal"],
+)
+@pytest.mark.parametrize(
+    "right",
+    [
+        nwp.col("c").null_count(),
+        nwp.col("c").fill_null(1),
+        nwp.col("c").rolling_mean(5),
+        nwp.nth(1).cum_min(),
+        nwp.col("c").shift(2),
+    ],
+    ids=[
+        "aggregation",
+        "elementwise",
+        "length_preserving_1",
+        "length_preserving_2",
+        "length_preserving_3",
+    ],
+)
+def test_binary_expr(left: nwp.Expr, right: nwp.Expr) -> None:
+    assert _is_expr_ir_binary_expr(left // right)
+    assert _is_expr_ir_binary_expr(right * left)
+
+
 def test_binary_expr_length_changing_invalid() -> None:
     a = nwp.col("a")
     b = nwp.col("b").exp()
@@ -332,7 +359,7 @@ def test_binary_expr_shape_invalid() -> None:
     with pytest.raises(ShapeError, match=pattern):
         a / b.drop_nulls()
     with pytest.raises(ShapeError, match=pattern):
-        a.fill_null(1) // b.rolling_mean(5)
+        a.hist(bin_count=4) // b.rolling_mean(5)
 
 
 def test_map_batches_invalid() -> None:

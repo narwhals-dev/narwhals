@@ -80,7 +80,7 @@ class Operator(Immutable):
 
 # TODO @dangotbanned: Review using `ExprIR.is_length_preserving`
 def _is_filtration(ir: ExprIR) -> bool:
-    return not ir.is_scalar() and is_function_expr(ir) and not ir.flags.is_elementwise()
+    return not ir.is_scalar() and is_function_expr(ir) and not ir.is_length_preserving()
 
 
 class SelectorOperator(Operator, func=None):

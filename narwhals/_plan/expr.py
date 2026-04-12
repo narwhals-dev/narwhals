@@ -312,7 +312,7 @@ class Expr:
     def cum_count(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumCount(reverse=reverse))
 
-    def cum_min(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_min(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumMin(reverse=reverse))
 
     def cum_max(self, *, reverse: bool = False) -> Self:  # pragma: no cover
