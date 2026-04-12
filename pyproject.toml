@@ -93,15 +93,13 @@ docs = [
   "duckdb",
   "narwhals[sql]",
   "markdown-exec[ansi]",
-  "mkdocs==1.6.1",
   "mkdocs-autorefs",
-  "mkdocs-material",
-  "mkdocstrings[python]",
-  "mkdocstrings-python>=1.16",
+  "mkdocstrings-python>=2.0.3",
   "sqlframe",
   "pandas",
   "polars>=1.0.0",
   "pyarrow",
+  "zensical>=0.0.28"
 ]
 dev = [
   "pre-commit",

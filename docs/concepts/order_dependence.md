@@ -22,7 +22,7 @@ such as:
 When row-order is defined, as is the case for `DataFrame`, these operations pose
 no issue.
 
-```python exec="1" result="python" session="order_dependence" source="above"
+```python exec="yes" result="python" session="order_dependence" source="above"
 import narwhals as nw
 import pandas as pd
 
@@ -39,7 +39,7 @@ you specify `order_by`. For example:
 - `nw.col('a').cum_sum().over(order_by="i")` can only be executed by either a `DataFrame`
   or a `LazyFrame`.
 
-```python exec="1" result="python" session="order_dependence" source="above"
+```python exec="yes" result="python" session="order_dependence" source="above"
 import polars as pl
 
 lf = nw.from_native(pl.LazyFrame(data))
