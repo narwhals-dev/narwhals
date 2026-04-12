@@ -78,7 +78,7 @@ jobs:
         run: |
           uv pip install \
             pipdeptree tox virtualenv setuptools tzdata \
-            pandas==1.4.0 \
+            pandas==1.4.1 \
             polars==0.20.4 \
             numpy==1.22.0 \
             pyarrow==14.0.0 \
