@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 import polars as pl
 
-from narwhals._plan import expressions as ir
 from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
@@ -14,7 +13,6 @@ from narwhals._polars.utils import (
     native_to_narwhals_dtype as _dtype_from_native,
 )
 from narwhals._utils import Implementation, Version
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     import datetime as dt
@@ -22,6 +20,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
+    from narwhals._plan import expressions as ir
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals._plan.polars.expr import PolarsExpr as Expr
@@ -182,16 +181,12 @@ class PolarsNamespace(
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
     ) -> Expr:
-        start, end = node.function.unwrap_input(node)
-        if isinstance(start, ir.Lit) and isinstance(end, ir.Lit):
-            start_, end_ = start.value, end.value
-            if isinstance(start_, int) and isinstance(end_, int):
-                dtype = dtype_to_native_fast(node.function.dtype)
-                native = pl.int_range(start_, end_, node.function.step, dtype=dtype)
-                return self._expr.from_native(native, name, self.version)
-            msg = f"All inputs for `{node.function}()` must resolve to int, but got \n{start_!r}\n{end_!r}"
-            raise InvalidOperationError(msg)
-        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{start!r}\n{end!r}"
+        func = node.function
+        if fastpath := func.try_unwrap_literals(node):
+            dtype = dtype_to_native_fast(func.dtype)
+            native = pl.int_range(*fastpath, func.step, dtype=dtype)
+            return self._expr.from_native(native, name, self.version)
+        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.input[0]!r}\n{node.input[1]!r}"
         raise NotImplementedError(msg)
 
     def int_range_eager(

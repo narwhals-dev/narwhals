@@ -226,7 +226,7 @@ def test_date_range_eager_invalid() -> None:
     start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
 
     with pytest.raises(InvalidOperationError):
-        nwp.date_range(nwp.len(), end, eager="pyarrow")  # type: ignore[call-overload]
+        nwp.date_range(1, end, eager="pyarrow")  # type: ignore[call-overload]
     with pytest.raises(InvalidOperationError):
         nwp.date_range(start, nwp.col("a").last(), eager=Implementation.PYARROW)  # type: ignore[call-overload]
     with pytest.raises(NotImplementedError):

@@ -5,18 +5,12 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._duration import Interval
 from narwhals._plan import _parse, common
-from narwhals._plan._dispatch import get_dispatch_name
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant import ranges as _ranges
 from narwhals._plan.exceptions import unsupported_backend_operation_error
-from narwhals._plan.expressions.ranges import (
-    DateRange,
-    IntRange,
-    LinearSpace,
-    RangeFunction,
-)
-from narwhals._utils import Version, ensure_type, qualified_type_name
-from narwhals.exceptions import ComputeError, InvalidOperationError
+from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
+from narwhals._utils import Version, ensure_type
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     import polars as pl
@@ -24,7 +18,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import IntoExprColumn, NonNestedLiteralT
+    from narwhals._plan.typing import IntoExprColumn
     from narwhals._typing import Arrow, Polars
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval, EagerAllowed, IntoBackend
@@ -79,7 +73,7 @@ def int_range(
         start = 0
     dtype = common.into_dtype(dtype)
     if eager:
-        start, end = _ensure_range_scalar(start, end, int, IntRange, eager)
+        start, end = IntRange.ensure_py_scalars(start, end, eager)
         ns_ = namespace_from_backend(eager)
         if _ranges.can_int_range_eager(ns_):
             return ns_.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
@@ -138,7 +132,7 @@ def date_range(
     days = _interval_days(interval)
     closed = _ensure_closed_interval(closed)
     if eager:
-        start, end = _ensure_range_scalar(start, end, dt.date, DateRange, eager)
+        start, end = DateRange.ensure_py_scalars(start, end, eager)
         ns_ = namespace_from_backend(eager)
         if _ranges.can_date_range_eager(ns_):
             return ns_.date_range_eager(start, end, days, closed=closed).to_narwhals()
@@ -238,7 +232,7 @@ def linear_space(
     ensure_type(num_samples, int, param_name="num_samples")
     closed = _ensure_closed_interval(closed)
     if eager:
-        start, end = _ensure_range_scalar(start, end, (float, int), LinearSpace, eager)
+        start, end = LinearSpace.ensure_py_scalars(start, end, eager)
         ns_ = namespace_from_backend(eager)
         if _ranges.can_linear_space_eager(ns_):
             return ns_.linear_space_eager(
@@ -252,30 +246,6 @@ def linear_space(
         .to_function_expr(*_parse.into_iter_expr_ir(start, end))
         .to_narwhals()
     )
-
-
-# TODO @dangotbanned: Handle this in `RangeFunction` or `RangeExpr`
-# NOTE: `ArrowNamespace._range_function_inputs` has some duplicated logic too
-def _ensure_range_scalar(
-    start: Any,
-    end: Any,
-    valid_type: type[NonNestedLiteralT] | tuple[type[NonNestedLiteralT], ...],
-    function: type[RangeFunction],
-    eager: IntoBackend[EagerAllowed],
-) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
-    if isinstance(start, valid_type) and isinstance(end, valid_type):
-        return start, end
-    tp_start = qualified_type_name(start)
-    tp_end = qualified_type_name(end)
-    valid_types = (valid_type,) if not isinstance(valid_type, tuple) else valid_type
-    tp_names = " | ".join(tp.__name__ for tp in valid_types)
-    msg = (
-        f"Expected `start` and `end` to be {tp_names} values since `eager={eager}`, but got: ({tp_start}, {tp_end})\n\n"
-        f"Hint: Calling `nw.{get_dispatch_name(function)}` with expressions requires:\n"
-        "  - `eager=False`\n"
-        "  - a context such as `select` or `with_columns`"
-    )
-    raise InvalidOperationError(msg)
 
 
 def _ensure_closed_interval(closed: ClosedInterval, /) -> ClosedInterval:

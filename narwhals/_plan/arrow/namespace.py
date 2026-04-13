@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import datetime as dt
 from collections.abc import Collection
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, overload
@@ -8,20 +7,21 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import pyarrow as pa  # ignore-banned-import
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
-from narwhals._plan import expressions as ir
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.compliant.translate import FromDict, FromIterable
+from narwhals._plan.exceptions import range_expr_non_scalar_error
 from narwhals._utils import Implementation, Version
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
+    import datetime as dt
     from collections.abc import Iterable, Mapping
 
     from typing_extensions import TypeAlias
 
+    from narwhals._plan import expressions as ir
     from narwhals._plan._dispatch import BoundMethod
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
@@ -42,9 +42,14 @@ if TYPE_CHECKING:
         functions as F,
     )
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
+    from narwhals._plan.expressions.ranges import (
+        DateRange,
+        IntRange,
+        LinearSpace,
+        RangeFunction,
+    )
     from narwhals._plan.expressions.strings import ConcatStr
-    from narwhals._plan.typing import NonNestedLiteralT
+    from narwhals._plan.typing import NonNestedLiteralT_co
     from narwhals.dtypes import IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -227,38 +232,18 @@ class ArrowNamespace(
             return self._scalar.from_native(result, name, self.version)
         return self._expr.from_native(result, name, self.version)
 
-    # TODO @dangotbanned: Refactor alongside `nwp.functions._ensure_range_scalar`
-    # Consider returning the supertype of inputs
+    # TODO @dangotbanned: Consider returning the supertype of inputs
     def _range_function_inputs(
-        self,
-        node: RangeExpr,
-        frame: Frame,
-        valid_type: type[NonNestedLiteralT] | tuple[type[NonNestedLiteralT], ...],
-    ) -> tuple[NonNestedLiteralT, NonNestedLiteralT]:
-        start_: PythonLiteral
-        end_: PythonLiteral
-        start, end = node.function.unwrap_input(node)
-        if isinstance(start, ir.Lit) and isinstance(end, ir.Lit):
-            start_, end_ = start.value, end.value
-        else:
-            scalar_start = self._expr.from_ir(start, frame, "start")
-            scalar_end = self._expr.from_ir(end, frame, "end")
-            if isinstance(scalar_start, self._scalar) and isinstance(
-                scalar_end, self._scalar
-            ):
-                start_, end_ = scalar_start.to_python(), scalar_end.to_python()
-            else:
-                msg = (
-                    f"All inputs for `{node.function}()` must be scalar or aggregations, but got \n"
-                    f"{scalar_start.native!r}\n{scalar_end.native!r}"
-                )
-                raise InvalidOperationError(msg)
-        if isinstance(start_, valid_type) and isinstance(end_, valid_type):
-            return start_, end_  # type: ignore[return-value]
-        valid_types = (valid_type,) if not isinstance(valid_type, tuple) else valid_type
-        tp_names = " | ".join(tp.__name__ for tp in valid_types)
-        msg = f"All inputs for `{node.function}()` must resolve to {tp_names}, but got \n{start_!r}\n{end_!r}"
-        raise InvalidOperationError(msg)
+        self, node: RangeExpr[RangeFunction[NonNestedLiteralT_co]], frame: Frame
+    ) -> tuple[NonNestedLiteralT_co, NonNestedLiteralT_co]:
+        func = node.function
+        if fastpath := func.try_unwrap_literals(node):
+            return fastpath
+        start = self._expr.from_ir(node.input[0], frame, "")
+        end = self._expr.from_ir(node.input[1], frame, "")
+        if isinstance(start, self._scalar) and isinstance(end, self._scalar):
+            return func.ensure_py_scalars(start.to_python(), end.to_python())
+        raise range_expr_non_scalar_error(node.input, func)
 
     def _int_range(
         self, start: int, end: int, step: int, dtype: IntegerType, /
@@ -271,7 +256,7 @@ class ArrowNamespace(
         return fn.int_range(start, end, step)
 
     def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
-        start, end = self._range_function_inputs(node, frame, int)
+        start, end = self._range_function_inputs(node, frame)
         native = self._int_range(start, end, node.function.step, node.function.dtype)
         return self._expr.from_native(native, name, self.version)
 
@@ -288,7 +273,7 @@ class ArrowNamespace(
         return self._series.from_native(native, name, version=self.version)
 
     def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
-        start, end = self._range_function_inputs(node, frame, dt.date)
+        start, end = self._range_function_inputs(node, frame)
         func = node.function
         native = fn.date_range(start, end, func.interval, closed=func.closed)
         return self._expr.from_native(native, name, self.version)
@@ -306,7 +291,7 @@ class ArrowNamespace(
         return self._series.from_native(native, name, version=self.version)
 
     def linear_space(self, node: RangeExpr[LinearSpace], frame: Frame, name: str) -> Expr:
-        start, end = self._range_function_inputs(node, frame, (int, float))
+        start, end = self._range_function_inputs(node, frame)
         func = node.function
         native = fn.linear_space(start, end, func.num_samples, closed=func.closed)
         return self._expr.from_native(native, name, self.version)

@@ -45,7 +45,7 @@ __all__ = [
     "LeftT",
     "LiteralT_co",
     "MapIR",
-    "NonNestedLiteralT",
+    "NonNestedLiteralT_co",
     "OperatorFn",
     "OperatorT",
     "OutputNames",
@@ -64,7 +64,10 @@ FunctionT_co = TypeVar(
     "FunctionT_co", bound="Function", default="Function", covariant=True
 )
 RangeT_co = TypeVar(
-    "RangeT_co", bound="RangeFunction", default="RangeFunction", covariant=True
+    "RangeT_co",
+    bound="RangeFunction[t.Any]",
+    default="RangeFunction[t.Any]",
+    covariant=True,
 )
 StructT_co = TypeVar(
     "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
@@ -122,8 +125,11 @@ Accessor: TypeAlias = t.Literal[
 DTypeT = TypeVar("DTypeT", bound="dtypes.DType")
 NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")
 
-NonNestedLiteralT = TypeVar(
-    "NonNestedLiteralT", bound="NonNestedLiteral", default="NonNestedLiteral"
+NonNestedLiteralT_co = TypeVar(
+    "NonNestedLiteralT_co",
+    bound="NonNestedLiteral",
+    default="NonNestedLiteral",
+    covariant=True,
 )
 PythonLiteralT = TypeVar("PythonLiteralT", bound="PythonLiteral", default="PythonLiteral")
 PythonLiteralT_co = TypeVar(
