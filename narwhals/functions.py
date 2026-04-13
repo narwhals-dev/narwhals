@@ -1420,10 +1420,10 @@ class Then(Expr):
         result._chain = chain
         return result
 
-    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Then:
+    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Expr:
         expr = self._from_chain(self._chain)
         expr._otherwise = otherwise_value
-        return expr
+        return Expr(*expr._nodes)
 
     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         return When(*predicates, chain=self._chain)
