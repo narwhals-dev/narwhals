@@ -429,6 +429,18 @@ def test_any_horizontal() -> None:
     assert_equal_data(result, expected)
 
 
+def test_struct() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 2], "b": ["dogs", None], "c": ["play", "walk"]}
+
+    df = nw_v1.from_native(pl.DataFrame(data))
+    result = df.select(my_struct=nw_v1.struct("a", "b"))
+    expected = {"my_struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": None}]}
+    assert_equal_data(result, expected)
+
+
 def test_all_horizontal() -> None:
     # here, it defaults to Kleene logic.
     pytest.importorskip("polars")

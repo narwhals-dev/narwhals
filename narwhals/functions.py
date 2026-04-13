@@ -5,7 +5,13 @@ import sys
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-from narwhals._expression_parsing import ExprKind, ExprNode, is_expr, is_series
+from narwhals._expression_parsing import (
+    ExprKind,
+    ExprNode,
+    _parse_into_expr,
+    is_expr,
+    is_series,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -1827,3 +1833,70 @@ def format(f_string: str, *args: IntoExpr) -> Expr:
         if len(s) > 0:
             exprs.append(lit(s))
     return concat_str(exprs, separator="")
+
+
+def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Expr:
+    """Collect columns into a struct column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a struct column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+        **named_exprs: Additional columns to collect into the struct column,
+            specified as keyword arguments. The columns will be renamed to the
+            keyword used.
+
+    Examples:
+        Collect all columns of a dataframe into a struct by passing `pl.all()`.
+
+        >>> import duckdb
+        >>> import narwhals as nw
+        >>> rel = duckdb.sql(
+        ...     "select * from values (1, 'a', True, [1, 2]), (2, 'b', False, [3]) df(int, str, bool, list)"
+        ... )
+        >>> df = nw.from_native(rel)
+        >>> df.select(nw.struct(nw.all()).alias("my_struct"))
+        ┌────────────────────────────────────────────────────────────────────┐
+        |                         Narwhals LazyFrame                         |
+        |--------------------------------------------------------------------|
+        |┌──────────────────────────────────────────────────────────────────┐|
+        |│                            my_struct                             │|
+        |│ struct("int" integer, str varchar, bool boolean, list integer[]) │|
+        |├──────────────────────────────────────────────────────────────────┤|
+        |│ {'int': 1, 'str': a, 'bool': true, 'list': [1, 2]}               │|
+        |│ {'int': 2, 'str': b, 'bool': false, 'list': [3]}                 │|
+        |└──────────────────────────────────────────────────────────────────┘|
+        └────────────────────────────────────────────────────────────────────┘
+
+        It's possible to specify the column names directly and use named expressions:
+
+        >>> df.select(
+        ...     nw.struct("int", x=nw.col("str").str.len_chars(), q="bool").alias(
+        ...         "my_struct"
+        ...     )
+        ... )
+        ┌──────────────────────────────────────────────┐
+        |              Narwhals LazyFrame              |
+        |----------------------------------------------|
+        |┌────────────────────────────────────────────┐|
+        |│                 my_struct                  │|
+        |│ struct("int" integer, x bigint, q boolean) │|
+        |├────────────────────────────────────────────┤|
+        |│ {'int': 1, 'x': 1, 'q': true}              │|
+        |│ {'int': 2, 'x': 1, 'q': false}             │|
+        |└────────────────────────────────────────────┘|
+        └──────────────────────────────────────────────┘
+    """
+    flat_exprs = [
+        *(_parse_into_expr(e) for e in flatten(exprs)),
+        *(_parse_into_expr(e).alias(n) for n, e in named_exprs.items()),
+    ]
+    if not flat_exprs:
+        msg = "expected at least 1 expression in 'struct'"
+        raise ValueError(msg)
+
+    return Expr(
+        ExprNode(
+            ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, allow_multi_output=True
+        )
+    )
