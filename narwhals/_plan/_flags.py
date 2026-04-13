@@ -214,7 +214,12 @@ class FunctionFlags(enum.Flag):
     """
 
     def __str__(self) -> str:
-        name = self.name or "<FUNCTION_FLAGS_UNKNOWN>"
+        if (name := self.name) is None:
+            # https://github.com/python/typeshed/blob/46b01bf323f3d7ee8764e844327c4010bade07c3/stdlib/enum.pyi#L260
+            # https://docs.python.org/3/howto/enum.html#flag
+            # Should be unreachable, since `DEFAULT = 0`
+            msg = f"Expected all {type(self).__name__!r} to have a name, got: {self!r}, name=None"
+            raise NotImplementedError(msg)
         return name.replace("|", " | ")
 
     @classmethod
