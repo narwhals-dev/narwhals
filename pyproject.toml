@@ -288,7 +288,7 @@ filterwarnings = [
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 
   # raised internally by Dask
-  "ignore:.*Using 'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask"
+  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
