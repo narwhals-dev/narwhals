@@ -240,10 +240,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return FunctionFlags.LENGTH_PRESERVING in self.flags
 
     def changes_length(self) -> bool:
-        flags = self.flags
-        return not (
-            FunctionFlags.LENGTH_PRESERVING in flags or FunctionFlags.AGGREGATION in flags
-        )
+        return self.flags.changes_length()
 
     def __repr__(self) -> str:
         if self.input:

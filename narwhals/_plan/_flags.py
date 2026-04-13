@@ -227,3 +227,11 @@ class FunctionFlags(enum.Flag):
 
     def is_elementwise(self) -> bool:
         return FunctionFlags.ELEMENTWISE in self
+
+    def changes_length(self) -> bool:
+        return self in _CHANGES_LENGTH
+
+
+# NOTE: Has to be exactly one of these, a set avoids this issue:
+#     `DEFAULT | ROW_SEPARABLE -> ROW_SEPARABLE`
+_CHANGES_LENGTH = frozenset((FunctionFlags.DEFAULT, FunctionFlags.ROW_SEPARABLE))
