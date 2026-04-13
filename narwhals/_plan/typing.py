@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.aggregation import AggExpr
-    from narwhals._plan.expressions.functions import RollingWindow
     from narwhals._plan.expressions.namespace import IRNamespace
     from narwhals._plan.expressions.ranges import RangeFunction
     from narwhals._plan.expressions.struct import StructFunction
@@ -53,7 +52,6 @@ __all__ = [
     "RangeT_co",
     "RightSelectorT",
     "RightT",
-    "RollingT",
     "SelectorOperatorT",
     "SelectorT",
     "Seq",
@@ -62,12 +60,8 @@ __all__ = [
 
 
 FunctionT = TypeVar("FunctionT", bound="Function", default="Function")
-RollingT = TypeVar("RollingT", bound="RollingWindow", default="RollingWindow")
 FunctionT_co = TypeVar(
     "FunctionT_co", bound="Function", default="Function", covariant=True
-)
-RollingT_co = TypeVar(
-    "RollingT_co", bound="RollingWindow", default="RollingWindow", covariant=True
 )
 RangeT_co = TypeVar(
     "RangeT_co", bound="RangeFunction", default="RangeFunction", covariant=True

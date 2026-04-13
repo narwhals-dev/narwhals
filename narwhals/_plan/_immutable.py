@@ -167,6 +167,18 @@ class Immutable(metaclass=ImmutableMeta):
             _OBJ_SETATTR(self, HASH, hash_value)
         return hash_value
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert this instance's fields to a dictionary.
+
+        Similar to [`dataclasses.asdict`], but **non-recursive**.
+
+        Tip:
+            Unless you plan to use `**to_dict()`, prefer iterating over `__immutable_items__` instead.
+
+        [`dataclasses.asdict`]: https://docs.python.org/3/library/dataclasses.html#dataclasses.asdict
+        """
+        return dict(self.__immutable_items__)
+
     def __copy__(self) -> Self:
         return self
 

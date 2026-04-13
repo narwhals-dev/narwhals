@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, Literal, get_args
+from typing import TYPE_CHECKING, Generic, Literal, get_args, overload
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.common import ensure_seq_str
@@ -131,28 +131,29 @@ class EWMOptions(Immutable):
     ignore_nulls: bool
 
 
-class RollingVarParams(Immutable):
+class RollingOptions(Immutable):
+    __slots__ = ("center", "min_samples", "window_size")
+    window_size: int
+    min_samples: int
+    center: bool
+
+
+class RollingVarOptions(RollingOptions):
     __slots__ = ("ddof",)
     ddof: int
 
 
-class RollingOptionsFixedWindow(Immutable):
-    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-core/src/chunked_array/ops/rolling_window.rs#L10-L23."""
-
-    __slots__ = ("center", "fn_params", "min_samples", "window_size")
-    window_size: int
-    min_samples: int
-    center: bool
-    fn_params: RollingVarParams | None
-
-    @property
-    def ddof(self) -> int:
-        return 1 if self.fn_params is None else self.fn_params.ddof
-
-
+@overload
+def rolling_options(
+    window_size: int, min_samples: int | None, /, *, center: bool
+) -> RollingOptions: ...
+@overload
+def rolling_options(
+    window_size: int, min_samples: int | None, /, *, center: bool, ddof: int
+) -> RollingVarOptions: ...
 def rolling_options(
     window_size: int, min_samples: int | None, /, *, center: bool, ddof: int | None = None
-) -> RollingOptionsFixedWindow:
+) -> RollingOptions | RollingVarOptions:
     ensure_type(window_size, int, param_name="window_size")
     ensure_type(min_samples, int, type(None), param_name="min_samples")
     if window_size < 1:
@@ -166,11 +167,12 @@ def rolling_options(
     elif min_samples > window_size:
         msg = "`min_samples` must be <= `window_size`"
         raise InvalidOperationError(msg)
-    return RollingOptionsFixedWindow(
-        window_size=window_size,
-        min_samples=min_samples,
-        center=center,
-        fn_params=ddof if ddof is None else RollingVarParams(ddof=ddof),
+    if ddof is None:
+        return RollingOptions(
+            window_size=window_size, min_samples=min_samples, center=center
+        )
+    return RollingVarOptions(
+        window_size=window_size, min_samples=min_samples, center=center, ddof=ddof
     )
 
 

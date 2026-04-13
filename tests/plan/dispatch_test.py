@@ -103,7 +103,7 @@ def test_missing_compliant(
         (nwp.int_range(10), "int_range"),
         (nwp.col("a") + nwp.col("b") + 10, "binary_expr"),
         (nwp.when(nwp.col("c")).then(5).when(nwp.col("d")).then(20), "ternary_expr"),
-        (nwp.col("a").rolling_sum(2), "rolling_expr"),
+        (nwp.col("a").rolling_sum(2), "rolling_sum"),
         (nwp.col("a").cum_sum(), "cum_sum"),
         (nwp.col("a").cat.get_categories(), "cat.get_categories"),
         (nwp.col("a").dt.timestamp(), "dt.timestamp"),

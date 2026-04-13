@@ -689,21 +689,12 @@ class ArrowExpr(  # type: ignore[misc]
         F.RollingStd: Series.rolling_std,
     }
 
-    def rolling_expr(
-        self, node: ir.RollingExpr[F.RollingWindow], frame: Frame, name: str
-    ) -> Self:
+    def _rolling(self, node: FExpr[F.RollingWindow], frame: Frame, name: str) -> Self:
         s = self._dispatch_expr(node.input[0], frame, name)
-        roll_options = node.function.options
-        size = roll_options.window_size
-        samples = roll_options.min_samples
-        center = roll_options.center
-        op = type(node.function)
-        method = self._ROLLING[op]
-        if op in {F.RollingSum, F.RollingMean}:
-            return self.from_series(method(s, size, min_samples=samples, center=center))
-        ddof = roll_options.ddof
-        result = method(s, size, min_samples=samples, center=center, ddof=ddof)
-        return self.from_series(result)
+        f = node.function
+        return self.from_series(self._ROLLING[type(f)](s, **(f.options.to_dict())))
+
+    rolling_sum = rolling_mean = rolling_std = rolling_var = _rolling
 
     # NOTE: Should not be returning a struct when all `include_*` are false
     # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/chunked_array/hist.rs#L223-L223
@@ -905,7 +896,10 @@ class ArrowScalar(
     map_batches = not_implemented()
     rank = not_implemented()
     # length_preserving
-    rolling_expr = not_implemented()
+    rolling_sum = not_implemented()
+    rolling_mean = not_implemented()
+    rolling_std = not_implemented()
+    rolling_var = not_implemented()
     diff = not_implemented()
     cum_sum = not_implemented()  # TODO @dangotbanned: is this just self?
     cum_count = not_implemented()

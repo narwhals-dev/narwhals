@@ -18,8 +18,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions import AnonymousExpr, FunctionExpr, RollingExpr
-    from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
+    from narwhals._plan.expressions import AnonymousExpr, FunctionExpr
+    from narwhals._plan.options import (
+        EWMOptions,
+        RankOptions,
+        RollingOptions,
+        RollingVarOptions,
+    )
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq, Udf
     from narwhals.dtypes import DType
@@ -71,15 +76,13 @@ class CumProd(CumAgg, dtype=map_first(dtm.cum_prod_dtype)): ...
 class CumSum(CumAgg, dtype=map_first(dtm.cum_sum_dtype)): ...
 class RollingWindow(Function, flags=LENGTH_PRESERVING):
     __slots__ = ("options",)
-    options: RollingOptionsFixedWindow
-
-    def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
-        from narwhals._plan.expressions import RollingExpr
-        return RollingExpr(input=self._validate_input(inputs), function=self)
+    options: RollingOptions
 class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
 class RollingMean(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
-class RollingVar(RollingWindow, dtype=map_first(dtm.var_dtype)): ...
-class RollingStd(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
+class _RollingVarStd(RollingWindow):
+    options: RollingVarOptions
+class RollingVar(_RollingVarStd, dtype=map_first(dtm.var_dtype)): ...
+class RollingStd(_RollingVarStd, dtype=map_first(dtm.moment_dtype)): ...
 class Diff(Function, flags=LENGTH_PRESERVING, dtype=map_first(dtm.diff_dtype)): ...
 class Unique(_SameDType): ...
 # TODO @dangotbanned: `map_to_supertype` (`*Horizontal`)

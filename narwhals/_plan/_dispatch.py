@@ -441,14 +441,11 @@ def get_dispatch_name(expr: ExprIR | type[Function], /) -> str:
         Refers to the `Compliant*` method name, which may be *either* more general
         or more specialized than what the user called.
     """
-    dispatch: Dispatcher[Any]
+    target: ExprIR | type[Function] | Function
     if is_function_expr(expr):
         from narwhals._plan import expressions as ir
 
-        if isinstance(expr, (ir.RollingExpr, ir.AnonymousExpr)):
-            dispatch = expr.__expr_ir_dispatch__
-        else:
-            dispatch = expr.function.__expr_ir_dispatch__
+        target = expr if isinstance(expr, ir.AnonymousExpr) else expr.function
     else:
-        dispatch = expr.__expr_ir_dispatch__
-    return dispatch.name
+        target = expr
+    return target.__expr_ir_dispatch__.name

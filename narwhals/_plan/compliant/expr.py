@@ -141,8 +141,17 @@ class CompliantExpr(HasVersion, Protocol[FrameT_contra]):
     def replace_strict_default(
         self, node: FunctionExpr[F.ReplaceStrictDefault], frame: FrameT_contra, name: str
     ) -> Self: ...
-    def rolling_expr(
-        self, node: ir.RollingExpr, frame: FrameT_contra, name: str
+    def rolling_mean(
+        self, node: FunctionExpr[F.RollingMean], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def rolling_sum(
+        self, node: FunctionExpr[F.RollingSum], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def rolling_std(
+        self, node: FunctionExpr[F.RollingStd], frame: FrameT_contra, name: str
+    ) -> Self: ...
+    def rolling_var(
+        self, node: FunctionExpr[F.RollingVar], frame: FrameT_contra, name: str
     ) -> Self: ...
     def round(
         self, node: FunctionExpr[F.Round], frame: FrameT_contra, name: str
