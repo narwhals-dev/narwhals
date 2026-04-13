@@ -407,7 +407,7 @@ class ExprStringNamespace(Generic[ExprT]):
         )
 
     def to_time(self, format: str | None = None) -> ExprT:
-        """Convert to Time dtype.
+        """Convert to [`narwhals.dtypes.Time`][] dtype.
 
         Warning:
             As different backends auto-infer format in different ways, if `format=None`
