@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions.expr import FunctionExpr as FExpr
+    from narwhals._plan.expressions import FunctionExpr as FExpr
     from narwhals._plan.expressions.literal import LitSeries
     from narwhals._plan.series import Series
     from narwhals._plan.typing import Seq

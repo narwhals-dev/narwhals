@@ -50,8 +50,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import ExprIR, FunctionExpr
-    from narwhals._plan.expressions.expr import HorizontalExpr
+    from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq
 
@@ -295,13 +294,13 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
 @cache
 def _import_function_expr() -> type[FunctionExpr[Any]]:
     # NOTE: Very heavily used (`Function.to_function_expr`), but creates a cycle
-    from narwhals._plan.expressions.expr import FunctionExpr
+    from narwhals._plan.expressions import FunctionExpr
 
     return FunctionExpr
 
 
 @cache
 def _import_horizontal_expr() -> type[HorizontalExpr[Any]]:
-    from narwhals._plan.expressions.expr import HorizontalExpr
+    from narwhals._plan.expressions import HorizontalExpr
 
     return HorizontalExpr

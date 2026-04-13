@@ -33,7 +33,7 @@ class RangeFunction(Function, dispatch=namespaced()):
         return input
 
     def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
-        from narwhals._plan.expressions.expr import RangeExpr
+        from narwhals._plan.expressions import RangeExpr
 
         return RangeExpr(input=self._validate_input(inputs), function=self)
 

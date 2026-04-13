@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions.expr import AnonymousExpr, FunctionExpr, RollingExpr
+    from narwhals._plan.expressions import AnonymousExpr, FunctionExpr, RollingExpr
     from narwhals._plan.options import EWMOptions, RankOptions, RollingOptionsFixedWindow
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import Seq, Udf
@@ -74,7 +74,7 @@ class RollingWindow(Function, flags=LENGTH_PRESERVING):
     options: RollingOptionsFixedWindow
 
     def to_function_expr(self, *inputs: ExprIR) -> RollingExpr[Self]:
-        from narwhals._plan.expressions.expr import RollingExpr
+        from narwhals._plan.expressions import RollingExpr
         return RollingExpr(input=self._validate_input(inputs), function=self)
 class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
 class RollingMean(RollingWindow, dtype=map_first(dtm.moment_dtype)): ...
@@ -290,7 +290,7 @@ class MapBatches(Function):
         return self.flags.is_elementwise()
 
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
-        from narwhals._plan.expressions.expr import AnonymousExpr
+        from narwhals._plan.expressions import AnonymousExpr
 
         return AnonymousExpr(input=self._validate_input(inputs), function=self)
 

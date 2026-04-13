@@ -36,9 +36,12 @@ if TYPE_CHECKING:
         IOSource,
         VariadicFunction,
     )
-    from narwhals._plan.expressions import functions as F
+    from narwhals._plan.expressions import (
+        FunctionExpr as FExpr,
+        RangeExpr,
+        functions as F,
+    )
     from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
-    from narwhals._plan.expressions.expr import FunctionExpr as FExpr, RangeExpr
     from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.typing import NonNestedLiteralT

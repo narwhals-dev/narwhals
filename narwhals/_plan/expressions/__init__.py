@@ -22,23 +22,26 @@ from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.expressions.expr import (
     Alias,
-    AnonymousExpr,
     BinaryExpr,
     Cast,
     Column,
     Filter,
-    FunctionExpr,
     Len,
     Over,
     OverOrdered,
-    RangeExpr,
-    RollingExpr,
     Sort,
     SortBy,
-    StructExpr,
     TernaryExpr,
     col,
     ternary_expr,
+)
+from narwhals._plan.expressions.function_expr import (
+    AnonymousExpr,
+    FunctionExpr,
+    HorizontalExpr,
+    RangeExpr,
+    RollingExpr,
+    StructExpr,
 )
 from narwhals._plan.expressions.literal import Lit, LitSeries, lit, lit_series
 from narwhals._plan.expressions.name import KeepName, RenameAlias
@@ -61,6 +64,7 @@ __all__ = [
     "Filter",
     "Function",
     "FunctionExpr",
+    "HorizontalExpr",
     "InvertSelector",
     "KeepName",
     "Len",

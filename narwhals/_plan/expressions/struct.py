@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expr_ir import ExprIR
-    from narwhals._plan.expressions.expr import FunctionExpr, StructExpr
+    from narwhals._plan.expressions import FunctionExpr, StructExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType, Field, Struct
 
@@ -26,7 +26,7 @@ renamed = DispatcherOptions.renamed
 
 class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct")):
     def to_function_expr(self, *inputs: ExprIR) -> StructExpr[Self]:
-        from narwhals._plan.expressions.expr import StructExpr
+        from narwhals._plan.expressions import StructExpr
 
         return StructExpr(input=inputs, function=self)
 
