@@ -400,7 +400,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def last(self) -> PythonLiteral:
         return self.native.iloc[-1] if len(self.native) else None
 
-    def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary(self, op: Callable[..., pd.Series], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         try:
@@ -415,7 +415,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.name
         )
 
-    def _with_binary_right(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary_right(self, op: Callable[..., pd.Series], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
