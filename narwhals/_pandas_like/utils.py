@@ -710,10 +710,6 @@ def broadcast_series_to_index(
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
 
 
-def is_pandas_string_dtype(obj: Any, pdx: Any) -> TypeIs[pd.StringDtype]:
-    return hasattr(pdx, "StringDtype") and isinstance(obj, pdx.StringDtype)
-
-
 def binary_string_sum_fallback(left: pd.Series, right: Any, pdx: Any) -> pd.Series:
     # Workaround some upstream issues:
     # - https://github.com/pandas-dev/pandas/issues/64393
@@ -739,6 +735,8 @@ def binary_string_sum_fallback(left: pd.Series, right: Any, pdx: Any) -> pd.Seri
             if pa.types.is_string(left_arrow) and pa.types.is_large_string(right_arrow):
                 # LHS is smaller than RHS, so use the latter
                 return left.astype(right_dtype) + right
+        else:  # pragma: no cover
+            pass
         # Give precedence to the left-hand-side dtype.
         return left + right.astype(left_dtype)
-    return left + right
+    return left + right  # pragma: no cover
