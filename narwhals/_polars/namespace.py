@@ -199,6 +199,10 @@ class PolarsNamespace:
             version=self._version,
         )
 
+    def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
+        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
+        return self._expr(pl.struct(pl_exprs), version=self._version)
+
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
     ) -> PolarsExpr:

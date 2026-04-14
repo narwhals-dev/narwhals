@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
@@ -19,9 +20,10 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     from sqlframe.base.column import Column
 
@@ -237,5 +239,28 @@ class SparkLikeNamespace(
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
+            implementation=self._implementation,
+        )
+
+    def struct(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+        version = self._version
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            names_to_cols: Mapping[str, Column] = {
+                alias: native_expr
+                for expr in exprs
+                for native_expr, _, alias in zip_strict(
+                    expr(df), *evaluate_output_names_and_aliases(expr, df, [])
+                )
+            }
+            aliased = (col.alias(name) for name, col in names_to_cols.items())
+            return [F.struct(*aliased)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
             implementation=self._implementation,
         )

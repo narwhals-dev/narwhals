@@ -85,6 +85,18 @@ def test_toplevel() -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
+def test_struct() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 2], "b": ["dogs", None], "c": ["play", "walk"]}
+
+    df = nw_v2.from_native(pl.DataFrame(data))
+    result = df.select(my_struct=nw_v2.struct("a", "b"))
+    expected = {"my_struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": None}]}
+    assert_equal_data(result, expected)
+
+
 def test_when_then() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
