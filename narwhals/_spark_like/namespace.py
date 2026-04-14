@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._spark_like.dataframe import SparkLikeLazyFrame
 from narwhals._spark_like.expr import SparkLikeExpr
@@ -19,16 +20,17 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     from sqlframe.base.column import Column
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 # Adjust slight SQL vs PySpark differences
 FUNCTION_REMAPPINGS = {
@@ -216,5 +218,49 @@ class SparkLikeNamespace(
             evaluate_output_names=combine_evaluate_output_names(*exprs),
             alias_output_names=combine_alias_output_names(*exprs),
             version=self._version,
+            implementation=self._implementation,
+        )
+
+    def corr(
+        self, a: SparkLikeExpr, b: SparkLikeExpr, *, method: CorrelationMethod
+    ) -> SparkLikeExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for Spark."
+            raise NotImplementedError(msg)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F.corr(a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def struct(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+        version = self._version
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            names_to_cols: Mapping[str, Column] = {
+                alias: native_expr
+                for expr in exprs
+                for native_expr, _, alias in zip_strict(
+                    expr(df), *evaluate_output_names_and_aliases(expr, df, [])
+                )
+            }
+            aliased = (col.alias(name) for name, col in names_to_cols.items())
+            return [F.struct(*aliased)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
             implementation=self._implementation,
         )

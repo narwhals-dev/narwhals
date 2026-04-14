@@ -241,6 +241,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
 
 class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
+    _version = Version.V2
+
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V2  # noqa: S101
@@ -813,6 +815,19 @@ def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     return _stableify(nw.max_horizontal(*exprs))
 
 
+def corr(
+    a: IntoExpr, b: IntoExpr, method: Literal["pearson", "spearman"] = "pearson"
+) -> Expr:
+    """Compute the Pearson's or Spearman rank correlation between two columns.
+
+    Arguments:
+        a: Column name or Expression
+        b: Column name or Expression
+        method: Correlation method ('pearson' or 'spearman')
+    """
+    return _stableify(nw.corr(a, b, method=method))
+
+
 def concat_str(
     exprs: IntoExpr | Iterable[IntoExpr],
     *more_exprs: IntoExpr,
@@ -1130,6 +1145,20 @@ def scan_parquet(
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
+def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Expr:
+    """Collect columns into a struct column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a struct column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+        **named_exprs: Additional columns to collect into the struct column,
+            specified as keyword arguments. The columns will be renamed to the
+            keyword used.
+    """
+    return _stableify(nw_f.struct(*exprs, **named_exprs))
+
+
 __all__ = [
     "Array",
     "Binary",
@@ -1172,6 +1201,7 @@ __all__ = [
     "col",
     "concat",
     "concat_str",
+    "corr",
     "dependencies",
     "dtypes",
     "dtypes",
@@ -1210,6 +1240,7 @@ __all__ = [
     "selectors",
     "selectors",
     "show_versions",
+    "struct",
     "sum",
     "sum_horizontal",
     "to_native",

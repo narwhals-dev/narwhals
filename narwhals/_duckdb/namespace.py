@@ -19,23 +19,25 @@ from narwhals._duckdb.utils import (
     function,
     lit,
     narwhals_to_native_dtype,
+    sql_expression,
     when,
 )
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, IntoDType, PythonLiteral
+    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -164,4 +166,46 @@ class DuckDBNamespace(
             evaluate_output_names=lambda _df: ["len"],
             alias_output_names=None,
             version=self._version,
+        )
+
+    def corr(
+        self, a: DuckDBExpr, b: DuckDBExpr, *, method: CorrelationMethod
+    ) -> DuckDBExpr:
+        if method != "pearson":
+            msg = "Only 'pearson' correlation is supported for DuckDB."
+            raise NotImplementedError(msg)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return [F("corr", a_, b_)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
+    def struct(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+        version = self._version
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            names_to_cols: Mapping[str, Expression] = {
+                alias: native_expr
+                for expr in exprs
+                for native_expr, _, alias in zip_strict(
+                    expr(df), *evaluate_output_names_and_aliases(expr, df, [])
+                )
+            }
+            field_args = ", ".join(
+                f'"{name}" := {col}' for name, col in names_to_cols.items()
+            )
+            return [sql_expression(f"struct_pack({field_args})")]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
         )

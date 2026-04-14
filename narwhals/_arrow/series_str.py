@@ -54,9 +54,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
             pc.equal(self.slice(-len(suffix), None).native, lit(suffix))
         )
 
-    def contains(self, pattern: str, *, literal: bool) -> ArrowSeries:
-        check_func = pc.match_substring if literal else pc.match_substring_regex
-        return self.with_native(check_func(self.native, pattern))
+    def contains(self, pattern: ArrowSeries, *, literal: bool) -> ArrowSeries:
+        _, pattern_native = extract_native(self.compliant, pattern)
+        if not isinstance(pattern_native, pa.StringScalar):
+            msg = "`.str.contains` only supports str pattern values for pyarrow backend"
+            raise TypeError(msg)
+        fn = pc.match_substring if literal else pc.match_substring_regex
+        return self.with_native(fn(self.native, pattern_native.as_py()))
 
     def slice(self, offset: int, length: int | None) -> ArrowSeries:
         stop = offset + length if length is not None else None

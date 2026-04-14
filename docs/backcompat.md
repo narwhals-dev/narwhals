@@ -22,7 +22,7 @@ incompatibilities.
 Ever upgraded a package, only to find that it breaks all your tests because of an intentional
 API change? Did you end up having to litter your code with statements such as the following?
 
-```python
+```py
 if parse_version(pdx.__version__) < parse_version("1.3.0"):
     df = df.brewbeer()
 elif parse_version("1.3.0") <= parse_version(pdx.__version__) < parse_version("1.5.0"):
@@ -49,7 +49,7 @@ Narwhals offers a `stable` namespace, which allows you to write your code once a
 it. That is to say, if you write your code like this:
 
 === "from/to_native"
-    ```python
+    ```py
     import narwhals.stable.v2 as nw
     from narwhals.stable.v2.typing import IntoFrameT
 
@@ -59,7 +59,7 @@ it. That is to say, if you write your code like this:
     ```
 
 === "@narwhalify"
-    ```python
+    ```py
     import narwhals.stable.v2 as nw
     from narwhals.stable.v2.typing import FrameT
 
@@ -164,7 +164,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
 
 - Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
   write:
-  ```python
+  ```py
   import narwhals as nw
   import polars as pl
 
@@ -179,7 +179,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
 - Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
     has been deprecated in favour of `pass_through`. This is because several users expressed
     confusion/surprise over what `strict=False` did.
-    ```python
+    ```py
     # v1 syntax:
     nw.from_native(df, strict=False)
 
@@ -198,7 +198,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
     `time_zone`.
     The effect of this can be seen when placing these dtypes in sets:
 
-    ```python exec="1" source="above" session="backcompat"
+    ```python exec="yes" source="above" session="backcompat"
     import narwhals.stable.v1 as nw_v1
     import narwhals as nw
 
@@ -214,7 +214,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
     we recommend using `==` instead, as that works consistently
     across namespaces:
 
-    ```python exec="1" source="above" session="backcompat"
+    ```python exec="yes" source="above" session="backcompat"
     # Recommended
     assert nw.Datetime("us") == nw.Datetime
     assert nw_v1.Datetime("us") == nw_v1.Datetime

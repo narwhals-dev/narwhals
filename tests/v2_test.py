@@ -46,6 +46,7 @@ def test_toplevel() -> None:
         max=nw_v2.max("a"),
         mean=nw_v2.mean("a"),
         median=nw_v2.median("a"),
+        corr=nw_v2.corr("a", "a"),
         sum=nw_v2.sum("a"),
         sum_h=nw_v2.sum_horizontal("a"),
         min_h=nw_v2.min_horizontal("a"),
@@ -65,6 +66,7 @@ def test_toplevel() -> None:
         "max": [3, 3, 3],
         "mean": [2.0, 2.0, 2.0],
         "median": [2.0, 2.0, 2.0],
+        "corr": [1, 1, 1],
         "sum": [6, 6, 6],
         "sum_h": [1, 2, 3],
         "min_h": [1, 2, 3],
@@ -81,6 +83,18 @@ def test_toplevel() -> None:
     }
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.DataFrame)
+
+
+def test_struct() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 2], "b": ["dogs", None], "c": ["play", "walk"]}
+
+    df = nw_v2.from_native(pl.DataFrame(data))
+    result = df.select(my_struct=nw_v2.struct("a", "b"))
+    expected = {"my_struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": None}]}
+    assert_equal_data(result, expected)
 
 
 def test_when_then() -> None:

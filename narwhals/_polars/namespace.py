@@ -33,6 +33,7 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
+    corr: Method[PolarsExpr]
 
     _implementation: Implementation = Implementation.POLARS
     _version: Version
@@ -197,6 +198,10 @@ class PolarsNamespace:
             pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
             version=self._version,
         )
+
+    def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
+        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
+        return self._expr(pl.struct(pl_exprs), version=self._version)
 
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None

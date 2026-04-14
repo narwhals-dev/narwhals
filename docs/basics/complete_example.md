@@ -23,7 +23,7 @@ We can specify that in the `@nw.narwhalify` decorator by setting `eager_only=Tru
 the argument will be propagated to `nw.from_native`.
 
 === "from/to_native"
-    ```python
+    ```py
     from typing import Self
     import narwhals as nw
     from narwhals.typing import IntoDataFrameT
@@ -39,7 +39,7 @@ the argument will be propagated to `nw.from_native`.
     ```
 
 === "@narwhalify"
-    ```python
+    ```py
     from typing import Self
     import narwhals as nw
     from narwhals.typing import DataFrameT
@@ -59,7 +59,7 @@ the argument will be propagated to `nw.from_native`.
 We're going to take in a dataframe, and return a dataframe of the same type:
 
 === "from/to_native"
-    ```python
+    ```py
     from typing import Self
     import narwhals as nw
     from narwhals.typing import IntoFrameT
@@ -77,7 +77,7 @@ We're going to take in a dataframe, and return a dataframe of the same type:
     ```
 
 === "@narwhalify"
-    ```python
+    ```py
     from typing import Self
     import narwhals as nw
     from narwhals.typing import FrameT
@@ -103,7 +103,7 @@ default `eager_only=False`.
 Here is our dataframe-agnostic standard scaler:
 
 === "from/to_native"
-    ```python
+    ```py
     from typing import Self
     import narwhals as nw
     from narwhals.typing import IntoDataFrameT
@@ -127,7 +127,7 @@ Here is our dataframe-agnostic standard scaler:
     ```
 
 === "@narwhalify"
-    ```python exec="1" source="above" session="standard-scaler-example"
+    ```python exec="yes" source="above" session="standard-scaler-example"
     from typing import Self
     import narwhals as nw
     from narwhals.typing import DataFrameT
@@ -155,7 +155,7 @@ any eager-only features, we can pass a Polars LazyFrame to it and have it
 stay lazy!
 
 === "pandas"
-    ```python exec="true" source="material-block" result="python" session="standard-scaler-example"
+    ```python exec="yes" source="material-block" result="python" session="standard-scaler-example"
     import pandas as pd
 
     df_train = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 7]})
@@ -166,7 +166,7 @@ stay lazy!
     ```
 
 === "Polars"
-    ```python exec="true" source="material-block" result="python" session="standard-scaler-example"
+    ```python exec="yes" source="material-block" result="python" session="standard-scaler-example"
     import polars as pl
 
     df_train = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 7]})
