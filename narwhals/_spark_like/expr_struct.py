@@ -22,7 +22,7 @@ class SparkLikeExprStructNamespace(
 
         return self.compliant._with_elementwise(func).alias(name)
 
-    def unnest(self) -> SparkLikeExpr:  # pragma: no cover
+    def unnest(self) -> SparkLikeExpr:
         compliant = self.compliant
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
