@@ -1279,9 +1279,17 @@ class Expr:
             partition_by: Names of columns to compute window expression over.
                 Must be names of columns, as opposed to expressions -
                 so, this is a bit less flexible than Polars' `Expr.over`.
+                If not specified, the expression is computed over the entire frame
+                (i.e., no grouping is applied).
             order_by: Column(s) to order window functions by.
                 For lazy backends, this argument is required when `over` is applied
                 to order-dependent functions, see [order-dependence](../concepts/order_dependence.md).
+                When `order_by` is specified, the expression is evaluated on the frame
+                sorted by the given column(s), and, if applicable, the results are
+                returned with the original row order preserved.
+
+        Warning:
+            At least one of `partition_by` or `order_by` must be provided.
 
         Examples:
             >>> import pandas as pd
@@ -1310,6 +1318,22 @@ class Expr:
             |1  2  x                    3|
             |2  4  y                    4|
             └────────────────────────────┘
+
+            When `partition_by` is omitted, the expression is computed over the
+            entire frame. This is useful with `order_by` for order-dependent
+            operations without grouping:
+
+            >>> df_native = pd.DataFrame({"a": [3, 1, 2], "b": ["x", "y", "z"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="a"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |   a  b  a_cum_sum|
+            |0  3  x          6|
+            |1  1  y          1|
+            |2  2  z          3|
+            └──────────────────┘
         """
         flat_partition_by = flatten(partition_by)
         flat_order_by = [order_by] if isinstance(order_by, str) else (order_by or [])
