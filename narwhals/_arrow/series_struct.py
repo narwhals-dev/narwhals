@@ -22,5 +22,13 @@ class ArrowSeriesStructNamespace(ArrowSeriesNamespace, StructNamespace["ArrowSer
 
         native = self.native
         struct_type: pa.StructType = native.type
-        table = pa.table({n: pc.struct_field(native, n) for n in struct_type.names})
+
+        # NOTE: struct_type.names is not available until pyarrow 18.0.0
+        n_fields = struct_type.num_fields
+        table = pa.table(
+            {
+                struct_type.field(idx).name: pc.struct_field(native, idx)
+                for idx in range(n_fields)
+            }
+        )
         return ArrowDataFrame.from_native(table, context=self.compliant)
