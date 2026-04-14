@@ -277,13 +277,27 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    data = {"movie": ["Cars", "Toy Story"], "rating": [4.5, 4.9]}
+    from_dtype = nw.Struct(
+        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())]
+    )
 
-    native_df = constructor(data)
+    if "spark" in str(constructor):
+        data = {"movie": ["Cars", "Toy Story"], "rating": [4.5, 4.9]}
+        dframe = nw.from_native(constructor(data)).select(
+            a=nw.struct("movie", "rating").cast(from_dtype)
+        )
 
-    dtype = nw.Struct([nw.Field("movie", nw.String()), nw.Field("rating", nw.Float32())])
-    result = nw.from_native(native_df).select(a=nw.struct("movie", "rating").cast(dtype))
-    assert result.collect_schema() == {"a": dtype}
+    else:
+        data = {
+            "a": [{"movie": "Cars", "rating": 4.5}, {"movie": "Toy Story", "rating": 4.9}]
+        }
+        dframe = nw.from_native(constructor(data)).select(nw.col("a").cast(from_dtype))
+
+    to_dtype = nw.Struct(
+        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float32())]
+    )
+    result = dframe.select(nw.col("a").cast(to_dtype))
+    assert result.collect_schema() == {"a": to_dtype}
 
 
 def test_raise_if_polars_dtype(constructor: Constructor) -> None:
