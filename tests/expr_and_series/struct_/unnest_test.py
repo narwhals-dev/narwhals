@@ -7,6 +7,7 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -36,6 +37,9 @@ def test_unnest_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     ):
         pytest.skip()
 
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 30):
+        pytest.skip()
+
     df = nw.from_native(constructor(data)).select(user=user_expr, psw=psw_expr)
 
     result = df.select(nw.col("user").struct.unnest())
@@ -52,6 +56,9 @@ def test_unnest_expr_multi(
     if "pandas" in str(constructor) and (
         PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
     ):
+        pytest.skip()
+
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 30):
         pytest.skip()
 
     df = nw.from_native(constructor(data)).select(user=user_expr, psw=psw_expr)

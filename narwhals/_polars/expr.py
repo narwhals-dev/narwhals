@@ -522,4 +522,18 @@ class PolarsExprListNamespace(
 class PolarsExprStructNamespace(
     PolarsExprNamespace, PolarsStructNamespace[PolarsExpr, pl.Expr]
 ):
-    unnest: Method[PolarsExpr]
+    def unnest(self) -> PolarsExpr:
+        native = self.native
+        pl_version = self._expr._backend_version
+        if pl_version >= (1, 10, 0):
+            result = native.struct.unnest()
+        elif pl_version >= (0, 20, 30):  # pragma: no cover
+            result = native.struct.field("*")
+        else:  # pragma: no cover
+            found = ".".join(f"{d}" for d in pl_version)
+            msg = (
+                "`Expr.struct.unnest` is only available in 'polars>=0.20.30',\n"
+                f"found version {found!r}."
+            )
+            raise NotImplementedError(msg)
+        return self.compliant._with_native(result)
