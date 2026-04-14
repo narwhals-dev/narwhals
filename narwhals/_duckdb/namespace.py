@@ -28,7 +28,7 @@ from narwhals._expression_parsing import (
     evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation, zip_strict
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -194,8 +194,10 @@ class DuckDBNamespace(
             names_to_cols: Mapping[str, Expression] = {
                 alias: native_expr
                 for expr in exprs
-                for native_expr, _, alias in zip_strict(
-                    expr(df), *evaluate_output_names_and_aliases(expr, df, [])
+                for native_expr, _, alias in zip(
+                    expr(df),
+                    *evaluate_output_names_and_aliases(expr, df, []),
+                    strict=True,
                 )
             }
             field_args = ", ".join(

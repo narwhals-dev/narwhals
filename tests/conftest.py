@@ -215,9 +215,7 @@ def sqlframe_pyspark_lazy_constructor(obj: Data) -> NativeSQLFrame:  # pragma: n
     pytest.importorskip("sqlframe")
     pytest.importorskip("duckdb")
     session = sqlframe_session()
-    return session.createDataFrame(
-        [*zip(*obj.values(), strict=False)], schema=[*obj.keys()]
-    )
+    return session.createDataFrame([*zip(*obj.values(), strict=False)], schema=list(obj))
 
 
 @lru_cache(maxsize=1)

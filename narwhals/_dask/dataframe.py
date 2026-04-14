@@ -379,7 +379,7 @@ class DaskLazyFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on, strict=True)),
+            columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
         return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
@@ -394,7 +394,7 @@ class DaskLazyFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on, strict=True)),
+            columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
         df = self.native.merge(
             other_native.dropna(subset=left_on, how="any"),

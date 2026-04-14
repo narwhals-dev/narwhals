@@ -672,7 +672,7 @@ class DaskExpr(
             msg = "`replace_strict` requires an explicit value for `default` for dask backend."
             raise ValueError(msg)
 
-        mapping = dict(zip(old, new, strict=True))
+        mapping = dict(zip(old, new, strict=False))
         old_ = list(old)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:

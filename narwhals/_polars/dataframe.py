@@ -479,7 +479,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                     native = native.select(
                         *(
                             col
-                            for col, select in zip(native.columns, columns, strict=True)
+                            for col, select in zip(native.columns, columns, strict=False)
                             if select
                         )
                     )

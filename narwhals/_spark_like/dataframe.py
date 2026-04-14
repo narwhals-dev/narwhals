@@ -418,7 +418,7 @@ class SparkLikeLazyFrame(
         )
 
         rename_mapping = {
-            **dict(zip(right_on_, left_on_, strict=True)),
+            **dict(zip(right_on_, left_on_, strict=False)),
             **{
                 colname: f"{colname}{suffix}" if colname in left_columns else colname
                 for colname in right_cols_to_rename

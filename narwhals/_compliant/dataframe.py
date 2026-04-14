@@ -422,7 +422,7 @@ class EagerDataFrame(
                 compliant = compliant.simple_select(
                     *(
                         col
-                        for col, select in zip(compliant.columns, columns, strict=True)
+                        for col, select in zip(compliant.columns, columns, strict=False)
                         if select
                     )
                 )

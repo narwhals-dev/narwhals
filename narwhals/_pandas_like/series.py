@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import operator
 import warnings
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerSeries, EagerSeriesHist

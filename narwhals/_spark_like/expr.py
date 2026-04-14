@@ -380,7 +380,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         F = self._F
 
-        mapping = dict(zip(old, new, strict=True))
+        mapping = dict(zip(old, new, strict=False))
         mapping_expr = F.create_map([F.lit(x) for x in chain(*mapping.items())])
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
