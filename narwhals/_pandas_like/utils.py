@@ -708,3 +708,37 @@ def broadcast_series_to_index(
         return series_class(pa_array, index=index, name=native.name)
 
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
+
+
+def is_pandas_string_dtype(obj: Any, pdx: Any) -> TypeIs[pd.StringDtype]:
+    return hasattr(pdx, "StringDtype") and isinstance(obj, pdx.StringDtype)
+
+
+def binary_string_sum_fallback(left: pd.Series, right: Any, pdx: Any) -> pd.Series:
+    # Workaround some upstream issues:
+    # - https://github.com/pandas-dev/pandas/issues/64393
+    # - https://github.com/pandas-dev/pandas/issues/65220
+    left_dtype = left.dtype
+    left_dtype_str = str(left_dtype)
+    if left_dtype_str == "large_string[pyarrow]" and isinstance(right, str):
+        import pyarrow as pa  # ignore-banned-import
+
+        return left + pa.scalar(right, type=pa.large_string())
+    if isinstance(right, pdx.Series):
+        right_dtype = right.dtype
+        if left_dtype_str == "object":  # pragma: no cover
+            # Only for pandas pre 3.0. Anything is better than `object`, so take RHS.
+            return left.astype(right_dtype) + right
+        if hasattr(left.values, "__arrow_array__") and hasattr(
+            right.values, "__arrow_array__"
+        ):
+            import pyarrow as pa  # ignore-banned-import
+
+            left_arrow = left.values.__arrow_array__().type  # noqa: PD011  # type: ignore[attr-defined]
+            right_arrow = right.values.__arrow_array__().type  # noqa: PD011  # type: ignore[attr-defined]
+            if pa.types.is_string(left_arrow) and pa.types.is_large_string(right_arrow):
+                # LHS is smaller than RHS, so use the latter
+                return left.astype(right_dtype) + right
+        # Give precedence to the left-hand-side dtype.
+        return left + right.astype(left_dtype)
+    return left + right
