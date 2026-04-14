@@ -292,6 +292,8 @@ class MapBatches(Function):
     def is_elementwise(self) -> bool:
         return self.flags.is_elementwise()
 
+    is_length_preserving = is_elementwise
+
     def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
         from narwhals._plan.expressions import AnonymousExpr
 

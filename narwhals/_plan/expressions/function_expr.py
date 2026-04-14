@@ -46,7 +46,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         # -but says it's overly conservative.
         # That won't make sense here as this is pre-expansion
         # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-stream/src/physical_plan/lower_expr.rs#L364-L374
-        return FunctionFlags.LENGTH_PRESERVING in self.flags
+        return self.flags.is_length_preserving()
 
     def changes_length(self) -> bool:
         return self.flags.changes_length()

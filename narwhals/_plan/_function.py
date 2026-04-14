@@ -172,6 +172,10 @@ class Function(Immutable):
     def is_elementwise(self) -> bool:
         return self.__function_flags__.is_elementwise()
 
+    def is_length_preserving(self) -> bool:
+        return self.__function_flags__.is_length_preserving()
+
+    # TODO @dangotbanned: Change `not self.is_elementwise` to `not self.is_length_preserving`
     def _validate_input(self, input: Seq[ExprIR], /) -> Seq[ExprIR]:  # noqa: A002
         # NOTE: (Hacky) hook for arbitrary validation
         # Ideally this would be more declarative
@@ -188,7 +192,7 @@ class Function(Immutable):
                 The first input is the root and responsible for the output name.
         """
         # NOTE: Defined as a method to allow these guys to override:
-        # - `RollingWindow`, `MapBatches`, `RangeFunction`, `StructFunction`
+        # - `MapBatches`, `RangeFunction`, `StructFunction`
         return _import_function_expr()(input=self._validate_input(inputs), function=self)
 
     def __init_subclass__(

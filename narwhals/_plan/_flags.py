@@ -231,11 +231,17 @@ class FunctionFlags(enum.Flag):
         return super()._missing_(value)  # pragma: no cover
 
     def is_elementwise(self) -> bool:
-        return FunctionFlags.ELEMENTWISE in self
+        return _ELEMENTWISE in self
+
+    def is_length_preserving(self) -> bool:
+        return _LENGTH_PRESERVING in self
 
     def changes_length(self) -> bool:
         return self in _CHANGES_LENGTH
 
+
+_LENGTH_PRESERVING = FunctionFlags.LENGTH_PRESERVING
+_ELEMENTWISE = FunctionFlags.ELEMENTWISE
 
 # NOTE: Has to be exactly one of these, a set avoids this issue:
 #     `DEFAULT | ROW_SEPARABLE -> ROW_SEPARABLE`
