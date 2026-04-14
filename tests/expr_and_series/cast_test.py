@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -19,7 +19,6 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals._native import NativeSQLFrame
     from narwhals.typing import NonNestedDType
 
 DATA = {
@@ -270,7 +269,7 @@ def test_cast_datetime_utc(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
@@ -278,40 +277,27 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    data = {
-        "a": [{"movie ": "Cars", "rating": 4.5}, {"movie ": "Toy Story", "rating": 4.9}]
-    }
+    from_dtype = nw.Struct(
+        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())]
+    )
 
-    native_df = constructor(data)
-
-    # NOTE: This branch needs to be rewritten to **not depend** on private `SparkLikeLazyFrame` properties
-    if "spark" in str(constructor):  # pragma: no cover
-        # Special handling for pyspark as it natively maps the input to
-        # a column of type MAP<STRING, STRING>
-        native_ldf = cast("NativeSQLFrame", native_df)
-        _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
-        F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined]
-        T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
-
-        native_ldf = native_ldf.withColumn(
-            "a",
-            F.struct(
-                F.col("a.movie ").cast(T.StringType()).alias("movie "),
-                F.col("a.rating").cast(T.DoubleType()).alias("rating"),
-            ),
+    if "spark" in str(constructor):
+        data = {"movie": ["Cars", "Toy Story"], "rating": [4.5, 4.9]}
+        dframe = nw.from_native(constructor(data)).select(
+            a=nw.struct("movie", "rating").cast(from_dtype)
         )
-        assert nw.from_native(native_ldf).collect_schema() == nw.Schema(
-            {
-                "a": nw.Struct(
-                    [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
-                )
-            }
-        )
-        native_df = native_ldf
 
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
-    result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
-    assert result.schema == {"a": dtype}
+    else:
+        data = {
+            "a": [{"movie": "Cars", "rating": 4.5}, {"movie": "Toy Story", "rating": 4.9}]
+        }
+        dframe = nw.from_native(constructor(data)).select(nw.col("a").cast(from_dtype))
+
+    to_dtype = nw.Struct(
+        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float32())]
+    )
+    result = dframe.select(nw.col("a").cast(to_dtype))
+    assert result.collect_schema() == {"a": to_dtype}
 
 
 def test_raise_if_polars_dtype(constructor: Constructor) -> None:
