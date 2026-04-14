@@ -168,9 +168,8 @@ jobs:
           cd py-shiny
           git log
 
-      # TODO: Change to @main after posit-dev/py-shiny#2218 is merged
       - name: Narwhals integration setup
-        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-setup@schloerke/narwhals-ci-docker
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-setup@main
         with:
           shiny-dir: py-shiny
 
@@ -188,9 +187,8 @@ jobs:
           cd py-shiny
           uv pip freeze
 
-      # TODO: Change to @main after posit-dev/py-shiny#2218 is merged
       - name: Narwhals integration test
-        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-test@schloerke/narwhals-ci-docker
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-test@main
         with:
           shiny-dir: py-shiny
 
