@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._flags import FunctionFlags
@@ -13,7 +13,6 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions import FunctionExpr, StructExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType, Field, Struct
@@ -25,10 +24,11 @@ renamed = DispatcherOptions.renamed
 
 
 class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct")):
-    def to_function_expr(self, *inputs: ExprIR) -> StructExpr[Self]:
+    @classmethod
+    def __function_expr__(cls) -> type[StructExpr[Any]]:
         from narwhals._plan.expressions import StructExpr
 
-        return StructExpr(input=inputs, function=self)
+        return StructExpr
 
     @property
     def needs_expansion(self) -> bool:

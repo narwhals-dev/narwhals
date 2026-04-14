@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
@@ -12,7 +13,7 @@ from narwhals._plan.expressions.namespace import IRNamespace
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
+    from narwhals._plan.expressions import FunctionExpr as FExpr
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
@@ -34,11 +35,7 @@ class Join(ListFunction, dtype=map_first(dtm.list_join_dtype)):
     separator: str
     ignore_nulls: bool
 class Contains(ListFunction, dtype=dtm.BOOL):
-    """N-ary (expr, item)."""
-
-    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, item = node.input
-        return expr, item
+    __function_parameters__: ClassVar[params.Binary] = params.Binary(right=params.SCALAR)
 class Any(ListFunction, dtype=dtm.BOOL): ...
 class All(ListFunction, dtype=dtm.BOOL): ...
 class First(_ListInner): ...

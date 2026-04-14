@@ -131,7 +131,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._with_native(fn.cast(native, data_type), name)
 
     def pow(self, node: FExpr[Pow], frame: Frame, name: str) -> StoresNativeT_co:
-        base, exponent = node.function.unwrap_input(node)
+        base, exponent = node.input
         base_ = base.dispatch(self, frame, "base").native
         exponent_ = exponent.dispatch(self, frame, "exponent").native
         return self._with_native(fn.power(base_, exponent_), name)
@@ -139,7 +139,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def fill_null(
         self, node: FExpr[FillNull], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, value = node.function.unwrap_input(node)
+        expr, value = node.input
         native = expr.dispatch(self, frame, name).native
         value_ = value.dispatch(self, frame, "value").native
         return self._with_native(pc.fill_null(native, value_), name)
@@ -147,7 +147,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def is_between(
         self, node: FExpr[IsBetween], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, lower_bound, upper_bound = node.function.unwrap_input(node)
+        expr, lower_bound, upper_bound = node.input
         native = expr.dispatch(self, frame, name).native
         lower = lower_bound.dispatch(self, frame, "lower").native
         upper = upper_bound.dispatch(self, frame, "upper").native
@@ -214,7 +214,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def is_in_expr(
         self, node: FExpr[IsInExpr], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, other = node.function.unwrap_input(node)
+        expr, other = node.input
         right = other.dispatch(self, frame, name).native
         arr = fn.array(right) if isinstance(right, pa.Scalar) else right
         result = fn.is_in(expr.dispatch(self, frame, name).native, arr)
@@ -284,7 +284,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._unary_function(fn.floor)(node, frame, name)
 
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> StoresNativeT_co:
-        expr, lower, upper = node.function.unwrap_input(node)
+        expr, lower, upper = node.input
         result = fn.clip(
             expr.dispatch(self, frame, name).native,
             lower.dispatch(self, frame, name).native,
@@ -295,7 +295,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def clip_lower(
         self, node: FExpr[F.ClipLower], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, other = node.function.unwrap_input(node)
+        expr, other = node.input
         result = fn.clip_lower(
             expr.dispatch(self, frame, name).native,
             other.dispatch(self, frame, name).native,
@@ -305,7 +305,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def clip_upper(
         self, node: FExpr[F.ClipUpper], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, other = node.function.unwrap_input(node)
+        expr, other = node.input
         result = fn.clip_upper(
             expr.dispatch(self, frame, name).native,
             other.dispatch(self, frame, name).native,
@@ -323,7 +323,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
     ) -> StoresNativeT_co:
         func = node.function
-        expr, default_ = func.unwrap_input(node)
+        expr, default_ = node.input
         native = expr.dispatch(self, frame, name).native
         default = default_.dispatch(self, frame, name).native
         dtype = fn.dtype_native(func.return_dtype, self.version)
@@ -964,8 +964,7 @@ class ArrowListNamespace(
     def contains(
         self, node: FExpr[lists.Contains], frame: Frame, name: str
     ) -> Expr | Scalar:
-        func = node.function
-        expr, other = func.unwrap_input(node)
+        expr, other = node.input
         prev = expr.dispatch(self.compliant, frame, name)
         item = other.dispatch(self.compliant, frame, name)
         if isinstance(item, ArrowExpr):
@@ -1048,7 +1047,7 @@ class ArrowStringNamespace(
     ) -> Expr | Scalar:
         func = node.function
         pattern, literal, n = (func.pattern, func.literal, func.n)
-        expr, other = func.unwrap_input(node)
+        expr, other = node.input
         prev = expr.dispatch(self.compliant, frame, name)
         value = other.dispatch(self.compliant, frame, name)
         if isinstance(value, ArrowScalar):

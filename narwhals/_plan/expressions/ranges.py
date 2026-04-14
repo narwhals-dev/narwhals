@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import Function
-from narwhals._plan.exceptions import range_expr_non_scalar_error
 from narwhals._plan.typing import NonNestedLiteralT_co as T_co
 from narwhals._utils import qualified_type_name
 from narwhals.exceptions import InvalidOperationError
@@ -15,8 +15,7 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import ExprIR, RangeExpr
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.expressions import RangeExpr
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
 
@@ -27,18 +26,15 @@ namespaced = DispatcherOptions.namespaced
 
 
 class RangeFunction(Function, Generic[T_co], dispatch=namespaced()):
-    def _validate_input(self, input: Seq[ExprIR], /) -> Seq[ExprIR]:  # noqa: A002
-        if len(input) < 2:
-            msg = f"Expected at least 2 inputs for `{self!r}()`, but got `{len(input)}`.\n`{input}`"
-            raise InvalidOperationError(msg)
-        if not all(e.is_scalar() for e in input):
-            raise range_expr_non_scalar_error(input, self)
-        return input
+    __function_parameters__: ClassVar[params.Binary] = params.Binary(
+        params.SCALAR, params.SCALAR
+    )
 
-    def to_function_expr(self, *inputs: ExprIR) -> RangeExpr[Self]:
+    @classmethod
+    def __function_expr__(cls) -> type[RangeExpr[Any]]:
         from narwhals._plan.expressions import RangeExpr
 
-        return RangeExpr(input=self._validate_input(inputs), function=self)
+        return RangeExpr
 
     @classmethod
     def _valid_types(cls) -> tuple[type[T_co], ...]:
@@ -75,8 +71,6 @@ class RangeFunction(Function, Generic[T_co], dispatch=namespaced()):
 
 
 class IntRange(RangeFunction[int], dtype=get_dtype()):
-    """N-ary (start, end)."""
-
     __slots__ = ("step", "dtype")  # noqa: RUF023
     step: int
     dtype: IntegerType
@@ -87,8 +81,6 @@ class IntRange(RangeFunction[int], dtype=get_dtype()):
 
 
 class DateRange(RangeFunction[dt.date], dtype=dtm.DATE):
-    """N-ary (start, end)."""
-
     __slots__ = ("interval", "closed")  # noqa: RUF023
     interval: int
     closed: ClosedInterval
@@ -99,8 +91,6 @@ class DateRange(RangeFunction[dt.date], dtype=dtm.DATE):
 
 
 class LinearSpace(RangeFunction["int | float"], dtype=map_all(dtm.floats_dtype)):
-    """N-ary (start, end)."""
-
     __slots__ = ("num_samples", "closed")  # noqa: RUF023
     num_samples: int
     closed: ClosedInterval

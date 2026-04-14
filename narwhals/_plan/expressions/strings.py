@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.expressions.namespace import IRNamespace
-
-if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
-
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 ELEMENTWISE = FunctionFlags.ELEMENTWISE
@@ -39,29 +34,18 @@ class EndsWith(StringFunction, dtype=dtm.BOOL):
     __slots__ = ("suffix",)
     suffix: str
 class Replace(StringFunction, dtype=same_dtype()):
-    """N-ary (expr, value)."""
-
     __slots__ = ("literal", "n", "pattern")
     pattern: str
     literal: bool
     n: int
-    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, value = node.input
-        return expr, value
-
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 class ReplaceAll(StringFunction, dtype=same_dtype()):
-    """N-ary (expr, value)."""
-
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool
-    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:  # pragma: no cover
-        expr, value = node.input
-        return expr, value
-
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
     def to_replace_n(self, n: int) -> Replace:
         return Replace(pattern=self.pattern, literal=self.literal, n=n)
-
 class Slice(StringFunction, dtype=same_dtype()):
     __slots__ = ("length", "offset")
     offset: int

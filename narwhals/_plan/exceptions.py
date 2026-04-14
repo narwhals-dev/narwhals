@@ -1,6 +1,5 @@
 """Exceptions and tools to format them."""
 
-# ruff: noqa: A002
 from __future__ import annotations
 
 from collections import Counter
@@ -52,20 +51,17 @@ def function_expr_invalid_operation_error(
     return InvalidOperationError(msg)
 
 
-def range_expr_non_scalar_error(
-    input: Sequence[ir.ExprIR], function: Function
-) -> ShapeError:
-    arg_name, arg_value = (
-        ("start", input[0]) if not (input[0].is_scalar()) else ("end", input[1])
-    )
-    return function_arg_non_scalar_error(function, arg_name, arg_value)
-
-
-def function_arg_non_scalar_error(
-    function: Function, arg_name: str, arg_value: Any
-) -> ShapeError:
-    msg = f"`{function!r}({arg_name}=...)` does not support non-scalar expression `{arg_value!r}`."
+def function_arg_non_scalar_error(function: Function, value: Any) -> ShapeError:
+    msg = f"`{function!r}` does not support non-scalar expressions, got: `{value!r}`."
     return ShapeError(msg)
+
+
+def function_arity_error(
+    function: Function, arity: Literal[1, 2, 3, "*"], inputs: Collection[ir.ExprIR]
+) -> TypeError:
+    exprs = "" if not inputs else f":\n{format_expressions(*inputs)}"
+    msg = f"Expected {arity} {'input' if arity == 1 else 'inputs'} for `{function!r}()`, got {len(inputs)}{exprs}"
+    return TypeError(msg)
 
 
 def literal_type_error(value: Any) -> TypeError:

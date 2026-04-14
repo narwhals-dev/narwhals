@@ -3,9 +3,10 @@ from __future__ import annotations
 # NOTE: Needed to avoid naming collisions
 # - Any
 import typing as t
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, ClassVar, Generic
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
@@ -13,8 +14,6 @@ from narwhals._plan._function import Function, HorizontalFunction
 from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions import FunctionExpr as FExpr
     from narwhals._plan.expressions.literal import LitSeries
@@ -51,14 +50,9 @@ class IsUnique(BooleanFunction, flags=LENGTH_PRESERVING): ...
 class Not(BooleanFunction, dispatch=renamed("not_"), dtype=map_first(lambda dtype: dtype if dtype.is_integer() else dtm.BOOL)): ...
 # fmt: on
 class IsBetween(BooleanFunction):
-    """N-ary (expr, lower_bound, upper_bound)."""
-
     __slots__ = ("closed",)
     closed: ClosedInterval
-
-    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
-        expr, lower_bound, upper_bound = node.input
-        return expr, lower_bound, upper_bound
+    __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
 
 
 class IsInSeq(BooleanFunction):
@@ -91,18 +85,8 @@ class IsInSeries(BooleanFunction, Generic[NativeSeriesT_co]):
 
 
 class IsInExpr(BooleanFunction):
-    """N-ary (expr, other).
-
-    Note:
-        If we get to a stage where `narwhals` has wide support for `list`, and
-        accepts them in `lit(...)` - *consider* [restricting to non-equal types].
-
-    [restricting to non-equal types]: https://github.com/pola-rs/polars/pull/22178
-    """
-
-    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, other = node.input
-        return expr, other
+    # NOTE: *Consider* restricting to non-equal types (https://github.com/pola-rs/polars/pull/22178)
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
     def __repr__(self) -> str:
         return "is_in"

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _parameters as params
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import Function, HorizontalFunction
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
     from _typeshed import ConvertibleToInt
     from typing_extensions import Self
 
-    from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.expressions import AnonymousExpr, FunctionExpr
     from narwhals._plan.options import (
         EWMOptions,
@@ -55,17 +55,11 @@ class ModeAny(_SameDType, flags=AGGREGATION): ...
 class Kurtosis(Function, flags=AGGREGATION, dtype=dtm.F64): ...
 class Skew(Function, flags=AGGREGATION, dtype=dtm.F64): ...
 class Clip(_SameDType, flags=ELEMENTWISE):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR, ExprIR]:
-        expr, lower_bound, upper_bound = node.input
-        return expr, lower_bound, upper_bound
+    __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
 class ClipLower(_SameDType, flags=ELEMENTWISE):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, lower_bound = node.input
-        return expr, lower_bound
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 class ClipUpper(_SameDType, flags=ELEMENTWISE):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, upper_bound = node.input
-        return expr, upper_bound
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 class CumAgg(Function, flags=LENGTH_PRESERVING):
     __slots__ = ("reverse",)
     reverse: bool
@@ -167,11 +161,7 @@ class Log(Function, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)):
 
 
 class Pow(Function, flags=ELEMENTWISE):
-    """N-ary (base, exponent)."""
-
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        base, exponent = node.input
-        return base, exponent
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
@@ -183,11 +173,7 @@ class Pow(Function, flags=ELEMENTWISE):
 
 
 class FillNull(Function, flags=ELEMENTWISE):
-    """N-ary (expr, value)."""
-
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, value = node.input
-        return expr, value
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
     # TODO @dangotbanned: `map_to_supertype`
     def resolve_dtype(
@@ -257,9 +243,7 @@ class ReplaceStrict(Function, flags=ELEMENTWISE):
 # Similar to `ReplaceStrict.resolve_dtype`
 # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
 class ReplaceStrictDefault(ReplaceStrict):
-    def unwrap_input(self, node: FunctionExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, default = node.input
-        return expr, default
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
 
 class GatherEvery(_SameDType):
@@ -294,10 +278,11 @@ class MapBatches(Function):
 
     is_length_preserving = is_elementwise
 
-    def to_function_expr(self, *inputs: ExprIR) -> AnonymousExpr:
+    @classmethod
+    def __function_expr__(cls) -> type[AnonymousExpr]:
         from narwhals._plan.expressions import AnonymousExpr
 
-        return AnonymousExpr(input=self._validate_input(inputs), function=self)
+        return AnonymousExpr
 
 
 class SampleN(_SameDType):

@@ -15,7 +15,11 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._parse import into_iter_expr_ir
-from narwhals._plan.expressions import functions as F, operators as ops
+from narwhals._plan.expressions import (
+    aggregation as agg,
+    functions as F,
+    operators as ops,
+)
 from narwhals._plan.expressions.ranges import IntRange
 from narwhals._utils import Implementation
 from narwhals.dtypes import DType, Int64, List, Struct
@@ -173,30 +177,35 @@ def test_agg_non_elementwise_range_special() -> None:
     assert isinstance(e_ir.expr.input[1], ir.Len)
 
 
+def test_function_arity_invalid() -> None:
+    expr_s = re.escape("col('a').first()")
+    function = re.escape("int_range()")
+    pattern = re_compile(rf"Expected 2 inputs for `{function}`, got 1:\n  {expr_s}")
+    with pytest.raises(TypeError, match=pattern):
+        IntRange(step=1, dtype=nw.Int64()).to_function_expr(agg.First(expr=ir.col("a")))
+
+
 def test_int_range_invalid() -> None:
-    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar.+col"):
+    with pytest.raises(ShapeError, match=r"int_range.+non-scalar.+col"):
         nwp.int_range(nwp.col("a"))
-    with pytest.raises(ShapeError, match=r"int_range.+start.+non-scalar"):
+    with pytest.raises(ShapeError, match=r"int_range.+non-scalar.+by_index"):
         nwp.int_range(nwp.nth(1), 10)
-    with pytest.raises(ShapeError, match=r"int_range.+start.+non-scalar.+filter"):
+    with pytest.raises(ShapeError, match=r"int_range.+non-scalar.+filter"):
         nwp.int_range(nwp.col("a").filter(nwp.col("a") == 1), 100)
-    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar.+abs"):
+    with pytest.raises(ShapeError, match=r"int_range.+non-scalar.+abs"):
         nwp.int_range(0, nwp.col("a").abs())
-    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar"):
+    with pytest.raises(ShapeError, match=r"int_range.+non-scalar.+\+"):
         nwp.int_range(nwp.col("a") + 1)
-    with pytest.raises(ShapeError, match=r"int_range.+end.+non-scalar.+keep"):
+    with pytest.raises(ShapeError, match=r"int_range.+non-scalar.+keep"):
         nwp.int_range((1 + nwp.col("b")).name.keep())
-    int_range = IntRange(step=1, dtype=nw.Int64())
-    with pytest.raises(InvalidOperationError, match=r"at least 2 inputs.+int_range"):
-        int_range.to_function_expr(ir.col("a"))
 
 
 def test_date_range_invalid() -> None:
     start, end = dt.date(2000, 1, 1), dt.date(2001, 1, 1)
-    with pytest.raises(ShapeError, match=r"date_range.+start.+non-scalar"):
+    with pytest.raises(ShapeError, match=r"date_range.+non-scalar.+col"):
         nwp.date_range(nwp.col("a"), nwp.col("b"))
-    with pytest.raises(ShapeError, match=r"date_range.+end.+non-scalar"):
-        nwp.date_range(start, nwp.col("b"))
+    with pytest.raises(ShapeError, match=r"date_range.+non-scalar.+all"):
+        nwp.date_range(start, nwp.all())
     with pytest.raises(TypeError, match=r"`closed` must be one of.+, got.+middle"):
         nwp.date_range(start, end, closed="middle")  # type: ignore[call-overload]
     with pytest.raises(

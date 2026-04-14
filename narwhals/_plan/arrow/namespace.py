@@ -12,7 +12,7 @@ from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.compliant.translate import FromDict, FromIterable
-from narwhals._plan.exceptions import range_expr_non_scalar_error
+from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -239,11 +239,15 @@ class ArrowNamespace(
         func = node.function
         if fastpath := func.try_unwrap_literals(node):
             return fastpath
-        start = self._expr.from_ir(node.input[0], frame, "")
-        end = self._expr.from_ir(node.input[1], frame, "")
+        _start, _end = node.input
+        start = self._expr.from_ir(_start, frame, "")
+        end = self._expr.from_ir(_end, frame, "")
         if isinstance(start, self._scalar) and isinstance(end, self._scalar):
             return func.ensure_py_scalars(start.to_python(), end.to_python())
-        raise range_expr_non_scalar_error(node.input, func)
+        # TODO @dangotbanned: Add some variant of `self._expr.from_ir` that ensures we got a `ArrowScalar`
+        # This should be unreachable, but the typing doesn't know that
+        bad = _start if isinstance(start, self._scalar) else _end
+        raise function_arg_non_scalar_error(func, bad)
 
     def _int_range(
         self, start: int, end: int, step: int, dtype: IntegerType, /

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from narwhals._plan import _parse
-from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._plan.expressions.lists import IRListNamespace
 from narwhals._plan.expressions.namespace import ExprNamespace
 from narwhals._plan.options import SortOptions
@@ -51,8 +50,6 @@ class ExprListNamespace(ExprNamespace[IRListNamespace]):
     def contains(self, item: IntoExpr) -> Expr:
         item_ir = _parse.into_expr_ir(item, str_as_lit=True)
         contains = self._ir.contains()
-        if not item_ir.is_scalar():
-            raise function_arg_non_scalar_error(contains, "item", item_ir)
         return self._expr._from_ir(contains.to_function_expr(self._expr._ir, item_ir))
 
     def join(self, separator: str, *, ignore_nulls: bool = True) -> Expr:

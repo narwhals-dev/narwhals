@@ -36,23 +36,22 @@ Interestingly, that meant:
 from __future__ import annotations
 
 from functools import cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.exceptions import function_expr_invalid_operation_error
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from typing import Any, ClassVar
+    from typing import ClassVar
 
     from typing_extensions import Self
 
     from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Seq
 
 __all__ = ["Function", "HorizontalFunction"]
 
@@ -61,8 +60,6 @@ namespaced = DispatcherOptions.namespaced
 ELEMENTWISE = FunctionFlags.ELEMENTWISE
 
 
-# TODO @dangotbanned: Introduce the concept of *arity* + replace `unwrap_input`
-# TODO @dangotbanned: `RangeExpr` (and probably others) have input shape requirements
 class Function(Immutable):
     r"""A general transformation applied to an expression.
 
@@ -102,6 +99,9 @@ class Function(Immutable):
     See Also:
         `narwhals._plan._function.py` doc for implementation notes
     """
+
+    __function_parameters__: ClassVar[params.Parameters] = params.Unary()
+    """Defines the number of expression arguments accepted and any constraints each has."""
 
     __function_flags__: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT
     """Defines properties of the function.
@@ -172,28 +172,23 @@ class Function(Immutable):
     def is_elementwise(self) -> bool:
         return self.__function_flags__.is_elementwise()
 
-    def is_length_preserving(self) -> bool:
+    def is_length_preserving(self) -> bool:  # pragma: no cover
         return self.__function_flags__.is_length_preserving()
 
-    # TODO @dangotbanned: Change `not self.is_elementwise` to `not self.is_length_preserving`
-    def _validate_input(self, input: Seq[ExprIR], /) -> Seq[ExprIR]:  # noqa: A002
-        # NOTE: (Hacky) hook for arbitrary validation
-        # Ideally this would be more declarative
-        parent = input[0]
-        if parent.is_scalar() and not self.is_elementwise():
-            raise function_expr_invalid_operation_error(self, parent)
-        return input
+    @classmethod
+    def __function_expr__(cls) -> type[FunctionExpr[Self]]:
+        """Return the `ExprIR` subclass this function should be wrapped with."""
+        return _import_function_expr()
 
     def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
-        """Wrap this `Function` in a `FunctionExpr`.
+        """Wrap this function as an expression.
 
         Arguments:
             *inputs: Expression arguments for the function.
                 The first input is the root and responsible for the output name.
         """
-        # NOTE: Defined as a method to allow these guys to override:
-        # - `MapBatches`, `RangeFunction`, `StructFunction`
-        return _import_function_expr()(input=self._validate_input(inputs), function=self)
+        exprs = self.__function_parameters__.check(self, inputs)
+        return self.__function_expr__()(input=exprs, function=self)
 
     def __init_subclass__(
         cls: type[Self],
@@ -289,10 +284,11 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
     [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
     """
 
-    def to_function_expr(self, *inputs: ExprIR) -> HorizontalExpr[Self]:
-        return _import_horizontal_expr()(
-            input=self._validate_input(inputs), function=self
-        )
+    __function_parameters__: ClassVar[params.Variadic] = params.Variadic()
+
+    @classmethod
+    def __function_expr__(cls) -> type[HorizontalExpr[Self]]:
+        return _import_horizontal_expr()
 
 
 @cache
