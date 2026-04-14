@@ -26,13 +26,31 @@ if TYPE_CHECKING:
 renamed = DispatcherOptions.renamed
 
 
+# TODO @dangotbanned: How painful will a rename for `input` -> `args` be?
 # TODO @dangotbanned: Docs should complement `Function`
 # - The two are very tightly coupled
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
+    """An expression wrapping a function and it's arguments.
+
+    Arguments:
+        input: Expression arguments to the function.
+        function: The function to apply, which may contain non-expression arguments.
+
+    ## What to doc?
+    - What things are functions?
+        - (Mostly) non-aggregating functions
+        - Data type namespaces
+        - Horizontal functions
+        - Range functions
+        - UDFs
+    - So what is a `FunctionExpr` then?
+        - ...
+    - What behaviors can we describe with this type?
+    """
+
     __slots__ = ("function", "input")
     input: Seq[ExprIR] = nodes()
     function: FunctionT_co
-    """Operation applied to each element of `input`."""
 
     @property
     def flags(self) -> FunctionFlags:
