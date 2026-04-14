@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -13,6 +14,19 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
 )
+
+
+def skip_if_old_version(constructor: Constructor | ConstructorEager) -> None:
+    if (
+        (
+            "pandas" in str(constructor)
+            and (PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0))
+        )
+        or ("polars" in str(constructor) and POLARS_VERSION < (0, 20, 30))
+        or ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3))
+    ):
+        pytest.skip()
+
 
 data = {
     "id": [0, 1],
@@ -32,13 +46,7 @@ def test_unnest_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     if any(backend in str(constructor) for backend in ("dask",)):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and (
-        PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
-    ):
-        pytest.skip()
-
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 30):
-        pytest.skip()
+    skip_if_old_version(constructor)
 
     df = nw.from_native(constructor(data)).select(user=user_expr, psw=psw_expr)
 
@@ -53,13 +61,7 @@ def test_unnest_expr_multi(
     if any(backend in str(constructor) for backend in ("dask",)):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor) and (
-        PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
-    ):
-        pytest.skip()
-
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 30):
-        pytest.skip()
+    skip_if_old_version(constructor)
 
     df = nw.from_native(constructor(data)).select(user=user_expr, psw=psw_expr)
 
@@ -74,10 +76,7 @@ def test_unnest_expr_multi(
 
 
 def test_unnest_series(constructor_eager: ConstructorEager) -> None:
-    if "pandas" in str(constructor_eager) and (
-        PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
-    ):
-        pytest.skip()
+    skip_if_old_version(constructor_eager)
 
     df = nw.from_native(constructor_eager(data), eager_only=True).select(user=user_expr)
 
