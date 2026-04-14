@@ -1288,7 +1288,7 @@ class Expr:
                 sorted by the given column(s), and, if applicable, the results are
                 returned with the original row order preserved.
 
-        Warning:
+        Note:
             At least one of `partition_by` or `order_by` must be provided.
 
         Examples:
@@ -1306,34 +1306,32 @@ class Expr:
             |2  4  y                4|
             └────────────────────────┘
 
-            Cumulative operations are also supported, but (currently) only for
-            pandas and Polars:
-
-            >>> df.with_columns(a_cum_sum_per_group=nw.col("a").cum_sum().over("b"))
-            ┌────────────────────────────┐
-            |     Narwhals DataFrame     |
-            |----------------------------|
-            |   a  b  a_cum_sum_per_group|
-            |0  1  x                    1|
-            |1  2  x                    3|
-            |2  4  y                    4|
-            └────────────────────────────┘
-
             When `partition_by` is omitted, the expression is computed over the
             entire frame. This is useful with `order_by` for order-dependent
             operations without grouping:
 
-            >>> df_native = pd.DataFrame({"a": [3, 1, 2], "b": ["x", "y", "z"]})
-            >>> df = nw.from_native(df_native)
-            >>> df.with_columns(a_cum_sum=nw.col("a").cum_sum().over(order_by="a"))
-            ┌──────────────────┐
-            |Narwhals DataFrame|
-            |------------------|
-            |   a  b  a_cum_sum|
-            |0  3  x          6|
-            |1  1  y          1|
-            |2  2  z          3|
-            └──────────────────┘
+
+            >>> import duckdb
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {"a": [3, 1, 2], "b": ["x", "y", "z"]}
+            >>> _table = pa.table(data)
+            >>> df = nw.from_native(duckdb.table("_table"))
+            >>> expr = nw.col("a").cum_sum().over(order_by="a")
+            >>> df.with_columns(a_cum_sum=expr).sort("a")
+            ┌───────────────────────────────┐
+            |      Narwhals LazyFrame       |
+            |-------------------------------|
+            |┌───────┬─────────┬───────────┐|
+            |│   a   │    b    │ a_cum_sum │|
+            |│ int64 │ varchar │  int128   │|
+            |├───────┼─────────┼───────────┤|
+            |│     1 │ y       │         1 │|
+            |│     2 │ z       │         3 │|
+            |│     3 │ x       │         6 │|
+            |└───────┴─────────┴───────────┘|
+            └───────────────────────────────┘
         """
         flat_partition_by = flatten(partition_by)
         flat_order_by = [order_by] if isinstance(order_by, str) else (order_by or [])
