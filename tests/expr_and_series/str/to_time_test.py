@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -31,6 +31,7 @@ def is_pandaslike_without_pyarrow(constructor: Constructor | ConstructorEager) -
     )
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
 def test_to_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if is_pandaslike_without_pyarrow(constructor) or (
         "pyspark" in str(constructor) or "dask" in str(constructor)
@@ -49,6 +50,7 @@ def test_to_time(request: pytest.FixtureRequest, constructor: Constructor) -> No
     assert str(result.item(row=0, column="b")) == expected
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
 def test_to_time_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
@@ -71,6 +73,7 @@ def test_to_time_series(
     ("data", "expected"),
     [({"a": ["12:34:56"]}, "12:34:56"), ({"a": ["12:34"]}, "12:34:00")],
 )
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
 def test_to_time_infer_fmt(
     request: pytest.FixtureRequest,
     constructor: Constructor,
@@ -103,6 +106,7 @@ def test_to_time_infer_fmt(
     ("data", "expected"),
     [({"a": ["12:34:56"]}, "12:34:56"), ({"a": ["12:34"]}, "12:34:00")],
 )
+@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
 def test_to_time_series_infer_fmt(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
