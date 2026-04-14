@@ -93,14 +93,6 @@ class PandasLikeSeriesStringNamespace(
         return self.to_datetime(format=format).dt.date()
 
     def to_time(self, format: str | None) -> PandasLikeSeries:
-        if not is_dtype_pyarrow(self.native.dtype):
-            msg = (
-                "This operation requires a pyarrow-backed series. "
-                "Please refer to https://narwhals-dev.github.io/narwhals/api-reference/narwhals/#narwhals.maybe_convert_dtypes "
-                "and ensure you are using dtype_backend='pyarrow'. "
-                "Additionally, make sure you have pandas version 1.5+ and pyarrow installed. "
-            )
-            raise TypeError(msg)
         time_dtype = self.version.dtypes.Time()
         return self.with_native(self._to_datetime(format, utc=False)).cast(time_dtype)
 
