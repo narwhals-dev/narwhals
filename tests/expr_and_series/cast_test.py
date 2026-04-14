@@ -289,10 +289,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
 
     else:
         data = {
-            "a": [
-                {"movie ": "Cars", "rating": 4.5},
-                {"movie ": "Toy Story", "rating": 4.9},
-            ]
+            "a": [{"movie": "Cars", "rating": 4.5}, {"movie": "Toy Story", "rating": 4.9}]
         }
         dframe = nw.from_native(constructor(data)).select(nw.col("a").cast(from_dtype))
 
