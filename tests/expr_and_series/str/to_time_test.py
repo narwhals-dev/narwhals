@@ -28,9 +28,7 @@ def requires_time_support(
             )
 
         if PYARROW_VERSION == (0, 0, 0):
-            request.applymarker(
-                pytest.mark.xfail(reason="pandas requires pyarrow for the Time dtype")
-            )
+            pytest.skip("pandas requires pyarrow for the Time dtype")
 
     if "pyspark" in str(constructor) or "dask" in str(constructor):
         request.applymarker(
