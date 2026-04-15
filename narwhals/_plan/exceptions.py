@@ -52,7 +52,7 @@ def function_expr_invalid_operation_error(
 
 
 def function_arg_non_scalar_error(function: Function, value: Any) -> ShapeError:
-    msg = f"`{function!r}` does not support non-scalar expressions, got: `{value!r}`."
+    msg = f"`{function!r}()` does not support non-scalar expressions, got: `{value!r}`."
     return ShapeError(msg)
 
 

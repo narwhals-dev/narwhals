@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expansion import Expander
+    from narwhals._plan._parameters import Parameters
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
@@ -104,6 +105,11 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         children = tuple(ctx.only(self, child) for child in non_root) if non_root else ()
         for root in input_root.iter_expand(ctx):
             yield self.__replace__(input=(root, *children))
+
+    # TODO @dangotbanned: Add `Function.parameters` and make *that* generic
+    @property
+    def parameters(self) -> Parameters[Seq[ExprIR]]:
+        return self.function.__function_parameters__
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):

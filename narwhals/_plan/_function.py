@@ -84,6 +84,10 @@ class Function(Immutable):
 
     Whereas **classes** encode most of the details, like...
 
+    What do we require of the expression argument(s)?
+    >>> F.Shift.__function_parameters__
+    Unary(DEFAULT)
+
     What properties does the function have?
     >>> F.Shift.__function_flags__
     <FunctionFlags.LENGTH_PRESERVING: 4>
