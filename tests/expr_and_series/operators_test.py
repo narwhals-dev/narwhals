@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
-from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DASK_VERSION, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 
 @pytest.mark.parametrize(

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor
 
 data = {"a": [1, 3, None, None], "b": [4, None, 6, None], "z": [3, 1, None, None]}
 expected_values = [4, 3, 6, None]

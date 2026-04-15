@@ -9,17 +9,12 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin
-from tests.utils import (
-    DUCKDB_VERSION,
-    PANDAS_VERSION,
-    assert_equal_data,
-    pyspark_session,
-    sqlframe_session,
-)
+from narwhals.testing.constructors import pyspark_session, sqlframe_session
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import LazyAllowed, SparkLike
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 
 data = {"a": [1, 2, 3], "b": ["x", "y", "z"]}

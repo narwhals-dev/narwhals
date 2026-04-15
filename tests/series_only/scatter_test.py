@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
+from tests.utils import assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
     from collections.abc import Collection
+
+    from narwhals.testing.typing import ConstructorEager
 
 
 def series(frame: ConstructorEager, name: str, values: Collection[Any]) -> nw.Series[Any]:

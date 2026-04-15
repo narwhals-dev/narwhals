@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals as nw
-from tests.utils import ConstructorEager, is_windows
+from tests.utils import is_windows
 
 if TYPE_CHECKING:
     import pytest
+
+    from narwhals.testing.typing import ConstructorEager
 
 
 def test_write_csv(

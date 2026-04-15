@@ -5,15 +5,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import PANDAS_VERSION, PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import DTypeBackend
 
 data = {"a": [-1, 0, 1, 2, 4]}

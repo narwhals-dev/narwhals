@@ -11,7 +11,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 
 def test_to_arrow(constructor_eager: ConstructorEager) -> None:

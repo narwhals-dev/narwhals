@@ -6,7 +6,7 @@ import sys
 import warnings
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, Callable
 
 import pytest
 
@@ -19,12 +19,10 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     import pandas as pd
-    from pyspark.sql import SparkSession
-    from sqlframe.duckdb import DuckDBSession
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeLazyFrame
-    from narwhals.typing import Frame, IntoDataFrame, TimeUnit
+    from narwhals.testing.typing import Constructor, ConstructorEager
+    from narwhals.typing import Frame, TimeUnit
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -44,9 +42,6 @@ PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
 
-Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
-ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
-ConstructorLazy: TypeAlias = Callable[[Any], "NativeLazyFrame"]
 ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
@@ -174,33 +169,6 @@ def assert_equal_hash(left: Any, right: Any) -> None:
     )
 
 
-def sqlframe_session() -> DuckDBSession:
-    from sqlframe.duckdb import DuckDBSession
-
-    # NOTE: `__new__` override inferred by `pyright` only
-    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
-    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
-
-
-def pyspark_session() -> SparkSession:  # pragma: no cover
-    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
-    else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-    builder = (
-        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-        if is_spark_connect
-        else builder.master("local[1]").config("spark.ui.enabled", "false")
-    )
-    return (
-        builder.config("spark.default.parallelism", "1")
-        .config("spark.sql.shuffle.partitions", "2")
-        .config("spark.sql.session.timeZone", "UTC")
-        .getOrCreate()
-    )
-
-
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
     """Convert a pandas DataFrame to a Modin DataFrame if Modin is available."""
     try:
@@ -230,10 +198,7 @@ def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
 
 def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
     """Checks if the pandas-like constructor uses pyarrow backend."""
-    return constructor.__name__ in {
-        "pandas_pyarrow_constructor",
-        "modin_pyarrow_constructor",
-    }
+    return str(constructor) in {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
 
 
 def maybe_collect(df: Frame) -> Frame:

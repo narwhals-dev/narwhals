@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor, ConstructorEager
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 data = {"a": [[3, None, 2, 2, 4, None], [-1], None, [None, None, None], []]}
 expected = [4, -1, None, None, None]

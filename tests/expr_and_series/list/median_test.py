@@ -9,7 +9,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, is_windows
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor, ConstructorEager
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 data = {"a": [[3, None, 2, 2, 4, None], [-1], None, [None, None, None], [], [3, 4, None]]}
 expected = [2.5, -1, None, None, None, 3.5]

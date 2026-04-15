@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from narwhals.testing.typing import Constructor
 
 
 def test_to_native(constructor: Constructor) -> None:

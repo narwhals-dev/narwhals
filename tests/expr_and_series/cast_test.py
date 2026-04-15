@@ -9,8 +9,6 @@ import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     time_unit_compat,
@@ -19,6 +17,7 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import NonNestedDType
 
 DATA = {

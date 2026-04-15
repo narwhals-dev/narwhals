@@ -8,7 +8,7 @@ import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from narwhals.testing.typing import Constructor
 
 
 def test_order_dependent_raises_in_lazy(constructor: Constructor) -> None:

@@ -18,7 +18,7 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor, ConstructorEager
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
 

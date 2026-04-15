@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import ConstructorEager
 
 
 def test_pivot(

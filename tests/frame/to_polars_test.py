@@ -9,7 +9,7 @@ import narwhals as nw
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 pytest.importorskip("polars")
 import polars as pl

@@ -9,19 +9,15 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, PerformanceWarning
-from tests.utils import (
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    assert_equal_hash,
-    pyspark_session,
-)
+from narwhals.testing.constructors import pyspark_session
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, assert_equal_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from narwhals.testing.typing import Constructor
     from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
-    from tests.utils import Constructor, ConstructorPandasLike, NestedOrEnumDType
+    from tests.utils import ConstructorPandasLike, NestedOrEnumDType
 
 
 @pytest.mark.parametrize("time_unit", ["us", "ns", "ms"])

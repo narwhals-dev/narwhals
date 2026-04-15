@@ -7,10 +7,11 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.dependencies import get_cudf, get_modin, get_polars
-from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import Arrow, Dask, IntoBackend, Modin, Pandas, Polars
+    from narwhals.testing.typing import Constructor
 
 
 data = {"a": [1, 2], "b": [3, 4]}

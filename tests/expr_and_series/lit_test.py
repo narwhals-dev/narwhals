@@ -12,12 +12,12 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
-    Constructor,
     assert_equal_data,
 )
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.testing.typing import Constructor
     from narwhals.typing import IntoDType, PythonLiteral
 
 

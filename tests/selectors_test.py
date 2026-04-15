@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 
@@ -12,10 +12,12 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
-    Constructor,
     assert_equal_data,
     is_windows,
 )
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor
 
 data = {
     "a": [1, 1, 2],

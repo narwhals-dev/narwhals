@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import ConstructorEager
     from narwhals.typing import _1DArray
 
 data: dict[str, Any] = {

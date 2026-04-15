@@ -7,7 +7,7 @@ import pytest
 from hypothesis import assume, given
 
 import narwhals as nw
-from tests.conftest import pandas_constructor, pyarrow_table_constructor
+from narwhals.testing.constructors import ConstructorName
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -19,8 +19,10 @@ pytest.importorskip("pandas")
 pytest.importorskip("polars")
 import polars as pl
 
+params = [ConstructorName.PANDAS.constructor, ConstructorName.PYARROW.constructor]
 
-@pytest.fixture(params=[pandas_constructor, pyarrow_table_constructor], scope="module")
+
+@pytest.fixture(params=params, scope="module")
 def pandas_or_pyarrow_constructor(
     request: pytest.FixtureRequest,
 ) -> Callable[[Any], IntoDataFrame]:
@@ -125,7 +127,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor.name.is_pyarrow
             and isinstance(selector, slice)
             and selector.step is not None
         )
@@ -134,7 +136,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor.name.is_pyarrow
             and isinstance(selector, tuple)
             and (
                 (isinstance(selector[0], slice) and selector[0].step is not None)

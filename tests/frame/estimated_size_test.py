@@ -8,7 +8,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 data = {"a": list(range(100))}
 

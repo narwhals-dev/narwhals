@@ -15,14 +15,13 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
     assert_equal_data,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import NonNestedLiteral
 
 

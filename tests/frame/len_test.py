@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 data = {"a": [1.0, 2.0, None, 4.0], "b": [None, 3.0, None, 5.0]}
 
 

@@ -8,7 +8,7 @@ import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 data = [100, 200, None]
 

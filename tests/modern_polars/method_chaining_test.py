@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
+from tests.utils import PANDAS_VERSION, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor
 
 data = {
     "OriginCityName": [
@@ -38,10 +42,7 @@ def test_split_list_get(request: pytest.FixtureRequest, constructor: Constructor
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    if (
-        constructor.__name__.startswith("pandas")
-        and "pyarrow" not in constructor.__name__
-    ):
+    if str(constructor).startswith("pandas") and "pyarrow" not in str(constructor):
         df = nw.from_native(constructor(data))
         msg = re.escape("This operation requires a pyarrow-backed series. ")
         with pytest.raises(TypeError, match=msg):

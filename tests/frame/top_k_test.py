@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import DUCKDB_VERSION, POLARS_VERSION, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor
 
 
 def test_top_k(constructor: Constructor) -> None:

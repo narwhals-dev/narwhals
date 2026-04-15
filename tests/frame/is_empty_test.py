@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 
 @pytest.mark.parametrize(("threshold", "expected"), [(0, False), (10, True)])

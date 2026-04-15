@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
 
@@ -20,8 +23,7 @@ data = {"s": ["foo bar", "foo_bar", "foo_bar_baz", "foo,bar"]}
 )
 def test_str_split(constructor: Constructor, by: str, expected: Any) -> None:
     if "cudf" not in str(constructor) and (
-        constructor.__name__.startswith("pandas")
-        and "pyarrow" not in constructor.__name__
+        str(constructor).startswith("pandas") and "pyarrow" not in str(constructor)
     ):
         df = nw.from_native(constructor(data))
         msg = re.escape("This operation requires a pyarrow-backed series. ")
@@ -44,8 +46,8 @@ def test_str_split_series(
     constructor_eager: ConstructorEager, by: str, expected: Any
 ) -> None:
     if "cudf" not in str(constructor_eager) and (
-        constructor_eager.__name__.startswith("pandas")
-        and "pyarrow" not in constructor_eager.__name__
+        str(constructor_eager).startswith("pandas")
+        and "pyarrow" not in str(constructor_eager)
     ):
         df = nw.from_native(constructor_eager(data), eager_only=True)
         msg = re.escape("This operation requires a pyarrow-backed series. ")

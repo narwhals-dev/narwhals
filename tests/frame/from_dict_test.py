@@ -6,10 +6,11 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation
-from tests.utils import Constructor, assert_equal_data
+from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, Polars
+    from narwhals.testing.typing import Constructor
 
 
 def test_from_dict(eager_backend: EagerAllowed) -> None:

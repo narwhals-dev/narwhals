@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import is_pd_na
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 data_na = {"a": [None, 3, 2], "b": [4, 4, 6], "z": [7.0, None, 9]}

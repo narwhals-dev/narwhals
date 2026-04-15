@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from narwhals.testing.typing import Constructor
 
 
 @pytest.mark.parametrize(

@@ -9,7 +9,7 @@ from narwhals._utils import Implementation, Version
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 
 class MockCompliantSeries:

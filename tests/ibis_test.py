@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     import ibis
     import polars as pl
 
-    from tests.utils import Constructor
+    from narwhals.testing.typing import Constructor
 else:
     ibis = pytest.importorskip("ibis")
     pl = pytest.importorskip("polars")

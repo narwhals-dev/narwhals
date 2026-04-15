@@ -1,16 +1,15 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, ShapeError
-from tests.utils import (
-    PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    maybe_collect,
-)
+from tests.utils import PYARROW_VERSION, assert_equal_data, maybe_collect
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 
 def test_with_columns_int_col_name_pandas() -> None:

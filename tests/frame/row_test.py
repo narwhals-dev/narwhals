@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 
 def test_row_column(request: Any, constructor_eager: ConstructorEager) -> None:

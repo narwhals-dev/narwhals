@@ -5,17 +5,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    DUCKDB_VERSION,
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from narwhals.testing.typing import Constructor, ConstructorEager
+
 
 data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 

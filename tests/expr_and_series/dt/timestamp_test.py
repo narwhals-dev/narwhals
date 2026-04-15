@@ -11,15 +11,15 @@ import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     time_unit_compat,
 )
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import IntoSeriesT
+
 
 data = {
     "a": [datetime(2021, 3, 1, 12, 34, 56, 49000), datetime(2020, 1, 2, 2, 4, 14, 715000)]

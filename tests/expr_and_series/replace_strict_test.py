@@ -6,18 +6,14 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import (
-    POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    xfail_if_pyspark_connect,
-)
+from tests.utils import POLARS_VERSION, assert_equal_data, xfail_if_pyspark_connect
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from narwhals.dtypes import DType
+    from narwhals.testing.typing import Constructor, ConstructorEager
+
 
 polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
 skip_reason = "replace_strict only available after 1.0"

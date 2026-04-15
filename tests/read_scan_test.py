@@ -6,13 +6,8 @@ from typing import TYPE_CHECKING, Any, Literal
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    Constructor,
-    assert_equal_data,
-    pyspark_session,
-    sqlframe_session,
-)
+from narwhals.testing.constructors import pyspark_session, sqlframe_session
+from tests.utils import PANDAS_VERSION, assert_equal_data
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
@@ -26,6 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
+    from narwhals.testing.typing import Constructor
     from narwhals.typing import FileSource
 
     Factory: TypeAlias = pytest.TempPathFactory

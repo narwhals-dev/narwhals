@@ -6,7 +6,7 @@ import narwhals as nw
 from narwhals.stable.v1.dependencies import is_narwhals_series
 
 if TYPE_CHECKING:
-    from tests.utils import ConstructorEager
+    from narwhals.testing.typing import ConstructorEager
 
 
 def test_is_narwhals_series(constructor_eager: ConstructorEager) -> None:

@@ -13,9 +13,9 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals.testing.typing import ConstructorEager
     from narwhals.typing import IntoSchema, IntoSeriesT
     from tests.conftest import Data
-    from tests.utils import ConstructorEager
 
     SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
 

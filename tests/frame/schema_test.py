@@ -17,13 +17,13 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias
 
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import (
         DTypeBackend,
         IntoArrowSchema,
         IntoPandasSchema,
         IntoPolarsSchema,
     )
-    from tests.utils import Constructor, ConstructorEager
 
     TimeUnit: TypeAlias = Literal["ns", "us"]
 
@@ -588,8 +588,8 @@ def origin_pandas_like_pyarrow(
     if PANDAS_VERSION < (1, 5):
         pytest.skip(reason="pandas too old for `pyarrow`")
     name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
-    if constructor_pandas_like.__name__ not in name_pandas_like:
-        pytest.skip(f"{constructor_pandas_like.__name__!r} is not pandas_like_pyarrow")
+    if str(constructor_pandas_like) not in name_pandas_like:
+        pytest.skip(f"{str(constructor_pandas_like)!r} is not pandas_like_pyarrow")
     data = {
         "a": [2, 1],
         "b": ["hello", "hi"],

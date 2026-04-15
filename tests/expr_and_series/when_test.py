@@ -6,15 +6,10 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import (
-    DUCKDB_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    uses_pyarrow_backend,
-)
+from tests.utils import DUCKDB_VERSION, assert_equal_data, uses_pyarrow_backend
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import _1DArray
 
 data = {

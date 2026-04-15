@@ -7,16 +7,10 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    DASK_VERSION,
-    DUCKDB_VERSION,
-    POLARS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import DASK_VERSION, DUCKDB_VERSION, POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import FillNullStrategy
 
 

@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
-from tests.utils import (
-    DASK_VERSION,
-    DUCKDB_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    maybe_collect,
-)
+from tests.utils import DASK_VERSION, DUCKDB_VERSION, assert_equal_data, maybe_collect
+
+if TYPE_CHECKING:
+    from narwhals.testing.typing import Constructor, ConstructorEager
 
 
 class Foo: ...

@@ -36,8 +36,6 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
     assert_equal_data,
     assert_equal_hash,
     assert_equal_series,
@@ -51,8 +49,8 @@ if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
     from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import IntoDType, _1DArray, _2DArray
-    from tests.utils import Constructor, ConstructorEager
 
 
 def test_toplevel() -> None:

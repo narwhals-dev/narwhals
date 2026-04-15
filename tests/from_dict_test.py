@@ -7,10 +7,11 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from narwhals.utils import Implementation
-from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
+from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed, Polars
+    from narwhals.testing.typing import Constructor
 
 
 def test_from_dict(eager_backend: EagerAllowed) -> None:
