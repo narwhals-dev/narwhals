@@ -46,8 +46,12 @@ _ANY: Final = Constraint.ANY
 _DEFAULT: Final = Constraint.DEFAULT
 
 
-# TODO @dangotbanned: Feat
-# - Port dispatch helpers from `arrow.{namespace,expr}` into something that uses this
+# TODO @dangotbanned: Port dispatch helpers from `arrow.{namespace,expr}` into something that uses this
+# TODO @dangotbanned: Specifying names?
+# - the first (and only in `Unary`) is never needed
+# - `__function_parameters__ = Binary(start=SCALAR, end=SCALAR)`
+#   - `_constraints = (SCALAR, SCALAR)`
+#   - `_names = ("start", "end")`
 class Parameters(Generic[_ArgsT_co], metaclass=SlottedMeta):
     """Expectations of expression arguments to a function.
 

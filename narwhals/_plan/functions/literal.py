@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 def lit(
     value: PythonLiteral | Series[NativeSeriesT], dtype: IntoDType | None = None
 ) -> Expr:
+    """TODO @dangotbanned: Update the reprs (see `Lit`, `LitSeries`)."""
     if _guards.is_series(value):
         return ir.lit_series(value).to_narwhals()
     if not _guards.is_python_literal(value):
