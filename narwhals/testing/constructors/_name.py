@@ -181,15 +181,12 @@ class ConstructorName(str, Enum):
 
     @property
     def constructor(self) -> ConstructorBase:
-        from narwhals.testing.constructors._classes import _ALL_CONSTRUCTORS
+        from narwhals.testing.constructors._classes import _NAME_TO_CONSTRUCTOR
 
-        return _ALL_CONSTRUCTORS[self]
+        return _NAME_TO_CONSTRUCTOR[self]
 
     @property
     def is_available(self) -> bool:
         from narwhals.testing.constructors._classes import _BACKEND_REQUIREMENTS
 
         return is_backend_available(*_BACKEND_REQUIREMENTS[self])
-
-
-__all__ = ["ConstructorName"]

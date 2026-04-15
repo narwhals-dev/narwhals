@@ -4,11 +4,12 @@ import os
 from typing import TYPE_CHECKING, cast
 
 from narwhals._utils import parse_version
-from narwhals.testing.constructors._classes import ConstructorBase, ConstructorEagerBase
-from narwhals.testing.constructors._name import ConstructorName
-from narwhals.testing.constructors._registry import (
+from narwhals.testing.constructors import (
     ALL_CPU_CONSTRUCTORS,
     DEFAULT_CONSTRUCTORS,
+    ConstructorBase,
+    ConstructorEagerBase,
+    ConstructorName,
     available_constructors,
     get_constructor,
 )

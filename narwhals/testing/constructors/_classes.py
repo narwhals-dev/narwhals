@@ -91,6 +91,12 @@ class ConstructorBase(ABC):
     def __call__(self, obj: Data) -> IntoFrame:
         """Build a native frame from `obj`."""
 
+    def __str__(self) -> str:
+        # NOTE: This is a temporary hack
+        # TODO(Unassigned): Remove once all the `"backend" in str(constructor)`
+        # statements in the test suite are properly replaced
+        return _LEGACY_NAME[self.name]
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
 
@@ -117,7 +123,7 @@ class ConstructorLazyBase(ConstructorBase):
     def __call__(self, obj: Data) -> IntoLazyFrame: ...
 
 
-# --- Eager constructors ------------------------------------------------------
+# Eager constructors
 
 
 class PandasConstructor(ConstructorEagerBase):
@@ -195,7 +201,7 @@ class PolarsEagerConstructor(ConstructorEagerBase):
         return pl.DataFrame(obj)
 
 
-# --- Lazy constructors -------------------------------------------------------
+# Lazy constructors
 
 
 class PolarsLazyConstructor(ConstructorLazyBase):
@@ -210,7 +216,7 @@ class PolarsLazyConstructor(ConstructorLazyBase):
 class DaskConstructor(ConstructorLazyBase):  # pragma: no cover
     name = ConstructorName.DASK
 
-    def __init__(self, npartitions: int = 2) -> None:
+    def __init__(self, npartitions: int = 1) -> None:
         self.npartitions = npartitions
 
     def __call__(self, obj: Data) -> NativeDask:
@@ -283,7 +289,7 @@ class IbisConstructor(ConstructorLazyBase):
         return _ibis_backend().create_table(table_name, table)
 
 
-_ALL_CONSTRUCTORS: dict[ConstructorName, ConstructorBase] = {
+_NAME_TO_CONSTRUCTOR: dict[ConstructorName, ConstructorBase] = {
     ConstructorName.PANDAS: PandasConstructor(),
     ConstructorName.PANDAS_NULLABLE: PandasNullableConstructor(),
     ConstructorName.PANDAS_PYARROW: PandasPyArrowConstructor(),
@@ -319,26 +325,22 @@ _BACKEND_REQUIREMENTS: dict[ConstructorName, tuple[str, ...]] = {
     ConstructorName.IBIS: ("ibis", "duckdb", "pyarrow"),
 }
 
-
-__all__ = [
-    "ConstructorBase",
-    "ConstructorEagerBase",
-    "ConstructorLazyBase",
-    "CudfConstructor",
-    "DaskConstructor",
-    "DuckDBConstructor",
-    "IbisConstructor",
-    "ModinConstructor",
-    "ModinPyArrowConstructor",
-    "PandasConstructor",
-    "PandasNullableConstructor",
-    "PandasPyArrowConstructor",
-    "PolarsEagerConstructor",
-    "PolarsLazyConstructor",
-    "PyArrowConstructor",
-    "PySparkConnectConstructor",
-    "PySparkConstructor",
-    "SQLFrameConstructor",
-    "pyspark_session",
-    "sqlframe_session",
-]
+# TODO(Unassigned): Remove once all the `"backend" in str(constructor)`
+# statements in the test suite are properly replaced
+_LEGACY_NAME: dict[ConstructorName, str] = {
+    ConstructorName.PANDAS: "pandas_constructor",
+    ConstructorName.PANDAS_NULLABLE: "pandas_nullable_constructor",
+    ConstructorName.PANDAS_PYARROW: "pandas_pyarrow_constructor",
+    ConstructorName.PYARROW: "pyarrow_table_constructor",
+    ConstructorName.MODIN: "modin_constructor",
+    ConstructorName.MODIN_PYARROW: "modin_pyarrow_constructor",
+    ConstructorName.CUDF: "cudf_constructor",
+    ConstructorName.POLARS_EAGER: "polars_eager_constructor",
+    ConstructorName.POLARS_LAZY: "polars_lazy_constructor",
+    ConstructorName.DASK: "dask_lazy_p1_constructor",
+    ConstructorName.DUCKDB: "duckdb_lazy_constructor",
+    ConstructorName.PYSPARK: "pyspark_lazy_constructor",
+    ConstructorName.PYSPARK_CONNECT: "pyspark_lazy_constructor",
+    ConstructorName.SQLFRAME: "sqlframe_pyspark_lazy_constructor",
+    ConstructorName.IBIS: "ibis_lazy_constructor",
+}
