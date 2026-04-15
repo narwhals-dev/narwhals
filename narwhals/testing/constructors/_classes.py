@@ -1,0 +1,346 @@
+from __future__ import annotations
+
+import os
+import uuid
+import warnings
+from abc import ABC, abstractmethod
+from copy import deepcopy
+from functools import lru_cache
+from typing import TYPE_CHECKING, Any, ClassVar, cast
+
+from narwhals._utils import generate_temporary_column_name
+from narwhals.testing.constructors._name import ConstructorName
+
+if TYPE_CHECKING:
+    import ibis
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
+    from ibis.backends.duckdb import Backend as IbisDuckDBBackend
+    from pyspark.sql import SparkSession
+    from sqlframe.duckdb import DuckDBSession
+
+    from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
+    from narwhals.testing.typing import Data
+    from narwhals.typing import IntoDataFrame
+
+
+def sqlframe_session() -> DuckDBSession:
+    """Return a fresh in-memory `sqlframe` DuckDB session."""
+    from sqlframe.duckdb import DuckDBSession
+
+    # NOTE: `__new__` override inferred by `pyright` only
+    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
+    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
+
+
+def pyspark_session() -> SparkSession:  # pragma: no cover
+    """Return a singleton local `pyspark` (or pyspark[connect]) session."""
+    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
+    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+    builder = (
+        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+        if is_spark_connect
+        else builder.master("local[1]").config("spark.ui.enabled", "false")
+    )
+    return (
+        builder.config("spark.default.parallelism", "1")
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
+
+
+@lru_cache(maxsize=1)
+def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
+    """Cached singleton in-memory ibis backend, so all tables share one database."""
+    import ibis
+
+    return ibis.duckdb.connect()
+
+
+# Legacy `<backend>_constructor` function names, exposed via
+# `ConstructorBase.__name__` so existing tests in the Narwhals suite that do
+# `constructor.__name__ in {"pandas_pyarrow_constructor", ...}` keep working.
+_LEGACY_NAMES: dict[ConstructorName, str] = {
+    ConstructorName.PANDAS: "pandas_constructor",
+    ConstructorName.PANDAS_NULLABLE: "pandas_nullable_constructor",
+    ConstructorName.PANDAS_PYARROW: "pandas_pyarrow_constructor",
+    ConstructorName.PYARROW: "pyarrow_table_constructor",
+    ConstructorName.MODIN: "modin_constructor",
+    ConstructorName.MODIN_PYARROW: "modin_pyarrow_constructor",
+    ConstructorName.CUDF: "cudf_constructor",
+    ConstructorName.POLARS_EAGER: "polars_eager_constructor",
+    ConstructorName.POLARS_LAZY: "polars_lazy_constructor",
+    ConstructorName.DASK: "dask_lazy_p2_constructor",
+    ConstructorName.DUCKDB: "duckdb_lazy_constructor",
+    ConstructorName.PYSPARK: "pyspark_lazy_constructor",
+    ConstructorName.PYSPARK_CONNECT: "pyspark_lazy_constructor",
+    ConstructorName.SQLFRAME: "sqlframe_pyspark_lazy_constructor",
+    ConstructorName.IBIS: "ibis_lazy_constructor",
+}
+
+
+@lru_cache(maxsize=1)
+def _pyspark_session_lazy() -> SparkSession:  # pragma: no cover
+    """Cached pyspark session; created on first use, stopped at interpreter exit."""
+    from atexit import register
+
+    with warnings.catch_warnings():
+        # The spark session seems to trigger a polars warning.
+        warnings.filterwarnings(
+            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
+        )
+        session = pyspark_session()
+        register(session.stop)
+        return session
+
+
+# --- Base classes ------------------------------------------------------------
+
+
+class ConstructorBase(ABC):
+    """Abstract base for any constructor exposed by `narwhals.testing`.
+
+    A constructor is a callable that turns a column-oriented `dict` (typed as
+    [`Data`][narwhals.testing.typing.Data] but accepted as `Any` for
+    backwards compatibility with mappings, ranges, numpy arrays, …) into a
+    native dataframe / lazy frame, plus a typed [`ConstructorName`][] that
+    identifies the backend.
+    """
+
+    name: ClassVar[ConstructorName]
+
+    @abstractmethod
+    def __call__(self, obj: Any) -> Any:
+        """Build a native frame from `obj`."""
+
+    def __str__(self) -> str:
+        # Returns the legacy `<backend>_constructor` identifier so existing
+        # downstream `"<backend>_constructor" in str(c)` substring checks
+        # continue to work. Use [`ConstructorBase.name`][] for the typed,
+        # CLI-style identifier (e.g. `"pandas[pyarrow]"`).
+        return _LEGACY_NAMES[self.name]
+
+    @property
+    def __name__(self) -> str:
+        """Legacy `<backend>_constructor` identifier (kept for backwards compatibility)."""
+        return _LEGACY_NAMES[self.name]
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name))
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            type(self) is type(other) and self.name == cast("ConstructorBase", other).name
+        )
+
+
+class ConstructorEagerBase(ConstructorBase):
+    """A constructor that returns an *eager* native dataframe."""
+
+    @abstractmethod
+    def __call__(self, obj: Any) -> IntoDataFrame: ...
+
+
+class ConstructorLazyBase(ConstructorBase):
+    """A constructor that returns a *lazy* native frame."""
+
+    @abstractmethod
+    def __call__(self, obj: Any) -> Any: ...
+
+
+# --- Eager constructors ------------------------------------------------------
+
+
+class PandasConstructor(ConstructorEagerBase):
+    name = ConstructorName.PANDAS
+
+    def __call__(self, obj: Data) -> pd.DataFrame:
+        import pandas as pd
+
+        return pd.DataFrame(obj)
+
+
+class PandasNullableConstructor(ConstructorEagerBase):
+    name = ConstructorName.PANDAS_NULLABLE
+
+    def __call__(self, obj: Data) -> pd.DataFrame:
+        import pandas as pd
+
+        return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
+
+
+class PandasPyArrowConstructor(ConstructorEagerBase):
+    name = ConstructorName.PANDAS_PYARROW
+
+    def __call__(self, obj: Data) -> pd.DataFrame:
+        import pandas as pd
+
+        return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
+
+
+class PyArrowConstructor(ConstructorEagerBase):
+    name = ConstructorName.PYARROW
+
+    def __call__(self, obj: Data) -> pa.Table:
+        import pyarrow as pa
+
+        return pa.table(obj)  # type:ignore[arg-type]
+
+
+class ModinConstructor(ConstructorEagerBase):  # pragma: no cover
+    name = ConstructorName.MODIN
+
+    def __call__(self, obj: Data) -> IntoDataFrame:
+        import modin.pandas as mpd
+        import pandas as pd
+
+        return cast("IntoDataFrame", mpd.DataFrame(pd.DataFrame(obj)))
+
+
+class ModinPyArrowConstructor(ConstructorEagerBase):  # pragma: no cover
+    name = ConstructorName.MODIN_PYARROW
+
+    def __call__(self, obj: Data) -> IntoDataFrame:
+        import modin.pandas as mpd
+        import pandas as pd
+
+        df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
+        return cast("IntoDataFrame", df)
+
+
+class CudfConstructor(ConstructorEagerBase):  # pragma: no cover
+    name = ConstructorName.CUDF
+
+    def __call__(self, obj: Data) -> IntoDataFrame:
+        import cudf
+
+        return cast("IntoDataFrame", cudf.DataFrame(obj))
+
+
+class PolarsEagerConstructor(ConstructorEagerBase):
+    name = ConstructorName.POLARS_EAGER
+
+    def __call__(self, obj: Data) -> pl.DataFrame:
+        import polars as pl
+
+        return pl.DataFrame(obj)
+
+
+# --- Lazy constructors -------------------------------------------------------
+
+
+class PolarsLazyConstructor(ConstructorLazyBase):
+    name = ConstructorName.POLARS_LAZY
+
+    def __call__(self, obj: Data) -> pl.LazyFrame:
+        import polars as pl
+
+        return pl.LazyFrame(obj)
+
+
+class DaskConstructor(ConstructorLazyBase):  # pragma: no cover
+    name = ConstructorName.DASK
+
+    def __init__(self, npartitions: int = 2) -> None:
+        self.npartitions = npartitions
+
+    def __call__(self, obj: Data) -> NativeDask:
+        import dask.dataframe as dd
+
+        return cast("NativeDask", dd.from_dict(obj, npartitions=self.npartitions))
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(npartitions={self.npartitions})"
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name, self.npartitions))
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            type(self) is type(other)
+            and self.npartitions == cast("DaskConstructor", other).npartitions
+        )
+
+
+class DuckDBConstructor(ConstructorLazyBase):
+    name = ConstructorName.DUCKDB
+
+    def __call__(self, obj: Data) -> NativeDuckDB:
+        import duckdb
+        import pyarrow as pa
+
+        duckdb.sql("""set timezone = 'UTC'""")
+        _df = pa.table(obj)  # type:ignore[arg-type]
+        return duckdb.sql("select * from _df")
+
+
+class PySparkConstructor(ConstructorLazyBase):  # pragma: no cover
+    name = ConstructorName.PYSPARK
+
+    def __call__(self, obj: Data) -> NativePySpark:
+        session = _pyspark_session_lazy()
+        _obj = deepcopy(obj)
+        index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
+        _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
+        result = (
+            session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
+            .repartition(2)
+            .orderBy(index_col_name)
+            .drop(index_col_name)
+        )
+        return cast("NativePySpark", result)
+
+
+class PySparkConnectConstructor(PySparkConstructor):  # pragma: no cover
+    name = ConstructorName.PYSPARK_CONNECT
+
+
+class SQLFrameConstructor(ConstructorLazyBase):  # pragma: no cover
+    name = ConstructorName.SQLFRAME
+
+    def __call__(self, obj: Data) -> NativeSQLFrame:
+        session = sqlframe_session()
+        return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
+
+
+class IbisConstructor(ConstructorLazyBase):  # pragma: no cover
+    name = ConstructorName.IBIS
+
+    def __call__(self, obj: Data) -> ibis.Table:
+        import pyarrow as pa
+
+        table = pa.table(obj)  # type:ignore[arg-type]
+        table_name = str(uuid.uuid4())
+        return _ibis_backend().create_table(table_name, table)
+
+
+__all__ = [
+    "ConstructorBase",
+    "ConstructorEagerBase",
+    "ConstructorLazyBase",
+    "CudfConstructor",
+    "DaskConstructor",
+    "DuckDBConstructor",
+    "IbisConstructor",
+    "ModinConstructor",
+    "ModinPyArrowConstructor",
+    "PandasConstructor",
+    "PandasNullableConstructor",
+    "PandasPyArrowConstructor",
+    "PolarsEagerConstructor",
+    "PolarsLazyConstructor",
+    "PyArrowConstructor",
+    "PySparkConnectConstructor",
+    "PySparkConstructor",
+    "SQLFrameConstructor",
+    "pyspark_session",
+    "sqlframe_session",
+]

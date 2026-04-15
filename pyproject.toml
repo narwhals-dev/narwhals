@@ -36,6 +36,10 @@ Documentation = "https://narwhals-dev.github.io/narwhals/"
 Repository = "https://github.com/narwhals-dev/narwhals"
 "Bug Tracker" = "https://github.com/narwhals-dev/narwhals/issues"
 
+[project.entry-points.pytest11]
+narwhals_testing = "narwhals.testing.pytest_plugin"
+# See: https://docs.pytest.org/en/stable/how-to/writing_plugins.html#making-your-plugin-installable-by-others
+
 [project.optional-dependencies]
 # These should be aligned with MIN_VERSIONS in narwhals/utils.py
 # Exception: modin, because `modin.__version__` isn't aligned with
