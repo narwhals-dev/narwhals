@@ -6,7 +6,7 @@ import warnings
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from narwhals._utils import generate_temporary_column_name
 from narwhals.testing.constructors._name import ConstructorName
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals.testing.typing import Data
-    from narwhals.typing import IntoDataFrame
+    from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame
 
 
 def sqlframe_session() -> DuckDBSession:
@@ -62,28 +62,6 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
     return ibis.duckdb.connect()
 
 
-# Legacy `<backend>_constructor` function names, exposed via
-# `ConstructorBase.__name__` so existing tests in the Narwhals suite that do
-# `constructor.__name__ in {"pandas_pyarrow_constructor", ...}` keep working.
-_LEGACY_NAMES: dict[ConstructorName, str] = {
-    ConstructorName.PANDAS: "pandas_constructor",
-    ConstructorName.PANDAS_NULLABLE: "pandas_nullable_constructor",
-    ConstructorName.PANDAS_PYARROW: "pandas_pyarrow_constructor",
-    ConstructorName.PYARROW: "pyarrow_table_constructor",
-    ConstructorName.MODIN: "modin_constructor",
-    ConstructorName.MODIN_PYARROW: "modin_pyarrow_constructor",
-    ConstructorName.CUDF: "cudf_constructor",
-    ConstructorName.POLARS_EAGER: "polars_eager_constructor",
-    ConstructorName.POLARS_LAZY: "polars_lazy_constructor",
-    ConstructorName.DASK: "dask_lazy_p2_constructor",
-    ConstructorName.DUCKDB: "duckdb_lazy_constructor",
-    ConstructorName.PYSPARK: "pyspark_lazy_constructor",
-    ConstructorName.PYSPARK_CONNECT: "pyspark_lazy_constructor",
-    ConstructorName.SQLFRAME: "sqlframe_pyspark_lazy_constructor",
-    ConstructorName.IBIS: "ibis_lazy_constructor",
-}
-
-
 @lru_cache(maxsize=1)
 def _pyspark_session_lazy() -> SparkSession:  # pragma: no cover
     """Cached pyspark session; created on first use, stopped at interpreter exit."""
@@ -99,36 +77,19 @@ def _pyspark_session_lazy() -> SparkSession:  # pragma: no cover
         return session
 
 
-# --- Base classes ------------------------------------------------------------
-
-
 class ConstructorBase(ABC):
     """Abstract base for any constructor exposed by `narwhals.testing`.
 
     A constructor is a callable that turns a column-oriented `dict` (typed as
-    [`Data`][narwhals.testing.typing.Data] but accepted as `Any` for
-    backwards compatibility with mappings, ranges, numpy arrays, …) into a
-    native dataframe / lazy frame, plus a typed [`ConstructorName`][] that
-    identifies the backend.
+    [`Data`][narwhals.testing.typing.Data]) into a native dataframe / lazy frame,
+    plus a typed [`ConstructorName`][] that identifies the backend.
     """
 
     name: ClassVar[ConstructorName]
 
     @abstractmethod
-    def __call__(self, obj: Any) -> Any:
+    def __call__(self, obj: Data) -> IntoFrame:
         """Build a native frame from `obj`."""
-
-    def __str__(self) -> str:
-        # Returns the legacy `<backend>_constructor` identifier so existing
-        # downstream `"<backend>_constructor" in str(c)` substring checks
-        # continue to work. Use [`ConstructorBase.name`][] for the typed,
-        # CLI-style identifier (e.g. `"pandas[pyarrow]"`).
-        return _LEGACY_NAMES[self.name]
-
-    @property
-    def __name__(self) -> str:
-        """Legacy `<backend>_constructor` identifier (kept for backwards compatibility)."""
-        return _LEGACY_NAMES[self.name]
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
@@ -146,14 +107,14 @@ class ConstructorEagerBase(ConstructorBase):
     """A constructor that returns an *eager* native dataframe."""
 
     @abstractmethod
-    def __call__(self, obj: Any) -> IntoDataFrame: ...
+    def __call__(self, obj: Data) -> IntoDataFrame: ...
 
 
 class ConstructorLazyBase(ConstructorBase):
     """A constructor that returns a *lazy* native frame."""
 
     @abstractmethod
-    def __call__(self, obj: Any) -> Any: ...
+    def __call__(self, obj: Data) -> IntoLazyFrame: ...
 
 
 # --- Eager constructors ------------------------------------------------------
@@ -205,7 +166,7 @@ class ModinConstructor(ConstructorEagerBase):  # pragma: no cover
         return cast("IntoDataFrame", mpd.DataFrame(pd.DataFrame(obj)))
 
 
-class ModinPyArrowConstructor(ConstructorEagerBase):  # pragma: no cover
+class ModinPyArrowConstructor(ConstructorEagerBase):
     name = ConstructorName.MODIN_PYARROW
 
     def __call__(self, obj: Data) -> IntoDataFrame:
@@ -303,7 +264,7 @@ class PySparkConnectConstructor(PySparkConstructor):  # pragma: no cover
     name = ConstructorName.PYSPARK_CONNECT
 
 
-class SQLFrameConstructor(ConstructorLazyBase):  # pragma: no cover
+class SQLFrameConstructor(ConstructorLazyBase):
     name = ConstructorName.SQLFRAME
 
     def __call__(self, obj: Data) -> NativeSQLFrame:
@@ -311,7 +272,7 @@ class SQLFrameConstructor(ConstructorLazyBase):  # pragma: no cover
         return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
 
 
-class IbisConstructor(ConstructorLazyBase):  # pragma: no cover
+class IbisConstructor(ConstructorLazyBase):
     name = ConstructorName.IBIS
 
     def __call__(self, obj: Data) -> ibis.Table:
@@ -320,6 +281,43 @@ class IbisConstructor(ConstructorLazyBase):  # pragma: no cover
         table = pa.table(obj)  # type:ignore[arg-type]
         table_name = str(uuid.uuid4())
         return _ibis_backend().create_table(table_name, table)
+
+
+_ALL_CONSTRUCTORS: dict[ConstructorName, ConstructorBase] = {
+    ConstructorName.PANDAS: PandasConstructor(),
+    ConstructorName.PANDAS_NULLABLE: PandasNullableConstructor(),
+    ConstructorName.PANDAS_PYARROW: PandasPyArrowConstructor(),
+    ConstructorName.PYARROW: PyArrowConstructor(),
+    ConstructorName.MODIN: ModinConstructor(),
+    ConstructorName.MODIN_PYARROW: ModinPyArrowConstructor(),
+    ConstructorName.CUDF: CudfConstructor(),
+    ConstructorName.POLARS_EAGER: PolarsEagerConstructor(),
+    ConstructorName.POLARS_LAZY: PolarsLazyConstructor(),
+    ConstructorName.DASK: DaskConstructor(),
+    ConstructorName.DUCKDB: DuckDBConstructor(),
+    ConstructorName.PYSPARK: PySparkConstructor(),
+    ConstructorName.PYSPARK_CONNECT: PySparkConnectConstructor(),
+    ConstructorName.SQLFRAME: SQLFrameConstructor(),
+    ConstructorName.IBIS: IbisConstructor(),
+}
+
+_BACKEND_REQUIREMENTS: dict[ConstructorName, tuple[str, ...]] = {
+    ConstructorName.PANDAS: ("pandas",),
+    ConstructorName.PANDAS_NULLABLE: ("pandas",),
+    ConstructorName.PANDAS_PYARROW: ("pandas", "pyarrow"),
+    ConstructorName.PYARROW: ("pyarrow",),
+    ConstructorName.MODIN: ("modin",),
+    ConstructorName.MODIN_PYARROW: ("modin", "pyarrow"),
+    ConstructorName.CUDF: ("cudf",),
+    ConstructorName.POLARS_EAGER: ("polars",),
+    ConstructorName.POLARS_LAZY: ("polars",),
+    ConstructorName.DASK: ("dask",),
+    ConstructorName.DUCKDB: ("duckdb", "pyarrow"),
+    ConstructorName.PYSPARK: ("pyspark",),
+    ConstructorName.PYSPARK_CONNECT: ("pyspark",),
+    ConstructorName.SQLFRAME: ("sqlframe", "duckdb"),
+    ConstructorName.IBIS: ("ibis", "duckdb", "pyarrow"),
+}
 
 
 __all__ = [

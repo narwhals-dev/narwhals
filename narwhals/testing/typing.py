@@ -1,23 +1,26 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeLazyFrame
-    from narwhals.typing import IntoDataFrame
+    from narwhals.testing.constructors._classes import (
+        ConstructorBase,
+        ConstructorEagerBase,
+        ConstructorLazyBase,
+    )
 
 Data: TypeAlias = dict[str, list[Any]]
 """A column-oriented mapping used as input to a [`Constructor`][]."""
 
-Constructor: TypeAlias = Callable[[Data], "NativeLazyFrame | IntoDataFrame"]
-"""Any constructor (eager or lazy) — anything callable that returns a native frame."""
+Constructor: TypeAlias = "ConstructorBase"
+"""Any constructor (eager or lazy): callable that returns a native frame."""
 
-ConstructorEager: TypeAlias = Callable[[Data], "IntoDataFrame"]
+ConstructorEager: TypeAlias = "ConstructorEagerBase"
 """A constructor that returns an eager native dataframe."""
 
-ConstructorLazy: TypeAlias = Callable[[Data], "NativeLazyFrame"]
+ConstructorLazy: TypeAlias = "ConstructorLazyBase"
 """A constructor that returns a lazy native frame."""
 
 __all__ = ["Constructor", "ConstructorEager", "ConstructorLazy", "Data"]

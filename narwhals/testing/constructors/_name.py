@@ -1,10 +1,27 @@
 from __future__ import annotations
 
 from enum import Enum
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pytest
+
+    from narwhals.testing.constructors._classes import ConstructorBase
+
+
+def is_backend_available(*packages: str) -> bool:
+    """Whether all backends required by `name` can be imported in this environment.
+
+    Examples:
+        >>> from narwhals.testing.constructors import (
+        ...     ConstructorName,
+        ...     is_backend_available,
+        ... )
+        >>> is_backend_available(ConstructorName.PANDAS)
+        True
+    """
+    return all(find_spec(pkg) is not None for pkg in packages)
 
 
 class ConstructorName(str, Enum):
@@ -137,6 +154,14 @@ class ConstructorName(str, Enum):
         }
 
     @property
+    def is_non_nullable(self) -> bool:
+        return self in {
+            ConstructorName.PANDAS,
+            ConstructorName.MODIN,
+            ConstructorName.DASK,
+        }
+
+    @property
     def needs_gpu(self) -> bool:
         """Whether this constructor requires GPU hardware."""
         return self is ConstructorName.CUDF
@@ -153,6 +178,18 @@ class ConstructorName(str, Enum):
             ...         ...
         """
         return cls(str(request.node.callspec.id))
+
+    @property
+    def constructor(self) -> ConstructorBase:
+        from narwhals.testing.constructors._classes import _ALL_CONSTRUCTORS
+
+        return _ALL_CONSTRUCTORS[self]
+
+    @property
+    def is_available(self) -> bool:
+        from narwhals.testing.constructors._classes import _BACKEND_REQUIREMENTS
+
+        return is_backend_available(*_BACKEND_REQUIREMENTS[self])
 
 
 __all__ = ["ConstructorName"]
