@@ -81,7 +81,7 @@ def test_to_time_infer_fmt(
         "polars" in str(constructor)
         and POLARS_VERSION < (1, 30)
         and data["a"][0].count(":") < 2
-    ):
+    ):  # pragma: no cover
         request.applymarker(
             pytest.mark.xfail(reason="Polars<1.30 cannot auto-infer the HH:MM format")
         )
@@ -112,7 +112,7 @@ def test_to_time_series_infer_fmt(
         "polars" in str(constructor_eager)
         and POLARS_VERSION < (1, 30)
         and data["a"][0].count(":") < 2
-    ):
+    ):  # pragma: no cover
         request.applymarker(
             pytest.mark.xfail(reason="Polars<1.30 cannot auto-infer the HH:MM format")
         )
