@@ -4,6 +4,8 @@ from enum import Enum
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
+from narwhals._utils import Implementation
+
 if TYPE_CHECKING:
     import pytest
 
@@ -60,68 +62,70 @@ class ConstructorName(str, Enum):
         return str(self.value)
 
     @property
+    def implementation(self) -> Implementation:
+        """The [`Implementation`][] that this constructor belongs to."""
+        return _NAME_TO_IMPL[self]
+
+    @property
     def is_pandas(self) -> bool:
         """Whether this is one of the pandas constructors."""
-        return self in {
-            ConstructorName.PANDAS,
-            ConstructorName.PANDAS_NULLABLE,
-            ConstructorName.PANDAS_PYARROW,
-        }
+        return self.implementation.is_pandas()
 
     @property
     def is_modin(self) -> bool:
         """Whether this is one of the modin constructors."""
-        return self in {ConstructorName.MODIN, ConstructorName.MODIN_PYARROW}
+        return self.implementation.is_modin()
 
     @property
     def is_cudf(self) -> bool:
         """Whether this is the cudf constructor."""
-        return self is ConstructorName.CUDF
+        return self.implementation.is_cudf()
 
     @property
     def is_pandas_like(self) -> bool:
         """Whether this constructor produces a pandas-like dataframe (pandas, modin, cudf)."""
-        return self.is_pandas or self.is_modin or self.is_cudf
+        return self.implementation.is_pandas_like()
 
     @property
     def is_polars(self) -> bool:
         """Whether this is one of the polars constructors."""
-        return self in {ConstructorName.POLARS_EAGER, ConstructorName.POLARS_LAZY}
+        return self.implementation.is_polars()
 
     @property
     def is_pyarrow(self) -> bool:
         """Whether this is the pyarrow table constructor."""
-        return self is ConstructorName.PYARROW
+        return self.implementation.is_pyarrow()
 
     @property
     def is_dask(self) -> bool:
         """Whether this is the dask constructor."""
-        return self is ConstructorName.DASK
+        return self.implementation.is_dask()
 
     @property
     def is_duckdb(self) -> bool:
         """Whether this is the duckdb constructor."""
-        return self is ConstructorName.DUCKDB
+        return self.implementation.is_duckdb()
 
     @property
     def is_pyspark(self) -> bool:
         """Whether this is one of the pyspark constructors."""
-        return self in {ConstructorName.PYSPARK, ConstructorName.PYSPARK_CONNECT}
+        impl = self.implementation
+        return impl.is_pyspark() or impl.is_pyspark_connect()
 
     @property
     def is_sqlframe(self) -> bool:
         """Whether this is the sqlframe constructor."""
-        return self is ConstructorName.SQLFRAME
+        return self.implementation.is_sqlframe()
 
     @property
     def is_ibis(self) -> bool:
         """Whether this is the ibis constructor."""
-        return self is ConstructorName.IBIS
+        return self.implementation.is_ibis()
 
     @property
     def is_spark_like(self) -> bool:
         """Whether this constructor uses a spark-like backend (pyspark, sqlframe)."""
-        return self.is_pyspark or self.is_sqlframe
+        return self.implementation.is_spark_like()
 
     @property
     def is_eager(self) -> bool:
@@ -155,6 +159,7 @@ class ConstructorName(str, Enum):
 
     @property
     def is_non_nullable(self) -> bool:
+        """Whether this constructor uses a backend without native null support."""
         return self in {
             ConstructorName.PANDAS,
             ConstructorName.MODIN,
@@ -181,12 +186,33 @@ class ConstructorName(str, Enum):
 
     @property
     def constructor(self) -> ConstructorBase:
-        from narwhals.testing.constructors._classes import _NAME_TO_CONSTRUCTOR
+        """Return the registered singleton constructor for this name."""
+        from narwhals.testing.constructors._classes import ConstructorBase
 
-        return _NAME_TO_CONSTRUCTOR[self]
+        return ConstructorBase._registry[self]
 
     @property
     def is_available(self) -> bool:
-        from narwhals.testing.constructors._classes import _BACKEND_REQUIREMENTS
+        """Whether every package required by this constructor is importable."""
+        from narwhals.testing.constructors._classes import ConstructorBase
 
-        return is_backend_available(*_BACKEND_REQUIREMENTS[self])
+        return is_backend_available(*ConstructorBase._requirements[self])
+
+
+_NAME_TO_IMPL: dict[ConstructorName, Implementation] = {
+    ConstructorName.PANDAS: Implementation.PANDAS,
+    ConstructorName.PANDAS_NULLABLE: Implementation.PANDAS,
+    ConstructorName.PANDAS_PYARROW: Implementation.PANDAS,
+    ConstructorName.PYARROW: Implementation.PYARROW,
+    ConstructorName.MODIN: Implementation.MODIN,
+    ConstructorName.MODIN_PYARROW: Implementation.MODIN,
+    ConstructorName.CUDF: Implementation.CUDF,
+    ConstructorName.POLARS_EAGER: Implementation.POLARS,
+    ConstructorName.POLARS_LAZY: Implementation.POLARS,
+    ConstructorName.DASK: Implementation.DASK,
+    ConstructorName.DUCKDB: Implementation.DUCKDB,
+    ConstructorName.PYSPARK: Implementation.PYSPARK,
+    ConstructorName.PYSPARK_CONNECT: Implementation.PYSPARK_CONNECT,
+    ConstructorName.SQLFRAME: Implementation.SQLFRAME,
+    ConstructorName.IBIS: Implementation.IBIS,
+}
