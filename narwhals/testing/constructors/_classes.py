@@ -149,6 +149,8 @@ class ConstructorBase(ABC):
             **kwargs: Forwarded to ``super().__init_subclass__``.
         """
         super().__init_subclass__(**kwargs)
+        if "name" not in cls.__dict__:
+            return
         instance = cls()
         ConstructorBase._registry[cls.name] = instance
         ConstructorBase._requirements[cls.name] = requirements
@@ -210,7 +212,7 @@ class PandasConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
         import pandas as pd
 
-        return pd.DataFrame(obj)
+        return pd.DataFrame(obj, **kwds)
 
 
 class PandasNullableConstructor(
@@ -225,7 +227,7 @@ class PandasNullableConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
         import pandas as pd
 
-        return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
+        return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="numpy_nullable")
 
 
 class PandasPyArrowConstructor(
@@ -240,7 +242,7 @@ class PandasPyArrowConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
         import pandas as pd
 
-        return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
+        return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="pyarrow")
 
 
 class PyArrowConstructor(
@@ -255,7 +257,7 @@ class PyArrowConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pa.Table:
         import pyarrow as pa
 
-        return pa.table(obj)  # type:ignore[arg-type]
+        return pa.table(obj, **kwds)  # type:ignore[arg-type]
 
 
 class ModinConstructor(
@@ -269,7 +271,7 @@ class ModinConstructor(
         import modin.pandas as mpd
         import pandas as pd
 
-        return cast("IntoDataFrame", mpd.DataFrame(pd.DataFrame(obj)))
+        return cast("IntoDataFrame", mpd.DataFrame(pd.DataFrame(obj, **kwds)))
 
 
 class ModinPyArrowConstructor(
@@ -285,7 +287,9 @@ class ModinPyArrowConstructor(
         import modin.pandas as mpd
         import pandas as pd
 
-        df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
+        df = mpd.DataFrame(pd.DataFrame(obj, **kwds)).convert_dtypes(
+            dtype_backend="pyarrow"
+        )
         return cast("IntoDataFrame", df)
 
 
@@ -299,7 +303,7 @@ class CudfConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
         import cudf
 
-        return cast("IntoDataFrame", cudf.DataFrame(obj))
+        return cast("IntoDataFrame", cudf.DataFrame(obj, **kwds))
 
 
 class PolarsEagerConstructor(
@@ -312,7 +316,7 @@ class PolarsEagerConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pl.DataFrame:
         import polars as pl
 
-        return pl.DataFrame(obj)
+        return pl.DataFrame(obj, **kwds)
 
 
 # Lazy constructors
@@ -328,11 +332,11 @@ class PolarsLazyConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pl.LazyFrame:
         import polars as pl
 
-        return pl.LazyFrame(obj)
+        return pl.LazyFrame(obj, **kwds)
 
 
 class DaskConstructor(
-    ConstructorLazyBase, requirements=("dask",), legacy_name="dask_lazy_p1_constructor"
+    ConstructorLazyBase, requirements=("dask",), legacy_name="dask_lazy_p2_constructor"
 ):  # pragma: no cover
     """Constructor backed by ``dask.dataframe``.
 
@@ -342,13 +346,13 @@ class DaskConstructor(
 
     name = ConstructorName.DASK
 
-    def __init__(self, npartitions: int = 1) -> None:
+    def __init__(self, npartitions: int = 2) -> None:
         self.npartitions = npartitions
 
     def __call__(self, obj: Data, /, **kwds: Any) -> NativeDask:
         import dask.dataframe as dd
 
-        return cast("NativeDask", dd.from_dict(obj, npartitions=self.npartitions))
+        return cast("NativeDask", dd.from_dict(obj, npartitions=self.npartitions, **kwds))
 
     @property
     def identifier(self) -> str:
@@ -382,7 +386,7 @@ class DuckDBConstructor(
         import pyarrow as pa
 
         duckdb.sql("""set timezone = 'UTC'""")
-        _df = pa.table(obj)  # type:ignore[arg-type]
+        _df = pa.table(obj, **kwds)  # type:ignore[arg-type]
         return duckdb.sql("select * from _df")
 
 
@@ -399,7 +403,7 @@ class PySparkConstructor(
         index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
         _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
         result = (
-            session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()])
+            session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()], **kwds)
             .repartition(2)
             .orderBy(index_col_name)
             .drop(index_col_name)
@@ -426,7 +430,9 @@ class SQLFrameConstructor(
 
     def __call__(self, obj: Data, /, **kwds: Any) -> NativeSQLFrame:
         session = sqlframe_session()
-        return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()])
+        return session.createDataFrame(
+            [*zip(*obj.values())], schema=[*obj.keys()], **kwds
+        )
 
 
 class IbisConstructor(
@@ -443,7 +449,7 @@ class IbisConstructor(
 
         table = pa.table(obj)  # type:ignore[arg-type]
         table_name = str(uuid.uuid4())
-        return _ibis_backend().create_table(table_name, table)
+        return _ibis_backend().create_table(table_name, table, **kwds)
 
 
 # TODO(Unassigned): Remove once all the `"backend" in str(constructor)`
