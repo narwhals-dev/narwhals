@@ -13,6 +13,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals.testing.typing import ConstructorBase
     from narwhals.typing import IntoDataFrame
 
 pytest.importorskip("pandas")
@@ -117,7 +118,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
 
 @given(selector=st.one_of(single_selector, tuple_selector()))
 @pytest.mark.slow
-def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
+def test_getitem(pandas_or_pyarrow_constructor: ConstructorBase, selector: Any) -> None:
     """Compare __getitem__ against polars."""
     # TODO(PR - clean up): documenting current differences
     # These assume(...) lines each filter out a known difference.
@@ -125,7 +126,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is PyArrowConstructor()
+            pandas_or_pyarrow_constructor.name.is_pyarrow
             and isinstance(selector, slice)
             and selector.step is not None
         )
@@ -134,7 +135,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is PyArrowConstructor()
+            pandas_or_pyarrow_constructor.name.is_pyarrow
             and isinstance(selector, tuple)
             and (
                 (isinstance(selector[0], slice) and selector[0].step is not None)
