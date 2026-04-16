@@ -147,9 +147,9 @@ If you add code that should be tested, please add tests.
 
 ### 7. Running tests
 
-- To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`
+- To run tests, run `pytest`. To check coverage: `make test`
 - To run tests on the doctests, use `pytest narwhals --doctest-modules`
-- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=narwhals --doctest-modules`
+- To run unit tests and doctests at the same time, run `pytest tests narwhals --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
 - To choose which backends to run tests with you, you can use the `--constructors` flag:
   - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
