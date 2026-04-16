@@ -6,13 +6,8 @@ from typing import TYPE_CHECKING, Any, Literal
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    Constructor,
-    assert_equal_data,
-    pyspark_session,
-    sqlframe_session,
-)
+from narwhals.testing.constructors import pyspark_session, sqlframe_session
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")

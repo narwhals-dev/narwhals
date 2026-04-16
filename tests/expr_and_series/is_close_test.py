@@ -12,12 +12,6 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError, InvalidOperationError
-from tests.conftest import (
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-    pandas_constructor,
-)
 from tests.utils import (
     PANDAS_VERSION,
     PYARROW_VERSION,
@@ -29,12 +23,6 @@ from tests.utils import (
 if TYPE_CHECKING:
     from narwhals.typing import NumericLiteral
 
-NON_NULLABLE_CONSTRUCTORS = (
-    pandas_constructor,
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-)
 NULL_PLACEHOLDER, NAN_PLACEHOLDER = 9999.0, -1.0
 INF_POS, INF_NEG = float("inf"), float("-inf")
 
@@ -126,7 +114,7 @@ def test_is_close_series_with_series(
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = x.is_close(y, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
-    if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
+    if constructor_eager.name.is_non_nullable:
         expected = [v if v is not None else nans_equal for v in expected]
     elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         expected = [
@@ -154,7 +142,7 @@ def test_is_close_series_with_scalar(
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
-    if constructor_eager in NON_NULLABLE_CONSTRUCTORS:
+    if constructor_eager.name.is_non_nullable:
         expected = [v if v is not None else False for v in expected]
     elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         expected = [
@@ -199,7 +187,7 @@ def test_is_close_expr_with_expr(
         )
         .sort("idx")
     )
-    if constructor in NON_NULLABLE_CONSTRUCTORS:
+    if constructor.name.is_non_nullable:
         expected = [v if v is not None else nans_equal for v in expected]
     elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
         expected = [
@@ -240,7 +228,7 @@ def test_is_close_expr_with_scalar(
         )
         .sort("idx")
     )
-    if constructor in NON_NULLABLE_CONSTRUCTORS:
+    if constructor.name.is_non_nullable:
         expected = [v if v is not None else False for v in expected]
     elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
         expected = [

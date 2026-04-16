@@ -5,20 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.conftest import (
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-    pandas_constructor,
-)
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
-
-NON_NULLABLE_CONSTRUCTORS = [
-    pandas_constructor,
-    dask_lazy_p1_constructor,
-    dask_lazy_p2_constructor,
-    modin_constructor,
-]
 
 data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
@@ -77,7 +64,7 @@ def test_is_finite_column_with_null(constructor: Constructor, data: list[float])
     result = df.select(nw.col("a").is_finite())
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if constructor.name.is_non_nullable:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {"a": [True, True, False]}
     else:
