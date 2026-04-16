@@ -166,39 +166,31 @@ jobs:
         run: |
           git clone https://github.com/posit-dev/py-shiny.git
           cd py-shiny
-          uv venv -p ${{ matrix.python-version }}
           git log
-      - name: install-basics
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          uv pip install --upgrade tox virtualenv setuptools
-      - name: install-shiny-dev
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          # temporary pin to get CI green
-          uv pip install "flake8-bugbear<25.10.21"
-          make narwhals-install-shiny
+
+      - name: Narwhals integration setup
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-setup@main
+        with:
+          shiny-dir: py-shiny
+
       - name: install-narwhals-dev
+        env:
+          UV_SYSTEM_PYTHON: "1"
         run: |
           cd py-shiny
-          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: show-deps
+        env:
+          UV_SYSTEM_PYTHON: "1"
         run: |
           cd py-shiny
-          . .venv/bin/activate
           uv pip freeze
-      - name: Run `make narwhals-test-integration`
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          # Isort seems to behave slightly differently in CI
-          # so we ignore its output
-          make format -s
-          make narwhals-test-integration
+
+      - name: Narwhals integration test
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-test@main
+        with:
+          shiny-dir: py-shiny
 
   tea-tasting:
     strategy:
