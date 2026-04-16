@@ -171,8 +171,11 @@ class ConstructorName(str, Enum):
         """Whether this constructor requires GPU hardware."""
         return self is ConstructorName.CUDF
 
+    # TODO(Unassigned): remove 'no cover' flag once used in test suite
     @classmethod
-    def from_pytest_request(cls, request: pytest.FixtureRequest) -> ConstructorName:
+    def from_pytest_request(
+        cls, request: pytest.FixtureRequest
+    ) -> ConstructorName:  # pragma: no cover
         """Resolve the [`ConstructorName`][] from the current parametrised pytest request.
 
         Examples:

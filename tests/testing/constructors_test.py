@@ -1,8 +1,29 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+import pytest
+
 import narwhals as nw
-from narwhals.testing.constructors import ConstructorName
-from narwhals.testing.constructors._classes import DaskConstructor
+from narwhals._utils import Implementation
+from narwhals.testing.constructors import (
+    ConstructorName,
+    get_constructor,
+    prepare_constructors,
+)
+from narwhals.testing.constructors._classes import (
+    ConstructorBase,
+    DaskConstructor,
+    PandasConstructor,
+    PolarsEagerConstructor as OriginalPolarsEagerConstructor,
+)
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+
+    PropertyName: TypeAlias = str
+    ReturnTrue: TypeAlias = set[ConstructorName]
+    ReturnFalse: TypeAlias = set[ConstructorName]
 
 
 def test_dask_npartitions_distinct() -> None:
@@ -27,3 +48,93 @@ def test_lazy_returns_lazy_frame() -> None:
     constructor = ConstructorName.POLARS_LAZY.constructor
     lf = nw.from_native(constructor(data))
     assert isinstance(lf, nw.LazyFrame)
+
+
+CN = ConstructorName
+
+
+_IS_PROPERTY_CASES: list[tuple[PropertyName, ReturnTrue, ReturnFalse]] = [
+    ("is_pandas", {CN.PANDAS, CN.PANDAS_NULLABLE, CN.PANDAS_PYARROW}, {CN.POLARS_EAGER}),
+    ("is_modin", {CN.MODIN, CN.MODIN_PYARROW}, {CN.PANDAS}),
+    ("is_cudf", {CN.CUDF}, {CN.PANDAS}),
+    ("is_pandas_like", {CN.PANDAS, CN.MODIN, CN.CUDF}, {CN.POLARS_EAGER}),
+    ("is_polars", {CN.POLARS_EAGER, CN.POLARS_LAZY}, {CN.PANDAS}),
+    ("is_pyarrow", {CN.PYARROW}, {CN.PANDAS}),
+    ("is_dask", {CN.DASK}, {CN.PANDAS}),
+    ("is_duckdb", {CN.DUCKDB}, {CN.PANDAS}),
+    ("is_pyspark", {CN.PYSPARK, CN.PYSPARK_CONNECT}, {CN.PANDAS}),
+    ("is_sqlframe", {CN.SQLFRAME}, {CN.PANDAS}),
+    ("is_ibis", {CN.IBIS}, {CN.PANDAS}),
+    ("is_spark_like", {CN.PYSPARK, CN.SQLFRAME, CN.PYSPARK_CONNECT}, {CN.PANDAS}),
+    ("is_lazy", {CN.POLARS_LAZY, CN.DASK, CN.DUCKDB}, {CN.PANDAS}),
+    ("needs_pyarrow", {CN.PYARROW, CN.DUCKDB, CN.IBIS}, {CN.PANDAS}),
+    ("is_non_nullable", {CN.PANDAS, CN.MODIN, CN.DASK}, {CN.POLARS_EAGER}),
+]
+
+
+@pytest.mark.parametrize(("prop", "true_names", "false_names"), _IS_PROPERTY_CASES)
+def test_constructor_name_is_properties(
+    prop: str, true_names: set[ConstructorName], false_names: set[ConstructorName]
+) -> None:
+    for name in true_names:
+        assert getattr(name, prop), f"{name}.{prop} should be True"
+    for name in false_names:
+        assert not getattr(name, prop), f"{name}.{prop} should be False"
+
+
+def test_constructor_name_implementation() -> None:
+    assert CN.PANDAS.implementation is Implementation.PANDAS
+    assert CN.PANDAS_PYARROW.implementation is Implementation.PANDAS
+    assert CN.POLARS_EAGER.implementation is Implementation.POLARS
+    assert CN.PYSPARK_CONNECT.implementation is Implementation.PYSPARK_CONNECT
+
+
+def test_constructor_dunder() -> None:
+    c1 = ConstructorName.PANDAS.constructor
+    c2 = PandasConstructor()
+    assert c1.identifier == "pandas"
+    assert c1 == c2
+    assert hash(c1) == hash(c2)
+    assert c1 != OriginalPolarsEagerConstructor()
+    assert c1 != "not a constructor"
+
+
+def test_init_subclass_no_legacy_name() -> None:
+    class _Dummy(ConstructorBase, requirements=("polars",)):
+        name = ConstructorName.POLARS_EAGER
+
+        def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]
+            ...  # pragma: no cover
+
+    # re-registered POLARS_EAGER (overwriting the real one), but without adding a legacy_name entry for it.
+    assert ConstructorBase._registry[ConstructorName.POLARS_EAGER] == _Dummy()
+    assert ConstructorBase._legacy_names[ConstructorName.POLARS_EAGER] == ""
+
+    # Restore the original
+    legacy_name = "polars_eager_constructor"
+
+    class PolarsEagerConstructor(
+        OriginalPolarsEagerConstructor, requirements=("polars",), legacy_name=legacy_name
+    ):
+        name = ConstructorName.POLARS_EAGER
+
+    original = PolarsEagerConstructor()
+
+    assert ConstructorBase._registry[ConstructorName.POLARS_EAGER] == original
+    assert ConstructorBase._legacy_names[ConstructorName.POLARS_EAGER] == legacy_name
+
+
+def test_get_constructor() -> None:
+    expected = ConstructorName.PANDAS_PYARROW.constructor
+    assert get_constructor("pandas[pyarrow]") == expected
+
+
+def test_get_constructor_invalid_name() -> None:
+    with pytest.raises(ValueError, match="Unknown constructor"):
+        get_constructor("not_a_backend")
+
+
+def test_prepare_constructors_exclude_only() -> None:
+    result = prepare_constructors(exclude=[ConstructorName.PANDAS])
+    names = {c.name for c in result}
+    assert ConstructorName.PANDAS not in names

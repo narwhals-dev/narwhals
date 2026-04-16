@@ -154,8 +154,7 @@ class ConstructorBase(ABC):
         instance = cls()
         ConstructorBase._registry[cls.name] = instance
         ConstructorBase._requirements[cls.name] = requirements
-        if legacy_name:
-            ConstructorBase._legacy_names[cls.name] = legacy_name
+        ConstructorBase._legacy_names[cls.name] = legacy_name
 
     @abstractmethod
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoFrame:

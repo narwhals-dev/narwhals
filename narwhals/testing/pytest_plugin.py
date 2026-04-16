@@ -138,3 +138,5 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         params = [c for c in selected if c.name.is_eager and c.name.is_pandas_like]
         ids = [str(c.name) for c in params]
         metafunc.parametrize("constructor_pandas_like", params, ids=ids)
+    else:  # pragma: no cover
+        ...
