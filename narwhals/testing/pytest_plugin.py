@@ -8,20 +8,18 @@ from narwhals.testing.constructors import (
     ALL_CPU_CONSTRUCTORS,
     DEFAULT_CONSTRUCTORS,
     ConstructorBase,
-    ConstructorEagerBase,
     ConstructorName,
-    available_constructors,
-    get_constructor,
+    prepare_constructors,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     import pytest
 
 
 _MIN_PANDAS_NULLABLE_VERSION: tuple[int, ...] = (2, 0, 0)
 """`pandas.convert_dtypes(dtype_backend=...)` requires pandas >= 2.0.0."""
+
+_PANDAS_NULLABLES = {ConstructorName.PANDAS_NULLABLE, ConstructorName.PANDAS_PYARROW}
 
 _ALL_CPU_EXCLUSIONS: frozenset[ConstructorName] = frozenset(
     {ConstructorName.MODIN, ConstructorName.PYSPARK_CONNECT}
@@ -49,8 +47,7 @@ def _default_constructor_ids() -> list[str]:
     """
     if env := os.environ.get("NARWHALS_DEFAULT_CONSTRUCTORS"):  # pragma: no cover
         return env.split(",")
-    available = available_constructors()
-    return [name.value for name in DEFAULT_CONSTRUCTORS if name in available]
+    return [str(c.name) for c in prepare_constructors(include=DEFAULT_CONSTRUCTORS)]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -91,24 +88,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def _select_constructors(
     config: pytest.Config,
-) -> list[ConstructorName]:  # pragma: no cover
+) -> list[ConstructorBase]:  # pragma: no cover
     if config.getoption("all_cpu_constructors"):
-        names: Iterable[ConstructorName] = sorted(
-            ALL_CPU_CONSTRUCTORS - _ALL_CPU_EXCLUSIONS, key=lambda c: c.value
+        selected = prepare_constructors(
+            include=ALL_CPU_CONSTRUCTORS, exclude=_ALL_CPU_EXCLUSIONS
         )
     else:
         opt = cast("str", config.getoption("constructors"))
         names = [ConstructorName(c) for c in opt.split(",") if c]
+        selected = prepare_constructors(include=names)
 
-    pandas_version = _pandas_version()
-    selected: list[ConstructorName] = []
-    for name in names:
-        if (
-            name in {ConstructorName.PANDAS_NULLABLE, ConstructorName.PANDAS_PYARROW}
-            and pandas_version < _MIN_PANDAS_NULLABLE_VERSION
-        ):
-            continue
-        selected.append(name)
+    if _pandas_version() < _MIN_PANDAS_NULLABLE_VERSION:
+        selected = [c for c in selected if c.name not in _PANDAS_NULLABLES]
     return selected
 
 
@@ -122,27 +113,13 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     selected = _select_constructors(metafunc.config)
 
-    constructors: list[ConstructorBase] = []
-    constructor_ids: list[str] = []
-    eager: list[ConstructorEagerBase] = []
-    eager_ids: list[str] = []
-    pandas_like: list[ConstructorEagerBase] = []
-    pandas_like_ids: list[str] = []
-
-    for name in selected:
-        constructor = get_constructor(name)
-        constructors.append(constructor)
-        constructor_ids.append(name.value)
-        if isinstance(constructor, ConstructorEagerBase):
-            eager.append(constructor)
-            eager_ids.append(name.value)
-            if name.is_pandas_like:
-                pandas_like.append(constructor)
-                pandas_like_ids.append(name.value)
-
     if "constructor_eager" in fixturenames:
-        metafunc.parametrize("constructor_eager", eager, ids=eager_ids)
+        params = [c for c in selected if c.name.is_eager]
+        ids = [str(c.name) for c in params]
+        metafunc.parametrize("constructor_eager", params, ids=ids)
     elif "constructor" in fixturenames:
-        metafunc.parametrize("constructor", constructors, ids=constructor_ids)
-    elif "constructor_pandas_like" in metafunc.fixturenames:
-        metafunc.parametrize("constructor_pandas_like", pandas_like, ids=pandas_like_ids)
+        metafunc.parametrize("constructor", selected, ids=[str(c.name) for c in selected])
+    elif "constructor_pandas_like" in fixturenames:
+        params = [c for c in selected if c.name.is_eager and c.name.is_pandas_like]
+        ids = [str(c.name) for c in params]
+        metafunc.parametrize("constructor_pandas_like", params, ids=ids)
