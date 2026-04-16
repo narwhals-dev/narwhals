@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Generic, Literal, final
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, final
 
 from narwhals._plan._meta import SlottedMeta
 from narwhals._plan.exceptions import (
@@ -9,7 +9,6 @@ from narwhals._plan.exceptions import (
     function_arity_error,
     function_expr_invalid_operation_error,
 )
-from narwhals._plan.typing import Seq
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -17,19 +16,20 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.expressions import ExprIR, Function
+    from narwhals._plan.compliant.typing import Ctx, FrameT_contra as Frame, R_co
+    from narwhals._plan.expressions import ExprIR, Function, FunctionExpr as FExpr
+    from narwhals._plan.typing import Seq
 
 __all__ = ["SCALAR", "Binary", "Parameters", "Ternary", "Unary", "Variadic"]
 
-_ArgsT_co = TypeVar(
-    "_ArgsT_co", bound="Seq[ExprIR]", default="Seq[ExprIR]", covariant=True
-)
 Arity: TypeAlias = Literal[1, 2, 3, "*"]
 """The number of expression arguments taken by a function.
 
 ## See Also
 [Arity](https://en.wikipedia.org/wiki/Arity)
 """
+
+Incomplete: TypeAlias = Any
 
 
 class Constraint(enum.Enum):
@@ -52,7 +52,7 @@ _DEFAULT: Final = Constraint.DEFAULT
 # - `__function_parameters__ = Binary(start=SCALAR, end=SCALAR)`
 #   - `_constraints = (SCALAR, SCALAR)`
 #   - `_names = ("start", "end")`
-class Parameters(Generic[_ArgsT_co], metaclass=SlottedMeta):
+class Parameters(metaclass=SlottedMeta):
     """Expectations of expression arguments to a function.
 
     Default instances encode how many:
@@ -114,12 +114,15 @@ class Parameters(Generic[_ArgsT_co], metaclass=SlottedMeta):
                 raise function_arg_non_scalar_error(function, expr)
         return exprs
 
-    def unwrap(self, exprs: Seq[ExprIR]) -> _ArgsT_co:
-        """Ensure we have the correct number of expressions.
+    def dispatch_args(
+        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
+    ) -> Seq[R_co]:
+        """Call `ExprIR.dispatch` on **all inputs** to `node`.
 
-        This shouldn't be used before expression expansion.
+        `name` is used for the first input.
         """
-        raise NotImplementedError
+        msg = f"TODO: {self.dispatch_args.__qualname__!r}"
+        raise NotImplementedError(msg)
 
     def _zip_constraints(
         self, function: Function, exprs: Seq[ExprIR], /
@@ -142,7 +145,7 @@ class Parameters(Generic[_ArgsT_co], metaclass=SlottedMeta):
 
 
 @final
-class Unary(Parameters[tuple["ExprIR"]], arity=1):
+class Unary(Parameters, arity=1):
     """Takes one expression argument.
 
     This is the default and used for most functions (by count).
@@ -159,13 +162,14 @@ class Unary(Parameters[tuple["ExprIR"]], arity=1):
     def __init__(self, arg: Constraint = _DEFAULT, /) -> None:
         self._constraints: tuple[Constraint] = (arg,)
 
-    def unwrap(self, exprs: Seq[ExprIR]) -> tuple[ExprIR]:  # pragma: no cover
-        (a,) = exprs
-        return (a,)
+    def dispatch_args(
+        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
+    ) -> tuple[R_co]:
+        return (node.input[0].dispatch(ctx, frame, name),)
 
 
 @final
-class Binary(Parameters[tuple["ExprIR", "ExprIR"]], arity=2):
+class Binary(Parameters, arity=2):
     """Takes two expression arguments.
 
     In many cases, this is like `Unary` but the `Expr` *method* accepts an expression:
@@ -183,13 +187,15 @@ class Binary(Parameters[tuple["ExprIR", "ExprIR"]], arity=2):
     def __init__(self, left: Constraint = _DEFAULT, right: Constraint = _ANY) -> None:
         self._constraints: tuple[Constraint, Constraint] = left, right
 
-    def unwrap(self, exprs: Seq[ExprIR]) -> tuple[ExprIR, ExprIR]:  # pragma: no cover
-        a, b = exprs
-        return (a, b)
+    def dispatch_args(
+        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
+    ) -> tuple[R_co, R_co]:
+        left, right = node.input
+        return (left.dispatch(ctx, frame, name), right.dispatch(ctx, frame, ""))
 
 
 @final
-class Ternary(Parameters[tuple["ExprIR", "ExprIR", "ExprIR"]], arity=3):
+class Ternary(Parameters, arity=3):
     """Takes three expression arguments.
 
     This is like `Unary` but the `Expr` *method* accepts two expressions:
@@ -207,16 +213,20 @@ class Ternary(Parameters[tuple["ExprIR", "ExprIR", "ExprIR"]], arity=3):
     ) -> None:
         self._constraints: tuple[Constraint, Constraint, Constraint] = arg_1, arg_2, arg_3
 
-    def unwrap(
-        self, exprs: Seq[ExprIR]
-    ) -> tuple[ExprIR, ExprIR, ExprIR]:  # pragma: no cover
-        a, b, c = exprs
-        return (a, b, c)
+    def dispatch_args(
+        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
+    ) -> tuple[R_co, R_co, R_co]:
+        arg_1, arg_2, arg_3 = node.input
+        return (
+            arg_1.dispatch(ctx, frame, name),
+            arg_2.dispatch(ctx, frame, ""),
+            arg_3.dispatch(ctx, frame, ""),
+        )
 
 
 # TODO @dangotbanned: Restrict variadic to elementwise + scalar?
 @final
-class Variadic(Parameters[Seq["ExprIR"]], arity="*"):
+class Variadic(Parameters, arity="*"):
     """Takes a variable number of expression arguments.
 
     Describes the parameters of horizontal functions:
@@ -234,5 +244,16 @@ class Variadic(Parameters[Seq["ExprIR"]], arity="*"):
     def __init__(self) -> None:
         self._constraints = ()
 
-    def unwrap(self, exprs: Seq[ExprIR]) -> Seq[ExprIR]:  # pragma: no cover
-        return exprs
+    # TODO @dangotbanned: Revisit later for coverage
+    # `ArrowNamespace._horizontal` is handling the `ArrowExpr.from_ir` part, so this is more complicated
+    def dispatch_args(
+        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
+    ) -> tuple[R_co, ...]:  # pragma: no cover
+        it = iter(node.input)
+        return (
+            next(it).dispatch(ctx, frame, name),
+            *(e.dispatch(ctx, frame, "") for e in it),
+        )
+
+
+ParamsT_co = TypeVar("ParamsT_co", bound=Parameters, default=Parameters, covariant=True)

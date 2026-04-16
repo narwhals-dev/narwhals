@@ -3,21 +3,29 @@ from __future__ import annotations
 # mypy: disable-error-code="misc"
 # NOTE: Needs to be disabled as `mypy` reports the diagnostic twice, with one not attributed to a line number
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Any, Generic, Protocol
 
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import nodes
-from narwhals._plan.typing import FunctionT_co, HorizontalT_co, RangeT_co, Seq, StructT_co
+from narwhals._plan.typing import (
+    FunctionT,
+    FunctionT_co,
+    HorizontalT_co,
+    RangeT_co,
+    Seq,
+    StructT_co,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import type_check_only
 
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan import _parameters as params
     from narwhals._plan._expansion import Expander
-    from narwhals._plan._parameters import Parameters
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
@@ -25,6 +33,8 @@ if TYPE_CHECKING:
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 renamed = DispatcherOptions.renamed
+
+Incomplete: TypeAlias = Any
 
 
 # TODO @dangotbanned: How painful will a rename for `input` -> `args` be?
@@ -106,10 +116,22 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         for root in input_root.iter_expand(ctx):
             yield self.__replace__(input=(root, *children))
 
-    # TODO @dangotbanned: Add `Function.parameters` and make *that* generic
-    @property
-    def parameters(self) -> Parameters[Seq[ExprIR]]:
-        return self.function.__function_parameters__
+    if TYPE_CHECKING:
+        # NOTE
+        @property
+        @type_check_only
+        def __associated_function__(self: FunctionExpr[FunctionT]) -> type[FunctionT]:
+            """**Type checking only!**, see `_AssociateParams` doc for details."""
+            return self.function.__class__
+
+        @property
+        def parameters(self: _AssociateParams[params.ParamsT_co]) -> params.ParamsT_co:
+            return self.__associated_function__.__function_parameters__
+    else:
+
+        @property
+        def parameters(self) -> params.Parameters:
+            return self.function.__function_parameters__
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
@@ -152,3 +174,52 @@ class StructExpr(FunctionExpr[StructT_co]):
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
+
+
+if TYPE_CHECKING:
+    # NOTE: Associated type magic
+    class _HasParams(Protocol[params.ParamsT_co]):
+        @property
+        def __function_parameters__(self) -> params.ParamsT_co: ...
+
+    class _AssociateParams(Protocol[params.ParamsT_co]):
+        """Magic to yoink out the associated `Parameters` type from `FunctionExpr[Function]`.
+
+        Adapts an idea from `scipy-stubs` ([1], [2]) for resolving this conundrum:
+
+            class Function[P: Parameters]:
+                # The real thing is an associated type (not a generic)
+                __function_parameters_actual__: ClassVar[Parameters]
+
+                # If we try to make it generic ...
+                __function_parameters_bad__: ClassVar[P] # "ClassVar" type cannot include type variables
+
+                # Fixes ^, but requires making `Function` generic
+                # & somehow handling that in `FunctionExpr`
+                @property
+                def __function_parameters_better__(self) -> P: ...
+
+
+            class FunctionExpr[F: Function[Parameters]]:
+                # We can't write this as `F[P]` (higher-kinded type)
+                function: F
+
+                # Since `Function` isn't generic, this accessor would hide the associated type
+                @property
+                def parameters_actual(self) -> Parameters:
+                    # But if we're *outside*, this long chain would work, e.g.
+                    #   FunctionExpr[FillNull].function.__function_parameters_actual__  # "Binary"
+                    return self.function.__function_parameters_actual__
+
+                # Might work if `Function` was generic, but doesn't work well with `FunctionExpr` subclasses
+                # & scales poorly to how many `Function` subclasses there are
+                @property
+                def parameters_better[P: Parameters](self: FunctionExpr[Function[P]]) -> P:
+                    return self.function.__function_parameters_better__
+
+        [1]: https://github.com/scipy/scipy-stubs/blob/2d6cca6a5e6ee21b6be7008c6c773dd8f12723fb/scipy-stubs/sparse/_base.pyi#L156-L171
+        [2]: https://github.com/scipy/scipy-stubs/blob/85bea68bad3924f306586585d46fd2f9ff0d53d4/scipy-stubs/sparse/_typing.pyi#L30-L46
+        """
+
+        @property
+        def __associated_function__(self) -> _HasParams[params.ParamsT_co]: ...
