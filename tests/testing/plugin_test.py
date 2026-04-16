@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    import pytest
-
+import pytest
 
 pytest_plugins = ["pytester"]
 
@@ -12,6 +8,10 @@ pytest_plugins = ["pytester"]
 def test_constructor_eager_fixture_runs_for_each_backend(
     pytester: pytest.Pytester,
 ) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    pytest.importorskip("pyarrow")
+
     pytester.makeconftest("")
     pytester.makepyfile("""
         import narwhals as nw
@@ -35,6 +35,10 @@ def test_constructor_eager_fixture_runs_for_each_backend(
 
 
 def test_constructor_fixture_includes_lazy_backends(pytester: pytest.Pytester) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+    pytest.importorskip("duckdb")
+
     pytester.makeconftest("")
     pytester.makepyfile("""
         import narwhals as nw

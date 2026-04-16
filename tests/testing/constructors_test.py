@@ -37,16 +37,20 @@ def test_dask_repr() -> None:
 
 
 def test_eager_returns_eager_frame() -> None:
-    data = {"x": [1, 2, 3]}
-    constructor = ConstructorName.PANDAS.constructor
-    df = nw.from_native(constructor(data))
+    cn = ConstructorName.PANDAS
+    if not cn.is_available:
+        pytest.skip()
+
+    df = nw.from_native(cn.constructor({"x": [1, 2, 3]}))
     assert isinstance(df, nw.DataFrame)
 
 
 def test_lazy_returns_lazy_frame() -> None:
-    data = {"x": [1, 2, 3]}
-    constructor = ConstructorName.POLARS_LAZY.constructor
-    lf = nw.from_native(constructor(data))
+    cn = ConstructorName.POLARS_LAZY
+    if not cn.is_available:
+        pytest.skip()
+
+    lf = nw.from_native(cn.constructor({"x": [1, 2, 3]}))
     assert isinstance(lf, nw.LazyFrame)
 
 
