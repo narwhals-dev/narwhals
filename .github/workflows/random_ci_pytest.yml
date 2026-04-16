@@ -36,4 +36,5 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-            coverage run -m pytest tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy] && coverage report
+            coverage run -m pytest tests --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+            coverage report --fail-under=75
