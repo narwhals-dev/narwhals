@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from enum import Enum
+from functools import lru_cache
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
-
-from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     import pytest
 
+    from narwhals._utils import Implementation
     from narwhals.testing.constructors._classes import ConstructorBase
 
 
@@ -64,7 +64,7 @@ class ConstructorName(str, Enum):
     @property
     def implementation(self) -> Implementation:
         """The [`Implementation`][] that this constructor belongs to."""
-        return _NAME_TO_IMPL[self]
+        return _name_to_impl()[self]
 
     @property
     def is_pandas(self) -> bool:
@@ -199,20 +199,29 @@ class ConstructorName(str, Enum):
         return is_backend_available(*ConstructorBase._requirements[self])
 
 
-_NAME_TO_IMPL: dict[ConstructorName, Implementation] = {
-    ConstructorName.PANDAS: Implementation.PANDAS,
-    ConstructorName.PANDAS_NULLABLE: Implementation.PANDAS,
-    ConstructorName.PANDAS_PYARROW: Implementation.PANDAS,
-    ConstructorName.PYARROW: Implementation.PYARROW,
-    ConstructorName.MODIN: Implementation.MODIN,
-    ConstructorName.MODIN_PYARROW: Implementation.MODIN,
-    ConstructorName.CUDF: Implementation.CUDF,
-    ConstructorName.POLARS_EAGER: Implementation.POLARS,
-    ConstructorName.POLARS_LAZY: Implementation.POLARS,
-    ConstructorName.DASK: Implementation.DASK,
-    ConstructorName.DUCKDB: Implementation.DUCKDB,
-    ConstructorName.PYSPARK: Implementation.PYSPARK,
-    ConstructorName.PYSPARK_CONNECT: Implementation.PYSPARK_CONNECT,
-    ConstructorName.SQLFRAME: Implementation.SQLFRAME,
-    ConstructorName.IBIS: Implementation.IBIS,
-}
+@lru_cache(maxsize=1)
+def _name_to_impl() -> dict[ConstructorName, Implementation]:
+    """Lazily build the ConstructorName -> Implementation mapping.
+
+    The import is deferred so that ``narwhals._utils`` is not loaded
+    at plugin-registration time (before coverage starts measuring).
+    """
+    from narwhals._utils import Implementation
+
+    return {
+        ConstructorName.PANDAS: Implementation.PANDAS,
+        ConstructorName.PANDAS_NULLABLE: Implementation.PANDAS,
+        ConstructorName.PANDAS_PYARROW: Implementation.PANDAS,
+        ConstructorName.PYARROW: Implementation.PYARROW,
+        ConstructorName.MODIN: Implementation.MODIN,
+        ConstructorName.MODIN_PYARROW: Implementation.MODIN,
+        ConstructorName.CUDF: Implementation.CUDF,
+        ConstructorName.POLARS_EAGER: Implementation.POLARS,
+        ConstructorName.POLARS_LAZY: Implementation.POLARS,
+        ConstructorName.DASK: Implementation.DASK,
+        ConstructorName.DUCKDB: Implementation.DUCKDB,
+        ConstructorName.PYSPARK: Implementation.PYSPARK,
+        ConstructorName.PYSPARK_CONNECT: Implementation.PYSPARK_CONNECT,
+        ConstructorName.SQLFRAME: Implementation.SQLFRAME,
+        ConstructorName.IBIS: Implementation.IBIS,
+    }

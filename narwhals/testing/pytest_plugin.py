@@ -1,34 +1,28 @@
+"""Narwhals pytest plugin - auto-parametrises `constructor*` fixtures.
+
+NOTE: All imports from `narwhals.*` are deferred inside the hook functions so
+that the entry-point module can be loaded by pytest without pulling in the
+narwhals package tree.
+
+This is critical because entry-point plugins are loaded *before* `pytest-cov`
+starts coverage measurement; any narwhals module imported at that stage would
+have its module-level code (class definitions, constants, etc.) executed outside
+the coverage tracer.
+"""
+
 from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, cast
 
-from narwhals._utils import parse_version
-from narwhals.testing.constructors import (
-    ALL_CPU_CONSTRUCTORS,
-    DEFAULT_CONSTRUCTORS,
-    ConstructorBase,
-    ConstructorName,
-    prepare_constructors,
-)
-
 if TYPE_CHECKING:
     import pytest
+
+    from narwhals.testing.constructors import ConstructorBase
 
 
 _MIN_PANDAS_NULLABLE_VERSION: tuple[int, ...] = (2, 0, 0)
 """`pandas.convert_dtypes(dtype_backend=...)` requires pandas >= 2.0.0."""
-
-_PANDAS_NULLABLES = {ConstructorName.PANDAS_NULLABLE, ConstructorName.PANDAS_PYARROW}
-
-_ALL_CPU_EXCLUSIONS: frozenset[ConstructorName] = frozenset(
-    {ConstructorName.MODIN, ConstructorName.PYSPARK_CONNECT}
-)
-"""Backends excluded from `--all-cpu-constructors` even when installed:
-
-* modin is too slow for the full matrix
-* pyspark[connect] needs a different local setup and can't run alongside pyspark
-"""
 
 
 def _pandas_version() -> tuple[int, ...]:
@@ -36,6 +30,9 @@ def _pandas_version() -> tuple[int, ...]:
         import pandas as pd
     except ImportError:  # pragma: no cover
         return (0, 0, 0)
+
+    from narwhals._utils import parse_version
+
     return parse_version(pd.__version__)
 
 
@@ -47,10 +44,14 @@ def _default_constructor_ids() -> list[str]:
     """
     if env := os.environ.get("NARWHALS_DEFAULT_CONSTRUCTORS"):  # pragma: no cover
         return env.split(",")
+    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, prepare_constructors
+
     return [str(c.name) for c in prepare_constructors(include=DEFAULT_CONSTRUCTORS)]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
+    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS
+
     group = parser.getgroup("narwhals", "narwhals.testing")
     defaults = ", ".join(f"'{c.value}'" for c in sorted(DEFAULT_CONSTRUCTORS))
     group.addoption(
@@ -89,9 +90,19 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def _select_constructors(
     config: pytest.Config,
 ) -> list[ConstructorBase]:  # pragma: no cover
+    from narwhals.testing.constructors import (
+        ALL_CPU_CONSTRUCTORS,
+        ConstructorName,
+        prepare_constructors,
+    )
+
+    _all_cpu_exclusions = frozenset(
+        {ConstructorName.MODIN, ConstructorName.PYSPARK_CONNECT}
+    )
+
     if config.getoption("all_cpu_constructors"):
         selected = prepare_constructors(
-            include=ALL_CPU_CONSTRUCTORS, exclude=_ALL_CPU_EXCLUSIONS
+            include=ALL_CPU_CONSTRUCTORS, exclude=_all_cpu_exclusions
         )
     else:
         opt = cast("str", config.getoption("constructors"))
@@ -99,7 +110,11 @@ def _select_constructors(
         selected = prepare_constructors(include=names)
 
     if _pandas_version() < _MIN_PANDAS_NULLABLE_VERSION:
-        selected = [c for c in selected if c.name not in _PANDAS_NULLABLES]
+        _pandas_nullables = {
+            ConstructorName.PANDAS_NULLABLE,
+            ConstructorName.PANDAS_PYARROW,
+        }
+        selected = [c for c in selected if c.name not in _pandas_nullables]
     return selected
 
 

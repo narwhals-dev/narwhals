@@ -304,6 +304,7 @@ env = [
 
 [tool.coverage.run]
 plugins = ["covdefaults"]
+source = ["narwhals", "tests"]
 
 [tool.coverage.report]
 fail_under = 80  # This is just for local development, in CI we set it to 100
