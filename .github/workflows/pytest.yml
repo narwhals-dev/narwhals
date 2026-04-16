@@ -31,8 +31,8 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests  --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
-          coverage report
+          coverage run -m pytest tests  --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy] \
+          && coverage report
       - name: install-test-plugin
         run: uv pip install -e test-plugin/.
 
@@ -62,8 +62,8 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
-          coverage report
+          coverage run -m pytest tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30 \
+          && coverage report
 
   pytest-full-coverage:
     strategy:
@@ -95,8 +95,8 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
-          coverage report
+          coverage run -m pytest tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30 \
+          && coverage report
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
@@ -163,8 +163,8 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
-          coverage report
+          coverage run -m pytest tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50 \
+          && coverage report
 
   python-314t:
     strategy:
@@ -191,5 +191,5 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50
-          coverage report
+          coverage run -m pytest tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50 \
+          && coverage report
