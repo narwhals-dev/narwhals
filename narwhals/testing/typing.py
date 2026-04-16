@@ -11,7 +11,7 @@ if TYPE_CHECKING:
         ConstructorLazyBase,
     )
 
-Data: TypeAlias = dict[str, list[Any]]
+Data: TypeAlias = dict[str, Any]  # TODO(Unassined): This should have a better annotation
 """A column-oriented mapping used as input to a [`Constructor`][]."""
 
 Constructor: TypeAlias = "ConstructorBase"

@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
+data: dict[str, list[Any]] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
 
 POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 

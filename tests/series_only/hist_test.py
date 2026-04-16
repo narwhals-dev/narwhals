@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from random import Random
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import hypothesis.strategies as st
 import pytest
@@ -11,6 +11,7 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
+from narwhals.testing.constructors import ConstructorName
 from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
@@ -45,7 +46,18 @@ counts_and_expected = [
 param_include_breakpoint = pytest.mark.parametrize(
     "include_breakpoint", [True, False], ids=["breakpoint-True", "breakpoint-False"]
 )
-param_library = pytest.mark.parametrize("library", ["pandas", "polars", "pyarrow"])
+param_name = pytest.mark.parametrize(
+    "name",
+    [ConstructorName.PANDAS, ConstructorName.POLARS_EAGER, ConstructorName.PYARROW],
+)
+
+
+def maybe_name_to_constructor(name: ConstructorName) -> ConstructorEager:
+    if name.is_available:
+        return cast("ConstructorEager", name.constructor)
+
+    pytest.skip()
+
 
 SHIFT_BINS_BY = 10
 """shift bins property"""
@@ -65,31 +77,15 @@ SHIFT_BINS_BY = 10
     ],
     ids=str,
 )
-@param_library
+@param_name
 def test_hist_bin(
-    library: str,
+    name: ConstructorName,
     bins: list[float],
     expected: Sequence[float],
     *,
     include_breakpoint: bool,
 ) -> None:
-    constructor_eager: ConstructorEager
-    pytest.importorskip(library)
-    if library == "pandas":
-        import pandas as pd
-
-        constructor_eager = pd.DataFrame
-    elif library == "polars":
-        import polars as pl
-
-        constructor_eager = pl.DataFrame
-    else:
-        import pyarrow as pa
-
-        pytest.importorskip("numpy")
-
-        constructor_eager = pa.table
-
+    constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
@@ -132,22 +128,11 @@ def test_hist_bin(
 
 @pytest.mark.parametrize("params", counts_and_expected)
 @param_include_breakpoint
-@param_library
+@param_name
 def test_hist_count(
-    library: str, *, params: dict[str, Any], include_breakpoint: bool
+    name: ConstructorName, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
-    if library == "pandas":
-        pytest.importorskip("pandas")
-        import pandas as pd
-
-        constructor_eager: Any = pd.DataFrame
-    elif library == "polars":
-        pl = pytest.importorskip("polars")
-        constructor_eager = pl.DataFrame
-    else:
-        pa = pytest.importorskip("pyarrow")
-        pytest.importorskip("numpy")
-        constructor_eager = pa.table
+    constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
@@ -188,20 +173,9 @@ def test_hist_count(
             )
 
 
-@param_library
-def test_hist_count_no_spread(library: str) -> None:
-    if library == "pandas":
-        pytest.importorskip("pandas")
-        import pandas as pd
-
-        constructor_eager: Any = pd.DataFrame
-    elif library == "polars":
-        pl = pytest.importorskip("polars")
-        constructor_eager = pl.DataFrame
-    else:
-        pa = pytest.importorskip("pyarrow")
-        pytest.importorskip("numpy")
-        constructor_eager = pa.table
+@param_name
+def test_hist_count_no_spread(name: ConstructorName) -> None:
+    constructor_eager = maybe_name_to_constructor(name)
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
 
@@ -231,20 +205,9 @@ def test_hist_bin_and_bin_count() -> None:
 
 
 @param_include_breakpoint
-@param_library
-def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
-    if library == "pandas":
-        pytest.importorskip("pandas")
-        import pandas as pd
-
-        constructor_eager: Any = pd.DataFrame
-    elif library == "polars":
-        pl = pytest.importorskip("polars")
-        constructor_eager = pl.DataFrame
-    else:
-        pa = pytest.importorskip("pyarrow")
-        pytest.importorskip("numpy")
-        constructor_eager = pa.table
+@param_name
+def test_hist_no_data(name: ConstructorName, *, include_breakpoint: bool) -> None:
+    constructor_eager = maybe_name_to_constructor(name)
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
@@ -264,20 +227,9 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     assert result["count"].sum() == 0
 
 
-@param_library
-def test_hist_small_bins(library: str) -> None:
-    if library == "pandas":
-        pytest.importorskip("pandas")
-        import pandas as pd
-
-        constructor_eager: Any = pd.DataFrame
-    elif library == "polars":
-        pl = pytest.importorskip("polars")
-        constructor_eager = pl.DataFrame
-    else:
-        pa = pytest.importorskip("pyarrow")
-        pytest.importorskip("numpy")
-        constructor_eager = pa.table
+@param_name
+def test_hist_small_bins(name: ConstructorName) -> None:
+    constructor_eager = maybe_name_to_constructor(name)
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
@@ -325,24 +277,13 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     POLARS_VERSION < (1, 27),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
-@param_library
+@param_name
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    library: str, data: list[float], bin_deltas: list[float]
+    name: ConstructorName, data: list[float], bin_deltas: list[float]
 ) -> None:
-    if library == "pandas":
-        pytest.importorskip("pandas")
-        import pandas as pd
-
-        constructor_eager: Any = pd.DataFrame
-    elif library == "polars":
-        pl = pytest.importorskip("polars")
-        constructor_eager = pl.DataFrame
-    else:
-        pa = pytest.importorskip("pyarrow")
-        pytest.importorskip("numpy")
-        constructor_eager = pa.table
+    constructor_eager = maybe_name_to_constructor(name)
     pytest.importorskip("polars")
     import polars as pl
 
@@ -378,25 +319,18 @@ def test_hist_bin_hypotheis(
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-@param_library
+@param_name
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    library: str, data: list[float], bin_count: int, request: pytest.FixtureRequest
+    name: ConstructorName,
+    data: list[float],
+    bin_count: int,
+    request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    if library == "pandas":
-        pytest.importorskip("pandas")
-        import pandas as pd
-
-        constructor_eager: Any = pd.DataFrame
-    elif library == "polars":
-        constructor_eager = pl.DataFrame
-    else:
-        pa = pytest.importorskip("pyarrow")
-        pytest.importorskip("numpy")
-        constructor_eager = pa.table
+    constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )

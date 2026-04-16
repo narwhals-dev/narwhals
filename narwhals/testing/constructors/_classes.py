@@ -42,10 +42,9 @@ from __future__ import annotations
 import os
 import uuid
 import warnings
-from abc import ABC, abstractmethod
 from copy import deepcopy
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
 from narwhals._utils import generate_temporary_column_name
 from narwhals.testing.constructors._name import ConstructorName
@@ -116,7 +115,7 @@ def _pyspark_session_lazy() -> SparkSession:  # pragma: no cover
         return session
 
 
-class ConstructorBase(ABC):
+class ConstructorBase(Protocol):
     """Abstract base for any constructor exposed by `narwhals.testing`.
 
     A constructor is a callable that turns a column-oriented `dict` (typed as
@@ -156,9 +155,9 @@ class ConstructorBase(ABC):
         ConstructorBase._requirements[cls.name] = requirements
         ConstructorBase._legacy_names[cls.name] = legacy_name
 
-    @abstractmethod
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoFrame:
         """Build a native frame from `obj`."""
+        ...
 
     @property
     def identifier(self) -> str:
@@ -187,14 +186,12 @@ class ConstructorBase(ABC):
 class ConstructorEagerBase(ConstructorBase):
     """A constructor that returns an *eager* native dataframe."""
 
-    @abstractmethod
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame: ...
 
 
 class ConstructorLazyBase(ConstructorBase):
     """A constructor that returns a *lazy* native frame."""
 
-    @abstractmethod
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoLazyFrame: ...
 
 

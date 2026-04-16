@@ -21,7 +21,7 @@ data_sorted = [7.0, 8.0, 9.0]
 )
 def test_is_sorted(
     constructor_eager: ConstructorEager,
-    input_data: str,
+    input_data: list[int],
     descending: bool,  # noqa: FBT001
     expected: bool,  # noqa: FBT001
 ) -> None:
