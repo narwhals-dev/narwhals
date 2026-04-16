@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 data_with_nulls = {"a": [1, 3, 2, None], "b": [4, 4, 6, None], "z": [7.0, 8.0, 9.0, None]}

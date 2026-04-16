@@ -6,10 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import NUMPY_VERSION, POLARS_VERSION
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
 
 T = TypeVar("T")
 

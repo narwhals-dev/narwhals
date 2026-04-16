@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+    from tests.utils import Constructor
 
 
 def test_eq_neq_raise(constructor: Constructor) -> None:

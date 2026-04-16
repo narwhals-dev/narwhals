@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import pytest
 
@@ -10,12 +10,11 @@ from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
     assert_equal_data,
     is_windows,
 )
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
 

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 
 def test_is_empty(constructor_eager: ConstructorEager) -> None:

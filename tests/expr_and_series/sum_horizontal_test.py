@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
 def test_sumh(constructor: Constructor) -> None:

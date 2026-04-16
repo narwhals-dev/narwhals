@@ -6,11 +6,10 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION, assert_equal_data
+from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.dtypes import DType
-    from narwhals.testing.typing import Constructor
 
 data = {"a": [7, 8, 9], "b": [1, 3, 5], "c": [2, 4, 6]}
 

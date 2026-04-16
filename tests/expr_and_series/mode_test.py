@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import re
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
-from tests.utils import POLARS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
 data_group = {

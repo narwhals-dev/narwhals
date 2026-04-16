@@ -1,21 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from narwhals.testing.constructors import ConstructorName
-from tests.utils import POLARS_VERSION, assert_equal_data
+from tests.conftest import (
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+    pandas_constructor,
+)
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
-
-NON_NULLABLE_CONSTRUCTORS = {
-    ConstructorName.MODIN,
-    ConstructorName.PANDAS,
-    ConstructorName.DASK,
-}
+NON_NULLABLE_CONSTRUCTORS = [
+    pandas_constructor,
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+]
 
 data = {"a": [float("nan"), float("inf"), 2.0, None]}
 
@@ -74,7 +77,7 @@ def test_is_finite_column_with_null(constructor: Constructor, data: list[float])
     result = df.select(nw.col("a").is_finite())
 
     expected: dict[str, list[Any]]
-    if constructor.name in NON_NULLABLE_CONSTRUCTORS:
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {"a": [True, True, False]}
     else:

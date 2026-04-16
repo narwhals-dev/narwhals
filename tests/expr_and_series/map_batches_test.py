@@ -7,12 +7,15 @@ import pytest
 pytest.importorskip("numpy")
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
-    from narwhals.testing.typing import ConstructorEager
-
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 

@@ -30,16 +30,14 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Version
-from narwhals.testing.constructors import ConstructorName
-from tests.utils import maybe_get_modin_df
+from tests.conftest import sqlframe_pyspark_lazy_constructor
+from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from _pytest.mark import ParameterSet
     from typing_extensions import assert_type
-
-    from narwhals.testing.typing import Constructor
 
 
 class MockDataFrame:
@@ -296,8 +294,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
 
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    constructor = ConstructorName.SQLFRAME.constructor
-    df = constructor(data)
+    df = sqlframe_pyspark_lazy_constructor(data)
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
         nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
@@ -318,8 +315,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
 )
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    constructor = ConstructorName.SQLFRAME.constructor
-    df = constructor(data)
+    df = sqlframe_pyspark_lazy_constructor(data)
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)

@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[2, 2, 3, None, None], None, [], [None]]}
 expected = {2, 3, None}

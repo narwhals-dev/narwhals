@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 data = {"foo": [1, 2, 3], "BAR": [4, 5, 6]}
 prefix = "with_prefix_"

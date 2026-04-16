@@ -6,12 +6,12 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+    from collections.abc import Mapping
 
-data: dict[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
+data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
 
 
 @pytest.mark.parametrize(

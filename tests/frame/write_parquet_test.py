@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 pytest.importorskip("pyarrow")
 data = {"a": [1, 2, 3]}

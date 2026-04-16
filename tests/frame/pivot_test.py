@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],

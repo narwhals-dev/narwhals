@@ -1,21 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from narwhals.testing.constructors import ConstructorName
-from tests.utils import PANDAS_VERSION, assert_equal_data
+from tests.conftest import (
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+    pandas_constructor,
+)
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
-
-NON_NULLABLE_CONSTRUCTORS = {
-    ConstructorName.MODIN,
-    ConstructorName.PANDAS,
-    ConstructorName.DASK,
-}
+NON_NULLABLE_CONSTRUCTORS = [
+    pandas_constructor,
+    dask_lazy_p1_constructor,
+    dask_lazy_p2_constructor,
+    modin_constructor,
+]
 
 
 def test_nan(constructor: Constructor) -> None:
@@ -30,7 +33,7 @@ def test_nan(constructor: Constructor) -> None:
     )
 
     expected: dict[str, list[Any]]
-    if constructor.name in NON_NULLABLE_CONSTRUCTORS:
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],
@@ -67,7 +70,7 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
         "float_na": df["float_na"].is_nan(),
     }
     expected: dict[str, list[Any]]
-    if constructor_eager.name in NON_NULLABLE_CONSTRUCTORS:
+    if any(constructor_eager is c for c in NON_NULLABLE_CONSTRUCTORS):
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],

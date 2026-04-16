@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 
 import narwhals as nw
 from narwhals.stable.v1.dependencies import is_narwhals_lazyframe
-from narwhals.testing.typing import Constructor
+from tests.utils import Constructor
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+    from tests.utils import Constructor
 
 
 def test_is_narwhals_lazyframe(constructor: Constructor) -> None:

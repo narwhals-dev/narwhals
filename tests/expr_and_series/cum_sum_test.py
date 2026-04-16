@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
@@ -9,12 +7,11 @@ from tests.utils import (
     DUCKDB_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
     assert_equal_data,
     is_windows,
 )
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
 
 data = {"arg entina": [1, 2, None, 4]}
 expected = {"cum_sum": [1, 3, None, 7], "reverse_cum_sum": [7, 6, None, 4]}

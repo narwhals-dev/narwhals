@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+from tests.utils import Constructor, assert_equal_data
 
 data = {"weight": ["89kg", "83", "79kg", "68kg", "78kg", "73", "86kg"]}
 

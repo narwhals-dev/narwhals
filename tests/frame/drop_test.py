@@ -10,7 +10,7 @@ from narwhals.exceptions import ColumnNotFoundError
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+    from tests.utils import Constructor
 
 
 @pytest.mark.parametrize(

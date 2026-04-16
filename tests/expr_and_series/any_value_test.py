@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION, PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 data = {
     "a": [1, 1, 1, 2, 2, 3],

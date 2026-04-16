@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+from tests.utils import PANDAS_VERSION, ConstructorEager, assert_equal_data
 
 data = [4, 4, 4, 1, 6, 6, 4, 4, 1, 1]
 

@@ -7,12 +7,17 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import DUCKDB_VERSION, POLARS_VERSION, PYARROW_VERSION, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import PythonLiteral
-
+    from tests.utils import ConstructorEager
 
 data: dict[str, list[PythonLiteral]] = {
     "a": [8, 2, 1, None],

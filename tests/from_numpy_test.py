@@ -8,10 +8,9 @@ pytest.importorskip("numpy")
 import numpy as np
 
 import narwhals as nw
-from tests.utils import assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
     from narwhals.typing import _2DArray
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6]}

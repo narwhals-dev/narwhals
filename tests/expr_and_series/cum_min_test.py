@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
@@ -10,12 +8,11 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
     assert_equal_data,
     is_windows,
 )
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
 
 data = {"a": [3, 1, None, 2]}
 

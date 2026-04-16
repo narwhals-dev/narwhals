@@ -12,7 +12,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 data = [1, 3, 2]
 

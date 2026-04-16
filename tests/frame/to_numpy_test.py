@@ -12,7 +12,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, is_windows
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 
 def test_to_numpy(constructor_eager: ConstructorEager) -> None:

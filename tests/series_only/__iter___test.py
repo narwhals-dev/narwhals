@@ -9,7 +9,7 @@ import narwhals as nw
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 data = [1, 2, 3]
 

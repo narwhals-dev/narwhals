@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, None, 2]}
 data_str = {"a": ["x", "x", "y", None]}

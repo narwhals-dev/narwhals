@@ -10,7 +10,7 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")

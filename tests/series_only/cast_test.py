@@ -9,7 +9,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 
 def test_cast_253(

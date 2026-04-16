@@ -12,12 +12,10 @@ from hypothesis import given
 import narwhals as nw
 from narwhals.exceptions import ComputeError
 from narwhals.testing.constructors import ConstructorName
-from tests.utils import POLARS_VERSION, assert_equal_data
+from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from narwhals.testing.typing import ConstructorEager
 
 rnd = Random(0)  # noqa: S311
 

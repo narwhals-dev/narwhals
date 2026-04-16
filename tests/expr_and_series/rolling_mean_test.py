@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, POLARS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [None, 1, 2, None, 4, 6, 11]}
 

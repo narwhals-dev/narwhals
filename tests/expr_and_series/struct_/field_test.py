@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:

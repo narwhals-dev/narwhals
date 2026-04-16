@@ -9,7 +9,7 @@ import narwhals as nw
 from tests.utils import assert_equal_data, uses_pyarrow_backend
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 data = {"a": ["2020-01-01", "2020-01-02", None]}
 expected = {"a": [date(2020, 1, 1), date(2020, 1, 2), None]}

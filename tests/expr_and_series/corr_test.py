@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 

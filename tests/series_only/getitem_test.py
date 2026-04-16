@@ -8,7 +8,7 @@ import narwhals as nw
 from tests.utils import assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+    from tests.utils import ConstructorEager
 
 
 def test_by_slice(constructor_eager: ConstructorEager) -> None:

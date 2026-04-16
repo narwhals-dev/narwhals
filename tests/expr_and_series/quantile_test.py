@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import re
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -46,7 +43,7 @@ def test_quantile_expr(
     )
     context = (
         pytest.raises(NotImplementedError, match=msg)
-        if "dask_lazy" in str(constructor)
+        if "dask_lazy_p2" in str(constructor)
         else does_not_raise()
     )
 

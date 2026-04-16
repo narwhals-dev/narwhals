@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor
+from tests.utils import Constructor, assert_equal_data
 
 
 def test_double_selected(constructor: Constructor) -> None:

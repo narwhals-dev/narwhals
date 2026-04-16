@@ -7,12 +7,16 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
-from narwhals.testing.constructors import pyspark_session
-from narwhals.testing.typing import ConstructorEager
-from tests.utils import PANDAS_VERSION, assert_equal_data, is_windows
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    assert_equal_data,
+    is_windows,
+    pyspark_session,
+)
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+    from tests.utils import ConstructorEager
 
 
 def test_replace_time_zone(

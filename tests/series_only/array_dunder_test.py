@@ -3,15 +3,15 @@ from __future__ import annotations
 import pytest
 
 pytest.importorskip("numpy")
-from typing import TYPE_CHECKING
-
 import numpy as np
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, PYARROW_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+from tests.utils import (
+    PANDAS_VERSION,
+    PYARROW_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 def test_array_dunder(

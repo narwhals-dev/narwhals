@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import ConstructorEager
+from tests.utils import ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(("row", "column", "expected"), [(0, 2, 7), (1, "z", 8)])

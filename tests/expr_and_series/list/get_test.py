@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [[1, 2], [None, 3], [None], None]}
 
@@ -48,8 +45,9 @@ def test_get_series(
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    if str(constructor_eager).startswith("pandas") and "pyarrow" not in str(
-        constructor_eager
+    if (
+        constructor_eager.__name__.startswith("pandas")
+        and "pyarrow" not in constructor_eager.__name__
     ):
         df = nw.from_native(constructor_eager(data), eager_only=True)
         msg = re.escape("Series must be of PyArrow List type to support list namespace.")

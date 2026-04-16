@@ -10,7 +10,7 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
 if TYPE_CHECKING:
     from typing import Any
 
-    from narwhals.testing.typing import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager
 
 
 data = {"a": [[3, 2, 2, 4, -10, None, None], [-1], None, [None, None, None], []]}

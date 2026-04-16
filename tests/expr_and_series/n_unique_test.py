@@ -1,14 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1.0, None, None, 3.0], "b": [1.0, None, 4.0, 5.0]}
 

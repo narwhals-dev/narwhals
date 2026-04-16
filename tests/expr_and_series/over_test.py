@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, POLARS_VERSION, assert_equal_data
-
-if TYPE_CHECKING:
-    from narwhals.testing.typing import Constructor, ConstructorEager
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {
     "a": ["a", "a", "b", "b", "b"],
