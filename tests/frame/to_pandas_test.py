@@ -22,7 +22,7 @@ def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
     df_raw = constructor_eager(data)
     result = nw.from_native(df_raw, eager_only=True).to_pandas()
 
-    if constructor_eager.__name__.startswith("pandas"):
+    if str(constructor_eager).startswith("pandas"):
         expected = cast("pd.DataFrame", constructor_eager(data))
     elif "modin_pyarrow" in str(constructor_eager):
         expected = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
