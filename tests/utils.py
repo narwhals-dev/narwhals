@@ -13,6 +13,10 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
+from narwhals.testing.typing import (
+    Constructor as Constructor,  # noqa: PLC0414,TC001
+    ConstructorEager as ConstructorEager,  # noqa: PLC0414,TC001
+)
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
@@ -21,7 +25,6 @@ if TYPE_CHECKING:
     import pandas as pd
     from typing_extensions import TypeAlias
 
-    from narwhals.testing.typing import Constructor, ConstructorEager
     from narwhals.typing import Frame, TimeUnit
 
 
