@@ -129,7 +129,7 @@ NumericOrTemporalScalarT = TypeVar(
 )
 
 
-class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
+class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):  # type: ignore[misc]
     @overload
     def __call__(
         self, data: ScalarPT_contra, /, *args: Any, **kwds: Any

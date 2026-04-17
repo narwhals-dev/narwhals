@@ -442,7 +442,7 @@ class DataFrame(
     ) -> DataFrame[Any, Any]:
         if backend is None:
             unwrapped: dict[str, NativeSeries | Any] = {}
-            impl: _EagerAllowedImpl | None = backend
+            impl: Implementation | None = backend
             for k, v in data.items():
                 if is_series(v):
                     current = v.implementation
@@ -457,13 +457,15 @@ class DataFrame(
             if impl is None:
                 msg = "Calling `from_dict` without `backend` is only supported if all input values are already Narwhals Series"
                 raise TypeError(msg)
-            backend = impl
+            backend_ = impl
             data = unwrapped
-        ns = namespace_from_backend(backend)
+        else:
+            backend_ = backend
+        ns = namespace_from_backend(backend_)
         if can_from_dict(ns):
             return ns.from_dict(data, schema=schema, version=cls._version).to_narwhals()
         raise unsupported_backend_operation_error(
-            backend, "from_dict"
+            backend_, "from_dict"
         )  # pragma: no cover
 
     @overload

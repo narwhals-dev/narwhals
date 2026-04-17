@@ -156,11 +156,11 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
     unique = todo()
     var = todo()
 
-    cat = todo()  # type: ignore[assignment]
-    dt = todo()  # type: ignore[assignment]
-    list = todo()  # type: ignore[assignment]
-    str = todo()  # type: ignore[assignment]
-    struct = todo()  # type: ignore[assignment]
+    cat = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    dt = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    list = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    str = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    struct = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
 
 PolarsExpr()

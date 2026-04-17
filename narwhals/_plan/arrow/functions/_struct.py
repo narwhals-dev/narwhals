@@ -10,7 +10,6 @@ import pyarrow.compute as pc  # ignore-banned-import
 from narwhals._plan import common
 from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions.meta import call
-from narwhals._plan.arrow.guards import is_arrow
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -74,7 +73,7 @@ def schema(native: Arrow[pa.StructScalar] | pa.StructType, /) -> pa.Schema:
     Arguments:
         native: Struct-typed arrow data, or a `StructType` *itself*.
     """
-    tp = native.type if is_arrow(native) else native
+    tp = native if isinstance(native, pa.StructType) else native.type
     fields = tp.fields if compat.HAS_STRUCT_TYPE_FIELDS else list(tp)
     return pa.schema(fields)
 
@@ -85,7 +84,7 @@ def field_names(native: Arrow[pa.StructScalar] | pa.StructType, /) -> list[str]:
     Arguments:
         native: Struct-typed arrow data, or a `StructType` *itself*.
     """
-    tp = native.type if is_arrow(native) else native
+    tp = native if isinstance(native, pa.StructType) else native.type
     return tp.names if compat.HAS_STRUCT_TYPE_FIELDS else [f.name for f in tp]
 
 

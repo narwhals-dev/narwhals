@@ -78,7 +78,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pytest",
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
-  "mypy~=1.15.0",
+  "mypy==1.20.1", # Will break CI, only testing on `_plan` locally
   "pyright",
   "pyarrow-stubs==19.2",
   "sqlframe",
@@ -368,6 +368,9 @@ exclude_also = [
 files = ["narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
+check_untyped_defs = true
+allow_redefinition_new = true
+local_partial_types = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -418,3 +421,4 @@ ignore = [
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
+defineConstant = { "MYPY" = false }

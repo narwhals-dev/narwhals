@@ -127,7 +127,7 @@ def inner_dtype(
 ) -> DType:
     """Validate we have `expected` nested type, then unwrap `dtype.inner`."""
     if isinstance(dtype, expected):
-        return _inner_into_dtype(dtype)  # type: ignore[arg-type]
+        return _inner_into_dtype(dtype)
     if method_name:
         raise invalid_dtype_operation_error(dtype, method_name, *expected)
     msg = f"expected {' or '.join(str(tp) for tp in expected)} type, got dtype: {dtype}"

@@ -119,8 +119,8 @@ class PolarsNamespace(
 
         return PolarsSeries
 
-    _scalar = todo()  # type: ignore[assignment]
-    _frame = todo()  # type: ignore[assignment]
+    _scalar = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    _frame = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
     def from_dict(
         self,

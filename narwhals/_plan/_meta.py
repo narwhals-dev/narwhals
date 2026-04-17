@@ -145,7 +145,8 @@ class ImmutableMeta(SlottedMeta):
         getattr_: Callable[..., Seq[str]] = getattr
         it_bases = (getattr_(b, KEYS, ()) for b in bases)
         it_all = chain(
-            flatten(it_bases), namespace.get(KEYS, namespace.get("__slots__", ()))
+            flatten(it_bases),
+            namespace.get(KEYS, namespace.get("__slots__", ())),  # type: ignore[arg-type]
         )
         namespace[KEYS] = tuple(key for key in it_all if key != HASH)
         return super().__new__(metacls, cls_name, bases, namespace, **kwds)

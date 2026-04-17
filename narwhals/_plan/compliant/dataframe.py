@@ -184,14 +184,14 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
 
     def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]:
         """Compliant-level `group_by`, allowing only `str` keys."""
-        return self._group_by.by_names(self, names)
+        return self._group_by.by_names(self, names)  # type: ignore[arg-type, return-value]
 
     def group_by_resolver(self, resolver: GroupByResolver, /) -> DataFrameGroupBy[Self]:
         """Narwhals-level resolved `group_by`.
 
         `keys`, `aggs` are already parsed and projections planned.
         """
-        return self._group_by.from_resolver(self, resolver)
+        return self._group_by.from_resolver(self, resolver)  # type: ignore[arg-type, return-value]
 
     @overload
     def to_dict(
@@ -329,7 +329,7 @@ class EagerDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     def group_by_resolver(
         self, resolver: GroupByResolver, /
     ) -> EagerDataFrameGroupBy[Self]:
-        return self._group_by.from_resolver(self, resolver)
+        return self._group_by.from_resolver(self, resolver)  # type: ignore[arg-type, return-value]
 
     def sink_parquet(self, target: str | BytesIO, /) -> None:
         self.write_parquet(target)

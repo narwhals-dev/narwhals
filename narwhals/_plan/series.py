@@ -14,7 +14,13 @@ from narwhals._plan.typing import (
     OneOrIterable,
     SeriesT,
 )
-from narwhals._utils import Version, generate_repr, qualified_type_name, unstable
+from narwhals._utils import (
+    Implementation,
+    Version,
+    generate_repr,
+    qualified_type_name,
+    unstable,
+)
 from narwhals.dependencies import is_polars_series, is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
 
@@ -27,7 +33,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._typing import EagerAllowed, IntoBackend, _EagerAllowedImpl
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -57,7 +63,7 @@ class Series(Generic[NativeSeriesT_co]):
         return self._compliant.name
 
     @property
-    def implementation(self) -> _EagerAllowedImpl:
+    def implementation(self) -> Implementation:
         return self._compliant.implementation
 
     @property

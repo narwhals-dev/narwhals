@@ -190,7 +190,7 @@ def into_iter_expr_ir(
     if (isinstance(first, always_expr_or_lit) or not _is_iterable(first)) or (
         more_inputs and isinstance(first, (list, tuple))
     ):
-        yield into_expr_ir(first)
+        yield into_expr_ir(first)  # type: ignore[arg-type]
     else:
         for into in first:
             yield into_expr_ir(into)
@@ -209,7 +209,7 @@ def _df_filter_into_iter_expr_ir(
     expr, lit = _import_expr(), _import_lit()
     non_mask_fast = (_import_series(), expr, str, bytes)
     if isinstance(first, non_mask_fast) or not _is_iterable(first):
-        yield into_expr_ir(first)
+        yield into_expr_ir(first)  # type: ignore[arg-type]
     elif isinstance(first, list) and first and not isinstance(first[0], non_mask_fast):
         more_predicates = chain([first], more_predicates)
     else:

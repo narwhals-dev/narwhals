@@ -116,7 +116,9 @@ if TYPE_CHECKING:
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
 
 
-class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], Protocol):
+class _ArrowDispatch(
+    ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], Protocol[StoresNativeT_co]
+):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
@@ -130,6 +132,12 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
+    # TODO @dangotbanned: Somehow get `mypy` to stop producing `Never`
+    # Every usage is broken in the same way
+    # `error: Argument 1 to "dispatch_args" of "FunctionExpr" has incompatible type
+    #   `_ArrowDispatch[StoresNativeT_co]`
+    # expected
+    #   `ExprDispatch[ArrowDataFrame, Never, CompliantNamespace[Any, Any, Any]]`
     def pow(self, node: FExpr[Pow], frame: Frame, name: str) -> StoresNativeT_co:
         base, exponent = node.dispatch_args(self, frame, name)
         return self._with_native(fn.power(base.native, exponent.native), name)
@@ -162,22 +170,6 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         """Return a function with the signature `(node, frame, name)`.
 
         Handles dispatching prior expressions, and rewrapping the result of this one.
-
-        Arity refers to the number of expression inputs to a function (after expanding).
-
-        So a **unary** function will look like:
-
-            col("a").round(2)
-
-        Which unravels to:
-
-            FunctionExpr(
-                input=(Column(name="a"),),
-                #                      ^ length-1 tuple
-                function=Round(decimals=2),
-                #                       ^ non-expression argument
-                options=...,
-            )
         """
 
         def func(node: FExpr[Any], frame: Frame, name: str, /) -> StoresNativeT_co:
@@ -192,13 +184,13 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def not_(self, node: FExpr[Not], frame: Frame, name: str) -> StoresNativeT_co:
         return self._unary_function(fn.not_)(node, frame, name)
 
-    def all(self, node: FExpr[All], frame: Frame, name: str) -> StoresNativeT_co:
-        return self._unary_function(fn.all)(node, frame, name)
+    def all(self, node: FExpr[All], frame: Frame, name: str) -> Scalar:
+        result = fn.all(node.input[0].dispatch(self, frame, name).native)
+        return ArrowScalar.from_native(result, name, version=frame.version)
 
-    def any(
-        self, node: FExpr[ir.boolean.Any], frame: Frame, name: str
-    ) -> StoresNativeT_co:
-        return self._unary_function(fn.any)(node, frame, name)
+    def any(self, node: FExpr[ir.boolean.Any], frame: Frame, name: str) -> Scalar:
+        result = fn.any(node.input[0].dispatch(self, frame, name).native)
+        return ArrowScalar.from_native(result, name, version=frame.version)
 
     def is_finite(
         self, node: FExpr[IsFinite], frame: Frame, name: str
@@ -309,8 +301,8 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._with_native(result, name)
 
 
-class ArrowExpr(  # type: ignore[misc]
-    _ArrowDispatch["ArrowExpr | ArrowScalar"],
+class ArrowExpr(
+    _ArrowDispatch["ArrowExpr"],
     _StoresNative["ChunkedArrayAny"],
     EagerExpr["Frame", Series],
 ):
@@ -739,7 +731,7 @@ class ArrowExpr(  # type: ignore[misc]
     def struct(self) -> ArrowStructNamespace[Expr]:
         return ArrowStructNamespace(self)
 
-    dt = not_implemented()  # type: ignore[assignment]
+    dt = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
 
 class ArrowScalar(
@@ -866,7 +858,7 @@ class ArrowScalar(
     def struct(self) -> ArrowStructNamespace[Scalar]:
         return ArrowStructNamespace(self)
 
-    dt = not_implemented()  # type: ignore[assignment]
+    dt = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
     filter = not_implemented()
     over = not_implemented()

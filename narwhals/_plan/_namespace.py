@@ -30,7 +30,7 @@ def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co
 
 
 def namespace_from_backend(
-    backend: IntoBackend[Backend],
+    backend: IntoBackend[Backend] | Any,
 ) -> CompliantNamespace[Any, Any, Any]:
     """Instantiate a compliant namespace from `backend`, routing through `Implementation`."""
     impl = Implementation.from_backend(backend)

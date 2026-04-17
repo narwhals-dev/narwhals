@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from narwhals._plan.compliant.typing import HasVersion
 from narwhals._plan.typing import IncompleteCyclic, NativeSeriesT_co
-from narwhals._utils import Version, unstable
+from narwhals._utils import Implementation, Version, unstable
 
 if TYPE_CHECKING:
     import decimal
@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.series import Series
-    from narwhals._typing import _EagerAllowedImpl
     from narwhals.dtypes import DType
     from narwhals.typing import (
         FillNullStrategy,
@@ -43,7 +42,7 @@ Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
 class CompliantSeries(HasVersion, Protocol[NativeSeriesT_co]):
     """`[NativeSeriesT_co]`."""
 
-    implementation: ClassVar[_EagerAllowedImpl]
+    implementation: ClassVar[Implementation]
 
     def __narwhals_series__(self) -> Self:
         return self

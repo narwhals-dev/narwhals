@@ -388,7 +388,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         )
         return self._with_native(self.native.select(int_range, pl.all()))
 
-    _group_by = not_implemented()  # type: ignore[assignment]
+    _group_by = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     lazy = not_implemented()
     filter = not_implemented()
 

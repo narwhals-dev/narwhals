@@ -85,9 +85,7 @@ class Timestamp(_TemporalInt64):
     @staticmethod
     def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
         if time_unit in _POLARS_TIME_UNIT:
-            # Needs `mypy>=1.20`
-            # https://mypy.readthedocs.io/en/stable/changelog.html#better-type-narrowing
-            return Timestamp(time_unit=time_unit) # type: ignore[arg-type]
+            return Timestamp(time_unit=time_unit)
         msg = f"Only the following time units are supported: {get_args(PolarsTimeUnit)}.\nGot: {time_unit!r}."
         raise TypeError(msg)
     def __repr__(self) -> str:
