@@ -296,7 +296,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str
     ) -> StoresNativeT_co:
         old, new = node.function.old, node.function.new
-        dtype = fn.dtype_native(node.function.return_dtype, self.version)
+        dtype = fn.dtype_native(node.function.return_dtype, frame.version)
         native = node.parameters.dispatch_args(node, self, frame, name)[0].native
         return self._with_native(fn.replace_strict(native, old, new, dtype), name)
 
@@ -306,7 +306,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         f = node.function
         dispatch = node.parameters.dispatch_args
         native, default = (s.native for s in dispatch(node, self, frame, name))
-        dtype = fn.dtype_native(f.return_dtype, self.version)
+        dtype = fn.dtype_native(f.return_dtype, frame.version)
         result = fn.replace_strict_default(native, f.old, f.new, default, dtype)
         return self._with_native(result, name)
 
@@ -581,12 +581,12 @@ class ArrowExpr(  # type: ignore[misc]
         udf_result: Series | Iterable[Any] | Any = udf(series)
         if node.is_scalar():
             return ArrowScalar.from_unknown(
-                udf_result, name, dtype=node.function.return_dtype, version=self.version
+                udf_result, name, dtype=node.function.return_dtype, version=frame.version
             )
         if isinstance(udf_result, Series):
             result = udf_result
         elif isinstance(udf_result, Iterable) and not is_iterable_reject(udf_result):
-            result = Series.from_iterable(udf_result, name=name, version=self.version)
+            result = Series.from_iterable(udf_result, name=name, version=frame.version)
         else:
             msg = (
                 "`map_batches` with `returns_scalar=False` must return a Series; "
@@ -682,9 +682,9 @@ class ArrowExpr(  # type: ignore[misc]
         ns = namespace(self)
         if len(data) == 1:
             count = next(iter(data.values()))
-            series = ns._series.from_iterable(count, version=self.version, name=name)
+            series = ns._series.from_iterable(count, version=ns.version, name=name)
         else:
-            series = ns._dataframe.from_dict(data, version=self.version).to_struct(name)
+            series = ns._dataframe.from_dict(data, version=ns.version).to_struct(name)
         return self.from_series(series)
 
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
@@ -850,7 +850,7 @@ class ArrowScalar(
         if previous.native.is_valid:
             return previous
         chunked = fn.chunked_array([], previous.native.type)
-        return ArrowExpr.from_native(chunked, name, version=self.version)
+        return ArrowExpr.from_native(chunked, name, version=frame.version)
 
     @property
     def cat(self) -> ArrowCatNamespace[Scalar]:
@@ -926,7 +926,7 @@ class ArrowAccessor(Generic[ExprOrScalarT]):
 class ArrowCatNamespace(ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT]):
     def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
         native = node.input[0].dispatch(self.compliant, frame, name).native
-        return ArrowExpr.from_native(fn.cat.get_categories(native), name, self.version)
+        return ArrowExpr.from_native(fn.cat.get_categories(native), name, frame.version)
 
 
 class ArrowListNamespace(

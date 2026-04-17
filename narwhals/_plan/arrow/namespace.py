@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         BinaryFunction,
         ChunkedArray,
         ChunkedArrayAny,
+        ChunkedOrScalarAny,
         CompliantDataFrame,
         CompliantSeries,
         IntegerScalar,
@@ -166,9 +167,7 @@ class ArrowNamespace(
             if fill is not None:
                 it = (fn.fill_null(native, fill) for native in it)
             result = function(*it) if variadic else reduce(function, it)
-            if isinstance(result, pa.Scalar):
-                return self._scalar.from_native(result, name, self.version)
-            return self._expr.from_native(result, name, self.version)
+            return self._into_expr(result, name, frame.version)
 
         return func
 
@@ -214,9 +213,7 @@ class ArrowNamespace(
             (fn.cast(fn.is_not_null(native), int64) for native in inputs),
         )
         result = fn.truediv(reduce(fn.add, filled), sum_not_null)
-        if isinstance(result, pa.Scalar):
-            return self._scalar.from_native(result, name, self.version)
-        return self._expr.from_native(result, name, self.version)
+        return self._into_expr(result, name, frame.version)
 
     def concat_str(
         self, node: FExpr[ConcatStr], frame: Frame, name: str
@@ -228,9 +225,14 @@ class ArrowNamespace(
         result = fn.str.concat_str(
             *aligned, separator=separator, ignore_nulls=ignore_nulls
         )
-        if isinstance(result, pa.Scalar):
-            return self._scalar.from_native(result, name, self.version)
-        return self._expr.from_native(result, name, self.version)
+        return self._into_expr(result, name, frame.version)
+
+    def _into_expr(
+        self, native: ChunkedOrScalarAny, name: str, version: Version
+    ) -> Expr | Scalar:
+        if isinstance(native, pa.Scalar):
+            return self._scalar.from_native(native, name, version)
+        return self._expr.from_native(native, name, version)
 
     # TODO @dangotbanned: Consider returning the supertype of inputs
     def _range_function_inputs(
@@ -262,7 +264,7 @@ class ArrowNamespace(
     def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         native = self._int_range(start, end, node.function.step, node.function.dtype)
-        return self._expr.from_native(native, name, self.version)
+        return self._expr.from_native(native, name, frame.version)
 
     def int_range_eager(
         self,
@@ -280,7 +282,7 @@ class ArrowNamespace(
         start, end = self._range_function_inputs(node, frame)
         func = node.function
         native = fn.date_range(start, end, func.interval, closed=func.closed)
-        return self._expr.from_native(native, name, self.version)
+        return self._expr.from_native(native, name, frame.version)
 
     def date_range_eager(
         self,
@@ -298,7 +300,7 @@ class ArrowNamespace(
         start, end = self._range_function_inputs(node, frame)
         func = node.function
         native = fn.linear_space(start, end, func.num_samples, closed=func.closed)
-        return self._expr.from_native(native, name, self.version)
+        return self._expr.from_native(native, name, frame.version)
 
     def linear_space_eager(
         self,
