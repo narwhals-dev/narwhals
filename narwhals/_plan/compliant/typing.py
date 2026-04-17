@@ -47,6 +47,11 @@ EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 ExprT = TypeVar("ExprT", bound=ExprAny)
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
+"""TODO @dangotbanned: Investigate using `ExprT_co` as a default.
+
+Could also/alternatively use `bound=ExprAny`.
+"""
+
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
 SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
 FrameT = TypeVar("FrameT", bound=FrameAny)
