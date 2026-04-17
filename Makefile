@@ -47,5 +47,6 @@ test: ## Run unittest
 		--editable .[ibis,modin,pyspark] \
 		--group core \
 		--group tests
-	$(VENV_BIN)/uv run --no-sync coverage run -m pytest tests --all-cpu-constructors
+	$(VENV_BIN)/uv run --no-sync coverage run -m pytest tests --all-cpu-constructors --numprocesses=logical
+	$(VENV_BIN)/uv run --no-sync coverage combine
 	$(VENV_BIN)/uv run --no-sync coverage report --fail-under=95

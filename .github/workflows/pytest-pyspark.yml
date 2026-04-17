@@ -41,7 +41,10 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
+        run: |
+          coverage run -m pytest tests --runslow --constructors pyspark
+          coverage combine
+          coverage report --fail-under=95 --include "narwhals/_spark_like/*"
 
 
   pytest-pyspark-min-version-constructor:
@@ -134,7 +137,10 @@ jobs:
           echo "Spark Connect server started"
 
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+        run: |
+          coverage run -m pytest tests --runslow --constructors "pyspark[connect]"
+          coverage combine
+          coverage report --fail-under=95 --include="narwhals/_spark_like/*"
 
       - name: Stop Spark Connect server
         if: always()

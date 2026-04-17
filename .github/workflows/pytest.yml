@@ -31,7 +31,10 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+        run: |
+          coverage run -m pytest tests --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+          coverage combine
+          coverage report --fail-under=75
       - name: install-test-plugin
         run: uv pip install -e test-plugin/.
 
@@ -61,7 +64,9 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
+          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
+          coverage combine
+          coverage report --fail-under=95
 
   pytest-full-coverage:
     strategy:
@@ -92,7 +97,10 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+        run: |
+          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+          coverage combine
+          coverage report --fail-under=100
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
@@ -158,7 +166,10 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
+        run: |
+          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+          coverage combine
+          coverage report --fail-under=100
 
   python-314t:
     strategy:
@@ -184,4 +195,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50
+        run: |
+          coverage run -m pytest tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow
+          coverage combine
+          coverage report --fail-under=50
