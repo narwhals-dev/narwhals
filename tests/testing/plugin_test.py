@@ -65,3 +65,78 @@ def test_external_constructor_disables_parametrisation(pytester: pytest.Pytester
     result = pytester.runpytest_subprocess("--use-external-constructor")
     # Without external parametrisation in place, the fixture is missing.
     result.assert_outcomes(errors=1)
+
+
+def test_xfail_only_marks_matching_constructor(pytester: pytest.Pytester) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    pytester.makeconftest("")
+    pytester.makepyfile("""
+        import pytest
+        from narwhals.testing.typing import ConstructorEager
+
+        def test_marks(constructor_eager: ConstructorEager, request: pytest.FixtureRequest) -> None:
+            constructor_eager.xfail(
+                request,
+                constructor_eager.is_polars,
+                reason="only polars is expected to fail here",
+                raises=RuntimeError,
+            )
+            if constructor_eager.is_polars:
+                raise RuntimeError("simulated backend bug")
+    """)
+    result = pytester.runpytest_subprocess("--constructors=pandas,polars[eager]")
+    result.assert_outcomes(passed=1, xfailed=1)
+
+
+def test_xfail_strict_catches_unexpected_pass(pytester: pytest.Pytester) -> None:
+    pytest.importorskip("pandas")
+
+    pytester.makeconftest("")
+    pytester.makepyfile("""
+        import pytest
+        from narwhals.testing.typing import ConstructorEager
+
+        def test_unexpected_pass(constructor_eager: ConstructorEager, request: pytest.FixtureRequest) -> None:
+            constructor_eager.xfail(
+                request, True, reason="claims to fail but does not", raises=Exception,
+            )
+            # Passes — strict=True turns this into a suite failure.
+    """)
+    result = pytester.runpytest_subprocess("--constructors=pandas")
+    result.assert_outcomes(failed=1)
+
+
+def test_skip_only_skips_matching_constructor(pytester: pytest.Pytester) -> None:
+    pytest.importorskip("pandas")
+    pytest.importorskip("polars")
+
+    pytester.makeconftest("")
+    pytester.makepyfile("""
+        import pytest
+        from narwhals.testing.typing import ConstructorEager
+
+        def test_conditional_skip(constructor_eager: ConstructorEager) -> None:
+            constructor_eager.skip(constructor_eager.is_polars, reason="polars unsupported")
+            assert constructor_eager is not None
+    """)
+    result = pytester.runpytest_subprocess("-rs", "--constructors=pandas,polars[eager]")
+    result.assert_outcomes(passed=1, skipped=1)
+    result.stdout.fnmatch_lines(["*polars unsupported*"])
+
+
+def test_skip_default_reason_uses_constructor_name(pytester: pytest.Pytester) -> None:
+    pytest.importorskip("pandas")
+
+    pytester.makeconftest("")
+    pytester.makepyfile("""
+        import pytest
+        from narwhals.testing.typing import ConstructorEager
+
+        def test_default_reason(constructor_eager: ConstructorEager) -> None:
+            constructor_eager.skip(True)
+    """)
+    result = pytester.runpytest_subprocess("-rs", "--constructors=pandas")
+    result.assert_outcomes(skipped=1)
+    result.stdout.fnmatch_lines(["*pandas: skipped*"])

@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    import pytest
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
@@ -227,6 +228,63 @@ class ConstructorBase(Protocol):
     def is_available(self) -> bool:
         """Whether every package this constructor needs is importable."""
         return is_backend_available(*self.requirements)
+
+    @property
+    def backend_version(self) -> tuple[int, ...]:
+        """Returns backend version."""
+        return self.implementation._backend_version()
+
+    def xfail(
+        self,
+        request: pytest.FixtureRequest,
+        condition: bool,  # noqa: FBT001
+        /,
+        *,
+        reason: str,
+        raises: type[BaseException] | tuple[type[BaseException], ...] = Exception,
+        strict: bool = True,
+    ) -> None:
+        """Mark the current test xfail when `condition` is truthy.
+
+        Examples:
+            Inside a parametrised test, guard against a known backend issue:
+
+            >>> def test_xyz_feature(
+            ...     constructor: Constructor, request: pytest.FixtureRequest
+            ... ) -> None:  # doctest: +SKIP
+            ...     constructor.xfail(
+            ...         request,
+            ...         constructor.is_pyarrow,
+            ...         reason="Not implemented, for pyarrow backend.",
+            ...         raises=NotImplementedError,
+            ...     )
+            ...     ...
+        """
+        import pytest
+
+        request.applymarker(
+            pytest.mark.xfail(condition, raises=raises, reason=reason, strict=strict)
+        )
+
+    def skip(self, condition: bool, /, *, reason: str = "") -> None:  # noqa: FBT001
+        """Skip the current test when `condition` is truthy.
+
+        Arguments:
+            condition: If truthy, the test is skipped.
+            reason: Human-readable reason for the skip. Defaults to a generic
+                message that includes the constructor's name.
+
+        Examples:
+            >>> def test_y(constructor):  # doctest: +SKIP
+            ...     constructor.skip(
+            ...         constructor.is_polars and POLARS_VERSION < (1, 10),
+            ...         reason="polars < 1.10 does not support this feature",
+            ...     )
+        """
+        if condition:
+            import pytest
+
+            pytest.skip(reason or f"{self.name}: skipped")
 
     def __str__(self) -> str:
         # NOTE: This is a temporary hack

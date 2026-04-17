@@ -163,12 +163,12 @@ def test_is_close_expr_with_expr(
     nans_equal: bool,
     expected: list[Any],
 ) -> None:
-    if "sqlframe" in str(constructor):
-        # TODO(FBruzzesi): Figure out a MRE and report upstream
-        reason = (
-            "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
+    # TODO(FBruzzesi): Figure out a MRE and report upstream
+    constructor.xfail(
+        request,
+        constructor.is_sqlframe,
+        reason="duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='",
+    )
 
     x, y = nw.col("x"), nw.col("y")
     result = (
@@ -208,12 +208,12 @@ def test_is_close_expr_with_scalar(
     nans_equal: bool,
     expected: list[Any],
 ) -> None:
-    if "sqlframe" in str(constructor):
-        # TODO(FBruzzesi): Figure out a MRE and report upstream
-        reason = (
-            "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
+    # TODO(FBruzzesi): Figure out a MRE and report upstream
+    constructor.xfail(
+        request,
+        constructor.is_sqlframe,
+        reason="duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='",
+    )
 
     y = nw.col("y")
     result = (
@@ -265,13 +265,15 @@ def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
 def test_issue_3474_expr_decimal(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "sqlframe")):
-        # TODO(FBruzzesi): Figure out a MRE and report upstream
-        reason = (
-            "SQLFrame: duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='\n"
+    # TODO(FBruzzesi): Figure out a MRE and report upstream
+    constructor.xfail(
+        request,
+        constructor.is_sqlframe or constructor.is_dask,
+        reason=(
+            "SQLFrame: duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='.\n"
             "Dask: Converting to Decimal dtype is not supported."
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
+        ),
+    )
 
     frame = nw.from_native(constructor({"a": [0, 1, 2]}))
 
