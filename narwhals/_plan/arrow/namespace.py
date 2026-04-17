@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.expressions import (
         FunctionExpr as FExpr,
+        HorizontalExpr as HExpr,
         RangeExpr,
         functions as F,
     )
@@ -62,7 +63,7 @@ if TYPE_CHECKING:
         PythonLiteral,
     )
 
-    Wrapper: TypeAlias = BoundMethod[FExpr[Any], Frame, Expr | Scalar]
+    HWrapper: TypeAlias = BoundMethod[HExpr[Any], Frame, Expr | Scalar]
 
 
 Int64 = Version.MAIN.dtypes.Int64()
@@ -140,11 +141,11 @@ class ArrowNamespace(
     @overload
     def _horizontal(
         self, function: BinaryFunction, /, fill: NonNestedLiteral = None
-    ) -> Wrapper: ...
+    ) -> HWrapper: ...
     @overload
     def _horizontal(
         self, function: VariadicFunction, /, *, variadic: Literal[True]
-    ) -> Wrapper: ...
+    ) -> HWrapper: ...
     def _horizontal(
         self,
         function: BinaryFunction | VariadicFunction,
@@ -152,7 +153,7 @@ class ArrowNamespace(
         fill: NonNestedLiteral = None,
         *,
         variadic: bool = False,
-    ) -> Wrapper:
+    ) -> HWrapper:
         """Generate a horizontal wrapper function.
 
         Arguments:
@@ -171,38 +172,38 @@ class ArrowNamespace(
 
         return func
 
-    def coalesce(self, node: FExpr[F.Coalesce], frame: Frame, name: str) -> Expr | Scalar:
+    def coalesce(self, node: HExpr[F.Coalesce], frame: Frame, name: str) -> Expr | Scalar:
         return self._horizontal(fn.coalesce, variadic=True)(node, frame, name)
 
     def any_horizontal(
-        self, node: FExpr[AnyHorizontal], frame: Frame, name: str
+        self, node: HExpr[AnyHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         fill = False if node.function.ignore_nulls else None
         return self._horizontal(fn.or_, fill)(node, frame, name)
 
     def all_horizontal(
-        self, node: FExpr[AllHorizontal], frame: Frame, name: str
+        self, node: HExpr[AllHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         fill = True if node.function.ignore_nulls else None
         return self._horizontal(fn.and_, fill)(node, frame, name)
 
     def sum_horizontal(
-        self, node: FExpr[F.SumHorizontal], frame: Frame, name: str
+        self, node: HExpr[F.SumHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal(fn.add, fill=0)(node, frame, name)
 
     def min_horizontal(
-        self, node: FExpr[F.MinHorizontal], frame: Frame, name: str
+        self, node: HExpr[F.MinHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal(fn.min_horizontal, variadic=True)(node, frame, name)
 
     def max_horizontal(
-        self, node: FExpr[F.MaxHorizontal], frame: Frame, name: str
+        self, node: HExpr[F.MaxHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         return self._horizontal(fn.max_horizontal, variadic=True)(node, frame, name)
 
     def mean_horizontal(
-        self, node: FExpr[F.MeanHorizontal], frame: Frame, name: str
+        self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         int64 = pa.int64()
         inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
@@ -216,7 +217,7 @@ class ArrowNamespace(
         return self._into_expr(result, name, frame.version)
 
     def concat_str(
-        self, node: FExpr[ConcatStr], frame: Frame, name: str
+        self, node: HExpr[ConcatStr], frame: Frame, name: str
     ) -> Expr | Scalar:
         exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
         aligned = (ser.native for ser in self._expr.align(exprs))

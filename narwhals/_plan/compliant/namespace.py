@@ -20,7 +20,11 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import FunctionExpr, boolean, functions as F
+    from narwhals._plan.expressions import (
+        HorizontalExpr as HExpr,
+        boolean,
+        functions as F,
+    )
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._utils import Implementation
     from narwhals.typing import PythonLiteral
@@ -47,33 +51,33 @@ class CompliantNamespace(
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
     def all_horizontal(
-        self, node: FunctionExpr[boolean.AllHorizontal], frame: FrameT, name: str
+        self, node: HExpr[boolean.AllHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def any_horizontal(
-        self, node: FunctionExpr[boolean.AnyHorizontal], frame: FrameT, name: str
+        self, node: HExpr[boolean.AnyHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def col(self, node: ir.Column, frame: FrameT, name: str) -> ExprT_co: ...
     def concat_str(
-        self, node: FunctionExpr[ConcatStr], frame: FrameT, name: str
+        self, node: HExpr[ConcatStr], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def coalesce(
-        self, node: FunctionExpr[F.Coalesce], frame: FrameT, name: str
+        self, node: HExpr[F.Coalesce], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
     def lit(
         self, node: ir.Lit[PythonLiteral], frame: FrameT, name: str
     ) -> ScalarT_co: ...
     def max_horizontal(
-        self, node: FunctionExpr[F.MaxHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.MaxHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def mean_horizontal(
-        self, node: FunctionExpr[F.MeanHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.MeanHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def min_horizontal(
-        self, node: FunctionExpr[F.MinHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.MinHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
     def sum_horizontal(
-        self, node: FunctionExpr[F.SumHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.SumHorizontal], frame: FrameT, name: str
     ) -> ExprT_co | ScalarT_co: ...
 
 
