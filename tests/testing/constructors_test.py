@@ -104,28 +104,47 @@ def test_constructor_dunder() -> None:
 
 
 def test_init_subclass_no_legacy_name() -> None:
-    class _Dummy(ConstructorBase, requirements=("polars",)):
+    class _Dummy(
+        ConstructorBase, implementation=Implementation.POLARS, requirements=("polars",)
+    ):
         name = ConstructorName.POLARS_EAGER
 
         def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]
             ...  # pragma: no cover
 
-    # re-registered POLARS_EAGER (overwriting the real one), but without adding a legacy_name entry for it.
-    assert ConstructorBase._registry[ConstructorName.POLARS_EAGER] == _Dummy()
-    assert ConstructorBase._legacy_names[ConstructorName.POLARS_EAGER] == ""
+    # re-registered POLARS_EAGER (overwriting the real one), but without a legacy_name for it.
+    registered = ConstructorBase._registry[ConstructorName.POLARS_EAGER]
+    assert registered == _Dummy()
+    assert registered.legacy_name == ""
+    assert registered.requirements == ("polars",)
+    assert registered.implementation is Implementation.POLARS
 
     # Restore the original
     legacy_name = "polars_eager_constructor"
 
     class PolarsEagerConstructor(
-        OriginalPolarsEagerConstructor, requirements=("polars",), legacy_name=legacy_name
+        OriginalPolarsEagerConstructor,
+        implementation=Implementation.POLARS,
+        requirements=("polars",),
+        legacy_name=legacy_name,
     ):
         name = ConstructorName.POLARS_EAGER
 
     original = PolarsEagerConstructor()
 
-    assert ConstructorBase._registry[ConstructorName.POLARS_EAGER] == original
-    assert ConstructorBase._legacy_names[ConstructorName.POLARS_EAGER] == legacy_name
+    restored = ConstructorBase._registry[ConstructorName.POLARS_EAGER]
+    assert restored == original
+    assert restored.legacy_name == legacy_name
+
+
+def test_init_subclass_requires_implementation() -> None:
+    with pytest.raises(TypeError, match="missing `implementation`"):
+
+        class _BadConstructor(ConstructorBase, requirements=("polars",)):
+            name = ConstructorName.POLARS_EAGER
+
+            def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]
+                ...  # pragma: no cover
 
 
 def test_get_constructor() -> None:

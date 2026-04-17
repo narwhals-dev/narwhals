@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from functools import lru_cache
 from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
@@ -13,14 +12,11 @@ if TYPE_CHECKING:
 
 
 def is_backend_available(*packages: str) -> bool:
-    """Whether all backends required by `name` can be imported in this environment.
+    """Whether every package in `packages` can be imported in this environment.
 
     Examples:
-        >>> from narwhals.testing.constructors import (
-        ...     ConstructorName,
-        ...     is_backend_available,
-        ... )
-        >>> is_backend_available(ConstructorName.PANDAS)
+        >>> from narwhals.testing.constructors._name import is_backend_available
+        >>> is_backend_available("pandas")
         True
     """
     return all(find_spec(pkg) is not None for pkg in packages)
@@ -31,6 +27,11 @@ class ConstructorName(str, Enum):
 
     The string values are byte-identical to the identifiers accepted by the
     `--constructors` pytest CLI option (e.g. `pandas[pyarrow]`, `polars[lazy]`).
+
+    All static metadata (implementation, requirements, eager/lazy, nullability,
+    GPU need) lives on the registered constructor class in `_classes.py`.
+    Properties on this enum delegate to that class so there is one source of
+    truth for each backend.
 
     Examples:
         >>> from narwhals.testing.constructors import ConstructorName
@@ -62,9 +63,16 @@ class ConstructorName(str, Enum):
         return str(self.value)
 
     @property
+    def constructor(self) -> ConstructorBase:
+        """Return the registered singleton constructor for this name."""
+        from narwhals.testing.constructors._classes import ConstructorBase
+
+        return ConstructorBase._registry[self]
+
+    @property
     def implementation(self) -> Implementation:
         """The [`Implementation`][] that this constructor belongs to."""
-        return _name_to_impl()[self]
+        return self.constructor.implementation
 
     @property
     def is_pandas(self) -> bool:
@@ -130,46 +138,32 @@ class ConstructorName(str, Enum):
     @property
     def is_eager(self) -> bool:
         """Whether this constructor produces an eager native dataframe."""
-        return self in {
-            ConstructorName.PANDAS,
-            ConstructorName.PANDAS_NULLABLE,
-            ConstructorName.PANDAS_PYARROW,
-            ConstructorName.PYARROW,
-            ConstructorName.MODIN,
-            ConstructorName.MODIN_PYARROW,
-            ConstructorName.CUDF,
-            ConstructorName.POLARS_EAGER,
-        }
+        return self.constructor.is_eager
 
     @property
     def is_lazy(self) -> bool:
         """Whether this constructor produces a lazy native frame."""
-        return not self.is_eager
+        return self.constructor.is_lazy
 
     @property
     def needs_pyarrow(self) -> bool:
         """Whether this constructor requires `pyarrow` to be installed."""
-        return self in {
-            ConstructorName.PYARROW,
-            ConstructorName.PANDAS_PYARROW,
-            ConstructorName.MODIN_PYARROW,
-            ConstructorName.DUCKDB,
-            ConstructorName.IBIS,
-        }
+        return self.constructor.needs_pyarrow
 
     @property
     def is_non_nullable(self) -> bool:
         """Whether this constructor uses a backend without native null support."""
-        return self in {
-            ConstructorName.PANDAS,
-            ConstructorName.MODIN,
-            ConstructorName.DASK,
-        }
+        return self.constructor.is_non_nullable
 
     @property
     def needs_gpu(self) -> bool:
         """Whether this constructor requires GPU hardware."""
-        return self is ConstructorName.CUDF
+        return self.constructor.needs_gpu
+
+    @property
+    def is_available(self) -> bool:
+        """Whether every package required by this constructor is importable."""
+        return self.constructor.is_available
 
     # TODO(Unassigned): remove 'no cover' flag once used in test suite
     @classmethod
@@ -186,45 +180,3 @@ class ConstructorName(str, Enum):
             ...         ...
         """
         return cls(str(request.node.callspec.id))
-
-    @property
-    def constructor(self) -> ConstructorBase:
-        """Return the registered singleton constructor for this name."""
-        from narwhals.testing.constructors._classes import ConstructorBase
-
-        return ConstructorBase._registry[self]
-
-    @property
-    def is_available(self) -> bool:
-        """Whether every package required by this constructor is importable."""
-        from narwhals.testing.constructors._classes import ConstructorBase
-
-        return is_backend_available(*ConstructorBase._requirements[self])
-
-
-@lru_cache(maxsize=1)
-def _name_to_impl() -> dict[ConstructorName, Implementation]:
-    """Lazily build the ConstructorName -> Implementation mapping.
-
-    The import is deferred so that ``narwhals._utils`` is not loaded
-    at plugin-registration time (before coverage starts measuring).
-    """
-    from narwhals._utils import Implementation
-
-    return {
-        ConstructorName.PANDAS: Implementation.PANDAS,
-        ConstructorName.PANDAS_NULLABLE: Implementation.PANDAS,
-        ConstructorName.PANDAS_PYARROW: Implementation.PANDAS,
-        ConstructorName.PYARROW: Implementation.PYARROW,
-        ConstructorName.MODIN: Implementation.MODIN,
-        ConstructorName.MODIN_PYARROW: Implementation.MODIN,
-        ConstructorName.CUDF: Implementation.CUDF,
-        ConstructorName.POLARS_EAGER: Implementation.POLARS,
-        ConstructorName.POLARS_LAZY: Implementation.POLARS,
-        ConstructorName.DASK: Implementation.DASK,
-        ConstructorName.DUCKDB: Implementation.DUCKDB,
-        ConstructorName.PYSPARK: Implementation.PYSPARK,
-        ConstructorName.PYSPARK_CONNECT: Implementation.PYSPARK_CONNECT,
-        ConstructorName.SQLFRAME: Implementation.SQLFRAME,
-        ConstructorName.IBIS: Implementation.IBIS,
-    }

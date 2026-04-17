@@ -3,6 +3,10 @@
 Each constructor wraps one backend library (pandas, Polars, DuckDB, ...)
 and knows how to turn a column-oriented `dict` into a native frame.
 
+All static metadata for a backend lives on its constructor class, colocated
+with the `__call__` implementation. Adding a constructor is a one-step
+declaration — the `__init_subclass__` hook then auto-registers a singleton.
+
 ## Adding a new constructor
 
 1. Choose the right base class:
@@ -10,18 +14,15 @@ and knows how to turn a column-oriented `dict` into a native frame.
     * `ConstructorEagerBase`: if the backend returns an eager dataframe.
     * `ConstructorLazyBase`: if the backend returns a lazy frame.
 
-2. Add a member to `ConstructorName` in `_name.py` and register the corresponding
-    `Implementation` mapping in `_NAME_TO_IMPL`.
+2. Add a member to `ConstructorName` in `_name.py`.
 
-3. Define the class in this module. Specify:
-
-    * `requirements`: the packages that `importlib.util.find_spec` should check
-    * `legacy_name` (if relevant): the old `str(constructor)` value used in existing
-        tests as keyword arguments in the class header:
+3. Define the class in this module and declare its metadata in the class
+    header as keyword arguments:
 
     ```py
     class MyBackendConstructor(
         ConstructorLazyBase,
+        implementation=Implementation.MY_BACKEND,
         requirements=("my_backend",),
         legacy_name="my_backend_lazy_constructor",
     ):
@@ -33,8 +34,8 @@ and knows how to turn a column-oriented `dict` into a native frame.
             return my_backend.from_dict(obj)
     ```
 
-That is all. `__init_subclass__` on `ConstructorBase` will automatically register
-a default singleton into `_registry`, record the *requirements*, and store the *legacy_name*.
+That is all. `__init_subclass__` on `ConstructorBase` automatically registers
+a default singleton into `_registry`.
 """
 
 from __future__ import annotations
@@ -46,8 +47,8 @@ from copy import deepcopy
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
-from narwhals._utils import generate_temporary_column_name
-from narwhals.testing.constructors._name import ConstructorName
+from narwhals._utils import Implementation, generate_temporary_column_name
+from narwhals.testing.constructors._name import ConstructorName, is_backend_available
 
 if TYPE_CHECKING:
     import ibis
@@ -122,38 +123,62 @@ class ConstructorBase(Protocol):
     [`Data`][narwhals.testing.typing.Data]) into a native dataframe / lazy frame,
     plus a typed [`ConstructorName`][] that identifies the backend.
 
-    Subclasses are automatically registered when they set ``name`` as a
-    class variable and pass ``requirements`` / ``legacy_name`` as
-    keyword arguments in the class definition.
+    Subclasses declare their backend metadata (implementation, requirements,
+    legacy name, nullability, GPU need) as keyword arguments in the class
+    header. `__init_subclass__` stores those on the class and registers a
+    default singleton into `_registry`.
     """
 
     _registry: ClassVar[dict[ConstructorName, ConstructorBase]] = {}
-    _requirements: ClassVar[dict[ConstructorName, tuple[str, ...]]] = {}
-    _legacy_names: ClassVar[dict[ConstructorName, str]] = {}
 
     name: ClassVar[ConstructorName]
+    implementation: ClassVar[Implementation]
+    requirements: ClassVar[tuple[str, ...]] = ()
+    legacy_name: ClassVar[str] = ""
+    is_eager: ClassVar[bool] = False
+    is_non_nullable: ClassVar[bool] = False
+    needs_gpu: ClassVar[bool] = False
 
     def __init_subclass__(
-        cls, *, requirements: tuple[str, ...] = (), legacy_name: str = "", **kwargs: Any
+        cls,
+        *,
+        implementation: Implementation | None = None,
+        requirements: tuple[str, ...] = (),
+        legacy_name: str = "",
+        is_non_nullable: bool = False,
+        needs_gpu: bool = False,
+        **kwargs: Any,
     ) -> None:
         """Register concrete subclasses automatically.
 
         Arguments:
-            requirements: Package names that must be importable for
-                this constructor to be available (checked via
-                ``importlib.util.find_spec``).
-            legacy_name: Value returned by ``str(constructor)`` for
-                backward compatibility with test assertions that
-                match on the old naming scheme.
-            **kwargs: Forwarded to ``super().__init_subclass__``.
+            implementation: The [`Implementation`][] this constructor belongs to.
+            requirements: Package names that must be importable for this constructor
+                to be available (checked via `importlib.util.find_spec`).
+            legacy_name: Value returned by `str(constructor)` for backward compatibility
+                with test assertions that match on the old naming scheme.
+            is_non_nullable: Whether the backend lacks native null support.
+            needs_gpu: Whether the backend requires GPU hardware.
+            **kwargs: Forwarded to `super().__init_subclass__`.
         """
         super().__init_subclass__(**kwargs)
+        if implementation is not None:
+            cls.implementation = implementation
+
+        cls.requirements = requirements
+        cls.legacy_name = legacy_name
+        cls.is_non_nullable = is_non_nullable
+        cls.needs_gpu = needs_gpu
+
         if "name" not in cls.__dict__:
             return
-        instance = cls()
-        ConstructorBase._registry[cls.name] = instance
-        ConstructorBase._requirements[cls.name] = requirements
-        ConstructorBase._legacy_names[cls.name] = legacy_name
+        if not hasattr(cls, "implementation"):
+            msg = (
+                f"Constructor {cls.__name__} is missing `implementation` "
+                "kwarg in its class header."
+            )
+            raise TypeError(msg)
+        ConstructorBase._registry[cls.name] = cls()
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoFrame:
         """Build a native frame from `obj`."""
@@ -164,12 +189,26 @@ class ConstructorBase(Protocol):
         """Instance-level string identifier for test IDs."""
         return str(self.name)
 
+    @property
+    def is_lazy(self) -> bool:
+        """Whether this constructor produces a lazy native frame."""
+        return not self.is_eager
+
+    @property
+    def needs_pyarrow(self) -> bool:
+        """Whether this constructor requires `pyarrow` to be installed."""
+        return "pyarrow" in self.requirements
+
+    @property
+    def is_available(self) -> bool:
+        """Whether every package this constructor needs is importable."""
+        return is_backend_available(*self.requirements)
+
     def __str__(self) -> str:
         # NOTE: This is a temporary hack
-        # TODO(Unassigned): Remove once all the
-        # `"backend" in str(constructor)` statements in the
-        # test suite are properly replaced
-        return _LEGACY_NAME[self.name]
+        # TODO(Unassigned): Remove once all the `"backend" in str(constructor)`
+        # statements in the test suite are properly replaced
+        return self.legacy_name
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
@@ -186,11 +225,15 @@ class ConstructorBase(Protocol):
 class ConstructorEagerBase(ConstructorBase):
     """A constructor that returns an *eager* native dataframe."""
 
+    is_eager: ClassVar[bool] = True
+
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame: ...
 
 
 class ConstructorLazyBase(ConstructorBase):
     """A constructor that returns a *lazy* native frame."""
+
+    is_eager: ClassVar[bool] = False
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoLazyFrame: ...
 
@@ -199,9 +242,13 @@ class ConstructorLazyBase(ConstructorBase):
 
 
 class PandasConstructor(
-    ConstructorEagerBase, requirements=("pandas",), legacy_name="pandas_constructor"
+    ConstructorEagerBase,
+    implementation=Implementation.PANDAS,
+    requirements=("pandas",),
+    legacy_name="pandas_constructor",
+    is_non_nullable=True,
 ):
-    """Constructor backed by ``pandas.DataFrame`` with default NumPy dtypes."""
+    """Constructor backed by `pandas.DataFrame` with default NumPy dtypes."""
 
     name = ConstructorName.PANDAS
 
@@ -213,10 +260,11 @@ class PandasConstructor(
 
 class PandasNullableConstructor(
     ConstructorEagerBase,
+    implementation=Implementation.PANDAS,
     requirements=("pandas",),
     legacy_name="pandas_nullable_constructor",
 ):
-    """Constructor backed by ``pandas.DataFrame`` with ``numpy_nullable`` dtypes."""
+    """Constructor backed by `pandas.DataFrame` with `numpy_nullable` dtypes."""
 
     name = ConstructorName.PANDAS_NULLABLE
 
@@ -228,10 +276,11 @@ class PandasNullableConstructor(
 
 class PandasPyArrowConstructor(
     ConstructorEagerBase,
+    implementation=Implementation.PANDAS,
     requirements=("pandas", "pyarrow"),
     legacy_name="pandas_pyarrow_constructor",
 ):
-    """Constructor backed by ``pandas.DataFrame`` with ``pyarrow`` dtypes."""
+    """Constructor backed by `pandas.DataFrame` with `pyarrow` dtypes."""
 
     name = ConstructorName.PANDAS_PYARROW
 
@@ -243,10 +292,11 @@ class PandasPyArrowConstructor(
 
 class PyArrowConstructor(
     ConstructorEagerBase,
+    implementation=Implementation.PYARROW,
     requirements=("pyarrow",),
     legacy_name="pyarrow_table_constructor",
 ):
-    """Constructor backed by ``pyarrow.Table``."""
+    """Constructor backed by `pyarrow.Table`."""
 
     name = ConstructorName.PYARROW
 
@@ -257,9 +307,13 @@ class PyArrowConstructor(
 
 
 class ModinConstructor(
-    ConstructorEagerBase, requirements=("modin",), legacy_name="modin_constructor"
+    ConstructorEagerBase,
+    implementation=Implementation.MODIN,
+    requirements=("modin",),
+    legacy_name="modin_constructor",
+    is_non_nullable=True,
 ):  # pragma: no cover
-    """Constructor backed by ``modin.pandas.DataFrame``."""
+    """Constructor backed by `modin.pandas.DataFrame`."""
 
     name = ConstructorName.MODIN
 
@@ -272,10 +326,11 @@ class ModinConstructor(
 
 class ModinPyArrowConstructor(
     ConstructorEagerBase,
+    implementation=Implementation.MODIN,
     requirements=("modin", "pyarrow"),
     legacy_name="modin_pyarrow_constructor",
 ):
-    """Constructor backed by ``modin.pandas.DataFrame`` with ``pyarrow`` dtypes."""
+    """Constructor backed by `modin.pandas.DataFrame` with `pyarrow` dtypes."""
 
     name = ConstructorName.MODIN_PYARROW
 
@@ -290,9 +345,13 @@ class ModinPyArrowConstructor(
 
 
 class CudfConstructor(
-    ConstructorEagerBase, requirements=("cudf",), legacy_name="cudf_constructor"
+    ConstructorEagerBase,
+    implementation=Implementation.CUDF,
+    requirements=("cudf",),
+    legacy_name="cudf_constructor",
+    needs_gpu=True,
 ):  # pragma: no cover
-    """Constructor backed by ``cudf.DataFrame`` (requires GPU)."""
+    """Constructor backed by `cudf.DataFrame` (requires GPU)."""
 
     name = ConstructorName.CUDF
 
@@ -303,9 +362,12 @@ class CudfConstructor(
 
 
 class PolarsEagerConstructor(
-    ConstructorEagerBase, requirements=("polars",), legacy_name="polars_eager_constructor"
+    ConstructorEagerBase,
+    implementation=Implementation.POLARS,
+    requirements=("polars",),
+    legacy_name="polars_eager_constructor",
 ):
-    """Constructor backed by ``polars.DataFrame``."""
+    """Constructor backed by `polars.DataFrame`."""
 
     name = ConstructorName.POLARS_EAGER
 
@@ -319,9 +381,12 @@ class PolarsEagerConstructor(
 
 
 class PolarsLazyConstructor(
-    ConstructorLazyBase, requirements=("polars",), legacy_name="polars_lazy_constructor"
+    ConstructorLazyBase,
+    implementation=Implementation.POLARS,
+    requirements=("polars",),
+    legacy_name="polars_lazy_constructor",
 ):
-    """Constructor backed by ``polars.LazyFrame``."""
+    """Constructor backed by `polars.LazyFrame`."""
 
     name = ConstructorName.POLARS_LAZY
 
@@ -332,12 +397,16 @@ class PolarsLazyConstructor(
 
 
 class DaskConstructor(
-    ConstructorLazyBase, requirements=("dask",), legacy_name="dask_lazy_p2_constructor"
+    ConstructorLazyBase,
+    implementation=Implementation.DASK,
+    requirements=("dask",),
+    legacy_name="dask_lazy_p2_constructor",
+    is_non_nullable=True,
 ):  # pragma: no cover
-    """Constructor backed by ``dask.dataframe``.
+    """Constructor backed by `dask.dataframe`.
 
     Arguments:
-        npartitions: Number of Dask partitions (default ``1``).
+        npartitions: Number of Dask partitions (default `1`).
     """
 
     name = ConstructorName.DASK
@@ -370,10 +439,11 @@ class DaskConstructor(
 
 class DuckDBConstructor(
     ConstructorLazyBase,
+    implementation=Implementation.DUCKDB,
     requirements=("duckdb", "pyarrow"),
     legacy_name="duckdb_lazy_constructor",
 ):
-    """Constructor backed by DuckDB (via ``duckdb.sql``)."""
+    """Constructor backed by DuckDB (via `duckdb.sql`)."""
 
     name = ConstructorName.DUCKDB
 
@@ -387,9 +457,12 @@ class DuckDBConstructor(
 
 
 class PySparkConstructor(
-    ConstructorLazyBase, requirements=("pyspark",), legacy_name="pyspark_lazy_constructor"
+    ConstructorLazyBase,
+    implementation=Implementation.PYSPARK,
+    requirements=("pyspark",),
+    legacy_name="pyspark_lazy_constructor",
 ):  # pragma: no cover
-    """Constructor backed by ``pyspark.sql.DataFrame``."""
+    """Constructor backed by `pyspark.sql.DataFrame`."""
 
     name = ConstructorName.PYSPARK
 
@@ -408,7 +481,10 @@ class PySparkConstructor(
 
 
 class PySparkConnectConstructor(
-    PySparkConstructor, requirements=("pyspark",), legacy_name="pyspark_lazy_constructor"
+    PySparkConstructor,
+    implementation=Implementation.PYSPARK_CONNECT,
+    requirements=("pyspark",),
+    legacy_name="pyspark_lazy_constructor",
 ):  # pragma: no cover
     """Constructor backed by PySpark Connect (Spark Connect protocol)."""
 
@@ -417,10 +493,11 @@ class PySparkConnectConstructor(
 
 class SQLFrameConstructor(
     ConstructorLazyBase,
+    implementation=Implementation.SQLFRAME,
     requirements=("sqlframe", "duckdb"),
     legacy_name="sqlframe_pyspark_lazy_constructor",
 ):
-    """Constructor backed by ``sqlframe`` (DuckDB session)."""
+    """Constructor backed by `sqlframe` (DuckDB session)."""
 
     name = ConstructorName.SQLFRAME
 
@@ -433,10 +510,11 @@ class SQLFrameConstructor(
 
 class IbisConstructor(
     ConstructorLazyBase,
+    implementation=Implementation.IBIS,
     requirements=("ibis", "duckdb", "pyarrow"),
     legacy_name="ibis_lazy_constructor",
 ):
-    """Constructor backed by ``ibis`` (DuckDB backend)."""
+    """Constructor backed by `ibis` (DuckDB backend)."""
 
     name = ConstructorName.IBIS
 
@@ -446,8 +524,3 @@ class IbisConstructor(
         table = pa.table(obj)  # type:ignore[arg-type]
         table_name = str(uuid.uuid4())
         return _ibis_backend().create_table(table_name, table, **kwds)
-
-
-# TODO(Unassigned): Remove once all the `"backend" in str(constructor)`
-# statements in the test suite are properly replaced.
-_LEGACY_NAME = ConstructorBase._legacy_names
