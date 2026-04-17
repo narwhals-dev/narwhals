@@ -269,15 +269,10 @@ class ConstructorBase(Protocol):
     def skip(self, condition: bool, /, *, reason: str = "") -> None:  # noqa: FBT001
         """Skip the current test when `condition` is truthy.
 
-        Arguments:
-            condition: If truthy, the test is skipped.
-            reason: Human-readable reason for the skip. Defaults to a generic
-                message that includes the constructor's name.
-
         Examples:
-            >>> def test_y(constructor):  # doctest: +SKIP
+            >>> def test_xyz(constructor: Constructor) -> None:  # doctest: +SKIP
             ...     constructor.skip(
-            ...         constructor.is_polars and POLARS_VERSION < (1, 10),
+            ...         constructor.is_polars and constructor.backend_version < (1, 10),
             ...         reason="polars < 1.10 does not support this feature",
             ...     )
         """
