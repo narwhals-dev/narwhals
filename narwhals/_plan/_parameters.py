@@ -9,7 +9,6 @@ from narwhals._plan.exceptions import (
     function_arity_error,
     function_expr_invalid_operation_error,
 )
-from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -254,6 +253,3 @@ class Variadic(Parameters, arity="*"):
             next(it).dispatch(ctx, frame, name),
             *(e.dispatch(ctx, frame, "") for e in it),
         )
-
-
-ParamsT_co = TypeVar("ParamsT_co", bound=Parameters, default=Parameters, covariant=True)

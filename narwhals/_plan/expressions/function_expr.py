@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra as FrameT, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
+    from narwhals._typing_compat import TypeVar
     from narwhals.dtypes import DType
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
@@ -115,7 +116,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(input=(root, *children))
 
     if TYPE_CHECKING:
-        # NOTE
+
         @property
         @type_check_only
         def __associated_function__(self: FunctionExpr[FunctionT]) -> type[FunctionT]:
@@ -123,13 +124,29 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return self.function.__class__
 
         @property
-        def parameters(self: _AssociateParams[params.ParamsT_co]) -> params.ParamsT_co:
+        def parameters(self: _AssociateParams[ParamsT_co]) -> ParamsT_co:
             return self.__associated_function__.__function_parameters__
+
+        def dispatch_args(
+            self: _AssociateParams[_DispatchArgs[R_co, ArgsR_co]],
+            ctx: Ctx[FrameT, R_co],
+            frame: FrameT,
+            name: str,
+        ) -> ArgsR_co:
+            """Call `ExprIR.dispatch` on all expression arguments to this function."""
+            return self.parameters.dispatch_args(self, ctx, frame, name)
     else:
 
         @property
         def parameters(self) -> params.Parameters:
             return self.function.__function_parameters__
+
+        def dispatch_args(
+            self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+        ) -> Seq[R_co]:
+            return self.function.__function_parameters__.dispatch_args(
+                self, ctx, frame, name
+            )
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
@@ -174,11 +191,19 @@ class StructExpr(FunctionExpr[StructT_co]):
 
 if TYPE_CHECKING:
     # NOTE: Associated type magic
-    class _HasParams(Protocol[params.ParamsT_co]):
-        @property
-        def __function_parameters__(self) -> params.ParamsT_co: ...
+    ParamsT_co = TypeVar(
+        "ParamsT_co",
+        bound="params.Parameters | _DispatchArgs[Any, Seq[Any]]",
+        default=params.Parameters,
+        covariant=True,
+    )
+    ArgsR_co = TypeVar("ArgsR_co", bound="Seq[Any]", covariant=True)
 
-    class _AssociateParams(Protocol[params.ParamsT_co]):
+    class _HasParams(Protocol[ParamsT_co]):
+        @property
+        def __function_parameters__(self) -> ParamsT_co: ...
+
+    class _AssociateParams(Protocol[ParamsT_co]):
         """Magic to yoink out the associated `Parameters` type from `FunctionExpr[Function]`.
 
         Adapts an idea from `scipy-stubs` ([1], [2]) for resolving this conundrum:
@@ -218,4 +243,49 @@ if TYPE_CHECKING:
         """
 
         @property
-        def __associated_function__(self) -> _HasParams[params.ParamsT_co]: ...
+        def __associated_function__(self) -> _HasParams[ParamsT_co]: ...
+        @property
+        def parameters(self: _AssociateParams[ParamsT_co]) -> ParamsT_co: ...
+
+    class _DispatchArgs(Protocol[R_co, ArgsR_co]):  # pyright: ignore[reportInvalidTypeVarUse]
+        """Magic to pull out the **return `tuple` length** of `Parameters.dispatch_args`.
+
+        Where `ExprIR.dispatch` has the signature:
+
+            Callable[[Ctx[FrameT, R_co], FrameT, str], R_co]
+
+        A reasonable signature for `dispatch_args` would be:
+
+            Callable[[Ctx[FrameT, R_co], FrameT, str], tuple[R_co, ...]]
+
+        But for the majority of functions, we have a more precise return type:
+
+            tuple[R_co]              # Unary
+            tuple[R_co, R_co]        # Binary
+            tuple[R_co, R_co, R_co]  # Ternary
+
+        This handles exposing those types as `ArgsR_co`, without needing to wait for
+        `TypeVarTuple(bound=...)` to be specified ([1], [2]).
+
+
+
+        ## Notes
+        A downside is that this messes with the variance inference for `R_co` in `Ctx[FrameT, R_co]`.
+
+        AFAIK, the type system doesn't support a way to express:
+          `ArgsR_co` has a bound of `tuple[R_co, ...]`
+
+        If that detail could be seen, then it would be inferred as ~~contravariant~~ covariant.
+
+
+        [1]: https://github.com/python/typing/pull/2215
+        [2]: https://github.com/python/cpython/pull/148212
+        """
+
+        def dispatch_args(
+            self,
+            node: FunctionExpr | Incomplete,
+            ctx: Ctx[FrameT, R_co],
+            frame: FrameT,
+            name: str,
+        ) -> ArgsR_co: ...

@@ -131,19 +131,19 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._with_native(fn.cast(native, data_type), name)
 
     def pow(self, node: FExpr[Pow], frame: Frame, name: str) -> StoresNativeT_co:
-        base, exponent = node.parameters.dispatch_args(node, self, frame, name)
+        base, exponent = node.dispatch_args(self, frame, name)
         return self._with_native(fn.power(base.native, exponent.native), name)
 
     def fill_null(
         self, node: FExpr[FillNull], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, value = node.parameters.dispatch_args(node, self, frame, name)
+        expr, value = node.dispatch_args(self, frame, name)
         return self._with_native(pc.fill_null(expr.native, value.native), name)
 
     def is_between(
         self, node: FExpr[IsBetween], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, lb, ub = node.parameters.dispatch_args(node, self, frame, name)
+        expr, lb, ub = node.dispatch_args(self, frame, name)
         closed = node.function.closed
         result = fn.is_between(expr.native, lb.native, ub.native, closed=closed)
         return self._with_native(result, name)
@@ -208,8 +208,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     def is_in_expr(
         self, node: FExpr[IsInExpr], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        dispatch = node.parameters.dispatch_args
-        native, right = (s.native for s in dispatch(node, self, frame, name))
+        native, right = (s.native for s in node.dispatch_args(self, frame, name))
         arr = fn.array(right) if isinstance(right, pa.Scalar) else right
         return self._with_native(fn.is_in(native, arr), name)
 
@@ -277,19 +276,19 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
         return self._unary_function(fn.floor)(node, frame, name)
 
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> StoresNativeT_co:
-        expr, lb, ub = node.parameters.dispatch_args(node, self, frame, name)
+        expr, lb, ub = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip(expr.native, lb.native, ub.native), name)
 
     def clip_lower(
         self, node: FExpr[F.ClipLower], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, other = node.parameters.dispatch_args(node, self, frame, name)
+        expr, other = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip_lower(expr.native, other.native), name)
 
     def clip_upper(
         self, node: FExpr[F.ClipUpper], frame: Frame, name: str
     ) -> StoresNativeT_co:
-        expr, other = node.parameters.dispatch_args(node, self, frame, name)
+        expr, other = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip_upper(expr.native, other.native), name)
 
     def replace_strict(
@@ -297,15 +296,14 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     ) -> StoresNativeT_co:
         old, new = node.function.old, node.function.new
         dtype = fn.dtype_native(node.function.return_dtype, frame.version)
-        native = node.parameters.dispatch_args(node, self, frame, name)[0].native
+        native = node.dispatch_args(self, frame, name)[0].native
         return self._with_native(fn.replace_strict(native, old, new, dtype), name)
 
     def replace_strict_default(
         self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
     ) -> StoresNativeT_co:
         f = node.function
-        dispatch = node.parameters.dispatch_args
-        native, default = (s.native for s in dispatch(node, self, frame, name))
+        native, default = (s.native for s in node.dispatch_args(self, frame, name))
         dtype = fn.dtype_native(f.return_dtype, frame.version)
         result = fn.replace_strict_default(native, f.old, f.new, default, dtype)
         return self._with_native(result, name)
