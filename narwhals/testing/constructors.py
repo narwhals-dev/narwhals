@@ -353,7 +353,7 @@ class ModinPyArrowConstructor(
     implementation=Implementation.MODIN,
     requirements=("modin", "pyarrow"),
     legacy_name="modin_pyarrow_constructor",
-):
+):  # pragma: no cover
     """Constructor backed by `modin.pandas.DataFrame` with `pyarrow` dtypes."""
 
     name = "modin[pyarrow]"
@@ -537,7 +537,7 @@ class IbisConstructor(
     implementation=Implementation.IBIS,
     requirements=("ibis", "duckdb", "pyarrow"),
     legacy_name="ibis_lazy_constructor",
-):
+):  # pragma: no cover
     """Constructor backed by `ibis` (DuckDB backend)."""
 
     name = "ibis"
