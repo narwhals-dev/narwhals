@@ -104,7 +104,9 @@ class Function(Immutable):
         `narwhals._plan._function.py` doc for implementation notes
     """
 
-    __function_parameters__: ClassVar[params.Parameters] = params.Unary()
+    # NOTE: Needs to use a bare `ClassVar` so the default can be `Unary`
+    # The correct annotation is `Parameters`, but that's lossy for what is the most common option
+    __function_parameters__: ClassVar = params.Unary()
     """Defines the number of expression arguments accepted and any constraints each has."""
 
     __function_flags__: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT

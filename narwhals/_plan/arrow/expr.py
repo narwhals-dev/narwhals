@@ -296,7 +296,7 @@ class _ArrowDispatch(ExprDispatch["Frame", StoresNativeT_co, "ArrowNamespace"], 
     ) -> StoresNativeT_co:
         old, new = node.function.old, node.function.new
         dtype = fn.dtype_native(node.function.return_dtype, frame.version)
-        native = node.dispatch_args(self, frame, name)[0].native
+        native = node.dispatch_arg(self, frame, name).native
         return self._with_native(fn.replace_strict(native, old, new, dtype), name)
 
     def replace_strict_default(

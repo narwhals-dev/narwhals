@@ -133,8 +133,9 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             frame: FrameT,
             name: str,
         ) -> ArgsR_co:
-            """Call `ExprIR.dispatch` on all expression arguments to this function."""
+            """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
             return self.parameters.dispatch_args(self, ctx, frame, name)
+
     else:
 
         @property
@@ -147,6 +148,16 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return self.function.__function_parameters__.dispatch_args(
                 self, ctx, frame, name
             )
+
+    def dispatch_arg(
+        self: _AssociateUnary, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+    ) -> R_co:
+        """Call `ExprIR.dispatch` on the **only** expression argument to this function.
+
+        Important:
+            Exclusive to `Unary`
+        """
+        return self.input[0].dispatch(ctx, frame, name)
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
@@ -267,8 +278,6 @@ if TYPE_CHECKING:
         This handles exposing those types as `ArgsR_co`, without needing to wait for
         `TypeVarTuple(bound=...)` to be specified ([1], [2]).
 
-
-
         ## Notes
         A downside is that this messes with the variance inference for `R_co` in `Ctx[FrameT, R_co]`.
 
@@ -289,3 +298,7 @@ if TYPE_CHECKING:
             frame: FrameT,
             name: str,
         ) -> ArgsR_co: ...
+
+    class _AssociateUnary(_AssociateParams[params.Unary], Protocol):
+        @property
+        def input(self) -> Seq[ExprIR]: ...
