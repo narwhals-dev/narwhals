@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from random import Random
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import hypothesis.strategies as st
 import pytest
@@ -11,7 +11,7 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from narwhals.testing.constructors import ConstructorName
+from narwhals.testing.constructors import get_constructor
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -44,15 +44,13 @@ counts_and_expected = [
 param_include_breakpoint = pytest.mark.parametrize(
     "include_breakpoint", [True, False], ids=["breakpoint-True", "breakpoint-False"]
 )
-param_name = pytest.mark.parametrize(
-    "name",
-    [ConstructorName.PANDAS, ConstructorName.POLARS_EAGER, ConstructorName.PYARROW],
-)
+param_name = pytest.mark.parametrize("name", ["pandas", "polars[eager]", "pyarrow"])
 
 
-def maybe_name_to_constructor(name: ConstructorName) -> ConstructorEager:
-    if name.is_available:
-        return cast("ConstructorEager", name.constructor)
+def maybe_name_to_constructor(name: str) -> ConstructorEager:
+    constructor = get_constructor(name)
+    if constructor.is_available:
+        return constructor  # type: ignore[return-value]
 
     pytest.skip()
 
@@ -77,11 +75,7 @@ SHIFT_BINS_BY = 10
 )
 @param_name
 def test_hist_bin(
-    name: ConstructorName,
-    bins: list[float],
-    expected: Sequence[float],
-    *,
-    include_breakpoint: bool,
+    name: str, bins: list[float], expected: Sequence[float], *, include_breakpoint: bool
 ) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
@@ -128,7 +122,7 @@ def test_hist_bin(
 @param_include_breakpoint
 @param_name
 def test_hist_count(
-    name: ConstructorName, *, params: dict[str, Any], include_breakpoint: bool
+    name: str, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
@@ -172,7 +166,7 @@ def test_hist_count(
 
 
 @param_name
-def test_hist_count_no_spread(name: ConstructorName) -> None:
+def test_hist_count_no_spread(name: str) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
@@ -204,7 +198,7 @@ def test_hist_bin_and_bin_count() -> None:
 
 @param_include_breakpoint
 @param_name
-def test_hist_no_data(name: ConstructorName, *, include_breakpoint: bool) -> None:
+def test_hist_no_data(name: str, *, include_breakpoint: bool) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
@@ -226,7 +220,7 @@ def test_hist_no_data(name: ConstructorName, *, include_breakpoint: bool) -> Non
 
 
 @param_name
-def test_hist_small_bins(name: ConstructorName) -> None:
+def test_hist_small_bins(name: str) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
@@ -279,7 +273,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    name: ConstructorName, data: list[float], bin_deltas: list[float]
+    name: str, data: list[float], bin_deltas: list[float]
 ) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     pytest.importorskip("polars")
@@ -320,10 +314,7 @@ def test_hist_bin_hypotheis(
 @param_name
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    name: ConstructorName,
-    data: list[float],
-    bin_count: int,
-    request: pytest.FixtureRequest,
+    name: str, data: list[float], bin_count: int, request: pytest.FixtureRequest
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl

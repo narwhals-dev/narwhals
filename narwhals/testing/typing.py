@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals.testing.constructors._classes import (
+    from narwhals.testing.constructors import (
         ConstructorBase,
         ConstructorEagerBase,
         ConstructorLazyBase,

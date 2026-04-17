@@ -14,9 +14,7 @@ declaration — the `__init_subclass__` hook then auto-registers a singleton.
     * `ConstructorEagerBase`: if the backend returns an eager dataframe.
     * `ConstructorLazyBase`: if the backend returns a lazy frame.
 
-2. Add a member to `ConstructorName` in `_name.py`.
-
-3. Define the class in this module and declare its metadata in the class
+2. Define the class in this module and declare its metadata in the class
     header as keyword arguments:
 
     ```py
@@ -26,7 +24,7 @@ declaration — the `__init_subclass__` hook then auto-registers a singleton.
         requirements=("my_backend",),
         legacy_name="my_backend_lazy_constructor",
     ):
-        name = ConstructorName.MY_BACKEND
+        name = "my_backend"
 
         def __call__(self, obj: Data, /, **kwds: Any) -> ...:
             import my_backend
@@ -35,7 +33,7 @@ declaration — the `__init_subclass__` hook then auto-registers a singleton.
     ```
 
 That is all. `__init_subclass__` on `ConstructorBase` automatically registers
-a default singleton into `_registry`.
+a default singleton into `_registry`, keyed by the string `name`.
 """
 
 from __future__ import annotations
@@ -45,12 +43,14 @@ import uuid
 import warnings
 from copy import deepcopy
 from functools import lru_cache
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
 from narwhals._utils import Implementation, generate_temporary_column_name
-from narwhals.testing.constructors._name import ConstructorName, is_backend_available
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     import ibis
     import pandas as pd
     import polars as pl
@@ -64,56 +64,19 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame
 
 
-def sqlframe_session() -> DuckDBSession:
-    """Return a fresh in-memory `sqlframe` DuckDB session."""
-    from sqlframe.duckdb import DuckDBSession
-
-    # NOTE: `__new__` override inferred by `pyright` only
-    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
-    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
-
-
-def pyspark_session() -> SparkSession:  # pragma: no cover
-    """Return a singleton local `pyspark` (or pyspark[connect]) session."""
-    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
-    else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
-    builder = (
-        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
-        if is_spark_connect
-        else builder.master("local[1]").config("spark.ui.enabled", "false")
-    )
-    return (
-        builder.config("spark.default.parallelism", "1")
-        .config("spark.sql.shuffle.partitions", "2")
-        .config("spark.sql.session.timeZone", "UTC")
-        .getOrCreate()
-    )
-
-
-@lru_cache(maxsize=1)
-def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
-    """Cached singleton in-memory ibis backend, so all tables share one database."""
-    import ibis
-
-    return ibis.duckdb.connect()
-
-
-@lru_cache(maxsize=1)
-def _pyspark_session_lazy() -> SparkSession:  # pragma: no cover
-    """Cached pyspark session; created on first use, stopped at interpreter exit."""
-    from atexit import register
-
-    with warnings.catch_warnings():
-        # The spark session seems to trigger a polars warning.
-        warnings.filterwarnings(
-            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
-        )
-        session = pyspark_session()
-        register(session.stop)
-        return session
+__all__ = (
+    "ALL_CONSTRUCTORS",
+    "ALL_CPU_CONSTRUCTORS",
+    "DEFAULT_CONSTRUCTORS",
+    "ConstructorBase",
+    "ConstructorEagerBase",
+    "available_constructors",
+    "get_constructor",
+    "is_backend_available",
+    "prepare_constructors",
+    "pyspark_session",
+    "sqlframe_session",
+)
 
 
 class ConstructorBase(Protocol):
@@ -121,7 +84,7 @@ class ConstructorBase(Protocol):
 
     A constructor is a callable that turns a column-oriented `dict` (typed as
     [`Data`][narwhals.testing.typing.Data]) into a native dataframe / lazy frame,
-    plus a typed [`ConstructorName`][] that identifies the backend.
+    plus a string `name` that identifies the backend (e.g. `"pandas[pyarrow]"`).
 
     Subclasses declare their backend metadata (implementation, requirements,
     legacy name, nullability, GPU need) as keyword arguments in the class
@@ -129,9 +92,9 @@ class ConstructorBase(Protocol):
     default singleton into `_registry`.
     """
 
-    _registry: ClassVar[dict[ConstructorName, ConstructorBase]] = {}
+    _registry: ClassVar[dict[str, ConstructorBase]] = {}
 
-    name: ClassVar[ConstructorName]
+    name: ClassVar[str]
     implementation: ClassVar[Implementation]
     requirements: ClassVar[tuple[str, ...]] = ()
     legacy_name: ClassVar[str] = ""
@@ -187,12 +150,73 @@ class ConstructorBase(Protocol):
     @property
     def identifier(self) -> str:
         """Instance-level string identifier for test IDs."""
-        return str(self.name)
+        return self.name
 
     @property
     def is_lazy(self) -> bool:
         """Whether this constructor produces a lazy native frame."""
         return not self.is_eager
+
+    @property
+    def is_pandas(self) -> bool:
+        """Whether this is one of the pandas constructors."""
+        return self.implementation.is_pandas()
+
+    @property
+    def is_modin(self) -> bool:
+        """Whether this is one of the modin constructors."""
+        return self.implementation.is_modin()
+
+    @property
+    def is_cudf(self) -> bool:
+        """Whether this is the cudf constructor."""
+        return self.implementation.is_cudf()
+
+    @property
+    def is_pandas_like(self) -> bool:
+        """Whether this constructor produces a pandas-like dataframe (pandas, modin, cudf)."""
+        return self.implementation.is_pandas_like()
+
+    @property
+    def is_polars(self) -> bool:
+        """Whether this is one of the polars constructors."""
+        return self.implementation.is_polars()
+
+    @property
+    def is_pyarrow(self) -> bool:
+        """Whether this is the pyarrow table constructor."""
+        return self.implementation.is_pyarrow()
+
+    @property
+    def is_dask(self) -> bool:
+        """Whether this is the dask constructor."""
+        return self.implementation.is_dask()
+
+    @property
+    def is_duckdb(self) -> bool:
+        """Whether this is the duckdb constructor."""
+        return self.implementation.is_duckdb()
+
+    @property
+    def is_pyspark(self) -> bool:
+        """Whether this is one of the pyspark constructors."""
+        impl = self.implementation
+        return impl.is_pyspark() or impl.is_pyspark_connect()
+
+    @property
+    def is_sqlframe(self) -> bool:
+        """Whether this is the sqlframe constructor."""
+        return self.implementation.is_sqlframe()
+
+    @property
+    def is_ibis(self) -> bool:
+        """Whether this is the ibis constructor."""
+        return self.implementation.is_ibis()
+
+    @property
+    def is_spark_like(self) -> bool:
+        """Whether this constructor uses a spark-like backend (pyspark, sqlframe)."""
+        return self.implementation.is_spark_like()
 
     @property
     def needs_pyarrow(self) -> bool:
@@ -250,7 +274,7 @@ class PandasConstructor(
 ):
     """Constructor backed by `pandas.DataFrame` with default NumPy dtypes."""
 
-    name = ConstructorName.PANDAS
+    name = "pandas"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
         import pandas as pd
@@ -266,7 +290,7 @@ class PandasNullableConstructor(
 ):
     """Constructor backed by `pandas.DataFrame` with `numpy_nullable` dtypes."""
 
-    name = ConstructorName.PANDAS_NULLABLE
+    name = "pandas[nullable]"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
         import pandas as pd
@@ -282,7 +306,7 @@ class PandasPyArrowConstructor(
 ):
     """Constructor backed by `pandas.DataFrame` with `pyarrow` dtypes."""
 
-    name = ConstructorName.PANDAS_PYARROW
+    name = "pandas[pyarrow]"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
         import pandas as pd
@@ -298,7 +322,7 @@ class PyArrowConstructor(
 ):
     """Constructor backed by `pyarrow.Table`."""
 
-    name = ConstructorName.PYARROW
+    name = "pyarrow"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> pa.Table:
         import pyarrow as pa
@@ -315,7 +339,7 @@ class ModinConstructor(
 ):  # pragma: no cover
     """Constructor backed by `modin.pandas.DataFrame`."""
 
-    name = ConstructorName.MODIN
+    name = "modin"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
         import modin.pandas as mpd
@@ -332,7 +356,7 @@ class ModinPyArrowConstructor(
 ):
     """Constructor backed by `modin.pandas.DataFrame` with `pyarrow` dtypes."""
 
-    name = ConstructorName.MODIN_PYARROW
+    name = "modin[pyarrow]"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
         import modin.pandas as mpd
@@ -353,7 +377,7 @@ class CudfConstructor(
 ):  # pragma: no cover
     """Constructor backed by `cudf.DataFrame` (requires GPU)."""
 
-    name = ConstructorName.CUDF
+    name = "cudf"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
         import cudf
@@ -369,7 +393,7 @@ class PolarsEagerConstructor(
 ):
     """Constructor backed by `polars.DataFrame`."""
 
-    name = ConstructorName.POLARS_EAGER
+    name = "polars[eager]"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> pl.DataFrame:
         import polars as pl
@@ -388,7 +412,7 @@ class PolarsLazyConstructor(
 ):
     """Constructor backed by `polars.LazyFrame`."""
 
-    name = ConstructorName.POLARS_LAZY
+    name = "polars[lazy]"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> pl.LazyFrame:
         import polars as pl
@@ -409,7 +433,7 @@ class DaskConstructor(
         npartitions: Number of Dask partitions (default `1`).
     """
 
-    name = ConstructorName.DASK
+    name = "dask"
 
     def __init__(self, npartitions: int = 2) -> None:
         self.npartitions = npartitions
@@ -445,7 +469,7 @@ class DuckDBConstructor(
 ):
     """Constructor backed by DuckDB (via `duckdb.sql`)."""
 
-    name = ConstructorName.DUCKDB
+    name = "duckdb"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> NativeDuckDB:
         import duckdb
@@ -464,7 +488,7 @@ class PySparkConstructor(
 ):  # pragma: no cover
     """Constructor backed by `pyspark.sql.DataFrame`."""
 
-    name = ConstructorName.PYSPARK
+    name = "pyspark"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> NativePySpark:
         session = _pyspark_session_lazy()
@@ -488,7 +512,7 @@ class PySparkConnectConstructor(
 ):  # pragma: no cover
     """Constructor backed by PySpark Connect (Spark Connect protocol)."""
 
-    name = ConstructorName.PYSPARK_CONNECT
+    name = "pyspark[connect]"
 
 
 class SQLFrameConstructor(
@@ -499,7 +523,7 @@ class SQLFrameConstructor(
 ):
     """Constructor backed by `sqlframe` (DuckDB session)."""
 
-    name = ConstructorName.SQLFRAME
+    name = "sqlframe"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> NativeSQLFrame:
         session = sqlframe_session()
@@ -516,7 +540,7 @@ class IbisConstructor(
 ):
     """Constructor backed by `ibis` (DuckDB backend)."""
 
-    name = ConstructorName.IBIS
+    name = "ibis"
 
     def __call__(self, obj: Data, /, **kwds: Any) -> ibis.Table:
         import pyarrow as pa
@@ -524,3 +548,150 @@ class IbisConstructor(
         table = pa.table(obj)  # type:ignore[arg-type]
         table_name = str(uuid.uuid4())
         return _ibis_backend().create_table(table_name, table, **kwds)
+
+
+ALL_CONSTRUCTORS: dict[str, ConstructorBase] = ConstructorBase._registry
+"""All registered constructors keyed by their string identifier."""
+
+DEFAULT_CONSTRUCTORS: frozenset[str] = frozenset(
+    {
+        "pandas",
+        "pandas[pyarrow]",
+        "polars[eager]",
+        "pyarrow",
+        "duckdb",
+        "sqlframe",
+        "ibis",
+    }
+)
+"""Subset of constructors enabled by default for parametrised tests when the
+user does not pass `--constructors` (mirrors the historical Narwhals defaults).
+"""
+
+ALL_CPU_CONSTRUCTORS: frozenset[str] = frozenset(
+    name for name, c in ConstructorBase._registry.items() if not c.needs_gpu
+)
+"""All constructors that do not require GPU hardware."""
+
+
+def available_constructors() -> frozenset[str]:
+    """Return the names of every constructor whose backend is importable.
+
+    Examples:
+        >>> from narwhals.testing.constructors import available_constructors
+        >>> "pandas" in available_constructors()
+        True
+    """
+    return frozenset(name for name, c in ALL_CONSTRUCTORS.items() if c.is_available)
+
+
+def get_constructor(name: str) -> ConstructorBase:
+    """Return the registered singleton constructor for `name`.
+
+    Arguments:
+        name: The string identifier of a registered constructor
+            (e.g. `"pandas[pyarrow]"`).
+
+    Raises:
+        ValueError: If `name` is not a registered constructor identifier.
+
+    Examples:
+        >>> from narwhals.testing.constructors import get_constructor
+        >>> get_constructor("pandas")
+        PandasConstructor()
+    """
+    try:
+        return ALL_CONSTRUCTORS[name]
+    except KeyError as exc:
+        valid = sorted(ALL_CONSTRUCTORS)
+        msg = f"Unknown constructor {name!r}. Expected one of: {valid}."
+        raise ValueError(msg) from exc
+
+
+def prepare_constructors(
+    *, include: Iterable[str] | None = None, exclude: Iterable[str] | None = None
+) -> list[ConstructorBase]:
+    """Return available constructors, optionally filtered.
+
+    Arguments:
+        include: If given, only return constructors whose name is in this set.
+        exclude: If given, remove constructors whose name is in this set.
+
+    Examples:
+        >>> from narwhals.testing.constructors import prepare_constructors
+        >>> constructors = prepare_constructors(include=["pandas", "polars[eager]"])
+    """
+    available = available_constructors()
+    candidates: list[ConstructorBase] = [
+        c for name, c in ALL_CONSTRUCTORS.items() if name in available
+    ]
+    if include is not None:
+        inc = frozenset(include)
+        candidates = [c for c in candidates if c.name in inc]
+    if exclude is not None:
+        exc = frozenset(exclude)
+        candidates = [c for c in candidates if c.name not in exc]
+    return sorted(candidates, key=lambda c: c.name)
+
+
+def is_backend_available(*packages: str) -> bool:
+    """Whether every package in `packages` can be imported in this environment.
+
+    Examples:
+        >>> from narwhals.testing.constructors import is_backend_available
+        >>> is_backend_available("pandas")
+        True
+    """
+    return all(find_spec(pkg) is not None for pkg in packages)
+
+
+def sqlframe_session() -> DuckDBSession:
+    """Return a fresh in-memory `sqlframe` DuckDB session."""
+    from sqlframe.duckdb import DuckDBSession
+
+    # NOTE: `__new__` override inferred by `pyright` only
+    # https://github.com/eakmanrq/sqlframe/blob/772b3a6bfe5a1ffd569b7749d84bea2f3a314510/sqlframe/base/session.py#L181-L184
+    return cast("DuckDBSession", DuckDBSession())  # type: ignore[redundant-cast]
+
+
+def pyspark_session() -> SparkSession:  # pragma: no cover
+    """Return a singleton local `pyspark` (or pyspark[connect]) session."""
+    if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
+        from pyspark.sql.connect.session import SparkSession
+    else:
+        from pyspark.sql import SparkSession
+    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+    builder = (
+        builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
+        if is_spark_connect
+        else builder.master("local[1]").config("spark.ui.enabled", "false")
+    )
+    return (
+        builder.config("spark.default.parallelism", "1")
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.sql.session.timeZone", "UTC")
+        .getOrCreate()
+    )
+
+
+@lru_cache(maxsize=1)
+def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
+    """Cached singleton in-memory ibis backend, so all tables share one database."""
+    import ibis
+
+    return ibis.duckdb.connect()
+
+
+@lru_cache(maxsize=1)
+def _pyspark_session_lazy() -> SparkSession:  # pragma: no cover
+    """Cached pyspark session; created on first use, stopped at interpreter exit."""
+    from atexit import register
+
+    with warnings.catch_warnings():
+        # The spark session seems to trigger a polars warning.
+        warnings.filterwarnings(
+            "ignore", r"Using fork\(\) can cause Polars", category=RuntimeWarning
+        )
+        session = pyspark_session()
+        register(session.stop)
+        return session

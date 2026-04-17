@@ -30,7 +30,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Version
-from narwhals.testing.constructors._classes import SQLFrameConstructor
+from narwhals.testing.constructors import SQLFrameConstructor
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:

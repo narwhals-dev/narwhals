@@ -7,7 +7,7 @@ import pytest
 from hypothesis import assume, given
 
 import narwhals as nw
-from narwhals.testing.constructors._classes import PandasConstructor, PyArrowConstructor
+from narwhals.testing.constructors import PandasConstructor, PyArrowConstructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -126,7 +126,7 @@ def test_getitem(pandas_or_pyarrow_constructor: ConstructorBase, selector: Any) 
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor.name.is_pyarrow
+            pandas_or_pyarrow_constructor.is_pyarrow
             and isinstance(selector, slice)
             and selector.step is not None
         )
@@ -135,7 +135,7 @@ def test_getitem(pandas_or_pyarrow_constructor: ConstructorBase, selector: Any) 
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor.name.is_pyarrow
+            pandas_or_pyarrow_constructor.is_pyarrow
             and isinstance(selector, tuple)
             and (
                 (isinstance(selector[0], slice) and selector[0].step is not None)

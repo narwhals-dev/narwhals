@@ -46,14 +46,14 @@ def _default_constructor_ids() -> list[str]:
         return env.split(",")
     from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, prepare_constructors
 
-    return [str(c.name) for c in prepare_constructors(include=DEFAULT_CONSTRUCTORS)]
+    return [c.name for c in prepare_constructors(include=DEFAULT_CONSTRUCTORS)]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS
 
     group = parser.getgroup("narwhals", "narwhals.testing")
-    defaults = ", ".join(f"'{c.value}'" for c in sorted(DEFAULT_CONSTRUCTORS))
+    defaults = ", ".join(f"'{c}'" for c in sorted(DEFAULT_CONSTRUCTORS))
     group.addoption(
         "--constructors",
         action="store",
@@ -90,15 +90,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def _select_constructors(
     config: pytest.Config,
 ) -> list[ConstructorBase]:  # pragma: no cover
-    from narwhals.testing.constructors import (
-        ALL_CPU_CONSTRUCTORS,
-        ConstructorName,
-        prepare_constructors,
-    )
+    from narwhals.testing.constructors import ALL_CPU_CONSTRUCTORS, prepare_constructors
 
-    _all_cpu_exclusions = frozenset(
-        {ConstructorName.MODIN, ConstructorName.PYSPARK_CONNECT}
-    )
+    _all_cpu_exclusions = frozenset({"modin", "pyspark[connect]"})
 
     if config.getoption("all_cpu_constructors"):
         selected = prepare_constructors(
@@ -106,14 +100,11 @@ def _select_constructors(
         )
     else:
         opt = cast("str", config.getoption("constructors"))
-        names = [ConstructorName(c) for c in opt.split(",") if c]
+        names = [c for c in opt.split(",") if c]
         selected = prepare_constructors(include=names)
 
     if _pandas_version() < _MIN_PANDAS_NULLABLE_VERSION:
-        _pandas_nullables = {
-            ConstructorName.PANDAS_NULLABLE,
-            ConstructorName.PANDAS_PYARROW,
-        }
+        _pandas_nullables = {"pandas[nullable]", "pandas[pyarrow]"}
         selected = [c for c in selected if c.name not in _pandas_nullables]
     return selected
 
@@ -129,14 +120,14 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     selected = _select_constructors(metafunc.config)
 
     if "constructor_eager" in fixturenames:
-        params = [c for c in selected if c.name.is_eager]
-        ids = [str(c.name) for c in params]
+        params = [c for c in selected if c.is_eager]
+        ids = [c.name for c in params]
         metafunc.parametrize("constructor_eager", params, ids=ids)
     elif "constructor" in fixturenames:
-        metafunc.parametrize("constructor", selected, ids=[str(c.name) for c in selected])
+        metafunc.parametrize("constructor", selected, ids=[c.name for c in selected])
     elif "constructor_pandas_like" in fixturenames:
-        params = [c for c in selected if c.name.is_eager and c.name.is_pandas_like]
-        ids = [str(c.name) for c in params]
+        params = [c for c in selected if c.is_eager and c.is_pandas_like]
+        ids = [c.name for c in params]
         metafunc.parametrize("constructor_pandas_like", params, ids=ids)
     else:  # pragma: no cover
         ...
