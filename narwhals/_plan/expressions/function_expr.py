@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import _parameters as params
     from narwhals._plan._expansion import Expander
-    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
+    from narwhals._plan.compliant.typing import Ctx, FrameT_contra as FrameT, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
@@ -88,9 +88,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
 
-    def dispatch(
-        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
-    ) -> R_co:
+    def dispatch(self: Self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
@@ -141,9 +139,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches"))
     def flags(self) -> FunctionFlags:
         return self.function.flags
 
-    def dispatch(
-        self: Self, ctx: Ctx[FrameT_contra, R_co], frame: FrameT_contra, name: str
-    ) -> R_co:
+    def dispatch(self: Self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
