@@ -525,6 +525,16 @@ def test_joinasof_numeric(
     assert_equal_data(result.sort(by="antananarivo"), expected)
     assert_equal_data(result_on.sort(by="antananarivo"), expected)
 
+    df_eager, df_right_eager = df.collect(), df_right.collect()
+    result_eager = df_eager.join_asof(
+        df_right_eager, left_on="antananarivo", right_on="antananarivo", strategy=strategy
+    )
+    result_on_eager = df_eager.join_asof(
+        df_right_eager, on="antananarivo", strategy=strategy
+    )
+    assert_equal_data(result_eager.sort(by="antananarivo"), expected)
+    assert_equal_data(result_on_eager.sort(by="antananarivo"), expected)
+
 
 @pytest.mark.parametrize(
     ("strategy", "expected"),
@@ -794,6 +804,10 @@ def test_join_duplicate_column_names(
         exception = nw.exceptions.DuplicateError
     with pytest.raises(exception):
         df.join(df, on=["a"]).join(df, on=["a"]).collect()
+
+    df_eager = df.collect()
+    with pytest.raises(exception):
+        df_eager.join(df_eager, on=["a"]).join(df_eager, on=["a"])
 
 
 def test_join_same_laziness(constructor: Constructor) -> None:
