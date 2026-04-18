@@ -71,7 +71,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     # Escape hatch for downstream test suites that ship their own backend plugin.
     # When set, this plugin still adds the CLI options but stops parametrising the fixtures.
     group.addoption(
-        "--use-external-backend",
+        "--use-external-nw-backend",
         action="store_true",
         default=False,
         help=(
@@ -100,23 +100,23 @@ def _select_backends(config: pytest.Config) -> list[FrameConstructor]:  # pragma
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if metafunc.config.getoption("use_external_backend"):  # pragma: no cover
+    if metafunc.config.getoption("use_external_nw_backend"):  # pragma: no cover
         return
 
     fixturenames = set(metafunc.fixturenames)
     if not fixturenames & {
         "nw_frame_constructor",
-        "nw_eager_frame_constructor",
+        "nw_eager_constructor",
         "nw_pandas_like_constructor",
     }:
         return
 
     selected = _select_backends(metafunc.config)
 
-    if "nw_eager_frame_constructor" in fixturenames:
+    if "nw_eager_constructor" in fixturenames:
         params = [c for c in selected if c.is_eager]
         ids = [c.name for c in params]
-        metafunc.parametrize("nw_eager_frame_constructor", params, ids=ids)
+        metafunc.parametrize("nw_eager_constructor", params, ids=ids)
     elif "nw_frame_constructor" in fixturenames:
         metafunc.parametrize(
             "nw_frame_constructor", selected, ids=[c.name for c in selected]
