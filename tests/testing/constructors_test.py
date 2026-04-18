@@ -8,8 +8,8 @@ import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
     FrameConstructor,
-    get_constructor,
-    prepare_constructors,
+    get_backend_constructor,
+    prepare_backends,
 )
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 def test_eager_returns_eager_frame() -> None:
-    c = get_constructor("pandas")
+    c = get_backend_constructor("pandas")
     if not c.is_available:
         pytest.skip()
 
@@ -30,7 +30,7 @@ def test_eager_returns_eager_frame() -> None:
 
 
 def test_lazy_returns_lazy_frame() -> None:
-    c = get_constructor("polars[lazy]")
+    c = get_backend_constructor("polars[lazy]")
     if not c.is_available:
         pytest.skip()
 
@@ -62,30 +62,34 @@ def test_constructor_is_properties(
     prop: str, true_names: TrueNames, false_names: FalseNames
 ) -> None:
     for name in true_names:
-        c = get_constructor(name)
+        c = get_backend_constructor(name)
         assert getattr(c, prop), f"{name}.{prop} should be True"
     for name in false_names:
-        c = get_constructor(name)
+        c = get_backend_constructor(name)
         assert not getattr(c, prop), f"{name}.{prop} should be False"
 
 
 def test_constructor_implementation() -> None:
-    assert get_constructor("pandas").implementation is Implementation.PANDAS
-    assert get_constructor("pandas[pyarrow]").implementation is Implementation.PANDAS
-    assert get_constructor("polars[eager]").implementation is Implementation.POLARS
+    assert get_backend_constructor("pandas").implementation is Implementation.PANDAS
     assert (
-        get_constructor("pyspark[connect]").implementation
+        get_backend_constructor("pandas[pyarrow]").implementation is Implementation.PANDAS
+    )
+    assert (
+        get_backend_constructor("polars[eager]").implementation is Implementation.POLARS
+    )
+    assert (
+        get_backend_constructor("pyspark[connect]").implementation
         is Implementation.PYSPARK_CONNECT
     )
 
 
 def test_constructor_dunder() -> None:
-    c1 = get_constructor("pandas")
-    c2 = get_constructor("pandas")
+    c1 = get_backend_constructor("pandas")
+    c2 = get_backend_constructor("pandas")
     assert c1.identifier == "pandas"
     assert c1 == c2
     assert hash(c1) == hash(c2)
-    assert c1 != get_constructor("polars[eager]")
+    assert c1 != get_backend_constructor("polars[eager]")
     assert c1 != "not a constructor"
 
 
@@ -99,16 +103,18 @@ def test_init_subclass_requires_implementation() -> None:
                 ...  # pragma: no cover
 
 
-def test_get_constructor() -> None:
-    assert get_constructor("pandas[pyarrow]") == get_constructor("pandas[pyarrow]")
+def test_get_backend_constructor() -> None:
+    assert get_backend_constructor("pandas[pyarrow]") == get_backend_constructor(
+        "pandas[pyarrow]"
+    )
 
 
-def test_get_constructor_invalid_name() -> None:
+def test_get_backend_constructor_invalid_name() -> None:
     with pytest.raises(ValueError, match="Unknown constructor"):
-        get_constructor("not_a_backend")
+        get_backend_constructor("not_a_backend")
 
 
-def test_prepare_constructors_exclude_only() -> None:
-    result = prepare_constructors(exclude=["pandas"])
+def test_prepare_backends_exclude_only() -> None:
+    result = prepare_backends(exclude=["pandas"])
     names = {c.name for c in result}
     assert "pandas" not in names

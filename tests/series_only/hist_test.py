@@ -11,7 +11,7 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from narwhals.testing.constructors import get_constructor
+from narwhals.testing.constructors import get_backend_constructor
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
@@ -48,7 +48,7 @@ param_name = pytest.mark.parametrize("name", ["pandas", "polars[eager]", "pyarro
 
 
 def maybe_name_to_constructor(name: str) -> ConstructorEager:
-    constructor = get_constructor(name)
+    constructor = get_backend_constructor(name)
     if constructor.is_available:
         return constructor  # type: ignore[return-value]
 
