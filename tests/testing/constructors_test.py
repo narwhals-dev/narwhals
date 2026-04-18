@@ -7,8 +7,8 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
-    ConstructorBase,
     DaskConstructor,
+    FrameConstructor,
     PandasConstructor,
     PolarsEagerConstructor as OriginalPolarsEagerConstructor,
     get_constructor,
@@ -104,7 +104,7 @@ def test_constructor_dunder() -> None:
 
 def test_init_subclass_no_legacy_name() -> None:
     class _Dummy(
-        ConstructorBase, implementation=Implementation.POLARS, requirements=("polars",)
+        FrameConstructor, implementation=Implementation.POLARS, requirements=("polars",)
     ):
         name = "polars[eager]"
 
@@ -112,7 +112,7 @@ def test_init_subclass_no_legacy_name() -> None:
             ...  # pragma: no cover
 
     # re-registered polars[eager] (overwriting the real one), but without a legacy_name for it.
-    registered = ConstructorBase._registry["polars[eager]"]
+    registered = FrameConstructor._registry["polars[eager]"]
     assert registered == _Dummy()
     assert registered.legacy_name == ""
     assert registered.requirements == ("polars",)
@@ -131,7 +131,7 @@ def test_init_subclass_no_legacy_name() -> None:
 
     original = PolarsEagerConstructor()
 
-    restored = ConstructorBase._registry["polars[eager]"]
+    restored = FrameConstructor._registry["polars[eager]"]
     assert restored == original
     assert restored.legacy_name == legacy_name
 
@@ -139,7 +139,7 @@ def test_init_subclass_no_legacy_name() -> None:
 def test_init_subclass_requires_implementation() -> None:
     with pytest.raises(TypeError, match="missing `implementation`"):
 
-        class _BadConstructor(ConstructorBase, requirements=("polars",)):
+        class _BadConstructor(FrameConstructor, requirements=("polars",)):
             name = "polars[eager]"
 
             def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]

@@ -15,9 +15,9 @@ def test_constructor_eager_fixture_runs_for_each_backend(
     pytester.makeconftest("")
     pytester.makepyfile("""
         import narwhals as nw
-        from narwhals.testing.typing import ConstructorEager
+        from narwhals.testing.typing import EagerFrameConstructor
 
-        def test_shape(constructor_eager: ConstructorEager) -> None:
+        def test_shape(constructor_eager: EagerFrameConstructor) -> None:
             df = nw.from_native(constructor_eager({"x": [1, 2, 3]}), eager_only=True)
             assert df.shape == (3, 1)
     """)
@@ -42,9 +42,9 @@ def test_constructor_fixture_includes_lazy_backends(pytester: pytest.Pytester) -
     pytester.makeconftest("")
     pytester.makepyfile("""
         import narwhals as nw
-        from narwhals.testing.typing import Constructor
+        from narwhals.testing.typing import FrameConstructor
 
-        def test_columns(constructor: Constructor) -> None:
+        def test_columns(constructor: FrameConstructor) -> None:
             df = nw.from_native(constructor({"x": [1, 2, 3]}))
             assert df.collect_schema().names() == ["x"]
     """)
@@ -57,9 +57,9 @@ def test_constructor_fixture_includes_lazy_backends(pytester: pytest.Pytester) -
 def test_external_constructor_disables_parametrisation(pytester: pytest.Pytester) -> None:
     pytester.makeconftest("")
     pytester.makepyfile("""
-        from narwhals.testing.typing import ConstructorEager
+        from narwhals.testing.typing import EagerFrameConstructor
 
-        def test_unparam(constructor_eager: ConstructorEager) -> None:
+        def test_unparam(constructor_eager: EagerFrameConstructor) -> None:
             pass
     """)
     result = pytester.runpytest_subprocess("--use-external-constructor")

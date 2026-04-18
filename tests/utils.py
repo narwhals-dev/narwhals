@@ -14,8 +14,9 @@ import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
 from narwhals.testing.typing import (
-    Constructor as Constructor,  # noqa: PLC0414,TC001
-    ConstructorEager as ConstructorEager,  # noqa: PLC0414,TC001
+    # TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
+    EagerFrameConstructor as ConstructorEager,  # noqa: TC001
+    FrameConstructor as Constructor,  # noqa: TC001
 )
 from narwhals.translate import from_native
 

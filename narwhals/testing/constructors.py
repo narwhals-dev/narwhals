@@ -11,15 +11,15 @@ declaration — the `__init_subclass__` hook then auto-registers a singleton.
 
 1. Choose the right base class:
 
-    * `ConstructorEagerBase`: if the backend returns an eager dataframe.
-    * `ConstructorLazyBase`: if the backend returns a lazy frame.
+    * `EagerFrameConstructor`: if the backend returns an eager dataframe.
+    * `LazyFrameConstructor`: if the backend returns a lazy frame.
 
 2. Define the class in this module and declare its metadata in the class
     header as keyword arguments:
 
     ```py
     class MyBackendConstructor(
-        ConstructorLazyBase,
+        LazyFrameConstructor,
         implementation=Implementation.MY_BACKEND,
         requirements=("my_backend",),
         legacy_name="my_backend_lazy_constructor",
@@ -32,7 +32,7 @@ declaration — the `__init_subclass__` hook then auto-registers a singleton.
             return my_backend.from_dict(obj)
     ```
 
-That is all. `__init_subclass__` on `ConstructorBase` automatically registers
+That is all. `__init_subclass__` on `FrameConstructor` automatically registers
 a default singleton into `_registry`, keyed by the string `name`.
 """
 
@@ -68,8 +68,8 @@ __all__ = (
     "ALL_CONSTRUCTORS",
     "ALL_CPU_CONSTRUCTORS",
     "DEFAULT_CONSTRUCTORS",
-    "ConstructorBase",
-    "ConstructorEagerBase",
+    "EagerFrameConstructor",
+    "FrameConstructor",
     "available_constructors",
     "get_constructor",
     "is_backend_available",
@@ -79,7 +79,7 @@ __all__ = (
 )
 
 
-class ConstructorBase(Protocol):
+class FrameConstructor(Protocol):
     """Abstract base for any constructor exposed by `narwhals.testing`.
 
     A constructor is a callable that turns a column-oriented `dict` (typed as
@@ -92,7 +92,7 @@ class ConstructorBase(Protocol):
     default singleton into `_registry`.
     """
 
-    _registry: ClassVar[dict[str, ConstructorBase]] = {}
+    _registry: ClassVar[dict[str, FrameConstructor]] = {}
 
     name: ClassVar[str]
     implementation: ClassVar[Implementation]
@@ -141,7 +141,7 @@ class ConstructorBase(Protocol):
                 "kwarg in its class header."
             )
             raise TypeError(msg)
-        ConstructorBase._registry[cls.name] = cls()
+        FrameConstructor._registry[cls.name] = cls()
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoFrame:
         """Build a native frame from `obj`."""
@@ -242,11 +242,12 @@ class ConstructorBase(Protocol):
 
     def __eq__(self, other: object) -> bool:
         return (
-            type(self) is type(other) and self.name == cast("ConstructorBase", other).name
+            type(self) is type(other)
+            and self.name == cast("FrameConstructor", other).name
         )
 
 
-class ConstructorEagerBase(ConstructorBase):
+class EagerFrameConstructor(FrameConstructor):
     """A constructor that returns an *eager* native dataframe."""
 
     is_eager: ClassVar[bool] = True
@@ -254,7 +255,7 @@ class ConstructorEagerBase(ConstructorBase):
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame: ...
 
 
-class ConstructorLazyBase(ConstructorBase):
+class LazyFrameConstructor(FrameConstructor):
     """A constructor that returns a *lazy* native frame."""
 
     is_eager: ClassVar[bool] = False
@@ -266,7 +267,7 @@ class ConstructorLazyBase(ConstructorBase):
 
 
 class PandasConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.PANDAS,
     requirements=("pandas",),
     legacy_name="pandas_constructor",
@@ -283,7 +284,7 @@ class PandasConstructor(
 
 
 class PandasNullableConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.PANDAS,
     requirements=("pandas",),
     legacy_name="pandas_nullable_constructor",
@@ -299,7 +300,7 @@ class PandasNullableConstructor(
 
 
 class PandasPyArrowConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.PANDAS,
     requirements=("pandas", "pyarrow"),
     legacy_name="pandas_pyarrow_constructor",
@@ -315,7 +316,7 @@ class PandasPyArrowConstructor(
 
 
 class PyArrowConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.PYARROW,
     requirements=("pyarrow",),
     legacy_name="pyarrow_table_constructor",
@@ -331,7 +332,7 @@ class PyArrowConstructor(
 
 
 class ModinConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.MODIN,
     requirements=("modin",),
     legacy_name="modin_constructor",
@@ -349,7 +350,7 @@ class ModinConstructor(
 
 
 class ModinPyArrowConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.MODIN,
     requirements=("modin", "pyarrow"),
     legacy_name="modin_pyarrow_constructor",
@@ -369,7 +370,7 @@ class ModinPyArrowConstructor(
 
 
 class CudfConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.CUDF,
     requirements=("cudf",),
     legacy_name="cudf_constructor",
@@ -386,7 +387,7 @@ class CudfConstructor(
 
 
 class PolarsEagerConstructor(
-    ConstructorEagerBase,
+    EagerFrameConstructor,
     implementation=Implementation.POLARS,
     requirements=("polars",),
     legacy_name="polars_eager_constructor",
@@ -405,7 +406,7 @@ class PolarsEagerConstructor(
 
 
 class PolarsLazyConstructor(
-    ConstructorLazyBase,
+    LazyFrameConstructor,
     implementation=Implementation.POLARS,
     requirements=("polars",),
     legacy_name="polars_lazy_constructor",
@@ -421,7 +422,7 @@ class PolarsLazyConstructor(
 
 
 class DaskConstructor(
-    ConstructorLazyBase,
+    LazyFrameConstructor,
     implementation=Implementation.DASK,
     requirements=("dask",),
     legacy_name="dask_lazy_p2_constructor",
@@ -462,7 +463,7 @@ class DaskConstructor(
 
 
 class DuckDBConstructor(
-    ConstructorLazyBase,
+    LazyFrameConstructor,
     implementation=Implementation.DUCKDB,
     requirements=("duckdb", "pyarrow"),
     legacy_name="duckdb_lazy_constructor",
@@ -481,7 +482,7 @@ class DuckDBConstructor(
 
 
 class PySparkConstructor(
-    ConstructorLazyBase,
+    LazyFrameConstructor,
     implementation=Implementation.PYSPARK,
     requirements=("pyspark",),
     legacy_name="pyspark_lazy_constructor",
@@ -516,7 +517,7 @@ class PySparkConnectConstructor(
 
 
 class SQLFrameConstructor(
-    ConstructorLazyBase,
+    LazyFrameConstructor,
     implementation=Implementation.SQLFRAME,
     requirements=("sqlframe", "duckdb"),
     legacy_name="sqlframe_pyspark_lazy_constructor",
@@ -533,7 +534,7 @@ class SQLFrameConstructor(
 
 
 class IbisConstructor(
-    ConstructorLazyBase,
+    LazyFrameConstructor,
     implementation=Implementation.IBIS,
     requirements=("ibis", "duckdb", "pyarrow"),
     legacy_name="ibis_lazy_constructor",
@@ -550,7 +551,7 @@ class IbisConstructor(
         return _ibis_backend().create_table(table_name, table, **kwds)
 
 
-ALL_CONSTRUCTORS: dict[str, ConstructorBase] = ConstructorBase._registry
+ALL_CONSTRUCTORS: dict[str, FrameConstructor] = FrameConstructor._registry
 """All registered constructors keyed by their string identifier."""
 
 DEFAULT_CONSTRUCTORS: frozenset[str] = frozenset(
@@ -569,7 +570,7 @@ user does not pass `--constructors` (mirrors the historical Narwhals defaults).
 """
 
 ALL_CPU_CONSTRUCTORS: frozenset[str] = frozenset(
-    name for name, c in ConstructorBase._registry.items() if not c.needs_gpu
+    name for name, c in FrameConstructor._registry.items() if not c.needs_gpu
 )
 """All constructors that do not require GPU hardware."""
 
@@ -585,7 +586,7 @@ def available_constructors() -> frozenset[str]:
     return frozenset(name for name, c in ALL_CONSTRUCTORS.items() if c.is_available)
 
 
-def get_constructor(name: str) -> ConstructorBase:
+def get_constructor(name: str) -> FrameConstructor:
     """Return the registered singleton constructor for `name`.
 
     Arguments:
@@ -610,7 +611,7 @@ def get_constructor(name: str) -> ConstructorBase:
 
 def prepare_constructors(
     *, include: Iterable[str] | None = None, exclude: Iterable[str] | None = None
-) -> list[ConstructorBase]:
+) -> list[FrameConstructor]:
     """Return available constructors, optionally filtered.
 
     Arguments:
@@ -622,7 +623,7 @@ def prepare_constructors(
         >>> constructors = prepare_constructors(include=["pandas", "polars[eager]"])
     """
     available = available_constructors()
-    candidates: list[ConstructorBase] = [
+    candidates: list[FrameConstructor] = [
         c for name, c in ALL_CONSTRUCTORS.items() if name in available
     ]
     if include is not None:
