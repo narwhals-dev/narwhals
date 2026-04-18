@@ -3,49 +3,35 @@ from __future__ import annotations
 # mypy: disable-error-code="misc"
 # NOTE: Needs to be disabled as `mypy` reports the diagnostic twice, with one not attributed to a line number
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
-from typing import TYPE_CHECKING, Any, Final, Generic, Literal, Protocol
+from typing import TYPE_CHECKING, Generic, overload
 
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import nodes
-from narwhals._plan.typing import (
-    FunctionT,
-    FunctionT_co,
-    HorizontalT_co,
-    RangeT_co,
-    Seq,
-    StructT_co,
-)
+from narwhals._plan.typing import FunctionT_co, HorizontalT_co, RangeT_co, Seq, StructT_co
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import type_check_only
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
-    from narwhals._plan import _parameters as params
     from narwhals._plan._expansion import Expander
-    from narwhals._plan._function import UnaryFunction
+    from narwhals._plan._function import (
+        BinaryFunction,
+        Function,
+        TernaryFunction,
+        UnaryFunction,
+    )
+    from narwhals._plan._parameters import Parameters
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra as FrameT, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._typing_compat import TypeVar
     from narwhals.dtypes import DType
 
-    ParamsT_co = TypeVar(
-        "ParamsT_co",
-        bound="params.Parameters | _DispatchArgs[Any, Seq[Any]]",
-        default=params.Parameters,
-        covariant=True,
-    )
-    ArgsR_co = TypeVar("ArgsR_co", bound="Seq[Any]", covariant=True)
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 renamed = DispatcherOptions.renamed
-
-Incomplete: TypeAlias = Any
-MYPY: Final[Literal[False]] = False  # noqa: PYI064
 
 
 # TODO @dangotbanned: How painful will a rename for `input` -> `args` be?
@@ -125,6 +111,11 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         for root in input_root.iter_expand(ctx):
             yield self.__replace__(input=(root, *children))
 
+    @property
+    def parameters(self) -> Parameters:
+        # referenced in doctests
+        return self.function.__function_parameters__
+
     def dispatch_arg(
         self: FunctionExpr[UnaryFunction],
         ctx: Ctx[FrameT, R_co],
@@ -138,53 +129,36 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """
         return self.input[0].dispatch(ctx, frame, name)
 
-    if TYPE_CHECKING:
-        # NOTE: This is a bit of a trainwreck now that `mypy` has joined the party
-
-        @property
-        @type_check_only
-        def __associated_function__(self: FunctionExpr[FunctionT]) -> type[FunctionT]:
-            """**Type checking only!**, see `_AssociateParams` doc for details."""
-            return self.function.__class__
-
-        if not MYPY:
-
-            def dispatch_args(
-                self: _AssociateParams[_DispatchArgs[R_co, ArgsR_co]],
-                ctx: Ctx[FrameT, R_co],
-                frame: FrameT,
-                name: str,
-            ) -> ArgsR_co:
-                """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
-                return self.parameters.dispatch_args(self, ctx, frame, name)
-
-            @property
-            def parameters(self: _AssociateParams[ParamsT_co]) -> ParamsT_co:
-                return self.__associated_function__.__function_parameters__
-        else:
-
-            def dispatch_args(
-                self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-            ) -> Seq[R_co]:
-                return self.parameters.dispatch_args(self, ctx, frame, name)
-
-            @property
-            def parameters(self) -> params.Parameters:
-                p: params.Parameters = self.function.__function_parameters__
-                return p
-
-    else:
-
-        def dispatch_args(
-            self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-        ) -> Seq[R_co]:
-            return self.function.__function_parameters__.dispatch_args(
-                self, ctx, frame, name
-            )
-
-        @property
-        def parameters(self) -> params.Parameters:
-            return self.function.__function_parameters__
+    @overload
+    def dispatch_args(
+        self: FunctionExpr[UnaryFunction],
+        ctx: Ctx[FrameT, R_co],
+        frame: FrameT,
+        name: str,
+    ) -> tuple[R_co]: ...
+    @overload
+    def dispatch_args(
+        self: FunctionExpr[BinaryFunction],
+        ctx: Ctx[FrameT, R_co],
+        frame: FrameT,
+        name: str,
+    ) -> tuple[R_co, R_co]: ...
+    @overload
+    def dispatch_args(
+        self: FunctionExpr[TernaryFunction],
+        ctx: Ctx[FrameT, R_co],
+        frame: FrameT,
+        name: str,
+    ) -> tuple[R_co, R_co, R_co]: ...
+    @overload
+    def dispatch_args(
+        self: FunctionExpr[Function], ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+    ) -> Seq[R_co]: ...
+    def dispatch_args(
+        self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+    ) -> Seq[R_co]:
+        """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
+        return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
@@ -225,96 +199,3 @@ class StructExpr(FunctionExpr[StructT_co]):
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
-
-
-if TYPE_CHECKING:
-    # NOTE: Associated type magic
-
-    class _HasParams(Protocol[ParamsT_co]):
-        @property
-        def __function_parameters__(self) -> ParamsT_co: ...
-
-    class _AssociateParams(Protocol[ParamsT_co]):
-        """Magic to yoink out the associated `Parameters` type from `FunctionExpr[Function]`.
-
-        Adapts an idea from `scipy-stubs` ([1], [2]) for resolving this conundrum:
-
-            class Function[P: Parameters]:
-                # The real thing is an associated type (not a generic)
-                __function_parameters_actual__: ClassVar[Parameters]
-
-                # If we try to make it generic ...
-                __function_parameters_bad__: ClassVar[P] # "ClassVar" type cannot include type variables
-
-                # Fixes ^, but requires making `Function` generic
-                # & somehow handling that in `FunctionExpr`
-                @property
-                def __function_parameters_better__(self) -> P: ...
-
-
-            class FunctionExpr[F: Function[Parameters]]:
-                # We can't write this as `F[P]` (higher-kinded type)
-                function: F
-
-                # Since `Function` isn't generic, this accessor would hide the associated type
-                @property
-                def parameters_actual(self) -> Parameters:
-                    # But if we're *outside*, this long chain would work, e.g.
-                    #   FunctionExpr[FillNull].function.__function_parameters_actual__  # "Binary"
-                    return self.function.__function_parameters_actual__
-
-                # Might work if `Function` was generic, but doesn't work well with `FunctionExpr` subclasses
-                # & scales poorly to how many `Function` subclasses there are
-                @property
-                def parameters_better[P: Parameters](self: FunctionExpr[Function[P]]) -> P:
-                    return self.function.__function_parameters_better__
-
-        [1]: https://github.com/scipy/scipy-stubs/blob/2d6cca6a5e6ee21b6be7008c6c773dd8f12723fb/scipy-stubs/sparse/_base.pyi#L156-L171
-        [2]: https://github.com/scipy/scipy-stubs/blob/85bea68bad3924f306586585d46fd2f9ff0d53d4/scipy-stubs/sparse/_typing.pyi#L30-L46
-        """
-
-        @property
-        def __associated_function__(self) -> _HasParams[ParamsT_co]: ...
-        @property
-        def parameters(self: _AssociateParams[ParamsT_co]) -> ParamsT_co: ...
-
-    class _DispatchArgs(Protocol[R_co, ArgsR_co]):  # pyright: ignore[reportInvalidTypeVarUse]
-        """Magic to pull out the **return `tuple` length** of `Parameters.dispatch_args`.
-
-        Where `ExprIR.dispatch` has the signature:
-
-            Callable[[Ctx[FrameT, R_co], FrameT, str], R_co]
-
-        A reasonable signature for `dispatch_args` would be:
-
-            Callable[[Ctx[FrameT, R_co], FrameT, str], tuple[R_co, ...]]
-
-        But for the majority of functions, we have a more precise return type:
-
-            tuple[R_co]              # Unary
-            tuple[R_co, R_co]        # Binary
-            tuple[R_co, R_co, R_co]  # Ternary
-
-        This handles exposing those types as `ArgsR_co`, without needing to wait for
-        `TypeVarTuple(bound=...)` to be specified ([1], [2]).
-
-        ## Notes
-        A downside is that this messes with the variance inference for `R_co` in `Ctx[FrameT, R_co]`.
-
-        AFAIK, the type system doesn't support a way to express:
-          `ArgsR_co` has a bound of `tuple[R_co, ...]`
-
-        If that detail could be seen, then it would be inferred as ~~contravariant~~ covariant.
-
-
-        [1]: https://github.com/python/typing/pull/2215
-        [2]: https://github.com/python/cpython/pull/148212
-        """
-
-        def dispatch_args(
-            self,
-            node: FunctionExpr | Incomplete,
-            ctx: Ctx[FrameT, R_co],
-            frame: FrameT,
-            name: str,
-        ) -> ArgsR_co: ...

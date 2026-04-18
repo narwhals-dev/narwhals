@@ -296,7 +296,6 @@ class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
         return _import_horizontal_expr()
 
 
-# TODO @dangotbanned: Remove the default `Parameters` from `Function` + try simpler typing in `FunctionExpr`
 class UnaryFunction(Function, dispatch="skip"):
     __function_parameters__: ClassVar[params.Unary] = params.Unary()
 

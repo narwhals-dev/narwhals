@@ -55,6 +55,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._plan._function import UnaryFunction as _UnaryFunction
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import (
@@ -111,6 +112,7 @@ if TYPE_CHECKING:
 
     Expr: TypeAlias = "ArrowExpr"
     Scalar: TypeAlias = "ArrowScalar"
+    UnaryFExpr: TypeAlias = FExpr[_UnaryFunction]
 
 
 BACKEND_VERSION = Implementation.PYARROW._backend_version()
@@ -153,20 +155,20 @@ class _ArrowDispatch(
     @overload
     def _unary_function(
         self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
-    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]: ...
+    ) -> Callable[[UnaryFExpr, Frame, str], StoresNativeT_co]: ...
     @overload
     def _unary_function(
         self, fn_native: Callable[[ChunkedOrScalarAny], ChunkedOrScalarAny], /
-    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]: ...
+    ) -> Callable[[UnaryFExpr, Frame, str], StoresNativeT_co]: ...
     def _unary_function(
         self, fn_native: UnaryFunctionP[P], /, *args: P.args, **kwds: P.kwargs
-    ) -> Callable[[FExpr[Any], Frame, str], StoresNativeT_co]:
+    ) -> Callable[[UnaryFExpr, Frame, str], StoresNativeT_co]:
         """Return a function with the signature `(node, frame, name)`.
 
         Handles dispatching prior expressions, and rewrapping the result of this one.
         """
 
-        def func(node: FExpr[Any], frame: Frame, name: str, /) -> StoresNativeT_co:
+        def func(node: UnaryFExpr, frame: Frame, name: str, /) -> StoresNativeT_co:
             native = node.dispatch_arg(self, frame, name).native
             return self._with_native(fn_native(native, *args, **kwds), name)
 
