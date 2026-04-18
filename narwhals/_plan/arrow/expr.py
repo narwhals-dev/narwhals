@@ -132,12 +132,6 @@ class _ArrowDispatch(
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
-    # TODO @dangotbanned: Somehow get `mypy` to stop producing `Never`
-    # Every usage is broken in the same way
-    # `error: Argument 1 to "dispatch_args" of "FunctionExpr" has incompatible type
-    #   `_ArrowDispatch[StoresNativeT_co]`
-    # expected
-    #   `ExprDispatch[ArrowDataFrame, Never, CompliantNamespace[Any, Any, Any]]`
     def pow(self, node: FExpr[Pow], frame: Frame, name: str) -> StoresNativeT_co:
         base, exponent = node.dispatch_args(self, frame, name)
         return self._with_native(fn.power(base.native, exponent.native), name)
@@ -173,7 +167,7 @@ class _ArrowDispatch(
         """
 
         def func(node: FExpr[Any], frame: Frame, name: str, /) -> StoresNativeT_co:
-            native = node.input[0].dispatch(self, frame, name).native
+            native = node.dispatch_arg(self, frame, name).native
             return self._with_native(fn_native(native, *args, **kwds), name)
 
         return func
@@ -185,11 +179,11 @@ class _ArrowDispatch(
         return self._unary_function(fn.not_)(node, frame, name)
 
     def all(self, node: FExpr[All], frame: Frame, name: str) -> Scalar:
-        result = fn.all(node.input[0].dispatch(self, frame, name).native)
+        result = fn.all(node.dispatch_arg(self, frame, name).native)
         return ArrowScalar.from_native(result, name, version=frame.version)
 
     def any(self, node: FExpr[ir.boolean.Any], frame: Frame, name: str) -> Scalar:
-        result = fn.any(node.input[0].dispatch(self, frame, name).native)
+        result = fn.any(node.dispatch_arg(self, frame, name).native)
         return ArrowScalar.from_native(result, name, version=frame.version)
 
     def is_finite(

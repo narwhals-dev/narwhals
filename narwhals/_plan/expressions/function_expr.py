@@ -3,7 +3,7 @@ from __future__ import annotations
 # mypy: disable-error-code="misc"
 # NOTE: Needs to be disabled as `mypy` reports the diagnostic twice, with one not attributed to a line number
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
-from typing import TYPE_CHECKING, Any, Generic, Protocol
+from typing import TYPE_CHECKING, Any, Final, Generic, Literal, Protocol
 
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._expr_ir import ExprIR
@@ -32,10 +32,19 @@ if TYPE_CHECKING:
     from narwhals._typing_compat import TypeVar
     from narwhals.dtypes import DType
 
+    ParamsT_co = TypeVar(
+        "ParamsT_co",
+        bound="params.Parameters | _DispatchArgs[Any, Seq[Any]]",
+        default=params.Parameters,
+        covariant=True,
+    )
+    ArgsR_co = TypeVar("ArgsR_co", bound="Seq[Any]", covariant=True)
+
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 renamed = DispatcherOptions.renamed
 
 Incomplete: TypeAlias = Any
+MYPY: Final[Literal[False]] = False  # noqa: PYI064
 
 
 # TODO @dangotbanned: How painful will a rename for `input` -> `args` be?
@@ -116,6 +125,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(input=(root, *children))
 
     if TYPE_CHECKING:
+        # NOTE: This is a bit of a trainwreck now that `mypy` has joined the party
 
         @property
         @type_check_only
@@ -123,24 +133,51 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             """**Type checking only!**, see `_AssociateParams` doc for details."""
             return self.function.__class__
 
-        @property
-        def parameters(self: _AssociateParams[ParamsT_co]) -> ParamsT_co:
-            return self.__associated_function__.__function_parameters__
+        if not MYPY:
 
-        def dispatch_args(
-            self: _AssociateParams[_DispatchArgs[R_co, ArgsR_co]],
-            ctx: Ctx[FrameT, R_co],
-            frame: FrameT,
-            name: str,
-        ) -> ArgsR_co:
-            """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
-            return self.parameters.dispatch_args(self, ctx, frame, name)
+            def dispatch_arg(
+                self: _AssociateUnary, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+            ) -> R_co:
+                """Call `ExprIR.dispatch` on the **only** expression argument to this function.
+
+                Important:
+                    Exclusive to `Unary`
+                """
+                return self.input[0].dispatch(ctx, frame, name)
+
+            def dispatch_args(
+                self: _AssociateParams[_DispatchArgs[R_co, ArgsR_co]],
+                ctx: Ctx[FrameT, R_co],
+                frame: FrameT,
+                name: str,
+            ) -> ArgsR_co:
+                """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
+                return self.parameters.dispatch_args(self, ctx, frame, name)
+
+            @property
+            def parameters(self: _AssociateParams[ParamsT_co]) -> ParamsT_co:
+                return self.__associated_function__.__function_parameters__
+        else:
+
+            def dispatch_arg(
+                self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+            ) -> R_co:
+                return self.input[0].dispatch(ctx, frame, name)
+
+            def dispatch_args(
+                self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
+            ) -> Seq[R_co]:
+                return self.parameters.dispatch_args(self, ctx, frame, name)
+
+            @property
+            def parameters(self) -> params.Parameters:
+                p: params.Parameters = self.function.__function_parameters__
+                return p
 
     else:
 
-        @property
-        def parameters(self) -> params.Parameters:
-            return self.function.__function_parameters__
+        def dispatch_arg(self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
+            return self.input[0].dispatch(ctx, frame, name)
 
         def dispatch_args(
             self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
@@ -149,15 +186,9 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
                 self, ctx, frame, name
             )
 
-    def dispatch_arg(
-        self: _AssociateUnary, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-    ) -> R_co:
-        """Call `ExprIR.dispatch` on the **only** expression argument to this function.
-
-        Important:
-            Exclusive to `Unary`
-        """
-        return self.input[0].dispatch(ctx, frame, name)
+        @property
+        def parameters(self) -> params.Parameters:
+            return self.function.__function_parameters__
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
@@ -202,13 +233,6 @@ class StructExpr(FunctionExpr[StructT_co]):
 
 if TYPE_CHECKING:
     # NOTE: Associated type magic
-    ParamsT_co = TypeVar(
-        "ParamsT_co",
-        bound="params.Parameters | _DispatchArgs[Any, Seq[Any]]",
-        default=params.Parameters,
-        covariant=True,
-    )
-    ArgsR_co = TypeVar("ArgsR_co", bound="Seq[Any]", covariant=True)
 
     class _HasParams(Protocol[ParamsT_co]):
         @property

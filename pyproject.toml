@@ -362,6 +362,7 @@ exclude_also = [
   '^\s*msg = .+\n\s*raise NotImplementedError\b',
   # stolen from https://github.com/pydantic/pydantic/blob/aa4d8b3fbc5f449ce1c05ebec36b1d4b3b736b69/pyproject.toml#L271
   'class .*\bProtocol\):',
+  "if MYPY:"
 ]
 
 [tool.mypy]

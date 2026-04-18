@@ -163,7 +163,7 @@ class Unary(Parameters, arity=1):
 
     def dispatch_args(
         self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
-    ) -> tuple[R_co]:
+    ) -> tuple[R_co]:  # pragma: no cover
         return (node.input[0].dispatch(ctx, frame, name),)
 
 
