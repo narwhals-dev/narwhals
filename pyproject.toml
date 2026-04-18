@@ -302,7 +302,7 @@ env = [
 ]
 
 [tool.coverage.run]
-patch = ["subprocess"]
+patch = ["execv", "fork", "subprocess"]
 plugins = ["covdefaults"]
 source = ["narwhals", "tests"]
 parallel = true
