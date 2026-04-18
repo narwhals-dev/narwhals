@@ -512,28 +512,32 @@ def test_joinasof_numeric(
         ("pandas_pyarrow" in str(constructor)) or ("pandas_nullable" in str(constructor))
     ):
         request.applymarker(pytest.mark.xfail)
-    df = from_native_lazy(
-        constructor({"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]})
-    ).sort("antananarivo")
-    df_right = from_native_lazy(
-        constructor({"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]})
-    ).sort("antananarivo")
-    result = df.join_asof(
-        df_right, left_on="antananarivo", right_on="antananarivo", strategy=strategy
-    )
-    result_on = df.join_asof(df_right, on="antananarivo", strategy=strategy)
+
+    data_left = {"antananarivo": [1, 5, 10], "val": ["a", "b", "c"]}
+    data_right = {"antananarivo": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}
+    left_lf = from_native_lazy(constructor(data_left)).sort("antananarivo")
+    right_lf = from_native_lazy(constructor(data_right)).sort("antananarivo")
+
+    result: nw.DataFrame[Any] | nw.LazyFrame[Any]
+    result_on: nw.DataFrame[Any] | nw.LazyFrame[Any]
+    if constructor.is_lazy:
+        result = left_lf.join_asof(
+            right_lf, left_on="antananarivo", right_on="antananarivo", strategy=strategy
+        )
+        result_on = left_lf.join_asof(right_lf, on="antananarivo", strategy=strategy)
+
+    elif constructor.is_eager:
+        left_df, right_df = left_lf.collect(), right_lf.collect()
+        result = left_df.join_asof(
+            right_df, left_on="antananarivo", right_on="antananarivo", strategy=strategy
+        )
+        result_on = left_df.join_asof(right_df, on="antananarivo", strategy=strategy)
+    else:  # pragma: no cover
+        msg = "Unreachable"
+        raise AssertionError(msg)
+
     assert_equal_data(result.sort(by="antananarivo"), expected)
     assert_equal_data(result_on.sort(by="antananarivo"), expected)
-
-    df_eager, df_right_eager = df.collect(), df_right.collect()
-    result_eager = df_eager.join_asof(
-        df_right_eager, left_on="antananarivo", right_on="antananarivo", strategy=strategy
-    )
-    result_on_eager = df_eager.join_asof(
-        df_right_eager, on="antananarivo", strategy=strategy
-    )
-    assert_equal_data(result_eager.sort(by="antananarivo"), expected)
-    assert_equal_data(result_on_eager.sort(by="antananarivo"), expected)
 
 
 @pytest.mark.parametrize(
@@ -764,9 +768,18 @@ def test_joinasof_by_exceptions(
     message: str,
 ) -> None:
     data = {ON: [1, 3, 2], BY: [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = from_native_lazy(constructor(data))
-    with pytest.raises(ValueError, match=message):
-        df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by).collect()
+    frame = from_native_lazy(constructor(data))
+
+    if constructor.is_lazy:
+        with pytest.raises(ValueError, match=message):
+            frame.join_asof(frame, on=on, by_left=by_left, by_right=by_right, by=by)
+    elif constructor.is_eager:
+        with pytest.raises(ValueError, match=message):
+            frame.collect().join_asof(
+                frame.collect(), on=on, by_left=by_left, by_right=by_right, by=by
+            )
+    else:  # pragma: no cover
+        ...
 
 
 def test_join_duplicate_column_names(
