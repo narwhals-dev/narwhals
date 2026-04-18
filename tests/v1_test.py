@@ -309,16 +309,16 @@ def test_enum_v1_is_enum_unstable() -> None:
 
 
 def test_cast_to_enum_v1(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
     # Backends that do not (yet) support Enum dtype
     if any(
-        backend in str(constructor)
+        backend in str(nw_frame_constructor)
         for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df_native = constructor({"a": ["a", "b"]})
+    df_native = nw_frame_constructor({"a": ["a", "b"]})
 
     msg = re.escape("Converting to Enum is not supported in narwhals.stable.v1")
     with pytest.raises(NotImplementedError, match=msg):
@@ -454,17 +454,17 @@ def test_all_horizontal() -> None:
     assert_equal_data(result, expected)
 
 
-def test_with_row_index(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_with_row_index(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
-    frame = nw_v1.from_native(constructor(data))
+    frame = nw_v1.from_native(nw_frame_constructor(data))
 
     msg = "Cannot pass `order_by`"
     context = (
         pytest.raises(TypeError, match=msg)
-        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
+        if any(x in str(nw_frame_constructor) for x in ("duckdb", "pyspark"))
         else does_not_raise()
     )
 
@@ -866,9 +866,9 @@ def test_narwhalify_backends_cross2() -> None:
         func(pl.DataFrame(data), pd.Series(data["a"]))
 
 
-def test_expr_sample(constructor_eager: ConstructorEager) -> None:
+def test_expr_sample(nw_eager_constructor: ConstructorEager) -> None:
     df = nw_v1.from_native(
-        constructor_eager({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
+        nw_eager_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}), eager_only=True
     )
 
     result_expr = df.select(nw_v1.col("a").sample(n=2)).shape
@@ -886,17 +886,19 @@ def test_is_frame() -> None:
     assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
 
 
-def test_with_version(constructor: Constructor) -> None:
-    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+def test_with_version(nw_frame_constructor: Constructor) -> None:
+    lf = nw_v1.from_native(nw_frame_constructor({"a": [1, 2]})).lazy()
     assert isinstance(lf, nw_v1.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
 
 
 @pytest.mark.parametrize("n", [1, 2])
 @pytest.mark.parametrize("offset", [1, 2])
-def test_gather_every(constructor_eager: ConstructorEager, n: int, offset: int) -> None:
+def test_gather_every(
+    nw_eager_constructor: ConstructorEager, n: int, offset: int
+) -> None:
     data = {"a": list(range(10))}
-    df_v1 = nw_v1.from_native(constructor_eager(data))
+    df_v1 = nw_v1.from_native(nw_eager_constructor(data))
     result = df_v1.gather_every(n=n, offset=offset)
     expected = {"a": data["a"][offset::n]}
     assert_equal_data(result, expected)
@@ -1154,26 +1156,26 @@ def test_series_from_iterable(
     assert_equal_series(result, expected, name)
 
 
-def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+def test_mode_single_expr(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-    df = nw_v1.from_native(constructor_eager(data))
+    df = nw_v1.from_native(nw_eager_constructor(data))
     result = df.select(nw_v1.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
 
 
-def test_mode_series(constructor_eager: ConstructorEager) -> None:
+def test_mode_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-    series = nw_v1.from_native(constructor_eager(data), eager_only=True)["a"]
+    series = nw_v1.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     result = series.mode().sort()
     expected = {"a": [1, 2]}
     assert_equal_data({"a": result}, expected)
 
 
-def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+def test_mode_different_lengths(nw_eager_constructor: ConstructorEager) -> None:
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    df = nw_v1.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw_v1.from_native(nw_eager_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw_v1.col("a", "b").mode())
 
@@ -1186,8 +1188,10 @@ def test_dtype___slots__(dtype: DType) -> None:
         dtype.i_also_dont_exist = 528329  # type: ignore[attr-defined]
 
 
-def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+def test_any_value_expr(
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(nw_frame_constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -1196,15 +1200,15 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
         "b": [1, 2, 3, 4, 5, 6],
         "c": [None, None, 1, None, 2, None],
     }
-    df = nw_v1.from_native(constructor(data))
+    df = nw_v1.from_native(nw_frame_constructor(data))
 
     with pytest.warns(NarwhalsUnstableWarning):
         df.select(nw_v1.col("a", "b").any_value())
 
 
-def test_any_value_series(constructor_eager: ConstructorEager) -> None:
+def test_any_value_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 1, 2, 2, 3]}
-    df = nw_v1.from_native(constructor_eager(data))
+    df = nw_v1.from_native(nw_eager_constructor(data))
 
     with pytest.warns(NarwhalsUnstableWarning):
         df["a"].any_value()

@@ -35,20 +35,20 @@ single_cases = pytest.mark.parametrize(
 
 @single_cases
 def test_first_last_series(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     col: str,
     expected_first: PythonLiteral,
     expected_last: PythonLiteral,
 ) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)[col]
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)[col]
     result = series.first()
     assert_equal_data({col: [result]}, {col: [expected_first]})
     result = series.last()
     assert_equal_data({col: [result]}, {col: [expected_last]})
 
 
-def test_first_last_series_empty(constructor_eager: ConstructorEager) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+def test_first_last_series_empty(nw_eager_constructor: ConstructorEager) -> None:
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     series = series.filter(series > 50)
     result = series.first()
     assert result is None
@@ -58,12 +58,12 @@ def test_first_last_series_empty(constructor_eager: ConstructorEager) -> None:
 
 @single_cases
 def test_first_last_expr_select(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     col: str,
     expected_first: PythonLiteral,
     expected_last: PythonLiteral,
 ) -> None:
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(
         nw.col(col).first().name.suffix("_first"), nw.col(col).last().name.suffix("_last")
     )
@@ -74,12 +74,12 @@ def test_first_last_expr_select(
 
 @single_cases
 def test_first_expr_with_columns(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     col: str,
     expected_first: PythonLiteral,
     expected_last: PythonLiteral,
 ) -> None:
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.with_columns(
         nw.col(col).first().name.suffix("_first"), nw.col(col).last().name.suffix("_last")
     ).select(nw.selectors.matches("first|last"))
@@ -93,22 +93,22 @@ def test_first_expr_with_columns(
 
 
 def test_first_last_expr_over_order_by(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
-    if any(x in str(constructor) for x in ("pyspark", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor):
+    if "cudf" in str(nw_frame_constructor):
         reason = "Need to pass dtype when passing pd.NA or None"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     frame = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "a": [1, 1, 2],
                 "b": [4, 5, 6],
@@ -150,24 +150,24 @@ def test_first_last_expr_over_order_by(
 
 
 def test_first_expr_over_order_by_partition_by(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14,):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
-    if any(x in str(constructor) for x in ("pyspark", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         # https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
 
     frame = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
         )
     )
@@ -189,14 +189,14 @@ def test_first_expr_over_order_by_partition_by(
 
 
 def test_first_expr_in_group_by(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("spark", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("spark", "dask")):
         # ibis: https://github.com/ibis-project/ibis/issues/11656
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14,):
         pytest.skip()
     data = {
         "grp": [1, 1, 1, 2],
@@ -206,7 +206,7 @@ def test_first_expr_in_group_by(
         "idx": [9, None, None, 7],
         "idx2": [9, 8, 7, 7],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = (
         df.group_by("grp")
         .agg(
@@ -246,11 +246,11 @@ def test_first_expr_in_group_by(
 
 
 def test_first_expr_broadcasting(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("spark", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("spark", "dask")):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
     data = {
@@ -261,7 +261,7 @@ def test_first_expr_broadcasting(
         "idx": [9, None, None, 7],
         "idx2": [9, 8, 7, 7],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(
         "idx", "idx2", nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first")
     ).sort("idx", "idx2")
@@ -289,9 +289,9 @@ def test_first_expr_broadcasting(
 
 
 def test_first_expr_invalid(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
     data = {
         "grp": [1, 1, 1, 2],
@@ -301,31 +301,31 @@ def test_first_expr_invalid(
         "idx": [9, None, None, 7],
         "idx2": [9, 8, 7, 7],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     with pytest.raises(InvalidOperationError, match="expression which isn't orderable"):
         df.select("idx", "idx2", nw.col("a").first(order_by="idx").over(order_by="idx2"))
 
 
 def test_first_last_different_orders(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if any(x in str(constructor) for x in ("pyspark", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
+    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14,):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
     context = (
         pytest.raises(NotImplementedError, match="Only one `order_by` can")
-        if "pandas" in str(constructor) or "pyarrow" in str(constructor)
+        if "pandas" in str(nw_frame_constructor) or "pyarrow" in str(nw_frame_constructor)
         else does_not_raise()
     )
     frame = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "a": [1, 1, 2],
                 "b": [4, 5, 6],

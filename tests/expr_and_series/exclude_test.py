@@ -21,11 +21,11 @@ if TYPE_CHECKING:
     ],
 )
 def test_exclude(
-    constructor: Constructor, exclude_selector: nw.Expr, expected_cols: list[str]
+    nw_frame_constructor: Constructor, exclude_selector: nw.Expr, expected_cols: list[str]
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(exclude_selector)
 
     expected = {col: data[col] for col in expected_cols}

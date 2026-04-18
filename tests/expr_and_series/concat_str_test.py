@@ -21,16 +21,16 @@ data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk
     ],
 )
 def test_concat_str(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     *,
     ignore_nulls: bool,
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 0, 0):
         # nth only available after 1.0
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = (
         df.select(
             "a",
@@ -61,8 +61,8 @@ def test_concat_str(
     assert_equal_data(result, {"a": expected})
 
 
-def test_concat_str_with_lit(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": ["cat", "dog", "pig"]}))
+def test_concat_str_with_lit(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor({"a": ["cat", "dog", "pig"]}))
     result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
     expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}
     assert_equal_data(result, expected)

@@ -25,11 +25,15 @@ if TYPE_CHECKING:
     ],
 )
 def test_to_native(
-    constructor_eager: ConstructorEager, method: str, *, pass_through: bool, context: Any
+    nw_eager_constructor: ConstructorEager,
+    method: str,
+    *,
+    pass_through: bool,
+    context: Any,
 ) -> None:
     if method == "to_numpy":
         pytest.importorskip("numpy")
-    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
+    df = nw.from_native(nw_eager_constructor({"a": [1, 2, 3]}))
 
     with context:
         nw.to_native(getattr(df, method)(), pass_through=pass_through)

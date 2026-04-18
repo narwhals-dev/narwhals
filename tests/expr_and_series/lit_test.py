@@ -26,22 +26,22 @@ if TYPE_CHECKING:
     [(None, [2, 2, 2]), (nw.String, ["2", "2", "2"]), (nw.Float32, [2.0, 2.0, 2.0])],
 )
 def test_lit(
-    constructor: Constructor, dtype: DType | None, expected_lit: list[Any]
+    nw_frame_constructor: Constructor, dtype: DType | None, expected_lit: list[Any]
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2, dtype).alias("lit"))
     expected = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "lit": expected_lit}
     assert_equal_data(result, expected)
 
 
-def test_lit_error(constructor: Constructor) -> None:
+def test_lit_error(nw_frame_constructor: Constructor) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw).lazy()
     with pytest.raises(
         ValueError, match="numpy arrays are not supported as literal values"
@@ -49,9 +49,9 @@ def test_lit_error(constructor: Constructor) -> None:
         _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]
 
 
-def test_lit_out_name(constructor: Constructor) -> None:
+def test_lit_out_name(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(nw.lit(2))
     expected = {"a": [1, 3, 2], "literal": [2, 2, 2]}
@@ -74,17 +74,20 @@ def test_lit_out_name(constructor: Constructor) -> None:
     ],
 )
 def test_lit_operation_in_select(
-    constructor: Constructor, col_name: str, expr: nw.Expr, expected_result: list[int]
+    nw_frame_constructor: Constructor,
+    col_name: str,
+    expr: nw.Expr,
+    expected_result: list[int],
 ) -> None:
     if (
-        "dask" in str(constructor)
+        "dask" in str(nw_frame_constructor)
         and col_name == "right_lit_with_abs"
         and DASK_VERSION < (2025,)
     ):
         pytest.skip()
 
     data = {"a": [1, 3, 2]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.select(expr.alias(col_name))
     expected = {col_name: expected_result}
@@ -99,10 +102,13 @@ def test_lit_operation_in_select(
     ],
 )
 def test_lit_operation_in_with_columns(
-    constructor: Constructor, col_name: str, expr: nw.Expr, expected_result: list[int]
+    nw_frame_constructor: Constructor,
+    col_name: str,
+    expr: nw.Expr,
+    expected_result: list[int],
 ) -> None:
     data = {"a": [1, 3, 2]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw).lazy()
     result = df.with_columns(expr.alias(col_name))
     expected = {"a": data["a"], col_name: expected_result}
@@ -110,16 +116,18 @@ def test_lit_operation_in_with_columns(
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
-def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+def test_date_lit(
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     # https://github.com/dask/dask/issues/11637
-    if "dask" in str(constructor) or (
+    if "dask" in str(nw_frame_constructor) or (
         # https://github.com/rapidsai/cudf/pull/18832
-        "cudf" in str(constructor) and CUDF_VERSION >= (25, 8, 0)
+        "cudf" in str(nw_frame_constructor) and CUDF_VERSION >= (25, 8, 0)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         pytest.importorskip("pyarrow")
-    df = nw.from_native(constructor({"a": [1]}))
+    df = nw.from_native(nw_frame_constructor({"a": [1]}))
     result = df.with_columns(nw.lit(date(2020, 1, 1), dtype=nw.Date)).collect_schema()
     if df.implementation.is_cudf():
         # cudf has no date dtype
@@ -163,30 +171,32 @@ def test_pyarrow_lit_string() -> None:
 )
 def test_nested_structures(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     value: PythonLiteral,
     dtype: IntoDType | None,
 ) -> None:
     is_empty_dict = isinstance(value, dict) and len(value) == 0
     non_pyspark_sql_like = ("duckdb", "sqlframe", "ibis")
-    is_non_pyspark_sql_like = any(x in str(constructor) for x in non_pyspark_sql_like)
+    is_non_pyspark_sql_like = any(
+        x in str(nw_frame_constructor) for x in non_pyspark_sql_like
+    )
     if is_non_pyspark_sql_like and is_empty_dict:
         reason = "Cannot create an empty struct type for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
     # TODO(FBruzzesi): Check cudf
-    if any(x in str(constructor) for x in ("cudf", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("cudf", "dask")):
         reason = "Nested structures are not support for backend"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
-    if any(x in str(constructor) for x in ("pandas", "modin")) and (
+    if any(x in str(nw_frame_constructor) for x in ("pandas", "modin")) and (
         PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 0)
     ):  # pragma: no cover
         reason = "Requires pyarrow and pandas 2.0+"
         pytest.skip(reason=reason)
 
     if (
-        "polars" in str(constructor)
+        "polars" in str(nw_frame_constructor)
         and isinstance(value, dict)
         and POLARS_VERSION < (1, 10, 0)
     ):  # pragma: no cover
@@ -200,7 +210,7 @@ def test_nested_structures(
     value_ = list(value) if isinstance(value, tuple) else value
     expected_nested = {"nested": [value_] * size}
 
-    frame = nw.from_native(constructor(data))
+    frame = nw.from_native(nw_frame_constructor(data))
 
     result_with_cols = frame.with_columns(expr)
     assert_equal_data(result_with_cols, {**data, **expected_nested})

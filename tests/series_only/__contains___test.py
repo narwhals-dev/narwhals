@@ -17,25 +17,25 @@ data = [100, 200, None]
     ("other", "expected"), [(100, True), (None, True), (1, False), (100.314, False)]
 )
 def test_contains(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     other: int | None,
     expected: bool,  # noqa: FBT001
 ) -> None:
-    s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+    s = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)["a"]
 
     assert (other in s) == expected
 
 
 @pytest.mark.parametrize("other", ["foo", [1, 2, 3]])
 def test_contains_invalid_type(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, other: Any
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager, other: Any
 ) -> None:
-    if "polars" not in str(constructor_eager) and "pyarrow_table" not in str(
-        constructor_eager
+    if "polars" not in str(nw_eager_constructor) and "pyarrow_table" not in str(
+        nw_eager_constructor
     ):
         request.applymarker(pytest.mark.xfail)
 
-    s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+    s = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)["a"]
 
     with pytest.raises(InvalidOperationError):
         _ = other in s

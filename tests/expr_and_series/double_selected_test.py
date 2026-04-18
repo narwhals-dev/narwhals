@@ -7,9 +7,9 @@ from narwhals.exceptions import MultiOutputExpressionError
 from tests.utils import Constructor, assert_equal_data
 
 
-def test_double_selected(constructor: Constructor) -> None:
+def test_double_selected(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7, 8, 9]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result = df.select(nw.col("a", "b") * 2)
     expected = {"a": [2, 6, 4], "b": [8, 8, 12]}

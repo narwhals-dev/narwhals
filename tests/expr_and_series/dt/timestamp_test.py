@@ -45,27 +45,27 @@ data = {
 )
 def test_timestamp_datetimes(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     original_time_unit: Literal["us", "ns", "ms", "s"],
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
-    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
+    if any(x in str(nw_frame_constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
-    if original_time_unit == "s" and "polars" in str(constructor):
+    if original_time_unit == "s" and "polars" in str(nw_frame_constructor):
         pytest.skip("Second precision not supported in Polars")
 
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (
+    if "pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (
         2,
         2,
     ):  # pragma: no cover
         pytest.skip("Requires pandas >= 2.2 for reliable pyarrow-backed timestamps")
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    df = nw.from_native(constructor(datetimes))
+    df = nw.from_native(nw_frame_constructor(datetimes))
     dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
     result = df.select(nw.col("a").cast(dtype).dt.timestamp(time_unit))
     assert_equal_data(result, {"a": expected})
@@ -90,32 +90,32 @@ def test_timestamp_datetimes(
 )
 def test_timestamp_datetimes_tz_aware(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     original_time_unit: Literal["us", "ns", "ms", "s"],
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
-    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
+    if any(x in str(nw_frame_constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
     version_conditions = [
         (
-            is_pyarrow_windows_no_tzdata(constructor),
+            is_pyarrow_windows_no_tzdata(nw_frame_constructor),
             "Timezone database is not installed on Windows",
         ),
         (
-            "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,),
+            "pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2,),
             "Requires pandas >= 2.0 for pyarrow support",
         ),
         (
-            "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 2),
+            "pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 2),
             "Requires pandas >= 2.2 for reliable timestamps",
         ),
         (
-            "dask" in str(constructor) and PANDAS_VERSION < (2, 1),
+            "dask" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 1),
             "Requires pandas >= 2.1 for dask support",
         ),
     ]
@@ -124,10 +124,10 @@ def test_timestamp_datetimes_tz_aware(
         if condition:
             pytest.skip(reason)  # pragma: no cover
 
-    if original_time_unit == "s" and "polars" in str(constructor):
+    if original_time_unit == "s" and "polars" in str(nw_frame_constructor):
         pytest.skip()
     datetimes = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    df = nw.from_native(constructor(datetimes))
+    df = nw.from_native(nw_frame_constructor(datetimes))
     dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
     result = df.select(
         nw.col("a")
@@ -149,13 +149,13 @@ def test_timestamp_datetimes_tz_aware(
 )
 def test_timestamp_dates(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     time_unit: Literal["ns", "us", "ms"],
     expected: list[int | None],
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
-    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
+    if any(x in str(nw_frame_constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
@@ -165,30 +165,30 @@ def test_timestamp_dates(
         "cudf",
         "modin_constructor",
     )
-    if any(x in str(constructor) for x in unsupported_backends):
+    if any(x in str(nw_frame_constructor) for x in unsupported_backends):
         pytest.skip("Backend does not support date type")
 
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         df = nw.from_native(
-            constructor(dates).astype({"a": "timestamp[ns][pyarrow]"})  # type: ignore[union-attr]
+            nw_frame_constructor(dates).astype({"a": "timestamp[ns][pyarrow]"})  # type: ignore[union-attr]
         )
     else:
-        df = nw.from_native(constructor(dates))
+        df = nw.from_native(nw_frame_constructor(dates))
     result = df.select(nw.col("a").dt.date().dt.timestamp(time_unit))
     assert_equal_data(result, {"a": expected})
 
 
 def test_timestamp_invalid_date(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         pytest.skip(reason="https://github.com/narwhals-dev/narwhals/issues/2808")
-    if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis")):
+    if any(x in str(nw_frame_constructor) for x in ("duckdb", "pyspark", "ibis")):
         request.applymarker(
             pytest.mark.xfail(reason="Backend timestamp conversion not yet implemented")
         )
-    if "polars" in str(constructor):
+    if "polars" in str(nw_frame_constructor):
         request.applymarker(
             pytest.mark.xfail(
                 reason="Invalid date handling not yet implemented in Polars"
@@ -196,8 +196,8 @@ def test_timestamp_invalid_date(
         )
     data_str = {"a": ["x", "y", None]}
     data_num = {"a": [1, 2, None]}
-    df_str = nw.from_native(constructor(data_str))
-    df_num = nw.from_native(constructor(data_num))
+    df_str = nw.from_native(nw_frame_constructor(data_str))
+    df_num = nw.from_native(nw_frame_constructor(data_num))
     msg = "Input should be either of Date or Datetime type"
     with pytest.raises(TypeError, match=msg):
         df_str.select(nw.col("a").dt.timestamp())
@@ -205,26 +205,26 @@ def test_timestamp_invalid_date(
         df_num.select(nw.col("a").dt.timestamp())
 
 
-def test_timestamp_invalid_unit_expr(constructor: Constructor) -> None:
+def test_timestamp_invalid_unit_expr(nw_frame_constructor: Constructor) -> None:
     time_unit_invalid = "i"
     msg = (
         "invalid `time_unit`"
         f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit_invalid!r}."
     )
     with pytest.raises(ValueError, match=msg):
-        nw.from_native(constructor(data)).select(
+        nw.from_native(nw_frame_constructor(data)).select(
             nw.col("a").dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
         )
 
 
-def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> None:
+def test_timestamp_invalid_unit_series(nw_eager_constructor: ConstructorEager) -> None:
     time_unit_invalid = "i"
     msg = (
         "invalid `time_unit`"
         f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit_invalid!r}."
     )
     with pytest.raises(ValueError, match=msg):
-        nw.from_native(constructor_eager(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
+        nw.from_native(nw_eager_constructor(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
 
 
 @given(

@@ -6,7 +6,7 @@ import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
 
-def test_unpivot(constructor: Constructor) -> None:
+def test_unpivot(nw_frame_constructor: Constructor) -> None:
     data = {
         "date": [datetime(2020, 1, 1), datetime(2020, 1, 2), datetime(2020, 1, 3)],
         "aapl": [110, 100, 105],
@@ -14,7 +14,7 @@ def test_unpivot(constructor: Constructor) -> None:
         "msft": [330, 300, 315],
         "nflx": [420, 400, 440],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.unpivot(index="date", value_name="price").sort(by=["date", "variable"])
     expected = {
         "date": [

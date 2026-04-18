@@ -17,9 +17,11 @@ from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_eq
     ],
 )
 def test_skew_series(
-    constructor_eager: ConstructorEager, data: list[float], expected: float | None
+    nw_eager_constructor: ConstructorEager, data: list[float], expected: float | None
 ) -> None:
-    result = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"].skew()
+    result = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)[
+        "a"
+    ].skew()
     assert_equal_data({"a": [result]}, {"a": [expected]})
 
 
@@ -36,22 +38,24 @@ def test_skew_series(
 )
 @pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning:dask")
 def test_skew_expr(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     data: list[float],
     expected: float | None,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         # https://github.com/ibis-project/ibis/issues/11176
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
-    if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
+    if "pyspark" in str(nw_frame_constructor) and int(request.node.callspec.id[-1]) == 0:
         # Can not infer schema from empty dataset.
         pytest.skip()
 
-    result = nw.from_native(constructor({"a": data})).select(nw.col("a").skew())
+    result = nw.from_native(nw_frame_constructor({"a": data})).select(nw.col("a").skew())
     assert_equal_data(result, {"a": [expected]})
-    result = nw.from_native(constructor({"a": data})).with_columns(nw.col("a").skew())
+    result = nw.from_native(nw_frame_constructor({"a": data})).with_columns(
+        nw.col("a").skew()
+    )
     assert_equal_data(result, {"a": [expected] * len(data)})

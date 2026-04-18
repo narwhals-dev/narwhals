@@ -26,19 +26,19 @@ data = {
 )
 def test_duration_attributes(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(nw_frame_constructor):
         pytest.skip()
-    if "pyspark" in str(constructor) or "ibis" in str(constructor):
+    if "pyspark" in str(nw_frame_constructor) or "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and attribute == "total_nanoseconds":
+    if "duckdb" in str(nw_frame_constructor) and attribute == "total_nanoseconds":
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result_a = df.select(getattr(nw.col("a").dt, attribute)().fill_null(0))
     assert_equal_data(result_a, {"a": expected_a})
@@ -59,22 +59,22 @@ def test_duration_attributes(
 )
 def test_duration_attributes_nano(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     attribute: str,
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(nw_frame_constructor):
         pytest.skip()
-    if "pyspark" in str(constructor) or "ibis" in str(constructor):
+    if "pyspark" in str(nw_frame_constructor) or "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and attribute == "total_nanoseconds":
+    if "duckdb" in str(nw_frame_constructor) and attribute == "total_nanoseconds":
         request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"c": np.array([None, 20], dtype="timedelta64[ns]")}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result_c = df.select(getattr(nw.col("c").dt, attribute)().fill_null(0))
     assert_equal_data(result_c, {"c": expected_c})
@@ -92,15 +92,15 @@ def test_duration_attributes_nano(
 )
 def test_duration_attributes_series(
     request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     attribute: str,
     expected_a: list[int],
     expected_b: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
 
     result_a = df.select(getattr(df["a"].dt, attribute)().fill_null(0))
     assert_equal_data(result_a, {"a": expected_a})
@@ -121,18 +121,18 @@ def test_duration_attributes_series(
 )
 def test_duration_attributes_series_nano(
     request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     attribute: str,
     expected_c: list[int],
 ) -> None:
-    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(constructor_eager):
+    if PANDAS_VERSION < (2, 2) and "pandas_pyarrow" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"c": np.array([None, 20], dtype="timedelta64[ns]")}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
 
     result_c = df.select(getattr(df["c"].dt, attribute)().fill_null(0))
     assert_equal_data(result_c, {"c": expected_c})

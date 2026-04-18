@@ -8,14 +8,14 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "ibis" in str(constructor):
+def test_unary(nw_frame_constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8.0, 9.0]}
-    result = nw.from_native(constructor(data)).select(
+    result = nw.from_native(nw_frame_constructor(data)).select(
         a_mean=nw.col("a").mean(),
         a_median=nw.col("a").median(),
         a_sum=nw.col("a").sum(),
@@ -40,9 +40,9 @@ def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None
     assert_equal_data(result, expected)
 
 
-def test_unary_series(constructor_eager: ConstructorEager) -> None:
+def test_unary_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "c": [7.0, 8.0, None], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = {
         "a_mean": [df["a"].mean()],
         "a_median": [df["a"].median()],
@@ -71,14 +71,14 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_unary_two_elements(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
-    result = nw.from_native(constructor(data)).select(
+    result = nw.from_native(nw_frame_constructor(data)).select(
         a_nunique=nw.col("a").n_unique(),
         a_skew=nw.col("a").skew(),
         b_nunique=nw.col("b").n_unique(),
@@ -97,9 +97,9 @@ def test_unary_two_elements(
     assert_equal_data(result, expected)
 
 
-def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
+def test_unary_two_elements_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = {
         "a_nunique": [df["a"].n_unique()],
         "a_skew": [df["a"].skew()],
@@ -120,24 +120,26 @@ def test_unary_two_elements_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_unary_one_element(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+    if "pyspark" in str(nw_frame_constructor) and "sqlframe" not in str(
+        nw_frame_constructor
+    ):
         request.applymarker(pytest.mark.xfail)
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1], "b": [2], "c": [None]}
     # Dask runs into a divide by zero RuntimeWarning for 1 element skew.
     context = (
         pytest.warns(RuntimeWarning, match="invalid value encountered in scalar divide")
-        if "dask" in str(constructor)
+        if "dask" in str(nw_frame_constructor)
         else does_not_raise()
     )
 
     result = (
-        nw.from_native(constructor(data))
+        nw.from_native(nw_frame_constructor(data))
         .with_columns(nw.col("c").cast(nw.Float64))
         .select(
             a_nunique=nw.col("a").n_unique(),
@@ -160,9 +162,9 @@ def test_unary_one_element(
         assert_equal_data(result, expected)
 
 
-def test_unary_one_element_series(constructor_eager: ConstructorEager) -> None:
+def test_unary_one_element_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1], "b": [2], "c": [None]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = {
         "a_nunique": [df["a"].n_unique()],
         "a_skew": [df["a"].skew()],

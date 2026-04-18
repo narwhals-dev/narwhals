@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from tests.utils import Constructor
 
 
-def test_eq_neq_raise(constructor: Constructor) -> None:
+def test_eq_neq_raise(nw_frame_constructor: Constructor) -> None:
     with pytest.raises(NotImplementedError, match="please use expressions"):
-        nw.from_native(constructor({"a": [1, 2, 3]})) == 0  # noqa: B015
+        nw.from_native(nw_frame_constructor({"a": [1, 2, 3]})) == 0  # noqa: B015
     with pytest.raises(NotImplementedError, match="please use expressions"):
-        nw.from_native(constructor({"a": [1, 2, 3]})) != 0  # noqa: B015
+        nw.from_native(nw_frame_constructor({"a": [1, 2, 3]})) != 0  # noqa: B015

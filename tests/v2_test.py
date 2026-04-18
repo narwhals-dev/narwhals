@@ -346,8 +346,8 @@ def test_narwhalify_method_invalid() -> None:
         Foo().func()
 
 
-def test_with_version(constructor: Constructor) -> None:
-    lf = nw_v2.from_native(constructor({"a": [1, 2]})).lazy()
+def test_with_version(nw_frame_constructor: Constructor) -> None:
+    lf = nw_v2.from_native(nw_frame_constructor({"a": [1, 2]})).lazy()
     assert isinstance(lf, nw_v2.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
 
@@ -501,32 +501,34 @@ def test_series_from_iterable(
     assert_equal_series(result, expected, name)
 
 
-def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
+def test_mode_single_expr(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-    df = nw_v2.from_native(constructor_eager(data))
+    df = nw_v2.from_native(nw_eager_constructor(data))
     result = df.select(nw_v2.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
 
 
-def test_mode_series(constructor_eager: ConstructorEager) -> None:
+def test_mode_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-    series = nw_v2.from_native(constructor_eager(data), eager_only=True)["a"]
+    series = nw_v2.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     result = series.mode().sort()
     expected = {"a": [1, 2]}
     assert_equal_data({"a": result}, expected)
 
 
-def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+def test_mode_different_lengths(nw_eager_constructor: ConstructorEager) -> None:
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw_v2.from_native(nw_eager_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
         df.select(nw_v2.col("a", "b").mode())
 
 
-def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "dask" in str(constructor):
+def test_any_value_expr(
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(nw_frame_constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -535,15 +537,15 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
         "b": [1, 2, 3, 4, 5, 6],
         "c": [None, None, 1, None, 2, None],
     }
-    df = nw_v2.from_native(constructor(data))
+    df = nw_v2.from_native(nw_frame_constructor(data))
 
     with pytest.warns(NarwhalsUnstableWarning):
         df.select(nw_v2.col("a", "b").any_value())
 
 
-def test_any_value_series(constructor_eager: ConstructorEager) -> None:
+def test_any_value_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 1, 1, 2, 2, 3]}
-    df = nw_v2.from_native(constructor_eager(data))
+    df = nw_v2.from_native(nw_eager_constructor(data))
 
     with pytest.warns(NarwhalsUnstableWarning):
         df["a"].any_value()

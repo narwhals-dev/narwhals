@@ -4,11 +4,11 @@ import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
 
-def test_head(constructor: Constructor) -> None:
+def test_head(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     expected = {"a": [1, 3], "b": [4, 4], "z": [7.0, 8.0]}
 
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw)
 
     result = df.head(2)

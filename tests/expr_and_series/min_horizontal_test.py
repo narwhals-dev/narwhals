@@ -10,16 +10,16 @@ expected_values = [1, 1, 6, None]
 
 
 @pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
-def test_minh(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_minh(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(horizontal_min=nw.min_horizontal("a", nw.col("b"), "z"))
     expected = {"horizontal_min": expected_values}
     assert_equal_data(result, expected)
 
 
 @pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
-def test_minh_all(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_minh_all(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(nw.min_horizontal(nw.all()), c=nw.min_horizontal(nw.all()))
     expected = {"a": expected_values, "c": expected_values}
     assert_equal_data(result, expected)

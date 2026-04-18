@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
-def test_to_numpy(constructor_eager: ConstructorEager) -> None:
+def test_to_numpy(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
-    df_raw = constructor_eager(data)
+    df_raw = nw_eager_constructor(data)
     result = nw.from_native(df_raw, eager_only=True).to_numpy()
     expected = np.array([[1, 3, 2], [4, 4, 6], [7.1, 8.0, 9.0]]).T
     np.testing.assert_array_equal(result, expected)
@@ -25,14 +25,14 @@ def test_to_numpy(constructor_eager: ConstructorEager) -> None:
 
 
 def test_to_numpy_tz_aware(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2)) or (
-        "pyarrow" in str(constructor_eager) and is_windows()
+    if ("pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2, 2)) or (
+        "pyarrow" in str(nw_eager_constructor) and is_windows()
     ):
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(
-        constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
+        nw_eager_constructor({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
         eager_only=True,
     )
     df = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))

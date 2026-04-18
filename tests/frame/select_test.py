@@ -19,16 +19,18 @@ from tests.utils import (
 class Foo: ...
 
 
-def test_select(constructor: Constructor) -> None:
+def test_select(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
     assert_equal_data(result, expected)
 
 
-def test_empty_select(constructor_eager: ConstructorEager) -> None:
-    result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
+def test_empty_select(nw_eager_constructor: ConstructorEager) -> None:
+    result = nw.from_native(
+        nw_eager_constructor({"a": [1, 2, 3]}), eager_only=True
+    ).select()
     assert result.shape == (0, 0)
 
 
@@ -52,9 +54,9 @@ def test_int_select_pandas() -> None:
 
 
 @pytest.mark.parametrize("invalid_select", [None, 0, Foo()])
-def test_invalid_select(constructor: Constructor, invalid_select: Any) -> None:
+def test_invalid_select(nw_frame_constructor: Constructor, invalid_select: Any) -> None:
     with pytest.raises(InvalidIntoExprError):
-        nw.from_native(constructor({"a": [1, 2, 3]})).select(invalid_select)
+        nw.from_native(nw_frame_constructor({"a": [1, 2, 3]})).select(invalid_select)
 
 
 def test_select_boolean_cols() -> None:
@@ -99,7 +101,7 @@ def test_comparison_with_list_error_message() -> None:
 
 
 def test_missing_columns(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
     if any(id_ == constructor_id for id_ in ("sqlframe", "ibis")):
@@ -107,7 +109,7 @@ def test_missing_columns(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     selected_columns = ["a", "e", "f"]
 
     if constructor_id == "polars[lazy]":
@@ -140,12 +142,12 @@ def test_missing_columns(
         maybe_collect(df.select(nw.col("fdfa").sum()))
 
 
-def test_left_to_right_broadcasting(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_left_to_right_broadcasting(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if "dask" in str(nw_frame_constructor) and DASK_VERSION < (2024, 10):
         pytest.skip()
-    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(nw_frame_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.select(nw.col("a") + nw.col("b").sum())
     expected = {"a": [16, 16, 17]}
     assert_equal_data(result, expected)
@@ -157,14 +159,14 @@ def test_left_to_right_broadcasting(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_alias_invalid(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+def test_alias_invalid(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises((NarwhalsError, ValueError)):
         df.lazy().select(nw.all().alias("c")).collect()
 
 
-def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager({"a": [1, None, 3]}))
+def test_filtration_vs_aggregation(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor({"a": [1, None, 3]}))
     result = df.select(nw.col("a").drop_nulls(), b=nw.col("a").mean())
     expected: dict[str, Any] = {"a": [1, 3], "b": [2.0, 2.0]}
     assert_equal_data(result, expected)
@@ -173,11 +175,11 @@ def test_filtration_vs_aggregation(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_select_duplicates(constructor: Constructor) -> None:
-    if "cudf" in str(constructor):
+def test_select_duplicates(nw_frame_constructor: Constructor) -> None:
+    if "cudf" in str(nw_frame_constructor):
         # cudf already raises its own error
         pytest.skip()
-    df = nw.from_native(constructor({"a": [1, 2]})).lazy()
+    df = nw.from_native(nw_frame_constructor({"a": [1, 2]})).lazy()
     with pytest.raises(
         ValueError,
         match=r"Expected unique|[Dd]uplicate|more than one|Duplicate column name",
@@ -185,8 +187,8 @@ def test_select_duplicates(constructor: Constructor) -> None:
         df.select("a", nw.col("a") + 1).collect()
 
 
-def test_binary_window_aggregation(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager({"a": [1, 1, 2]}))
+def test_binary_window_aggregation(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor({"a": [1, 1, 2]}))
     result = df.select(nw.col("a").cum_sum() + nw.col("a").sum())
     expected = {"a": [5, 6, 8]}
     assert_equal_data(result, expected)

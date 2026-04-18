@@ -14,9 +14,9 @@ T = TypeVar("T")
 @pytest.mark.skipif(
     POLARS_VERSION < (1,), reason="Polars would raise unrecoverable panic."
 )
-def test_all_vs_all(constructor: Constructor) -> None:
+def test_all_vs_all(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     with pytest.raises(MultiOutputExpressionError):
         df.lazy().select(nw.all() + nw.col("b", "a")).collect()
 

@@ -11,9 +11,9 @@ data = {"a": list(range(10))}
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [1, 2, 3])
 def test_gather_every_series(
-    constructor_eager: ConstructorEager, n: int, offset: int
+    nw_eager_constructor: ConstructorEager, n: int, offset: int
 ) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
 
     result = series.gather_every(n=n, offset=offset)
     expected = data["a"][offset::n]

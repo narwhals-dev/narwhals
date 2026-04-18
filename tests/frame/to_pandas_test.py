@@ -16,15 +16,15 @@ if TYPE_CHECKING:
 
 @pytest.mark.filterwarnings("ignore:.*Passing a BlockManager.*:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pandas-pyarrow")
-def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
+def test_convert_pandas(nw_eager_constructor: ConstructorEager) -> None:
     pytest.importorskip("pyarrow")
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_raw = constructor_eager(data)
+    df_raw = nw_eager_constructor(data)
     result = nw.from_native(df_raw, eager_only=True).to_pandas()
 
-    if str(constructor_eager).startswith("pandas"):
-        expected = cast("pd.DataFrame", constructor_eager(data))
-    elif "modin_pyarrow" in str(constructor_eager):
+    if str(nw_eager_constructor).startswith("pandas"):
+        expected = cast("pd.DataFrame", nw_eager_constructor(data))
+    elif "modin_pyarrow" in str(nw_eager_constructor):
         expected = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
     else:
         expected = pd.DataFrame(data)

@@ -6,11 +6,11 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
-def test_over_pushdown(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_over_pushdown(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2, -4, 5, 6, -1], "b": [1, 1, 1, 2, 2, 2], "i": list(range(6))}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(
         "i",
         a=nw.col("a").sum().abs().over("b"),

@@ -13,8 +13,8 @@ if TYPE_CHECKING:
 data = {"a": list(range(100))}
 
 
-def test_estimated_size(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+def test_estimated_size(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
 
     assert df.estimated_size("b") > 0
     assert df.estimated_size("kb") == (df.estimated_size("b") / 1024)

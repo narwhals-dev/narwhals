@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from tests.utils import Constructor
 
 
-def test_order_dependent_raises_in_lazy(constructor: Constructor) -> None:
-    lf = nw.from_native(constructor({"a": [1, 2, 3]})).lazy()
+def test_order_dependent_raises_in_lazy(nw_frame_constructor: Constructor) -> None:
+    lf = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]})).lazy()
     with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):
         lf.select(nw.col("a").diff())
     with pytest.raises(InvalidOperationError, match="Order-dependent expressions"):

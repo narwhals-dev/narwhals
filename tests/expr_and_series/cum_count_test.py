@@ -17,16 +17,16 @@ expected = {"cum_count": [1, 2, 2, 3], "reverse_cum_count": [3, 2, 1, 1]}
 
 
 @pytest.mark.parametrize("reverse", [True, False])
-def test_cum_count_expr(constructor_eager: ConstructorEager, *, reverse: bool) -> None:
+def test_cum_count_expr(nw_eager_constructor: ConstructorEager, *, reverse: bool) -> None:
     name = "reverse_cum_count" if reverse else "cum_count"
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a").cum_count(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
 
-def test_cum_count_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+def test_cum_count_series(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.select(
         cum_count=df["a"].cum_count(), reverse_cum_count=df["a"].cum_count(reverse=True)
     )
@@ -38,30 +38,30 @@ def test_cum_count_series(constructor_eager: ConstructorEager) -> None:
     ("reverse", "expected_a"), [(False, [1, 1, 2]), (True, [1, 2, 1])]
 )
 def test_lazy_cum_count_grouped(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     *,
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(nw_frame_constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         pytest.skip(reason="probably bugged")
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if "cudf" in str(constructor):
+    if "cudf" in str(nw_frame_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "arg entina": [None, 2, 3],
                 "ban gkok": [1, 0, 2],

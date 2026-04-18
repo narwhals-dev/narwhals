@@ -21,11 +21,14 @@ if TYPE_CHECKING:
     ],
 )
 def test_sort_series(
-    constructor_eager: ConstructorEager, descending: Any, nulls_last: Any, expected: Any
+    nw_eager_constructor: ConstructorEager,
+    descending: Any,
+    nulls_last: Any,
+    expected: Any,
 ) -> None:
-    series = nw.from_native(constructor_eager({"a": [1, 3, 2, None]}), eager_only=True)[
-        "a"
-    ]
+    series = nw.from_native(
+        nw_eager_constructor({"a": [1, 3, 2, None]}), eager_only=True
+    )["a"]
     result = series.sort(descending=descending, nulls_last=nulls_last)
 
     assert_equal_data({"a": result}, {"a": expected})

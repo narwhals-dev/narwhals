@@ -6,11 +6,11 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
-def test_sumh_broadcasting(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_sumh_broadcasting(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 1, 2]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.with_columns(
         any=nw.any_horizontal(nw.sum("a", "b").cast(nw.Boolean), ignore_nulls=True),
         all=nw.all_horizontal(nw.sum("a", "b").cast(nw.Boolean), ignore_nulls=True),

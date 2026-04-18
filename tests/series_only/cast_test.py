@@ -13,12 +13,12 @@ if TYPE_CHECKING:
 
 
 def test_cast_253(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
-    df_raw = constructor_eager({"a": [1]})
+    df_raw = nw_eager_constructor({"a": [1]})
     result = nw.from_native(df_raw, eager_only=True).select(
         nw.col("a").cast(nw.String) + "hi"
     )["a"][0]
@@ -111,16 +111,16 @@ def test_unknown_to_int() -> None:
 
 
 def test_cast_to_enum_vmain(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
     # Backends that do not (yet) support Enum dtype
     if any(
-        backend in str(constructor)
+        backend in str(nw_frame_constructor)
         for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df_nw = nw.from_native(constructor({"a": ["a", "b"]}))
+    df_nw = nw.from_native(nw_frame_constructor({"a": ["a", "b"]}))
     col_a = nw.col("a")
 
     with pytest.raises(

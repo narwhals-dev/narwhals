@@ -20,13 +20,13 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy
 
 
-def test_fill_null(constructor: Constructor) -> None:
+def test_fill_null(nw_frame_constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
         "c": [5.0, None, 3.0, 2.0, 1.0],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result = df.with_columns(nw.col("a", "b", "c").fill_null(value=99))
     expected = {
@@ -37,14 +37,14 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_fill_null_w_aggregate(constructor: Constructor) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 12):
+def test_fill_null_w_aggregate(nw_frame_constructor: Constructor) -> None:
+    if "dask" in str(nw_frame_constructor) and DASK_VERSION < (2024, 12):
         # Bug in old version of Dask.
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [0.5, None, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", None, "yy"]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result = df.select(
         nw.col("a").fill_null(nw.col("a").mean()), nw.col("b").fill_null("a")
@@ -64,13 +64,13 @@ def test_fill_null_pandas_downcast() -> None:
     assert result["a"].to_native().dtype == "object"
 
 
-def test_fill_null_series_expression(constructor: Constructor) -> None:
+def test_fill_null_series_expression(nw_frame_constructor: Constructor) -> None:
     data = {
         "a": [0.0, None, 2.0, 3.0, 4.0],
         "b": [1.0, None, None, 5.0, 3.0],
         "c": [5.0, 2.0, None, 2.0, 1.0],
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result = df.with_columns(nw.col("a", "b").fill_null(nw.col("c")))
     expected = {
@@ -81,9 +81,9 @@ def test_fill_null_series_expression(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_fill_null_exceptions(constructor: Constructor) -> None:
+def test_fill_null_exceptions(nw_frame_constructor: Constructor) -> None:
     data = {"a": [0.0, None, 2.0, 3.0, 4.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     with pytest.raises(ValueError, match="cannot specify both `value` and `strategy`"):
         df.with_columns(nw.col("a").fill_null(value=99, strategy="forward"))
@@ -98,14 +98,14 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
 
 
 def test_fill_null_strategies_with_limit_as_none(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    if ("duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)
     ):
         pytest.skip()
 
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
 
     data_limits = {
@@ -113,7 +113,7 @@ def test_fill_null_strategies_with_limit_as_none(
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
         "idx": list(range(10)),
     }
-    df = nw.from_native(constructor(data_limits))
+    df = nw.from_native(nw_frame_constructor(data_limits))
 
     expected_forward = {
         "a": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
@@ -121,9 +121,9 @@ def test_fill_null_strategies_with_limit_as_none(
         "idx": list(range(10)),
     }
     if (
-        "pandas_pyarrow_constructor" in str(constructor)
-        or "modin" in str(constructor)
-        or "dask" in str(constructor)
+        "pandas_pyarrow_constructor" in str(nw_frame_constructor)
+        or "modin" in str(nw_frame_constructor)
+        or "dask" in str(nw_frame_constructor)
     ):
         with warnings.catch_warnings():
             # case for modin and dask
@@ -155,9 +155,9 @@ def test_fill_null_strategies_with_limit_as_none(
         "idx": list(range(10)),
     }
     if (
-        "pandas_pyarrow_constructor" in str(constructor)
-        or "modin" in str(constructor)
-        or "dask" in str(constructor)
+        "pandas_pyarrow_constructor" in str(nw_frame_constructor)
+        or "modin" in str(nw_frame_constructor)
+        or "dask" in str(nw_frame_constructor)
     ):
         with warnings.catch_warnings():
             # case for modin and dask
@@ -185,21 +185,21 @@ def test_fill_null_strategies_with_limit_as_none(
 
 
 def test_fill_null_limits(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    if ("duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)
     ):
         pytest.skip()
 
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
 
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
-        if "cudf" in str(constructor)
+        if "cudf" in str(nw_frame_constructor)
         else warnings.catch_warnings()
-        if "modin" in str(constructor)
+        if "modin" in str(nw_frame_constructor)
         else does_not_raise()
     )
     data_limits = {
@@ -207,9 +207,9 @@ def test_fill_null_limits(
         "b": ["a", None, None, None, "b", "c", None, None, None, "d"],
         "idx": list(range(10)),
     }
-    df = nw.from_native(constructor(data_limits))
+    df = nw.from_native(nw_frame_constructor(data_limits))
     with context:
-        if "modin" in str(constructor):
+        if "modin" in str(nw_frame_constructor):
             warnings.filterwarnings(
                 "ignore", message="The 'downcast' keyword in fillna is deprecated"
             )
@@ -236,9 +236,9 @@ def test_fill_null_limits(
         assert_equal_data(result_backward, expected_backward)
 
 
-def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
+def test_fill_null_series(nw_eager_constructor: ConstructorEager) -> None:
     data_series_float = {"a": [0.0, 1, None, 2, None, 3]}
-    df_float = nw.from_native(constructor_eager(data_series_float), eager_only=True)
+    df_float = nw.from_native(nw_eager_constructor(data_series_float), eager_only=True)
 
     expected_float = {"a_zero_digit": [0.0, 1, 0, 2, 0, 3]}
     result_float = df_float.select(a_zero_digit=df_float["a"].fill_null(value=0))
@@ -246,7 +246,7 @@ def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result_float, expected_float)
 
     data_series_str = {"a": ["a", None, "c", None, "e"]}
-    df_str = nw.from_native(constructor_eager(data_series_str), eager_only=True)
+    df_str = nw.from_native(nw_eager_constructor(data_series_str), eager_only=True)
 
     expected_str = {"a_z_str": ["a", "z", "c", "z", "e"]}
 
@@ -255,22 +255,22 @@ def test_fill_null_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result_str, expected_str)
 
 
-def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
+def test_fill_null_series_limits(nw_eager_constructor: ConstructorEager) -> None:
     context: Any = (
         pytest.raises(NotImplementedError, match="The limit keyword is not supported")
-        if "cudf" in str(constructor_eager)
+        if "cudf" in str(nw_eager_constructor)
         else warnings.catch_warnings()
-        if "modin" in str(constructor_eager)
+        if "modin" in str(nw_eager_constructor)
         else does_not_raise()
     )
     data_series_float = {
         "a": [0.0, 1, None, None, 2, None, None, 3],
         "b": ["", "a", None, None, "c", None, None, "e"],
     }
-    df = nw.from_native(constructor_eager(data_series_float), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data_series_float), eager_only=True)
 
     with context:
-        if "modin" in str(constructor_eager):
+        if "modin" in str(nw_eager_constructor):
             warnings.filterwarnings(
                 "ignore", message="The 'downcast' keyword in fillna is deprecated"
             )
@@ -298,18 +298,18 @@ def test_fill_null_series_limits(constructor_eager: ConstructorEager) -> None:
         assert_equal_data(result_backward, expected_backward)
 
 
-def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> None:
+def test_fill_null_series_limit_as_none(nw_eager_constructor: ConstructorEager) -> None:
     data_series = {"a": [1, None, None, None, 5, 6, None, None, None, 10]}
-    df = nw.from_native(constructor_eager(data_series), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data_series), eager_only=True)
 
     expected_forward = {
         "a_forward": [1, 1, 1, 1, 5, 6, 6, 6, 6, 10],
         "a_backward": [1, 5, 5, 5, 5, 6, 10, 10, 10, 10],
     }
     if (
-        "pandas_pyarrow_constructor" in str(constructor_eager)
-        or "modin" in str(constructor_eager)
-        or "dask" in str(constructor_eager)
+        "pandas_pyarrow_constructor" in str(nw_eager_constructor)
+        or "modin" in str(nw_eager_constructor)
+        or "dask" in str(nw_eager_constructor)
     ):
         with warnings.catch_warnings():
             # case for modin and dask
@@ -335,7 +335,7 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
 
     data_series_str = {"a": ["a", None, None, None, "b", "c", None, None, None, "d"]}
 
-    df_str = nw.from_native(constructor_eager(data_series_str), eager_only=True)
+    df_str = nw.from_native(nw_eager_constructor(data_series_str), eager_only=True)
 
     expected_forward_str = {
         "a_forward": ["a", "a", "a", "a", "b", "c", "c", "c", "c", "d"],
@@ -343,9 +343,9 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
     }
 
     if (
-        "pandas_pyarrow_constructor" in str(constructor_eager)
-        or "modin" in str(constructor_eager)
-        or "dask" in str(constructor_eager)
+        "pandas_pyarrow_constructor" in str(nw_eager_constructor)
+        or "modin" in str(nw_eager_constructor)
+        or "dask" in str(nw_eager_constructor)
     ):
         with warnings.catch_warnings():
             # case for modin and dask
@@ -369,9 +369,9 @@ def test_fill_null_series_limit_as_none(constructor_eager: ConstructorEager) -> 
         assert_equal_data(result_forward_str, expected_forward_str)
 
 
-def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> None:
+def test_fill_null_series_exceptions(nw_eager_constructor: ConstructorEager) -> None:
     data_series_float = {"a": [0.0, 1, None, 2, None, 3]}
-    df_float = nw.from_native(constructor_eager(data_series_float), eager_only=True)
+    df_float = nw.from_native(nw_eager_constructor(data_series_float), eager_only=True)
 
     with pytest.raises(ValueError, match="cannot specify both `value` and `strategy`"):
         df_float.select(a_zero_digit=df_float["a"].fill_null(value=0, strategy="forward"))
@@ -388,16 +388,16 @@ def test_fill_null_series_exceptions(constructor_eager: ConstructorEager) -> Non
 
 
 def test_fill_null_strategies_with_partition_by(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask", "ibis")):
+    if any(x in str(nw_frame_constructor) for x in ("pyarrow_table", "dask", "ibis")):
         request.applymarker(pytest.mark.xfail)
 
-    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+    if ("duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)) or (
+        "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)
     ):
         pytest.skip()
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         # unreliable
         pytest.skip()
 
@@ -406,7 +406,7 @@ def test_fill_null_strategies_with_partition_by(
         "values": [1, None, None, 2, None, 3, None, None, 4],
         "idx": list(range(9)),
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     # Forward fill within each group
     result_forward = df.with_columns(
@@ -447,21 +447,21 @@ def test_fill_null_strategies_with_partition_by(
     ],
 )
 def test_fill_null_expr_limits(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     values: list[int | None],
     strategy: FillNullStrategy,
     limit: int,
     expected: list[int | None],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
 
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         reason = "The limit keyword is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"a": values}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.with_columns(nw.col("a").fill_null(strategy=strategy, limit=limit))
     assert_equal_data(result, {"a": expected})

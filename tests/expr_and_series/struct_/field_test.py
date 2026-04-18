@@ -8,19 +8,21 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_get_field_expr(
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    if any(backend in str(constructor) for backend in ("dask", "modin")):
+    if any(backend in str(nw_frame_constructor) for backend in ("dask", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 0):
+    if "pandas" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 2, 0):
         pytest.skip()
     data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
 
-    df_native = constructor(data)
+    df_native = nw_frame_constructor(data)
 
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         import pandas as pd
 
         df_native = cast("pd.DataFrame", df_native).assign(
@@ -45,22 +47,22 @@ def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor
 
 
 def test_get_field_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    if any(backend in str(constructor_eager) for backend in ("modin",)):
+    if any(backend in str(nw_eager_constructor) for backend in ("modin",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2, 0):
+    if "pandas" in str(nw_eager_constructor) and PANDAS_VERSION < (2, 2, 0):
         pytest.skip()
     data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
     expected = {"id": ["0", "1"], "name": ["john", "jane"]}
 
     _expected = expected.copy()
-    df_native = constructor_eager(data)
+    df_native = nw_eager_constructor(data)
 
-    if "pandas" in str(constructor_eager):
+    if "pandas" in str(nw_eager_constructor):
         import pandas as pd
 
         df_native = cast("pd.DataFrame", df_native).assign(

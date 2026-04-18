@@ -19,25 +19,28 @@ expected = {"cum_prod": [1, 2, None, 6], "reverse_cum_prod": [6, 6, None, 3]}
 
 @pytest.mark.parametrize("reverse", [True, False])
 def test_cum_prod_expr(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, *, reverse: bool
+    request: pytest.FixtureRequest,
+    nw_eager_constructor: ConstructorEager,
+    *,
+    reverse: bool,
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_prod" if reverse else "cum_prod"
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a").cum_prod(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
 
 
 def test_cum_prod_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.select(
         cum_prod=df["a"].cum_prod(), reverse_cum_prod=df["a"].cum_prod(reverse=True)
     )
@@ -48,33 +51,33 @@ def test_cum_prod_series(
     ("reverse", "expected_a"), [(False, [2, 2, 6, None]), (True, [3, 6, 3, None])]
 )
 def test_lazy_cum_prod_grouped(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     *,
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(nw_frame_constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         pytest.skip(reason="probably bugged")
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if "cudf" in str(constructor):
+    if "cudf" in str(nw_frame_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         # https://github.com/ibis-project/ibis/issues/10542
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "arg entina": [1, 2, 3, None],
                 "ban gkok": [1, 0, 2, 3],

@@ -20,15 +20,15 @@ expected_over = {
 }
 
 
-def test_filter(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_filter(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a").filter(nw.col("i") < 2, nw.col("c") == 5))
     expected = {"a": [0]}
     assert_equal_data(result, expected)
 
 
-def test_filter_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+def test_filter_series(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.select(df["a"].filter((df["i"] < 2) & (df["c"] == 5)))
     expected = {"a": [0]}
     assert_equal_data(result, expected)
@@ -37,8 +37,8 @@ def test_filter_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result_s}, expected)
 
 
-def test_filter_constraints(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_filter_constraints(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result_added = df.filter(nw.col("i") < 4, b=3)
     expected = {"i": [2], "a": [2], "b": [3], "c": [3]}
     assert_equal_data(result_added, expected)
@@ -46,10 +46,10 @@ def test_filter_constraints(constructor: Constructor) -> None:
     assert_equal_data(result_only, expected)
 
 
-def test_filter_windows(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_filter_windows(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.filter(nw.col("i") == nw.col("i").min())
     expected = {"i": [0], "a": [0], "b": [1], "c": [5]}
     assert_equal_data(result, expected)
@@ -60,12 +60,12 @@ def test_filter_windows(constructor: Constructor) -> None:
 
 
 def test_filter_windows_over(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail())
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.filter(nw.col("i") == nw.col("i").min().over("b")).sort("i")
     assert_equal_data(result, expected_over)

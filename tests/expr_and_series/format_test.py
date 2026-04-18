@@ -6,9 +6,9 @@ import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
 
-def test_format(constructor: Constructor) -> None:
+def test_format(nw_frame_constructor: Constructor) -> None:
     df = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "name": ["bob", "alice", "dodo"],
                 "surname": ["builder", "wonderlander", "extinct"],

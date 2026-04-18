@@ -6,11 +6,11 @@ import narwhals as nw
 from tests.utils import DASK_VERSION, Constructor, assert_equal_data
 
 
-def test_expr_binary(constructor: Constructor) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+def test_expr_binary(nw_frame_constructor: Constructor) -> None:
+    if "dask" in str(nw_frame_constructor) and DASK_VERSION < (2024, 10):
         pytest.skip()
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     result = nw.from_native(df_raw).with_columns(
         a=(1 + 3 * nw.col("a")) * (1 / nw.col("a")),
         b=nw.col("z") / (2 - nw.col("b")),

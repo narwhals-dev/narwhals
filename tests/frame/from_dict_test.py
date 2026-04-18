@@ -28,12 +28,14 @@ def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
-def test_from_dict_without_backend(constructor: Constructor, backend: Polars) -> None:
+def test_from_dict_without_backend(
+    nw_frame_constructor: Constructor, backend: Polars
+) -> None:
     pytest.importorskip("polars")
     pytest.importorskip("pyarrow")
 
     df = (
-        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .lazy()
         .collect(backend=backend)
     )
@@ -41,8 +43,12 @@ def test_from_dict_without_backend(constructor: Constructor, backend: Polars) ->
     assert_equal_data(result, {"c": [1, 2, 3], "d": [4, 5, 6]})
 
 
-def test_from_dict_without_backend_invalid(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy().collect()
+def test_from_dict_without_backend_invalid(nw_frame_constructor: Constructor) -> None:
+    df = (
+        nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        .lazy()
+        .collect()
+    )
     with pytest.raises(TypeError, match="backend"):
         nw.DataFrame.from_dict({"c": nw.to_native(df["a"]), "d": nw.to_native(df["b"])})
 
@@ -55,13 +61,13 @@ def test_from_dict_with_backend_invalid() -> None:
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_one_native_one_narwhals(
-    constructor: Constructor, backend: Polars
+    nw_frame_constructor: Constructor, backend: Polars
 ) -> None:
     pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
 
     df = (
-        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .lazy()
         .collect(backend=backend)
     )

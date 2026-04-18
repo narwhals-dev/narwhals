@@ -8,7 +8,9 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
-def test_shape(constructor_eager: ConstructorEager) -> None:
-    result = nw.from_native(constructor_eager({"a": [1, 2]}), eager_only=True)["a"].shape
+def test_shape(nw_eager_constructor: ConstructorEager) -> None:
+    result = nw.from_native(nw_eager_constructor({"a": [1, 2]}), eager_only=True)[
+        "a"
+    ].shape
     expected = (2,)
     assert result == expected

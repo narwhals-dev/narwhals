@@ -507,8 +507,13 @@ def test_from_native_roundtrip_identity(native: Any, kwds: dict[str, Any]) -> No
     assert roundtrip is native
 
 
-def test_pyspark_connect_deps_2517(constructor: Constructor) -> None:  # pragma: no cover
-    if not ("pyspark" in str(constructor) and "sqlframe" not in str(constructor)):
+def test_pyspark_connect_deps_2517(
+    nw_frame_constructor: Constructor,
+) -> None:  # pragma: no cover
+    if not (
+        "pyspark" in str(nw_frame_constructor)
+        and "sqlframe" not in str(nw_frame_constructor)
+    ):
         # Only run this slow test if `--constructors=pyspark` is passed
         return
     pytest.importorskip("pyspark")
@@ -524,11 +529,13 @@ def test_pyspark_connect_deps_2517(constructor: Constructor) -> None:  # pragma:
     nw.from_native(spark.createDataFrame([(1,)], ["a"]))
 
 
-def test_eager_only_pass_through_main(constructor: Constructor) -> None:
-    if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
+def test_eager_only_pass_through_main(nw_frame_constructor: Constructor) -> None:
+    if not any(
+        s in str(nw_frame_constructor) for s in ("pyspark", "dask", "ibis", "duckdb")
+    ):
         pytest.skip(reason="Non lazy or polars")
 
-    df = constructor(data)
+    df = nw_frame_constructor(data)
 
     r1 = nw.from_native(df, eager_only=False, pass_through=False)
     r2 = nw.from_native(df, eager_only=False, pass_through=True)

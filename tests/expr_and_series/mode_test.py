@@ -19,22 +19,22 @@ data_group = {
 }
 
 
-def test_mode_single_expr_keep_all(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_mode_single_expr_keep_all(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a").mode(keep="all")).sort("a")
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
 
 
-def test_mode_series_keep_all(constructor_eager: ConstructorEager) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+def test_mode_series_keep_all(nw_eager_constructor: ConstructorEager) -> None:
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     result = series.mode(keep="all").sort()
     expected = {"a": [1, 2]}
     assert_equal_data({"a": result}, expected)
 
 
-def test_mode_series_keep_any(constructor_eager: ConstructorEager) -> None:
-    frame = nw.from_native(constructor_eager(data), eager_only=True)
+def test_mode_series_keep_any(nw_eager_constructor: ConstructorEager) -> None:
+    frame = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result_a = frame["a"].mode(keep="any")
     assert result_a in {1, 2}
 
@@ -42,16 +42,16 @@ def test_mode_series_keep_any(constructor_eager: ConstructorEager) -> None:
     assert result_b == 3
 
 
-def test_mode_different_lengths_keep_all(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+def test_mode_different_lengths_keep_all(nw_eager_constructor: ConstructorEager) -> None:
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     with pytest.raises(ShapeError):
         df.select(nw.col("a", "b").mode(keep="all"))
 
 
-def test_mode_expr_keep_any(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_mode_expr_keep_any(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(nw.col("a", "b").mode(keep="any")).lazy().collect()
 
     try:
@@ -62,8 +62,8 @@ def test_mode_expr_keep_any(constructor: Constructor) -> None:
         assert_equal_data(result, expected)
 
 
-def test_mode_expr_keep_all_lazy(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_mode_expr_keep_all_lazy(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     impl = df.implementation
     not_implemented = {
         nw.Implementation.DUCKDB,
@@ -85,9 +85,9 @@ def test_mode_expr_keep_all_lazy(constructor: Constructor) -> None:
 
 
 def test_mode_group_by_unimodal(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    df = nw.from_native(constructor(data_group))
+    df = nw.from_native(nw_frame_constructor(data_group))
     impl = df.implementation
 
     if impl.is_dask() or impl.is_pyarrow():
@@ -115,13 +115,13 @@ def test_mode_group_by_unimodal(
     ],
 )
 def test_mode_group_by_multimodal(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     mode_col: str,
     expected_opt_1: list[Any],
     expected_opt_2: list[Any],
 ) -> None:
-    df = nw.from_native(constructor(data_group))
+    df = nw.from_native(nw_frame_constructor(data_group))
     impl = df.implementation
 
     if impl.is_dask() or impl.is_pyarrow():
@@ -156,11 +156,11 @@ def test_mode_group_by_multimodal(
     ],
 )
 def test_mode_group_by_multiple_cols(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     mode_expr: nw.Expr | list[nw.Expr],
 ) -> None:
-    df = nw.from_native(constructor(data_group))
+    df = nw.from_native(nw_frame_constructor(data_group))
     impl = df.implementation
 
     if impl.is_dask() or impl.is_pyarrow():

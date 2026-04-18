@@ -10,16 +10,16 @@ expected_values = [4, 3, 6, None]
 
 
 @pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
-def test_maxh(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_maxh(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(horizontal_max=nw.max_horizontal("a", nw.col("b"), "z"))
     expected = {"horizontal_max": expected_values}
     assert_equal_data(result, expected)
 
 
 @pytest.mark.filterwarnings(r"ignore:.*All-NaN slice encountered:RuntimeWarning")
-def test_maxh_all(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_maxh_all(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(nw.max_horizontal(nw.all()), c=nw.max_horizontal(nw.all()))
     expected = {"a": expected_values, "c": expected_values}
     assert_equal_data(result, expected)

@@ -113,20 +113,20 @@ data_no_dups = {
 )
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     agg_func: str,
     expected: dict[str, list[Any]],
     on: str | list[str],
     index: str | list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.pivot(
         on=on,
         index=index,
@@ -146,15 +146,15 @@ def test_pivot(
     ],
 )
 def test_pivot_no_agg(
-    request: Any, constructor_eager: ConstructorEager, data_: Any, context: Any
+    request: Any, nw_eager_constructor: ConstructorEager, data_: Any, context: Any
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data_), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data_), eager_only=True)
     with context:
         df.pivot("col", index="ix", aggregate_function=None)
 
@@ -168,17 +168,17 @@ def test_pivot_no_agg(
 )
 def test_pivot_sort_columns(
     request: Any,
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     sort_columns: Any,
     expected: list[str],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.pivot(
         on="col",
         index="ix",
@@ -218,15 +218,15 @@ def test_pivot_sort_columns(
     ],
 )
 def test_pivot_names_out(
-    request: Any, constructor_eager: ConstructorEager, kwargs: Any, expected: list[str]
+    request: Any, nw_eager_constructor: ConstructorEager, kwargs: Any, expected: list[str]
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
 
     result = (
         df.pivot(aggregate_function="min", index="ix", **kwargs).collect_schema().names()
@@ -234,21 +234,21 @@ def test_pivot_names_out(
     assert result == expected
 
 
-def test_pivot_no_index_no_values(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+def test_pivot_no_index_no_values(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data_no_dups), eager_only=True)
     with pytest.raises(ValueError, match="At least one of `values` and `index` must"):
         df.pivot(on="col")
 
 
 def test_pivot_no_index(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data_no_dups), eager_only=True)
     with pytest.warns(UserWarning, match="has no effect"):
         result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")
     expected = {

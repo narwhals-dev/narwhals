@@ -26,12 +26,12 @@ from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_eq
     ],
 )
 def test_scalar_reduction_select(
-    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
+    nw_frame_constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(*expr)
     assert_equal_data(result, expected)
 
@@ -53,17 +53,17 @@ def test_scalar_reduction_select(
     ],
 )
 def test_scalar_reduction_with_columns(
-    constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
+    nw_frame_constructor: Constructor, expr: list[Any], expected: dict[str, list[Any]]
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.with_columns(*expr).select(*expected.keys())
     assert_equal_data(result, expected)
 
 
-def test_empty_scalar_reduction_select(constructor: Constructor) -> None:
+def test_empty_scalar_reduction_select(nw_frame_constructor: Constructor) -> None:
     data = {
         "str": [*"abcde"],
         "int": [0, 1, 2, 3, 4],
@@ -78,7 +78,7 @@ def test_empty_scalar_reduction_select(constructor: Constructor) -> None:
         "sum": nw.col("int").sum(),
     }
 
-    df = nw.from_native(constructor(data)).filter(str="z")
+    df = nw.from_native(nw_frame_constructor(data)).filter(str="z")
 
     result = df.select(**expressions)
     expected = {
@@ -92,8 +92,8 @@ def test_empty_scalar_reduction_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_scalar_reduction_with_columns(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_empty_scalar_reduction_with_columns(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
     data = {
@@ -110,7 +110,7 @@ def test_empty_scalar_reduction_with_columns(constructor: Constructor) -> None:
         "sum": nw.col("int").sum(),
     }
 
-    df = nw.from_native(constructor(data)).filter(str="z")
+    df = nw.from_native(nw_frame_constructor(data)).filter(str="z")
     result = df.with_columns(**expressions)
     expected: dict[str, list[Any]] = {
         k: [] for k in chain(df.collect_schema(), expressions)
@@ -118,13 +118,13 @@ def test_empty_scalar_reduction_with_columns(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_empty_scalar_reduction_series(constructor_eager: ConstructorEager) -> None:
+def test_empty_scalar_reduction_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {
         "str": [*"abcde"],
         "int": [0, 1, 2, 3, 4],
         "bool": [True, False, False, True, False],
     }
-    df = nw.from_native(constructor_eager(data), eager_only=True).filter(str="z")
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True).filter(str="z")
     result_s = {
         "all": [df["bool"].all()],
         "any": [df["bool"].any()],

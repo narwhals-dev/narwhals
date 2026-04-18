@@ -14,28 +14,30 @@ data = {"a": [[3, None, 2, 2, 4, None], [-1], None, [None, None, None], []]}
 expected = [4, -1, None, None, None]
 
 
-def test_max_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+def test_max_expr(
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+) -> None:
+    if any(backend in str(nw_frame_constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    result = nw.from_native(constructor(data)).select(
+    result = nw.from_native(nw_frame_constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.max()
     )
     assert_equal_data(result, {"a": expected})
 
 
 def test_max_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("cudf",)):
+    if any(backend in str(nw_eager_constructor) for backend in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager):
+    if "pandas" in str(nw_eager_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.max()
     assert_equal_data({"a": result}, {"a": expected})

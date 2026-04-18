@@ -14,26 +14,28 @@ data = {"a": [[2, 2, 3, None, None], None, []]}
 expected = {"a": [True, None, False]}
 
 
-def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+def test_contains_expr(
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+) -> None:
     if any(
-        backend in str(constructor)
+        backend in str(nw_frame_constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
-    result = nw.from_native(constructor(data)).select(
+    result = nw.from_native(nw_frame_constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.contains(2)
     )
     assert_equal_data(result, expected)
 
 
 def test_contains_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
     if any(
-        backend in str(constructor_eager)
+        backend in str(nw_eager_constructor)
         for backend in ("modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.contains(2)
     assert_equal_data({"a": result}, expected)

@@ -49,12 +49,12 @@ expected_on_none_idx_none = {
     ],
 )
 def test_unpivot(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     on: str | list[str] | None,
     index: list[str] | None,
     expected: dict[str, list[float]],
 ) -> None:
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     sort_columns = ["variable"] if index is None else ["variable", "a"]
     result = df.unpivot(on=on, index=index).sort(by=sort_columns)
     assert_equal_data(result, expected)
@@ -69,24 +69,24 @@ def test_unpivot(
     ],
 )
 def test_unpivot_var_value_names(
-    constructor: Constructor, variable_name: str, value_name: str
+    nw_frame_constructor: Constructor, variable_name: str, value_name: str
 ) -> None:
     context = (
         pytest.raises(NotImplementedError)
         if (
             any([variable_name == "", value_name == ""])
             and (
-                "duckdb" in str(constructor)
+                "duckdb" in str(nw_frame_constructor)
                 # This might depend from the dialect we use in sqlframe.
                 # Since for now we use only duckdb, we need to xfail it
-                or "sqlframe" in str(constructor)
+                or "sqlframe" in str(nw_frame_constructor)
             )
         )
         else does_not_raise()
     )
 
     with context:
-        df = nw.from_native(constructor(data))
+        df = nw.from_native(nw_frame_constructor(data))
         result = df.unpivot(
             on=["b", "c"], index=["a"], variable_name=variable_name, value_name=value_name
         )
@@ -94,8 +94,8 @@ def test_unpivot_var_value_names(
         assert result.collect_schema().names()[-2:] == [variable_name, value_name]
 
 
-def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_unpivot_default_var_value_names(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.unpivot(on=["b", "c"], index=["a"])
 
     assert result.collect_schema().names()[-2:] == ["variable", "value"]
@@ -112,16 +112,16 @@ def test_unpivot_default_var_value_names(constructor: Constructor) -> None:
 )
 def test_unpivot_mixed_types(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     data: dict[str, Any],
     expected_dtypes: list[DType],
 ) -> None:
-    if "cudf" in str(constructor) or (
-        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
+    if "cudf" in str(nw_frame_constructor) or (
+        "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14, 0, 0)
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.unpivot(on=["a", "b"], index="idx")
 
     assert result.collect_schema().dtypes() == expected_dtypes

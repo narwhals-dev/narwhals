@@ -22,25 +22,25 @@ data = {
 }
 
 
-def test_shift(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_shift(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2)).filter(nw.col("i") > 1)
     expected = {"i": [2, 3, 4], "a": [0, 1, 2], "b": [1, 2, 3], "c": [5, 4, 3]}
     assert_equal_data(result, expected)
 
 
-def test_shift_lazy(constructor: Constructor) -> None:
+def test_shift_lazy(nw_frame_constructor: Constructor) -> None:
     data = {
         "i": [None, 1, 2, 3, 4],
         "a": [0, 1, 2, 3, 4],
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
     }
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.with_columns(nw.col("a", "b", "c").shift(2).over(order_by="i")).filter(
         nw.col("i") > 1, ~nw.col("i").is_null()
     )
@@ -49,17 +49,17 @@ def test_shift_lazy(constructor: Constructor) -> None:
 
 
 def test_shift_lazy_grouped(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table", "cudf")):
+    if any(x in str(nw_frame_constructor) for x in ("dask", "pyarrow_table", "cudf")):
         # https://github.com/dask/dask/issues/11806
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.with_columns(nw.col("a").shift(1).over("b", order_by="i")).sort("i")
     expected = {
         "i": [0, 1, 2, 3, 4],
@@ -70,8 +70,8 @@ def test_shift_lazy_grouped(
     assert_equal_data(result, expected)
 
 
-def test_shift_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+def test_shift_series(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.with_columns(df["a"].shift(2), df["b"].shift(2), df["c"].shift(2)).filter(
         nw.col("i") > 1
     )
@@ -126,8 +126,8 @@ def test_shift_expr_invalid_params(n: Any, context: Any) -> None:
     ],
 )
 def test_shift_series_invalid_params(
-    constructor_eager: ConstructorEager, n: Any, context: Any
+    nw_eager_constructor: ConstructorEager, n: Any, context: Any
 ) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     with context:
         df["a"].shift(n)

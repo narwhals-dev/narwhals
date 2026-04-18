@@ -16,16 +16,16 @@ expected = {"a": [date(2020, 1, 1), date(2020, 1, 2), None]}
 
 
 def test_to_date_with_fmt_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "cudf" in str(constructor_eager) or (
-        "pandas" in str(constructor_eager)
-        and not uses_pyarrow_backend(constructor=constructor_eager)
+    if "cudf" in str(nw_eager_constructor) or (
+        "pandas" in str(nw_eager_constructor)
+        and not uses_pyarrow_backend(constructor=nw_eager_constructor)
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_date(
+    result = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"].str.to_date(
         format="%Y-%m-%d"
     )
     assert isinstance(result.dtype, nw.Date)
@@ -33,34 +33,37 @@ def test_to_date_with_fmt_series(
 
 
 def test_to_date_infer_fmt_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "cudf" in str(constructor_eager) or (
-        "pandas" in str(constructor_eager)
-        and not uses_pyarrow_backend(constructor=constructor_eager)
+    if "cudf" in str(nw_eager_constructor) or (
+        "pandas" in str(nw_eager_constructor)
+        and not uses_pyarrow_backend(constructor=nw_eager_constructor)
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_date()
+    result = nw.from_native(nw_eager_constructor(data), eager_only=True)[
+        "a"
+    ].str.to_date()
     assert isinstance(result.dtype, nw.Date)
     assert_equal_data({"a": result}, expected)
 
 
 def test_to_date_with_fmt_expr(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
-    if "cudf" in str(constructor) or (
-        "pandas" in str(constructor) and not uses_pyarrow_backend(constructor=constructor)
+    if "cudf" in str(nw_frame_constructor) or (
+        "pandas" in str(nw_frame_constructor)
+        and not uses_pyarrow_backend(constructor=nw_frame_constructor)
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         reason = "not implemented"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    result = nw.from_native(constructor(data)).select(
+    result = nw.from_native(nw_frame_constructor(data)).select(
         a=nw.col("a").str.to_date(format="%Y-%m-%d")
     )
     result_schema = result.collect_schema()
@@ -70,22 +73,25 @@ def test_to_date_with_fmt_expr(
 
 
 def test_to_date_infer_fmt_expr(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
-    if "cudf" in str(constructor) or (
-        "pandas" in str(constructor) and not uses_pyarrow_backend(constructor=constructor)
+    if "cudf" in str(nw_frame_constructor) or (
+        "pandas" in str(nw_frame_constructor)
+        and not uses_pyarrow_backend(constructor=nw_frame_constructor)
     ):
         reason = "Date type is not supported"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         reason = "Cannot infer format"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         reason = "not implemented"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    result = nw.from_native(constructor(data)).select(a=nw.col("a").str.to_date())
+    result = nw.from_native(nw_frame_constructor(data)).select(
+        a=nw.col("a").str.to_date()
+    )
     result_schema = result.collect_schema()
     assert isinstance(result_schema["a"], nw.Date)
 

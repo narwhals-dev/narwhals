@@ -16,25 +16,25 @@ if TYPE_CHECKING:
 data = {"a": [1, 2], "b": [3, 4]}
 
 
-def test_collect_to_default_backend(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_collect_to_default_backend(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect().to_native()
 
     expected_cls: Any
-    if "polars" in str(constructor):
+    if "polars" in str(nw_frame_constructor):
         pytest.importorskip("polars")
         import polars as pl
 
         expected_cls = pl.DataFrame
-    elif any(x in str(constructor) for x in ("pandas", "dask")):
+    elif any(x in str(nw_frame_constructor) for x in ("pandas", "dask")):
         pytest.importorskip("pandas")
         import pandas as pd
 
         expected_cls = pd.DataFrame
-    elif "modin" in str(constructor):
+    elif "modin" in str(nw_frame_constructor):
         mpd = get_modin()
         expected_cls = mpd.DataFrame
-    elif "cudf" in str(constructor):
+    elif "cudf" in str(nw_frame_constructor):
         cudf = get_cudf()
         expected_cls = cudf.DataFrame
     else:  # pyarrow, duckdb, and PySpark
@@ -51,13 +51,13 @@ def test_collect_to_default_backend(constructor: Constructor) -> None:
 )
 @pytest.mark.parametrize("backend", ["pandas", Implementation.PANDAS])
 def test_collect_to_valid_backend_pandas(
-    constructor: Constructor, backend: Pandas
+    nw_frame_constructor: Constructor, backend: Pandas
 ) -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
     import pandas as pd
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect(backend=backend).to_native()
     assert isinstance(result, pd.DataFrame)
 
@@ -67,13 +67,13 @@ def test_collect_to_valid_backend_pandas(
 )
 @pytest.mark.parametrize("backend", ["polars", Implementation.POLARS])
 def test_collect_to_valid_backend_polars(
-    constructor: Constructor, backend: Polars
+    nw_frame_constructor: Constructor, backend: Polars
 ) -> None:
     pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect(backend=backend).to_native()
     assert isinstance(result, pl.DataFrame)
 
@@ -83,12 +83,12 @@ def test_collect_to_valid_backend_polars(
 )
 @pytest.mark.parametrize("backend", ["pyarrow", Implementation.PYARROW])
 def test_collect_to_valid_backend_pyarrow(
-    constructor: Constructor, backend: Arrow
+    nw_frame_constructor: Constructor, backend: Arrow
 ) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect(backend=backend).to_native()
     assert isinstance(result, pa.Table)
 
@@ -96,12 +96,12 @@ def test_collect_to_valid_backend_pyarrow(
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-def test_collect_to_valid_backend_pandas_mod(constructor: Constructor) -> None:
+def test_collect_to_valid_backend_pandas_mod(nw_frame_constructor: Constructor) -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
     import pandas as pd
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect(backend=pd).to_native()
     assert isinstance(result, pd.DataFrame)
 
@@ -109,12 +109,12 @@ def test_collect_to_valid_backend_pandas_mod(constructor: Constructor) -> None:
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-def test_collect_to_valid_backend_polars_mod(constructor: Constructor) -> None:
+def test_collect_to_valid_backend_polars_mod(nw_frame_constructor: Constructor) -> None:
     pytest.importorskip("pyarrow")
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect(backend=pl).to_native()
     assert isinstance(result, pl.DataFrame)
 
@@ -122,11 +122,11 @@ def test_collect_to_valid_backend_polars_mod(constructor: Constructor) -> None:
 @pytest.mark.filterwarnings(
     "ignore:is_sparse is deprecated and will be removed in a future version."
 )
-def test_collect_to_valid_backend_pyarrow_mod(constructor: Constructor) -> None:
+def test_collect_to_valid_backend_pyarrow_mod(nw_frame_constructor: Constructor) -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.lazy().collect(backend=pa).to_native()
     assert isinstance(result, pa.Table)
 
@@ -135,15 +135,15 @@ def test_collect_to_valid_backend_pyarrow_mod(constructor: Constructor) -> None:
     "backend", ["foo", Implementation.DASK, Implementation.MODIN, pytest]
 )
 def test_collect_to_invalid_backend(
-    constructor: Constructor, backend: Literal["foo"] | IntoBackend[Modin | Dask]
+    nw_frame_constructor: Constructor, backend: Literal["foo"] | IntoBackend[Modin | Dask]
 ) -> None:
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     with pytest.raises(ValueError, match="Unsupported `backend` value"):
         df.lazy().collect(backend=backend).to_native()  # type: ignore[arg-type]
 
 
-def test_collect_with_kwargs(constructor: Constructor) -> None:
+def test_collect_with_kwargs(nw_frame_constructor: Constructor) -> None:
     pl_kwargs = (
         {"optimizations": get_polars().QueryOptFlags(predicate_pushdown=False)}
         if POLARS_VERSION > (1, 29, 0)
@@ -155,7 +155,7 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
         nw.Implementation.PYARROW: {},
     }
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     result = (
         df.lazy()
@@ -167,8 +167,8 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_collect_empty(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+def test_collect_empty(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]}))
     lf = df.filter(nw.col("a").is_null()).with_columns(b=nw.lit(None)).lazy()
     result = lf.collect()
     assert_equal_data(result, {"a": [], "b": []})

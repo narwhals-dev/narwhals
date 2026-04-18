@@ -21,13 +21,16 @@ expected = {"cum_min": [3, 1, None, 1], "reverse_cum_min": [1, 1, None, 2]}
 
 @pytest.mark.parametrize("reverse", [True, False])
 def test_cum_min_expr(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager, *, reverse: bool
+    request: pytest.FixtureRequest,
+    nw_eager_constructor: ConstructorEager,
+    *,
+    reverse: bool,
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
     name = "reverse_cum_min" if reverse else "cum_min"
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a").cum_min(reverse=reverse).alias(name))
 
     assert_equal_data(result, {name: expected[name]})
@@ -37,30 +40,32 @@ def test_cum_min_expr(
     ("reverse", "expected_a"), [(False, [1, 2, 1]), (True, [1, 1, 3])]
 )
 def test_lazy_cum_min_grouped(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     *,
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(nw_frame_constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         pytest.skip(reason="probably bugged")
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if "cudf" in str(constructor):
+    if "cudf" in str(nw_frame_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor({"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]})
+        nw_frame_constructor(
+            {"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2], "g": [1, 1, 1]}
+        )
     )
     result = df.with_columns(
         nw.col("a").cum_min(reverse=reverse).over("g", order_by="b")
@@ -74,36 +79,40 @@ def test_lazy_cum_min_grouped(
     [(False, [1, 2, 1, None, 1, 2, 4]), (True, [1, 1, 2, None, 2, 1, 1])],
 )
 def test_lazy_cum_min_ordered_by_nulls(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     *,
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(nw_frame_constructor):
         # grouped window functions not yet supported
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         pytest.skip(reason="probably bugged")
-    if "pandas_nullable" in str(constructor):
+    if "pandas_nullable" in str(nw_frame_constructor):
         # https://github.com/pandas-dev/pandas/issues/62473
         request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
-    if "cudf" in str(constructor):
+    if "cudf" in str(nw_frame_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows() and PYARROW_VERSION < (22, 0):
+    if (
+        "pyarrow" in str(nw_frame_constructor)
+        and is_windows()
+        and PYARROW_VERSION < (22, 0)
+    ):
         # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "a": [1, 2, 3, None, 2, 3, 4],
                 "b": [1, -1, 3, 2, 5, 0, None],
@@ -128,23 +137,23 @@ def test_lazy_cum_min_ordered_by_nulls(
     ("reverse", "expected_a"), [(False, [1, 2, 1]), (True, [1, 1, 3])]
 )
 def test_lazy_cum_min_ungrouped(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     *,
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "dask" in str(constructor) and reverse:
+    if "dask" in str(nw_frame_constructor) and reverse:
         # https://github.com/dask/dask/issues/11802
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         pytest.skip(reason="probably bugged")
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
     df = nw.from_native(
-        constructor({"a": [2, 3, 1], "b": [0, 2, 1], "i": [1, 2, 0]})
+        nw_frame_constructor({"a": [2, 3, 1], "b": [0, 2, 1], "i": [1, 2, 0]})
     ).sort("i")
     result = df.with_columns(
         nw.col("a").cum_min(reverse=reverse).over(order_by="b")
@@ -158,23 +167,23 @@ def test_lazy_cum_min_ungrouped(
     [(False, [1, 2, 1, 1, 1, 2, 4]), (True, [1, 1, 2, 1, 2, 1, 1])],
 )
 def test_lazy_cum_min_ungrouped_ordered_by_nulls(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     *,
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         pytest.skip(reason="probably bugged")
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip(reason="too old version")
     df = nw.from_native(
-        constructor(
+        nw_frame_constructor(
             {
                 "a": [1, 2, 3, 1, 2, 3, 4],
                 "b": [1, -1, 3, 2, 5, 0, None],
@@ -194,12 +203,12 @@ def test_lazy_cum_min_ungrouped_ordered_by_nulls(
 
 
 def test_cum_min_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(constructor_eager):
+    if (PANDAS_VERSION < (2, 1)) and "pandas_pyarrow" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df.select(
         cum_min=df["a"].cum_min(), reverse_cum_min=df["a"].cum_min(reverse=True)
     )

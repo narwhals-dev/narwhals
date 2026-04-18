@@ -126,16 +126,16 @@ def test_read_csv_raise_with_lazy(backend: _LazyOnly) -> None:
 
 
 def test_scan_csv(
-    csv_path: FileSource, csv_path_sep: FileSource, constructor: Constructor
+    csv_path: FileSource, csv_path_sep: FileSource, nw_frame_constructor: Constructor
 ) -> None:
     kwargs: dict[str, Any]
-    if "sqlframe" in str(constructor):
+    if "sqlframe" in str(nw_frame_constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True, "header": True}
-    elif "pyspark" in str(constructor):
+    elif "pyspark" in str(nw_frame_constructor):
         kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
     else:
         kwargs = {}
-    backend = native_namespace(constructor)
+    backend = native_namespace(nw_frame_constructor)
     assert_equal_lazy(nw.scan_csv(csv_path, backend=backend, **kwargs))
     assert_equal_lazy(nw.scan_csv(csv_path_sep, backend=backend, separator="|", **kwargs))
 
@@ -171,15 +171,17 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
 
 
 @skipif_pandas_lt_1_5
-def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> None:
+def test_scan_parquet(
+    parquet_path: FileSource, nw_frame_constructor: Constructor
+) -> None:
     kwargs: dict[str, Any]
-    if "sqlframe" in str(constructor):
+    if "sqlframe" in str(nw_frame_constructor):
         kwargs = {"session": sqlframe_session(), "inferSchema": True}
-    elif "pyspark" in str(constructor):
+    elif "pyspark" in str(nw_frame_constructor):
         kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
     else:
         kwargs = {}
-    backend = native_namespace(constructor)
+    backend = native_namespace(nw_frame_constructor)
     assert_equal_lazy(nw.scan_parquet(parquet_path, backend=backend, **kwargs))
 
 

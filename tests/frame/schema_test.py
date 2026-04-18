@@ -32,9 +32,9 @@ data = {"a": [datetime(2020, 1, 1)], "b": [datetime(2020, 1, 1, tzinfo=timezone.
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_schema(constructor: Constructor) -> None:
+def test_schema(nw_frame_constructor: Constructor) -> None:
     df = nw.from_native(
-        constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
+        nw_frame_constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
     )
     result = df.schema
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
@@ -45,9 +45,9 @@ def test_schema(constructor: Constructor) -> None:
     assert result == expected
 
 
-def test_collect_schema(constructor: Constructor) -> None:
+def test_collect_schema(nw_frame_constructor: Constructor) -> None:
     df = nw.from_native(
-        constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
+        nw_frame_constructor({"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]})
     )
     expected = {"a": nw.Int64, "b": nw.Int64, "z": nw.Float64}
 
@@ -83,15 +83,15 @@ def test_string_disguised_as_object() -> None:
 
 
 def test_actual_object(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "cudf")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     class Foo: ...
 
     data = {"a": [Foo()]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.schema
     assert result == {"a": nw.Object}
 
@@ -569,7 +569,7 @@ def origin_arrow(
 
 @pytest.fixture
 def origin_pandas_like(
-    constructor_pandas_like: ConstructorPandasLike,
+    nw_pandas_like_constructor: ConstructorPandasLike,
 ) -> IntoPandasSchema:
     data: dict[str, Any] = {
         "a": [2, 1],
@@ -578,18 +578,18 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).dtypes.to_dict()
+    return nw_pandas_like_constructor(data).dtypes.to_dict()
 
 
 @pytest.fixture
 def origin_pandas_like_pyarrow(
-    constructor_pandas_like: ConstructorPandasLike,
+    nw_pandas_like_constructor: ConstructorPandasLike,
 ) -> IntoPandasSchema:
     if PANDAS_VERSION < (1, 5):
         pytest.skip(reason="pandas too old for `pyarrow`")
     name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
-    if str(constructor_pandas_like) not in name_pandas_like:
-        pytest.skip(f"{constructor_pandas_like!s} is not pandas_like_pyarrow")
+    if str(nw_pandas_like_constructor) not in name_pandas_like:
+        pytest.skip(f"{nw_pandas_like_constructor!s} is not pandas_like_pyarrow")
     data = {
         "a": [2, 1],
         "b": ["hello", "hi"],
@@ -599,7 +599,7 @@ def origin_pandas_like_pyarrow(
         "f": [date(2003, 1, 1), date(2004, 1, 1)],
         "g": [time(10, 1, 1), time(14, 1, 1)],
     }
-    df_pd = constructor_pandas_like(data)
+    df_pd = nw_pandas_like_constructor(data)
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )

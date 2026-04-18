@@ -28,34 +28,34 @@ def test_with_columns_int_col_name_pandas() -> None:
     pd.testing.assert_frame_equal(result, expected)
 
 
-def test_with_columns_order(constructor: Constructor) -> None:
+def test_with_columns_order(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2, 4, 3], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "d": [0, 2, 1]}
     assert_equal_data(result, expected)
 
 
-def test_with_columns_empty(constructor_eager: ConstructorEager) -> None:
+def test_with_columns_empty(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select().with_columns()
     assert_equal_data(result, {})
 
 
-def test_select_with_columns_empty_lazy(constructor: Constructor) -> None:
+def test_select_with_columns_empty_lazy(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data)).lazy()
+    df = nw.from_native(nw_frame_constructor(data)).lazy()
     with pytest.raises(ValueError, match="At least one"):
         df.with_columns()
     with pytest.raises(ValueError, match="At least one"):
         df.select()
 
 
-def test_with_columns_order_single_row(constructor: Constructor) -> None:
+def test_with_columns_order_single_row(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0], "i": [0, 1, 2]}
-    df = nw.from_native(constructor(data)).filter(nw.col("i") < 1).drop("i")
+    df = nw.from_native(nw_frame_constructor(data)).filter(nw.col("i") < 1).drop("i")
     result = df.with_columns(nw.col("a") + 1, d=nw.col("a") - 1)
     assert result.collect_schema().names() == ["a", "b", "z", "d"]
     expected = {"a": [2], "b": [4], "z": [7.0], "d": [0]}
@@ -63,42 +63,46 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 
 
 def test_with_columns_dtypes_single_row(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
+    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (15,):
         pytest.skip()
     if (
-        ("pyspark" in str(constructor))
-        or "duckdb" in str(constructor)
-        or "ibis" in str(constructor)
+        ("pyspark" in str(nw_frame_constructor))
+        or "duckdb" in str(nw_frame_constructor)
+        or "ibis" in str(nw_frame_constructor)
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": ["foo"]}
-    df = nw.from_native(constructor(data)).with_columns(nw.col("a").cast(nw.Categorical))
+    df = nw.from_native(nw_frame_constructor(data)).with_columns(
+        nw.col("a").cast(nw.Categorical)
+    )
     result = df.with_columns(nw.col("a"))
     assert result.collect_schema() == {"a": nw.Categorical}
 
 
-def test_with_columns_series_shape_mismatch(constructor_eager: ConstructorEager) -> None:
-    df1 = nw.from_native(constructor_eager({"first": [1, 2, 3]}), eager_only=True)
-    second = nw.from_native(constructor_eager({"second": [1, 2, 3, 4]}), eager_only=True)[
-        "second"
-    ]
+def test_with_columns_series_shape_mismatch(
+    nw_eager_constructor: ConstructorEager,
+) -> None:
+    df1 = nw.from_native(nw_eager_constructor({"first": [1, 2, 3]}), eager_only=True)
+    second = nw.from_native(
+        nw_eager_constructor({"second": [1, 2, 3, 4]}), eager_only=True
+    )["second"]
     with pytest.raises(ShapeError):
         df1.with_columns(second=second)
 
 
 def test_with_columns_missing_column(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
     if any(id_ == constructor_id for id_ in ("sqlframe", "ibis")):
         # `sqlframe` raises a different error depending on its underlying backend
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2], "b": [3, 4]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
-    if "polars" in str(constructor):
+    if "polars" in str(nw_frame_constructor):
         msg = r"c"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"

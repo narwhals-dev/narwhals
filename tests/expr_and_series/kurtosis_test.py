@@ -17,9 +17,9 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
     ],
 )
 def test_kurtosis_series(
-    constructor_eager: ConstructorEager, data: list[float], expected: float | None
+    nw_eager_constructor: ConstructorEager, data: list[float], expected: float | None
 ) -> None:
-    result = nw.from_native(constructor_eager({"a": data}), eager_only=True)[
+    result = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)[
         "a"
     ].kurtosis()
     assert_equal_data({"a": [result]}, {"a": [expected]})
@@ -38,18 +38,20 @@ def test_kurtosis_series(
 )
 @pytest.mark.filterwarnings("ignore:.*invalid value:RuntimeWarning:dask")
 def test_kurtosis_expr(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     data: list[float],
     expected: float | None,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "ibis" in str(constructor):
+    if "ibis" in str(nw_frame_constructor):
         # https://github.com/ibis-project/ibis/issues/11341
         request.applymarker(pytest.mark.xfail)
 
-    if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
+    if "pyspark" in str(nw_frame_constructor) and int(request.node.callspec.id[-1]) == 0:
         # Can not infer schema from empty dataset.
         pytest.skip()
 
-    result = nw.from_native(constructor({"a": data})).select(nw.col("a").kurtosis())
+    result = nw.from_native(nw_frame_constructor({"a": data})).select(
+        nw.col("a").kurtosis()
+    )
     assert_equal_data(result, {"a": [expected]})

@@ -22,20 +22,20 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_expr(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: dict[str, list[float]],
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        any(x in str(constructor) for x in ("dask", "duckdb", "ibis"))
+        any(x in str(nw_frame_constructor) for x in ("dask", "duckdb", "ibis"))
         and interpolation != "linear"
-    ) or "pyspark" in str(constructor):
+    ) or "pyspark" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw)
 
     msg = re.escape(
@@ -43,7 +43,7 @@ def test_quantile_expr(
     )
     context = (
         pytest.raises(NotImplementedError, match=msg)
-        if "dask_lazy_p2" in str(constructor)
+        if "dask_lazy_p2" in str(nw_frame_constructor)
         else does_not_raise()
     )
 
@@ -64,14 +64,14 @@ def test_quantile_expr(
 )
 @pytest.mark.filterwarnings("ignore:the `interpolation=` argument to percentile")
 def test_quantile_series(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     interpolation: Literal["nearest", "higher", "lower", "midpoint", "linear"],
     expected: float,
 ) -> None:
     q = 0.3
 
-    series = nw.from_native(constructor_eager({"a": [7.0, 8.0, 9.0]}), eager_only=True)[
-        "a"
-    ].alias("a")
+    series = nw.from_native(
+        nw_eager_constructor({"a": [7.0, 8.0, 9.0]}), eager_only=True
+    )["a"].alias("a")
     result = series.quantile(quantile=q, interpolation=interpolation)
     assert_equal_data({"a": [result]}, {"a": [expected]})

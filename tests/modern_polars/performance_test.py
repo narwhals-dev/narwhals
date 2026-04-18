@@ -10,10 +10,12 @@ data = {"weight": ["89kg", "83", "79kg", "68kg", "78kg", "73", "86kg"]}
 expected = {"weight_kg": [89, 38, 79, 68, 78, 33, 86]}
 
 
-def test_parse_weight(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "ibis", "duckdb")):
+def test_parse_weight(
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+) -> None:
+    if any(x in str(nw_frame_constructor) for x in ("pyspark", "ibis", "duckdb")):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
 
     col = nw.col("weight")
     is_kg = col.str.ends_with("kg")

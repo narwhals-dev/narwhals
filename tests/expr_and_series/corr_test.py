@@ -20,18 +20,18 @@ data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
     ],
 )
 def test_corr_expr(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     request: pytest.FixtureRequest,
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
     expected_corr: float | None,
 ) -> None:
-    if "pyspark" in str(constructor) and expected_corr is None:
+    if "pyspark" in str(nw_frame_constructor) and expected_corr is None:
         request.applymarker(
             pytest.skip(reason="Pyspark corr function does not allow None values")
         )
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(nw.corr(a, b).round(2))
     expected = {output_name: [expected_corr]}
     assert_equal_data(result, expected)
@@ -47,7 +47,7 @@ def test_corr_expr(
     ],
 )
 def test_corr_expr_spearman(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
@@ -55,10 +55,12 @@ def test_corr_expr_spearman(
 ) -> None:
     context = (
         does_not_raise()
-        if any(x in str(constructor) for x in ("pandas", "polars", "modin", "cudf"))
+        if any(
+            x in str(nw_frame_constructor) for x in ("pandas", "polars", "modin", "cudf")
+        )
         else pytest.raises(NotImplementedError)
     )
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     with context:
         result = df.select(nw.corr(a, b, method="spearman").round(2))
         expected = {output_name: [expected_corr]}
@@ -70,18 +72,18 @@ def test_corr_expr_spearman(
     [("a", "a", "b", 0.87), ("a", "a", "c", None)],
 )
 def test_corr_series(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     request: pytest.FixtureRequest,
     output_name: str,
     a: str,
     b: str,
     expected_corr: float | None,
 ) -> None:
-    if "pyspark" in str(constructor_eager) and expected_corr is None:
+    if "pyspark" in str(nw_eager_constructor) and expected_corr is None:
         request.applymarker(
             pytest.skip(reason="Pyspark corr function does not allow None values")
         )
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.corr(df[a], df[b]).round(2))
     expected = {output_name: [expected_corr]}
     assert_equal_data(result, expected)
@@ -92,26 +94,26 @@ def test_corr_series(
     [("a", "a", "b", 0.87), ("a", "a", "c", None)],
 )
 def test_corr_series_spearman(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     request: pytest.FixtureRequest,
     output_name: str,
     a: str,
     b: str,
     expected_corr: float | None,
 ) -> None:
-    if "pyspark" in str(constructor_eager) and expected_corr is None:
+    if "pyspark" in str(nw_eager_constructor) and expected_corr is None:
         request.applymarker(
             pytest.skip(reason="Pyspark corr function does not allow None values")
         )
     context = (
         does_not_raise()
         if any(
-            x in str(constructor_eager)
+            x in str(nw_eager_constructor)
             for x in ("pandas", "polars", "modin", "cudf", "pyarrow")
         )
         else pytest.raises(NotImplementedError)
     )
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     with context:
         result = df.select(nw.corr(df[a], df[b]).round(2))
         expected = {output_name: [expected_corr]}

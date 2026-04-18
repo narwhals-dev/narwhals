@@ -15,9 +15,9 @@ data = {"a": ["fdas", "edfas"]}
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice(
-    constructor: Constructor, offset: int, length: int | None, expected: Any
+    nw_frame_constructor: Constructor, offset: int, length: int | None, expected: Any
 ) -> None:
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result_frame = df.select(nw.col("a").str.slice(offset, length))
     assert_equal_data(result_frame, expected)
 
@@ -27,9 +27,9 @@ def test_str_slice(
     [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
 )
 def test_str_slice_series(
-    constructor_eager: ConstructorEager, offset: int, length: int | None, expected: Any
+    nw_eager_constructor: ConstructorEager, offset: int, length: int | None, expected: Any
 ) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
 
     result_series = df["a"].str.slice(offset, length)
     assert_equal_data({"a": result_series}, expected)

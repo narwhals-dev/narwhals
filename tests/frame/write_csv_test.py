@@ -10,17 +10,19 @@ if TYPE_CHECKING:
 
 
 def test_write_csv(
-    constructor_eager: ConstructorEager, tmpdir: pytest.TempdirFactory
+    nw_eager_constructor: ConstructorEager, tmpdir: pytest.TempdirFactory
 ) -> None:
     data = {"a": [1, 2, 3]}
     path = tmpdir / "foo.csv"  # type: ignore[operator]
-    result = nw.from_native(constructor_eager(data), eager_only=True).write_csv(str(path))
+    result = nw.from_native(nw_eager_constructor(data), eager_only=True).write_csv(
+        str(path)
+    )
     assert path.exists()
     assert result is None
-    result = nw.from_native(constructor_eager(data), eager_only=True).write_csv()
+    result = nw.from_native(nw_eager_constructor(data), eager_only=True).write_csv()
     if is_windows():  # pragma: no cover
         result = result.replace("\r\n", "\n")
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         assert result == '"a"\n1\n2\n3\n'
     else:
         assert result == "a\n1\n2\n3\n"

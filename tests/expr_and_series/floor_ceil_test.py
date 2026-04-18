@@ -6,9 +6,9 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-def test_floor_expr(constructor: Constructor) -> None:
+def test_floor_expr(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234, -0.5]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw)
 
     expected_data = {"a": [1.0, 2.0, 3.0, -1.0]}
@@ -17,9 +17,9 @@ def test_floor_expr(constructor: Constructor) -> None:
     assert_equal_data(result_frame, expected_data)
 
 
-def test_ceil_expr(constructor: Constructor) -> None:
+def test_ceil_expr(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234, -0.5]}
-    df_raw = constructor(data)
+    df_raw = nw_frame_constructor(data)
     df = nw.from_native(df_raw)
 
     expected_data = {"a": [2.0, 3.0, 4.0, 0.0]}
@@ -27,9 +27,9 @@ def test_ceil_expr(constructor: Constructor) -> None:
     assert_equal_data(result_frame, expected_data)
 
 
-def test_floor_series(constructor_eager: ConstructorEager) -> None:
+def test_floor_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234, -0.5]}
-    df_raw = constructor_eager(data)
+    df_raw = nw_eager_constructor(data)
     df = nw.from_native(df_raw, eager_only=True)
 
     expected_data = {"a": [1.0, 2.0, 3.0, -1.0]}
@@ -38,9 +38,9 @@ def test_floor_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data({"a": result_series}, expected_data)
 
 
-def test_ceil_series(constructor_eager: ConstructorEager) -> None:
+def test_ceil_series(nw_eager_constructor: ConstructorEager) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234, -0.5]}
-    df_raw = constructor_eager(data)
+    df_raw = nw_eager_constructor(data)
     df = nw.from_native(df_raw, eager_only=True)
 
     expected_data = {"a": [2.0, 3.0, 4.0, 0.0]}

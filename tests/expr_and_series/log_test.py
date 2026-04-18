@@ -18,16 +18,16 @@ expected = {  # base: expected values
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("base", [2, 10, math.e])
-def test_log_expr(constructor: Constructor, base: float) -> None:
-    df = nw.from_native(constructor(data))
+def test_log_expr(nw_frame_constructor: Constructor, base: float) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(nw.col("a").log(base=base))
     assert_equal_data(result, {"a": expected[base]})
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("base", [2, 10, math.e])
-def test_log_series(constructor_eager: ConstructorEager, base: float) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+def test_log_series(nw_eager_constructor: ConstructorEager, base: float) -> None:
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     result = series.log(base=base)
     assert_equal_data({"a": result}, {"a": expected[base]})
 

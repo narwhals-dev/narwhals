@@ -6,9 +6,9 @@ import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
 
-def test_sort(constructor: Constructor) -> None:
+def test_sort(nw_frame_constructor: Constructor) -> None:
     data = {"an tan": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.sort("an tan", "b")
     expected = {"an tan": [1, 2, 3], "b": [4, 6, 4], "z": [7.0, 9.0, 8.0]}
     assert_equal_data(result, expected)
@@ -25,9 +25,9 @@ def test_sort(constructor: Constructor) -> None:
     ],
 )
 def test_sort_nulls(
-    constructor: Constructor, *, nulls_last: bool, expected: dict[str, float]
+    nw_frame_constructor: Constructor, *, nulls_last: bool, expected: dict[str, float]
 ) -> None:
     data = {"antan desc": [0, 0, 2, -1], "b": [1, 3, 2, None]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.sort("b", descending=True, nulls_last=nulls_last)
     assert_equal_data(result, expected)

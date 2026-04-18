@@ -9,12 +9,12 @@ data = {"a": [1, 1, 2], "b": [1, 2, 3]}
 
 
 def test_ewm_mean_expr(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a", "b").ewm_mean(com=1))
     expected = {
         "a": [1.0, 1.0, 1.5714285714285714],
@@ -24,12 +24,12 @@ def test_ewm_mean_expr(
 
 
 def test_ewm_mean_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
 
-    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     result = series.ewm_mean(com=1)
     expected = {"a": [1.0, 1.0, 1.5714285714285714]}
     assert_equal_data({"a": result}, expected)
@@ -50,14 +50,14 @@ def test_ewm_mean_series(
 )
 def test_ewm_mean_expr_adjust(
     request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     adjust: bool,  # noqa: FBT001
     expected: dict[str, list[float]],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(nw.col("a", "b").ewm_mean(com=1, adjust=adjust))
     assert_equal_data(result, expected)
 
@@ -73,23 +73,23 @@ def test_ewm_mean_nulls(
     request: pytest.FixtureRequest,
     ignore_nulls: bool,  # noqa: FBT001
     expected: dict[str, list[float]],
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin", "cudf")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table_", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager({"a": [2.0, 4.0, None, 3.0]}))
+    df = nw.from_native(nw_eager_constructor({"a": [2.0, 4.0, None, 3.0]}))
     result = df.select(nw.col("a").ewm_mean(com=1, ignore_nulls=ignore_nulls))
     assert_equal_data(result, expected)
 
 
 def test_ewm_mean_params(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin", "cudf")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table_", "modin", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager({"a": [2, 5, 3]}))
+    df = nw.from_native(nw_eager_constructor({"a": [2, 5, 3]}))
     expected: dict[str, list[float | None]] = {"a": [2.0, 4.0, 3.4285714285714284]}
     assert_equal_data(
         df.select(nw.col("a").ewm_mean(alpha=0.5, adjust=True, ignore_nulls=True)),

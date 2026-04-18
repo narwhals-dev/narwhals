@@ -16,28 +16,30 @@ expected = [2.5, -1, None, None, None, 3.5]
 expected_pyarrow = [2.5, -1, None, None, None, 3]
 
 
-def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "ibis")) or (
-        "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)
-    ):
+def test_median_expr(
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+) -> None:
+    if any(
+        backend in str(nw_frame_constructor) for backend in ("dask", "cudf", "ibis")
+    ) or ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (0, 20, 7)):
         # ibis issue: https://github.com/ibis-project/ibis/issues/11788
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
     if (
-        any(backend in str(constructor) for backend in ("pandas", "pyarrow"))
+        any(backend in str(nw_frame_constructor) for backend in ("pandas", "pyarrow"))
         and sys.version_info < (3, 10)
         and is_windows()
     ):  # pragma: no cover
         reason = "The issue only affects old Python versions on Windows."
         request.applymarker(pytest.mark.xfail(reason=reason))
-    result = nw.from_native(constructor(data)).select(
+    result = nw.from_native(nw_frame_constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.median()
     )
     if any(
-        backend in str(constructor)
+        backend in str(nw_frame_constructor)
         for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
     ):
         # there is a mismatch as pyarrow uses an approximate median
@@ -47,27 +49,27 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
 
 
 def test_median_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if any(backend in str(constructor_eager) for backend in ("cudf",)) or (
-        "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7)
+    if any(backend in str(nw_eager_constructor) for backend in ("cudf",)) or (
+        "polars" in str(nw_eager_constructor) and POLARS_VERSION < (0, 20, 7)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager):
+    if "pandas" in str(nw_eager_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
     if (
-        any(backend in str(constructor_eager) for backend in ("pandas", "pyarrow"))
+        any(backend in str(nw_eager_constructor) for backend in ("pandas", "pyarrow"))
         and sys.version_info < (3, 10)
         and is_windows()
     ):  # pragma: no cover
         reason = "The issue only affects old Python versions on Windows."
         request.applymarker(pytest.mark.xfail(reason=reason))
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.median()
     if any(
-        backend in str(constructor_eager)
+        backend in str(nw_eager_constructor)
         for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
     ):
         # there is a mismatch as pyarrow uses an approximate median

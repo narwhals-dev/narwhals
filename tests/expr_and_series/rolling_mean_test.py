@@ -39,8 +39,8 @@ kwargs_and_expected: dict[str, dict[str, Any]] = {
 }
 
 
-def test_rolling_mean_expr(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_rolling_mean_expr(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data))
     result = df.select(
         **{
             name: nw.col("a").rolling_mean(**values["kwargs"])
@@ -55,8 +55,8 @@ def test_rolling_mean_expr(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings(
     "ignore:`Series.rolling_mean` is being called from the stable API although considered an unstable feature."
 )
-def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+def test_rolling_mean_series(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
 
     result = df.select(
         **{
@@ -110,7 +110,7 @@ def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # 
     ],
 )
 def test_rolling_mean_expr_lazy_grouped(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     expected_a: list[float],
     window_size: int,
     min_samples: int,
@@ -118,15 +118,15 @@ def test_rolling_mean_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         pytest.skip()
-    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+    if any(x in str(nw_frame_constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         # unreliable
         pytest.skip()
     data = {
@@ -135,7 +135,7 @@ def test_rolling_mean_expr_lazy_grouped(
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = (
         df.with_columns(
             nw.col("a")
@@ -162,18 +162,18 @@ def test_rolling_mean_expr_lazy_grouped(
     ],
 )
 def test_rolling_mean_expr_lazy_ungrouped(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     expected_a: list[float],
     window_size: int,
     min_samples: int,
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         # unreliable
         pytest.skip()
     data = {
@@ -181,7 +181,7 @@ def test_rolling_mean_expr_lazy_ungrouped(
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = (
         df.with_columns(
             nw.col("a")

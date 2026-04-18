@@ -8,9 +8,10 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
-def test_sample_n(constructor_eager: ConstructorEager) -> None:
+def test_sample_n(nw_eager_constructor: ConstructorEager) -> None:
     df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}), eager_only=True
+        nw_eager_constructor({"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}),
+        eager_only=True,
     )
 
     result_expr = df.sample(n=2).shape
@@ -18,9 +19,10 @@ def test_sample_n(constructor_eager: ConstructorEager) -> None:
     assert result_expr == expected_expr
 
 
-def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
+def test_sample_fraction(nw_eager_constructor: ConstructorEager) -> None:
     df = nw.from_native(
-        constructor_eager({"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}), eager_only=True
+        nw_eager_constructor({"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}),
+        eager_only=True,
     )
 
     result_expr = df.sample(fraction=0.5).shape
@@ -28,9 +30,9 @@ def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
     assert result_expr == expected_expr
 
 
-def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
+def test_sample_with_seed(nw_eager_constructor: ConstructorEager) -> None:
     size, n = 100, 10
-    df = nw.from_native(constructor_eager({"a": range(size)}), eager_only=True)
+    df = nw.from_native(nw_eager_constructor({"a": range(size)}), eager_only=True)
 
     r1 = nw.to_native(df.sample(n=n, seed=123))
     r2 = nw.to_native(df.sample(n=n, seed=123))

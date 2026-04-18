@@ -4,10 +4,10 @@ import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 
-def test_clone(constructor_eager: ConstructorEager) -> None:
+def test_clone(nw_eager_constructor: ConstructorEager) -> None:
     expected = {"a": [1, 2], "b": [3, 4]}
     expected_mod = {"a": [1, 2], "b": [3, 4], "c": [4, 6]}
-    df = nw.from_native(constructor_eager(expected), eager_only=True)
+    df = nw.from_native(nw_eager_constructor(expected), eager_only=True)
     df_clone = df.clone()
     assert df is not df_clone
     assert df._compliant_frame is not df_clone._compliant_frame

@@ -14,9 +14,9 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
-def test_to_arrow(constructor_eager: ConstructorEager) -> None:
+def test_to_arrow(nw_eager_constructor: ConstructorEager) -> None:
     data: dict[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
-    df_raw = constructor_eager(data)
+    df_raw = nw_eager_constructor(data)
     result = nw.from_native(df_raw, eager_only=True).to_arrow()
 
     expected = pa.table(data)

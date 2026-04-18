@@ -11,9 +11,9 @@ from tests.utils import ConstructorEager, assert_equal_data
 data = {"a": ["foo", "bars"], "ab": ["foo", "bars"]}
 
 
-def test_with_columns(constructor_eager: ConstructorEager) -> None:
+def test_with_columns(nw_eager_constructor: ConstructorEager) -> None:
     result = (
-        nw.from_native(constructor_eager(data))
+        nw.from_native(nw_eager_constructor(data))
         .with_columns(d=np.array([4, 5]))  # pyright: ignore[reportArgumentType]
         .with_columns(e=nw.col("d") + 1)
         .select("d", "e")

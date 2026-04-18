@@ -14,16 +14,16 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
 
 
 @pytest.mark.filterwarnings("ignore:Determining|Resolving.*")
-def test_columns(constructor: Constructor) -> None:
+def test_columns(nw_frame_constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.columns
     expected = ["a", "b", "z"]
     assert result == expected
 
 
-def test_iter_columns(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+def test_iter_columns(nw_eager_constructor: ConstructorEager) -> None:
+    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
     expected = df.to_dict(as_series=True)
     result = {series.name: series for series in df.iter_columns()}
 

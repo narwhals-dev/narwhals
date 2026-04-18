@@ -12,12 +12,12 @@ pytest.importorskip("joblib")
 from joblib import Parallel, delayed
 
 
-def test_parallelisability(constructor_eager: ConstructorEager) -> None:
+def test_parallelisability(nw_eager_constructor: ConstructorEager) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/2450
     def do_something(df: nw.DataFrame[Any]) -> nw.DataFrame[Any]:  # pragma: no cover
         return df.with_columns(nw.col("col1") * 2)
 
-    dfs = [nw.from_native(constructor_eager({"col1": [0, 2], "col2": [3, 7]}))]
+    dfs = [nw.from_native(nw_eager_constructor({"col1": [0, 2], "col2": [3, 7]}))]
     result = list(Parallel(n_jobs=-1)(delayed(do_something)(df_) for df_ in dfs))
     assert len(result) == 1
     expected = {"col1": [0, 4], "col2": [3, 7]}
@@ -25,10 +25,10 @@ def test_parallelisability(constructor_eager: ConstructorEager) -> None:
 
 
 def test_parallelisability_series(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/2450
-    if "modin" in str(constructor_eager):
+    if "modin" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
 
     def do_something(s: nw.Series[Any]) -> nw.Series[Any]:  # pragma: no cover
@@ -36,7 +36,7 @@ def test_parallelisability_series(
 
     columns = [
         nw.from_native(
-            constructor_eager({"col1": [0, 2], "col2": [3, 7]}), eager_only=True
+            nw_eager_constructor({"col1": [0, 2], "col2": [3, 7]}), eager_only=True
         )["col1"]
     ]
     result = list(

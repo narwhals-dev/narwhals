@@ -31,20 +31,23 @@ data = {
 )
 def test_explode_single_col(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     column: str,
     expected_values: list[int | None],
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "pyarrow_table")):
+    if any(
+        backend in str(nw_frame_constructor)
+        for backend in ("dask", "cudf", "pyarrow_table")
+    ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
     result = (
-        nw.from_native(constructor(data))
+        nw.from_native(nw_frame_constructor(data))
         .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
         .explode(column)
         .select("a", column)
@@ -79,24 +82,24 @@ def test_explode_single_col(
 )
 def test_explode_multiple_cols(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     column: str,
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
 ) -> None:
     if any(
-        backend in str(constructor)
+        backend in str(nw_frame_constructor)
         for backend in ("dask", "cudf", "pyarrow_table", "duckdb", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
     result = (
-        nw.from_native(constructor(data))
+        nw.from_native(nw_frame_constructor(data))
         .with_columns(nw.col(column, *more_columns).cast(nw.List(nw.Int32())))
         .explode(column, *more_columns)
         .select("a", column, *more_columns)
@@ -106,12 +109,15 @@ def test_explode_multiple_cols(
 
 
 def test_explode_shape_error(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "pyarrow_table")):
+    if any(
+        backend in str(nw_frame_constructor)
+        for backend in ("dask", "cudf", "pyarrow_table")
+    ):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor):
+    if "pandas" in str(nw_frame_constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
@@ -121,7 +127,7 @@ def test_explode_shape_error(
         match=r".*exploded columns (must )?have matching element counts",
     ):
         _ = (
-            nw.from_native(constructor(data))
+            nw.from_native(nw_frame_constructor(data))
             .lazy()
             .with_columns(nw.col("l1", "l2", "l3").cast(nw.List(nw.Int32())))
             .explode("l1", "l3")
@@ -130,15 +136,15 @@ def test_explode_shape_error(
 
 
 def test_explode_invalid_operation_error(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
 ) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
+    if any(x in str(nw_frame_constructor) for x in ("pyarrow_table", "dask")):
         request.applymarker(pytest.mark.xfail)
 
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (0, 20, 6):
         pytest.skip()
 
     with pytest.raises(
         InvalidOperationError, match="`explode` operation not supported for dtype"
     ):
-        _ = nw.from_native(constructor(data)).lazy().explode("a").collect()
+        _ = nw.from_native(nw_frame_constructor(data)).lazy().explode("a").collect()

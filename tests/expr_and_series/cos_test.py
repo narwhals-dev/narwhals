@@ -23,15 +23,15 @@ expected = [-1, 0, 1, 0, -1]
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_cos_expr(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_cos_expr(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select(nw.col("a").cos())
     assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_cos_series(constructor_eager: ConstructorEager) -> None:
-    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+def test_cos_series(nw_eager_constructor: ConstructorEager) -> None:
+    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
     result = series.cos()
     assert_equal_data({"a": result}, {"a": expected})
 

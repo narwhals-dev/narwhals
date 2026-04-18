@@ -7,11 +7,11 @@ from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 
 def test_ew_mean(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
 
     data = {
@@ -41,7 +41,7 @@ def test_ew_mean(
         ],
     }
 
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
 
     expr = (
         nw.col("close")

@@ -30,11 +30,11 @@ data_cum = {
 }
 
 
-def test_over_single(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_over_single(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
@@ -49,14 +49,16 @@ def test_over_single(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if "cudf" in str(constructor):
+def test_over_std_var(
+    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+) -> None:
+    if "cudf" in str(nw_frame_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
@@ -83,10 +85,10 @@ def test_over_std_var(request: pytest.FixtureRequest, constructor: Constructor) 
     assert_equal_data(result, expected)
 
 
-def test_over_multiple(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_over_multiple(nw_frame_constructor: Constructor) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
@@ -100,17 +102,17 @@ def test_over_multiple(constructor: Constructor) -> None:
 
 
 def test_over_cumsum(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data_cum))
+    df = nw.from_native(nw_eager_constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -128,15 +130,15 @@ def test_over_cumsum(
 
 
 def test_over_cumcount(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data_cum))
+    df = nw.from_native(nw_eager_constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -154,16 +156,16 @@ def test_over_cumcount(
 
 
 def test_over_cummax(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager(data_cum))
+    df = nw.from_native(nw_eager_constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -180,17 +182,17 @@ def test_over_cummax(
 
 
 def test_over_cummin(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data_cum))
+    df = nw.from_native(nw_eager_constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -208,17 +210,17 @@ def test_over_cummin(
 
 
 def test_over_cumprod(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2, 1):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data_cum))
+    df = nw.from_native(nw_eager_constructor(data_cum))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, None, 5, 3],
@@ -236,12 +238,12 @@ def test_over_cumprod(
 
 
 def test_over_anonymous_cumulative(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor_eager({"": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(nw_eager_constructor({"": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
@@ -266,15 +268,15 @@ def test_over_anonymous_cumulative(
 
 
 def test_over_anonymous_reduction(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "modin" in str(constructor):
+    if "modin" in str(nw_frame_constructor):
         # probably bugged
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(nw_frame_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
@@ -315,15 +317,15 @@ def test_over_unsupported_dask() -> None:
 
 
 def test_over_shift(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
@@ -335,15 +337,15 @@ def test_over_shift(
 
 
 def test_over_diff(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor_eager(data))
+    df = nw.from_native(nw_eager_constructor(data))
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
@@ -365,33 +367,33 @@ def test_over_diff(
     ],
 )
 def test_over_cum_reverse(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
     request: pytest.FixtureRequest,
     attr: str,
     expected_b: list[object],
 ) -> None:
-    if "pyarrow_table" in str(constructor_eager):
+    if "pyarrow_table" in str(nw_eager_constructor):
         request.applymarker(pytest.mark.xfail)
     if (
-        "pandas_nullable" in str(constructor_eager)
+        "pandas_nullable" in str(nw_eager_constructor)
         and attr in {"cum_max", "cum_min"}
         and PANDAS_VERSION < (3, 0)
     ):
         # TODO(FBruzzesi): convert to pytest.skip() if the fix does not make it into
         # `pandas=2.3.4`. Otherwise update version boundary
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(constructor_eager):
+    if "cudf" in str(nw_eager_constructor):
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    df = constructor_eager({"a": [1, 1, 2, 2, 2], "b": [4, 5, 7, None, 9]})
+    df = nw_eager_constructor({"a": [1, 1, 2, 2, 2], "b": [4, 5, 7, None, 9]})
     expr = getattr(nw.col("b"), attr)(reverse=True)
     result = nw.from_native(df).with_columns(expr.over("a"))
     expected = {"a": [1, 1, 2, 2, 2], "b": expected_b}
     assert_equal_data(result, expected)
 
 
-def test_over_raise_len_change(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
+def test_over_raise_len_change(nw_frame_constructor: Constructor) -> None:
+    df = nw.from_native(nw_frame_constructor(data))
 
     with pytest.raises((InvalidOperationError, NotImplementedError)):
         nw.from_native(df).select(nw.col("b").drop_nulls().over("a"))
@@ -413,15 +415,15 @@ def test_unsupported_over() -> None:
 
 
 def test_over_without_partition_by(
-    constructor: Constructor, request: pytest.FixtureRequest
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
+    df = nw.from_native(nw_frame_constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
         df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))
         .sort("i")
@@ -432,12 +434,12 @@ def test_over_without_partition_by(
 
 
 def test_aggregation_over_without_partition_by(
-    constructor_eager: ConstructorEager,
+    nw_eager_constructor: ConstructorEager,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
 
-    df = nw.from_native(constructor_eager({"a": [1, -1, 2], "i": [0, 2, 1]}))
+    df = nw.from_native(nw_eager_constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
         df.with_columns(b=nw.col("a").diff().sum().over(order_by="i"))
         .sort("i")
@@ -447,34 +449,38 @@ def test_aggregation_over_without_partition_by(
     assert_equal_data(result, expected)
 
 
-def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+def test_len_over_2369(
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+    if "pandas" in str(nw_frame_constructor) and PANDAS_VERSION < (1, 5):
         pytest.skip()
-    if any(x in str(constructor) for x in ("modin", "cudf")):
+    if any(x in str(nw_frame_constructor) for x in ("modin", "cudf")):
         # https://github.com/modin-project/modin/issues/7508
         # https://github.com/rapidsai/cudf/issues/18491
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
+    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 4], "b": ["x", "x", "y"]}))
     result = df.with_columns(a_len_per_group=nw.len().over("b")).sort("a")
     expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
     assert_equal_data(result, expected)
 
 
-def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
+def test_over_quantile(
+    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(nw_frame_constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
     data = {"a": [1, 2, 3, 4, 5, 6], "b": ["x", "x", "x", "y", "y", "y"]}
 
     quantile_expr = nw.col("a").quantile(quantile=0.5, interpolation="linear")
-    native_frame = constructor(data)
+    native_frame = nw_frame_constructor(data)
 
-    if "dask" in str(constructor):
+    if "dask" in str(nw_frame_constructor):
         native_frame = native_frame.repartition(npartitions=1)  # type: ignore[union-attr]
 
     result = (
@@ -494,19 +500,19 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_over_ewm_mean(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
+    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin", "cudf")):
         # not implemented
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 2):
+    if "pandas" in str(nw_eager_constructor) and PANDAS_VERSION < (1, 2):
         request.applymarker(pytest.mark.xfail(reason="too old, not implemented"))
 
     data = {"a": [0.0, 1.0, 3.0, 5.0, 7.0, 7.5], "b": [1, 1, 1, 2, 2, 2]}
 
     ewm_expr = nw.col("a").ewm_mean(com=1)
     result = (
-        nw.from_native(constructor_eager(data))
+        nw.from_native(nw_eager_constructor(data))
         .with_columns(ewm_over_b=ewm_expr.over("b"), ewm_global=ewm_expr)
         .sort("a")
     )
@@ -527,13 +533,13 @@ def test_over_ewm_mean(
     ],
 )
 def test_over_with_nulls_in_partition(
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     partition: list[str],
     expected_min: list[int],
     expected_max: list[int],
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3300
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {
         "a": [1, 1, None, 3, 3],
@@ -541,7 +547,7 @@ def test_over_with_nulls_in_partition(
         "c": [1, 1, None, 3, 4],  # second group with nulls
         "d": [1, 1, 2, 2, 3],  # second group without nulls
     }
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     expected = {"b": [1, 3, 4, 5, 6], "bmin": expected_min, "bmax": expected_max}
     result = df.select(
         "b",
@@ -570,7 +576,7 @@ def test_over_with_nulls_in_partition(
 )
 def test_over_when_then_aggregation_partition_by(
     request: pytest.FixtureRequest,
-    constructor: Constructor,
+    nw_frame_constructor: Constructor,
     expr: nw.Expr,
     expected_c: list[float],
 ) -> None:
@@ -578,13 +584,13 @@ def test_over_when_then_aggregation_partition_by(
     # tests/imputers/test_ModeImputer.py::TestFit::test_learnt_values_tied_weighted[input_col1-weight_col1-b-False-pandas]
     # tubular commit: b2ca639aa26e620271b87d43de826006765b1f48
     # https://github.com/narwhals-dev/narwhals/issues/3300
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "cudf" in str(constructor):
+    if "cudf" in str(nw_frame_constructor):
         request.applymarker(pytest.mark.xfail(reason="Value mismatch"))
 
     data = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "g": [1, 1, 2, 3, 3]}
-    df = nw.from_native(constructor(data))
+    df = nw.from_native(nw_frame_constructor(data))
     result = df.select("a", "b", c=expr).sort("b")
     expected = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "c": expected_c}
     assert_equal_data(result, expected)
