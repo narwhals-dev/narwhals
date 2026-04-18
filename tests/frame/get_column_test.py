@@ -13,7 +13,10 @@ def test_get_column(constructor_eager: ConstructorEager) -> None:
     assert result.name == "a"
     with pytest.raises(
         (KeyError, TypeError),
-        match=r"Expected str|'int' object cannot be (converted|cast)|0",
+        match=(
+            r"Expected str|'int' object cannot be (converted|cast)|0"
+            r"|argument 'name': 'int' object is not an instance of 'str'"
+        ),
     ):
         # Check that trying to get a column by position is disallowed here.
         nw.from_native(df, eager_only=True).get_column(0)  # type: ignore[arg-type]
