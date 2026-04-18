@@ -36,7 +36,7 @@ Interestingly, that meant:
 from __future__ import annotations
 
 from functools import cache
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
@@ -58,8 +58,6 @@ __all__ = ["Function", "HorizontalFunction"]
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 namespaced = DispatcherOptions.namespaced
 ELEMENTWISE = FunctionFlags.ELEMENTWISE
-
-MYPY: Final[Literal[False]] = False  # noqa: PYI064
 
 
 class Function(Immutable):
@@ -106,15 +104,8 @@ class Function(Immutable):
         `narwhals._plan._function.py` doc for implementation notes
     """
 
-    if MYPY:
-        # NOTE: `mypy` does not (yet) understand anything that depends on this,
-        # regardless of it being narrower/wider
-        __function_parameters__: ClassVar[Any] = params.Unary()
-    else:
-        # NOTE: Needs to use a bare `ClassVar` so the default can be `Unary`
-        # The correct annotation is `Parameters`, but that's lossy for what is the most common option
-        __function_parameters__: ClassVar = params.Unary()
-        """Defines the number of expression arguments accepted and any constraints each has."""
+    __function_parameters__: ClassVar[params.Parameters]
+    """Defines the number of expression arguments accepted and any constraints each has."""
 
     __function_flags__: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT
     """Defines properties of the function.
@@ -245,7 +236,8 @@ class Function(Immutable):
                 dtype = ResolveDType.just_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
                 dtype = ResolveDType.function.visitor(dtype)
-            cls.__expr_ir_dtype__ = dtype
+            # NOTE: See `FunctionVisitor` for invariance issue
+            cls.__expr_ir_dtype__ = dtype  # type: ignore [assignment]
 
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name

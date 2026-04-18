@@ -10,6 +10,7 @@ from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
 from narwhals._plan._flags import FunctionFlags
+from narwhals._plan._function import UnaryFunction
 from narwhals._plan._nodes import node
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
@@ -63,7 +64,9 @@ def test_missing_compliant(
     # If you add a new expression, but don't update the compliant-level this should 🙏
     # nudge you in the right direction
 
-    class MissingMethod(ir.Function, dispatch=DispatcherOptions(accessor_name="str")): ...
+    class MissingMethod(
+        UnaryFunction, dispatch=DispatcherOptions(accessor_name="str")
+    ): ...
 
     class MissingNamespaced(ir.ExprIR, dispatch=DispatcherOptions.namespaced()):
         __slots__ = ("expr",)

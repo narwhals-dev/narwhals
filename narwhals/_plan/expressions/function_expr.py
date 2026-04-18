@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import _parameters as params
     from narwhals._plan._expansion import Expander
+    from narwhals._plan._function import UnaryFunction
     from narwhals._plan.compliant.typing import Ctx, FrameT_contra as FrameT, R_co
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
@@ -124,6 +125,19 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         for root in input_root.iter_expand(ctx):
             yield self.__replace__(input=(root, *children))
 
+    def dispatch_arg(
+        self: FunctionExpr[UnaryFunction],
+        ctx: Ctx[FrameT, R_co],
+        frame: FrameT,
+        name: str,
+    ) -> R_co:
+        """Call `ExprIR.dispatch` on the **only** expression argument to this function.
+
+        Important:
+            Exclusive to `Unary`
+        """
+        return self.input[0].dispatch(ctx, frame, name)
+
     if TYPE_CHECKING:
         # NOTE: This is a bit of a trainwreck now that `mypy` has joined the party
 
@@ -134,16 +148,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return self.function.__class__
 
         if not MYPY:
-
-            def dispatch_arg(
-                self: _AssociateUnary, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-            ) -> R_co:
-                """Call `ExprIR.dispatch` on the **only** expression argument to this function.
-
-                Important:
-                    Exclusive to `Unary`
-                """
-                return self.input[0].dispatch(ctx, frame, name)
 
             def dispatch_args(
                 self: _AssociateParams[_DispatchArgs[R_co, ArgsR_co]],
@@ -159,11 +163,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
                 return self.__associated_function__.__function_parameters__
         else:
 
-            def dispatch_arg(
-                self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-            ) -> R_co:
-                return self.input[0].dispatch(ctx, frame, name)
-
             def dispatch_args(
                 self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
             ) -> Seq[R_co]:
@@ -175,9 +174,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
                 return p
 
     else:
-
-        def dispatch_arg(self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
-            return self.input[0].dispatch(ctx, frame, name)
 
         def dispatch_args(
             self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
@@ -322,7 +318,3 @@ if TYPE_CHECKING:
             frame: FrameT,
             name: str,
         ) -> ArgsR_co: ...
-
-    class _AssociateUnary(_AssociateParams[params.Unary], Protocol):
-        @property
-        def input(self) -> Seq[ExprIR]: ...

@@ -286,6 +286,8 @@ class ExprIRVisitor(ResolveDType[_ExprIRT], Generic[_ExprIRT]):
         return f"{accessor.__name__}.{accessor.visitor.__name__}({self._visitor!r})"
 
 
+# TODO @dangotbanned: (low-priority) Invariance of `ResolveDType[_ExprIRT]` & `_FunctionExpr` are at odds,
+# causing `[assignment]` issues in `Function.__init_subclass__`
 class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_FunctionT]):
     __slots__ = ("_visitor",)
 
