@@ -526,15 +526,12 @@ def test_joinasof_numeric(
         )
         result_on = left_lf.join_asof(right_lf, on="antananarivo", strategy=strategy)
 
-    elif constructor.is_eager:
+    else:
         left_df, right_df = left_lf.collect(), right_lf.collect()
         result = left_df.join_asof(
             right_df, left_on="antananarivo", right_on="antananarivo", strategy=strategy
         )
         result_on = left_df.join_asof(right_df, on="antananarivo", strategy=strategy)
-    else:  # pragma: no cover
-        msg = "Unreachable"
-        raise AssertionError(msg)
 
     assert_equal_data(result.sort(by="antananarivo"), expected)
     assert_equal_data(result_on.sort(by="antananarivo"), expected)
@@ -773,13 +770,11 @@ def test_joinasof_by_exceptions(
     if constructor.is_lazy:
         with pytest.raises(ValueError, match=message):
             frame.join_asof(frame, on=on, by_left=by_left, by_right=by_right, by=by)
-    elif constructor.is_eager:
+    else:
         with pytest.raises(ValueError, match=message):
             frame.collect().join_asof(
                 frame.collect(), on=on, by_left=by_left, by_right=by_right, by=by
             )
-    else:  # pragma: no cover
-        ...
 
 
 def test_join_duplicate_column_names(
@@ -815,12 +810,13 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
-    with pytest.raises(exception):
-        df.join(df, on=["a"]).join(df, on=["a"]).collect()
 
-    df_eager = df.collect()
-    with pytest.raises(exception):
-        df_eager.join(df_eager, on=["a"]).join(df_eager, on=["a"])
+    if constructor.is_lazy:
+        with pytest.raises(exception):
+            df.join(df, on=["a"]).join(df, on=["a"]).collect()
+    else:
+        with pytest.raises(exception):
+            df.join(df, on=["a"]).join(df, on=["a"])
 
 
 def test_join_same_laziness(constructor: Constructor) -> None:
