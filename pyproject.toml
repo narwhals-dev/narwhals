@@ -305,7 +305,9 @@ env = [
 ]
 
 [tool.coverage.run]
-patch = ["fork", "subprocess"]
+# execv and fork patches are unsupported on Windows (coverage raises), so Windows
+# CI jobs set these env vars to "subprocess" — coverage dedupes the final list.
+patch = ["${COVERAGE_PATCH_EXECV-execv}", "${COVERAGE_PATCH_FORK-fork}", "subprocess"]
 plugins = ["covdefaults"]
 source = ["narwhals", "tests"]
 parallel = true

@@ -31,6 +31,11 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
+        env:
+          # coverage's execv/fork patches raise on Windows; collapse to `subprocess`
+          # there (coverage dedupes) and keep the default values on Linux.
+          COVERAGE_PATCH_EXECV: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'execv' }}
+          COVERAGE_PATCH_FORK: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'fork' }}
         run: |
           coverage run -m pytest tests --constructors=pandas,pyarrow,polars[eager],polars[lazy]
           coverage combine
@@ -44,6 +49,11 @@ jobs:
         python-version: ["3.10", "3.12"]
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      # coverage's execv/fork patches raise on Windows; collapse them to `subprocess`
+      # in the pyproject `patch` list (coverage dedupes).
+      COVERAGE_PATCH_EXECV: subprocess
+      COVERAGE_PATCH_FORK: subprocess
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
