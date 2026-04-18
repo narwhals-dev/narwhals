@@ -37,4 +37,4 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors ibis
+        run: pytest tests --nw-backends ibis

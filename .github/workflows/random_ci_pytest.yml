@@ -37,6 +37,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-            coverage run -m pytest tests --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+            coverage run -m pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]
             coverage combine
             coverage report --fail-under=75

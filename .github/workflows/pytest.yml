@@ -37,7 +37,7 @@ jobs:
           COVERAGE_PATCH_EXECV: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'execv' }}
           COVERAGE_PATCH_FORK: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'fork' }}
         run: |
-          coverage run -m pytest tests --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+          coverage run -m pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]
           coverage combine
           coverage report --fail-under=75
       - name: install-test-plugin
@@ -74,7 +74,7 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
           coverage combine
           coverage report --fail-under=95
 
@@ -108,7 +108,7 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
           coverage combine
           coverage report --fail-under=100
       - name: Run doctests
@@ -139,20 +139,20 @@ jobs:
           uv pip install -e ".[pandas]" --group tests
           uv pip freeze
       - name: Run pytest (pandas and pandas[nullable])
-        run: pytest tests --runslow --constructors=pandas,pandas[nullable]
+        run: pytest tests --runslow --nw-backends=pandas,pandas[nullable]
       - name: install-more-reqs
         run: |
           uv pip install -U pyarrow
           uv pip freeze
       - name: Run pytest (pandas[pyarrow] and pyarrow)
-        run: pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
+        run: pytest tests --runslow --nw-backends=pandas[pyarrow],pyarrow
       - name: install-polars
         run: |
           uv pip uninstall pandas pyarrow
           uv pip install polars
           uv pip freeze
       - name: Run pytest (polars)
-        run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
+        run: pytest tests --runslow --nw-backends=polars[eager],polars[lazy]
 
   python-314:
     strategy:
@@ -177,7 +177,7 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
           coverage combine
           coverage report --fail-under=50
 
@@ -206,6 +206,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow
+          coverage run -m pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow
           coverage combine
           coverage report --fail-under=50

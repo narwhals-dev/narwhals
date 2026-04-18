@@ -46,7 +46,7 @@ jobs:
           echo "$DEPS" | grep 'duckdb==1.1'
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pyarrow,polars[eager],polars[lazy],duckdb
           coverage combine
           coverage report --fail-under=50
 
@@ -87,7 +87,7 @@ jobs:
           echo "$DEPS" | grep 'duckdb==1.2'
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pyarrow,polars[eager],polars[lazy],duckdb
           coverage combine
           coverage report --fail-under=50
 
@@ -127,7 +127,7 @@ jobs:
           echo "$DEPS" | grep 'duckdb==1.3'
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
           coverage combine
           coverage report --fail-under=50 
 
@@ -185,6 +185,6 @@ jobs:
           echo "$DEPS" | grep 'dask.*@'
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb
           coverage combine
           coverage report --fail-under=50
