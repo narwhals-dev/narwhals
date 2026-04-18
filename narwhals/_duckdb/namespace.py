@@ -28,7 +28,7 @@ from narwhals._expression_parsing import (
     evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -187,6 +187,7 @@ class DuckDBNamespace(
             version=self._version,
         )
 
+    @requires.backend_version((1, 3))
     def struct(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         version = self._version
 
