@@ -239,6 +239,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             dispatch: Defines how to build a `Dispatcher`.
                 Stored in `__expr_ir_dispatch__.options`.
 
+                *"no_dispatch"* is syntax sugar for `DispatcherOptions(allow_dispatch=False)`.
+
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 

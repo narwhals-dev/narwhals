@@ -206,7 +206,7 @@ class Function(Immutable):
     def __init_subclass__(
         cls: type[Self],
         *,
-        dispatch: DispatcherOptions | None = None,
+        dispatch: DispatcherOptions | Literal["skip"] | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         flags: FunctionFlags | None = None,
         **_: Any,
@@ -218,6 +218,8 @@ class Function(Immutable):
         Arguments:
             dispatch: Defines how to build a `Dispatcher`.
                 Stored in `__expr_ir_dispatch__.options`.
+
+                *"skip"* can be used for mixins that add anything unrelated to `dispatch`.
 
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
@@ -236,7 +238,8 @@ class Function(Immutable):
         super().__init_subclass__(**_)
         if flags is not None:
             cls.__function_flags__ = flags
-        cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch)
+        if dispatch != "skip":
+            cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)

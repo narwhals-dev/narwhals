@@ -9,6 +9,7 @@ import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
+from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import node
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
@@ -169,3 +170,39 @@ def test_options_sharing() -> None:
     assert selector_ir.options.allow_dispatch is False
     assert agg_expr.options.allow_dispatch is True
     assert first.options is not root_selector.options
+
+
+def test_multiple_inheritance() -> None:
+    ELEMENTWISE = FunctionFlags.ELEMENTWISE  # noqa: N806
+    ACCESSOR_BIN = DispatcherOptions(accessor_name="bin")  # noqa: N806
+
+    class ConfiguredFlagsSkip(ir.Function, dispatch="skip", flags=ELEMENTWISE): ...
+
+    class ConfiguredDispatch(ir.Function, dispatch=ACCESSOR_BIN): ...
+
+    class DirectFlagsSkip(ConfiguredFlagsSkip): ...
+
+    class DirectDispatch(ConfiguredDispatch): ...
+
+    class MixDispatchFlagsSkip(ConfiguredDispatch, ConfiguredFlagsSkip): ...
+
+    class MixFlagsSkipDispatch(ConfiguredFlagsSkip, ConfiguredDispatch): ...
+
+    # Baseline for standard mro behavior
+    for tp in ConfiguredFlagsSkip.__subclasses__():
+        assert tp.__function_flags__ is FunctionFlags.ELEMENTWISE
+
+    assert get_dispatch_name(ConfiguredFlagsSkip) != "configured_flags_skip"
+    assert get_dispatch_name(DirectFlagsSkip) == "direct_flags_skip"
+
+    # Most derived wins
+    assert get_dispatch_name(ConfiguredDispatch) == "bin.configured_dispatch"
+    assert get_dispatch_name(DirectDispatch) == "bin.direct_dispatch"
+    assert get_dispatch_name(MixDispatchFlagsSkip) == "bin.mix_dispatch_flags_skip"
+
+    # `"skip"` reflects that the definition of `ConfiguredFlagsSkip` did not specify `dispatch`
+    assert get_dispatch_name(MixFlagsSkipDispatch) == "bin.mix_flags_skip_dispatch"
+
+    # And just to be sure
+    for tp in ConfiguredDispatch.__subclasses__():
+        assert tp.__expr_ir_dispatch__.options.accessor_name == "bin"
