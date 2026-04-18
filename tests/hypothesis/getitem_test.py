@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import hypothesis.strategies as st
 import pytest
@@ -13,8 +13,7 @@ from tests.utils import assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.testing.typing import ConstructorBase
-    from narwhals.typing import IntoDataFrame
+    from narwhals.testing.typing import ConstructorEager
 
 pytest.importorskip("pandas")
 pytest.importorskip("polars")
@@ -22,9 +21,7 @@ import polars as pl
 
 
 @pytest.fixture(params=[PandasConstructor(), PyArrowConstructor()], scope="module")
-def pandas_or_pyarrow_constructor(
-    request: pytest.FixtureRequest,
-) -> Callable[[Any], IntoDataFrame]:
+def pandas_or_pyarrow_constructor(request: pytest.FixtureRequest) -> ConstructorEager:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -118,7 +115,7 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
 
 @given(selector=st.one_of(single_selector, tuple_selector()))
 @pytest.mark.slow
-def test_getitem(pandas_or_pyarrow_constructor: ConstructorBase, selector: Any) -> None:
+def test_getitem(pandas_or_pyarrow_constructor: ConstructorEager, selector: Any) -> None:
     """Compare __getitem__ against polars."""
     # TODO(PR - clean up): documenting current differences
     # These assume(...) lines each filter out a known difference.

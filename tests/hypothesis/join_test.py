@@ -44,7 +44,7 @@ def test_join(  # pragma: no cover
     floats: st.SearchStrategy[list[float]],
     cols: st.SearchStrategy[list[str]],
 ) -> None:
-    data: Mapping[str, Any] = {"a": integers, "b": other_integers, "c": floats}
+    data: dict[str, Any] = {"a": integers, "b": other_integers, "c": floats}
     join_cols = cast("list[str]", cols)
 
     df_polars = pl.DataFrame(data)

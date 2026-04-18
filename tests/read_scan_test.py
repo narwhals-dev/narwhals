@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
 
-data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+data: dict[str, list[Any]] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 skipif_pandas_lt_1_5 = pytest.mark.skipif(
     PANDAS_VERSION < (1, 5), reason="too old for pyarrow"
 )

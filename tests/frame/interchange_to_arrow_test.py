@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
 import narwhals.stable.v1 as nw_v1
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
+data: dict[str, list[Any]] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
