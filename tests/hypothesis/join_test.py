@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -44,6 +45,9 @@ def test_join(  # pragma: no cover
     floats: st.SearchStrategy[list[float]],
     cols: st.SearchStrategy[list[str]],
 ) -> None:
+    # See https://github.com/narwhals-dev/narwhals/issues/3554
+    # for why we need to assume that all float values are finite
+    assume(all(math.isfinite(f) for f in cast("list[float]", floats)))
     data: Mapping[str, Any] = {"a": integers, "b": other_integers, "c": floats}
     join_cols = cast("list[str]", cols)
 
