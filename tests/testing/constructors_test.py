@@ -7,10 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
-    DaskConstructor,
     FrameConstructor,
-    PandasConstructor,
-    PolarsEagerConstructor as OriginalPolarsEagerConstructor,
     get_constructor,
     prepare_constructors,
 )
@@ -21,16 +18,6 @@ if TYPE_CHECKING:
     PropertyName: TypeAlias = str
     TrueNames: TypeAlias = set[str]
     FalseNames: TypeAlias = set[str]
-
-
-def test_dask_npartitions_distinct() -> None:
-    dp1, dp2 = DaskConstructor(npartitions=1), DaskConstructor(npartitions=2)
-    assert dp1 != dp2
-    assert hash(dp1) != hash(dp2)
-
-
-def test_dask_repr() -> None:
-    assert repr(DaskConstructor(npartitions=3)) == "DaskConstructor(npartitions=3)"
 
 
 def test_eager_returns_eager_frame() -> None:
@@ -94,46 +81,12 @@ def test_constructor_implementation() -> None:
 
 def test_constructor_dunder() -> None:
     c1 = get_constructor("pandas")
-    c2 = PandasConstructor()
+    c2 = get_constructor("pandas")
     assert c1.identifier == "pandas"
     assert c1 == c2
     assert hash(c1) == hash(c2)
-    assert c1 != OriginalPolarsEagerConstructor()
+    assert c1 != get_constructor("polars[eager]")
     assert c1 != "not a constructor"
-
-
-def test_init_subclass_no_legacy_name() -> None:
-    class _Dummy(
-        FrameConstructor, implementation=Implementation.POLARS, requirements=("polars",)
-    ):
-        name = "polars[eager]"
-
-        def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]
-            ...  # pragma: no cover
-
-    # re-registered polars[eager] (overwriting the real one), but without a legacy_name for it.
-    registered = FrameConstructor._registry["polars[eager]"]
-    assert registered == _Dummy()
-    assert registered.legacy_name == ""
-    assert registered.requirements == ("polars",)
-    assert registered.implementation is Implementation.POLARS
-
-    # Restore the original
-    legacy_name = "polars_eager_constructor"
-
-    class PolarsEagerConstructor(
-        OriginalPolarsEagerConstructor,
-        implementation=Implementation.POLARS,
-        requirements=("polars",),
-        legacy_name=legacy_name,
-    ):
-        name = "polars[eager]"
-
-    original = PolarsEagerConstructor()
-
-    restored = FrameConstructor._registry["polars[eager]"]
-    assert restored == original
-    assert restored.legacy_name == legacy_name
 
 
 def test_init_subclass_requires_implementation() -> None:

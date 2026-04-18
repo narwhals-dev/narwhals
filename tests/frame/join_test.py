@@ -754,13 +754,9 @@ def test_joinasof_by_exceptions(
     message: str,
 ) -> None:
     data = {ON: [1, 3, 2], BY: [4, 4, 6], "zor ro": [7.0, 8.0, 9.0]}
-    df = nw.from_native(constructor(data))
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(ValueError, match=message):
-            df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
-    else:
-        with pytest.raises(ValueError, match=message):
-            df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by)
+    df = from_native_lazy(constructor(data))
+    with pytest.raises(ValueError, match=message):
+        df.join_asof(df, on=on, by_left=by_left, by_right=by_right, by=by).collect()
 
 
 def test_join_duplicate_column_names(
@@ -777,7 +773,7 @@ def test_join_duplicate_column_names(
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
-    df = nw.from_native(constructor(data))
+    df = from_native_lazy(constructor(data))
     if any(
         x in str(constructor)
         for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
@@ -796,12 +792,8 @@ def test_join_duplicate_column_names(
         request.applymarker(pytest.mark.xfail)
     else:
         exception = nw.exceptions.DuplicateError
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(exception):
-            df.join(df, on=["a"]).join(df, on=["a"]).collect()
-    else:
-        with pytest.raises(exception):
-            df.join(df, on=["a"]).join(df, on=["a"])
+    with pytest.raises(exception):
+        df.join(df, on=["a"]).join(df, on=["a"]).collect()
 
 
 def test_join_same_laziness(constructor: Constructor) -> None:

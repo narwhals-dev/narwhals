@@ -7,21 +7,25 @@ import pytest
 from hypothesis import assume, given
 
 import narwhals as nw
-from narwhals.testing.constructors import PandasConstructor, PyArrowConstructor
+from narwhals.testing.constructors import get_constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.testing.typing import ConstructorEager
+    from narwhals.testing.typing import EagerFrameConstructor
 
 pytest.importorskip("pandas")
 pytest.importorskip("polars")
 import polars as pl
 
 
-@pytest.fixture(params=[PandasConstructor(), PyArrowConstructor()], scope="module")
-def pandas_or_pyarrow_constructor(request: pytest.FixtureRequest) -> ConstructorEager:
+@pytest.fixture(
+    params=[get_constructor("pandas"), get_constructor("pyarrow")], scope="module"
+)
+def pandas_or_pyarrow_constructor(
+    request: pytest.FixtureRequest,
+) -> EagerFrameConstructor:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -115,7 +119,9 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
 
 @given(selector=st.one_of(single_selector, tuple_selector()))
 @pytest.mark.slow
-def test_getitem(pandas_or_pyarrow_constructor: ConstructorEager, selector: Any) -> None:
+def test_getitem(
+    pandas_or_pyarrow_constructor: EagerFrameConstructor, selector: Any
+) -> None:
     """Compare __getitem__ against polars."""
     # TODO(PR - clean up): documenting current differences
     # These assume(...) lines each filter out a known difference.

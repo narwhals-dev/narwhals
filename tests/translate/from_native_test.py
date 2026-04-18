@@ -30,7 +30,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Version
-from narwhals.testing.constructors import SQLFrameConstructor
+from narwhals.testing.constructors import get_constructor
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
@@ -294,10 +294,10 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
 
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    df = SQLFrameConstructor()(data)
+    df = get_constructor("sqlframe")(data)
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nw.from_native(df, series_only=True)  # type: ignore[call-overload]
 
 
 @pytest.mark.parametrize(
@@ -315,7 +315,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
 )
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    df = SQLFrameConstructor()(data)
+    df = get_constructor("sqlframe")(data)
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)

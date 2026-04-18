@@ -15,8 +15,8 @@ from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
 from narwhals.testing.typing import (
     # TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
-    EagerFrameConstructor as ConstructorEager,  # noqa: TC001
-    FrameConstructor as Constructor,  # noqa: TC001
+    EagerFrameConstructor as ConstructorEager,
+    FrameConstructor as Constructor,
 )
 from narwhals.translate import from_native
 
@@ -27,6 +27,11 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals.typing import Frame, TimeUnit
+
+# TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
+# NOTE: Explicitly exported otherwise mypy will raise an [attr-defined] error for each file
+# importing them from `tests.utils` rather than `narwhals.testing.typing` directly.
+__all__ = ("Constructor", "ConstructorEager")
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:

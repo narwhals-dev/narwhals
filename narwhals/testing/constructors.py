@@ -145,7 +145,7 @@ class FrameConstructor(Protocol):
 
     def __call__(self, obj: Data, /, **kwds: Any) -> IntoFrame:
         """Build a native frame from `obj`."""
-        ...
+        raise NotImplementedError
 
     @property
     def identifier(self) -> str:
@@ -252,7 +252,8 @@ class EagerFrameConstructor(FrameConstructor):
 
     is_eager: ClassVar[bool] = True
 
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame: ...
+    def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
+        raise NotImplementedError
 
 
 class LazyFrameConstructor(FrameConstructor):
@@ -260,7 +261,8 @@ class LazyFrameConstructor(FrameConstructor):
 
     is_eager: ClassVar[bool] = False
 
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoLazyFrame: ...
+    def __call__(self, obj: Data, /, **kwds: Any) -> IntoLazyFrame:
+        raise NotImplementedError
 
 
 # Eager constructors
@@ -328,7 +330,7 @@ class PyArrowConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> pa.Table:
         import pyarrow as pa
 
-        return pa.table(obj, **kwds)  # type:ignore[arg-type]
+        return pa.table(obj, **kwds)
 
 
 class ModinConstructor(
@@ -428,38 +430,14 @@ class DaskConstructor(
     legacy_name="dask_lazy_p2_constructor",
     is_non_nullable=True,
 ):  # pragma: no cover
-    """Constructor backed by `dask.dataframe`.
-
-    Arguments:
-        npartitions: Number of Dask partitions (default `1`).
-    """
+    """Constructor backed by `dask.dataframe`."""
 
     name = "dask"
 
-    def __init__(self, npartitions: int = 2) -> None:
-        self.npartitions = npartitions
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> NativeDask:
+    def __call__(self, obj: Data, /, npartitions: int = 2, **kwds: Any) -> NativeDask:
         import dask.dataframe as dd
 
-        return cast("NativeDask", dd.from_dict(obj, npartitions=self.npartitions, **kwds))
-
-    @property
-    def identifier(self) -> str:
-        """Identifier that encodes the number of partitions."""
-        return f"dask[p{self.npartitions}]"
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}(npartitions={self.npartitions})"
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.name, self.npartitions))
-
-    def __eq__(self, other: object) -> bool:
-        return (
-            type(self) is type(other)
-            and self.npartitions == cast("DaskConstructor", other).npartitions
-        )
+        return cast("NativeDask", dd.from_dict(obj, npartitions=npartitions, **kwds))
 
 
 class DuckDBConstructor(
@@ -477,7 +455,7 @@ class DuckDBConstructor(
         import pyarrow as pa
 
         duckdb.sql("""set timezone = 'UTC'""")
-        _df = pa.table(obj, **kwds)  # type:ignore[arg-type]
+        _df = pa.table(obj, **kwds)
         return duckdb.sql("select * from _df")
 
 
@@ -546,7 +524,7 @@ class IbisConstructor(
     def __call__(self, obj: Data, /, **kwds: Any) -> ibis.Table:
         import pyarrow as pa
 
-        table = pa.table(obj)  # type:ignore[arg-type]
+        table = pa.table(obj)
         table_name = str(uuid.uuid4())
         return _ibis_backend().create_table(table_name, table, **kwds)
 
