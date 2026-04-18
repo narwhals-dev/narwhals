@@ -289,6 +289,9 @@ filterwarnings = [
 
   # raised internally by Dask
   "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
+
+  # raise internally by polars
+  "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
 ]
 xfail_strict = true
 markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
