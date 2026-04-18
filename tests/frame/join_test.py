@@ -800,7 +800,7 @@ def test_join_duplicate_column_names(
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3, 4, 5], "b": [6, 6, 6, 6, 6]}
-    df = from_native_lazy(nw_frame_constructor(data))
+    lf = from_native_lazy(nw_frame_constructor(data))
     if any(
         x in str(nw_frame_constructor)
         for x in ("pandas", "pandas[pyarrow]", "pandas[nullable]", "dask")
@@ -824,8 +824,9 @@ def test_join_duplicate_column_names(
 
     if nw_frame_constructor.is_lazy:
         with pytest.raises(exception):
-            df.join(df, on=["a"]).join(df, on=["a"]).collect()
+            lf.join(lf, on=["a"]).join(lf, on=["a"]).collect()
     else:
+        df = lf.collect()
         with pytest.raises(exception):
             df.join(df, on=["a"]).join(df, on=["a"])
 
