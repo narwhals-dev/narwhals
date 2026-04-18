@@ -7,7 +7,7 @@ import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._function import Function
+from narwhals._plan._function import BinaryFunction
 from narwhals._plan.typing import NonNestedLiteralT_co as T_co
 from narwhals._utils import qualified_type_name
 from narwhals.exceptions import InvalidOperationError
@@ -25,10 +25,8 @@ map_all = ResolveDType.function.map_all
 namespaced = DispatcherOptions.namespaced
 
 
-class RangeFunction(Function, Generic[T_co], dispatch=namespaced()):
-    __function_parameters__: ClassVar[params.Binary] = params.Binary(
-        params.SCALAR, params.SCALAR
-    )
+class RangeFunction(BinaryFunction, Generic[T_co], dispatch=namespaced()):
+    __function_parameters__: ClassVar = params.Binary(params.SCALAR, params.SCALAR)
 
     @classmethod
     def __function_expr__(cls) -> type[RangeExpr[Any]]:

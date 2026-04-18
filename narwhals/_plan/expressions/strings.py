@@ -3,11 +3,15 @@ from __future__ import annotations
 from typing import ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
-from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import Function, HorizontalFunction
+from narwhals._plan._function import (
+    BinaryFunction,
+    Function,
+    HorizontalFunction,
+    UnaryFunction,
+)
 from narwhals._plan.expressions.namespace import IRNamespace
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
@@ -18,56 +22,55 @@ renamed = DispatcherOptions.renamed
 
 # fmt: off
 class StringFunction(Function, dispatch=DispatcherOptions(accessor_name="str"), flags=ELEMENTWISE): ...
-class LenChars(StringFunction, dtype=dtm.U32): ...
-class ToLowercase(StringFunction, dtype=same_dtype()): ...
-class ToUppercase(StringFunction, dtype=same_dtype()): ...
-class ToTitlecase(StringFunction, dtype=same_dtype()): ...
+class _StringUnary(UnaryFunction, StringFunction): ...
+class LenChars(_StringUnary, dtype=dtm.U32): ...
+class ToLowercase(_StringUnary, dtype=same_dtype()): ...
+class ToUppercase(_StringUnary, dtype=same_dtype()): ...
+class ToTitlecase(_StringUnary, dtype=same_dtype()): ...
 class ConcatStr(HorizontalFunction, StringFunction, dtype=dtm.STR):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-class Contains(StringFunction, dtype=dtm.BOOL):
+class Contains(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool
-class EndsWith(StringFunction, dtype=dtm.BOOL):
+class EndsWith(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("suffix",)
     suffix: str
-class Replace(StringFunction, dtype=same_dtype()):
+class Replace(BinaryFunction, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "n", "pattern")
     pattern: str
     literal: bool
     n: int
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
-class ReplaceAll(StringFunction, dtype=same_dtype()):
+class ReplaceAll(BinaryFunction, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
     def to_replace_n(self, n: int) -> Replace:
         return Replace(pattern=self.pattern, literal=self.literal, n=n)
-class Slice(StringFunction, dtype=same_dtype()):
+class Slice(_StringUnary, dtype=same_dtype()):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
-class Split(StringFunction, dtype=dtm.dtypes.List(dtm.STR)):
+class Split(_StringUnary, dtype=dtm.dtypes.List(dtm.STR)):
     __slots__ = ("by",)
     by: str
-class StartsWith(StringFunction, dtype=dtm.BOOL):
+class StartsWith(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("prefix",)
     prefix: str
-class StripChars(StringFunction, dtype=same_dtype()):
+class StripChars(_StringUnary, dtype=same_dtype()):
     __slots__ = ("characters",)
     characters: str | None
-class ToDate(StringFunction, dtype=dtm.DATE):
+class ToDate(_StringUnary, dtype=dtm.DATE):
     __slots__ = ("format",)
     format: str | None
-class ZFill(StringFunction, dispatch=renamed("zfill"), dtype=same_dtype()):
+class ZFill(_StringUnary, dispatch=renamed("zfill"), dtype=same_dtype()):
     __slots__ = ("length",)
     length: int
 # TODO @dangotbanned: Get @MarcoGorelli's opinion on `str.to_datetime` resolve_dtype.
 # Can we work with (one of) `format: str | None`?
-class ToDatetime(StringFunction):
+class ToDatetime(_StringUnary):
     __slots__ = ("format",)
     format: str | None
 # fmt: on

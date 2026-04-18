@@ -8,7 +8,7 @@ from narwhals._plan.typing import IRNamespaceT
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan._function import Function
+    from narwhals._plan._function import UnaryFunction
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR
 
@@ -37,5 +37,5 @@ class ExprNamespace(Immutable, Generic[IRNamespaceT]):
     def _to_narwhals(self, ir: ExprIR, /) -> Expr:
         return self._expr._from_ir(ir)
 
-    def _with_unary(self, function: Function, /) -> Expr:
+    def _with_unary(self, function: UnaryFunction, /) -> Expr:
         return self._expr._with_unary(function)

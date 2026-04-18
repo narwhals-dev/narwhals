@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Concatenate, LiteralString, ParamSpec, Self
 
-    from narwhals._plan._function import Function
+    from narwhals._plan._function import UnaryFunction
     from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals._typing import NoDefault
@@ -213,7 +213,7 @@ class Expr:
         by = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._from_ir(ir.Filter(expr=self._ir, by=by))
 
-    def _with_unary(self, function: Function, /) -> Self:
+    def _with_unary(self, function: UnaryFunction, /) -> Self:
         return self._from_ir(function.to_function_expr(self._ir))
 
     def abs(self) -> Self:

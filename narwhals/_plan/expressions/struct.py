@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import Function
+from narwhals._plan._function import Function, UnaryFunction
 from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._utils import Version
@@ -36,7 +36,9 @@ class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct"
         raise NotImplementedError(msg)
 
 
-class FieldByName(StructFunction, flags=ELEMENTWISE, dispatch=renamed("field")):
+class FieldByName(
+    UnaryFunction, StructFunction, flags=ELEMENTWISE, dispatch=renamed("field")
+):
     __slots__ = ("name",)
     name: str
 

@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
-from narwhals._plan import _parameters as params
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import Function, HorizontalFunction
+from narwhals._plan._function import (
+    BinaryFunction,
+    Function,
+    HorizontalFunction,
+    TernaryFunction,
+    UnaryFunction,
+)
 from narwhals._plan.exceptions import hist_bins_monotonic_error
 
 if TYPE_CHECKING:
@@ -42,25 +47,22 @@ same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
-class _SameDType(Function, dtype=same_dtype()): ...
-class Abs(_SameDType, flags=ELEMENTWISE): ...
-class NullCount(Function, flags=AGGREGATION, dtype=dtm.IDX_DTYPE): ...
-class Exp(Function, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)): ...
-class Sqrt(Function, flags=ELEMENTWISE, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
-class Ceil(_SameDType, flags=ELEMENTWISE): ...
-class Floor(_SameDType, flags=ELEMENTWISE): ...
-class DropNulls(_SameDType, flags=ROW_SEPARABLE): ...
-class ModeAll(_SameDType): ...
-class ModeAny(_SameDType, flags=AGGREGATION): ...
-class Kurtosis(Function, flags=AGGREGATION, dtype=dtm.F64): ...
-class Skew(Function, flags=AGGREGATION, dtype=dtm.F64): ...
-class Clip(_SameDType, flags=ELEMENTWISE):
-    __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
-class ClipLower(_SameDType, flags=ELEMENTWISE):
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
-class ClipUpper(_SameDType, flags=ELEMENTWISE):
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
-class CumAgg(Function, flags=LENGTH_PRESERVING):
+class _UnarySameDType(UnaryFunction, dtype=same_dtype()): ...
+class Abs(_UnarySameDType, flags=ELEMENTWISE): ...
+class NullCount(UnaryFunction, flags=AGGREGATION, dtype=dtm.IDX_DTYPE): ...
+class Exp(UnaryFunction, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)): ...
+class Sqrt(UnaryFunction, flags=ELEMENTWISE, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
+class Ceil(_UnarySameDType, flags=ELEMENTWISE): ...
+class Floor(_UnarySameDType, flags=ELEMENTWISE): ...
+class DropNulls(_UnarySameDType, flags=ROW_SEPARABLE): ...
+class ModeAll(_UnarySameDType): ...
+class ModeAny(_UnarySameDType, flags=AGGREGATION): ...
+class Kurtosis(UnaryFunction, flags=AGGREGATION, dtype=dtm.F64): ...
+class Skew(UnaryFunction, flags=AGGREGATION, dtype=dtm.F64): ...
+class Clip(TernaryFunction, dtype=same_dtype(), flags=ELEMENTWISE): ...
+class ClipLower(BinaryFunction, dtype=same_dtype(), flags=ELEMENTWISE): ...
+class ClipUpper(BinaryFunction, dtype=same_dtype(), flags=ELEMENTWISE): ...
+class CumAgg(UnaryFunction, flags=LENGTH_PRESERVING):
     __slots__ = ("reverse",)
     reverse: bool
 class CumCount(CumAgg, dtype=dtm.IDX_DTYPE): ...
@@ -68,7 +70,7 @@ class CumMin(CumAgg, dtype=same_dtype()): ...
 class CumMax(CumAgg, dtype=same_dtype()): ...
 class CumProd(CumAgg, dtype=map_first(dtm.cum_prod_dtype)): ...
 class CumSum(CumAgg, dtype=map_first(dtm.cum_sum_dtype)): ...
-class RollingWindow(Function, flags=LENGTH_PRESERVING):
+class RollingWindow(UnaryFunction, flags=LENGTH_PRESERVING):
     __slots__ = ("options",)
     options: RollingOptions
 class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
@@ -77,8 +79,8 @@ class _RollingVarStd(RollingWindow):
     options: RollingVarOptions
 class RollingVar(_RollingVarStd, dtype=map_first(dtm.var_dtype)): ...
 class RollingStd(_RollingVarStd, dtype=map_first(dtm.moment_dtype)): ...
-class Diff(Function, flags=LENGTH_PRESERVING, dtype=map_first(dtm.diff_dtype)): ...
-class Unique(_SameDType): ...
+class Diff(UnaryFunction, flags=LENGTH_PRESERVING, dtype=map_first(dtm.diff_dtype)): ...
+class Unique(_UnarySameDType): ...
 # TODO @dangotbanned: `map_to_supertype` (`*Horizontal`)
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L45
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L402-L420
@@ -104,7 +106,7 @@ class MeanHorizontal(HorizontalFunction):
 
 
 class Hist(
-    Function,
+    UnaryFunction,
     # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L243
     dtype=lambda f: (
         dtm.Struct({"breakpoint": dtm.F64, "count": dtm.IDX_DTYPE})
@@ -155,14 +157,12 @@ class HistBinCount(Hist):
     bin_count: int
 
 
-class Log(Function, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)):
+class Log(UnaryFunction, flags=ELEMENTWISE, dtype=map_first(dtm.float_dtype)):
     __slots__ = ("base",)
     base: float
 
 
-class Pow(Function, flags=ELEMENTWISE):
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
-
+class Pow(BinaryFunction, flags=ELEMENTWISE):
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
@@ -172,9 +172,7 @@ class Pow(Function, flags=ELEMENTWISE):
         return base
 
 
-class FillNull(Function, flags=ELEMENTWISE):
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
-
+class FillNull(BinaryFunction, flags=ELEMENTWISE):
     # TODO @dangotbanned: `map_to_supertype`
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
@@ -187,31 +185,32 @@ class FillNull(Function, flags=ELEMENTWISE):
         return expr
 
 
-class FillNullWithStrategy(_SameDType):
+class FillNullWithStrategy(_UnarySameDType):
     __slots__ = ("limit", "strategy")
     strategy: FillNullStrategy
     limit: int | None
 
 
-class Shift(_SameDType, flags=LENGTH_PRESERVING):
+class Shift(_UnarySameDType, flags=LENGTH_PRESERVING):
     __slots__ = ("n",)
     n: int
 
 
 class Rank(
-    Function, dtype=lambda f: dtm.F64 if f.options.method == "average" else dtm.IDX_DTYPE
+    UnaryFunction,
+    dtype=lambda f: dtm.F64 if f.options.method == "average" else dtm.IDX_DTYPE,
 ):
     __slots__ = ("options",)
     options: RankOptions
 
 
-class Round(_SameDType, flags=ELEMENTWISE):
+class Round(_UnarySameDType, flags=ELEMENTWISE):
     __slots__ = ("decimals",)
     decimals: int
 
 
 class EwmMean(
-    Function,
+    UnaryFunction,
     flags=LENGTH_PRESERVING,
     dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal),
 ):
@@ -219,40 +218,54 @@ class EwmMean(
     options: EWMOptions
 
 
-# TODO @dangotbanned: (partial)
-# Need to run a sample of `new` through `nwp.common.py_to_narwhals_dtype`
-class ReplaceStrict(Function, flags=ELEMENTWISE):
+# TODO @dangotbanned: Finish partial `replace_strict` resolve dtype
+@ResolveDType.function.visitor
+def _replace_strict_dtype(
+    self: ReplaceStrict | ReplaceStrictDefault, /
+) -> DType:  # pragma: no cover
+    """(Partial) impl of `resolve_dtype`.
+
+    - `ReplaceStrict`
+      - `new` is used when missing `return_dtype` ([1], [2], [3])
+
+      - Need to run a sample of `new` through `nwp.common.py_to_narwhals_dtype`
+    - `ReplaceStrictDefault`
+      - Builds on the above, then needs `get_supertype(new, default)` ([4])
+
+    [1]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L773
+    [2]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L777
+    [3]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L781
+    [4]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
+    """
+    if dtype := self.return_dtype:
+        return dtype
+    msg = f"`{type(self).__name__}.resolve_dtype()` is not yet fully implemented"
+    raise NotImplementedError(msg)
+
+
+class ReplaceStrict(UnaryFunction, flags=ELEMENTWISE, dtype=_replace_strict_dtype):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
     return_dtype: DType | None
 
-    def resolve_dtype(
-        self, node: FunctionExpr[Self], schema: FrozenSchema, /
-    ) -> DType:  # pragma: no cover
-        if dtype := self.return_dtype:
-            return dtype
-        # NOTE: polars would use the dtype of `new` here
-        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L773
-        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L777
-        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L781
-        return super().resolve_dtype(node, schema)
+
+class ReplaceStrictDefault(
+    BinaryFunction, flags=ELEMENTWISE, dtype=_replace_strict_dtype
+):
+    __slots__ = ("new", "old", "return_dtype")
+    old: Seq[Any]
+    new: Seq[Any]
+    return_dtype: DType | None
 
 
-# TODO @dangotbanned: (partial) `get_supertype(new, default)`
-# Similar to `ReplaceStrict.resolve_dtype`
-# https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L780
-class ReplaceStrictDefault(ReplaceStrict):
-    __function_parameters__: ClassVar[params.Binary] = params.Binary()
-
-
-class GatherEvery(_SameDType):
+class GatherEvery(_UnarySameDType):
     __slots__ = ("n", "offset")
     n: int
     offset: int
 
 
-class MapBatches(Function):
+class MapBatches(UnaryFunction):
     __slots__ = ("flags", "function", "return_dtype")
     function: Udf
     return_dtype: DType | None
@@ -285,14 +298,14 @@ class MapBatches(Function):
         return AnonymousExpr
 
 
-class SampleN(_SameDType):
+class SampleN(_UnarySameDType):
     __slots__ = ("n", "seed", "with_replacement")
     n: int
     with_replacement: bool
     seed: int | None
 
 
-class SampleFrac(_SameDType):
+class SampleFrac(_UnarySameDType):
     __slots__ = ("fraction", "seed", "with_replacement")
     fraction: float
     with_replacement: bool
