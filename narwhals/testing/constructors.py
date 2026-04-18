@@ -1,11 +1,11 @@
 """Concrete constructor classes and auto-registration machinery.
 
-Each constructor wraps one backend library (pandas, Polars, DuckDB, ...)
-and knows how to turn a column-oriented `dict` into a native frame.
+Each constructor wraps one backend library (pandas, Polars, DuckDB, ...) and
+knows how to turn a column-oriented `dict` into a native frame.
 
-All static metadata for a backend lives on its constructor class, colocated
-with the `__call__` implementation. Adding a constructor is a one-step
-declaration — the `__init_subclass__` hook then auto-registers a singleton.
+All static metadata for a backend lives on its constructor class, colocated with
+the `__call__` implementation. Adding a constructor is a one-step declaration.
+The `__init_subclass__` hook then auto-registers a singleton.
 
 ## Adding a new constructor
 
@@ -65,15 +65,15 @@ if TYPE_CHECKING:
 
 
 __all__ = (
-    "ALL_CONSTRUCTORS",
-    "ALL_CPU_CONSTRUCTORS",
-    "DEFAULT_CONSTRUCTORS",
+    "ALL_BACKENDS",
+    "ALL_CPU_BACKENDS",
+    "DEFAULT_BACKENDS",
     "EagerFrameConstructor",
     "FrameConstructor",
-    "available_constructors",
-    "get_constructor",
+    "available_backends",
+    "get_backend_constructor",
     "is_backend_available",
-    "prepare_constructors",
+    "prepare_backends",
     "pyspark_session",
     "sqlframe_session",
 )
@@ -529,10 +529,10 @@ class IbisConstructor(
         return _ibis_backend().create_table(table_name, table, **kwds)
 
 
-ALL_CONSTRUCTORS: dict[str, FrameConstructor] = FrameConstructor._registry
-"""All registered constructors keyed by their string identifier."""
+ALL_BACKENDS: dict[str, FrameConstructor] = FrameConstructor._registry
+"""All registered backends keyed by their string identifier."""
 
-DEFAULT_CONSTRUCTORS: frozenset[str] = frozenset(
+DEFAULT_BACKENDS: frozenset[str] = frozenset(
     {
         "pandas",
         "pandas[pyarrow]",
@@ -543,28 +543,28 @@ DEFAULT_CONSTRUCTORS: frozenset[str] = frozenset(
         "ibis",
     }
 )
-"""Subset of constructors enabled by default for parametrised tests when the
-user does not pass `--constructors` (mirrors the historical Narwhals defaults).
+"""Subset of backends enabled by default for parametrised tests when the
+user does not pass `--nw-backends` (mirrors the historical Narwhals defaults).
 """
 
-ALL_CPU_CONSTRUCTORS: frozenset[str] = frozenset(
+ALL_CPU_BACKENDS: frozenset[str] = frozenset(
     name for name, c in FrameConstructor._registry.items() if not c.needs_gpu
 )
-"""All constructors that do not require GPU hardware."""
+"""All backends that do not require GPU hardware."""
 
 
-def available_constructors() -> frozenset[str]:
+def available_backends() -> frozenset[str]:
     """Return the names of every constructor whose backend is importable.
 
     Examples:
-        >>> from narwhals.testing.constructors import available_constructors
-        >>> "pandas" in available_constructors()
+        >>> from narwhals.testing.constructors import available_backends
+        >>> "pandas" in available_backends()
         True
     """
-    return frozenset(name for name, c in ALL_CONSTRUCTORS.items() if c.is_available)
+    return frozenset(name for name, c in ALL_BACKENDS.items() if c.is_available)
 
 
-def get_constructor(name: str) -> FrameConstructor:
+def get_backend_constructor(name: str) -> FrameConstructor:
     """Return the registered singleton constructor for `name`.
 
     Arguments:
@@ -575,34 +575,34 @@ def get_constructor(name: str) -> FrameConstructor:
         ValueError: If `name` is not a registered constructor identifier.
 
     Examples:
-        >>> from narwhals.testing.constructors import get_constructor
-        >>> get_constructor("pandas")
+        >>> from narwhals.testing.constructors import get_backend_constructor
+        >>> get_backend_constructor("pandas")
         PandasConstructor()
     """
     try:
-        return ALL_CONSTRUCTORS[name]
+        return ALL_BACKENDS[name]
     except KeyError as exc:
-        valid = sorted(ALL_CONSTRUCTORS)
+        valid = sorted(ALL_BACKENDS)
         msg = f"Unknown constructor {name!r}. Expected one of: {valid}."
         raise ValueError(msg) from exc
 
 
-def prepare_constructors(
+def prepare_backends(
     *, include: Iterable[str] | None = None, exclude: Iterable[str] | None = None
 ) -> list[FrameConstructor]:
-    """Return available constructors, optionally filtered.
+    """Return available backends, optionally filtered.
 
     Arguments:
-        include: If given, only return constructors whose name is in this set.
-        exclude: If given, remove constructors whose name is in this set.
+        include: If given, only return backends whose name is in this set.
+        exclude: If given, remove backends whose name is in this set.
 
     Examples:
-        >>> from narwhals.testing.constructors import prepare_constructors
-        >>> constructors = prepare_constructors(include=["pandas", "polars[eager]"])
+        >>> from narwhals.testing.constructors import prepare_backends
+        >>> backends = prepare_backends(include=["pandas", "polars[eager]"])
     """
-    available = available_constructors()
+    available = available_backends()
     candidates: list[FrameConstructor] = [
-        c for name, c in ALL_CONSTRUCTORS.items() if name in available
+        c for name, c in ALL_BACKENDS.items() if name in available
     ]
     if include is not None:
         inc = frozenset(include)

@@ -1,13 +1,11 @@
-"""Narwhals pytest plugin - auto-parametrises `constructor*` fixtures.
+"""Narwhals pytest plugin - auto-parametrises fixtures.
 
-NOTE: All imports from `narwhals.*` are deferred inside the hook functions so
-that the entry-point module can be loaded by pytest without pulling in the
-narwhals package tree.
+NOTE: All imports from `narwhals.*` are deferred inside the hook functions so that
+the entry-point module can be loaded by pytest without pulling in the narwhals package tree.
 
-This is critical because entry-point plugins are loaded *before* `pytest-cov`
-starts coverage measurement; any narwhals module imported at that stage would
-have its module-level code (class definitions, constants, etc.) executed outside
-the coverage tracer.
+This is critical because entry-point plugins are loaded *before* `coveragepy` starts
+coverage measurement; any narwhals module imported at that stage would have its
+module-level code (class definitions, constants, etc.) executed outside the coverage tracer.
 """
 
 from __future__ import annotations
@@ -36,72 +34,64 @@ def _pandas_version() -> tuple[int, ...]:
     return parse_version(pd.__version__)
 
 
-def _default_constructor_ids() -> list[str]:
-    """Resolve the default `--constructors` value for the current environment.
+def _default_backend_ids() -> list[str]:
+    """Resolve the default `--nw-backends` value for the current environment.
 
-    Honours `NARWHALS_DEFAULT_CONSTRUCTORS` if set, otherwise restricts
-    [`DEFAULT_CONSTRUCTORS`][] to backends whose libraries are importable.
+    Honours `NARWHALS_DEFAULT_BACKENDS` if set, otherwise restricts
+    [`DEFAULT_BACKENDS`][] to backends whose libraries are importable.
     """
-    if env := os.environ.get("NARWHALS_DEFAULT_CONSTRUCTORS"):  # pragma: no cover
+    if env := os.environ.get("NARWHALS_DEFAULT_BACKENDS"):  # pragma: no cover
         return env.split(",")
-    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, prepare_constructors
+    from narwhals.testing.constructors import DEFAULT_BACKENDS, prepare_backends
 
-    return [c.name for c in prepare_constructors(include=DEFAULT_CONSTRUCTORS)]
+    return [c.name for c in prepare_backends(include=DEFAULT_BACKENDS)]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS
+    from narwhals.testing.constructors import DEFAULT_BACKENDS
 
-    group = parser.getgroup("narwhals", "narwhals.testing")
-    defaults = ", ".join(f"'{c}'" for c in sorted(DEFAULT_CONSTRUCTORS))
+    group = parser.getgroup("narwhals", "narwhals-testing")
+    defaults = ", ".join(f"'{c}'" for c in sorted(DEFAULT_BACKENDS))
     group.addoption(
-        "--constructors",
+        "--nw-backends",
         action="store",
-        default=",".join(_default_constructor_ids()),
+        default=",".join(_default_backend_ids()),
         type=str,
         help=(
-            "Comma-separated list of backend constructors to parametrise. "
-            f"Defaults to the installed subset of ({defaults})"
+            "Comma-separated list of (data|lazy) frame backend constructors to"
+            f"parametrise. Defaults to the installed subset of ({defaults})"
         ),
     )
     group.addoption(
-        "--all-cpu-constructors",
+        "--all-nw-backends",
         action="store_true",
         default=False,
-        help=(
-            "Run tests against every installed CPU constructor "
-            "(overrides --constructors)."
-        ),
+        help=("Run tests against every installed CPU backend (overrides --nw-backends)."),
     )
-    # Escape hatch for downstream test suites that ship their own constructor
-    # plugin. When set, this plugin still adds the CLI options but stops
-    # parametrising the fixtures.
+    # Escape hatch for downstream test suites that ship their own backend plugin.
+    # When set, this plugin still adds the CLI options but stops parametrising the fixtures.
     group.addoption(
-        "--use-external-constructor",
+        "--use-external-backend",
         action="store_true",
         default=False,
         help=(
-            "Skip narwhals.testing's parametrisation and let another plugin "
-            "provide the `constructor*` fixtures."
+            "Skip narwhals-testing's parametrisation and let another plugin "
+            "provide the `nw_*frame_constructor` fixtures."
         ),
     )
 
 
-def _select_constructors(
-    config: pytest.Config,
-) -> list[FrameConstructor]:  # pragma: no cover
-    from narwhals.testing.constructors import ALL_CPU_CONSTRUCTORS, prepare_constructors
+def _select_backends(config: pytest.Config) -> list[FrameConstructor]:  # pragma: no cover
+    from narwhals.testing.constructors import ALL_CPU_BACKENDS, prepare_backends
 
     _all_cpu_exclusions = frozenset({"modin", "pyspark[connect]"})
 
-    if config.getoption("all_cpu_constructors"):
-        selected = prepare_constructors(
-            include=ALL_CPU_CONSTRUCTORS, exclude=_all_cpu_exclusions
-        )
+    if config.getoption("all_nw_backends"):
+        selected = prepare_backends(include=ALL_CPU_BACKENDS, exclude=_all_cpu_exclusions)
     else:
-        opt = cast("str", config.getoption("constructors"))
+        opt = cast("str", config.getoption("nw_backends"))
         names = [c for c in opt.split(",") if c]
-        selected = prepare_constructors(include=names)
+        selected = prepare_backends(include=names)
 
     if _pandas_version() < _MIN_PANDAS_NULLABLE_VERSION:
         _pandas_nullables = {"pandas[nullable]", "pandas[pyarrow]"}
@@ -110,24 +100,30 @@ def _select_constructors(
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
-    if metafunc.config.getoption("use_external_constructor"):  # pragma: no cover
+    if metafunc.config.getoption("use_external_backend"):  # pragma: no cover
         return
 
     fixturenames = set(metafunc.fixturenames)
-    if not fixturenames & {"constructor", "constructor_eager", "constructor_pandas_like"}:
+    if not fixturenames & {
+        "nw_frame_constructor",
+        "nw_eager_frame_constructor",
+        "nw_pandas_like_constructor",
+    }:
         return
 
-    selected = _select_constructors(metafunc.config)
+    selected = _select_backends(metafunc.config)
 
-    if "constructor_eager" in fixturenames:
+    if "nw_eager_frame_constructor" in fixturenames:
         params = [c for c in selected if c.is_eager]
         ids = [c.name for c in params]
-        metafunc.parametrize("constructor_eager", params, ids=ids)
-    elif "constructor" in fixturenames:
-        metafunc.parametrize("constructor", selected, ids=[c.name for c in selected])
-    elif "constructor_pandas_like" in fixturenames:
+        metafunc.parametrize("nw_eager_frame_constructor", params, ids=ids)
+    elif "nw_frame_constructor" in fixturenames:
+        metafunc.parametrize(
+            "nw_frame_constructor", selected, ids=[c.name for c in selected]
+        )
+    elif "nw_pandas_like_constructor" in fixturenames:
         params = [c for c in selected if c.is_eager and c.is_pandas_like]
         ids = [c.name for c in params]
-        metafunc.parametrize("constructor_pandas_like", params, ids=ids)
+        metafunc.parametrize("nw_pandas_like_constructor", params, ids=ids)
     else:  # pragma: no cover
         ...
