@@ -416,6 +416,21 @@ def test_get_level() -> None:
     )
 
 
+def test_v1_explicit_level_kwarg() -> None:
+    # `_duckdb`/`_ibis` pass `level="interchange"` explicitly for a v1 DataFrame.
+    # We have no such _real_ cases for LazyFrame and Series
+    pytest.importorskip("polars")
+    import polars as pl
+
+    nw_lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
+    rewrapped_lf = nw_v1.LazyFrame(nw_lf._compliant_frame, level="lazy")
+    assert nw_v1.get_level(rewrapped_lf) == "lazy"
+
+    nw_s = nw_v1.from_native(pl.Series(name="a", values=[1]), series_only=True)
+    rewrapped_s = nw_v1.Series(nw_s._compliant_series, level="full")
+    assert nw_v1.get_level(rewrapped_s) == "full"
+
+
 def test_any_horizontal() -> None:
     # here, it defaults to Kleene logic.
     pytest.importorskip("polars")
