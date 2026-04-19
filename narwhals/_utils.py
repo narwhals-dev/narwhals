@@ -1922,7 +1922,7 @@ def convert_str_slice_to_int_slice(
 
 
 def inherit_doc(
-    tp_parent: Callable[P, R1], /
+    tp_parent: Callable[..., R1], /
 ) -> Callable[[_Constructor[_T, P, R2]], _Constructor[_T, P, R2]]:
     """Steal the class-level docstring from parent and attach to child `__init__`.
 
