@@ -423,7 +423,7 @@ def test_v1_explicit_level_kwarg() -> None:
     import polars as pl
 
     nw_lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
-    rewrapped_lf = nw_v1.LazyFrame(nw_lf._compliant_frame, level="lazy")
+    rewrapped_lf = nw_v1.LazyFrame[pl.LazyFrame](nw_lf._compliant_frame, level="lazy")
     assert nw_v1.get_level(rewrapped_lf) == "lazy"
 
     nw_s = nw_v1.from_native(pl.Series(name="a", values=[1]), series_only=True)
