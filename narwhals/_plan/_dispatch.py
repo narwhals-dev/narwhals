@@ -80,7 +80,7 @@ class Dispatcher(Generic[Node]):
 
     __slots__ = ("_name", "_options", "bind")
 
-    # TODO @dangotbanned: Improve or remnove doc
+    # TODO @dangotbanned: Improve or remove doc
     bind: Binder[Node]
     """Retrieve the implementation of this expression from `ctx`.
 

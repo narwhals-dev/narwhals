@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         Uint32Type,
         Uint64Type,
     )
-    from typing_extensions import ParamSpec, TypeAlias
+    from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals._plan.compliant.dataframe import (
@@ -75,22 +75,6 @@ if TYPE_CHECKING:
 
     class _NumpyArray(Protocol):
         def __array__(self) -> _AnyDArray: ...
-
-    # TODO @dangotbanned: Move out of `TYPE_CHECKING` for docs after (3, 10) minimum
-    # https://github.com/narwhals-dev/narwhals/issues/3204
-    P = ParamSpec("P")
-
-    class UnaryFunctionP(Protocol[P]):
-        """A function wrapping at-most 1 `Expr` input."""
-
-        def __call__(
-            self, native: ChunkedOrScalarAny, /, *args: P.args, **kwds: P.kwargs
-        ) -> ChunkedOrScalarAny: ...
-
-    class VectorFunction(Protocol[P]):
-        def __call__(
-            self, native: ChunkedArrayAny, /, *args: P.args, **kwds: P.kwargs
-        ) -> ChunkedArrayAny: ...
 
     class BooleanLengthPreserving(Protocol):
         def __call__(

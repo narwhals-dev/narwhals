@@ -38,10 +38,6 @@ def test_dispatch(
     dataframe.xfail_polars_select(request)
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
 
-    missing_backend = r"ewm_mean.+is not yet implemented for"
-    with pytest.raises(NotImplementedError, match=missing_backend):
-        df.select(nwp.col("c").ewm_mean())
-
     with pytest.raises(
         TypeError,
         match=re_compile(r"ByIndex.+not.+appear.+compliant.+expand.+expr.+first"),
@@ -55,6 +51,22 @@ def test_dispatch(
     # Not a narwhals method, to make sure this doesn't allow arbitrary calls
     with pytest.raises(AttributeError):
         nwp.col("a").max().to_physical()  # type: ignore[attr-defined]
+
+
+def test_dispatch_not_yet(
+    data: Data, dataframe: DataFrame, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    df = dataframe(data)
+    # NOTE: This will unconditionally trigger the exception
+    monkeypatch.setattr(
+        ir.functions.EwmMean.__expr_ir_dispatch__,
+        "bind",
+        lambda _: lambda _node, _frame, _name: None,
+    )
+    with pytest.raises(
+        NotImplementedError, match=r"ewm_mean.+is not yet implemented for"
+    ):
+        df.select(nwp.col("c").ewm_mean())
 
 
 def test_missing_compliant(

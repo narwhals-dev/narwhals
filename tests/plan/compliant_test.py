@@ -879,8 +879,7 @@ if TYPE_CHECKING:
         """
         from narwhals._plan import arrow as _arrow
 
-        # NOTE: Intentionally leaving `ewm_mean` without a `not_implemented()` for another test
-        expr = _arrow.Expr()  # type: ignore[abstract]
+        expr = _arrow.Expr()
         scalar = _arrow.Scalar()
         df = _arrow.DataFrame()
         ser = _arrow.Series()
