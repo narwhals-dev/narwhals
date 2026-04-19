@@ -116,9 +116,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     _version = Version.V2
 
     @inherit_doc(NwDataFrame)
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+    def __init__(self, df: Any) -> None:
         assert df._version is Version.V2  # noqa: S101
-        super().__init__(df, level=level)
+        super().__init__(df)
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
@@ -244,9 +244,9 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     _version = Version.V2
 
     @inherit_doc(NwLazyFrame)
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+    def __init__(self, df: Any) -> None:
         assert df._version is Version.V2  # noqa: S101
-        super().__init__(df, level=level)
+        super().__init__(df)
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -262,11 +262,9 @@ class Series(NwSeries[IntoSeriesT]):
     _version = Version.V2
 
     @inherit_doc(NwSeries)
-    def __init__(
-        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
-    ) -> None:
+    def __init__(self, series: Any) -> None:
         assert series._version is Version.V2  # noqa: S101
-        super().__init__(series, level=level)
+        super().__init__(series)
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
@@ -375,11 +373,11 @@ def _stableify(
     | NwExpr,
 ) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT] | Expr:
     if isinstance(obj, NwDataFrame):
-        return DataFrame(obj._compliant_frame._with_version(Version.V2), level=obj._level)
+        return DataFrame(obj._compliant_frame._with_version(Version.V2))
     if isinstance(obj, NwLazyFrame):
-        return LazyFrame(obj._compliant_frame._with_version(Version.V2), level=obj._level)
+        return LazyFrame(obj._compliant_frame._with_version(Version.V2))
     if isinstance(obj, NwSeries):
-        return Series(obj._compliant_series._with_version(Version.V2), level=obj._level)
+        return Series(obj._compliant_series._with_version(Version.V2))
     if isinstance(obj, NwExpr):
         return Expr(*obj._nodes)
     assert_never(obj)

@@ -74,8 +74,8 @@ class IbisLazyFrame(
         if self._version is Version.V1:
             from narwhals.stable.v1 import DataFrame
 
-            return DataFrame(self, level="interchange")
-        return self._version.lazyframe(self, level="lazy")
+            return DataFrame(self, level="interchange")  # pyright: ignore[reportCallIssue]
+        return self._version.lazyframe(self)
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         # Keep around for backcompat.
