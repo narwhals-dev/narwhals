@@ -26,6 +26,7 @@ from narwhals._translate import (
 )
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
+    Implementation,
     ValidateBackendVersion,
     Version,
     _StoresNative,
@@ -56,7 +57,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-    from narwhals._utils import Implementation, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dataframe import DataFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
@@ -242,6 +243,7 @@ class CompliantDataFrame(
     def lazy(
         self, backend: _LazyAllowedImpl | None, *, session: SparkSession | None
     ) -> CompliantLazyFrameAny: ...
+    def with_backend(self, backend: _EagerAllowedImpl) -> CompliantDataFrameAny: ...
     def pivot(
         self,
         on: Sequence[str],
@@ -331,6 +333,23 @@ class EagerDataFrame(
 
     def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
         return self._version.dataframe(self, level="full")
+
+    def with_backend(self, backend: _EagerAllowedImpl) -> CompliantDataFrameAny:
+        if backend is self._implementation:
+            return self
+        ns = self._version.namespace.from_backend(backend).compliant
+        if backend is Implementation.POLARS:
+            from narwhals._polars.dataframe import PolarsDataFrame
+
+            return PolarsDataFrame.from_native(self.to_polars(), context=ns)
+        if backend is Implementation.PYARROW:
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame.from_native(self.to_arrow(), context=ns)
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        return PandasLikeDataFrame._from_pandas(self.to_pandas(), context=ns)
 
     def aggregate(self, *exprs: EagerExprT) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
         # NOTE: Ignore intermittent [False Negative] (1)
