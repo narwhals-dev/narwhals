@@ -5,7 +5,6 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, overload
 
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import _StoresNative as StoresNative
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -242,6 +241,10 @@ ScalarAny: TypeAlias = "Scalar[Any]"
 ArrayAny: TypeAlias = "Array[Any]"
 ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
+Native: TypeAlias = ChunkedOrScalarAny
+"""The type of `Arrow{Expr,Scalar}.native`."""
+
+
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
 ChunkedOrScalarT = TypeVar("ChunkedOrScalarT", ChunkedArrayAny, ScalarAny)
@@ -276,11 +279,9 @@ IntoChunkedArray: TypeAlias = (
     "ArrowAny | list[Iterable[Any]] | OneOrIterable[ArrowStreamExportable | _NumpyArray]"
 )
 
-NativeScalar: TypeAlias = ScalarAny
+
 BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
-StoresNativeT_co = TypeVar(
-    "StoresNativeT_co", bound=StoresNative[ChunkedOrScalarAny], covariant=True
-)
+
 DataTypeRemap: TypeAlias = Mapping[DataType, DataType]
 NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
