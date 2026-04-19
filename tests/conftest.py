@@ -120,17 +120,17 @@ def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
     return dtype
 
 
+# The following fixtures are aliases of those registered in `narwhals/testing/pytest_plugin.py`
+# in order to be backward compatible with the old fixture names and avoid having to change
+# every single test.
+# TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
 @pytest.fixture
 def constructor(nw_frame_constructor: FrameConstructor) -> FrameConstructor:
-    # Alias fixture for backward compatibility
-    # TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
     return nw_frame_constructor
 
 
 @pytest.fixture
 def constructor_eager(nw_eager_constructor: EagerFrameConstructor) -> FrameConstructor:
-    # Alias fixture for backward compatibility
-    # TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
     return nw_eager_constructor
 
 
@@ -138,6 +138,4 @@ def constructor_eager(nw_eager_constructor: EagerFrameConstructor) -> FrameConst
 def constructor_pandas_like(
     nw_pandas_like_constructor: EagerFrameConstructor,
 ) -> FrameConstructor:
-    # Alias fixture for backward compatibility
-    # TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
     return nw_pandas_like_constructor

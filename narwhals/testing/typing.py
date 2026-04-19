@@ -16,4 +16,4 @@ __all__ = ("Data", "EagerFrameConstructor", "FrameConstructor", "LazyFrameConstr
 
 
 Data: TypeAlias = dict[str, Any]  # TODO(Unassined): This should have a better annotation
-"""A column-oriented mapping used as input to a [`Constructor`][]."""
+"""A column-oriented mapping used as input to a [`narwhals.testing.constructors.FrameConstructor`][]."""
