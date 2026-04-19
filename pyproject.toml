@@ -207,6 +207,8 @@ extend-ignore-names = [
   "_Window", 
   "F", 
   "_F",
+  "_self", # needed to preserve the method `self` in a `Protocol` https://github.com/python/mypy/issues/16200
+  "unary"
 ]
 
 [tool.ruff.lint.per-file-ignores]
