@@ -102,7 +102,7 @@ _NativeT = TypeVar("_NativeT", bound="Native", default="Native")
 class _UnaryPartial(Protocol[_S_contra, _U_contra, _NativeT]):
     """The type of the method being *decorated by* `@unary.partial`."""
 
-    def __call__(_self, /, self: _S_contra, node: FExpr[_U_contra], previous: _NativeT) -> _NativeT: ...
+    def __call__(_self, self: _S_contra, function: _U_contra, previous: _NativeT,/ ) -> _NativeT: ...
 
 _S = TypeVar("_S", bound=_Self)
 class _UnaryWrapper(Protocol[_S, _U_contra]):
@@ -138,7 +138,7 @@ Native_co = TypeVar("Native_co", bound="Native", covariant=True, default="Native
 # - [x] Get mypy happy (ish)
 # - [x] Clean up experiments
 # - [x] Document whats left
-# - [ ] Reduce `partial` to `(Function, Native)`
+# - [x] Reduce `partial` to `(Function, Native)`
 #   - Everything just discards `node` and goes straight to `node.function`
 @final
 class unary(Generic[S1, U1]):
@@ -174,11 +174,11 @@ class unary(Generic[S1, U1]):
     def partial(fn_partial: _UnaryPartial[S2, U2, Native_co], /) -> unary[S2, U2]:
         """Decorator to fill in the boilerplate when implementing a `UnaryFunction`.
 
-        The method being decorated should look like:
+        The method being decorated should look like this (*parameter names are flexible*):
 
             @unary.partial
-            def round(self, node: FunctionExpr[F.Round], previous: Native) -> Native:
-                # 1. Destructure `node` to get additional non-expression arguments
+            def round(self, function: F.Round, previous: Native) -> Native:
+                # 1. Destructure `function` to get additional non-expression arguments
                 # 2. (optional) Do something interesting with them
                 # 3. Use `previous` (the native result of the last expression)
                 #    and the other arguments to perform the native operation
@@ -186,26 +186,28 @@ class unary(Generic[S1, U1]):
                 ...
 
         Tip:
-            Consider using `unary.no_args(function)` if you don't need anything from `node`.
+            Consider using `unary.no_args(<impl>)` if you don't need anything from `node.function`.
         """
 
         def _wrapper(self: S2, node: FExpr[U2], frame: Frame, name: str) -> S2:
             previous = node.dispatch_arg(self, frame, name).native
-            return self._with_native(fn_partial(self, node, previous), name)
+            return self._with_native(fn_partial(self, node.function, previous), name)
 
         return unary(_wrapper)
 
     @overload
     @staticmethod
-    def no_args(f: Callable[[Native], Native_co], /) -> unary[Any, UnaryFn]: ...
+    def no_args(fn_native: Callable[[Native], Native_co], /) -> unary[Any, UnaryFn]: ...
     @overload
     @staticmethod
     def no_args(
-        f: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
+        fn_native: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
     ) -> unary[Expr, UnaryFn]: ...
     @staticmethod
     def no_args(
-        f: Callable[[Native], Native_co] | Callable[[ChunkedArrayAny], ChunkedArrayAny], /
+        fn_native: Callable[[Native], Native_co]
+        | Callable[[ChunkedArrayAny], ChunkedArrayAny],
+        /,
     ) -> unary[Any, UnaryFn]:
         """Non-decorating function wrapper to fill in the boilerplate when implementing a `UnaryFunction`.
 
@@ -216,7 +218,7 @@ class unary(Generic[S1, U1]):
 
         def _wrapper(self: S2, node: FExpr[UnaryFn], frame: Frame, name: str) -> S2:
             previous = node.dispatch_arg(self, frame, name).native
-            return self._with_native(f(previous), name)
+            return self._with_native(fn_native(previous), name)
 
         return unary(_wrapper)
 
@@ -267,14 +269,12 @@ class _ArrowDispatch(SelfDispatch["Frame", Namespace], Generic[Native_co]):
         return self._with_native(fn.is_in(native, arr), name)
 
     @unary.partial
-    def is_in_series(
-        self, node: FExpr[IsInSeries[ChunkedArrayAny]], previous: Native
-    ) -> Native:
-        return fn.is_in(previous, node.function.other.native)
+    def is_in_series(self, f: IsInSeries[ChunkedArrayAny], previous: Native) -> Native:
+        return fn.is_in(previous, f.other.native)
 
     @unary.partial
-    def is_in_seq(self, node: FExpr[IsInSeq], previous: Native) -> Native:
-        return fn.is_in(previous, fn.array(node.function.other))
+    def is_in_seq(self, f: IsInSeq, previous: Native) -> Native:
+        return fn.is_in(previous, fn.array(f.other))
 
     def binary_expr(self, node: ir.BinaryExpr, frame: Frame, name: str) -> Self:
         lhs, rhs = (
@@ -292,12 +292,12 @@ class _ArrowDispatch(SelfDispatch["Frame", Namespace], Generic[Native_co]):
         return self._with_native(result, name)
 
     @unary.partial
-    def log(self, node: FExpr[F.Log], previous: Native) -> Native:
-        return fn.log(previous, node.function.base)
+    def log(self, f: F.Log, previous: Native) -> Native:
+        return fn.log(previous, f.base)
 
     @unary.partial
-    def round(self, node: FExpr[F.Round], previous: Native) -> Native:
-        return fn.round(previous, node.function.decimals)
+    def round(self, f: F.Round, previous: Native) -> Native:
+        return fn.round(previous, f.decimals)
 
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> Self:
         expr, lb, ub = node.dispatch_args(self, frame, name)
@@ -312,8 +312,7 @@ class _ArrowDispatch(SelfDispatch["Frame", Namespace], Generic[Native_co]):
         return self._with_native(fn.clip_upper(expr.native, other.native), name)
 
     @unary.partial
-    def replace_strict(self, node: FExpr[F.ReplaceStrict], previous: Native) -> Native:
-        f = node.function
+    def replace_strict(self, f: F.ReplaceStrict, previous: Native) -> Native:
         dtype = fn.dtype_native(f.return_dtype, self.version)
         return fn.replace_strict(previous, f.old, f.new, dtype)
 
@@ -617,12 +616,12 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]): 
     mode_all = unary.no_args(fn.mode_all)  # pyright: ignore[reportAssignmentType]
 
     @unary.partial
-    def shift(self, node: FExpr[F.Shift], previous: ChunkedArrayAny) -> ChunkedArrayAny:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return fn.shift(previous, node.function.n)
+    def shift(self, f: F.Shift, previous: ChunkedArrayAny) -> ChunkedArrayAny:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return fn.shift(previous, f.n)
 
     @unary.partial
-    def rank(self, node: FExpr[F.Rank], previous: ChunkedArrayAny) -> ChunkedArrayAny:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return fn.rank(previous, node.function.options)
+    def rank(self, f: F.Rank, previous: ChunkedArrayAny) -> ChunkedArrayAny:  # pyright: ignore[reportIncompatibleMethodOverride]
+        return fn.rank(previous, f.options)
 
     def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
