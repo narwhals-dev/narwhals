@@ -17,26 +17,26 @@ data: dict[str, Any] = {
 }
 
 
-def test_slice_column(nw_eager_constructor: ConstructorEager) -> None:
-    result = nw.from_native(nw_eager_constructor(data))["a"]
+def test_slice_column(constructor_eager: ConstructorEager) -> None:
+    result = nw.from_native(constructor_eager(data))["a"]
     assert isinstance(result, nw.Series)
     assert_equal_data({"a": result}, {"a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]})
 
 
-def test_slice_rows(nw_eager_constructor: ConstructorEager) -> None:
-    result = nw.from_native(nw_eager_constructor(data))[1:]
+def test_slice_rows(constructor_eager: ConstructorEager) -> None:
+    result = nw.from_native(constructor_eager(data))[1:]
     assert_equal_data(result, {"a": [2.0, 3.0, 4.0, 5.0, 6.0], "b": [12, 13, 14, 15, 16]})
 
-    result = nw.from_native(nw_eager_constructor(data))[2:4]
+    result = nw.from_native(constructor_eager(data))[2:4]
     assert_equal_data(result, {"a": [3.0, 4.0], "b": [13, 14]})
 
 
 def test_slice_rows_with_step(
-    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "pyarrow_table" in str(nw_eager_constructor):
+    if "pyarrow_table" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
-    result = nw.from_native(nw_eager_constructor(data))[1::2]
+    result = nw.from_native(constructor_eager(data))[1::2]
     assert_equal_data(result, {"a": [2.0, 4.0, 6.0], "b": [12, 14, 16]})
 
 
@@ -62,23 +62,23 @@ def test_slice_lazy_fails() -> None:
         _ = nw.from_native(pl.LazyFrame(data))[1:]
 
 
-def test_slice_int(nw_eager_constructor: ConstructorEager) -> None:
-    result = nw.from_native(nw_eager_constructor(data), eager_only=True)[1]
+def test_slice_int(constructor_eager: ConstructorEager) -> None:
+    result = nw.from_native(constructor_eager(data), eager_only=True)[1]
     assert_equal_data(result, {"a": [2], "b": [12]})
 
 
-def test_slice_fails(nw_eager_constructor: ConstructorEager) -> None:
+def test_slice_fails(constructor_eager: ConstructorEager) -> None:
     class Foo: ...
 
     with pytest.raises(TypeError, match=r"Unexpected type.*, got:"):
-        nw.from_native(nw_eager_constructor(data), eager_only=True)[Foo()]  # type: ignore[call-overload, unused-ignore]
+        nw.from_native(constructor_eager(data), eager_only=True)[Foo()]  # type: ignore[call-overload, unused-ignore]
 
 
-def test_gather(nw_eager_constructor: ConstructorEager) -> None:
+def test_gather(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 3, 1]]
     expected = {"a": [1.0, 4.0, 2.0], "b": [11, 14, 12]}
     assert_equal_data(result, expected)
@@ -102,11 +102,11 @@ def test_gather_pandas_index() -> None:
     assert_equal_data(result, expected)
 
 
-def test_gather_rows_cols(nw_eager_constructor: ConstructorEager) -> None:
+def test_gather_rows_cols(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    native_df = nw_eager_constructor(data)
+    native_df = constructor_eager(data)
     df = nw.from_native(native_df, eager_only=True)
 
     expected = {"b": [11, 14, 12]}
@@ -118,30 +118,30 @@ def test_gather_rows_cols(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_slice_both_list_of_ints(nw_eager_constructor: ConstructorEager) -> None:
+def test_slice_both_list_of_ints(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 1], [0, 2]]
     expected = {"a": [1, 2], "c": [7, 8]}
     assert_equal_data(result, expected)
 
 
 def test_slice_both_tuple(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "cudf" in str(nw_eager_constructor):
+    if "cudf" in str(constructor_eager):
         # https://github.com/rapidsai/cudf/issues/18556
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[(0, 1), ("a", "c")]
     expected = {"a": [1, 2], "c": [7, 8]}
     assert_equal_data(result, expected)
 
 
-def test_slice_int_rows_str_columns(nw_eager_constructor: ConstructorEager) -> None:
+def test_slice_int_rows_str_columns(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[[0, 1], ["a", "c"]]
     expected = {"a": [1, 2], "c": [7, 8]}
     assert_equal_data(result, expected)
@@ -178,26 +178,26 @@ def test_slice_int_rows_str_columns(nw_eager_constructor: ConstructorEager) -> N
     ],
 )
 def test_slice_slice_columns(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     row_selector: Any,
     col_selector: Any,
     expected: dict[str, list[Any]],
 ) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df[row_selector] if col_selector is None else df[row_selector, col_selector]
     assert_equal_data(result, expected)
 
 
-def test_slice_item(nw_eager_constructor: ConstructorEager) -> None:
+def test_slice_item(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2], "b": [4, 5]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     assert df[0, 0] == 1
 
 
-def test_slice_edge_cases(nw_eager_constructor: ConstructorEager) -> None:
+def test_slice_edge_cases(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "c": [7, 8, 9], "d": [1, 4, 2]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     assert df[[], :].shape == (0, 4)
     assert df[:, []].shape == (0, 0)
     assert df[[]].shape == (0, 4)
@@ -219,11 +219,11 @@ def test_slice_edge_cases(nw_eager_constructor: ConstructorEager) -> None:
     ],
 )
 def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     row_idx: list[int] | tuple[int] | range,
     col_idx: list[int] | tuple[int] | range,
 ) -> None:
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col_idx]
 
 
@@ -231,11 +231,11 @@ def test_get_item_works_with_tuple_and_list_and_range_row_and_col_indexing(
     ("row_idx", "col"), [([0, 2], slice(1)), ((0, 2), slice(1)), (range(2), slice(1))]
 )
 def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col_indexing(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     row_idx: list[int] | tuple[int] | range,
     col: slice,
 ) -> None:
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
 
 
@@ -243,44 +243,42 @@ def test_get_item_works_with_tuple_and_list_and_range_row_indexing_and_slice_col
     ("row_idx", "col"), [([0, 2], "a"), ((0, 2), "a"), (range(2), "a")]
 )
 def test_get_item_works_with_tuple_and_list_indexing_and_str(
-    nw_eager_constructor: ConstructorEager,
-    row_idx: list[int] | tuple[int] | range,
-    col: str,
+    constructor_eager: ConstructorEager, row_idx: list[int] | tuple[int] | range, col: str
 ) -> None:
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     nw_df[row_idx, col]
 
 
-def test_getitem_ndarray_columns(nw_eager_constructor: ConstructorEager) -> None:
+def test_getitem_ndarray_columns(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     arr = np.arange(2)
     result = nw_df[:, arr]
     expected = {"col1": ["a", "b", "c", "d"], "col2": [0, 1, 2, 3]}
     assert_equal_data(result, expected)
 
 
-def test_getitem_ndarray_columns_labels(nw_eager_constructor: ConstructorEager) -> None:
+def test_getitem_ndarray_columns_labels(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     arr: np.ndarray[tuple[int], np.dtype[Any]] = np.array(["col1", "col2"])  # pyright: ignore[reportAssignmentType]
     result = nw_df[:, arr]
     expected = {"col1": ["a", "b", "c", "d"], "col2": [0, 1, 2, 3]}
     assert_equal_data(result, expected)
 
 
-def test_getitem_negative_slice(nw_eager_constructor: ConstructorEager) -> None:
+def test_getitem_negative_slice(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[-3:-2, ["col3", "col1"]]
     expected = {"col3": [3], "col1": ["b"]}
     assert_equal_data(result, expected)
@@ -292,20 +290,20 @@ def test_getitem_negative_slice(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data({"col1": result_s}, expected)
 
 
-def test_zeroth_row_no_columns(nw_eager_constructor: ConstructorEager) -> None:
+def test_zeroth_row_no_columns(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     data = {"col1": ["a", "b", "c", "d"], "col2": np.arange(4), "col3": [4, 3, 2, 1]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     columns: list[str] = []
     result = nw_df[0, columns]
     assert result.shape == (0, 0)
 
 
-def test_single_tuple(nw_eager_constructor: ConstructorEager) -> None:
+def test_single_tuple(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     # Technically works but we should probably discourage it
     # OK if overloads don't match it.
     result = nw_df[[0, 1],]  # type: ignore[index]
@@ -313,23 +311,23 @@ def test_single_tuple(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_triple_tuple(nw_eager_constructor: ConstructorEager) -> None:
+def test_triple_tuple(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2, 3]}
     with pytest.raises(TypeError, match="Tuples cannot"):
-        nw.from_native(nw_eager_constructor(data), eager_only=True)[(1, 2, 3)]
+        nw.from_native(constructor_eager(data), eager_only=True)[(1, 2, 3)]
 
 
 def test_slice_with_series(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (3,),
+            "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
             reason="https://github.com/pandas-dev/pandas/issues/61311",
         )
     )
     data = {"a": [1, 2, 3], "c": [0, 2, 1]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[nw_df["c"]]
     expected = {"a": [1, 3, 2], "c": [0, 1, 2]}
     assert_equal_data(result, expected)
@@ -338,32 +336,32 @@ def test_slice_with_series(
     assert_equal_data(result, expected)
 
 
-def test_horizontal_slice_with_series(nw_eager_constructor: ConstructorEager) -> None:
+def test_horizontal_slice_with_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[nw_df["d"]]
     expected = {"c": [0, 2], "a": [1, 2]}
     assert_equal_data(result, expected)
 
 
 def test_horizontal_slice_with_series_2(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (3,),
+            "pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (3,),
             reason="https://github.com/pandas-dev/pandas/issues/61311",
         )
     )
     data = {"a": [1, 2], "c": [0, 2], "d": ["c", "a"]}
-    nw_df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    nw_df = nw.from_native(constructor_eager(data), eager_only=True)
     result = nw_df[:, nw_df["c"]]
     expected = {"a": [1, 2], "d": ["c", "a"]}
     assert_equal_data(result, expected)
 
 
-def test_native_slice_series(nw_eager_constructor: ConstructorEager) -> None:
-    s = nw.from_native(nw_eager_constructor({"a": [0, 2, 1]}), eager_only=True)["a"]
+def test_native_slice_series(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"a": [0, 2, 1]}), eager_only=True)["a"]
     result = {"a": s[s.to_native()]}
     expected = {"a": [0, 1, 2]}
     assert_equal_data(result, expected)
@@ -385,18 +383,18 @@ def test_pandas_non_str_columns() -> None:
     assert result.to_dict(as_series=False) == expected
 
 
-def test_select_rows_by_name(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor({"a": [0, 2, 1]}), eager_only=True)
+def test_select_rows_by_name(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [0, 2, 1]}), eager_only=True)
     with pytest.raises(TypeError, match="Unexpected type"):
         df["a", :]  # type: ignore[index]
 
 
-def test_getitem_boolean_columns(nw_eager_constructor: ConstructorEager) -> None:
+def test_getitem_boolean_columns(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     df = nw.from_native(
-        nw_eager_constructor({"ab": [1, 2, 3], "bc": [4, 5, 6], "cd": [3, 2, 1]}),
+        constructor_eager({"ab": [1, 2, 3], "bc": [4, 5, 6], "cd": [3, 2, 1]}),
         eager_only=True,
     )
     result = df[:, [False, True, True]]
@@ -408,9 +406,9 @@ def test_getitem_boolean_columns(nw_eager_constructor: ConstructorEager) -> None
     assert_equal_data(result, expected)
 
 
-def test_getitem_single_boolean_column(nw_eager_constructor: ConstructorEager) -> None:
+def test_getitem_single_boolean_column(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
-        nw_eager_constructor({"ab": [1, 2, 3], "bc": [4, 5, 6], "cd": [3, 2, 1]}),
+        constructor_eager({"ab": [1, 2, 3], "bc": [4, 5, 6], "cd": [3, 2, 1]}),
         eager_only=True,
     )
     with pytest.raises(TypeError):

@@ -10,15 +10,15 @@ data = {"a": ["one", "two", "two"]}
 
 
 def test_get_categories_eager(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(nw_eager_constructor) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
-    if "polars" in str(nw_eager_constructor):
+    if "polars" in str(constructor_eager):
         reason = "https://github.com/narwhals-dev/narwhals/issues/3097"
         request.applymarker(pytest.mark.xfail(reason=reason, strict=False))
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     df = df.select(nw.col("a").cast(nw.Categorical))
     expected = {"a": ["one", "two"]}
 
@@ -30,16 +30,16 @@ def test_get_categories_eager(
 
 
 def test_get_categories_lazy(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(nw_eager_constructor) and PYARROW_VERSION < (15, 0, 0):
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
 
-    if "polars" in str(nw_eager_constructor):
+    if "polars" in str(constructor_eager):
         reason = "https://github.com/narwhals-dev/narwhals/issues/3097"
         request.applymarker(pytest.mark.xfail(reason=reason, strict=False))
 
-    df = nw.from_native(nw_eager_constructor(data)).lazy()
+    df = nw.from_native(constructor_eager(data)).lazy()
     expr = nw.col("a").cast(nw.Categorical).cat.get_categories()
     msg = "Length-changing expressions are not supported for use in LazyFrame"
     with pytest.raises(InvalidOperationError, match=msg):

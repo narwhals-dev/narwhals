@@ -6,8 +6,8 @@ from tests.utils import Constructor, assert_equal_data
 data = {"a": ["foo", "bars"], "ab": ["foo", "bars"]}
 
 
-def test_pipe(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_pipe(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     columns = df.collect_schema().names()
     result = df.pipe(lambda _df: _df.select([x for x in columns if len(x) == 2]))
     expected = {"ab": ["foo", "bars"]}

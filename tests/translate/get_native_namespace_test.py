@@ -62,25 +62,25 @@ def _get_expected_namespace(constructor_name: str) -> Any | None:  # noqa: PLR09
     return None  # pragma: no cover
 
 
-def test_native_namespace_frame(nw_frame_constructor: Constructor) -> None:
-    constructor_name = str(nw_frame_constructor)
+def test_native_namespace_frame(constructor: Constructor) -> None:
+    constructor_name = str(constructor)
     if "pyspark" in constructor_name and "sqlframe" not in constructor_name:
         pytest.skip(reason="Requires special handling for spark local vs spark connect")
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     assert nw.get_native_namespace(df) is expected_namespace
     assert nw.get_native_namespace(df.to_native()) is expected_namespace
     assert nw.get_native_namespace(df.lazy().to_native()) is expected_namespace
 
 
-def test_native_namespace_series(nw_eager_constructor: ConstructorEager) -> None:
-    constructor_name = str(nw_eager_constructor)
+def test_native_namespace_series(constructor_eager: ConstructorEager) -> None:
+    constructor_name = str(constructor_eager)
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     assert nw.get_native_namespace(df["a"].to_native()) is expected_namespace
     assert nw.get_native_namespace(df, df["a"].to_native()) is expected_namespace

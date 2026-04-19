@@ -41,8 +41,8 @@ kwargs_and_expected: dict[str, dict[str, Any]] = {
 }
 
 
-def test_rolling_sum_expr(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+def test_rolling_sum_expr(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(
         **{
             name: nw.col("a").rolling_sum(**values["kwargs"])
@@ -67,18 +67,18 @@ def test_rolling_sum_expr(nw_eager_constructor: ConstructorEager) -> None:
     ],
 )
 def test_rolling_sum_expr_lazy_ungrouped(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     expected_a: list[float],
     window_size: int,
     min_samples: int,
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
-    if "modin" in str(nw_frame_constructor):
+    if "modin" in str(constructor):
         # unreliable
         pytest.skip()
     data = {
@@ -86,7 +86,7 @@ def test_rolling_sum_expr_lazy_ungrouped(
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.with_columns(
             nw.col("a")
@@ -113,7 +113,7 @@ def test_rolling_sum_expr_lazy_ungrouped(
     ],
 )
 def test_rolling_sum_expr_lazy_grouped(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     expected_a: list[float],
     window_size: int,
     min_samples: int,
@@ -121,15 +121,15 @@ def test_rolling_sum_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
-    if "pandas" in str(nw_frame_constructor) and PANDAS_VERSION < (1, 2):
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 2):
         pytest.skip()
-    if any(x in str(nw_frame_constructor) for x in ("dask", "pyarrow_table")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(nw_frame_constructor):
+    if "modin" in str(constructor):
         # unreliable
         pytest.skip()
     data = {
@@ -138,7 +138,7 @@ def test_rolling_sum_expr_lazy_grouped(
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.with_columns(
             nw.col("a")
@@ -155,8 +155,8 @@ def test_rolling_sum_expr_lazy_grouped(
 @pytest.mark.filterwarnings(
     "ignore:`Series.rolling_sum` is being called from the stable API although considered an unstable feature."
 )
-def test_rolling_sum_series(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result = df.select(
         **{
@@ -206,12 +206,12 @@ def test_rolling_sum_series(nw_eager_constructor: ConstructorEager) -> None:
     ],
 )
 def test_rolling_sum_expr_invalid_params(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     window_size: int,
     min_samples: int | None,
     context: Any,
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
 
     with context:
         df.select(
@@ -260,12 +260,12 @@ def test_rolling_sum_expr_invalid_params(
     ],
 )
 def test_rolling_sum_series_invalid_params(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     window_size: int,
     min_samples: int | None,
     context: Any,
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
 
     with context:
         df["a"].rolling_sum(window_size=window_size, min_samples=min_samples)

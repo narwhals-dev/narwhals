@@ -135,25 +135,24 @@ data_dst = {"a": [datetime(2020, 10, 25, tzinfo=timezone.utc)]}
 )
 def test_offset_by(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     by: str,
     expected: list[datetime],
 ) -> None:
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(nw_frame_constructor) for x in ("dask", "pyarrow", "ibis")
+        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
     if "ns" in by and any(
-        x in str(nw_frame_constructor)
-        for x in ("dask", "pyspark", "ibis", "cudf", "duckdb")
+        x in str(constructor) for x in ("dask", "pyspark", "ibis", "cudf", "duckdb")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(nw_frame_constructor) for x in ("dask", "ibis")):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": expected})
 
@@ -168,31 +167,26 @@ def test_offset_by(
     ],
 )
 def test_offset_by_tz(
-    request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
-    by: str,
-    expected: str,
+    request: pytest.FixtureRequest, constructor: Constructor, by: str, expected: str
 ) -> None:
     if (
-        ("pyarrow" in str(nw_frame_constructor) and is_windows())
-        or ("pyarrow_table" in str(nw_frame_constructor) and is_windows())
-        or ("pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 1))
+        ("pyarrow" in str(constructor) and is_windows())
+        or ("pyarrow_table" in str(constructor) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
     ):
         pytest.skip()
-    if any(
-        x in str(nw_frame_constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")
-    ):
+    if any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe", "ibis")):
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(nw_frame_constructor) for x in ("dask", "pyarrow", "ibis")
+        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(nw_frame_constructor) for x in ("dask",)):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
-    df = nw.from_native(nw_frame_constructor(data_tz))
+    df = nw.from_native(constructor(data_tz))
     df = df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu"))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": [datetime.strptime(expected, "%Y-%m-%dT%H:%M%z")]})
@@ -207,41 +201,36 @@ def test_offset_by_tz(
     ],
 )
 def test_offset_by_dst(
-    request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
-    by: str,
-    expected: str,
+    request: pytest.FixtureRequest, constructor: Constructor, by: str, expected: str
 ) -> None:
     if (
-        ("pyarrow" in str(nw_frame_constructor) and is_windows())
-        or ("pyarrow_table" in str(nw_frame_constructor) and is_windows())
-        or ("pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 1))
-        or ("modin_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2, 1))
+        ("pyarrow" in str(constructor) and is_windows())
+        or ("pyarrow_table" in str(constructor) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1))
     ):
         pytest.skip()
-    if any(
-        x in str(nw_frame_constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis")
-    ):
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "pyspark", "ibis")):
         # pyspark,duckdb don't support changing time zones.
         # convert_time_zone is not supported for ibis.
         request.applymarker(pytest.mark.xfail())
-    if any(x in str(nw_frame_constructor) for x in ("cudf",)) and "d" not in by:
+    if any(x in str(constructor) for x in ("cudf",)) and "d" not in by:
         # cudf: https://github.com/rapidsai/cudf/issues/19363
         request.applymarker(pytest.mark.xfail())
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(nw_frame_constructor) for x in ("dask", "pyarrow")
+        x in str(constructor) for x in ("dask", "pyarrow")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(nw_frame_constructor) for x in ("dask",)):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
-    df = nw.from_native(nw_frame_constructor(data_dst))
+    df = nw.from_native(constructor(data_dst))
     df = df.with_columns(a=nw.col("a").dt.convert_time_zone("Europe/Amsterdam"))
     result = df.select(nw.col("a").dt.offset_by(by))
     assert_equal_data(result, {"a": [datetime.strptime(expected, "%Y-%m-%dT%H:%M%z")]})
 
 
-def test_offset_by_series(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_offset_by_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.offset_by("1h"))
     expected = {
         "a": [
@@ -252,10 +241,10 @@ def test_offset_by_series(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_offset_by_invalid_interval(nw_frame_constructor: Constructor) -> None:
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+def test_offset_by_invalid_interval(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
         df.select(nw.col("a").dt.offset_by("1r"))
@@ -277,14 +266,12 @@ def test_offset_by_date_pandas() -> None:
     assert_equal_data(result, expected)
 
 
-def test_offset_by_3471(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("dask", "ibis")):
+def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(x in str(constructor) for x in ("dask", "ibis")):
         request.applymarker(pytest.mark.xfail())
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    date_nw = nw.from_native(nw_frame_constructor({"date": [date(2026, 1, 31)]}))
+    date_nw = nw.from_native(constructor({"date": [date(2026, 1, 31)]}))
 
     existent_col_offset = nw.col("date").dt.offset_by("-1d")
     result = date_nw.with_columns(existent_col_offset)

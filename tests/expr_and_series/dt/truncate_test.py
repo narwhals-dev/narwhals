@@ -48,27 +48,23 @@ data = {
 )
 def test_truncate(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     every: str,
     expected: list[datetime],
 ) -> None:
     if every.endswith("ns") and any(
-        x in str(nw_frame_constructor) for x in ("duckdb", "pyspark", "ibis")
+        x in str(constructor) for x in ("duckdb", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail())
 
-    if (
-        every.endswith("ns")
-        and "polars" in str(nw_frame_constructor)
-        and POLARS_VERSION < (1, 35)
-    ):
+    if every.endswith("ns") and "polars" in str(constructor) and POLARS_VERSION < (1, 35):
         request.applymarker(pytest.mark.xfail())
 
     if any(every.endswith(x) for x in ("mo", "q", "y")) and any(
-        x in str(nw_frame_constructor) for x in ("dask", "cudf")
+        x in str(constructor) for x in ("dask", "cudf")
     ):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
 
@@ -107,34 +103,26 @@ def test_truncate(
 )
 def test_truncate_multiples(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     every: str,
     expected: list[datetime],
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("cudf", "pyspark", "duckdb")):
+    if any(x in str(constructor) for x in ("cudf", "pyspark", "duckdb")):
         # Reasons:
         # - cudf: https://github.com/rapidsai/cudf/issues/18654
         # - pyspark/sqlframe: Only multiple 1 is currently supported
         request.applymarker(pytest.mark.xfail())
 
-    if every.endswith("ns") and any(
-        x in str(nw_frame_constructor) for x in ("duckdb", "ibis")
-    ):
+    if every.endswith("ns") and any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail())
 
-    if (
-        every.endswith("ns")
-        and "polars" in str(nw_frame_constructor)
-        and POLARS_VERSION < (1, 35)
-    ):
+    if every.endswith("ns") and "polars" in str(constructor) and POLARS_VERSION < (1, 35):
         request.applymarker(pytest.mark.xfail())
 
-    if any(every.endswith(x) for x in ("mo", "q", "y")) and "dask" in str(
-        nw_frame_constructor
-    ):
+    if any(every.endswith(x) for x in ("mo", "q", "y")) and "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Not implemented"))
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.truncate(every))
     assert_equal_data(result, {"a": expected})
 
@@ -169,8 +157,8 @@ def test_truncate_polars_ns(every: str, expected: list[datetime]) -> None:
     assert_equal_data(result, {"a": expected})
 
 
-def test_truncate_series(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_truncate_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.truncate("1h"))
     expected = {
         "a": [datetime(2021, 3, 1, 12, 0, 0, 0), datetime(2020, 1, 2, 2, 0, 0, 0)]
@@ -178,15 +166,15 @@ def test_truncate_series(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_truncate_invalid_interval(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_truncate_invalid_interval(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     msg = "Invalid `every` string"
     with pytest.raises(ValueError, match=msg):
         df.select(nw.col("a").dt.truncate("1r"))
 
 
-def test_truncate_invalid_multiple(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_truncate_invalid_multiple(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     msg = "Only the following multiples are supported"
     msg_year = "Only multiple 1 is currently supported for 'y' unit"
     with pytest.raises(ValueError, match=msg):

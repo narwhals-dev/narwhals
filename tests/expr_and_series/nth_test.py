@@ -20,13 +20,11 @@ data: dict[str, list[Any]] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.
     ],
 )
 def test_nth(
-    nw_frame_constructor: Constructor,
-    idx: int | list[int],
-    expected: dict[str, list[int]],
+    constructor: Constructor, idx: int | list[int], expected: dict[str, list[int]]
 ) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 0, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         pytest.skip()
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.nth(idx))
     assert_equal_data(result, expected)
 

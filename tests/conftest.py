@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._typing import EagerAllowed
+    from narwhals.testing.typing import EagerFrameConstructor, FrameConstructor
     from narwhals.typing import NonNestedDType
     from tests.utils import NestedOrEnumDType
 
@@ -117,3 +118,26 @@ def non_nested_type(request: pytest.FixtureRequest) -> type[NonNestedDType]:
 def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
     dtype: NestedOrEnumDType = request.param
     return dtype
+
+
+@pytest.fixture
+def constructor(nw_frame_constructor: FrameConstructor) -> FrameConstructor:
+    # Alias fixture for backward compatibility
+    # TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
+    return nw_frame_constructor
+
+
+@pytest.fixture
+def constructor_eager(nw_eager_constructor: EagerFrameConstructor) -> FrameConstructor:
+    # Alias fixture for backward compatibility
+    # TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
+    return nw_eager_constructor
+
+
+@pytest.fixture
+def constructor_pandas_like(
+    nw_pandas_like_constructor: EagerFrameConstructor,
+) -> FrameConstructor:
+    # Alias fixture for backward compatibility
+    # TODO(FBruzzesi): Rm once all tests start using nw_frame_constructor directly
+    return nw_pandas_like_constructor

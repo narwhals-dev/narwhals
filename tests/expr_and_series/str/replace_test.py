@@ -99,7 +99,7 @@ replace_all_data_multivalue = [
     ("data", "pattern", "value", "n", "literal", "expected"), replace_data
 )
 def test_str_replace_series_scalar(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -107,7 +107,7 @@ def test_str_replace_series_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
@@ -119,14 +119,14 @@ def test_str_replace_series_scalar(
     ("data", "pattern", "value", "literal", "expected"), replace_all_data
 )
 def test_str_replace_all_series_scalar(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result_series = df["a"].str.replace_all(pattern=pattern, value=value, literal=literal)
     assert_equal_data({"a": result_series}, expected)
@@ -136,7 +136,7 @@ def test_str_replace_all_series_scalar(
     ("data", "pattern", "value", "n", "literal", "expected"), replace_data
 )
 def test_str_replace_expr_scalar(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
@@ -145,14 +145,14 @@ def test_str_replace_expr_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
-                reason=f"{nw_frame_constructor} only supports `replace_all`.",
+                reason=f"{constructor} only supports `replace_all`.",
                 raises=NotImplementedError,
             )
         )
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
     )
@@ -163,14 +163,14 @@ def test_str_replace_expr_scalar(
     ("data", "pattern", "value", "literal", "expected"), replace_all_data
 )
 def test_str_replace_all_expr_scalar(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("a").str.replace_all(pattern=pattern, value=value, literal=literal)
     )
@@ -181,7 +181,7 @@ def test_str_replace_all_expr_scalar(
     ("data", "pattern", "value", "n", "literal", "expected"), replace_data_multivalue
 )
 def test_str_replace_series_multivalue(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -190,13 +190,11 @@ def test_str_replace_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
-    if any(
-        x in str(nw_eager_constructor) for x in ("pyarrow", "pandas", "modin", "cudf")
-    ):
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    if any(x in str(constructor_eager) for x in ("pyarrow", "pandas", "modin", "cudf")):
         request.applymarker(
             pytest.mark.xfail(
-                reason=f"{nw_eager_constructor} does not support multivalue replacement",
+                reason=f"{constructor_eager} does not support multivalue replacement",
                 raises=TypeError,
             )
         )
@@ -211,7 +209,7 @@ def test_str_replace_series_multivalue(
     ("data", "pattern", "value", "literal", "expected"), replace_all_data_multivalue
 )
 def test_str_replace_all_series_multivalue(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -219,17 +217,15 @@ def test_str_replace_all_series_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(
-        x in str(nw_eager_constructor) for x in ("pyarrow", "pandas", "modin", "cudf")
-    ):
+    if any(x in str(constructor_eager) for x in ("pyarrow", "pandas", "modin", "cudf")):
         request.applymarker(
             pytest.mark.xfail(
-                reason=f"{nw_eager_constructor} only supports `replace_all`.",
+                reason=f"{constructor_eager} only supports `replace_all`.",
                 raises=TypeError,
             )
         )
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace_all(
         pattern=pattern, value=df[value], literal=literal
     )
@@ -240,7 +236,7 @@ def test_str_replace_all_series_multivalue(
     ("data", "pattern", "value", "n", "literal", "expected"), replace_data_multivalue
 )
 def test_str_replace_expr_multivalue(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
@@ -249,25 +245,24 @@ def test_str_replace_expr_multivalue(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("pyspark", "duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
-                reason=f"{nw_frame_constructor} only supports `replace_all`.",
+                reason=f"{constructor} only supports `replace_all`.",
                 raises=NotImplementedError,
             )
         )
     elif any(
-        x in str(nw_frame_constructor)
-        for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
+        x in str(constructor) for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
     ):
         request.applymarker(
             pytest.mark.xfail(
-                reason=f"{nw_frame_constructor} does not support multivalue replacement",
+                reason=f"{constructor} does not support multivalue replacement",
                 raises=TypeError,
             )
         )
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result_df = df.select(
         nw.col("a").str.replace(
             pattern=pattern, value=nw.col(value), n=n, literal=literal
@@ -280,7 +275,7 @@ def test_str_replace_expr_multivalue(
     ("data", "pattern", "value", "literal", "expected"), replace_all_data_multivalue
 )
 def test_str_replace_all_expr_multivalue(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -288,32 +283,29 @@ def test_str_replace_all_expr_multivalue(
     expected: dict[str, list[str]],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(
-        x in str(nw_frame_constructor)
-        for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
-    ):
+    if any(x in str(constructor) for x in ("dask", "pyarrow", "pandas", "modin", "cudf")):
         request.applymarker(
             pytest.mark.xfail(
-                reason=f"{nw_frame_constructor} does not support multivalue replacement",
+                reason=f"{constructor} does not support multivalue replacement",
                 raises=TypeError,
             )
         )
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("a").str.replace_all(pattern=pattern, value=nw.col(value), literal=literal)
     )
     assert_equal_data(result, expected)
 
 
-def test_str_replace_errors_series(nw_eager_constructor: ConstructorEager) -> None:
+def test_str_replace_errors_series(constructor_eager: ConstructorEager) -> None:
     context: Any
     only_str_supported = pytest.raises(
         TypeError, match=r"only supports str replacement values"
     )
     multivalue_binary_n = pytest.raises(Exception, match=r"'n > 1' not yet supported")
 
-    df = nw.from_native(nw_eager_constructor({"a": ["abc", "def", "ab"]}))
+    df = nw.from_native(constructor_eager({"a": ["abc", "def", "ab"]}))
 
     ## .str.replace
     # all eager backends support scalar replacement
@@ -322,9 +314,7 @@ def test_str_replace_errors_series(nw_eager_constructor: ConstructorEager) -> No
 
     # pyarrow, pandas, modin and cudf do not support multivalue replacement
     context = nullcontext()
-    if any(
-        x in str(nw_eager_constructor) for x in ("pyarrow", "pandas", "modin", "cudf")
-    ):
+    if any(x in str(constructor_eager) for x in ("pyarrow", "pandas", "modin", "cudf")):
         context = only_str_supported
 
     with context:
@@ -332,9 +322,7 @@ def test_str_replace_errors_series(nw_eager_constructor: ConstructorEager) -> No
 
     # no backends support multivalue AND n > 1; others error out on multivalue
     context = (
-        multivalue_binary_n
-        if "polars" in str(nw_eager_constructor)
-        else only_str_supported
+        multivalue_binary_n if "polars" in str(constructor_eager) else only_str_supported
     )
     with context:
         df["a"].str.replace("ab", df["a"], n=2)
@@ -346,7 +334,7 @@ def test_str_replace_errors_series(nw_eager_constructor: ConstructorEager) -> No
     context = (
         only_str_supported
         if any(
-            x in str(nw_eager_constructor) for x in ("pyarrow", "pandas", "modin", "cudf")
+            x in str(constructor_eager) for x in ("pyarrow", "pandas", "modin", "cudf")
         )
         else nullcontext()
     )
@@ -354,19 +342,19 @@ def test_str_replace_errors_series(nw_eager_constructor: ConstructorEager) -> No
         df["a"].str.replace_all("ab", df["a"])
 
 
-def test_str_replace_errors_expr(nw_frame_constructor: Constructor) -> None:
+def test_str_replace_errors_expr(constructor: Constructor) -> None:
     context: Any
     not_implemented = pytest.raises(NotImplementedError)
     only_str_supported = pytest.raises(
         TypeError, match=r"only supports str replacement values"
     )
 
-    df = nw.from_native(nw_frame_constructor({"a": ["abc", "def", "ab"]}))
+    df = nw.from_native(constructor({"a": ["abc", "def", "ab"]}))
 
     ## .str.replace
     context = (
         not_implemented
-        if any(x in str(nw_frame_constructor) for x in ("duckdb", "ibis", "pyspark"))
+        if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark"))
         else nullcontext()
     )
     with context:
@@ -374,11 +362,10 @@ def test_str_replace_errors_expr(nw_frame_constructor: Constructor) -> None:
 
     ## .str.replace multivalue; some dont implement replace, others dont support multivalue
     context = nullcontext()
-    if any(x in str(nw_frame_constructor) for x in ("duckdb", "ibis", "pyspark")):
+    if any(x in str(constructor) for x in ("duckdb", "ibis", "pyspark")):
         context = not_implemented
     elif any(
-        x in str(nw_frame_constructor)
-        for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
+        x in str(constructor) for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
     ):
         context = only_str_supported
 
@@ -392,8 +379,7 @@ def test_str_replace_errors_expr(nw_frame_constructor: Constructor) -> None:
     context = (
         only_str_supported
         if any(
-            x in str(nw_frame_constructor)
-            for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
+            x in str(constructor) for x in ("dask", "pyarrow", "pandas", "modin", "cudf")
         )
         else nullcontext()
     )

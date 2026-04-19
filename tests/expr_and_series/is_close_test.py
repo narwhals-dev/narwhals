@@ -35,10 +35,8 @@ data: dict[str, Any] = {
 
 
 # Exceptions
-def test_is_close_series_raise_non_numeric(
-    nw_eager_constructor: ConstructorEager,
-) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_is_close_series_raise_non_numeric(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["non_numeric"], df["y"]
 
     msg = "`is_close` operation not supported for dtype"
@@ -48,9 +46,9 @@ def test_is_close_series_raise_non_numeric(
 
 @pytest.mark.parametrize("rel_tol", [1e-09, 999])
 def test_is_close_raise_negative_abs_tol(
-    nw_eager_constructor: ConstructorEager, rel_tol: float
+    constructor_eager: ConstructorEager, rel_tol: float
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
 
     abs_tol = -2
@@ -64,9 +62,9 @@ def test_is_close_raise_negative_abs_tol(
 
 @pytest.mark.parametrize("rel_tol", [-0.0001, 1.0, 1.1])
 def test_is_close_raise_invalid_rel_tol(
-    nw_eager_constructor: ConstructorEager, rel_tol: float
+    constructor_eager: ConstructorEager, rel_tol: float
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
 
     msg = rf"`rel_tol` must be in the range \[0, 1\) but got {rel_tol}"
@@ -100,14 +98,14 @@ cases_scalar = pytest.mark.parametrize(
 # Series
 @cases_columnar
 def test_is_close_series_with_series(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     abs_tol: float,
     rel_tol: float,
     *,
     nans_equal: bool,
     expected: list[Any],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     x, y = df["x"], df["y"]
     nulls = nw.new_series(
         "nulls", [None] * len(x), nw.Float64(), backend=df.implementation
@@ -116,9 +114,9 @@ def test_is_close_series_with_series(
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = x.is_close(y, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
-    if nw_eager_constructor.is_non_nullable:
+    if constructor_eager.is_non_nullable:
         expected = [v if v is not None else nans_equal for v in expected]
-    elif "pandas" in str(nw_eager_constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -128,7 +126,7 @@ def test_is_close_series_with_series(
 
 @cases_scalar
 def test_is_close_series_with_scalar(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     other: NumericLiteral,
     abs_tol: float,
     rel_tol: float,
@@ -136,7 +134,7 @@ def test_is_close_series_with_scalar(
     nans_equal: bool,
     expected: list[Any],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     y = df["y"]
     nulls = nw.new_series(
         "nulls", [None] * len(y), nw.Float64(), backend=df.implementation
@@ -144,9 +142,9 @@ def test_is_close_series_with_scalar(
     y = y.zip_with(y != NAN_PLACEHOLDER, y**0.5).zip_with(y != NULL_PLACEHOLDER, nulls)
     result = y.is_close(other, abs_tol=abs_tol, rel_tol=rel_tol, nans_equal=nans_equal)
 
-    if nw_eager_constructor.is_non_nullable:
+    if constructor_eager.is_non_nullable:
         expected = [v if v is not None else False for v in expected]
-    elif "pandas" in str(nw_eager_constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -158,14 +156,14 @@ def test_is_close_series_with_scalar(
 @cases_columnar
 def test_is_close_expr_with_expr(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     abs_tol: float,
     rel_tol: float,
     *,
     nans_equal: bool,
     expected: list[Any],
 ) -> None:
-    if "sqlframe" in str(nw_frame_constructor):
+    if "sqlframe" in str(constructor):
         # TODO(FBruzzesi): Figure out a MRE and report upstream
         reason = (
             "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
@@ -174,7 +172,7 @@ def test_is_close_expr_with_expr(
 
     x, y = nw.col("x"), nw.col("y")
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .with_columns(
             x=nw.when(x != NAN_PLACEHOLDER).then(x).otherwise(x**0.5),
             y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5),
@@ -189,9 +187,9 @@ def test_is_close_expr_with_expr(
         )
         .sort("idx")
     )
-    if nw_frame_constructor.is_non_nullable:
+    if constructor.is_non_nullable:
         expected = [v if v is not None else nans_equal for v in expected]
-    elif "pandas" in str(nw_frame_constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -202,7 +200,7 @@ def test_is_close_expr_with_expr(
 @cases_scalar
 def test_is_close_expr_with_scalar(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     other: NumericLiteral,
     abs_tol: float,
     rel_tol: float,
@@ -210,7 +208,7 @@ def test_is_close_expr_with_scalar(
     nans_equal: bool,
     expected: list[Any],
 ) -> None:
-    if "sqlframe" in str(nw_frame_constructor):
+    if "sqlframe" in str(constructor):
         # TODO(FBruzzesi): Figure out a MRE and report upstream
         reason = (
             "duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='"
@@ -219,7 +217,7 @@ def test_is_close_expr_with_scalar(
 
     y = nw.col("y")
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .with_columns(y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5))
         .with_columns(y=nw.when(y != NULL_PLACEHOLDER).then(y))
         .select(
@@ -230,9 +228,9 @@ def test_is_close_expr_with_scalar(
         )
         .sort("idx")
     )
-    if nw_frame_constructor.is_non_nullable:
+    if constructor.is_non_nullable:
         expected = [v if v is not None else False for v in expected]
-    elif "pandas" in str(nw_frame_constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
         expected = [
             v if data["y"][i] not in {NULL_PLACEHOLDER, NAN_PLACEHOLDER} else None
             for i, v in enumerate(expected)
@@ -252,8 +250,8 @@ def test_is_close_pandas_unnamed() -> None:
     assert res.name == "ab"
 
 
-def test_issue_3474_series_decimal(nw_eager_constructor: ConstructorEager) -> None:
-    frame = nw.from_native(nw_eager_constructor({"a": [0, 1, 2]}))
+def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
+    frame = nw.from_native(constructor_eager({"a": [0, 1, 2]}))
 
     if frame.implementation.is_pandas_like() and (
         PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
@@ -265,9 +263,9 @@ def test_issue_3474_series_decimal(nw_eager_constructor: ConstructorEager) -> No
 
 
 def test_issue_3474_expr_decimal(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("dask", "sqlframe")):
+    if any(x in str(constructor) for x in ("dask", "sqlframe")):
         # TODO(FBruzzesi): Figure out a MRE and report upstream
         reason = (
             "SQLFrame: duckdb.duckdb.ParserException: Parser Error: syntax error at or near '='\n"
@@ -275,7 +273,7 @@ def test_issue_3474_expr_decimal(
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    frame = nw.from_native(nw_frame_constructor({"a": [0, 1, 2]}))
+    frame = nw.from_native(constructor({"a": [0, 1, 2]}))
 
     if frame.implementation.is_pandas_like() and (
         PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)

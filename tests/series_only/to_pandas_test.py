@@ -19,19 +19,19 @@ data = [1, 3, 2]
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old for pyarrow")
 def test_convert(
-    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     pytest.importorskip("pyarrow")
 
     if any(
-        cname in str(nw_eager_constructor)
+        cname in str(constructor_eager)
         for cname in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    series = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)[
+    series = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"].alias(
         "a"
-    ].alias("a")
+    )
 
     result = series.to_pandas()
     assert_series_equal(result, pd.Series([1, 3, 2], name="a"))

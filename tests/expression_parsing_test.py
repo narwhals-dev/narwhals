@@ -52,14 +52,14 @@ from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equa
     ],
 )
 def test_over_pushdown(
-    nw_frame_constructor: Constructor, expr: nw.Expr, expected: list[float]
+    constructor: Constructor, expr: nw.Expr, expected: list[float]
 ) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
-    df = nw.from_native(nw_frame_constructor(data)).lazy()
+    df = nw.from_native(constructor(data)).lazy()
     result = df.select("i", a=expr).sort("i").select("a")
     assert_equal_data(result, {"a": expected})
 
@@ -68,18 +68,18 @@ def test_over_pushdown(
     ("expr", "expected"), [((nw.col("a") - nw.col("a").mean()).over("b"), [-1.5, 1.5, 0])]
 )
 def test_per_group_broadcasting(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     expr: nw.Expr,
     expected: list[float],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         # sigh...
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
-    df = nw.from_native(nw_frame_constructor(data)).lazy()
+    df = nw.from_native(constructor(data)).lazy()
     result = df.select("i", a=expr).sort("i").select("a")
     assert_equal_data(result, {"a": expected})
 
@@ -107,13 +107,11 @@ def test_per_group_broadcasting(
         nw.col("a").filter(nw.col("b").sum().over("c") > 1).sum().over("d"),
     ],
 )
-def test_invalid_operations(nw_frame_constructor: Constructor, expr: nw.Expr) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
+def test_invalid_operations(constructor: Constructor, expr: nw.Expr) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     df = nw.from_native(
-        nw_frame_constructor(
-            {"a": [-1, 2, 3], "b": [1, 1, 1], "c": [2, 2, 2], "i": [0, 1, 2]}
-        )
+        constructor({"a": [-1, 2, 3], "b": [1, 1, 1], "c": [2, 2, 2], "i": [0, 1, 2]})
     ).lazy()
     with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.select(a=expr)

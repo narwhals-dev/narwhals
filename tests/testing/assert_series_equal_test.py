@@ -32,21 +32,21 @@ def series_from_native(native: IntoSeriesT) -> nw.Series[IntoSeriesT]:
 
 def test_self_equal(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     testing_data: Data,
     testing_schema: IntoSchema,
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
-    if "cudf" in str(nw_eager_constructor):
+    if "cudf" in str(constructor_eager):
         # TODO(FBruzzesi): Investigate which conversion is failing aside from nested dtypes
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(nw_eager_constructor):
+    if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
-    if "pyarrow_table" in str(nw_eager_constructor) and PYARROW_VERSION < (
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         15,
         0,
     ):  # pragma: no cover
@@ -56,7 +56,7 @@ def test_self_equal(
         )
         pytest.skip(reason=reason)
 
-    if "pyarrow_table" in str(nw_eager_constructor):
+    if "pyarrow_table" in str(constructor_eager):
         # Replace Enum with Categorical, since Pyarrow does not support Enum
         data = dict(testing_data)
         schema = {**testing_schema, "enum": nw.Categorical()}
@@ -64,7 +64,7 @@ def test_self_equal(
         data = dict(testing_data)
         schema = dict(testing_schema)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     for name, dtype in schema.items():
         assert_series_equal(df[name].cast(dtype), df[name].cast(dtype))
 
@@ -93,10 +93,10 @@ def test_implementation_mismatch() -> None:
     ],
 )
 def test_metadata_checks(
-    nw_eager_constructor: ConstructorEager, setup_fn: SetupFn, error_msg: str
+    constructor_eager: ConstructorEager, setup_fn: SetupFn, error_msg: str
 ) -> None:
     """Test metadata validation (length, dtype, name)."""
-    series = nw.from_native(nw_eager_constructor({"a": [1, 2, 3]}), eager_only=True)["a"]
+    series = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     left, right = setup_fn(series)
 
     with _assertion_error(error_msg):
@@ -112,7 +112,7 @@ def test_metadata_checks(
     ],
 )
 def test_metadata_checks_with_flags(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     setup_fn: SetupFn,
     error_msg: str,
     *,
@@ -120,7 +120,7 @@ def test_metadata_checks_with_flags(
     check_names: bool,
 ) -> None:
     """Test the effect of check_dtypes and check_names flags."""
-    series = nw.from_native(nw_eager_constructor({"a": [1, 2, 3]}), eager_only=True)["a"]
+    series = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     left, right = setup_fn(series)
 
     with _assertion_error(error_msg):
@@ -142,25 +142,25 @@ def test_metadata_checks_with_flags(
 )
 def test_check_order(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     dtype: nw.dtypes.DType,
     *,
     check_order: bool,
     context: AbstractContextManager[Any],
 ) -> None:
     """Test check_order behavior with nested and simple data."""
-    if "cudf" in str(nw_eager_constructor) and dtype.is_nested():
+    if "cudf" in str(constructor_eager) and dtype.is_nested():
         reason = "NotImplementedError"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(nw_eager_constructor):
+    if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2) and dtype.is_nested():  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
     data: list[Any] = [[1, 2, 3]] if dtype.is_nested() else [1, 2, 3]
-    frame = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)
+    frame = nw.from_native(constructor_eager({"a": data}), eager_only=True)
     left = right = frame["a"].cast(dtype)
 
     with context:
@@ -174,9 +174,9 @@ def test_check_order(
         {"left": ["x", None, None], "right": [None, "x", "y"]},  # Different null counts
     ],
 )
-def test_null_mismatch(nw_eager_constructor: ConstructorEager, null_data: Data) -> None:
+def test_null_mismatch(constructor_eager: ConstructorEager, null_data: Data) -> None:
     """Test null value mismatch detection."""
-    frame = nw.from_native(nw_eager_constructor(null_data), eager_only=True)
+    frame = nw.from_native(constructor_eager(null_data), eager_only=True)
     left, right = frame["left"], frame["right"]
     with _assertion_error("null value mismatch"):
         assert_series_equal(left, right, check_names=False)
@@ -191,7 +191,7 @@ def test_null_mismatch(nw_eager_constructor: ConstructorEager, null_data: Data) 
     ],
 )
 def test_numeric(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     *,
     check_exact: bool,
     abs_tol: float,
@@ -203,7 +203,7 @@ def test_numeric(
         "right": [1.01, float("nan"), float("inf"), None, 1.11],
     }
 
-    frame = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"], frame["right"]
     with context:
         assert_series_equal(
@@ -259,7 +259,7 @@ def test_numeric(
 )
 def test_list_like(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     l_vals: list[list[Any]],
     r_vals: list[list[Any]],
     *,
@@ -267,18 +267,18 @@ def test_list_like(
     context: AbstractContextManager[Any],
     dtype: nw.dtypes.DType,
 ) -> None:
-    if "cudf" in str(nw_eager_constructor):
+    if "cudf" in str(constructor_eager):
         reason = "NotImplementedError"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(nw_eager_constructor):
+    if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
     if (
-        "pyarrow_table" in str(nw_eager_constructor)
+        "pyarrow_table" in str(constructor_eager)
         and PYARROW_VERSION < (14, 0)
         and dtype == nw.Array
     ):  # pragma: no cover
@@ -289,7 +289,7 @@ def test_list_like(
         pytest.skip(reason=reason)
 
     data = {"left": l_vals, "right": r_vals}
-    frame = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
     with context:
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
@@ -320,18 +320,18 @@ def test_list_like(
 )
 def test_struct(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     l_vals: list[dict[str, Any]],
     r_vals: list[dict[str, Any]],
     *,
     check_exact: bool,
     context: AbstractContextManager[Any],
 ) -> None:
-    if "cudf" in str(nw_eager_constructor):
+    if "cudf" in str(constructor_eager):
         reason = "NotImplementedError"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(nw_eager_constructor):
+    if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
@@ -339,7 +339,7 @@ def test_struct(
 
     dtype = nw.Struct({"a": nw.Float32(), "b": nw.List(nw.String())})
     data = {"left": l_vals, "right": r_vals}
-    frame = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
     with context:
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
@@ -374,13 +374,13 @@ def test_non_nw_series() -> None:
 )
 def test_categorical_as_str(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     *,
     categorical_as_str: bool,
     context: AbstractContextManager[Any],
 ) -> None:
     if (
-        "polars" in str(nw_eager_constructor)
+        "polars" in str(constructor_eager)
         and POLARS_VERSION >= (1, 32)
         and not categorical_as_str
     ):
@@ -388,11 +388,11 @@ def test_categorical_as_str(
         # exists but it does nothing in python.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(nw_eager_constructor) and not categorical_as_str:
+    if "pyarrow_table" in str(constructor_eager) and not categorical_as_str:
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(nw_eager_constructor) and PYARROW_VERSION < (
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         15,
         0,
     ):  # pragma: no cover
@@ -406,7 +406,7 @@ def test_categorical_as_str(
         "left": ["beluga", "dolphin", "narwhal", "orca"],
         "right": ["unicorn", "orca", "narwhal", "orca"],
     }
-    frame = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
     left = frame["left"].cast(nw.Categorical())[2:]
     right = frame["right"].cast(nw.Categorical())[2:]
 

@@ -7,9 +7,9 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize("decimals", [0, 1, 2])
-def test_round(nw_frame_constructor: Constructor, decimals: int) -> None:
+def test_round(constructor: Constructor, decimals: int) -> None:
     data = {"a": [2.12345, 2.56789, 3.901234]}
-    df_raw = nw_frame_constructor(data)
+    df_raw = constructor(data)
     df = nw.from_native(df_raw)
 
     expected_data = {k: [round(e, decimals) for e in v] for k, v in data.items()}
@@ -18,9 +18,9 @@ def test_round(nw_frame_constructor: Constructor, decimals: int) -> None:
 
 
 @pytest.mark.parametrize("decimals", [0, 1, 2])
-def test_round_series(nw_eager_constructor: ConstructorEager, decimals: int) -> None:
+def test_round_series(constructor_eager: ConstructorEager, decimals: int) -> None:
     data = {"a": [1.12345, 2.56789, 3.901234]}
-    df_raw = nw_eager_constructor(data)
+    df_raw = constructor_eager(data)
     df = nw.from_native(df_raw, eager_only=True)
 
     expected_data = {k: [round(e, decimals) for e in v] for k, v in data.items()}

@@ -77,8 +77,8 @@ SHIFT_BINS_BY = 10
 def test_hist_bin(
     name: str, bins: list[float], expected: Sequence[float], *, include_breakpoint: bool
 ) -> None:
-    nw_eager_constructor = maybe_name_to_constructor(name)
-    df = nw.from_native(nw_eager_constructor(data)).with_columns(
+    constructor_eager = maybe_name_to_constructor(name)
+    df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
     expected_full = {"count": expected}
@@ -106,7 +106,7 @@ def test_hist_bin(
 
     # missing/nan results
     df = nw.from_native(
-        nw_eager_constructor(
+        constructor_eager(
             {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
         )
     )
@@ -124,8 +124,8 @@ def test_hist_bin(
 def test_hist_count(
     name: str, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
-    nw_eager_constructor = maybe_name_to_constructor(name)
-    df = nw.from_native(nw_eager_constructor(data)).with_columns(
+    constructor_eager = maybe_name_to_constructor(name)
+    df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
     bin_count = params["bin_count"]
@@ -148,7 +148,7 @@ def test_hist_count(
 
     # missing/nan results
     df = nw.from_native(
-        nw_eager_constructor(
+        constructor_eager(
             {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
         )
     )
@@ -167,9 +167,9 @@ def test_hist_count(
 
 @param_name
 def test_hist_count_no_spread(name: str) -> None:
-    nw_eager_constructor = maybe_name_to_constructor(name)
+    constructor_eager = maybe_name_to_constructor(name)
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
 
     result = df["all_zero"].hist(bin_count=4, include_breakpoint=True)
     expected = {"breakpoint": [-0.25, 0.0, 0.25, 0.5], "count": [0, 3, 0, 0]}
@@ -199,8 +199,8 @@ def test_hist_bin_and_bin_count() -> None:
 @param_include_breakpoint
 @param_name
 def test_hist_no_data(name: str, *, include_breakpoint: bool) -> None:
-    nw_eager_constructor = maybe_name_to_constructor(name)
-    s = nw.from_native(nw_eager_constructor({"values": []})).select(
+    constructor_eager = maybe_name_to_constructor(name)
+    s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
     for bin_count in [1, 10]:
@@ -221,8 +221,8 @@ def test_hist_no_data(name: str, *, include_breakpoint: bool) -> None:
 
 @param_name
 def test_hist_small_bins(name: str) -> None:
-    nw_eager_constructor = maybe_name_to_constructor(name)
-    s = nw.from_native(nw_eager_constructor({"values": [1, 2, 3]}))
+    constructor_eager = maybe_name_to_constructor(name)
+    s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
 
@@ -230,11 +230,11 @@ def test_hist_small_bins(name: str) -> None:
         s["values"].hist(bins=[1, 3], bin_count=4)
 
 
-def test_hist_non_monotonic(nw_eager_constructor: ConstructorEager) -> None:
-    if "cudf" in str(nw_eager_constructor):
+def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
+    if "cudf" in str(constructor_eager):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
-    df = nw.from_native(nw_eager_constructor({"int": [0, 1, 2, 3, 4, 5, 6]}))
+    df = nw.from_native(constructor_eager({"int": [0, 1, 2, 3, 4, 5, 6]}))
 
     with pytest.raises(ComputeError, match="monotonic"):
         df["int"].hist(bins=[5, 0, 2])
@@ -275,14 +275,14 @@ def test_hist_non_monotonic(nw_eager_constructor: ConstructorEager) -> None:
 def test_hist_bin_hypotheis(
     name: str, data: list[float], bin_deltas: list[float]
 ) -> None:
-    nw_eager_constructor = maybe_name_to_constructor(name)
+    constructor_eager = maybe_name_to_constructor(name)
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(nw_eager_constructor({"values": data})).select(
+    df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )
-    df_bins_native = nw_eager_constructor({"bins": bin_deltas})
+    df_bins_native = constructor_eager({"bins": bin_deltas})
     bins = (
         nw.from_native(df_bins_native, eager_only=True)
         .get_column("bins")
@@ -319,8 +319,8 @@ def test_hist_count_hypothesis(
     pytest.importorskip("polars")
     import polars as pl
 
-    nw_eager_constructor = maybe_name_to_constructor(name)
-    df = nw.from_native(nw_eager_constructor({"values": data})).select(
+    constructor_eager = maybe_name_to_constructor(name)
+    df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )
 
@@ -344,7 +344,7 @@ def test_hist_count_hypothesis(
     if expected[
         "count"
     ].sum() != expected_data.is_not_nan().sum() and "polars" not in str(
-        nw_eager_constructor
+        constructor_eager
     ):
         request.applymarker(pytest.mark.xfail)
 

@@ -9,11 +9,11 @@ from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 
 def test_pivot(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(nw_eager_constructor) for x in ("pyarrow_table", "modin")):
+    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1, 0):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         pytest.skip()
 
     data = {
@@ -25,7 +25,7 @@ def test_pivot(
         "ticker": [*["AAPL", "TSLA", "MSFT", "NFLX"] * 3],
         "price": [100, 200, 300, 400, 110, 220, 330, 420, 105, 210, 315, 440],
     }
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True).sort("date")
+    df = nw.from_native(constructor_eager(data), eager_only=True).sort("date")
 
     pivoted = df.pivot(index="date", values="price", on="ticker")
 

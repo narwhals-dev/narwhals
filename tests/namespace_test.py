@@ -70,9 +70,9 @@ def test_namespace_from_backend_name(backend: BackendName) -> None:
     assert namespace.version is Version.MAIN
 
 
-def test_namespace_from_native_object(nw_frame_constructor: Constructor) -> None:
+def test_namespace_from_native_object(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    frame = nw_frame_constructor(data)
+    frame = constructor(data)
     namespace = Namespace.from_native_object(frame)
     nw_frame = nw.from_native(frame)
     assert namespace.implementation == nw_frame.implementation

@@ -73,8 +73,8 @@ def test_invalid_group_by_dask() -> None:
         nw.from_native(df_dask).group_by("a").agg(nw.col("b").abs().min())
 
 
-def test_group_by_iter(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     expected_keys = [(1,), (3,)]
     keys = []
     for key, sub_df in df.group_by("a"):
@@ -108,10 +108,8 @@ def test_group_by_iter_non_str_pandas() -> None:
     assert_equal_data(groups, expected)
 
 
-def test_group_by_nw_all(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(
-        nw_frame_constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]})
-    )
+def test_group_by_nw_all(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 8, 9]}))
     result = df.group_by("a").agg(nw.all().sum()).sort("a")
     expected = {"a": [1, 2], "b": [9, 6], "c": [15, 9]}
     assert_equal_data(result, expected)
@@ -135,21 +133,17 @@ def test_group_by_nw_all(nw_frame_constructor: Constructor) -> None:
     ],
 )
 def test_group_by_depth_1_agg(
-    nw_frame_constructor: Constructor, attr: str, expected: dict[str, list[int | float]]
+    constructor: Constructor, attr: str, expected: dict[str, list[int | float]]
 ) -> None:
-    if (
-        "pandas_pyarrow" in str(nw_frame_constructor)
-        and attr == "var"
-        and PANDAS_VERSION < (2, 1)
-    ):
+    if "pandas_pyarrow" in str(constructor) and attr == "var" and PANDAS_VERSION < (2, 1):
         pytest.skip(
             "Known issue with variance calculation in pandas 2.0.x with pyarrow backend in groupby operations"
         )
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 1, 1, 2], "b": [1, None, 2, 3]}
     expr = getattr(nw.col("b"), attr)()
-    result = nw.from_native(nw_frame_constructor(data)).group_by("a").agg(expr).sort("a")
+    result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 
 
@@ -169,18 +163,16 @@ def test_group_by_depth_1_agg(
 )
 def test_group_by_depth_1_agg_bool_ops(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     values: dict[str, list[bool]],
     expected: dict[str, list[bool]],
 ) -> None:
-    if ("dask-nullable" in request.node.callspec.id) or (
-        "cudf" in str(nw_frame_constructor)
-    ):
+    if ("dask-nullable" in request.node.callspec.id) or ("cudf" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 1, 2, 2, 3, 3], **values}
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by("a")
         .agg(nw.col("x").all().alias("all"), nw.col("x").any().alias("any"))
         .sort("a")
@@ -191,9 +183,7 @@ def test_group_by_depth_1_agg_bool_ops(
 @pytest.mark.parametrize(
     ("attr", "ddof"), [("std", 0), ("var", 0), ("std", 2), ("var", 2)]
 )
-def test_group_by_depth_1_std_var(
-    nw_frame_constructor: Constructor, attr: str, ddof: int
-) -> None:
+def test_group_by_depth_1_std_var(constructor: Constructor, attr: str, ddof: int) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}
     _pow = 0.5 if attr == "std" else 1
     expected = {
@@ -204,14 +194,14 @@ def test_group_by_depth_1_std_var(
         ],
     }
     expr = getattr(nw.col("b"), attr)(ddof=ddof)
-    result = nw.from_native(nw_frame_constructor(data)).group_by("a").agg(expr).sort("a")
+    result = nw.from_native(constructor(data)).group_by("a").agg(expr).sort("a")
     assert_equal_data(result, expected)
 
 
-def test_group_by_median(nw_frame_constructor: Constructor) -> None:
+def test_group_by_median(constructor: Constructor) -> None:
     data = {"a": [1, 1, 1, 2, 2, 2], "b": [5, 4, 6, 7, 3, 2]}
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by("a")
         .agg(nw.col("b").median())
         .sort("a")
@@ -220,12 +210,12 @@ def test_group_by_median(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_n_unique_w_missing(nw_frame_constructor: Constructor) -> None:
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+def test_group_by_n_unique_w_missing(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 1, 2], "b": [4, None, 5], "c": [None, None, 7], "d": [1, 1, 3]}
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by("a")
         .agg(
             nw.col("b").n_unique(),
@@ -269,9 +259,9 @@ def test_group_by_empty_result_pandas() -> None:
         )
 
 
-def test_group_by_simple_named(nw_frame_constructor: Constructor) -> None:
+def test_group_by_simple_named(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(nw_frame_constructor(data)).lazy()
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a").agg(b_min=nw.col("b").min(), b_max=nw.col("b").max()).sort("a")
     )
@@ -279,17 +269,17 @@ def test_group_by_simple_named(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_group_by_simple_unnamed(nw_frame_constructor: Constructor) -> None:
+def test_group_by_simple_unnamed(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "c": [7, 2, 1]}
-    df = nw.from_native(nw_frame_constructor(data)).lazy()
+    df = nw.from_native(constructor(data)).lazy()
     result = df.group_by("a").agg(nw.col("b").min(), nw.col("c").max()).sort("a")
     expected = {"a": [1, 2], "b": [4, 6], "c": [7, 1]}
     assert_equal_data(result, expected)
 
 
-def test_group_by_multiple_keys(nw_frame_constructor: Constructor) -> None:
+def test_group_by_multiple_keys(constructor: Constructor) -> None:
     data = {"a": [1, 1, 2], "b": [4, 4, 6], "c": [7, 2, 1]}
-    df = nw.from_native(nw_frame_constructor(data)).lazy()
+    df = nw.from_native(constructor(data)).lazy()
     result = (
         df.group_by("a", "b")
         .agg(c_min=nw.col("c").min(), c_max=nw.col("c").max())
@@ -299,15 +289,13 @@ def test_group_by_multiple_keys(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_key_with_nulls(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "modin" in str(nw_frame_constructor):
+def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "modin" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Modin flaky here", strict=False))
 
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by("b")
         .agg(nw.len(), nw.col("a").min())
         .sort("a")
@@ -317,10 +305,10 @@ def test_key_with_nulls(
     assert_equal_data(result, expected)
 
 
-def test_key_with_nulls_ignored(nw_frame_constructor: Constructor) -> None:
+def test_key_with_nulls_ignored(constructor: Constructor) -> None:
     data = {"b": [4, 5, None], "a": [1, 2, 3]}
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by("b", drop_null_keys=True)
         .agg(nw.len(), nw.col("a").min())
         .sort("a")
@@ -330,14 +318,14 @@ def test_key_with_nulls_ignored(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_key_with_nulls_iter(nw_eager_constructor: ConstructorEager) -> None:
+def test_key_with_nulls_iter(constructor_eager: ConstructorEager) -> None:
     data = {
         "b": [None, "4", "5", None, "7"],
         "a": [None, 1, 2, 3, 4],
         "c": [None, "4", "3", None, None],
     }
     result = dict(
-        nw.from_native(nw_eager_constructor(data), eager_only=True)
+        nw.from_native(constructor_eager(data), eager_only=True)
         .group_by("b", "c", drop_null_keys=True)
         .__iter__()
     )
@@ -347,7 +335,7 @@ def test_key_with_nulls_iter(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result[("5", "3")], {"b": ["5"], "a": [2], "c": ["3"]})
 
     result = dict(
-        nw.from_native(nw_eager_constructor(data), eager_only=True)
+        nw.from_native(constructor_eager(data), eager_only=True)
         .group_by("b", "c", drop_null_keys=False)
         .__iter__()
     )
@@ -356,22 +344,17 @@ def test_key_with_nulls_iter(nw_eager_constructor: ConstructorEager) -> None:
     assert len(result) == 4
 
 
-def test_no_agg(nw_frame_constructor: Constructor) -> None:
-    result = (
-        nw.from_native(nw_frame_constructor(data))
-        .group_by(["a", "b"])
-        .agg()
-        .sort("a", "b")
-    )
+def test_no_agg(constructor: Constructor) -> None:
+    result = nw.from_native(constructor(data)).group_by(["a", "b"]).agg().sort("a", "b")
 
     expected = {"a": [1, 3], "b": [4, 6]}
     assert_equal_data(result, expected)
 
 
-def test_group_by_categorical(nw_frame_constructor: Constructor) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("pyspark", "duckdb", "ibis")):
+def test_group_by_categorical(constructor: Constructor) -> None:
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
         pytest.skip(reason="no categorical support")
-    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (
         15,
     ):  # pragma: no cover
         # https://github.com/narwhals-dev/narwhals/issues/1078
@@ -380,7 +363,7 @@ def test_group_by_categorical(nw_frame_constructor: Constructor) -> None:
         )
 
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.with_columns(
             g1=nw.col("g1").cast(nw.Categorical()), g2=nw.col("g2").cast(nw.Categorical())
@@ -392,42 +375,40 @@ def test_group_by_categorical(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, data)
 
 
-def test_group_by_shift_raises(nw_frame_constructor: Constructor) -> None:
+def test_group_by_shift_raises(constructor: Constructor) -> None:
     df_native = {"a": [1, 2, 3], "b": [1, 1, 2]}
-    df = nw.from_native(nw_frame_constructor(df_native))
+    df = nw.from_native(constructor(df_native))
     with pytest.raises(InvalidOperationError, match="does not aggregate"):
         df.group_by("b").agg(nw.col("a").abs())
 
 
 def test_double_same_aggregation(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("dask",)):
+    if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(nw_frame_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(c=nw.col("b").mean(), d=nw.col("b").mean()).sort("a")
     expected = {"a": [1, 2], "c": [4.5, 6], "d": [4.5, 6]}
     assert_equal_data(result, expected)
 
 
 def test_all_kind_of_aggs(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("dask",)):
+    if any(x in str(constructor) for x in ("dask",)):
         # bugged in dask https://github.com/dask/dask/issues/11612
         # and cudf https://github.com/rapidsai/cudf/issues/17649
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(nw_frame_constructor) and PANDAS_VERSION < (1, 4):
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 4):
         pytest.skip(
             "Pandas < 1.4.0 does not support multiple aggregations with the same column"
         )
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(
-        nw_frame_constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]})
-    )
+    df = nw.from_native(constructor({"a": [1, 1, 1, 2, 2, 2], "b": [4, 5, 6, 0, 5, 5]}))
     result = (
         df.group_by("a")
         .agg(
@@ -473,8 +454,8 @@ def test_pandas_group_by_index_and_column_overlap() -> None:
     pd.testing.assert_frame_equal(result.to_native(), expected_native)
 
 
-def test_fancy_functions(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+def test_fancy_functions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = df.group_by("a").agg(nw.all().std(ddof=0)).sort("a")
     expected = {"a": [1, 2], "b": [0.5, 0.0]}
     assert_equal_data(result, expected)
@@ -537,14 +518,14 @@ def test_fancy_functions(nw_frame_constructor: Constructor) -> None:
     ],
 )
 def test_group_by_expr(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     keys: list[nw.Expr],
     aggs: list[nw.Expr],
     expected: dict[str, list[Any]],
     sort_by: list[str],
 ) -> None:
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.group_by(*keys).agg(*aggs).sort(*sort_by)
     assert_equal_data(result, expected)
 
@@ -560,19 +541,19 @@ def test_group_by_expr(
     ],
 )
 def test_group_by_raise_if_not_preserves_length(
-    nw_frame_constructor: Constructor, keys: list[nw.Expr]
+    constructor: Constructor, keys: list[nw.Expr]
 ) -> None:
     data = {"a": [1, 2, 2, None], "b": [0, 1, 2, 3], "x": [1, 2, 3, 4]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.group_by(keys).agg(nw.col("x").max())
 
 
-def test_group_by_window(nw_frame_constructor: Constructor) -> None:
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+def test_group_by_window(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2, 2, None], "b": [1, 1, 2, 2], "x": [1, 2, 3, 4]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.group_by(nw.col("a").mean().over("b"))
         .agg(nw.col("x").max())
@@ -586,17 +567,17 @@ def test_group_by_window(nw_frame_constructor: Constructor) -> None:
     "keys", [[nw.col("a").abs()], ["a", nw.col("a").abs().alias("a_test")]]
 )
 def test_group_by_raise_drop_null_keys_with_exprs(
-    nw_frame_constructor: Constructor, keys: list[nw.Expr | str]
+    constructor: Constructor, keys: list[nw.Expr | str]
 ) -> None:
     data = {"a": [1, 1, 2, 2, -1], "x": [0, 1, 2, 3, 4], "y": [0.5, -0.5, 1.0, -1.0, 1.5]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     with pytest.raises(
         NotImplementedError, match="drop_null_keys cannot be True when keys contains Expr"
     ):
         df.group_by(*keys, drop_null_keys=True)  # type: ignore[call-overload]
 
 
-def test_group_by_selector(nw_frame_constructor: Constructor) -> None:
+def test_group_by_selector(constructor: Constructor) -> None:
     data = {
         "a": [1, 1, 1],
         "b": [4, 4, 6],
@@ -604,7 +585,7 @@ def test_group_by_selector(nw_frame_constructor: Constructor) -> None:
         "x": [7.5, 8.5, 9.0],
     }
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by(nw.selectors.by_dtype(nw.Int64), "c")
         .agg(nw.col("x").mean())
         .sort("a", "b")
@@ -613,33 +594,29 @@ def test_group_by_selector(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_renaming_edge_case(nw_frame_constructor: Constructor) -> None:
+def test_renaming_edge_case(constructor: Constructor) -> None:
     data = {"a": [0, 0, 0], "_a_tmp": [1, 2, 3], "b": [4, 5, 6]}
-    result = (
-        nw.from_native(nw_frame_constructor(data))
-        .group_by(nw.col("a"))
-        .agg(nw.all().min())
-    )
+    result = nw.from_native(constructor(data)).group_by(nw.col("a")).agg(nw.all().min())
     expected = {"a": [0], "_a_tmp": [1], "b": [4]}
     assert_equal_data(result, expected)
 
 
 def test_group_by_len_1_column(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     """Based on a failure from marimo.
 
     - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/tests/_plugins/ui/_impl/tables/test_narwhals.py#L1098-L1108
     - https://github.com/marimo-team/marimo/blob/036fd3ff89ef3a0e598bebb166637028024f98bc/marimo/_plugins/ui/_impl/tables/narwhals_table.py#L163-L188
     """
-    if any(x in str(nw_frame_constructor) for x in ("dask",)):
+    if any(x in str(constructor) for x in ("dask",)):
         # `dask`
         #     ValueError: conflicting aggregation functions: [('size', 'a'), ('size', 'a')]
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 1, 2, 3, 4]}
     expected = {"a": [1, 2, 3, 4], "len": [2, 2, 1, 1], "len_a": [2, 2, 1, 1]}
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .group_by("a")
         .agg(nw.len(), nw.len().alias("len_a"))
         .sort("a")
@@ -674,7 +651,7 @@ def test_group_by_len_1_column(
 )
 def test_group_by_no_preserve_dtype(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     low: NonNestedLiteral,
     high: NonNestedLiteral,
 ) -> None:
@@ -686,7 +663,7 @@ def test_group_by_no_preserve_dtype(
     [aggregation that requires a function]: https://github.com/pandas-dev/pandas/issues/57317
     """
     if (
-        "polars" in str(nw_eager_constructor)
+        "polars" in str(constructor_eager)
         and isinstance(low, Decimal)
         and POLARS_VERSION < (1, 21, 0)
     ):
@@ -699,7 +676,7 @@ def test_group_by_no_preserve_dtype(
         "col_b": [low, low, high, high, None, None, None],
     }
     expected = {"col_a": [None, "A", "B"], "n_unique": [2, 3, 2]}
-    frame = nw.from_native(nw_eager_constructor(data))
+    frame = nw.from_native(constructor_eager(data))
     result = (
         frame.group_by("col_a").agg(n_unique=nw.col("col_b").n_unique()).sort("col_a")
     )
@@ -708,12 +685,10 @@ def test_group_by_no_preserve_dtype(
     assert_equal_data(result, expected)
 
 
-def test_top_level_len(nw_frame_constructor: Constructor) -> None:
+def test_top_level_len(constructor: Constructor) -> None:
     # https://github.com/holoviz/holoviews/pull/6567#issuecomment-3178743331
     df = nw.from_native(
-        nw_frame_constructor(
-            {"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]}
-        )
+        constructor({"gender": ["m", "f", "f"], "weight": [4, 5, 6], "age": [None, 8, 9]})
     )
     result = df.group_by(["gender"]).agg(nw.all().len()).sort("gender")
     expected = {"gender": ["f", "m"], "weight": [2, 1], "age": [2, 1]}
@@ -742,7 +717,7 @@ def test_top_level_len(nw_frame_constructor: Constructor) -> None:
     ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
 )
 def test_group_by_agg_first(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     keys: Sequence[str],
     aggs: Sequence[str],
     expected: Mapping[str, Any],
@@ -751,7 +726,7 @@ def test_group_by_agg_first(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pyarrow_table" in str(nw_eager_constructor) and (PYARROW_VERSION < (14, 0)),
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )
@@ -761,7 +736,7 @@ def test_group_by_agg_first(
         "b": [1, 2, 3, 4, 5, 6],
         "c": [None, "A", "A", None, "B", "B"],
     }
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
     result = df.group_by(keys).agg(nw.col(aggs).first()).sort(keys)
@@ -784,7 +759,7 @@ def test_group_by_agg_first(
     ids=["no-sort", "sort-descending", "NA-order-nulls-first", "NA-order-nulls-last"],
 )
 def test_group_by_agg_last(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     keys: Sequence[str],
     aggs: Sequence[str],
     expected: Mapping[str, Any],
@@ -793,7 +768,7 @@ def test_group_by_agg_last(
 ) -> None:
     request.applymarker(
         pytest.mark.xfail(
-            "pyarrow_table" in str(nw_eager_constructor) and (PYARROW_VERSION < (14, 0)),
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )
@@ -803,19 +778,19 @@ def test_group_by_agg_last(
         "b": [1, 2, 3, 4, 5, 6],
         "c": [None, "A", "A", None, "B", "B"],
     }
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
     if pre_sort:
         df = df.sort(aggs, **pre_sort)
     result = df.group_by(keys).agg(nw.col(aggs).last()).sort(keys)
     assert_equal_data(result, expected)
 
 
-def test_multi_column_expansion(nw_frame_constructor: Constructor) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 32):
+def test_multi_column_expansion(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 32):
         pytest.skip(reason="https://github.com/pola-rs/polars/issues/21773")
-    if "modin" in str(nw_frame_constructor):
+    if "modin" in str(constructor):
         pytest.skip(reason="Internal error")
-    df = nw.from_native(nw_frame_constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [4, 5, 6]}))
     result = (
         df.group_by("a")
         .agg(nw.all().sum().name.suffix("_aggregated"))

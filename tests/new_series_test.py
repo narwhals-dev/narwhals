@@ -6,8 +6,8 @@ import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 
-def test_new_series(nw_eager_constructor: ConstructorEager) -> None:
-    s = nw.from_native(nw_eager_constructor({"a": [1, 2, 3]}), eager_only=True)["a"]
+def test_new_series(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     result = nw.new_series("b", [4, 1, 2], backend=nw.get_native_namespace(s))
     expected = {"b": [4, 1, 2]}
     # all supported libraries auto-infer this to be int64, we can always special-case

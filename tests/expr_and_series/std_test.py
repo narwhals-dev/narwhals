@@ -17,10 +17,8 @@ expected_results = {
 
 
 @pytest.mark.parametrize("input_data", [data, data_with_nulls])
-def test_std(
-    nw_frame_constructor: Constructor, input_data: dict[str, list[float | None]]
-) -> None:
-    df = nw.from_native(nw_frame_constructor(input_data))
+def test_std(constructor: Constructor, input_data: dict[str, list[float | None]]) -> None:
+    df = nw.from_native(constructor(input_data))
     result = df.select(
         nw.col("a").std(ddof=1).alias("a_ddof_1"),
         nw.col("a").std(ddof=0).alias("a_ddof_0"),
@@ -36,9 +34,9 @@ def test_std(
 
 @pytest.mark.parametrize("input_data", [data, data_with_nulls])
 def test_std_series(
-    nw_eager_constructor: ConstructorEager, input_data: dict[str, list[float | None]]
+    constructor_eager: ConstructorEager, input_data: dict[str, list[float | None]]
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(input_data), eager_only=True)
+    df = nw.from_native(constructor_eager(input_data), eager_only=True)
     result = {
         "a_ddof_1": [df["a"].std(ddof=1)],
         "a_ddof_0": [df["a"].std(ddof=0)],

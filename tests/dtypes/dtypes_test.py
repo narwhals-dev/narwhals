@@ -146,23 +146,21 @@ def test_struct_hashes() -> None:
     assert len({hash(tp) for tp in (dtypes)}) == 3
 
 
-def test_2d_array(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     version_conditions = [
         (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
         (
-            "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14,),
+            "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,),
             "PyArrow 14+ required for 2D array support",
         ),
     ]
     for condition, reason in version_conditions:
         if condition:
             pytest.skip(reason)
-    if "pandas" in str(nw_frame_constructor):
+    if "pandas" in str(constructor):
         pytest.importorskip("pyarrow")
 
-    if any(x in str(nw_frame_constructor) for x in ("dask", "cudf", "pyspark")):
+    if any(x in str(constructor) for x in ("dask", "cudf", "pyspark")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="2D array operations not supported in these backends"
@@ -170,7 +168,7 @@ def test_2d_array(
         )
 
     data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
-    df = nw.from_native(nw_frame_constructor(data)).with_columns(
+    df = nw.from_native(constructor(data)).with_columns(
         a=nw.col("a").cast(nw.Array(nw.Int64(), (3, 2)))
     )
     assert df.collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
@@ -415,19 +413,19 @@ def test_huge_int_to_native() -> None:
 )
 def test_cast_decimal_to_native(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     precision: int | None,
     scale: int,
 ) -> None:
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Unsupported dtype"))
 
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 0, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
         pytest.skip(reason="too old to convert to decimal")
 
     data = {"a": [1.1, 2.2, 3.3]}
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     if df.implementation.is_pandas_like() and (
         PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
@@ -619,13 +617,13 @@ def test_dtype_base_type_nested(nested_dtype: NestedOrEnumDType) -> None:
     ],
 )
 def test_pandas_datetime_ignored_time_unit_warns(
-    nw_pandas_like_constructor: ConstructorPandasLike,
+    constructor_pandas_like: ConstructorPandasLike,
     dtype: nw.Datetime | type[nw.Datetime],
     context: AbstractContextManager[Any],
 ) -> None:
     data = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     expr = nw.col("a").cast(dtype)
-    df = nw.from_native(nw_pandas_like_constructor(data))
+    df = nw.from_native(constructor_pandas_like(data))
     ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
     with ctx:
         df.select(expr)

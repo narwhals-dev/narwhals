@@ -22,9 +22,9 @@ def _assertion_error(detail: str) -> pytest.RaisesExc:
     return pytest.raises(AssertionError, match=re.escape(msg))
 
 
-def test_check_narwhals_objects(nw_frame_constructor: Constructor) -> None:
+def test_check_narwhals_objects(constructor: Constructor) -> None:
     """Test that a type error is raised if the input is not a Narwhals object."""
-    frame = nw_frame_constructor({"a": [1, 2, 3]})
+    frame = constructor({"a": [1, 2, 3]})
     msg = re.escape(
         "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found"
     )
@@ -46,13 +46,13 @@ def test_implementation_mismatch() -> None:
         )
 
 
-def test_check_same_input_type(nw_eager_constructor: ConstructorEager) -> None:
+def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
     """Test that left and right frames are either both eager or both lazy.
 
-    NOTE: Use `nw_eager_constructor` instead of `constructor` so that the roundtrip
+    NOTE: Use `constructor_eager` instead of `constructor` so that the roundtrip
         `.lazy().collect()` preserves the same implementation (and we raise the check after)
     """
-    frame = nw.from_native(nw_eager_constructor({"a": [1, 2, 3]}))
+    frame = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
 
     msg = re.escape("inputs are different (unexpected input types)")
     with pytest.raises(AssertionError, match=msg):
@@ -148,7 +148,7 @@ def test_check_same_input_type(nw_eager_constructor: ConstructorEager) -> None:
     ],
 )
 def test_check_schema_mismatch(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     left_schema: IntoSchema,
     right_schema: IntoSchema,
     *,
@@ -157,10 +157,10 @@ def test_check_schema_mismatch(
     context: AbstractContextManager[Any],
 ) -> None:
     data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["foo", "bar", "baz"]}
-    left = nw.from_native(nw_frame_constructor(data)).select(
+    left = nw.from_native(constructor(data)).select(
         nw.col(name).cast(dtype) for name, dtype in left_schema.items()
     )
-    right = nw.from_native(nw_frame_constructor(data)).select(
+    right = nw.from_native(constructor(data)).select(
         nw.col(name).cast(dtype) for name, dtype in right_schema.items()
     )
 
@@ -170,9 +170,9 @@ def test_check_schema_mismatch(
         )
 
 
-def test_height_mismatch(nw_frame_constructor: Constructor) -> None:
-    left = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]}))
-    right = nw.from_native(nw_frame_constructor({"a": [1, 3]}))
+def test_height_mismatch(constructor: Constructor) -> None:
+    left = nw.from_native(constructor({"a": [1, 2, 3]}))
+    right = nw.from_native(constructor({"a": [1, 3]}))
 
     with _assertion_error("height (row count) mismatch"):
         assert_frame_equal(left, right)
@@ -180,18 +180,15 @@ def test_height_mismatch(nw_frame_constructor: Constructor) -> None:
 
 @pytest.mark.parametrize("check_row_order", [True, False])
 def test_check_row_order(
-    nw_frame_constructor: Constructor,
-    request: pytest.FixtureRequest,
-    *,
-    check_row_order: bool,
+    constructor: Constructor, request: pytest.FixtureRequest, *, check_row_order: bool
 ) -> None:
-    if "pandas" in str(nw_frame_constructor):  # pragma: no cover
+    if "pandas" in str(constructor):  # pragma: no cover
         if PANDAS_VERSION < (2, 2):
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         reason = "Unsupported List type"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
@@ -199,14 +196,10 @@ def test_check_row_order(
 
     b_expr = nw.col("b").cast(nw.List(nw.String()))
     left = (
-        nw.from_native(nw_frame_constructor(data))
-        .with_columns(b_expr)
-        .sort("a", descending=False)
+        nw.from_native(constructor(data)).with_columns(b_expr).sort("a", descending=False)
     )
     right = (
-        nw.from_native(nw_frame_constructor(data))
-        .with_columns(b_expr)
-        .sort("a", descending=True)
+        nw.from_native(constructor(data)).with_columns(b_expr).sort("a", descending=True)
     )
 
     context = (
@@ -220,44 +213,41 @@ def test_check_row_order(
 
 
 def test_check_row_order_nested_only(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas" in str(nw_frame_constructor):  # pragma: no cover
+    if "pandas" in str(constructor):  # pragma: no cover
         if PANDAS_VERSION < (2, 2):
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         reason = "Unsupported List type"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     data = {"b": [["x", "y"], ["x", "z"]]}
 
     b_expr = nw.col("b").cast(nw.List(nw.String()))
-    left = nw.from_native(nw_frame_constructor(data)).select(b_expr)
+    left = nw.from_native(constructor(data)).select(b_expr)
 
     msg = "`check_row_order=False` is not supported (yet) with only nested data type."
     with pytest.raises(NotImplementedError, match=re.escape(msg)):
         assert_frame_equal(left, left, check_row_order=False)
 
 
-def test_self_equal(nw_frame_constructor: Constructor, testing_data: Data) -> None:
+def test_self_equal(constructor: Constructor, testing_data: Data) -> None:
     """Test that a dataframe is equal to itself, including nested dtypes with nulls.
 
     We are dropping columns which type is unsupported by _some_ backend.
     """
     cols_to_drop = ("categorical", "enum", "duration", "struct", "time")
 
-    if "pandas" in str(nw_frame_constructor) and PANDAS_VERSION < (
-        2,
-        2,
-    ):  # pragma: no cover
+    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2):  # pragma: no cover
         reason = "Pandas too old for nested dtypes"
         pytest.skip(reason=reason)
 
     _data = {k: v for k, v in testing_data.items() if k not in cols_to_drop}
-    df = nw.from_native(nw_frame_constructor(_data))
+    df = nw.from_native(constructor(_data))
     assert_frame_equal(df, df)
 
     # Keep to cover early return when no rows present but same schema

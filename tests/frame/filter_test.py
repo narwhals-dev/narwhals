@@ -19,17 +19,17 @@ data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     ],
 )
 def test_filter_with_expr_predicates(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     predicates: tuple[nw.Expr, ...],
     expected: dict[str, list[Any]],
 ) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.filter(*predicates)
     assert_equal_data(result, expected)
 
 
-def test_filter_with_series_predicates(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_filter_with_series_predicates(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.filter(df["a"] > 1)
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
     assert_equal_data(result, expected)
@@ -47,11 +47,11 @@ def test_filter_with_series_predicates(nw_eager_constructor: ConstructorEager) -
     ],
 )
 def test_filter_with_boolean_list_predicates_eager(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     predicates: tuple[list[bool], ...],
     expected: dict[str, list[Any]],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.filter(*predicates)
     assert_equal_data(result, expected)
 
@@ -66,27 +66,27 @@ def test_filter_with_boolean_list_predicates_eager(
     ],
 )
 def test_filter_with_boolean_list_predicates_lazy(
-    nw_frame_constructor: Constructor, predicates: tuple[list[bool] | nw.Expr, ...]
+    constructor: Constructor, predicates: tuple[list[bool] | nw.Expr, ...]
 ) -> None:
-    df = nw.from_native(nw_frame_constructor(data)).lazy()
+    df = nw.from_native(constructor(data)).lazy()
     with pytest.raises(TypeError, match="not supported with Python boolean masks"):
         df.filter(*predicates)  # type: ignore[arg-type]
 
 
-def test_filter_raise_on_agg_predicate(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_filter_raise_on_agg_predicate(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     with pytest.raises(InvalidOperationError):
         df.filter(nw.col("a").max() > 2).lazy().collect()
 
 
-def test_filter_raise_on_shape_mismatch(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_filter_raise_on_shape_mismatch(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     with pytest.raises((InvalidOperationError, NotImplementedError)):
         df.filter(nw.col("b").unique() > 2).lazy().collect()
 
 
-def test_filter_with_constrains_only(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_filter_with_constrains_only(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result_scalar = df.filter(a=3)
     expected_scalar = {"a": [3], "b": [4], "z": [8.0]}
 
@@ -99,14 +99,14 @@ def test_filter_with_constrains_only(nw_frame_constructor: Constructor) -> None:
 
 
 def test_filter_missing_column(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     constructor_id = str(request.node.callspec.id)
     if any(id_ == constructor_id for id_ in ("sqlframe", "pyspark[connect]", "ibis")):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(nw_frame_constructor(data))
-    if "polars" in str(nw_frame_constructor):
+    df = nw.from_native(constructor(data))
+    if "polars" in str(constructor):
         msg = r"unable to find column \"c\"; valid columns: \[\"a\", \"b\"\, \"z\"\]"
     elif any(id_ == constructor_id for id_ in ("duckdb", "pyspark")):
         msg = r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
@@ -116,7 +116,7 @@ def test_filter_missing_column(
             r"\n\nHint: Did you mean one of these columns: \['a', 'b', 'z'\]?"
         )
 
-    if "polars_lazy" in str(nw_frame_constructor) and isinstance(df, nw.LazyFrame):
+    if "polars_lazy" in str(constructor) and isinstance(df, nw.LazyFrame):
         with pytest.raises(ColumnNotFoundError, match=msg):
             df.filter(c=5).collect()
     else:
@@ -125,10 +125,10 @@ def test_filter_missing_column(
 
 
 def test_filter_with_predicates_and_constraints(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
 ) -> None:
     # Adapted from https://github.com/narwhals-dev/narwhals/pull/3173/commits/8433b2d75438df98004a3c850ad23628e2376836
-    df = nw.from_native(nw_eager_constructor({"a": range(5), "b": [2, 2, 4, 2, 4]}))
+    df = nw.from_native(constructor_eager({"a": range(5), "b": [2, 2, 4, 2, 4]}))
     mask = [True, False, True, True, False]
     mask_2 = [True, True, False, True, False]
     expected_mask_only = {"a": [0, 2, 3], "b": [2, 4, 2]}
@@ -139,7 +139,7 @@ def test_filter_with_predicates_and_constraints(
 
     msg = (
         r"unable to find column \"c\"; valid columns: \[\"a\", \"b\"\]"
-        if "polars" in str(nw_eager_constructor)
+        if "polars" in str(constructor_eager)
         else (
             r"The following columns were not found: \[.*\]"
             r"\n\nHint: Did you mean one of these columns: \['a', 'b'\]?"
@@ -167,12 +167,10 @@ def test_filter_with_predicates_and_constraints(
     assert_equal_data(result, expected_mixed)
 
 
-def test_filter_multiple_predicates(nw_frame_constructor: Constructor) -> None:
+def test_filter_multiple_predicates(constructor: Constructor) -> None:
     """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L175-L202."""
     df = nw.from_native(
-        nw_frame_constructor(
-            {"a": [1, 1, 1, 2, 2], "b": [1, 1, 2, 2, 2], "c": [1, 1, 2, 3, 4]}
-        )
+        constructor({"a": [1, 1, 1, 2, 2], "b": [1, 1, 2, 2, 2], "c": [1, 1, 2, 3, 4]})
     )
 
     # multiple predicates
@@ -192,12 +190,10 @@ def test_filter_multiple_predicates(nw_frame_constructor: Constructor) -> None:
     )
 
 
-def test_filter_string_predicate(nw_frame_constructor: Constructor) -> None:
+def test_filter_string_predicate(constructor: Constructor) -> None:
     """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L204-L210."""
     df = nw.from_native(
-        nw_frame_constructor(
-            {"description": ["eq", "gt", "ge"], "predicate": ["==", ">", ">="]}
-        )
+        constructor({"description": ["eq", "gt", "ge"], "predicate": ["==", ">", ">="]})
     )
     expected = {"description": ["eq"], "predicate": ["=="]}
     result = df.filter(predicate="==")
@@ -207,11 +203,9 @@ def test_filter_string_predicate(nw_frame_constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     "predicates", [(nw.col("z") < 10,), (nw.col("a") > 0, nw.col("b") > 0)]
 )
-def test_filter_seq_iterable_all_true(
-    nw_frame_constructor: Constructor, predicates: Any
-) -> None:
+def test_filter_seq_iterable_all_true(constructor: Constructor, predicates: Any) -> None:
     """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L213-L233."""
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     predicate = (p for p in predicates)
     assert_equal_data(df.filter(predicate), data)
 
@@ -219,10 +213,8 @@ def test_filter_seq_iterable_all_true(
 @pytest.mark.parametrize(
     "predicates", [(nw.col("z") > 10,), (nw.col("a") < 0, nw.col("b") < 0)]
 )
-def test_filter_seq_iterable_all_false(
-    nw_frame_constructor: Constructor, predicates: Any
-) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_filter_seq_iterable_all_false(constructor: Constructor, predicates: Any) -> None:
+    df = nw.from_native(constructor(data))
     expected: dict[str, list[Any]] = {"a": [], "b": [], "z": []}
     predicate = (p for p in predicates)
     assert_equal_data(df.filter(predicate), expected)

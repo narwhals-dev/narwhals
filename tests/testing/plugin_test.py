@@ -5,7 +5,7 @@ import pytest
 pytest_plugins = ["pytester"]
 
 
-def test_nw_eager_constructor_fixture_runs_for_each_backend(
+def test_constructor_eager_fixture_runs_for_each_backend(
     pytester: pytest.Pytester,
 ) -> None:
     pytest.importorskip("pandas")

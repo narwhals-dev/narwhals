@@ -17,8 +17,8 @@ data = {
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_series(nw_eager_constructor: ConstructorEager, fmt: str) -> None:
-    input_frame = nw.from_native(nw_eager_constructor(data), eager_only=True)
+def test_dt_to_string_series(constructor_eager: ConstructorEager, fmt: str) -> None:
+    input_frame = nw.from_native(constructor_eager(data), eager_only=True)
     input_series = input_frame["a"]
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
@@ -26,8 +26,7 @@ def test_dt_to_string_series(nw_eager_constructor: ConstructorEager, fmt: str) -
     result = {"a": input_series.dt.to_string(fmt)}
 
     if any(
-        x in str(nw_eager_constructor)
-        for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
+        x in str(constructor_eager) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
     ):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
@@ -40,16 +39,13 @@ def test_dt_to_string_series(nw_eager_constructor: ConstructorEager, fmt: str) -
     "fmt", ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%G-W%V-%u", "%G-W%V"]
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
-def test_dt_to_string_expr(nw_frame_constructor: Constructor, fmt: str) -> None:
-    input_frame = nw.from_native(nw_frame_constructor(data))
+def test_dt_to_string_expr(constructor: Constructor, fmt: str) -> None:
+    input_frame = nw.from_native(constructor(data))
 
     expected_col = [datetime.strftime(d, fmt) for d in data["a"]]
 
     result = input_frame.select(nw.col("a").dt.to_string(fmt).alias("b"))
-    if any(
-        x in str(nw_frame_constructor)
-        for x in ["pandas_pyarrow", "pyarrow_table", "modin"]
-    ):
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "pyarrow_table", "modin"]):
         # PyArrow differs from other libraries, in that %S also shows
         # the fraction of a second.
         result = input_frame.select(
@@ -82,9 +78,9 @@ def _clean_string_expr(e: Any) -> Any:
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_datetime_series(
-    nw_eager_constructor: ConstructorEager, data: datetime, expected: str
+    constructor_eager: ConstructorEager, data: datetime, expected: str
 ) -> None:
-    df = nw_eager_constructor({"a": [data]})
+    df = constructor_eager({"a": [data]})
     result = (
         nw.from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")
@@ -110,14 +106,14 @@ def test_dt_to_string_iso_local_datetime_series(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_datetime_expr(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     data: datetime,
     expected: str,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(nw_frame_constructor) or "ibis" in str(nw_frame_constructor):
+    if "duckdb" in str(constructor) or "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    df = nw_frame_constructor({"a": [data]})
+    df = constructor({"a": [data]})
 
     result = nw.from_native(df).select(
         b=_clean_string_expr(nw.col("a").dt.to_string("%Y-%m-%dT%H:%M:%S.%f"))
@@ -133,9 +129,9 @@ def test_dt_to_string_iso_local_datetime_expr(
 @pytest.mark.parametrize(("data", "expected"), [(datetime(2020, 1, 9), "2020-01-09")])
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_series(
-    nw_eager_constructor: ConstructorEager, data: datetime, expected: str
+    constructor_eager: ConstructorEager, data: datetime, expected: str
 ) -> None:
-    df = nw_eager_constructor({"a": [data]})
+    df = constructor_eager({"a": [data]})
     result = nw.from_native(df, eager_only=True)["a"].dt.to_string("%Y-%m-%d").item(0)
     assert str(result) == expected
 
@@ -143,8 +139,8 @@ def test_dt_to_string_iso_local_date_series(
 @pytest.mark.parametrize(("data", "expected"), [(datetime(2020, 1, 9), "2020-01-09")])
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_iso_local_date_expr(
-    nw_frame_constructor: Constructor, data: datetime, expected: str
+    constructor: Constructor, data: datetime, expected: str
 ) -> None:
-    df = nw_frame_constructor({"a": [data]})
+    df = constructor({"a": [data]})
     result = nw.from_native(df).select(b=nw.col("a").dt.to_string("%Y-%m-%d"))
     assert_equal_data(result, {"b": [expected]})

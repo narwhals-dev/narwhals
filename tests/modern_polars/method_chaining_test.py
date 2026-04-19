@@ -30,24 +30,20 @@ expected = {
 }
 
 
-def test_split_list_get(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
-) -> None:
-    if any(backend in str(nw_frame_constructor) for backend in ("dask",)):
+def test_split_list_get(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(backend in str(constructor) for backend in ("dask",)):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(nw_frame_constructor):
+    if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    if str(nw_frame_constructor).startswith("pandas") and "pyarrow" not in str(
-        nw_frame_constructor
-    ):
-        df = nw.from_native(nw_frame_constructor(data))
+    if str(constructor).startswith("pandas") and "pyarrow" not in str(constructor):
+        df = nw.from_native(constructor(data))
         msg = re.escape("This operation requires a pyarrow-backed series. ")
         with pytest.raises(TypeError, match=msg):
             df.select(nw.col("OriginCityName").str.split(",").list.get(0))
         return
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("OriginCityName").str.split(",").list.get(0))
     assert_equal_data(result, expected)

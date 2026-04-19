@@ -14,18 +14,16 @@ data = {"a": [[2, 2, 3, None, None], None, [], [None]]}
 expected = {2, 3, None}
 
 
-def test_unique_expr(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
-) -> None:
+def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if any(
-        backend in str(nw_frame_constructor)
+        backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.unique())
         .lazy()
         .collect()["a"]
@@ -43,14 +41,14 @@ def test_unique_expr(
 
 
 def test_unique_series(
-    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
     if any(
-        backend in str(nw_eager_constructor)
+        backend in str(constructor_eager)
         for backend in ("modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.unique().to_list()
     assert len(result) == 4
     assert len(result[0]) == 3

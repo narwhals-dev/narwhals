@@ -11,15 +11,15 @@ expected = [0.367879, 1.0, 2.718282, 7.389056, 54.59815]
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_exp_expr(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_exp_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").exp())
     assert_equal_data(result, {"a": expected})
 
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_exp_series(nw_eager_constructor: ConstructorEager) -> None:
-    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
+def test_exp_series(constructor_eager: ConstructorEager) -> None:
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.exp()
     assert_equal_data({"a": result}, {"a": expected})
 

@@ -81,7 +81,7 @@ contains_expr_pattern_data = [
     contains_str_pattern_data,
 )
 def test_expr_contains_str_pattern(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
     pattern: str,
     *,
@@ -89,15 +89,15 @@ def test_expr_contains_str_pattern(
     expected_with_null: dict[str, list[Any]],
     expected_without_null: dict[str, list[Any]],
 ) -> None:
-    if "cudf" in str(nw_frame_constructor) and "(?i)" in pattern:
+    if "cudf" in str(constructor) and "(?i)" in pattern:
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("pets").str.contains(pattern, literal=literal).alias("match")
     )
 
-    if "pandas_constructor" in str(nw_frame_constructor) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor) and PANDAS_VERSION >= (3,):
         expected = expected_without_null
     else:
         expected = expected_with_null
@@ -109,7 +109,7 @@ def test_expr_contains_str_pattern(
     contains_str_pattern_data,
 )
 def test_series_contains_str_pattern(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
     pattern: str,
     *,
@@ -117,13 +117,13 @@ def test_series_contains_str_pattern(
     expected_with_null: dict[str, list[Any]],
     expected_without_null: dict[str, list[Any]],
 ) -> None:
-    if "cudf" in str(nw_eager_constructor) and "(?i)" in pattern:
+    if "cudf" in str(constructor_eager) and "(?i)" in pattern:
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(match=df["pets"].str.contains(pattern, literal=literal))
 
-    if "pandas_constructor" in str(nw_eager_constructor) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         expected = expected_without_null
     else:
         expected = expected_with_null
@@ -132,17 +132,17 @@ def test_series_contains_str_pattern(
 
 @pytest.mark.parametrize(("expr_data", "literal", "expected"), contains_expr_pattern_data)
 def test_expr_contains_expr_pattern(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
     expr_data: dict[str, list[str]],
     *,
     literal: bool,
     expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in EXPR_PATTERN_UNSUPPORTED):
+    if any(x in str(constructor) for x in EXPR_PATTERN_UNSUPPORTED):
         request.applymarker(pytest.mark.xfail(reason="Not supported", raises=TypeError))
 
-    df = nw.from_native(nw_frame_constructor(expr_data))
+    df = nw.from_native(constructor(expr_data))
     result = df.select(
         nw.col("text").str.contains(nw.col("pattern"), literal=literal).alias("result")
     )
@@ -151,29 +151,29 @@ def test_expr_contains_expr_pattern(
 
 @pytest.mark.parametrize(("expr_data", "literal", "expected"), contains_expr_pattern_data)
 def test_series_contains_series_pattern(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
     expr_data: dict[str, list[str]],
     *,
     literal: bool,
     expected: dict[str, list[Any]],
 ) -> None:
-    if any(x in str(nw_eager_constructor) for x in EXPR_PATTERN_UNSUPPORTED):
+    if any(x in str(constructor_eager) for x in EXPR_PATTERN_UNSUPPORTED):
         request.applymarker(pytest.mark.xfail(reason="Not supported", raises=TypeError))
 
-    df = nw.from_native(nw_eager_constructor(expr_data), eager_only=True)
+    df = nw.from_native(constructor_eager(expr_data), eager_only=True)
     result = df.select(result=df["text"].str.contains(df["pattern"], literal=literal))
     assert_equal_data(result, expected)
 
 
-def test_expr_contains_literal_vs_regex(nw_frame_constructor: Constructor) -> None:
+def test_expr_contains_literal_vs_regex(constructor: Constructor) -> None:
     """Test that literal=True vs literal=False behaves differently for regex patterns."""
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.col("pets").str.contains("Parrot|dove", literal=False).alias("regex_match"),
         nw.col("pets").str.contains("Parrot|dove", literal=True).alias("literal_match"),
     )
-    if "pandas_constructor" in str(nw_frame_constructor) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor) and PANDAS_VERSION >= (3,):
         expected: dict[str, Any] = {
             "regex_match": [False, False, False, True, True, False],
             "literal_match": [False, False, False, False, True, False],
@@ -186,14 +186,14 @@ def test_expr_contains_literal_vs_regex(nw_frame_constructor: Constructor) -> No
     assert_equal_data(result, expected)
 
 
-def test_series_contains_literal_vs_regex(nw_eager_constructor: ConstructorEager) -> None:
+def test_series_contains_literal_vs_regex(constructor_eager: ConstructorEager) -> None:
     """Test that literal=True vs literal=False behaves differently for regex patterns."""
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
         regex_match=df["pets"].str.contains("Parrot|dove", literal=False),
         literal_match=df["pets"].str.contains("Parrot|dove", literal=True),
     )
-    if "pandas_constructor" in str(nw_eager_constructor) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         expected: dict[str, Any] = {
             "regex_match": [False, False, False, True, True, False],
             "literal_match": [False, False, False, False, True, False],

@@ -59,20 +59,20 @@ kwargs_and_expected = (
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_expr(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     kwargs_and_expected: dict[str, Any],
 ) -> None:
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
         # TODO(FBruzzesi): Dask is raising the following error:
         # NotImplementedError: Partition size is less than overlapping window size.
         # Try using ``df.repartition`` to increase the partition size.
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").rolling_var(**kwargs).alias(name))
 
     assert_equal_data(result, {name: expected})
@@ -83,16 +83,16 @@ def test_rolling_var_expr(
 )
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_series(
-    nw_eager_constructor: ConstructorEager, kwargs_and_expected: dict[str, Any]
+    constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
-    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
         pytest.skip()
 
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].rolling_var(**kwargs).alias(name))
 
     assert_equal_data(result, {name: expected})
@@ -191,7 +191,7 @@ def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> Non
     ],
 )
 def test_rolling_var_expr_lazy_ungrouped(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     expected_a: list[float],
     window_size: int,
     min_samples: int,
@@ -199,14 +199,14 @@ def test_rolling_var_expr_lazy_ungrouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
-    if "modin" in str(nw_frame_constructor):
+    if "modin" in str(constructor):
         # unreliable
         pytest.skip()
-    if "dask" in str(nw_frame_constructor) and ddof != 1:
+    if "dask" in str(constructor) and ddof != 1:
         # Only `ddof=1` is supported
         pytest.skip()
     data = {
@@ -214,7 +214,7 @@ def test_rolling_var_expr_lazy_ungrouped(
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.with_columns(
             nw.col("a")
@@ -255,7 +255,7 @@ def test_rolling_var_expr_lazy_ungrouped(
     ],
 )
 def test_rolling_var_expr_lazy_grouped(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     expected_a: list[float],
     window_size: int,
     min_samples: int,
@@ -265,14 +265,14 @@ def test_rolling_var_expr_lazy_grouped(
     ddof: int,
 ) -> None:
     if (
-        ("polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10))
-        or ("duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3))
-        or ("pandas" in str(nw_frame_constructor) and PANDAS_VERSION < (1, 2))
+        ("polars" in str(constructor) and POLARS_VERSION < (1, 10))
+        or ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3))
+        or ("pandas" in str(constructor) and PANDAS_VERSION < (1, 2))
     ):
         pytest.skip()
-    if any(x in str(nw_frame_constructor) for x in ("dask", "pyarrow_table")):
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if "modin" in str(nw_frame_constructor):
+    if "modin" in str(constructor):
         # unreliable
         pytest.skip()
     data = {
@@ -281,7 +281,7 @@ def test_rolling_var_expr_lazy_grouped(
         "b": [1, None, 2, 3, 4, 5, 6],
         "i": list(range(7)),
     }
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.with_columns(
             nw.col("a")

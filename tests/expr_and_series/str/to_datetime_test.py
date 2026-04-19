@@ -23,14 +23,14 @@ if TYPE_CHECKING:
 data = {"a": ["2020-01-01T12:34:56"]}
 
 
-def test_to_datetime(nw_frame_constructor: Constructor) -> None:
-    if "cudf" in str(nw_frame_constructor):
+def test_to_datetime(constructor: Constructor) -> None:
+    if "cudf" in str(constructor):
         expected = "2020-01-01T12:34:56.000000000"
     else:
         expected = "2020-01-01 12:34:56"
 
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S"))
     )
@@ -41,14 +41,14 @@ def test_to_datetime(nw_frame_constructor: Constructor) -> None:
     assert str(result_item) == expected
 
 
-def test_to_datetime_series(nw_eager_constructor: ConstructorEager) -> None:
-    if "cudf" in str(nw_eager_constructor):
+def test_to_datetime_series(constructor_eager: ConstructorEager) -> None:
+    if "cudf" in str(constructor_eager):
         expected = "2020-01-01T12:34:56.000000000"
     else:
         expected = "2020-01-01 12:34:56"
 
     result = (
-        nw.from_native(nw_eager_constructor(data), eager_only=True)["a"].str.to_datetime(
+        nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_datetime(
             format="%Y-%m-%dT%H:%M:%S"
         )
     ).item(0)
@@ -80,27 +80,27 @@ def test_to_datetime_series(nw_eager_constructor: ConstructorEager) -> None:
 )
 def test_to_datetime_infer_fmt(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
     expected_pyspark: str,
 ) -> None:
     if (
-        ("polars" in str(nw_frame_constructor) and str(data["a"][0]).isdigit())
-        or "duckdb" in str(nw_frame_constructor)
-        or ("pyspark" in str(nw_frame_constructor) and data["a"][0] == "20240101123456")
-        or "ibis" in str(nw_frame_constructor)
+        ("polars" in str(constructor) and str(data["a"][0]).isdigit())
+        or "duckdb" in str(constructor)
+        or ("pyspark" in str(constructor) and data["a"][0] == "20240101123456")
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
 
-    if "cudf" in str(nw_frame_constructor):
+    if "cudf" in str(constructor):
         expected = expected_cudf
-    elif "pyspark" in str(nw_frame_constructor):
+    elif "pyspark" in str(constructor):
         expected = expected_pyspark
 
     result = (
-        nw.from_native(nw_frame_constructor(data))
+        nw.from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_datetime())
         .collect()
@@ -131,29 +131,29 @@ def test_to_datetime_infer_fmt(
 )
 def test_to_datetime_series_infer_fmt(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     data: dict[str, list[str]],
     expected: str,
     expected_cudf: str,
 ) -> None:
-    if "polars" in str(nw_eager_constructor) and str(data["a"][0]).isdigit():
+    if "polars" in str(constructor_eager) and str(data["a"][0]).isdigit():
         request.applymarker(pytest.mark.xfail)
-    if "cudf" in str(nw_eager_constructor):
+    if "cudf" in str(constructor_eager):
         expected = expected_cudf
 
     result = (
-        nw.from_native(nw_eager_constructor(data), eager_only=True)["a"].str.to_datetime()
+        nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_datetime()
     ).item(0)
     assert str(result) == expected
 
 
 def test_to_datetime_infer_fmt_from_date(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in ("duckdb", "ibis")):
+    if any(x in str(constructor) for x in ("duckdb", "ibis")):
         request.applymarker(pytest.mark.xfail)
     data = {"z": ["2020-01-01", "2020-01-02", None]}
-    if "pyspark" in str(nw_frame_constructor):
+    if "pyspark" in str(constructor):
         expected = [
             datetime(2020, 1, 1, tzinfo=timezone.utc),
             datetime(2020, 1, 2, tzinfo=timezone.utc),
@@ -162,9 +162,7 @@ def test_to_datetime_infer_fmt_from_date(
     else:
         expected = [datetime(2020, 1, 1), datetime(2020, 1, 2), None]
     result = (
-        nw.from_native(nw_frame_constructor(data))
-        .lazy()
-        .select(nw.col("z").str.to_datetime())
+        nw.from_native(constructor(data)).lazy().select(nw.col("z").str.to_datetime())
     )
     assert_equal_data(result, {"z": expected})
 
@@ -217,30 +215,25 @@ def test_pyarrow_infer_datetime_raise_inconsistent_date_fmt(
 
 @pytest.mark.parametrize("format", [None, "%Y-%m-%dT%H:%M:%S%z"])
 def test_to_datetime_tz_aware(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest, format: str | None
+    constructor: Constructor, request: pytest.FixtureRequest, format: str | None
 ) -> None:
-    if is_pyarrow_windows_no_tzdata(nw_frame_constructor) or (
-        "sqlframe" in str(nw_frame_constructor) and format is not None and is_windows()
+    if is_pyarrow_windows_no_tzdata(constructor) or (
+        "sqlframe" in str(constructor) and format is not None and is_windows()
     ):
         # NOTE: For `sqlframe` see https://github.com/narwhals-dev/narwhals/pull/2263#discussion_r2009101659
         pytest.skip()
-    if "cudf" in str(nw_frame_constructor):
+    if "cudf" in str(constructor):
         # cuDF does not yet support timezone-aware datetimes
         request.applymarker(pytest.mark.xfail)
     context: AbstractContextManager[Any] = (
         pytest.raises(NotImplementedError)
-        if any(x in str(nw_frame_constructor) for x in ("duckdb", "ibis"))
-        and format is None
+        if any(x in str(constructor) for x in ("duckdb", "ibis")) and format is None
         else does_not_raise()
     )
-    if (
-        "polars" in str(nw_frame_constructor)
-        and POLARS_VERSION >= (1, 33, 0)
-        and format is None
-    ):
+    if "polars" in str(constructor) and POLARS_VERSION >= (1, 33, 0) and format is None:
         # Polars 1.33.0+ raises an error when parsing timezone-aware datetimes without specifying the timezone
         context = pytest.raises(ComputeError)
-    df = nw.from_native(nw_frame_constructor({"a": ["2020-01-01T01:02:03+0100"]}))
+    df = nw.from_native(constructor({"a": ["2020-01-01T01:02:03+0100"]}))
     with context:
         result = df.with_columns(b=nw.col("a").str.to_datetime(format))
         assert isinstance(result.collect_schema()["b"], nw.Datetime)

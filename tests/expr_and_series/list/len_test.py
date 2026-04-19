@@ -9,18 +9,16 @@ data = {"a": [[1, 2], [3, 4, None], None, [], [None]]}
 expected = {"a": [2, 3, None, 0, 1]}
 
 
-def test_len_expr(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
-) -> None:
-    if any(backend in str(nw_frame_constructor) for backend in ("dask", "cudf")):
+def test_len_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(nw_frame_constructor):
+    if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    result = nw.from_native(nw_frame_constructor(data)).select(
+    result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.len()
     )
 
@@ -28,17 +26,17 @@ def test_len_expr(
 
 
 def test_len_series(
-    request: pytest.FixtureRequest, nw_eager_constructor: ConstructorEager
+    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if "cudf" in str(nw_eager_constructor):
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(nw_eager_constructor):
+    if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result = df["a"].cast(nw.List(nw.Int32())).list.len()
     assert_equal_data({"a": result}, expected)

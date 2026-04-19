@@ -6,7 +6,7 @@ import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
 
-def test_filter(nw_frame_constructor: Constructor) -> None:
+def test_filter(constructor: Constructor) -> None:
     data = {
         "time": [
             "2021-01-01",
@@ -34,7 +34,7 @@ def test_filter(nw_frame_constructor: Constructor) -> None:
         ],
     }
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     df = df.with_columns(nw.col("time").str.to_datetime(format="%Y-%m-%d"))
 

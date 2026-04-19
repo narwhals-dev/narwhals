@@ -8,9 +8,9 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-def test_nan(nw_frame_constructor: Constructor) -> None:
+def test_nan(constructor: Constructor) -> None:
     data_na = {"int": [-1, 1, None]}
-    df = nw.from_native(nw_frame_constructor(data_na)).with_columns(
+    df = nw.from_native(constructor(data_na)).with_columns(
         float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") ** 0.5
     )
     result = df.select(
@@ -20,14 +20,14 @@ def test_nan(nw_frame_constructor: Constructor) -> None:
     )
 
     expected: dict[str, list[Any]]
-    if nw_frame_constructor.is_non_nullable:
+    if constructor.is_non_nullable:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],
             "float": [False, False, True],
             "float_na": [True, False, True],
         }
-    elif "pandas" in str(nw_frame_constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
         # NaN values are coerced into NA for nullable datatypes by default
         expected = {
             "int": [False, False, None],
@@ -45,9 +45,9 @@ def test_nan(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_nan_series(nw_eager_constructor: ConstructorEager) -> None:
+def test_nan_series(constructor_eager: ConstructorEager) -> None:
     data_na = {"int": [0, 1, None]}
-    df = nw.from_native(nw_eager_constructor(data_na), eager_only=True).with_columns(
+    df = nw.from_native(constructor_eager(data_na), eager_only=True).with_columns(
         float=nw.col("int").cast(nw.Float64), float_na=nw.col("int") / nw.col("int")
     )
 
@@ -57,14 +57,14 @@ def test_nan_series(nw_eager_constructor: ConstructorEager) -> None:
         "float_na": df["float_na"].is_nan(),
     }
     expected: dict[str, list[Any]]
-    if nw_eager_constructor.is_non_nullable:
+    if constructor_eager.is_non_nullable:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],
             "float": [False, False, True],
             "float_na": [True, False, True],
         }
-    elif "pandas" in str(nw_eager_constructor) and PANDAS_VERSION >= (3,):
+    elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         # NaN values are coerced into NA for nullable datatypes by default
         expected = {
             "int": [False, False, None],
@@ -82,15 +82,13 @@ def test_nan_series(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_nan_non_float(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_nan_non_float(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     pytest.importorskip("pyarrow")
 
     if (
-        ("pyspark" in str(nw_frame_constructor))
-        or "duckdb" in str(nw_frame_constructor)
-        or "ibis" in str(nw_frame_constructor)
+        ("pyspark" in str(constructor))
+        or "duckdb" in str(constructor)
+        or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
     from pyarrow.lib import ArrowNotImplementedError
@@ -98,11 +96,11 @@ def test_nan_non_float(
     from narwhals.exceptions import InvalidOperationError
 
     data = {"a": ["x", "y"]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     exc = (
         ArrowNotImplementedError
-        if "pyarrow_table" in str(nw_frame_constructor)
+        if "pyarrow_table" in str(constructor)
         else InvalidOperationError
     )
 
@@ -110,18 +108,18 @@ def test_nan_non_float(
         df.select(nw.col("a").is_nan()).lazy().collect()
 
 
-def test_nan_non_float_series(nw_eager_constructor: ConstructorEager) -> None:
+def test_nan_non_float_series(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("pyarrow")
     from pyarrow.lib import ArrowNotImplementedError
 
     from narwhals.exceptions import InvalidOperationError
 
     data = {"a": ["x", "y"]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     exc = (
         ArrowNotImplementedError
-        if "pyarrow_table" in str(nw_eager_constructor)
+        if "pyarrow_table" in str(constructor_eager)
         else InvalidOperationError
     )
 

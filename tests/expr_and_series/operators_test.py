@@ -18,10 +18,10 @@ from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equa
     ],
 )
 def test_comparand_operators_scalar_expr(
-    nw_frame_constructor: Constructor, operator: str, expected: list[bool]
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 2]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), operator)(1))
     assert_equal_data(result, {"a": expected})
 
@@ -38,10 +38,10 @@ def test_comparand_operators_scalar_expr(
     ],
 )
 def test_comparand_operators_expr(
-    nw_frame_constructor: Constructor, operator: str, expected: list[bool]
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
     assert_equal_data(result, {"a": expected})
 
@@ -51,34 +51,34 @@ def test_comparand_operators_expr(
     [("__and__", [True, False, False, False]), ("__or__", [True, True, True, False])],
 )
 def test_logic_operators_expr(
-    nw_frame_constructor: Constructor, operator: str, expected: list[bool]
+    constructor: Constructor, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
     assert_equal_data(result, {"a": expected})
 
 
 def test_logic_operators_expr_kleene(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "cudf" in str(nw_frame_constructor):
+    if "cudf" in str(constructor):
         # https://github.com/rapidsai/cudf/issues/19171
         request.applymarker(pytest.mark.xfail)
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         # Dask infers `[True, None, None, None]` as `object` dtype, and then `__or__` fails.
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, None], "b": [True, None, None, None]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a") | (nw.col("b")))
-    if any(x in str(nw_frame_constructor) for x in ("pandas_constructor",)):
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
         expected: list[bool | None] = [True, True, False, False]
     else:
         expected = [True, True, None, None]
     assert_equal_data(result, {"a": expected})
     result = df.select(nw.col("a") & (nw.col("b")))
-    if any(x in str(nw_frame_constructor) for x in ("pandas_constructor",)):
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
         expected = [True, False, False, False]
     else:
         expected = [True, None, False, None]
@@ -95,19 +95,19 @@ def test_logic_operators_expr_kleene(
     ],
 )
 def test_logic_operators_expr_scalar(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     operator: str,
     expected: list[bool],
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        "dask" in str(nw_frame_constructor)
+        "dask" in str(constructor)
         and DASK_VERSION < (2024, 10)
         and operator in {"__rand__", "__ror__"}
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     result = df.select(a=getattr(nw.col("a"), operator)(False))
     assert_equal_data(result, {"a": expected})
@@ -125,10 +125,10 @@ def test_logic_operators_expr_scalar(
     ],
 )
 def test_comparand_operators_scalar_series(
-    nw_eager_constructor: ConstructorEager, operator: str, expected: list[bool]
+    constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 2]}
-    s = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
+    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": (getattr(s, operator)(1))}
     assert_equal_data(result, {"a": expected})
 
@@ -145,10 +145,10 @@ def test_comparand_operators_scalar_series(
     ],
 )
 def test_comparand_operators_series(
-    nw_eager_constructor: ConstructorEager, operator: str, expected: list[bool]
+    constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [0, 1, 1], "b": [0, 0, 2]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     series, other = df["a"], df["b"]
     result = {"a": getattr(series, operator)(other)}
     assert_equal_data(result, {"a": expected})
@@ -164,10 +164,10 @@ def test_comparand_operators_series(
     ],
 )
 def test_logic_operators_series(
-    nw_eager_constructor: ConstructorEager, operator: str, expected: list[bool]
+    constructor_eager: ConstructorEager, operator: str, expected: list[bool]
 ) -> None:
     data = {"a": [True, True, False, False], "b": [True, False, True, False]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     series, other = df["a"], df["b"]
     result = {"a": getattr(series, operator)(other)}
     assert_equal_data(result, {"a": expected})

@@ -19,10 +19,10 @@ expected_floordiv: list[float | None] = [None, None, None]
 
 @pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
 def test_series_truediv_by_zero(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     get_denominator: Callable[[nw.DataFrame[Any]], int | nw.Series[Any]],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     denominator = get_denominator(df)
     result = {"int": df["int"] / denominator, "float": df["float"] / denominator}
     expected = {"int": expected_truediv, "float": expected_truediv}
@@ -31,9 +31,9 @@ def test_series_truediv_by_zero(
 
 @pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
 def test_expr_truediv_by_zero(
-    nw_frame_constructor: Constructor, denominator: int | nw.Expr
+    constructor: Constructor, denominator: int | nw.Expr
 ) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("int", "float") / denominator)
     expected = {"int": expected_truediv, "float": expected_truediv}
     assert_equal_data(result, expected)
@@ -41,13 +41,13 @@ def test_expr_truediv_by_zero(
 
 @pytest.mark.parametrize("get_denominator", [lambda _: 0, lambda df: df["denominator"]])
 def test_series_floordiv_by_zero(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
     get_denominator: Callable[[nw.DataFrame[Any]], int | nw.Series[Any]],
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     if df.implementation.is_pandas_like():
         request.applymarker(pytest.mark.xfail)
@@ -60,13 +60,11 @@ def test_series_floordiv_by_zero(
 
 @pytest.mark.parametrize("denominator", [0, nw.lit(0), nw.col("denominator")])
 def test_expr_floordiv_by_zero(
-    nw_frame_constructor: Constructor,
-    request: pytest.FixtureRequest,
-    denominator: int | nw.Expr,
+    constructor: Constructor, request: pytest.FixtureRequest, denominator: int | nw.Expr
 ) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     if df.implementation.is_pandas_like():
         request.applymarker(pytest.mark.xfail)
@@ -84,9 +82,9 @@ def test_expr_floordiv_by_zero(
     ),
 )
 def test_series_rtruediv_by_zero(
-    nw_eager_constructor: ConstructorEager, numerator: float, expected: float
+    constructor_eager: ConstructorEager, numerator: float, expected: float
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = {"result": numerator / df["denominator"]}
     assert_equal_data(result, {"result": [expected] * len(df)})
 
@@ -98,9 +96,9 @@ def test_series_rtruediv_by_zero(
     ),
 )
 def test_expr_rtruediv_by_zero(
-    nw_frame_constructor: Constructor, numerator: float, expected: float
+    constructor: Constructor, numerator: float, expected: float
 ) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(result=numerator / nw.col("denominator"))
     assert_equal_data(result, {"result": [expected] * len(data["denominator"])})
     assert_equal_data(result.select((~nw.all().is_finite()).all()), {"result": [True]})
@@ -108,25 +106,22 @@ def test_expr_rtruediv_by_zero(
 
 @pytest.mark.parametrize("numerator", data["int"])
 def test_series_rfloordiv_by_zero(
-    nw_eager_constructor: ConstructorEager,
-    request: pytest.FixtureRequest,
-    numerator: float,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, numerator: float
 ) -> None:
-    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     if any(
-        x in str(nw_eager_constructor)
-        for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
+        x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
     ) or (
         any(
-            x in str(nw_eager_constructor)
+            x in str(constructor_eager)
             for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
         )
         and numerator != 0
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result = {"result": numerator // df["denominator"]}
     assert_equal_data(result, {"result": expected_floordiv})
@@ -134,23 +129,22 @@ def test_series_rfloordiv_by_zero(
 
 @pytest.mark.parametrize("numerator", data["int"])
 def test_expr_rfloordiv_by_zero(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest, numerator: float
+    constructor: Constructor, request: pytest.FixtureRequest, numerator: float
 ) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (0, 20, 7):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
     if any(
-        x in str(nw_frame_constructor)
-        for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
+        x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
     ) or (
         any(
-            x in str(nw_frame_constructor)
+            x in str(constructor)
             for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
         )
         and numerator != 0
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     result = df.select(result=numerator // nw.col("denominator"))
     expected = {"result": expected_floordiv}

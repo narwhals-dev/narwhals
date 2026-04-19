@@ -39,9 +39,9 @@ def test_scatter(
     indices: int | Collection[int],
     values: int | Collection[int],
     expected: list[Any],
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
 ) -> None:
-    constructor = partial(series, nw_eager_constructor)
+    constructor = partial(series, constructor_eager)
     s = constructor("s", data)
     df = s.to_frame().with_row_index("dont change me")
     unchanged_indexed = df.to_dict(as_series=False)
@@ -63,8 +63,8 @@ def test_scatter_pandas_index() -> None:
     pd.testing.assert_series_equal(result.to_native(), expected)
 
 
-def test_scatter_2862(nw_eager_constructor: ConstructorEager) -> None:
-    s = series(nw_eager_constructor, "a", [1, 2, 3])
+def test_scatter_2862(constructor_eager: ConstructorEager) -> None:
+    s = series(constructor_eager, "a", [1, 2, 3])
     assert_equal_series(s.scatter(1, 999), [1, 999, 3], "a")
     assert_equal_series(s.scatter([0, 2], [999, 888]), [999, 2, 888], "a")
     assert_equal_series(s.scatter([2, 0], [999, 888]), [888, 2, 999], "a")

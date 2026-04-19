@@ -14,8 +14,8 @@ from tests.utils import (
 data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1]}
 
 
-def test_is_first_distinct_expr(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+def test_is_first_distinct_expr(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     result = df.select(nw.all().is_first_distinct())
     expected = {
         "a": [True, False, True, True, False],
@@ -24,13 +24,13 @@ def test_is_first_distinct_expr(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_first_distinct_expr_lazy(nw_frame_constructor: Constructor) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
+def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 1, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [None, 1, 2, 3, 4]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.select(nw.col("a", "b").is_first_distinct().over(order_by="i"), "i")
         .sort("i")
@@ -43,13 +43,13 @@ def test_is_first_distinct_expr_lazy(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_first_distinct_expr_lazy_w_nulls(nw_frame_constructor: Constructor) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
+def test_is_first_distinct_expr_lazy_w_nulls(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [None, None, 2, 3, 2], "b": [1, 2, 3, 2, 1], "i": [None, 1, 2, 3, 4]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.select(nw.col("a", "b").is_first_distinct().over(order_by="i"), "i")
         .sort("i")
@@ -63,19 +63,16 @@ def test_is_first_distinct_expr_lazy_w_nulls(nw_frame_constructor: Constructor) 
 
 
 def test_is_first_distinct_expr_lazy_grouped(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if any(
-        x in str(nw_frame_constructor)
-        for x in ("dask", "pandas", "pyarrow", "cudf", "modin")
-    ):
+    if any(x in str(constructor) for x in ("dask", "pandas", "pyarrow", "cudf", "modin")):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 3, 3, 2, 3], "i": [0, 1, 2, 3, 4]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = (
         df.select(nw.col("b").is_first_distinct().over("a", order_by="i"), "i")
         .sort("i")
@@ -85,8 +82,8 @@ def test_is_first_distinct_expr_lazy_grouped(
     assert_equal_data(result, expected)
 
 
-def test_is_first_distinct_series(nw_eager_constructor: ConstructorEager) -> None:
-    series = nw.from_native(nw_eager_constructor(data), eager_only=True)["a"]
+def test_is_first_distinct_series(constructor_eager: ConstructorEager) -> None:
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = series.is_first_distinct()
     expected = {"a": [True, False, True, True, False]}
     assert_equal_data({"a": result}, expected)

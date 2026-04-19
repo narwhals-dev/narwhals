@@ -26,8 +26,8 @@ data = {
 }
 
 
-def test_when(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_when(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(value=3).alias("a_when"))
     expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
@@ -36,15 +36,15 @@ def test_when(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_otherwise(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_when_otherwise(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(3).otherwise(6).alias("a_when"))
     expected = {"a_when": [3, 6, 6]}
     assert_equal_data(result, expected)
 
 
-def test_multiple_conditions(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_multiple_conditions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") < 3, nw.col("c") < 5.0).then(3).alias("a_when")
     )
@@ -52,45 +52,45 @@ def test_multiple_conditions(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_no_arg_when_fail(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_no_arg_when_fail(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     with pytest.raises((TypeError, ValueError)):
         df.select(nw.when().then(value=3).alias("a_when"))
 
 
-def test_value_numpy_array(nw_eager_constructor: ConstructorEager) -> None:
+def test_value_numpy_array(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
 
     result = df.select(nw.when(nw.col("a") == 1).then(np.arange(3, 6)).alias("a_when"))
     expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
 
 
-def test_value_series(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+def test_value_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     s_data = {"s": [3, 4, 5]}
-    s = nw.from_native(nw_eager_constructor(s_data))["s"]
+    s = nw.from_native(constructor_eager(s_data))["s"]
     assert isinstance(s, nw.Series)
     result = df.select(nw.when(nw.col("a") == 1).then(s).alias("a_when"))
     expected = {"a_when": [3, None, None]}
     assert_equal_data(result, expected)
 
 
-def test_value_expression(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_value_expression(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") == 1).then(nw.col("a") + 9).alias("a_when"))
     expected = {"a_when": [10, None, None]}
     assert_equal_data(result, expected)
 
 
-def test_otherwise_numpy_array(nw_eager_constructor: ConstructorEager) -> None:
+def test_otherwise_numpy_array(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    df = nw.from_native(nw_eager_constructor(data))
+    df = nw.from_native(constructor_eager(data))
 
     arr: _1DArray = np.zeros([3], np.dtype(np.int64))
     arr[:3] = 0, 9, 10
@@ -99,18 +99,18 @@ def test_otherwise_numpy_array(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_otherwise_series(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw.from_native(nw_eager_constructor(data))
+def test_otherwise_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data))
     s_data = {"s": [0, 9, 10]}
-    s = nw.from_native(nw_eager_constructor(s_data))["s"]
+    s = nw.from_native(constructor_eager(s_data))["s"]
     assert isinstance(s, nw.Series)
     result = df.select(nw.when(nw.col("a") == 1).then(-1).otherwise(s).alias("a_when"))
     expected = {"a_when": [-1, 9, 10]}
     assert_equal_data(result, expected)
 
 
-def test_otherwise_expression(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_otherwise_expression(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.when(nw.col("a") == 1).then(-1).otherwise(nw.col("a") + 7).alias("a_when")
     )
@@ -118,17 +118,17 @@ def test_otherwise_expression(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_into_expr(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_when_then_otherwise_into_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then("c").otherwise("e"))
     expected = {"c": [7, 5, 6]}
     assert_equal_data(result, expected)
 
 
-def test_when_then_broadcasting(nw_frame_constructor: Constructor) -> None:
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+def test_when_then_broadcasting(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a").sum() > 1).then("c"))
     expected = {"c": [4.1, 5, 6]}
     assert_equal_data(result, expected)
@@ -137,15 +137,15 @@ def test_when_then_broadcasting(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_lit_str(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_when_then_otherwise_lit_str(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(nw.when(nw.col("a") > 1).then(nw.col("b")).otherwise(nw.lit("z")))
     expected = {"b": ["z", "b", "c"]}
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_both_lit(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_when_then_otherwise_both_lit(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(
         x1=nw.when(nw.col("a") > 1).then(nw.lit(42)).otherwise(nw.lit(-1)),
         x2=nw.when(nw.col("a") > 2).then(nw.lit(42)).otherwise(nw.lit(-1)),
@@ -154,8 +154,8 @@ def test_when_then_otherwise_both_lit(nw_frame_constructor: Constructor) -> None
     assert_equal_data(result, expected)
 
 
-def test_when_then_otherwise_multi_output(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+def test_when_then_otherwise_multi_output(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     with pytest.raises(MultiOutputExpressionError):
         df.select(x1=nw.when(nw.all() > 1).then(nw.col("a", "b")))
     with pytest.raises(MultiOutputExpressionError):
@@ -182,13 +182,13 @@ def test_when_then_otherwise_aggregate_select(
     then: nw.Expr | int,
     otherwise: nw.Expr | int | None,
     expected: list[int],
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "cudf" in str(nw_frame_constructor) and otherwise is None:
+    if "cudf" in str(constructor) and otherwise is None:
         reason = "cudf does not support mixed types"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = df.select(a_when=nw.when(condition).then(then).otherwise(otherwise))
     assert_equal_data(result, {"a_when": expected})
 
@@ -213,30 +213,30 @@ def test_when_then_otherwise_aggregate_with_columns(
     then: nw.Expr | int,
     otherwise: nw.Expr | int | None,
     expected: list[int],
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "cudf" in str(nw_frame_constructor) and otherwise is None:
+    if "cudf" in str(constructor) and otherwise is None:
         reason = "cudf does not support mixed types"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
     expr = nw.when(condition).then(then).otherwise(otherwise)
     result = df.with_columns(a_when=expr)
     assert_equal_data(result.select(nw.col("a_when")), {"a_when": expected})
 
 
-def test_when_then_empty(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [-1]})).filter(nw.col("a") > 0)
+def test_when_then_empty(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [-1]})).filter(nw.col("a") > 0)
     result = df.with_columns(nw.when(nw.col("a") == 1).then(nw.lit(1)).alias("new_col"))
     expected: dict[str, Any] = {"a": [], "new_col": []}
     assert_equal_data(result, expected)
 
 
-def test_when_chain_basic_two_conditions(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]}))
+def test_when_chain_basic_two_conditions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -251,8 +251,8 @@ def test_when_chain_basic_two_conditions(nw_frame_constructor: Constructor) -> N
     assert_equal_data(result, expected)
 
 
-def test_when_chain_three_conditions(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4]}))
+def test_when_chain_three_conditions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -269,8 +269,8 @@ def test_when_chain_three_conditions(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_chain_multiple_conditions(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4, 5]}))
+def test_when_chain_multiple_conditions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -289,8 +289,8 @@ def test_when_chain_multiple_conditions(nw_frame_constructor: Constructor) -> No
     assert_equal_data(result, expected)
 
 
-def test_when_chain_no_otherwise(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4]}))
+def test_when_chain_no_otherwise(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1).then(10).when(nw.col("a") == 2).then(20).alias("result")
@@ -300,8 +300,8 @@ def test_when_chain_no_otherwise(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_chain_first_match_wins(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 5, 10]}))
+def test_when_chain_first_match_wins(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 5, 10]}))
 
     result = df.select(
         nw.when(nw.col("a") < 5)
@@ -318,8 +318,8 @@ def test_when_chain_first_match_wins(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_chain_all_conditions_false(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]}))
+def test_when_chain_all_conditions_false(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     result = df.select(
         nw.when(nw.col("a") > 10)
@@ -336,8 +336,8 @@ def test_when_chain_all_conditions_false(nw_frame_constructor: Constructor) -> N
     assert_equal_data(result, expected)
 
 
-def test_when_chain_mixed_value_types(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
+def test_when_chain_mixed_value_types(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -354,10 +354,8 @@ def test_when_chain_mixed_value_types(nw_frame_constructor: Constructor) -> None
     assert_equal_data(result, expected)
 
 
-def test_when_chain_complex_conditions(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(
-        nw_frame_constructor({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]})
-    )
+def test_when_chain_complex_conditions(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]}))
 
     result = df.select(
         nw.when((nw.col("a") == 1) & (nw.col("b") == 10))
@@ -374,8 +372,8 @@ def test_when_chain_complex_conditions(nw_frame_constructor: Constructor) -> Non
     assert_equal_data(result, expected)
 
 
-def test_when_chain_with_nulls(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, None, 3, None, 5]}))
+def test_when_chain_with_nulls(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, None, 3, None, 5]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -393,17 +391,15 @@ def test_when_chain_with_nulls(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_chain_expression_conditions(nw_frame_constructor: Constructor) -> None:
-    if uses_pyarrow_backend(nw_frame_constructor) or "pyarrow" in str(
-        nw_frame_constructor
-    ):
+def test_when_chain_expression_conditions(constructor: Constructor) -> None:
+    if uses_pyarrow_backend(constructor) or "pyarrow" in str(constructor):
         reason = (
             "PyArrow backend doesn't support modulo operator. "
             "This is a pre-existing PyArrow arithmetic limitation."
         )
         pytest.skip(reason=reason)
 
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4, 5]}))
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5]}))
 
     result = df.select(
         nw.when(nw.col("a") % 2 == 0)
@@ -424,8 +420,8 @@ def test_when_chain_expression_conditions(nw_frame_constructor: Constructor) -> 
     assert_equal_data(result, expected)
 
 
-def test_when_chain_value_types_string(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": ["x", "y", "z"]}))
+def test_when_chain_value_types_string(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": ["x", "y", "z"]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -440,8 +436,8 @@ def test_when_chain_value_types_string(nw_frame_constructor: Constructor) -> Non
     assert_equal_data(result, expected)
 
 
-def test_when_chain_value_types_float(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [1.1, 2.2, 3.3]}))
+def test_when_chain_value_types_float(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [1.1, 2.2, 3.3]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -458,8 +454,8 @@ def test_when_chain_value_types_float(nw_frame_constructor: Constructor) -> None
     assert_equal_data(result, expected)
 
 
-def test_when_chain_value_types_mixed(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
+def test_when_chain_value_types_mixed(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -476,8 +472,8 @@ def test_when_chain_value_types_mixed(nw_frame_constructor: Constructor) -> None
     assert_equal_data(result, expected)
 
 
-def test_when_chain_with_columns(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
+def test_when_chain_with_columns(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
 
     result = df.with_columns(
         nw.when(nw.col("a") == 1)
@@ -492,8 +488,8 @@ def test_when_chain_with_columns(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_when_chain_multiple_columns(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]}))
+def test_when_chain_multiple_columns(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1)
@@ -515,9 +511,9 @@ def test_when_chain_multiple_columns(nw_frame_constructor: Constructor) -> None:
 
 
 def test_when_chain_backward_compatible_single_condition(
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
 ) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3]}))
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     # This is the existing API that must continue to work
     result = df.select(nw.when(nw.col("a") == 1).then(10).otherwise(20).alias("result"))
@@ -526,10 +522,8 @@ def test_when_chain_backward_compatible_single_condition(
     assert_equal_data(result, expected)
 
 
-def test_when_chain_two_conditions_no_otherwise(
-    nw_frame_constructor: Constructor,
-) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4, 5]}))
+def test_when_chain_two_conditions_no_otherwise(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5]}))
 
     result = df.select(
         nw.when(nw.col("a") == 1).then(10).when(nw.col("a") == 2).then(20).alias("result")
@@ -539,13 +533,9 @@ def test_when_chain_two_conditions_no_otherwise(
     assert_equal_data(result, expected)
 
 
-def test_when_chain_conditions_on_multiple_columns(
-    nw_frame_constructor: Constructor,
-) -> None:
+def test_when_chain_conditions_on_multiple_columns(constructor: Constructor) -> None:
     df = nw.from_native(
-        nw_frame_constructor(
-            {"a": [1, 2, 3, 4], "b": [10, 20, 30, 40], "c": [5, 15, 25, 35]}
-        )
+        constructor({"a": [1, 2, 3, 4], "b": [10, 20, 30, 40], "c": [5, 15, 25, 35]})
     )
 
     result = df.select(
@@ -565,10 +555,8 @@ def test_when_chain_conditions_on_multiple_columns(
     assert_equal_data(result, expected)
 
 
-def test_when_chain_boolean_column_condition(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(
-        nw_frame_constructor({"a": [True, False, True, False], "b": [1, 2, 3, 4]})
-    )
+def test_when_chain_boolean_column_condition(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [True, False, True, False], "b": [1, 2, 3, 4]}))
 
     result = df.select(
         nw.when(nw.col("a"))
@@ -587,8 +575,8 @@ def test_when_chain_boolean_column_condition(nw_frame_constructor: Constructor) 
     assert_equal_data(result, expected)
 
 
-def test_when_chain_branching_does_not_mutate(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4]}))
+def test_when_chain_branching_does_not_mutate(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
 
     base_expr = nw.when(nw.col("a") == 1).then(10)
     derived_expr = base_expr.when(nw.col("a") > 2).then(nw.col("a") * 10).otherwise(0)
@@ -598,10 +586,8 @@ def test_when_chain_branching_does_not_mutate(nw_frame_constructor: Constructor)
     assert_equal_data(result, expected)
 
 
-def test_when_then_composes_with_expr_operations(
-    nw_frame_constructor: Constructor,
-) -> None:
-    df = nw.from_native(nw_frame_constructor({"a": [1, 2, 3, 4]}))
+def test_when_then_composes_with_expr_operations(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
 
     result = df.select(
         (

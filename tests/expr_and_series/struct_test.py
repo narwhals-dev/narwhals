@@ -40,15 +40,15 @@ def maybe_skip(constructor: Constructor | ConstructorEager) -> None:
 )
 def test_struct_positional_exprs(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     exprs: tuple[nw.Expr | list[nw.Expr], ...],
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in UNSUPPORTED_BACKENDS):
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    maybe_skip(constructor=nw_frame_constructor)
+    maybe_skip(constructor=constructor)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.struct(*exprs))
 
     expected = {
@@ -63,14 +63,14 @@ def test_struct_positional_exprs(
 
 
 def test_struct_named_exprs(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in UNSUPPORTED_BACKENDS):
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    maybe_skip(constructor=nw_frame_constructor)
+    maybe_skip(constructor=constructor)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.struct(x="a", y="b").alias("struct"))
 
     expected = {
@@ -81,14 +81,14 @@ def test_struct_named_exprs(
 
 
 def test_struct_positional_and_named(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in UNSUPPORTED_BACKENDS):
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    maybe_skip(constructor=nw_frame_constructor)
+    maybe_skip(constructor=constructor)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.struct("a", z="c").alias("struct"))
 
     expected = {
@@ -99,14 +99,14 @@ def test_struct_positional_and_named(
 
 
 def test_struct_with_expressions(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in UNSUPPORTED_BACKENDS):
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    maybe_skip(constructor=nw_frame_constructor)
+    maybe_skip(constructor=constructor)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(
         nw.struct(nw.col("a") * 2, nw.col("c").str.len_chars()).alias("struct")
     )
@@ -117,14 +117,14 @@ def test_struct_with_expressions(
 
 
 def test_struct_with_literals(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in UNSUPPORTED_BACKENDS):
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    maybe_skip(constructor=nw_frame_constructor)
+    maybe_skip(constructor=constructor)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.struct("a", x="c", y=nw.lit(False)).alias("struct"))
 
     expected = {
@@ -138,8 +138,8 @@ def test_struct_with_literals(
     assert_equal_data(result, expected)
 
 
-def test_struct_raise_no_exprs(nw_frame_constructor: Constructor) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_struct_raise_no_exprs(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
     with pytest.raises(ValueError, match="expected at least 1 expression in 'struct'"):
         df.select(nw.struct().alias("struct"))
 
@@ -148,16 +148,16 @@ def test_struct_raise_no_exprs(nw_frame_constructor: Constructor) -> None:
 
 
 def test_struct_with_schema(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor
+    request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(x in str(nw_frame_constructor) for x in UNSUPPORTED_BACKENDS):
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
 
-    maybe_skip(constructor=nw_frame_constructor)
+    maybe_skip(constructor=constructor)
 
     data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
     schema = {"a": nw.Float64(), "b": nw.Float32()}
-    df = nw.from_native(nw_frame_constructor(data_numeric))
+    df = nw.from_native(constructor(data_numeric))
     result = df.select(nw.struct("a", "b").cast(nw.Struct(schema)).alias("struct"))
     assert result.collect_schema()["struct"] == nw.Struct(schema)
 
@@ -167,10 +167,10 @@ def test_struct_with_schema(
     assert_equal_data(result, expected)
 
 
-def test_struct_with_series(nw_eager_constructor: ConstructorEager) -> None:
-    maybe_skip(constructor=nw_eager_constructor)
+def test_struct_with_series(constructor_eager: ConstructorEager) -> None:
+    maybe_skip(constructor=constructor_eager)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a, s_b = df.get_column("a"), df.get_column("b")
     result = df.select(nw.struct(s_a, s_b).alias("struct"))
 
@@ -181,10 +181,10 @@ def test_struct_with_series(nw_eager_constructor: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_struct_mixed_series_and_exprs(nw_eager_constructor: ConstructorEager) -> None:
-    maybe_skip(constructor=nw_eager_constructor)
+def test_struct_mixed_series_and_exprs(constructor_eager: ConstructorEager) -> None:
+    maybe_skip(constructor=constructor_eager)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a = df.get_column("a")
     result = df.select(nw.struct(s_a, nw.col("c")).alias("struct"))
 
@@ -195,10 +195,10 @@ def test_struct_mixed_series_and_exprs(nw_eager_constructor: ConstructorEager) -
     assert_equal_data(result, expected)
 
 
-def test_struct_named_with_series(nw_eager_constructor: ConstructorEager) -> None:
-    maybe_skip(constructor=nw_eager_constructor)
+def test_struct_named_with_series(constructor_eager: ConstructorEager) -> None:
+    maybe_skip(constructor=constructor_eager)
 
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     s_a = df.get_column("a")
     result = df.select(nw.struct(x=s_a, y="b").alias("struct"))
 

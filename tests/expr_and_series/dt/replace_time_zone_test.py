@@ -15,16 +15,16 @@ if TYPE_CHECKING:
 
 
 def test_replace_time_zone(
-    nw_frame_constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if (
-        ("pyarrow" in str(nw_frame_constructor) and is_windows())
-        or ("pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2,))
+        ("pyarrow" in str(constructor) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
     ):
         pytest.skip()
 
-    if any(x in str(nw_frame_constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
+    if any(x in str(constructor) for x in ("cudf", "pyspark", "ibis", "duckdb")):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -32,7 +32,7 @@ def test_replace_time_zone(
             datetime(2020, 1, 2, tzinfo=timezone.utc),
         ]
     }
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
@@ -43,11 +43,11 @@ def test_replace_time_zone(
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_none(nw_frame_constructor: Constructor) -> None:
+def test_replace_time_zone_none(constructor: Constructor) -> None:
     if (
-        ("pyarrow" in str(nw_frame_constructor) and is_windows())
-        or ("pandas_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(nw_frame_constructor) and PANDAS_VERSION < (2,))
+        ("pyarrow" in str(constructor) and is_windows())
+        or ("pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor) and PANDAS_VERSION < (2,))
     ):
         pytest.skip()
     data = {
@@ -56,7 +56,7 @@ def test_replace_time_zone_none(nw_frame_constructor: Constructor) -> None:
             datetime(2020, 1, 2, tzinfo=timezone.utc),
         ]
     }
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").dt.replace_time_zone(None))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
@@ -68,15 +68,15 @@ def test_replace_time_zone_none(nw_frame_constructor: Constructor) -> None:
 
 
 def test_replace_time_zone_series(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     if (
-        ("pyarrow" in str(nw_eager_constructor) and is_windows())
-        or ("pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2,))
+        ("pyarrow" in str(constructor_eager) and is_windows())
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
     ):
         pytest.skip()
-    if any(x in str(nw_eager_constructor) for x in ("cudf",)):
+    if any(x in str(constructor_eager) for x in ("cudf",)):
         request.applymarker(pytest.mark.xfail)
     data = {
         "a": [
@@ -84,7 +84,7 @@ def test_replace_time_zone_series(
             datetime(2020, 1, 2, tzinfo=timezone.utc),
         ]
     }
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.replace_time_zone("Asia/Kathmandu"))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime
@@ -95,11 +95,11 @@ def test_replace_time_zone_series(
     assert_equal_data(result_str, expected)
 
 
-def test_replace_time_zone_none_series(nw_eager_constructor: ConstructorEager) -> None:
+def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> None:
     if (
-        ("pyarrow" in str(nw_eager_constructor) and is_windows())
-        or ("pandas_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2,))
-        or ("modin_pyarrow" in str(nw_eager_constructor) and PANDAS_VERSION < (2,))
+        ("pyarrow" in str(constructor_eager) and is_windows())
+        or ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
+        or ("modin_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2,))
     ):
         pytest.skip()
     data = {
@@ -108,7 +108,7 @@ def test_replace_time_zone_none_series(nw_eager_constructor: ConstructorEager) -
             datetime(2020, 1, 2, tzinfo=timezone.utc),
         ]
     }
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].dt.replace_time_zone(None))
     result_dtype = result.collect_schema()["a"]
     assert result_dtype == nw.Datetime

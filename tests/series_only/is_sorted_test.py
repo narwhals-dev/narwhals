@@ -15,20 +15,18 @@ data_sorted = [7.0, 8.0, 9.0]
     [(data, False, False), (data_sorted, False, True), (data_sorted, True, False)],
 )
 def test_is_sorted(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     input_data: list[int],
     descending: bool,  # noqa: FBT001
     expected: bool,  # noqa: FBT001
 ) -> None:
-    series = nw.from_native(nw_eager_constructor({"a": input_data}), eager_only=True)["a"]
+    series = nw.from_native(constructor_eager({"a": input_data}), eager_only=True)["a"]
     result = series.is_sorted(descending=descending)
     assert_equal_data({"a": [result]}, {"a": [expected]})
 
 
-def test_is_sorted_invalid(nw_eager_constructor: ConstructorEager) -> None:
-    series = nw.from_native(nw_eager_constructor({"a": data_sorted}), eager_only=True)[
-        "a"
-    ]
+def test_is_sorted_invalid(constructor_eager: ConstructorEager) -> None:
+    series = nw.from_native(constructor_eager({"a": data_sorted}), eager_only=True)["a"]
 
     with pytest.raises(TypeError):
         series.is_sorted(descending="invalid_type")  # type: ignore[arg-type]

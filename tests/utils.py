@@ -61,7 +61,7 @@ ID_PANDAS_LIKE = frozenset(
 )
 ID_CUDF = frozenset(("cudf",))
 _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
-    ("nw_eager_constructor", "nw_frame_constructor", "nw_pandas_like_constructor")
+    ("constructor_eager", "constructor", "constructor_pandas_like")
 )
 
 
@@ -200,13 +200,9 @@ def windows_has_tzdata() -> bool:  # pragma: no cover
     return (Path.home() / "Downloads" / "tzdata").exists()
 
 
-def is_pyarrow_windows_no_tzdata(nw_frame_constructor: Constructor, /) -> bool:
+def is_pyarrow_windows_no_tzdata(constructor: Constructor, /) -> bool:
     """Skip test on Windows when the tz database is not configured."""
-    return (
-        "pyarrow" in str(nw_frame_constructor)
-        and is_windows()
-        and not windows_has_tzdata()
-    )
+    return "pyarrow" in str(constructor) and is_windows() and not windows_has_tzdata()
 
 
 def uses_pyarrow_backend(constructor: Constructor | ConstructorEager) -> bool:
@@ -241,9 +237,9 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     return time_unit
 
 
-def is_pyspark_connect(nw_frame_constructor: Constructor) -> bool:
+def is_pyspark_connect(constructor: Constructor) -> bool:
     is_spark_connect = bool(os.environ.get("SPARK_CONNECT", None))
-    return is_spark_connect and ("pyspark" in str(nw_frame_constructor))
+    return is_spark_connect and ("pyspark" in str(constructor))
 
 
 def xfail_if_pyspark_connect(  # pragma: no cover

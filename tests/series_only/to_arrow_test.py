@@ -14,9 +14,9 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
-def test_to_arrow(nw_eager_constructor: ConstructorEager) -> None:
+def test_to_arrow(constructor_eager: ConstructorEager) -> None:
     data = [1, 2, 3]
-    result = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)[
+    result = nw.from_native(constructor_eager({"a": data}), eager_only=True)[
         "a"
     ].to_arrow()
 
@@ -25,16 +25,16 @@ def test_to_arrow(nw_eager_constructor: ConstructorEager) -> None:
 
 
 def test_to_arrow_with_nulls(
-    nw_eager_constructor: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pandas_constructor" in str(nw_eager_constructor) or "modin_constructor" in str(
-        nw_eager_constructor
+    if "pandas_constructor" in str(constructor_eager) or "modin_constructor" in str(
+        constructor_eager
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = [1, 2, None]
     result = (
-        nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)["a"]
+        nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
         .cast(nw.Int64)
         .to_arrow()
     )

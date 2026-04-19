@@ -9,8 +9,8 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 
-def test_is_narwhals_series(nw_eager_constructor: ConstructorEager) -> None:
-    df = nw_eager_constructor({"col1": [1, 2], "col2": [3, 4]})
+def test_is_narwhals_series(constructor_eager: ConstructorEager) -> None:
+    df = constructor_eager({"col1": [1, 2], "col2": [3, 4]})
 
     assert is_narwhals_series(nw.from_native(df, eager_only=True)["col1"])
     assert not is_narwhals_series(nw.from_native(df, eager_only=True)["col1"].to_native())

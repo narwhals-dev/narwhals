@@ -9,8 +9,8 @@ data = {"a": [1, 3, 2], "b": [4, 4, 7], "z": [7.0, 8.0, 9.0]}
 
 
 @pytest.mark.parametrize("expr", [nw.col("a", "b", "z").mean(), nw.mean("a", "b", "z")])
-def test_expr_mean_expr(nw_frame_constructor: Constructor, expr: nw.Expr) -> None:
-    df = nw.from_native(nw_frame_constructor(data))
+def test_expr_mean_expr(constructor: Constructor, expr: nw.Expr) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(expr)
     expected = {"a": [2.0], "b": [5.0], "z": [8.0]}
     assert_equal_data(result, expected)
@@ -18,8 +18,8 @@ def test_expr_mean_expr(nw_frame_constructor: Constructor, expr: nw.Expr) -> Non
 
 @pytest.mark.parametrize(("col", "expected"), [("a", 2.0), ("b", 5.0), ("z", 8.0)])
 def test_expr_mean_series(
-    nw_eager_constructor: ConstructorEager, col: str, expected: float
+    constructor_eager: ConstructorEager, col: str, expected: float
 ) -> None:
-    series = nw.from_native(nw_eager_constructor(data), eager_only=True)[col]
+    series = nw.from_native(constructor_eager(data), eager_only=True)[col]
     result = series.mean()
     assert_equal_data({col: [result]}, {col: [expected]})

@@ -4,9 +4,9 @@ import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
-def test_any_all(nw_frame_constructor: Constructor) -> None:
+def test_any_all(constructor: Constructor) -> None:
     df = nw.from_native(
-        nw_frame_constructor(
+        constructor(
             {
                 "a": [True, False, True],
                 "b": [True, True, True],
@@ -22,9 +22,9 @@ def test_any_all(nw_frame_constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_any_all_series(nw_eager_constructor: ConstructorEager) -> None:
+def test_any_all_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
-        nw_eager_constructor(
+        constructor_eager(
             {
                 "a": [True, False, True],
                 "b": [True, True, True],

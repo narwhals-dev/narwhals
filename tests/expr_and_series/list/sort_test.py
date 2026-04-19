@@ -55,23 +55,23 @@ expected_asc_nulls_first = [
 )
 def test_sort_expr_args(
     request: pytest.FixtureRequest,
-    nw_frame_constructor: Constructor,
+    constructor: Constructor,
     descending: bool,  # noqa: FBT001
     nulls_last: bool,  # noqa: FBT001
     expected: list[Any],
 ) -> None:
-    if any(backend in str(nw_frame_constructor) for backend in ("dask", "cudf")):
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
-    if "ibis" in str(nw_frame_constructor) and descending:
+    if "ibis" in str(constructor) and descending:
         # https://github.com/ibis-project/ibis/issues/11735
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(nw_frame_constructor) and POLARS_VERSION < (0, 20, 5):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
         pytest.skip()
-    if "pandas" in str(nw_frame_constructor):
+    if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    result = nw.from_native(nw_frame_constructor(data)).select(
+    result = nw.from_native(constructor(data)).select(
         nw.col("a")
         .cast(nw.List(nw.Int32()))
         .list.sort(descending=descending, nulls_last=nulls_last)
@@ -90,20 +90,20 @@ def test_sort_expr_args(
 )
 def test_sort_series_args(
     request: pytest.FixtureRequest,
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
     descending: bool,  # noqa: FBT001
     nulls_last: bool,  # noqa: FBT001
     expected: list[Any],
 ) -> None:
-    if any(backend in str(nw_eager_constructor) for backend in ("dask", "cudf")):
+    if any(backend in str(constructor_eager) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(nw_eager_constructor) and POLARS_VERSION < (0, 20, 5):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
         pytest.skip()
-    if "pandas" in str(nw_eager_constructor):
+    if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     result = (
         df["a"]
         .cast(nw.List(nw.Int32()))

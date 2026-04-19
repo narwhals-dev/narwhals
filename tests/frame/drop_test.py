@@ -17,11 +17,9 @@ if TYPE_CHECKING:
     ("to_drop", "expected"),
     [("abc", ["b", "z"]), (["abc"], ["b", "z"]), (["abc", "b"], ["z"])],
 )
-def test_drop(
-    nw_frame_constructor: Constructor, to_drop: list[str], expected: list[str]
-) -> None:
+def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str]) -> None:
     data = {"abc": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
     assert df.drop(to_drop).collect_schema().names() == expected
     if not isinstance(to_drop, str):
         assert df.drop(*to_drop).collect_schema().names() == expected
@@ -29,23 +27,19 @@ def test_drop(
 
 @pytest.mark.parametrize("strict", [True, False])
 def test_drop_strict(
-    request: pytest.FixtureRequest, nw_frame_constructor: Constructor, *, strict: bool
+    request: pytest.FixtureRequest, constructor: Constructor, *, strict: bool
 ) -> None:
-    if (
-        "polars_lazy" in str(nw_frame_constructor)
-        and POLARS_VERSION < (1, 0, 0)
-        and strict
-    ):
+    if "polars_lazy" in str(constructor) and POLARS_VERSION < (1, 0, 0) and strict:
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
     to_drop = ["a", "z"]
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     context: Any
     if strict:
-        if "polars_lazy" in str(nw_frame_constructor):
+        if "polars_lazy" in str(constructor):
             msg = r"^(\"z\"|z)"
         else:
             msg = (

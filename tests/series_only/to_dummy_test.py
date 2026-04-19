@@ -10,8 +10,8 @@ data_na = ["x", "y", None]
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies(nw_eager_constructor: ConstructorEager, sep: str) -> None:
-    s = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)["a"].alias("a")
+def test_to_dummies(constructor_eager: ConstructorEager, sep: str) -> None:
+    s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(separator=sep)
     expected = {f"a{sep}x": [1, 0, 0], f"a{sep}y": [0, 1, 0], f"a{sep}z": [0, 0, 1]}
 
@@ -19,8 +19,8 @@ def test_to_dummies(nw_eager_constructor: ConstructorEager, sep: str) -> None:
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies_drop_first(nw_eager_constructor: ConstructorEager, sep: str) -> None:
-    s = nw.from_native(nw_eager_constructor({"a": data}), eager_only=True)["a"].alias("a")
+def test_to_dummies_drop_first(constructor_eager: ConstructorEager, sep: str) -> None:
+    s = nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(drop_first=True, separator=sep)
     expected = {f"a{sep}y": [0, 1, 0], f"a{sep}z": [0, 0, 1]}
 
@@ -28,12 +28,10 @@ def test_to_dummies_drop_first(nw_eager_constructor: ConstructorEager, sep: str)
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies_with_nulls(nw_eager_constructor: ConstructorEager, sep: str) -> None:
-    if "pandas_nullable_constructor" not in str(nw_eager_constructor):
+def test_to_dummies_with_nulls(constructor_eager: ConstructorEager, sep: str) -> None:
+    if "pandas_nullable_constructor" not in str(constructor_eager):
         pytest.skip()
-    s = nw.from_native(nw_eager_constructor({"a": data_na}), eager_only=True)["a"].alias(
-        "a"
-    )
+    s = nw.from_native(constructor_eager({"a": data_na}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(separator=sep)
     expected = {f"a{sep}null": [0, 0, 1], f"a{sep}x": [1, 0, 0], f"a{sep}y": [0, 1, 0]}
 
@@ -41,12 +39,8 @@ def test_to_dummies_with_nulls(nw_eager_constructor: ConstructorEager, sep: str)
 
 
 @pytest.mark.parametrize("sep", ["_", "-"])
-def test_to_dummies_drop_first_na(
-    nw_eager_constructor: ConstructorEager, sep: str
-) -> None:
-    s = nw.from_native(nw_eager_constructor({"a": data_na}), eager_only=True)["a"].alias(
-        "a"
-    )
+def test_to_dummies_drop_first_na(constructor_eager: ConstructorEager, sep: str) -> None:
+    s = nw.from_native(constructor_eager({"a": data_na}), eager_only=True)["a"].alias("a")
     result = s.to_dummies(drop_first=True, separator=sep)
     expected = {f"a{sep}null": [0, 0, 1], f"a{sep}y": [0, 1, 0]}
 

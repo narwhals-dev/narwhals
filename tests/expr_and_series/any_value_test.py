@@ -19,16 +19,13 @@ data = {
 
 @pytest.mark.parametrize("ignore_nulls", [False, True])
 def test_any_value_expr(
-    nw_frame_constructor: Constructor,
-    request: pytest.FixtureRequest,
-    *,
-    ignore_nulls: bool,
+    constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
 ) -> None:
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     # Aggregation
     result = (
@@ -36,7 +33,7 @@ def test_any_value_expr(
     )
     assert result.shape == (1, 2)
 
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         reason = "broadcast requires `over`, which requires DuckDB 1.3.0"
         pytest.skip(reason=reason)
 
@@ -69,9 +66,9 @@ def test_any_value_expr(
 
 @pytest.mark.parametrize("ignore_nulls", [False, True])
 def test_any_value_series(
-    nw_eager_constructor: ConstructorEager, *, ignore_nulls: bool
+    constructor_eager: ConstructorEager, *, ignore_nulls: bool
 ) -> None:
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw.from_native(constructor_eager(data), eager_only=True)
 
     result = {
         "a": [df["a"].any_value(ignore_nulls=ignore_nulls)],
@@ -87,19 +84,16 @@ def test_any_value_series(
 
 @pytest.mark.parametrize("ignore_nulls", [False, True])
 def test_any_value_group_by(
-    nw_frame_constructor: Constructor,
-    request: pytest.FixtureRequest,
-    *,
-    ignore_nulls: bool,
+    constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
 ) -> None:
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14, 0):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0):
         reason = "too old"
         pytest.skip(reason)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     if ignore_nulls and df.implementation.is_pandas_like():
         reason = "not implemented"
@@ -124,24 +118,21 @@ def test_any_value_group_by(
 
 @pytest.mark.parametrize("ignore_nulls", [False, True])
 def test_any_value_over(
-    nw_frame_constructor: Constructor,
-    request: pytest.FixtureRequest,
-    *,
-    ignore_nulls: bool,
+    constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
 ) -> None:
-    if "dask" in str(nw_frame_constructor):
+    if "dask" in str(constructor):
         reason = "sample does not allow n, use frac instead"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "duckdb" in str(nw_frame_constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         reason = "`over` requires DuckDB 1.3.0"
         pytest.skip(reason=reason)
 
-    if "pyarrow_table" in str(nw_frame_constructor) and PYARROW_VERSION < (14, 0):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0):
         reason = "too old"
         pytest.skip(reason)
 
-    df = nw.from_native(nw_frame_constructor(data))
+    df = nw.from_native(constructor(data))
 
     if ignore_nulls and df.implementation.is_pandas_like():
         reason = "not implemented"

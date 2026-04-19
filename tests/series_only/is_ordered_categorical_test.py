@@ -70,10 +70,10 @@ def test_is_ordered_categorical_pyarrow_string() -> None:
 
 
 def test_is_definitely_not_ordered_categorical(
-    nw_eager_constructor: ConstructorEager,
+    constructor_eager: ConstructorEager,
 ) -> None:
     assert not nw.is_ordered_categorical(
-        nw.from_native(nw_eager_constructor({"a": [1, 2, 3]}), eager_only=True)["a"]
+        nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
     )
 
 
