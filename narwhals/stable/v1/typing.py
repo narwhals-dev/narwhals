@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, Union
+from typing import TYPE_CHECKING, Any, Union
 
 from narwhals._native import IntoSeries
 from narwhals._typing_compat import TypeVar
@@ -8,11 +8,9 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals._interchange.dataframe import DataFrameLike
     from narwhals._native import NativeDataFrame, NativeDuckDB, NativeLazyFrame
     from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series
-
-    class DataFrameLike(Protocol):
-        def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 IntoExpr: TypeAlias = Union["Expr", str, "Series[Any]"]
