@@ -1,7 +1,14 @@
+"""Useful types for `narwhals._plan.compliant`.
+
+This module has 0 runtime dependencies on the rest of `compliant.*`.
+"""
+
 from __future__ import annotations
 
+# ruff: noqa: PLC0105
 from typing import TYPE_CHECKING, Any, Protocol
 
+from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -21,6 +28,8 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._utils import Version
 
+
+# TODO @dangotbanned: Investigate replacing this (in `ExprDispatch`) with something more useful
 R_co = TypeVar("R_co", covariant=True)
 LengthT = TypeVar("LengthT")
 ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
@@ -98,3 +107,56 @@ class HasVersion(Protocol):
     def version(self) -> Version:
         """Narwhals API version (V1 or MAIN)."""
         return self._version
+
+
+# - `Self_` and `Frame` need to share a `*Namespace`
+# - `Self_` needs to express how we get to `CompliantExpr` with it's bound
+Self_ = TypeVar("Self_", contravariant=True)
+Frame = TypeVar("Frame", bound=FrameAny, contravariant=True)
+IR = TypeVar("IR", bound="ir.ExprIR", contravariant=True)
+F_contra = TypeVar("F_contra", bound="ir.Function", contravariant=True)
+
+# - Probably should have an upper bound of `CompliantExpr`
+R = TypeVar("R", covariant=True)
+
+
+class ExprMethod(Protocol[Self_, IR, Frame, R]):
+    """A (unbound) `CompliantExpr` or namespace accessor method.
+
+    That is, this describes the method *without* an instance.
+    """
+
+    def __call__(_self, /, self: Self_, node: IR, frame: Frame, name: str) -> R:
+        """Bind and evaluate an expression.
+
+        Arguments:
+            self: An object providing a route to a `CompliantExpr` instance.
+            node: The expression to evaluate.
+            frame: The `CompliantFrame` context for the expression.
+            name: The output column name (see `NamedIR.name`).
+
+        Note:
+            Ignore `_self`, see https://github.com/python/mypy/issues/16200
+        """
+        ...
+
+
+class BoundExprMethod(Protocol[IR, Frame, R]):
+    """A `CompliantExpr` or namespace accessor method, after binding `self`.
+
+    ## Notes
+    - Current version binds to the namespace accessor
+        - That makes sense in the context of this being a "method"
+    - The accessor is only being kept around for typing
+        - which isn't working great anyway
+    - The wrapper functions would be identical if `unary_accessor.__get__` did
+        - `return MethodType(self._wrapper_method, instance.compliant)`
+    """
+
+    def __call__(self, node: IR, frame: Frame, name: str) -> R: ...
+
+
+# NOTE: Equivalent to writing a sub-protocol
+# runtime requires that `FunctionExpr` is not a ForwardRef
+FunctionImplMethod = ExprMethod[Self_, ir.FunctionExpr[F_contra], Frame, R]
+BoundFunctionImplMethod = BoundExprMethod[ir.FunctionExpr[F_contra], Frame, R]

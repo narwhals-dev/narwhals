@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from types import MethodType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, final, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, final, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -21,6 +21,7 @@ from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import ChunkedArrayAny, Native, ScalarAny as NativeScalar
 from narwhals._plan.common import temp
+from narwhals._plan.compliant import typing as ct
 from narwhals._plan.compliant.accessors import (
     ExprCatNamespace,
     ExprListNamespace,
@@ -87,6 +88,8 @@ Similar to `typing.Self`, but to refer to the type *outside* of the enclosing cl
 This is needed for getting the descriptor/decorator stuff to work nicely with subclasses.
 """
 
+_AccessorSelf: TypeAlias = "ArrowCatNamespace[Any] | ArrowListNamespace[Any] | ArrowStringNamespace[Any] | ArrowStructNamespace[Any]"
+"""Equivalent to `_Self`, for namespaces."""
 
 UnaryFn: TypeAlias = _UnaryFunction
 """The upper bound for `U*` type vars used with `_ArrowDispatch`.
@@ -94,47 +97,20 @@ UnaryFn: TypeAlias = _UnaryFunction
 Nothing to fancy here, just a short way to say *subclasses of `UnaryFunction`*.
 """
 
-# NOTE: Everything here except `_UnaryPartial` can be widened from `UnaryFunction`
-# and reused w/ other `*Function`s
 
-# fmt: off
-_S_contra = TypeVar("_S_contra", bound=_Self, contravariant=True)
 _U_contra = TypeVar("_U_contra", bound=UnaryFn, contravariant=True)
 _NativeT = TypeVar("_NativeT", bound="Native", default="Native")
-class _UnaryPartial(Protocol[_S_contra, _U_contra, _NativeT]):
-    """The type of the method being *decorated by* `@unary.partial`."""
-
-    def __call__(_self, self: _S_contra, function: _U_contra, previous: _NativeT, / ) -> _NativeT: ...
-
-_S = TypeVar("_S", bound=_Self)
-class _UnaryWrapper(Protocol[_S, _U_contra]):
-    """The type of the wrapper method *produced by* any `unary` constructor."""
-
-    def __call__(_self, /, self: _S, node: FExpr[_U_contra], frame: Frame, name: str) -> _S: ...
-# fmt: on
 
 
-_AccessorSelf: TypeAlias = "ArrowCatNamespace[Any] | ArrowListNamespace[Any] | ArrowStringNamespace[Any] | ArrowStructNamespace[Any]"
-_AS_contra = TypeVar("_AS_contra", bound=_AccessorSelf, contravariant=True)
+UnaryPartial: TypeAlias = Callable[[ct.Self_, _U_contra, _NativeT], _NativeT]
+"""The type of the method being *decorated by* `@unary.partial`."""
 
+FunctionImplMethod = ct.FunctionImplMethod[ct.Self_, ct.F_contra, "Frame", ct.R]
+"""The type of the wrapper method *produced by* any `unary` constructor."""
 
-class _UnaryPartialAccessor(Protocol[_AS_contra, _U_contra]):
-    def __call__(
-        _self, self: _AS_contra, function: _U_contra, previous: Native, /
-    ) -> Native: ...
-
-
-class _UnaryWrapperAccessor(Protocol[_AS_contra, _U_contra]):
-    def __call__(
-        _self, /, self: _AS_contra, node: FExpr[_U_contra], frame: Frame, name: str
-    ) -> Expr | Scalar: ...
-
-
-class _BoundUnaryWrapperAccessor(Protocol[_U_contra]):
-    def __call__(
-        self, node: FExpr[_U_contra], frame: Frame, name: str
-    ) -> Expr | Scalar: ...
-
+BoundFunctionImplMethod = ct.BoundFunctionImplMethod[
+    ct.F_contra, "Frame", "Expr | Scalar"
+]
 
 S1 = TypeVar("S1", bound=_Self)
 """`_ArrowDispatch` scoped to an instance of `unary`."""
@@ -163,8 +139,10 @@ class unary(Generic[S1, U1]):
 
     __slots__ = ("_wrapper_method",)
 
-    def __init__(self, f: _UnaryWrapper[S1, U1], /) -> None:
-        self._wrapper_method: _UnaryWrapper[S1, U1] = f  # pyright: ignore[reportAttributeAccessIssue]
+    _wrapper_method: FunctionImplMethod[S1, U1, S1]
+
+    def __init__(self, f: FunctionImplMethod[S1, U1, S1], /) -> None:
+        self._wrapper_method = f  # pyright: ignore[reportAttributeAccessIssue]
 
     @overload
     def __get__(self, instance: None, owner: type[Any], /) -> Self: ...
@@ -178,7 +156,7 @@ class unary(Generic[S1, U1]):
         return MethodType(self._wrapper_method, instance)
 
     @staticmethod
-    def partial(fn_partial: _UnaryPartial[S2, U2, Native_co], /) -> unary[S2, U2]:
+    def partial(fn_partial: UnaryPartial[S2, U2, Native_co], /) -> unary[S2, U2]:
         """Decorator to fill in the boilerplate when implementing a `UnaryFunction`.
 
         The method being decorated should look like this (*parameter names are flexible*):
@@ -265,11 +243,13 @@ class unary_accessor(Generic[AS1, U1]):  # noqa: N801
 
     __slots__ = ("_wrapper_method",)
 
-    def __init__(self, f: _UnaryWrapperAccessor[AS1, U1], /) -> None:
-        self._wrapper_method: _UnaryWrapperAccessor[AS1, U1] = f
+    _wrapper_method: FunctionImplMethod[AS1, U1, Expr | Scalar]
+
+    def __init__(self, f: FunctionImplMethod[AS1, U1, Expr | Scalar], /) -> None:
+        self._wrapper_method = f
 
     @staticmethod
-    def partial(fn_partial: _UnaryPartialAccessor[AS2, U2], /) -> unary_accessor[AS2, U2]:
+    def partial(fn_partial: UnaryPartial[AS2, U2, Native], /) -> unary_accessor[AS2, U2]:
         def _wrapper(
             self: AS2, node: FExpr[U2], frame: Frame, name: str
         ) -> Expr | Scalar:
@@ -301,10 +281,10 @@ class unary_accessor(Generic[AS1, U1]):  # noqa: N801
     @overload
     def __get__(
         self, instance: AS1, owner: type[Any] | None = None, /
-    ) -> _BoundUnaryWrapperAccessor[U1]: ...
+    ) -> BoundFunctionImplMethod[U1]: ...
     def __get__(
         self, instance: AS1 | None, owner: type[Any] | None = None, /
-    ) -> Self | _BoundUnaryWrapperAccessor[U1]:
+    ) -> Self | BoundFunctionImplMethod[U1]:
         if instance is None:
             return self
         return MethodType(self._wrapper_method, instance)
