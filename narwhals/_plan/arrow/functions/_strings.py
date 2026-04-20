@@ -41,6 +41,7 @@ if TYPE_CHECKING:
         ChunkedOrScalarAny,
         IntegerScalar,
         ListScalar,
+        Native,
         ScalarAny,
         StringScalar,
     )
@@ -125,23 +126,21 @@ def join(
     return list_.join_scalar(implode(native), separator, ignore_nulls=False)
 
 
-def len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
+def len_chars(native: Native) -> Native:
     """Return the length of each string as the number of characters."""
-    result: ChunkedOrScalarAny = call("utf8_length", native)
+    result: Native = call("utf8_length", native)
     return result
 
 
-def slice(
-    native: ChunkedOrScalarAny, offset: int, length: int | None = None
-) -> ChunkedOrScalarAny:
+def slice(native: Native, offset: int, length: int | None = None) -> Native:
     """Extract a substring from each string value."""
     stop = length if length is None else offset + length
     return pc.utf8_slice_codeunits(native, offset, stop=stop)
 
 
 def pad_start(
-    native: ChunkedOrScalarAny, length: int, fill_char: str = " "
-) -> ChunkedOrScalarAny:  # pragma: no cover
+    native: Native, length: int, fill_char: str = " "
+) -> Native:  # pragma: no cover
     """Pad the start of the string until it reaches the given length."""
     return pc.utf8_lpad(native, length, fill_char)
 
@@ -275,11 +274,14 @@ def contains(
     return result
 
 
-def strip_chars(native: Incomplete, characters: str | None) -> Incomplete:
+def strip_chars(native: Native, characters: str | None) -> ChunkedOrScalar[StringScalar]:
     """Remove leading and trailing characters."""
-    if characters:
-        return pc.utf8_trim(native, characters)
-    return pc.utf8_trim_whitespace(native)
+    result: ChunkedOrScalar[StringScalar] = (
+        call("utf8_trim_whitespace", native)
+        if not characters
+        else call("utf8_trim", native, options=pc.TrimOptions(characters))
+    )
+    return result
 
 
 def replace(
