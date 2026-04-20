@@ -132,14 +132,6 @@ Native_co = TypeVar("Native_co", bound="Native", covariant=True, default="Native
 """The return type of `_ArrowDispatch.native`."""
 
 
-# TODO @dangotbanned: Finishing `unary`
-# - [x] Get pyright happy (ish)
-# - [x] Runtime testing
-# - [x] Get mypy happy (ish)
-# - [x] Clean up experiments
-# - [x] Document whats left
-# - [x] Reduce `partial` to `(Function, Native)`
-#   - Everything just discards `node` and goes straight to `node.function`
 @final
 class unary(Generic[S1, U1]):
     """Factories for implementing functions that dispatch a single expression.
