@@ -20,11 +20,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import (
-        HorizontalExpr as HExpr,
-        boolean,
-        functions as F,
-    )
+    from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._utils import Implementation
     from narwhals.typing import PythonLiteral
@@ -51,10 +47,10 @@ class CompliantNamespace(
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
     def all_horizontal(
-        self, node: HExpr[boolean.AllHorizontal], frame: FrameT, name: str, /
+        self, node: HExpr[ir.boolean.AllHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def any_horizontal(
-        self, node: HExpr[boolean.AnyHorizontal], frame: FrameT, name: str, /
+        self, node: HExpr[ir.boolean.AnyHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def col(self, node: ir.Column, frame: FrameT, name: str, /) -> ExprT_co: ...
     def concat_str(

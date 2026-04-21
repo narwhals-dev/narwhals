@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
-from narwhals._plan.compliant.typing import FrameT_contra, SeriesT
+from narwhals._plan.compliant.typing import FrameT_contra as FrameT, SeriesT
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -11,16 +11,15 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import (
-        FunctionExpr,
+        FunctionExpr as FExpr,
         aggregation as agg,
         functions as F,
     )
-    from narwhals._plan.expressions.functions import EwmMean, NullCount, Shift
     from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
 
 
-class CompliantScalar(CompliantExpr[FrameT_contra], Protocol[FrameT_contra]):
+class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
     """`[FrameT_contra]`."""
 
     _evaluated: Any
@@ -32,7 +31,7 @@ class CompliantScalar(CompliantExpr[FrameT_contra], Protocol[FrameT_contra]):
     """
     _name: str
 
-    def _cast_float(self, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:
+    def _cast_float(self, node: ir.ExprIR, frame: FrameT, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
         dtype = self.version.dtypes.Float64()
         return self.cast(node.cast(dtype), frame, name)
@@ -84,40 +83,34 @@ class CompliantScalar(CompliantExpr[FrameT_contra], Protocol[FrameT_contra]):
         version: Version,
     ) -> Self: ...
 
-    def count(self, node: agg.Count, frame: FrameT_contra, name: str, /) -> Self:
+    def count(self, node: agg.Count, frame: FrameT, name: str, /) -> Self:
         """Returns 0 if null, else 1."""
         ...
 
-    def ewm_mean(
-        self, node: FunctionExpr[EwmMean], frame: FrameT_contra, name: str, /
-    ) -> Self:
+    def ewm_mean(self, node: FExpr[F.EwmMean], frame: FrameT, name: str, /) -> Self:
         return self._cast_float(node.input[0], frame, name)
 
-    def mean(self, node: agg.Mean, frame: FrameT_contra, name: str, /) -> Self:
+    def mean(self, node: agg.Mean, frame: FrameT, name: str, /) -> Self:
         return self._cast_float(node.expr, frame, name)
 
-    def median(self, node: agg.Median, frame: FrameT_contra, name: str, /) -> Self:
+    def median(self, node: agg.Median, frame: FrameT, name: str, /) -> Self:
         return self._cast_float(node.expr, frame, name)
 
-    def null_count(
-        self, node: FunctionExpr[NullCount], frame: FrameT_contra, name: str
-    ) -> Self:
+    def null_count(self, node: FExpr[F.NullCount], frame: FrameT, name: str) -> Self:
         """Returns 1 if null, else 0."""
         ...
 
-    def quantile(self, node: agg.Quantile, frame: FrameT_contra, name: str, /) -> Self:
+    def quantile(self, node: agg.Quantile, frame: FrameT, name: str, /) -> Self:
         return self._cast_float(node.expr, frame, name)
 
-    def shift(
-        self, node: FunctionExpr[Shift], frame: FrameT_contra, name: str, /
-    ) -> Self:
+    def shift(self, node: FExpr[F.Shift], frame: FrameT, name: str, /) -> Self:
         if node.function.n == 0:
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None, version=self.version)
 
     def drop_nulls(  # type: ignore[override]
-        self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
-    ) -> Self | CompliantExpr[FrameT_contra]:
+        self, node: FExpr[F.DropNulls], frame: FrameT, name: str, /
+    ) -> Self | CompliantExpr[FrameT]:
         """Returns a 0-length Series if null, else noop."""
         ...
 
@@ -150,9 +143,7 @@ class CompliantScalar(CompliantExpr[FrameT_contra], Protocol[FrameT_contra]):
 
 
 class EagerScalar(
-    CompliantScalar[FrameT_contra],
-    EagerExpr[FrameT_contra, SeriesT],
-    Protocol[FrameT_contra, SeriesT],
+    CompliantScalar[FrameT], EagerExpr[FrameT, SeriesT], Protocol[FrameT, SeriesT]
 ):
     """`[FrameT_contra, SeriesT]`."""
 

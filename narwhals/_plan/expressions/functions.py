@@ -1,4 +1,9 @@
-"""General functions that aren't namespaced."""
+"""General functions that aren't namespaced.
+
+TODO @dangotbanned: Rename module and use the current name to re-export all public functions
+- Export members of `ranges` & `boolean` to that namespace
+- `{categorical,lists,strings,struct,temporal}` -> `{cat,list,str,struct,dt}`
+"""
 
 from __future__ import annotations
 
