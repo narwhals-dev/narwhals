@@ -58,13 +58,11 @@ if TYPE_CHECKING:
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
-    from typing_extensions import Concatenate, ParamSpec, TypeAlias
+    from typing_extensions import Concatenate, TypeAlias
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals.testing.typing import Data
     from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame
-
-    PS = ParamSpec("PS")
 
 
 __all__ = (
@@ -102,7 +100,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
 
     def __init__(
         self,
-        func: Callable[Concatenate[Data, PS], T_co],
+        func: Callable[Concatenate[Data, ...], T_co],
         /,
         *,
         name: str,
@@ -130,7 +128,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         is_eager: bool = False,
         is_nullable: bool = True,
         needs_gpu: bool = False,
-    ) -> Callable[[Callable[Concatenate[Data, PS], R]], frame_constructor[R]]:
+    ) -> Callable[[Callable[Concatenate[Data, ...], R]], frame_constructor[R]]:
         """Decorator: register `func` as the constructor named `name`.
 
         Arguments:
@@ -147,7 +145,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
             instance registered into the shared `_registry`.
         """
 
-        def decorator(func: Callable[Concatenate[Data, PS], R]) -> frame_constructor[R]:
+        def decorator(func: Callable[Concatenate[Data, ...], R]) -> frame_constructor[R]:
             inst: frame_constructor[R] = frame_constructor(
                 func,
                 name=name,
@@ -562,7 +560,7 @@ def get_constructor(name: str) -> frame_constructor[IntoFrame]:
 
 def prepare_constructors(
     *, include: Iterable[str] | None = None, exclude: Iterable[str] | None = None
-) -> list[frame_constructor[Any]]:
+) -> list[frame_constructor[IntoFrame]]:
     """Return available constructors, optionally filtered.
 
     Note:
@@ -581,14 +579,21 @@ def prepare_constructors(
         c for name, c in frame_constructor._registry.items() if name in available
     ]
 
-    include_set = frozenset(include) if include is not None else set()
-    exclude_set = frozenset(exclude) if exclude is not None else set()
+    include_set: frozenset[str] = (
+        frozenset(include) if include is not None else frozenset()
+    )
+    exclude_set: frozenset[str] = (
+        frozenset(exclude) if exclude is not None else frozenset()
+    )
 
     if unknown := (include_set.union(exclude_set).difference(available)):
         msg = f"The following names are not known constructors: {sorted(unknown)}"
         raise ValueError(msg)
 
-    candidates = [c for c in candidates if c.name in include_set.difference(exclude_set)]
+    if include is not None:
+        candidates = [c for c in candidates if c.name in include_set]
+    if exclude is not None:
+        candidates = [c for c in candidates if c.name not in exclude_set]
     return sorted(candidates, key=lambda c: c.name)
 
 

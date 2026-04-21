@@ -7,6 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
+    available_constructors,
     frame_constructor,
     get_constructor,
     prepare_constructors,
@@ -105,7 +106,27 @@ def test_get_constructor_invalid_name() -> None:
         get_constructor("not_a_backend")
 
 
-def test_prepare_constructors_exclude_only() -> None:
-    result = prepare_constructors(exclude=["pandas"])
-    names = {c.name for c in result}
-    assert "pandas" not in names
+@pytest.mark.parametrize(
+    ("include", "exclude", "expected"),
+    [
+        (None, None, available_constructors()),
+        (None, ["pandas"], available_constructors() - {"pandas"}),
+        (["pandas", "polars[eager]"], None, {"pandas", "polars[eager]"}),
+        (["pandas", "polars[eager]"], ["pandas"], {"polars[eager]"}),
+        ([], None, frozenset()),
+    ],
+)
+def test_prepare_constructors(
+    include: list[str] | None, exclude: list[str] | None, expected: frozenset[str]
+) -> None:
+    for name in (*(include or ()), *(exclude or ())):
+        if not get_constructor(name).is_available:
+            pytest.skip(f"{name} not installed")
+    result = prepare_constructors(include=include, exclude=exclude)
+    assert {c.name for c in result} == expected
+
+
+@pytest.mark.parametrize("kwarg", ["include", "exclude"])
+def test_prepare_constructors_unknown_name_raises(kwarg: str) -> None:
+    with pytest.raises(ValueError, match="not known constructors"):
+        prepare_constructors(**{kwarg: ["not_a_backend"]})
