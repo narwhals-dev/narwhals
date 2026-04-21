@@ -206,7 +206,7 @@ def test_concat() -> None:
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v1.DataFrame)
     if TYPE_CHECKING:
-        assert_type(result, nw_v1.DataFrame[Any])
+        assert_type(result, nw_v1.DataFrame[Any])  # pyrefly: ignore[assert-type]
 
 
 def test_to_dict() -> None:

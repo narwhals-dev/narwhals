@@ -392,3 +392,19 @@ ignore = [
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
+
+[tool.pyrefly]
+project-includes = ["tests"]
+ignore-missing-imports = [
+    "cudf.*",
+    "cupy.*",
+    "dask.*",
+    "dask_expr.*",
+    "ibis.*",
+    "joblib.*",
+    "modin.*",
+    "numpy.*",
+    "pyspark.*",
+    "sklearn.*",
+    "sqlparse.*",
+]

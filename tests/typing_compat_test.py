@@ -17,8 +17,7 @@ def test_assert_never() -> None:
     )
     some: Literal["a"] = "a"
     if some != "a":
-        assigned = "b"
-        assert_never(assigned)
+        assert_never(some)
     else:
         assigned = some
     if not TYPE_CHECKING:
