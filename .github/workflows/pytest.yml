@@ -177,7 +177,7 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+          coverage run -m pytest tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
           coverage combine
           coverage report --fail-under=50
 

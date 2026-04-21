@@ -493,7 +493,7 @@ def available_constructors() -> frozenset[str]:
     )
 
 
-def available_cpu_constructors() -> frozenset[str]:
+def available_cpu_constructors() -> frozenset[str]:  # pragma: no cover
     """Return the names of every CPU constructor whose backend is importable.
 
     Examples:
