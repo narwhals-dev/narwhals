@@ -42,9 +42,13 @@ def _default_backend_ids() -> list[str]:
     """
     if env := os.environ.get("NARWHALS_DEFAULT_BACKENDS"):  # pragma: no cover
         return env.split(",")
-    from narwhals.testing.constructors import DEFAULT_BACKENDS, prepare_backends
+    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, frame_constructor
 
-    return [c.name for c in prepare_backends(include=DEFAULT_BACKENDS)]
+    return [
+        name
+        for name, constructor in frame_constructor._registry.items()
+        if constructor.is_available and name in DEFAULT_CONSTRUCTORS
+    ]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -120,7 +124,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
         params = [c for c in selected if c.is_eager]
         ids = [c.name for c in params]
         metafunc.parametrize("nw_dataframe", params, ids=ids)
-    elif "nw_lazyframe" in fixturenames:
+    elif "nw_lazyframe" in fixturenames:  # pragma: no cover
         params = [c for c in selected if not c.is_eager]
         ids = [c.name for c in params]
         metafunc.parametrize("nw_dataframe", params, ids=ids)
