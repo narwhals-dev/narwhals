@@ -23,7 +23,7 @@ from narwhals._plan.arrow.functions._sort import reverse
 from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "drop_nulls",
     "fill_nan",
     "fill_null",
     "fill_null_with_strategy",
@@ -57,6 +58,8 @@ __all__ = [
     "replace_with_mask",
     "when_then",
 ]
+
+drop_nulls = t.cast("Callable[[ChunkedArray], ChunkedArray]", pc.drop_null)
 
 
 @overload

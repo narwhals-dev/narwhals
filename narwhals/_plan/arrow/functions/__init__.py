@@ -12,7 +12,7 @@ from narwhals._plan.arrow.functions import (
 from narwhals._plan.arrow.functions._aggregation import (
     count,
     first,
-    kurtosis_skew,
+    kurtosis,
     last,
     max,
     mean,
@@ -23,6 +23,7 @@ from narwhals._plan.arrow.functions._aggregation import (
     n_unique,
     null_count,
     quantile,
+    skew,
     std,
     sum,
     var,
@@ -103,6 +104,7 @@ from narwhals._plan.arrow.functions._horizontal import (
 )
 from narwhals._plan.arrow.functions._lists import ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
+    drop_nulls,
     fill_nan,
     fill_null,
     fill_null_with_strategy,
@@ -180,6 +182,7 @@ __all__ = [
     "cumulative",
     "date_range",
     "diff",
+    "drop_nulls",
     "dtype_native",
     "eq",
     "eq_missing",
@@ -203,7 +206,7 @@ __all__ = [
     "is_not_null",
     "is_null",
     "is_only_nulls",
-    "kurtosis_skew",
+    "kurtosis",
     "last",
     "linear_space",
     "list",
@@ -243,6 +246,7 @@ __all__ = [
     "round",
     "search_sorted",
     "shift",
+    "skew",
     "sort_indices",
     "sqrt",
     "std",

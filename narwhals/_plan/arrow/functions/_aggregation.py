@@ -31,7 +31,7 @@ __all__ = [
     "count",
     "first",
     "implode",
-    "kurtosis_skew",
+    "kurtosis",
     "last",
     "max",
     "mean",
@@ -42,6 +42,7 @@ __all__ = [
     "n_unique",
     "null_count",
     "quantile",
+    "skew",
     "std",
     "sum",
     "var",
@@ -95,10 +96,19 @@ def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
     return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
 
 
-def kurtosis_skew(
+def kurtosis(native: ChunkedArray[pc.NumericScalar], /) -> ScalarAny:
+    """Compute the kurtosis of this array."""
+    return _kurtosis_skew(native, "kurtosis")
+
+
+def skew(native: ChunkedArray[pc.NumericScalar], /) -> ScalarAny:
+    """Compute the sample skewness of this array."""
+    return _kurtosis_skew(native, "skew")
+
+
+def _kurtosis_skew(
     native: ChunkedArray[pc.NumericScalar], function: Literal["kurtosis", "skew"], /
 ) -> ScalarAny:
-    """Compute the kurtosis or sample skewness of this array."""
     result: ScalarAny
     if compat.HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):

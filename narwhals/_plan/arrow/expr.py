@@ -70,8 +70,7 @@ if TYPE_CHECKING:
         Sum,
         Var,
     )
-    from narwhals._plan.expressions.boolean import All, IsBetween
-    from narwhals._plan.expressions.categorical import GetCategories
+    from narwhals._plan.expressions.boolean import IsBetween
     from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.typing import Seq
     from narwhals.typing import IntoDType, PythonLiteral
@@ -111,7 +110,6 @@ FunctionImplMethod = ct.FunctionImplMethod[ct.Self_, ct.F_contra, "Frame", ct.R]
 BoundFunctionImplMethod = ct.BoundFunctionImplMethod[
     ct.F_contra, "Frame", "Expr | Scalar"
 ]
-
 
 S1 = TypeVar("S1", bound=_Self)
 """`_ArrowDispatch` scoped to an instance of `unary`."""
@@ -201,11 +199,14 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
         fn_native: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
     ) -> Callable[..., Expr]: ...
     @staticmethod
+    @overload
     def no_args(
-        fn_native: Callable[[Native], Native]
-        | Callable[[ChunkedArrayAny], ChunkedArrayAny],
-        /,
-    ) -> Callable[..., _Self]:
+        fn_native: Callable[[ChunkedArrayAny], NativeScalar], /
+    ) -> Callable[..., Scalar]: ...
+    @staticmethod
+    def no_args(
+        fn_native: Callable[[Native], Native] | Callable[[ChunkedArrayAny], Native], /
+    ) -> Callable[..., Incomplete]:
         """Non-decorating function wrapper to fill in the boilerplate when implementing a `UnaryFunction`.
 
         Use this when the only argument to the function is the result of the last expression:
@@ -265,7 +266,24 @@ class unary_accessor(  # noqa: N801
         return unary_accessor(_wrapper)
 
     @staticmethod
-    def no_args(fn_native: Callable[[Native], Native], /) -> Callable[..., Expr | Scalar]:
+    @overload
+    def no_args(
+        fn_native: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
+    ) -> Callable[..., Expr]: ...
+    @staticmethod
+    @overload
+    def no_args(
+        fn_native: Callable[[ChunkedArrayAny], NativeScalar], /
+    ) -> Callable[..., Scalar]: ...
+    @staticmethod
+    @overload
+    def no_args(
+        fn_native: Callable[[Native], Native], /
+    ) -> Callable[..., Expr | Scalar]: ...
+    @staticmethod
+    def no_args(
+        fn_native: Callable[[Native], Native] | Callable[[ChunkedArrayAny], Native], /
+    ) -> Callable[..., Expr | Scalar]:
         def _wrapper(
             self: _AccessorSelf, node: FExpr[UnaryFn], frame: Frame, name: str
         ) -> Expr | Scalar:
@@ -310,14 +328,6 @@ class _ArrowDispatch(
         closed = node.function.closed
         result = fn.is_between(expr.native, lb.native, ub.native, closed=closed)
         return self._with_native(result, name)
-
-    def all(self, node: FExpr[All], frame: Frame, name: str, /) -> Scalar:
-        result = fn.all(node.dispatch_arg(self, frame, name).native)
-        return ArrowScalar.from_native(result, name, version=frame.version)
-
-    def any(self, node: FExpr[ir.boolean.Any], frame: Frame, name: str, /) -> Scalar:
-        result = fn.any(node.dispatch_arg(self, frame, name).native)
-        return ArrowScalar.from_native(result, name, version=frame.version)
 
     def is_in_expr(self, node: FExpr[IsInExpr], frame: Frame, name: str, /) -> Self:
         native, right = (s.native for s in node.dispatch_args(self, frame, name))
@@ -392,6 +402,8 @@ class _ArrowDispatch(
     ceil: Callable[..., Self] = unary.no_args(fn.ceil)
     floor: Callable[..., Self] = unary.no_args(fn.floor)
     abs: Callable[..., Self] = unary.no_args(fn.abs)
+    any: Callable[..., Scalar] = unary.no_args(fn.any)
+    all: Callable[..., Scalar] = unary.no_args(fn.all)
 
 
 @final
@@ -565,18 +577,6 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         result: NativeScalar = fn.min(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str, /) -> Scalar:
-        native = self._dispatch_expr(node.input[0], frame, name).native
-        return self._with_native(fn.null_count(native), name)
-
-    def kurtosis(self, node: FExpr[F.Kurtosis], frame: Frame, name: str, /) -> Scalar:
-        native = self._dispatch_expr(node.input[0], frame, name).native
-        return self._with_native(fn.kurtosis_skew(native, "kurtosis"), name)
-
-    def skew(self, node: FExpr[F.Skew], frame: Frame, name: str, /) -> Scalar:
-        native = self._dispatch_expr(node.input[0], frame, name).native
-        return self._with_native(fn.kurtosis_skew(native, "skew"), name)
-
     def over(
         self,
         node: ir.Over,
@@ -621,7 +621,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         # NOTE: This subset of functions can be expressed as a mask applied to indices
         into_agg, mask = group_by._BOOLEAN_LENGTH_PRESERVING[type(node.function)]
         idx_name = temp.column_name(frame)
-        df = frame._with_columns([node.input[0].dispatch(self, frame, name)])
+        df = frame._with_columns([node.dispatch_arg(self, frame, name)])
         if sort_indices is not None:
             column = fn.unsort_indices(sort_indices)
             df = df._with_native(df.native.add_column(0, idx_name, column))
@@ -666,9 +666,6 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
             result = result.cast(dtype)
         return self.from_series(result)
 
-    diff = unary.no_args(fn.diff)
-    mode_all = unary.no_args(fn.mode_all)
-
     @unary.partial
     def shift(self, f: F.Shift, previous: ChunkedArrayAny) -> ChunkedArrayAny:
         return fn.shift(previous, f.n)
@@ -678,11 +675,8 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         return fn.rank(previous, f.options)
 
     def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str, /) -> Self:
-        native = self._dispatch_expr(node.input[0], frame, name).native
+        native = node.dispatch_arg(self, frame, name).native
         return self._with_native(fn.cumulative(native, node.function), name)
-
-    def unique(self, node: FExpr[F.Unique], frame: Frame, name: str, /) -> Self:
-        return self.from_series(self._dispatch_expr(node.input[0], frame, name).unique())
 
     def gather_every(
         self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
@@ -705,31 +699,23 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         result = series.sample_frac(fraction, with_replacement=replace, seed=seed)
         return self.from_series(result)
 
-    def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str, /) -> Self:
-        series = self._dispatch_expr(node.input[0], frame, name)
-        return self.from_series(series.drop_nulls())
-
-    def mode_any(self, node: FExpr[F.ModeAny], frame: Frame, name: str, /) -> Scalar:
-        native = self._dispatch_expr(node.input[0], frame, name).native
-        return self._with_native(fn.mode_any(native), name)
-
+    @unary.partial
     def fill_null_with_strategy(
-        self, node: FExpr[F.FillNullWithStrategy], frame: Frame, name: str, /
-    ) -> Self:
-        native = self._dispatch_expr(node.input[0], frame, name).native
-        strategy, limit = node.function.strategy, node.function.limit
-        func = fn.fill_null_with_strategy
-        return self._with_native(func(native, strategy, limit), name)
+        self, f: F.FillNullWithStrategy, previous: ChunkedArrayAny, /
+    ) -> ChunkedArrayAny:
+        return fn.fill_null_with_strategy(previous, f.strategy, f.limit)
 
-    cum_count = _cumulative
-    cum_min = _cumulative
-    cum_max = _cumulative
-    cum_prod = _cumulative
-    cum_sum = _cumulative
-    is_first_distinct = _boolean_length_preserving
-    is_last_distinct = _boolean_length_preserving
-    is_duplicated = _boolean_length_preserving
-    is_unique = _boolean_length_preserving
+    null_count = unary.no_args(fn.null_count)
+    kurtosis = unary.no_args(fn.kurtosis)
+    skew = unary.no_args(fn.skew)
+    diff = unary.no_args(fn.diff)
+    mode_all = unary.no_args(fn.mode_all)
+    mode_any = unary.no_args(fn.mode_any)
+    unique = unary.no_args(pc.unique)
+    drop_nulls = unary.no_args(fn.drop_nulls)
+    cum_count = cum_min = cum_max = cum_prod = cum_sum = _cumulative
+    is_first_distinct = is_last_distinct = _boolean_length_preserving
+    is_duplicated = is_unique = _boolean_length_preserving
 
     _ROLLING: ClassVar[Mapping[type[F.RollingWindow], Callable[..., Series]]] = {
         F.RollingSum: Series.rolling_sum,
@@ -905,14 +891,14 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
 
-    def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str) -> Self:
-        native = node.input[0].dispatch(self, frame, name).native
-        return self._with_native(pa.scalar(0 if native.is_valid else 1), name)
+    @unary.partial
+    def null_count(self, f: F.NullCount, previous: NativeScalar) -> NativeScalar:
+        return pa.scalar(0 if previous.is_valid else 1)
 
     def drop_nulls(  # type: ignore[override]
         self, node: FExpr[F.DropNulls], frame: Frame, name: str
     ) -> Scalar | Expr:
-        previous = node.input[0].dispatch(self, frame, name)
+        previous = node.dispatch_arg(self, frame, name)
         if previous.native.is_valid:
             return previous
         chunked = fn.chunked_array([], previous.native.type)
@@ -979,11 +965,7 @@ class ArrowAccessor(Generic[ExprOrScalarT_co]):
 class ArrowCatNamespace(
     ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT_co]
 ):
-    def get_categories(
-        self, node: FExpr[GetCategories], frame: Frame, name: str, /
-    ) -> Expr:
-        native = node.input[0].dispatch(self.compliant, frame, name).native
-        return ArrowExpr.from_native(fn.cat.get_categories(native), name, frame.version)
+    get_categories = unary_accessor.no_args(fn.cat.get_categories)
 
 
 class ArrowListNamespace(
