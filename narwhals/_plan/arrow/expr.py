@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable
 from types import MethodType
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, final, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, final, overload
 
 import pyarrow as pa  # ignore-banned-import
 import pyarrow.compute as pc  # ignore-banned-import
@@ -112,6 +112,7 @@ BoundFunctionImplMethod = ct.BoundFunctionImplMethod[
     ct.F_contra, "Frame", "Expr | Scalar"
 ]
 
+
 S1 = TypeVar("S1", bound=_Self)
 """`_ArrowDispatch` scoped to an instance of `unary`."""
 S2 = TypeVar("S2", bound=_Self)
@@ -124,9 +125,34 @@ U2 = TypeVar("U2", bound=UnaryFn, contravariant=True, default=UnaryFn)  # noqa: 
 Native_co = TypeVar("Native_co", bound="Native", covariant=True, default="Native")
 """The return type of `_ArrowDispatch.native`."""
 
+F_co = TypeVar("F_co", bound=Callable[..., Any], covariant=True)
+
+
+class _BaseWrapper(Generic[F_co]):
+    __slots__ = ("__func__",)
+    __func__: F_co
+
+    def __init__(self, f: F_co, /) -> None:
+        self.__func__ = f
+
+    def __get__(
+        self, instance: Incomplete | None, owner: type[Any] | None = None, /
+    ) -> Incomplete | Self:
+        if instance is None:
+            return self
+        return self._bind(instance)
+
+    def _bind(self, instance: Incomplete) -> Incomplete:
+        return MethodType(self.__func__, instance)
+
+    if TYPE_CHECKING:
+        # NOTE: This smooths over a lot of really ugly parts
+        def __call__(self, *args: Incomplete, **kwds: Incomplete) -> Incomplete:
+            raise NotImplementedError
+
 
 @final
-class unary(Generic[S1, U1]):
+class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
     """Factories for implementing functions that dispatch a single expression.
 
     Provides two ways to write an implementation which cares only about the native parts.
@@ -137,26 +163,10 @@ class unary(Generic[S1, U1]):
     Separate-scoped `TypeVar`s emulate PEP 695 syntax
     """
 
-    __slots__ = ("_wrapper_method",)
-
-    _wrapper_method: FunctionImplMethod[S1, U1, S1]
-
-    def __init__(self, f: FunctionImplMethod[S1, U1, S1], /) -> None:
-        self._wrapper_method = f  # pyright: ignore[reportAttributeAccessIssue]
-
-    @overload
-    def __get__(self, instance: None, owner: type[Any], /) -> Self: ...
-    @overload
-    def __get__(self, instance: S1, owner: type[Any] | None = None, /) -> MethodType: ...
-    def __get__(
-        self, instance: S1 | None, owner: type[Any] | None = None, /
-    ) -> MethodType | Self:
-        if instance is None:
-            return self
-        return MethodType(self._wrapper_method, instance)
+    __slots__ = ()
 
     @staticmethod
-    def partial(fn_partial: UnaryPartial[S2, U2, Native_co], /) -> unary[S2, U2]:
+    def partial(fn_partial: UnaryPartial[S2, U2, Native_co], /) -> Callable[..., S2]:
         """Decorator to fill in the boilerplate when implementing a `UnaryFunction`.
 
         The method being decorated should look like this (*parameter names are flexible*):
@@ -184,18 +194,18 @@ class unary(Generic[S1, U1]):
     @overload
     def no_args(
         fn_native: Callable[[Native], Native], /
-    ) -> unary[Incomplete, UnaryFn]: ...
+    ) -> Callable[..., Incomplete]: ...
     @staticmethod
     @overload
     def no_args(
         fn_native: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
-    ) -> unary[Expr, UnaryFn]: ...
+    ) -> Callable[..., Expr]: ...
     @staticmethod
     def no_args(
         fn_native: Callable[[Native], Native]
         | Callable[[ChunkedArrayAny], ChunkedArrayAny],
         /,
-    ) -> unary[Any, UnaryFn]:
+    ) -> Callable[..., _Self]:
         """Non-decorating function wrapper to fill in the boilerplate when implementing a `UnaryFunction`.
 
         Use this when the only argument to the function is the result of the last expression:
@@ -209,20 +219,15 @@ class unary(Generic[S1, U1]):
 
         return unary(_wrapper)
 
-    if TYPE_CHECKING:
-        # NOTE: This "fixes" 'pyright: ignore[reportAssignmentType]' when using `no_args`
-        # doesn't fix the pylance weirdness tho
-
-        def __call__(self, *args: Incomplete, **kwds: Incomplete) -> Incomplete:
-            raise NotImplementedError
-
 
 AS1 = TypeVar("AS1", bound=_AccessorSelf)
 AS2 = TypeVar("AS2", bound=_AccessorSelf)
 
 
 @final
-class unary_accessor(Generic[AS1, U1]):  # noqa: N801
+class unary_accessor(  # noqa: N801
+    _BaseWrapper[FunctionImplMethod[AS1, U1, Expr | Scalar]], Generic[AS1, U1]
+):
     """`ArrowAccessor` equivalent of `unary`.
 
     Ideally, I want the end api to be something like:
@@ -241,15 +246,12 @@ class unary_accessor(Generic[AS1, U1]):  # noqa: N801
         def get(self: ArrowListNamespace, f: lists.Get, previous: Native) -> Native: ...
     """
 
-    __slots__ = ("_wrapper_method",)
-
-    _wrapper_method: FunctionImplMethod[AS1, U1, Expr | Scalar]
-
-    def __init__(self, f: FunctionImplMethod[AS1, U1, Expr | Scalar], /) -> None:
-        self._wrapper_method = f
+    __slots__ = ()
 
     @staticmethod
-    def partial(fn_partial: UnaryPartial[AS2, U2, Native], /) -> unary_accessor[AS2, U2]:
+    def partial(
+        fn_partial: UnaryPartial[AS2, U2, Native], /
+    ) -> Callable[..., Expr | Scalar]:
         def _wrapper(
             self: AS2, node: FExpr[U2], frame: Frame, name: str
         ) -> Expr | Scalar:
@@ -263,9 +265,7 @@ class unary_accessor(Generic[AS1, U1]):  # noqa: N801
         return unary_accessor(_wrapper)
 
     @staticmethod
-    def no_args(
-        fn_native: Callable[[Native], Native], /
-    ) -> unary_accessor[Incomplete, UnaryFn]:
+    def no_args(fn_native: Callable[[Native], Native], /) -> Callable[..., Expr | Scalar]:
         def _wrapper(
             self: _AccessorSelf, node: FExpr[UnaryFn], frame: Frame, name: str
         ) -> Expr | Scalar:
@@ -276,26 +276,10 @@ class unary_accessor(Generic[AS1, U1]):  # noqa: N801
 
         return unary_accessor(_wrapper)
 
-    @overload
-    def __get__(self, instance: None, owner: type[Any], /) -> Self: ...
-    @overload
-    def __get__(
-        self, instance: AS1, owner: type[Any] | None = None, /
-    ) -> BoundFunctionImplMethod[U1]: ...
-    def __get__(
-        self, instance: AS1 | None, owner: type[Any] | None = None, /
-    ) -> Self | BoundFunctionImplMethod[U1]:
-        if instance is None:
-            return self
-        return MethodType(self._wrapper_method, instance)
 
-    if TYPE_CHECKING:
-        # NOTE: This "fixes" 'pyright: ignore[reportAssignmentType]' when using `no_args`
-        def __call__(self, *args: Incomplete, **kwds: Incomplete) -> Incomplete:
-            raise NotImplementedError
-
-
-class _ArrowDispatch(SelfDispatch["Frame", Namespace], Generic[Native_co]):
+class _ArrowDispatch(
+    SelfDispatch["Frame", Namespace], EagerExpr["Frame", Series], Protocol[Native_co]
+):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
     @property
@@ -397,17 +381,17 @@ class _ArrowDispatch(SelfDispatch["Frame", Namespace], Generic[Native_co]):
         result = fn.replace_strict_default(native, f.old, f.new, default, dtype)
         return self._with_native(result, name)
 
-    not_ = unary.no_args(fn.not_)
-    is_finite = unary.no_args(fn.is_finite)
-    is_nan = unary.no_args(fn.is_nan)
-    is_null = unary.no_args(fn.is_null)
-    is_not_nan = unary.no_args(fn.is_not_nan)
-    is_not_null = unary.no_args(fn.is_not_null)
-    exp = unary.no_args(fn.exp)
-    sqrt = unary.no_args(fn.sqrt)
-    ceil = unary.no_args(fn.ceil)
-    floor = unary.no_args(fn.floor)
-    abs = unary.no_args(fn.abs)
+    not_: Callable[..., Self] = unary.no_args(fn.not_)
+    is_finite: Callable[..., Self] = unary.no_args(fn.is_finite)
+    is_nan: Callable[..., Self] = unary.no_args(fn.is_nan)
+    is_null: Callable[..., Self] = unary.no_args(fn.is_null)
+    is_not_nan: Callable[..., Self] = unary.no_args(fn.is_not_nan)
+    is_not_null: Callable[..., Self] = unary.no_args(fn.is_not_null)
+    exp: Callable[..., Self] = unary.no_args(fn.exp)
+    sqrt: Callable[..., Self] = unary.no_args(fn.sqrt)
+    ceil: Callable[..., Self] = unary.no_args(fn.ceil)
+    floor: Callable[..., Self] = unary.no_args(fn.floor)
+    abs: Callable[..., Self] = unary.no_args(fn.abs)
 
 
 @final
@@ -682,16 +666,15 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
             result = result.cast(dtype)
         return self.from_series(result)
 
-    # TODO @dangotbanned: Try adding `CompliantExpr` as a base for `_ArrowDispatch`
     diff = unary.no_args(fn.diff)
     mode_all = unary.no_args(fn.mode_all)
 
     @unary.partial
-    def shift(self, f: F.Shift, previous: ChunkedArrayAny) -> ChunkedArrayAny:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def shift(self, f: F.Shift, previous: ChunkedArrayAny) -> ChunkedArrayAny:
         return fn.shift(previous, f.n)
 
     @unary.partial
-    def rank(self, f: F.Rank, previous: ChunkedArrayAny) -> ChunkedArrayAny:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def rank(self, f: F.Rank, previous: ChunkedArrayAny) -> ChunkedArrayAny:
         return fn.rank(previous, f.options)
 
     def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str) -> Self:
@@ -1003,11 +986,11 @@ class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT_co]
 ):
     @unary_accessor.partial
-    def get(self, f: lists.Get, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def get(self, f: lists.Get, previous: Native) -> Native:
         return fn.list.get(previous, f.index)
 
     @unary_accessor.partial
-    def join(self, f: lists.Join, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def join(self, f: lists.Join, previous: Native) -> Native:
         if isinstance(previous, pa.ChunkedArray):
             return fn.list.join(previous, f.separator, ignore_nulls=f.ignore_nulls)
         return fn.list.join_scalar(previous, f.separator, ignore_nulls=f.ignore_nulls)
@@ -1031,7 +1014,7 @@ class ArrowListNamespace(
         return self.with_native(agg.agg_list(previous.native), name)
 
     @unary_accessor.partial
-    def sort(self, f: lists.Sort, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def sort(self, f: lists.Sort, previous: Native) -> Native:
         opt = f.options
         if isinstance(previous, pa.Scalar):
             return fn.list.sort_scalar(previous, opt)
@@ -1057,19 +1040,19 @@ class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT_co]
 ):
     @unary_accessor.partial
-    def slice(self, f: strings.Slice, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def slice(self, f: strings.Slice, previous: Native) -> Native:
         return fn.str.slice(previous, f.offset, f.length)
 
     @unary_accessor.partial
-    def zfill(self, f: strings.ZFill, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def zfill(self, f: strings.ZFill, previous: Native) -> Native:
         return fn.str.zfill(previous, f.length)
 
     @unary_accessor.partial
-    def contains(self, f: strings.Contains, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def contains(self, f: strings.Contains, previous: Native) -> Native:
         return fn.str.contains(previous, f.pattern, literal=f.literal)
 
     @unary_accessor.partial
-    def ends_with(self, f: strings.EndsWith, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def ends_with(self, f: strings.EndsWith, previous: Native) -> Native:
         return fn.str.ends_with(previous, f.suffix)
 
     def replace(
@@ -1103,15 +1086,15 @@ class ArrowStringNamespace(
         return self.replace(rewrite, frame, name)
 
     @unary_accessor.partial
-    def split(self, f: strings.Split, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def split(self, f: strings.Split, previous: Native) -> Native:
         return fn.str.split(previous, f.by)
 
     @unary_accessor.partial
-    def starts_with(self, f: strings.StartsWith, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def starts_with(self, f: strings.StartsWith, previous: Native) -> Native:
         return fn.str.starts_with(previous, f.prefix)
 
     @unary_accessor.partial
-    def strip_chars(self, f: strings.StripChars, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def strip_chars(self, f: strings.StripChars, previous: Native) -> Native:
         return fn.str.strip_chars(previous, f.characters)
 
     len_chars = unary_accessor.no_args(fn.str.len_chars)
@@ -1126,5 +1109,5 @@ class ArrowStructNamespace(
     ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT_co]
 ):
     @unary_accessor.partial
-    def field(self, f: FieldByName, previous: Native) -> Native:  # pyright: ignore[reportIncompatibleMethodOverride]
+    def field(self, f: FieldByName, previous: Native) -> Native:
         return fn.struct.field(previous, f.name)
