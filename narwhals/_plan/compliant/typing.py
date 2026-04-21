@@ -126,7 +126,7 @@ class ExprMethod(Protocol[Self_, IR, Frame, R]):
     That is, this describes the method *without* an instance.
     """
 
-    def __call__(_self, /, self: Self_, node: IR, frame: Frame, name: str) -> R:
+    def __call__(_self, self: Self_, node: IR, frame: Frame, name: str, /) -> R:
         """Bind and evaluate an expression.
 
         Arguments:
@@ -153,7 +153,7 @@ class BoundExprMethod(Protocol[IR, Frame, R]):
         - `return MethodType(self._wrapper_method, instance.compliant)`
     """
 
-    def __call__(self, node: IR, frame: Frame, name: str) -> R: ...
+    def __call__(self, node: IR, frame: Frame, name: str, /) -> R: ...
 
 
 # NOTE: Equivalent to writing a sub-protocol

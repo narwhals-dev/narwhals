@@ -109,13 +109,13 @@ class ExprDispatch(HasVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
     # NOTE: Needs to stay `covariant` and never be used as a parameter
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
     @classmethod
-    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str) -> R_co:
+    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str, /) -> R_co:
         obj = cls.__new__(cls)
         obj._version = frame.version
         return node.dispatch(obj, frame, name)
 
     @classmethod
-    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra) -> R_co:
+    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra, /) -> R_co:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
 
 
@@ -142,5 +142,5 @@ class SelfDispatch(Protocol[FrameT_contra, NamespaceT_co]):
         return node.dispatch(obj, frame, name)  # type: ignore[return-value]
 
     @classmethod
-    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra) -> Self:
+    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra, /) -> Self:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
