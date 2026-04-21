@@ -17,6 +17,8 @@ from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals.testing.constructors import EagerName
+
 rnd = Random(0)  # noqa: S311
 
 data: dict[str, Any] = {
@@ -47,10 +49,10 @@ param_include_breakpoint = pytest.mark.parametrize(
 param_name = pytest.mark.parametrize("name", ["pandas", "polars[eager]", "pyarrow"])
 
 
-def maybe_name_to_constructor(name: str) -> ConstructorEager:
+def maybe_name_to_constructor(name: EagerName) -> ConstructorEager:
     constructor = get_constructor(name)
     if constructor.is_available:
-        return constructor  # type: ignore[return-value]
+        return constructor
 
     pytest.skip()
 
@@ -75,7 +77,11 @@ SHIFT_BINS_BY = 10
 )
 @param_name
 def test_hist_bin(
-    name: str, bins: list[float], expected: Sequence[float], *, include_breakpoint: bool
+    name: EagerName,
+    bins: list[float],
+    expected: Sequence[float],
+    *,
+    include_breakpoint: bool,
 ) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
@@ -122,7 +128,7 @@ def test_hist_bin(
 @param_include_breakpoint
 @param_name
 def test_hist_count(
-    name: str, *, params: dict[str, Any], include_breakpoint: bool
+    name: EagerName, *, params: dict[str, Any], include_breakpoint: bool
 ) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
@@ -166,7 +172,7 @@ def test_hist_count(
 
 
 @param_name
-def test_hist_count_no_spread(name: str) -> None:
+def test_hist_count_no_spread(name: EagerName) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
@@ -198,7 +204,7 @@ def test_hist_bin_and_bin_count() -> None:
 
 @param_include_breakpoint
 @param_name
-def test_hist_no_data(name: str, *, include_breakpoint: bool) -> None:
+def test_hist_no_data(name: EagerName, *, include_breakpoint: bool) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
@@ -220,7 +226,7 @@ def test_hist_no_data(name: str, *, include_breakpoint: bool) -> None:
 
 
 @param_name
-def test_hist_small_bins(name: str) -> None:
+def test_hist_small_bins(name: EagerName) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
@@ -273,7 +279,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    name: str, data: list[float], bin_deltas: list[float]
+    name: EagerName, data: list[float], bin_deltas: list[float]
 ) -> None:
     constructor_eager = maybe_name_to_constructor(name)
     pytest.importorskip("polars")
@@ -314,7 +320,7 @@ def test_hist_bin_hypotheis(
 @param_name
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    name: str, data: list[float], bin_count: int, request: pytest.FixtureRequest
+    name: EagerName, data: list[float], bin_count: int, request: pytest.FixtureRequest
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl

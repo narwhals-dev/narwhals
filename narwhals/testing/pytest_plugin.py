@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, cast
 if TYPE_CHECKING:
     import pytest
 
-    from narwhals.testing.constructors import FrameConstructor
+    from narwhals.testing.typing import FrameConstructor
 
 
 _MIN_PANDAS_NULLABLE_VERSION: tuple[int, ...] = (2, 0, 0)
@@ -90,13 +90,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def _select_constructors(
     config: pytest.Config,
 ) -> list[FrameConstructor]:  # pragma: no cover
-    from narwhals.testing.constructors import ALL_CPU_CONSTRUCTORS, prepare_constructors
+    from narwhals.testing.constructors import (
+        available_cpu_constructors,
+        prepare_constructors,
+    )
 
     _all_cpu_exclusions = frozenset({"modin", "pyspark[connect]"})
 
     if config.getoption("all_cpu_constructors"):
         selected = prepare_constructors(
-            include=ALL_CPU_CONSTRUCTORS, exclude=_all_cpu_exclusions
+            include=available_cpu_constructors(), exclude=_all_cpu_exclusions
         )
     else:
         opt = cast("str", config.getoption("constructors"))

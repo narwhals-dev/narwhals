@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
-    FrameConstructor,
+    frame_constructor,
     get_constructor,
     prepare_constructors,
 )
@@ -53,7 +53,7 @@ _IS_PROPERTY_CASES: list[tuple[PropertyName, TrueNames, FalseNames]] = [
     ("is_spark_like", {"pyspark", "sqlframe", "pyspark[connect]"}, {"pandas"}),
     ("is_lazy", {"polars[lazy]", "dask", "duckdb"}, {"pandas"}),
     ("needs_pyarrow", {"pyarrow", "duckdb", "ibis"}, {"pandas"}),
-    ("is_non_nullable", {"pandas", "modin", "dask"}, {"polars[eager]"}),
+    ("is_nullable", {"polars[eager]"}, {"pandas", "modin", "dask"}),
 ]
 
 
@@ -89,14 +89,11 @@ def test_constructor_dunder() -> None:
     assert c1 != "not a constructor"
 
 
-def test_init_subclass_requires_implementation() -> None:
-    with pytest.raises(TypeError, match="missing `implementation`"):
-
-        class _BadConstructor(FrameConstructor, requirements=("polars",)):
-            name = "polars[eager]"
-
-            def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]
-                ...  # pragma: no cover
+def test_register_requires_implementation() -> None:
+    with pytest.raises(TypeError, match="implementation"):
+        frame_constructor.register(  # type: ignore[call-arg]
+            name="_bad", requirements=("polars",)
+        )
 
 
 def test_get_constructor() -> None:
