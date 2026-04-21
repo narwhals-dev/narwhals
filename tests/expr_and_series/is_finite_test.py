@@ -64,7 +64,7 @@ def test_is_finite_column_with_null(constructor: Constructor, data: list[float])
     result = df.select(nw.col("a").is_finite())
 
     expected: dict[str, list[Any]]
-    if constructor.is_non_nullable:
+    if not constructor.is_nullable:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {"a": [True, True, False]}
     else:

@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
-    FrameConstructor,
+    available_backends,
     get_backend_constructor,
     prepare_backends,
 )
@@ -53,7 +53,7 @@ _IS_PROPERTY_CASES: list[tuple[PropertyName, TrueNames, FalseNames]] = [
     ("is_spark_like", {"pyspark", "sqlframe", "pyspark[connect]"}, {"pandas"}),
     ("is_lazy", {"polars[lazy]", "dask", "duckdb"}, {"pandas"}),
     ("needs_pyarrow", {"pyarrow", "duckdb", "ibis"}, {"pandas"}),
-    ("is_non_nullable", {"pandas", "modin", "dask"}, {"polars[eager]"}),
+    ("is_nullable", {"polars[eager]"}, {"pandas", "modin", "dask"}),
 ]
 
 
@@ -93,28 +93,32 @@ def test_constructor_dunder() -> None:
     assert c1 != "not a constructor"
 
 
-def test_init_subclass_requires_implementation() -> None:
-    with pytest.raises(TypeError, match="missing `implementation`"):
-
-        class _BadConstructor(FrameConstructor, requirements=("polars",)):
-            name = "polars[eager]"
-
-            def __call__(self, obj: object, /, **kwds: object) -> None:  # type: ignore[override]
-                ...  # pragma: no cover
-
-
-def test_get_backend_constructor() -> None:
-    assert get_backend_constructor("pandas[pyarrow]") == get_backend_constructor(
-        "pandas[pyarrow]"
-    )
-
-
 def test_get_backend_constructor_invalid_name() -> None:
     with pytest.raises(ValueError, match="Unknown constructor"):
         get_backend_constructor("not_a_backend")
 
 
-def test_prepare_backends_exclude_only() -> None:
-    result = prepare_backends(exclude=["pandas"])
-    names = {c.name for c in result}
-    assert "pandas" not in names
+@pytest.mark.parametrize(
+    ("include", "exclude", "expected"),
+    [
+        (None, None, available_backends()),
+        (None, ["pandas"], available_backends() - {"pandas"}),
+        (["pandas", "polars[eager]"], None, {"pandas", "polars[eager]"}),
+        (["pandas", "polars[eager]"], ["pandas"], {"polars[eager]"}),
+        ([], None, frozenset()),
+    ],
+)
+def test_prepare_backends(
+    include: list[str] | None, exclude: list[str] | None, expected: frozenset[str]
+) -> None:
+    for name in (*(include or ()), *(exclude or ())):
+        if not get_backend_constructor(name).is_available:
+            pytest.skip(f"{name} not installed")
+    result = prepare_backends(include=include, exclude=exclude)
+    assert {c.name for c in result} == expected
+
+
+@pytest.mark.parametrize("kwarg", ["include", "exclude"])
+def test_prepare_backends_unknown_name_raises(kwarg: str) -> None:
+    with pytest.raises(ValueError, match="not known constructors"):
+        prepare_backends(**{kwarg: ["not_a_backend"]})

@@ -15,7 +15,7 @@ from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
 from narwhals.testing.typing import (
     # TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
-    EagerFrameConstructor as ConstructorEager,
+    DataFrameConstructor as ConstructorEager,
     FrameConstructor as Constructor,
 )
 from narwhals.translate import from_native

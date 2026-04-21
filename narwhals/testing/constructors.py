@@ -1,39 +1,28 @@
-"""Concrete constructor classes and auto-registration machinery.
+"""Constructor registry for `narwhals.testing`.
 
 Each constructor wraps one backend library (pandas, Polars, DuckDB, ...) and
 knows how to turn a column-oriented `dict` into a native frame.
 
-All static metadata for a backend lives on its constructor class, colocated with
-the `__call__` implementation. Adding a constructor is a one-step declaration.
-The `__init_subclass__` hook then auto-registers a singleton.
+Registration is explicit: wrap a plain builder function with `@frame_constructor.register(...)`.
+The decorator instantiates a [`narwhals.testing.frame_constructor`][] with the
+declared metadata and stores it in the shared `_registry`.
 
 ## Adding a new constructor
 
-1. Choose the right base class:
+```py
+from narwhals.testing import frame_constructor
 
-    * `EagerFrameConstructor`: if the backend returns an eager dataframe.
-    * `LazyFrameConstructor`: if the backend returns a lazy frame.
 
-2. Define the class in this module and declare its metadata in the class
-    header as keyword arguments:
+@frame_constructor.register(
+    name="my_backend",
+    implementation=Implementation.MY_BACKEND,
+    requirements=("my_backend",),
+)
+def my_backend_lazy_constructor(obj: Data, /, **kwds: Any) -> IntoLazyFrame:
+    import my_backend
 
-    ```py
-    class MyBackendConstructor(
-        LazyFrameConstructor,
-        implementation=Implementation.MY_BACKEND,
-        requirements=("my_backend",),
-        legacy_name="my_backend_lazy_constructor",
-    ):
-        name = "my_backend"
-
-        def __call__(self, obj: Data, /, **kwds: Any) -> ...:
-            import my_backend
-
-            return my_backend.from_dict(obj)
-    ```
-
-That is all. `__init_subclass__` on `FrameConstructor` automatically registers
-a default singleton into `_registry`, keyed by the string `name`.
+    return my_backend.from_dict(obj)
+```
 """
 
 from __future__ import annotations
@@ -44,7 +33,17 @@ import warnings
 from copy import deepcopy
 from functools import lru_cache
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    overload,
+)
 
 from narwhals._utils import Implementation, generate_temporary_column_name
 
@@ -58,6 +57,7 @@ if TYPE_CHECKING:
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
+    from typing_extensions import Concatenate, TypeAlias
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals.testing.typing import Data
@@ -65,12 +65,9 @@ if TYPE_CHECKING:
 
 
 __all__ = (
-    "ALL_BACKENDS",
-    "ALL_CPU_BACKENDS",
-    "DEFAULT_BACKENDS",
-    "EagerFrameConstructor",
-    "FrameConstructor",
     "available_backends",
+    "available_cpu_backends",
+    "frame_constructor",
     "get_backend_constructor",
     "is_backend_available",
     "prepare_backends",
@@ -78,74 +75,93 @@ __all__ = (
     "sqlframe_session",
 )
 
+T_co = TypeVar("T_co", covariant=True, bound="IntoFrame")
+R = TypeVar("R", bound="IntoFrame")
 
-class FrameConstructor(Protocol):
-    """Abstract base for any constructor exposed by `narwhals.testing`.
 
-    A constructor is a callable that turns a column-oriented `dict` (typed as
-    [`Data`][narwhals.testing.typing.Data]) into a native dataframe / lazy frame,
-    plus a string `name` that identifies the backend (e.g. `"pandas[pyarrow]"`).
+class frame_constructor(Generic[T_co]):  # noqa: N801
+    """Callable wrapper around a backend frame builder.
 
-    Subclasses declare their backend metadata (implementation, requirements,
-    legacy name, nullability, GPU need) as keyword arguments in the class
-    header. `__init_subclass__` stores those on the class and registers a
-    default singleton into `_registry`.
+    Turns a column-oriented `dict` (typed as [`Data`][narwhals.testing.typing.Data])
+    into a native frame. Metadata (implementation, requirements, eager/lazy,
+    nullability, GPU need) lives on the instance, alongside the wrapped
+    `func`. Equality and hashing are keyed on `(type, name)`, so two lookups
+    of the same registered constructor compare equal.
+
+    Warning:
+        Instances should be created via [`narwhals.testing.constructors.frame_constructor.register`][],
+        which is the only supported entry point.
+
+        Direct instantiation is allowed but **does not** register the instance.
     """
 
-    _registry: ClassVar[dict[str, FrameConstructor]] = {}
+    _registry: ClassVar[dict[str, frame_constructor[IntoFrame]]] = {}
 
-    name: ClassVar[str]
-    implementation: ClassVar[Implementation]
-    requirements: ClassVar[tuple[str, ...]] = ()
-    legacy_name: ClassVar[str] = ""
-    is_eager: ClassVar[bool] = False
-    is_non_nullable: ClassVar[bool] = False
-    needs_gpu: ClassVar[bool] = False
+    def __init__(
+        self,
+        func: Callable[Concatenate[Data, ...], T_co],
+        /,
+        *,
+        name: str,
+        implementation: Implementation,
+        requirements: tuple[str, ...] = (),
+        is_eager: bool = False,
+        is_nullable: bool = True,
+        needs_gpu: bool = False,
+    ) -> None:
+        self.func = func
+        self.name = name
+        self.implementation = implementation
+        self.requirements = requirements
+        self.is_eager = is_eager
+        self.is_nullable = is_nullable
+        self.needs_gpu = needs_gpu
 
-    def __init_subclass__(
+    @classmethod
+    def register(
         cls,
         *,
-        implementation: Implementation | None = None,
+        name: str,
+        implementation: Implementation,
         requirements: tuple[str, ...] = (),
-        legacy_name: str = "",
-        is_non_nullable: bool = False,
+        is_eager: bool = False,
+        is_nullable: bool = True,
         needs_gpu: bool = False,
-        **kwargs: Any,
-    ) -> None:
-        """Register concrete subclasses automatically.
+    ) -> Callable[[Callable[Concatenate[Data, ...], R]], frame_constructor[R]]:
+        """Decorator: register `func` as the constructor named `name`.
 
         Arguments:
+            name: The string identifier of the constructor (e.g. `"pandas[pyarrow]"`).
             implementation: The [`Implementation`][] this constructor belongs to.
             requirements: Package names that must be importable for this constructor
                 to be available (checked via `importlib.util.find_spec`).
-            legacy_name: Value returned by `str(constructor)` for backward compatibility
-                with test assertions that match on the old naming scheme.
-            is_non_nullable: Whether the backend lacks native null support.
+            is_eager: Whether the backend returns an eager dataframe.
+            is_nullable: Whether the backend has native null support.
             needs_gpu: Whether the backend requires GPU hardware.
-            **kwargs: Forwarded to `super().__init_subclass__`.
+
+        Returns:
+            A decorator that replaces `func` with a `frame_constructor`
+            instance registered into the shared `_registry`.
         """
-        super().__init_subclass__(**kwargs)
-        if implementation is not None:
-            cls.implementation = implementation
 
-        cls.requirements = requirements
-        cls.legacy_name = legacy_name
-        cls.is_non_nullable = is_non_nullable
-        cls.needs_gpu = needs_gpu
-
-        if "name" not in cls.__dict__:
-            return
-        if not hasattr(cls, "implementation"):
-            msg = (
-                f"Constructor {cls.__name__} is missing `implementation` "
-                "kwarg in its class header."
+        def decorator(func: Callable[Concatenate[Data, ...], R]) -> frame_constructor[R]:
+            inst: frame_constructor[R] = frame_constructor(
+                func,
+                name=name,
+                implementation=implementation,
+                requirements=requirements,
+                is_eager=is_eager,
+                is_nullable=is_nullable,
+                needs_gpu=needs_gpu,
             )
-            raise TypeError(msg)
-        FrameConstructor._registry[cls.name] = cls()
+            cls._registry[name] = inst
+            return inst
 
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoFrame:
-        """Build a native frame from `obj`."""
-        raise NotImplementedError
+        return decorator
+
+    def __call__(self, obj: Data, /, **kwds: Any) -> T_co:
+        """Build a native frame from `obj` by delegating to the wrapped function."""
+        return self.func(obj, **kwds)
 
     @property
     def identifier(self) -> str:
@@ -230,307 +246,223 @@ class FrameConstructor(Protocol):
 
     def __str__(self) -> str:
         # NOTE: This is a temporary hack
-        # TODO(Unassigned): Remove once all the `"backend" in str(constructor)`
+        # TODO(FBruzzesi): Remove once all the `"backend" in str(constructor)`
         # statements in the test suite are properly replaced
-        return self.legacy_name
+        return self.func.__name__
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}()"
+        return f"{type(self).__name__}(name={self.name!r})"
 
     def __hash__(self) -> int:
         return hash((type(self), self.name))
 
     def __eq__(self, other: object) -> bool:
-        return (
-            type(self) is type(other)
-            and self.name == cast("FrameConstructor", other).name
-        )
-
-
-class EagerFrameConstructor(FrameConstructor):
-    """A constructor that returns an *eager* native dataframe."""
-
-    is_eager: ClassVar[bool] = True
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
-        raise NotImplementedError
-
-
-class LazyFrameConstructor(FrameConstructor):
-    """A constructor that returns a *lazy* native frame."""
-
-    is_eager: ClassVar[bool] = False
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoLazyFrame:
-        raise NotImplementedError
+        return isinstance(other, frame_constructor) and self.name == other.name
 
 
 # Eager constructors
 
 
-class PandasConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="pandas",
     implementation=Implementation.PANDAS,
     requirements=("pandas",),
-    legacy_name="pandas_constructor",
-    is_non_nullable=True,
-):
-    """Constructor backed by `pandas.DataFrame` with default NumPy dtypes."""
+    is_eager=True,
+    is_nullable=False,
+)
+def pandas_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
+    import pandas as pd
 
-    name = "pandas"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
-        import pandas as pd
-
-        return pd.DataFrame(obj, **kwds)
+    return pd.DataFrame(obj, **kwds)
 
 
-class PandasNullableConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="pandas[nullable]",
     implementation=Implementation.PANDAS,
     requirements=("pandas",),
-    legacy_name="pandas_nullable_constructor",
-):
-    """Constructor backed by `pandas.DataFrame` with `numpy_nullable` dtypes."""
+    is_eager=True,
+)
+def pandas_nullable_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
+    import pandas as pd
 
-    name = "pandas[nullable]"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
-        import pandas as pd
-
-        return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="numpy_nullable")
+    return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="numpy_nullable")
 
 
-class PandasPyArrowConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="pandas[pyarrow]",
     implementation=Implementation.PANDAS,
     requirements=("pandas", "pyarrow"),
-    legacy_name="pandas_pyarrow_constructor",
-):
-    """Constructor backed by `pandas.DataFrame` with `pyarrow` dtypes."""
+    is_eager=True,
+)
+def pandas_pyarrow_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
+    import pandas as pd
 
-    name = "pandas[pyarrow]"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> pd.DataFrame:
-        import pandas as pd
-
-        return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="pyarrow")
+    return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="pyarrow")
 
 
-class PyArrowConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="pyarrow",
     implementation=Implementation.PYARROW,
     requirements=("pyarrow",),
-    legacy_name="pyarrow_table_constructor",
-):
-    """Constructor backed by `pyarrow.Table`."""
+    is_eager=True,
+)
+def pyarrow_table_constructor(obj: Data, /, **kwds: Any) -> pa.Table:
+    import pyarrow as pa
 
-    name = "pyarrow"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> pa.Table:
-        import pyarrow as pa
-
-        return pa.table(obj, **kwds)
+    return pa.table(obj, **kwds)
 
 
-class ModinConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="modin",
     implementation=Implementation.MODIN,
     requirements=("modin",),
-    legacy_name="modin_constructor",
-    is_non_nullable=True,
-):  # pragma: no cover
-    """Constructor backed by `modin.pandas.DataFrame`."""
+    is_eager=True,
+    is_nullable=False,
+)
+def modin_constructor(obj: Data, /, **kwds: Any) -> IntoDataFrame:  # pragma: no cover
+    import modin.pandas as mpd
+    import pandas as pd
 
-    name = "modin"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
-        import modin.pandas as mpd
-        import pandas as pd
-
-        return cast("IntoDataFrame", mpd.DataFrame(pd.DataFrame(obj, **kwds)))
+    return cast("IntoDataFrame", mpd.DataFrame(pd.DataFrame(obj, **kwds)))
 
 
-class ModinPyArrowConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="modin[pyarrow]",
     implementation=Implementation.MODIN,
     requirements=("modin", "pyarrow"),
-    legacy_name="modin_pyarrow_constructor",
-):  # pragma: no cover
-    """Constructor backed by `modin.pandas.DataFrame` with `pyarrow` dtypes."""
+    is_eager=True,
+)
+def modin_pyarrow_constructor(
+    obj: Data, /, **kwds: Any
+) -> IntoDataFrame:  # pragma: no cover
+    import modin.pandas as mpd
+    import pandas as pd
 
-    name = "modin[pyarrow]"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
-        import modin.pandas as mpd
-        import pandas as pd
-
-        df = mpd.DataFrame(pd.DataFrame(obj, **kwds)).convert_dtypes(
-            dtype_backend="pyarrow"
-        )
-        return cast("IntoDataFrame", df)
+    df = mpd.DataFrame(pd.DataFrame(obj, **kwds)).convert_dtypes(dtype_backend="pyarrow")
+    return cast("IntoDataFrame", df)
 
 
-class CudfConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="cudf",
     implementation=Implementation.CUDF,
     requirements=("cudf",),
-    legacy_name="cudf_constructor",
+    is_eager=True,
     needs_gpu=True,
-):  # pragma: no cover
-    """Constructor backed by `cudf.DataFrame` (requires GPU)."""
+)
+def cudf_constructor(obj: Data, /, **kwds: Any) -> IntoDataFrame:  # pragma: no cover
+    import cudf
 
-    name = "cudf"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> IntoDataFrame:
-        import cudf
-
-        return cast("IntoDataFrame", cudf.DataFrame(obj, **kwds))
+    return cast("IntoDataFrame", cudf.DataFrame(obj, **kwds))
 
 
-class PolarsEagerConstructor(
-    EagerFrameConstructor,
+@frame_constructor.register(
+    name="polars[eager]",
     implementation=Implementation.POLARS,
     requirements=("polars",),
-    legacy_name="polars_eager_constructor",
-):
-    """Constructor backed by `polars.DataFrame`."""
+    is_eager=True,
+)
+def polars_eager_constructor(obj: Data, /, **kwds: Any) -> pl.DataFrame:
+    import polars as pl
 
-    name = "polars[eager]"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> pl.DataFrame:
-        import polars as pl
-
-        return pl.DataFrame(obj, **kwds)
+    return pl.DataFrame(obj, **kwds)
 
 
 # Lazy constructors
 
 
-class PolarsLazyConstructor(
-    LazyFrameConstructor,
-    implementation=Implementation.POLARS,
-    requirements=("polars",),
-    legacy_name="polars_lazy_constructor",
-):
-    """Constructor backed by `polars.LazyFrame`."""
+@frame_constructor.register(
+    name="polars[lazy]", implementation=Implementation.POLARS, requirements=("polars",)
+)
+def polars_lazy_constructor(obj: Data, /, **kwds: Any) -> pl.LazyFrame:
+    import polars as pl
 
-    name = "polars[lazy]"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> pl.LazyFrame:
-        import polars as pl
-
-        return pl.LazyFrame(obj, **kwds)
+    return pl.LazyFrame(obj, **kwds)
 
 
-class DaskConstructor(
-    LazyFrameConstructor,
+@frame_constructor.register(
+    name="dask",
     implementation=Implementation.DASK,
     requirements=("dask",),
-    legacy_name="dask_lazy_p2_constructor",
-    is_non_nullable=True,
-):  # pragma: no cover
-    """Constructor backed by `dask.dataframe`."""
+    is_nullable=False,
+)
+def dask_lazy_p2_constructor(
+    obj: Data, /, npartitions: int = 2, **kwds: Any
+) -> NativeDask:  # pragma: no cover
+    import dask.dataframe as dd
 
-    name = "dask"
-
-    def __call__(self, obj: Data, /, npartitions: int = 2, **kwds: Any) -> NativeDask:
-        import dask.dataframe as dd
-
-        return cast("NativeDask", dd.from_dict(obj, npartitions=npartitions, **kwds))
+    return cast("NativeDask", dd.from_dict(obj, npartitions=npartitions, **kwds))
 
 
-class DuckDBConstructor(
-    LazyFrameConstructor,
+@frame_constructor.register(
+    name="duckdb",
     implementation=Implementation.DUCKDB,
     requirements=("duckdb", "pyarrow"),
-    legacy_name="duckdb_lazy_constructor",
-):
-    """Constructor backed by DuckDB (via `duckdb.sql`)."""
+)
+def duckdb_lazy_constructor(obj: Data, /, **kwds: Any) -> NativeDuckDB:
+    import duckdb
+    import pyarrow as pa
 
-    name = "duckdb"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> NativeDuckDB:
-        import duckdb
-        import pyarrow as pa
-
-        duckdb.sql("""set timezone = 'UTC'""")
-        _df = pa.table(obj, **kwds)
-        return duckdb.sql("select * from _df")
+    duckdb.sql("""set timezone = 'UTC'""")
+    _df = pa.table(obj, **kwds)
+    return duckdb.sql("select * from _df")
 
 
-class PySparkConstructor(
-    LazyFrameConstructor,
-    implementation=Implementation.PYSPARK,
-    requirements=("pyspark",),
-    legacy_name="pyspark_lazy_constructor",
-):  # pragma: no cover
-    """Constructor backed by `pyspark.sql.DataFrame`."""
-
-    name = "pyspark"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> NativePySpark:
-        session = _pyspark_session_lazy()
-        _obj = deepcopy(obj)
-        index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
-        _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
-        result = (
-            session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()], **kwds)
-            .repartition(2)
-            .orderBy(index_col_name)
-            .drop(index_col_name)
-        )
-        return cast("NativePySpark", result)
+def _pyspark_build(obj: Data, /, **kwds: Any) -> NativePySpark:  # pragma: no cover
+    session = _pyspark_session_lazy()
+    _obj = deepcopy(obj)
+    index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
+    _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
+    result = (
+        session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()], **kwds)
+        .repartition(2)
+        .orderBy(index_col_name)
+        .drop(index_col_name)
+    )
+    return cast("NativePySpark", result)
 
 
-class PySparkConnectConstructor(
-    PySparkConstructor,
+@frame_constructor.register(
+    name="pyspark", implementation=Implementation.PYSPARK, requirements=("pyspark",)
+)
+def pyspark_lazy_constructor(
+    obj: Data, /, **kwds: Any
+) -> NativePySpark:  # pragma: no cover
+    return _pyspark_build(obj, **kwds)
+
+
+@frame_constructor.register(
+    name="pyspark[connect]",
     implementation=Implementation.PYSPARK_CONNECT,
     requirements=("pyspark",),
-    legacy_name="pyspark_lazy_constructor",
-):  # pragma: no cover
-    """Constructor backed by PySpark Connect (Spark Connect protocol)."""
+)
+def pyspark_connect_lazy_constructor(
+    obj: Data, /, **kwds: Any
+) -> NativePySpark:  # pragma: no cover
+    return _pyspark_build(obj, **kwds)
 
-    name = "pyspark[connect]"
 
-
-class SQLFrameConstructor(
-    LazyFrameConstructor,
+@frame_constructor.register(
+    name="sqlframe",
     implementation=Implementation.SQLFRAME,
     requirements=("sqlframe", "duckdb"),
-    legacy_name="sqlframe_pyspark_lazy_constructor",
-):
-    """Constructor backed by `sqlframe` (DuckDB session)."""
-
-    name = "sqlframe"
-
-    def __call__(self, obj: Data, /, **kwds: Any) -> NativeSQLFrame:
-        session = sqlframe_session()
-        return session.createDataFrame(
-            [*zip(*obj.values())], schema=[*obj.keys()], **kwds
-        )
+)
+def sqlframe_pyspark_lazy_constructor(obj: Data, /, **kwds: Any) -> NativeSQLFrame:
+    session = sqlframe_session()
+    return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()], **kwds)
 
 
-class IbisConstructor(
-    LazyFrameConstructor,
+@frame_constructor.register(
+    name="ibis",
     implementation=Implementation.IBIS,
     requirements=("ibis", "duckdb", "pyarrow"),
-    legacy_name="ibis_lazy_constructor",
-):  # pragma: no cover
-    """Constructor backed by `ibis` (DuckDB backend)."""
+)
+def ibis_lazy_constructor(obj: Data, /, **kwds: Any) -> ibis.Table:  # pragma: no cover
+    import pyarrow as pa
 
-    name = "ibis"
+    table = pa.table(obj)
+    table_name = str(uuid.uuid4())
+    return _ibis_backend().create_table(table_name, table, **kwds)
 
-    def __call__(self, obj: Data, /, **kwds: Any) -> ibis.Table:
-        import pyarrow as pa
-
-        table = pa.table(obj)
-        table_name = str(uuid.uuid4())
-        return _ibis_backend().create_table(table_name, table, **kwds)
-
-
-ALL_BACKENDS: dict[str, FrameConstructor] = FrameConstructor._registry
-"""All registered backends keyed by their string identifier."""
 
 DEFAULT_BACKENDS: frozenset[str] = frozenset(
     {
@@ -547,11 +479,6 @@ DEFAULT_BACKENDS: frozenset[str] = frozenset(
 user does not pass `--nw-backends` (mirrors the historical Narwhals defaults).
 """
 
-ALL_CPU_BACKENDS: frozenset[str] = frozenset(
-    name for name, c in FrameConstructor._registry.items() if not c.needs_gpu
-)
-"""All backends that do not require GPU hardware."""
-
 
 def available_backends() -> frozenset[str]:
     """Return the names of every constructor whose backend is importable.
@@ -561,11 +488,51 @@ def available_backends() -> frozenset[str]:
         >>> "pandas" in available_backends()
         True
     """
-    return frozenset(name for name, c in ALL_BACKENDS.items() if c.is_available)
+    return frozenset(
+        name for name, c in frame_constructor._registry.items() if c.is_available
+    )
 
 
-def get_backend_constructor(name: str) -> FrameConstructor:
-    """Return the registered singleton constructor for `name`.
+def available_cpu_backends() -> frozenset[str]:
+    """Return the names of every CPU constructor whose backend is importable.
+
+    Examples:
+        >>> from narwhals.testing.constructors import available_cpu_backends
+        >>> "pandas" in available_cpu_backends()
+        True
+    """
+    return frozenset(
+        name
+        for name, c in frame_constructor._registry.items()
+        if c.is_available and not c.needs_gpu
+    )
+
+
+EagerName: TypeAlias = Literal[
+    "pandas",
+    "pandas[nullable]",
+    "pandas[pyarrow]",
+    "modin",
+    "modin[pyarrow]",
+    "cudf",
+    "polars[eager]",
+    "pyarrow",
+]
+LazyName: TypeAlias = Literal[
+    "polars[lazy]", "dask", "duckdb", "pyspark", "pyspark[connect]", "sqlframe", "ibis"
+]
+
+
+@overload
+def get_backend_constructor(name: EagerName) -> frame_constructor[IntoDataFrame]: ...
+@overload
+def get_backend_constructor(name: LazyName) -> frame_constructor[IntoLazyFrame]: ...
+@overload
+def get_backend_constructor(name: str) -> frame_constructor[IntoFrame]: ...
+
+
+def get_backend_constructor(name: str) -> frame_constructor[IntoFrame]:
+    """Return the registered constructor for `name`.
 
     Arguments:
         name: The string identifier of a registered constructor
@@ -577,20 +544,23 @@ def get_backend_constructor(name: str) -> FrameConstructor:
     Examples:
         >>> from narwhals.testing.constructors import get_backend_constructor
         >>> get_backend_constructor("pandas")
-        PandasConstructor()
+        frame_constructor(name='pandas')
     """
     try:
-        return ALL_BACKENDS[name]
+        return frame_constructor._registry[name]
     except KeyError as exc:
-        valid = sorted(ALL_BACKENDS)
+        valid = sorted(frame_constructor._registry)
         msg = f"Unknown constructor {name!r}. Expected one of: {valid}."
         raise ValueError(msg) from exc
 
 
 def prepare_backends(
     *, include: Iterable[str] | None = None, exclude: Iterable[str] | None = None
-) -> list[FrameConstructor]:
-    """Return available backends, optionally filtered.
+) -> list[frame_constructor[IntoFrame]]:
+    """Return available constructors, optionally filtered.
+
+    Note:
+        `exclude` is given precedence in the selection.
 
     Arguments:
         include: If given, only return backends whose name is in this set.
@@ -601,15 +571,25 @@ def prepare_backends(
         >>> backends = prepare_backends(include=["pandas", "polars[eager]"])
     """
     available = available_backends()
-    candidates: list[FrameConstructor] = [
-        c for name, c in ALL_BACKENDS.items() if name in available
+    candidates: list[frame_constructor[Any]] = [
+        c for name, c in frame_constructor._registry.items() if name in available
     ]
+
+    include_set: frozenset[str] = (
+        frozenset(include) if include is not None else frozenset()
+    )
+    exclude_set: frozenset[str] = (
+        frozenset(exclude) if exclude is not None else frozenset()
+    )
+
+    if unknown := (include_set.union(exclude_set).difference(available)):
+        msg = f"The following names are not known constructors: {sorted(unknown)}"
+        raise ValueError(msg)
+
     if include is not None:
-        inc = frozenset(include)
-        candidates = [c for c in candidates if c.name in inc]
+        candidates = [c for c in candidates if c.name in include_set]
     if exclude is not None:
-        exc = frozenset(exclude)
-        candidates = [c for c in candidates if c.name not in exc]
+        candidates = [c for c in candidates if c.name not in exclude_set]
     return sorted(candidates, key=lambda c: c.name)
 
 

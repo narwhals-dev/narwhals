@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, cast
 if TYPE_CHECKING:
     import pytest
 
-    from narwhals.testing.constructors import FrameConstructor
+    from narwhals.testing.typing import FrameConstructor
 
 
 _MIN_PANDAS_NULLABLE_VERSION: tuple[int, ...] = (2, 0, 0)
@@ -82,12 +82,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def _select_backends(config: pytest.Config) -> list[FrameConstructor]:  # pragma: no cover
-    from narwhals.testing.constructors import ALL_CPU_BACKENDS, prepare_backends
+    from narwhals.testing.constructors import available_cpu_backends, prepare_backends
 
     _all_cpu_exclusions = frozenset({"modin", "pyspark[connect]"})
 
     if config.getoption("all_nw_backends"):
-        selected = prepare_backends(include=ALL_CPU_BACKENDS, exclude=_all_cpu_exclusions)
+        selected = prepare_backends(
+            include=available_cpu_backends(), exclude=_all_cpu_exclusions
+        )
     else:
         opt = cast("str", config.getoption("nw_backends"))
         names = [c for c in opt.split(",") if c]
@@ -105,25 +107,28 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
 
     fixturenames = set(metafunc.fixturenames)
     if not fixturenames & {
-        "nw_frame_constructor",
-        "nw_eager_constructor",
-        "nw_pandas_like_constructor",
+        "nw_frame",
+        "nw_dataframe",
+        "nw_lazyframe",
+        "nw_pandas_like_frame",
     }:
         return
 
     selected = _select_backends(metafunc.config)
 
-    if "nw_eager_constructor" in fixturenames:
+    if "nw_dataframe" in fixturenames:
         params = [c for c in selected if c.is_eager]
         ids = [c.name for c in params]
-        metafunc.parametrize("nw_eager_constructor", params, ids=ids)
-    elif "nw_frame_constructor" in fixturenames:
-        metafunc.parametrize(
-            "nw_frame_constructor", selected, ids=[c.name for c in selected]
-        )
-    elif "nw_pandas_like_constructor" in fixturenames:
+        metafunc.parametrize("nw_dataframe", params, ids=ids)
+    elif "nw_lazyframe" in fixturenames:
+        params = [c for c in selected if not c.is_eager]
+        ids = [c.name for c in params]
+        metafunc.parametrize("nw_dataframe", params, ids=ids)
+    elif "nw_frame" in fixturenames:
+        metafunc.parametrize("nw_frame", selected, ids=[c.name for c in selected])
+    elif "nw_pandas_like_frame" in fixturenames:
         params = [c for c in selected if c.is_eager and c.is_pandas_like]
         ids = [c.name for c in params]
-        metafunc.parametrize("nw_pandas_like_constructor", params, ids=ids)
+        metafunc.parametrize("nw_pandas_like_frame", params, ids=ids)
     else:  # pragma: no cover
         ...
