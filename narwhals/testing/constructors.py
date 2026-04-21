@@ -3,10 +3,9 @@
 Each constructor wraps one backend library (pandas, Polars, DuckDB, ...) and
 knows how to turn a column-oriented `dict` into a native frame.
 
-Registration is explicit: wrap a plain builder function with
-`@frame_constructor.register(...)`. The decorator instantiates a
-[`narwhals.testing.frame_constructor`][] with the declared metadata and stores
-it in the shared `_registry`.
+Registration is explicit: wrap a plain builder function with `@frame_constructor.register(...)`.
+The decorator instantiates a [`narwhals.testing.frame_constructor`][] with the
+declared metadata and stores it in the shared `_registry`.
 
 ## Adding a new constructor
 
@@ -258,10 +257,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         return hash((type(self), self.name))
 
     def __eq__(self, other: object) -> bool:
-        return (
-            type(self) is type(other)
-            and self.name == cast("frame_constructor[Any]", other).name
-        )
+        return isinstance(other, frame_constructor) and self.name == other.name
 
 
 # Eager constructors
