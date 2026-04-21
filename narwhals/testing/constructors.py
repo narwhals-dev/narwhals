@@ -106,7 +106,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         implementation: Implementation,
         requirements: tuple[str, ...] = (),
         is_eager: bool = False,
-        is_nullable: bool = False,
+        is_nullable: bool = True,
         needs_gpu: bool = False,
     ) -> None:
         self.func = func
