@@ -42,12 +42,12 @@ def _default_backend_ids() -> list[str]:
     """
     if env := os.environ.get("NARWHALS_DEFAULT_BACKENDS"):  # pragma: no cover
         return env.split(",")
-    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, frame_constructor
+    from narwhals.testing.constructors import DEFAULT_BACKENDS, frame_constructor
 
     return [
         name
         for name, constructor in frame_constructor._registry.items()
-        if constructor.is_available and name in DEFAULT_CONSTRUCTORS
+        if constructor.is_available and name in DEFAULT_BACKENDS
     ]
 
 
