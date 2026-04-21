@@ -51,33 +51,33 @@ class CompliantNamespace(
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
     def all_horizontal(
-        self, node: HExpr[boolean.AllHorizontal], frame: FrameT, name: str
+        self, node: HExpr[boolean.AllHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def any_horizontal(
-        self, node: HExpr[boolean.AnyHorizontal], frame: FrameT, name: str
+        self, node: HExpr[boolean.AnyHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
-    def col(self, node: ir.Column, frame: FrameT, name: str) -> ExprT_co: ...
+    def col(self, node: ir.Column, frame: FrameT, name: str, /) -> ExprT_co: ...
     def concat_str(
-        self, node: HExpr[ConcatStr], frame: FrameT, name: str
+        self, node: HExpr[ConcatStr], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def coalesce(
-        self, node: HExpr[F.Coalesce], frame: FrameT, name: str
+        self, node: HExpr[F.Coalesce], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
-    def len(self, node: ir.Len, frame: FrameT, name: str) -> ScalarT_co: ...
+    def len(self, node: ir.Len, frame: FrameT, name: str, /) -> ScalarT_co: ...
     def lit(
-        self, node: ir.Lit[PythonLiteral], frame: FrameT, name: str
+        self, node: ir.Lit[PythonLiteral], frame: FrameT, name: str, /
     ) -> ScalarT_co: ...
     def max_horizontal(
-        self, node: HExpr[F.MaxHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.MaxHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def mean_horizontal(
-        self, node: HExpr[F.MeanHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.MeanHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def min_horizontal(
-        self, node: HExpr[F.MinHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.MinHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
     def sum_horizontal(
-        self, node: HExpr[F.SumHorizontal], frame: FrameT, name: str
+        self, node: HExpr[F.SumHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
 
 
@@ -115,11 +115,11 @@ class EagerNamespace(
     @property
     def _series(self) -> type[SeriesT_co]: ...
 
-    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str) -> EagerScalarT_co:
+    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str, /) -> EagerScalarT_co:
         return self._scalar.from_python(
             len(frame), name or node.name, dtype=None, version=frame.version
         )
 
     def lit_series(
-        self, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str
+        self, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str, /
     ) -> EagerExprT_co: ...

@@ -292,34 +292,34 @@ class _ArrowDispatch(
     def __narwhals_namespace__(self) -> Namespace:
         return Namespace(self.version)
 
-    def cast(self, node: ir.Cast, frame: Frame, name: str) -> Self:
+    def cast(self, node: ir.Cast, frame: Frame, name: str, /) -> Self:
         data_type = fn.dtype_native(node.dtype, frame.version)
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
-    def pow(self, node: FExpr[F.Pow], frame: Frame, name: str) -> Self:
+    def pow(self, node: FExpr[F.Pow], frame: Frame, name: str, /) -> Self:
         base, exponent = node.dispatch_args(self, frame, name)
         return self._with_native(fn.power(base.native, exponent.native), name)
 
-    def fill_null(self, node: FExpr[F.FillNull], frame: Frame, name: str) -> Self:
+    def fill_null(self, node: FExpr[F.FillNull], frame: Frame, name: str, /) -> Self:
         expr, value = node.dispatch_args(self, frame, name)
         return self._with_native(pc.fill_null(expr.native, value.native), name)
 
-    def is_between(self, node: FExpr[IsBetween], frame: Frame, name: str) -> Self:
+    def is_between(self, node: FExpr[IsBetween], frame: Frame, name: str, /) -> Self:
         expr, lb, ub = node.dispatch_args(self, frame, name)
         closed = node.function.closed
         result = fn.is_between(expr.native, lb.native, ub.native, closed=closed)
         return self._with_native(result, name)
 
-    def all(self, node: FExpr[All], frame: Frame, name: str) -> Scalar:
+    def all(self, node: FExpr[All], frame: Frame, name: str, /) -> Scalar:
         result = fn.all(node.dispatch_arg(self, frame, name).native)
         return ArrowScalar.from_native(result, name, version=frame.version)
 
-    def any(self, node: FExpr[ir.boolean.Any], frame: Frame, name: str) -> Scalar:
+    def any(self, node: FExpr[ir.boolean.Any], frame: Frame, name: str, /) -> Scalar:
         result = fn.any(node.dispatch_arg(self, frame, name).native)
         return ArrowScalar.from_native(result, name, version=frame.version)
 
-    def is_in_expr(self, node: FExpr[IsInExpr], frame: Frame, name: str) -> Self:
+    def is_in_expr(self, node: FExpr[IsInExpr], frame: Frame, name: str, /) -> Self:
         native, right = (s.native for s in node.dispatch_args(self, frame, name))
         arr = fn.array(right) if isinstance(right, pa.Scalar) else right
         return self._with_native(fn.is_in(native, arr), name)
@@ -332,7 +332,7 @@ class _ArrowDispatch(
     def is_in_seq(self, f: IsInSeq, previous: Native) -> Native:
         return fn.is_in(previous, fn.array(f.other))
 
-    def binary_expr(self, node: ir.BinaryExpr, frame: Frame, name: str) -> Self:
+    def binary_expr(self, node: ir.BinaryExpr, frame: Frame, name: str, /) -> Self:
         lhs, rhs = (
             node.left.dispatch(self, frame, name),
             node.right.dispatch(self, frame, name),
@@ -340,7 +340,7 @@ class _ArrowDispatch(
         result = fn.binary(lhs.native, node.op.__class__, rhs.native)
         return self._with_native(result, name)
 
-    def ternary_expr(self, node: ir.TernaryExpr, frame: Frame, name: str) -> Self:
+    def ternary_expr(self, node: ir.TernaryExpr, frame: Frame, name: str, /) -> Self:
         when = node.predicate.dispatch(self, frame, name)
         then = node.truthy.dispatch(self, frame, name)
         otherwise = node.falsy.dispatch(self, frame, name)
@@ -355,15 +355,15 @@ class _ArrowDispatch(
     def round(self, f: F.Round, previous: Native) -> Native:
         return fn.round(previous, f.decimals)
 
-    def clip(self, node: FExpr[F.Clip], frame: Frame, name: str) -> Self:
+    def clip(self, node: FExpr[F.Clip], frame: Frame, name: str, /) -> Self:
         expr, lb, ub = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip(expr.native, lb.native, ub.native), name)
 
-    def clip_lower(self, node: FExpr[F.ClipLower], frame: Frame, name: str) -> Self:
+    def clip_lower(self, node: FExpr[F.ClipLower], frame: Frame, name: str, /) -> Self:
         expr, other = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip_lower(expr.native, other.native), name)
 
-    def clip_upper(self, node: FExpr[F.ClipUpper], frame: Frame, name: str) -> Self:
+    def clip_upper(self, node: FExpr[F.ClipUpper], frame: Frame, name: str, /) -> Self:
         expr, other = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip_upper(expr.native, other.native), name)
 
@@ -373,7 +373,7 @@ class _ArrowDispatch(
         return fn.replace_strict(previous, f.old, f.new, dtype)
 
     def replace_strict_default(
-        self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str
+        self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str, /
     ) -> Self:
         f = node.function
         native, default = (s.native for s in node.dispatch_args(self, frame, name))
@@ -460,13 +460,13 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     def __len__(self) -> int:
         return len(self._evaluated)
 
-    def sort(self, node: ir.Sort, frame: Frame, name: str) -> Expr:
+    def sort(self, node: ir.Sort, frame: Frame, name: str, /) -> Expr:
         series = self._dispatch_expr(node.expr, frame, name)
         opts = node.options
         result = series.sort(descending=opts.descending, nulls_last=opts.nulls_last)
         return self.from_series(result)
 
-    def sort_by(self, node: ir.SortBy, frame: Frame, name: str) -> Expr:
+    def sort_by(self, node: ir.SortBy, frame: Frame, name: str, /) -> Expr:
         if is_seq_column(node.by):
             # fastpath, roughly the same as `DataFrame.sort`, but only taking indices
             # of a single column
@@ -481,7 +481,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         series = self._dispatch_expr(node.expr, frame, name)
         return self.from_series(series.gather(indices))
 
-    def filter(self, node: ir.Filter, frame: Frame, name: str) -> Expr:
+    def filter(self, node: ir.Filter, frame: Frame, name: str, /) -> Expr:
         return self._with_native(
             self._dispatch_expr(node.expr, frame, name).native.filter(
                 self._dispatch_expr(node.by, frame, name).native
@@ -489,13 +489,13 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
             name,
         )
 
-    def first(self, node: First, frame: Frame, name: str) -> Scalar:
+    def first(self, node: First, frame: Frame, name: str, /) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
         result: NativeScalar = native[0] if len(prev) else fn.lit(None, native.type)
         return self._with_native(result, name)
 
-    def last(self, node: Last, frame: Frame, name: str) -> Scalar:
+    def last(self, node: Last, frame: Frame, name: str, /) -> Scalar:
         prev = self._dispatch_expr(node.expr, frame, name)
         native = prev.native
         result: NativeScalar = (
@@ -503,37 +503,37 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         )
         return self._with_native(result, name)
 
-    def arg_min(self, node: ArgMin, frame: Frame, name: str) -> Scalar:
+    def arg_min(self, node: ArgMin, frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
         result = pc.index(native, fn.min(native))
         return self._with_native(result, name)
 
-    def arg_max(self, node: ArgMax, frame: Frame, name: str) -> Scalar:
+    def arg_max(self, node: ArgMax, frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
         result: NativeScalar = pc.index(native, fn.max(native))
         return self._with_native(result, name)
 
-    def sum(self, node: Sum, frame: Frame, name: str) -> Scalar:
+    def sum(self, node: Sum, frame: Frame, name: str, /) -> Scalar:
         result = fn.sum(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def n_unique(self, node: NUnique, frame: Frame, name: str) -> Scalar:
+    def n_unique(self, node: NUnique, frame: Frame, name: str, /) -> Scalar:
         result = fn.n_unique(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def std(self, node: Std, frame: Frame, name: str) -> Scalar:
+    def std(self, node: Std, frame: Frame, name: str, /) -> Scalar:
         result = fn.std(
             self._dispatch_expr(node.expr, frame, name).native, ddof=node.ddof
         )
         return self._with_native(result, name)
 
-    def var(self, node: Var, frame: Frame, name: str) -> Scalar:
+    def var(self, node: Var, frame: Frame, name: str, /) -> Scalar:
         result = fn.var(
             self._dispatch_expr(node.expr, frame, name).native, ddof=node.ddof
         )
         return self._with_native(result, name)
 
-    def quantile(self, node: Quantile, frame: Frame, name: str) -> Scalar:
+    def quantile(self, node: Quantile, frame: Frame, name: str, /) -> Scalar:
         result = fn.quantile(
             self._dispatch_expr(node.expr, frame, name).native,
             q=node.quantile,
@@ -541,39 +541,39 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         )[0]
         return self._with_native(result, name)
 
-    def count(self, node: Count, frame: Frame, name: str) -> Scalar:
+    def count(self, node: Count, frame: Frame, name: str, /) -> Scalar:
         result = fn.count(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def len(self, node: Len, frame: Frame, name: str) -> Scalar:
+    def len(self, node: Len, frame: Frame, name: str, /) -> Scalar:
         result = fn.count(self._dispatch_expr(node.expr, frame, name).native, mode="all")
         return self._with_native(result, name)
 
-    def max(self, node: Max, frame: Frame, name: str) -> Scalar:
+    def max(self, node: Max, frame: Frame, name: str, /) -> Scalar:
         result: NativeScalar = fn.max(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def mean(self, node: Mean, frame: Frame, name: str) -> Scalar:
+    def mean(self, node: Mean, frame: Frame, name: str, /) -> Scalar:
         result = fn.mean(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def median(self, node: Median, frame: Frame, name: str) -> Scalar:
+    def median(self, node: Median, frame: Frame, name: str, /) -> Scalar:
         result = fn.median(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def min(self, node: Min, frame: Frame, name: str) -> Scalar:
+    def min(self, node: Min, frame: Frame, name: str, /) -> Scalar:
         result: NativeScalar = fn.min(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
-    def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str) -> Scalar:
+    def null_count(self, node: FExpr[F.NullCount], frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.null_count(native), name)
 
-    def kurtosis(self, node: FExpr[F.Kurtosis], frame: Frame, name: str) -> Scalar:
+    def kurtosis(self, node: FExpr[F.Kurtosis], frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.kurtosis_skew(native, "kurtosis"), name)
 
-    def skew(self, node: FExpr[F.Skew], frame: Frame, name: str) -> Scalar:
+    def skew(self, node: FExpr[F.Skew], frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.kurtosis_skew(native, "skew"), name)
 
@@ -598,7 +598,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         return self.from_series(results.get_column(name))
 
     def over_ordered(
-        self, node: ir.OverOrdered, frame: Frame, name: str
+        self, node: ir.OverOrdered, frame: Frame, name: str, /
     ) -> Self | Scalar:
         by = node.order_by_names()
         indices = fn.sort_indices(frame.native, *by, options=node.sort_options)
@@ -642,7 +642,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     # NOTE: Can't implement in `EagerExpr` (like on `main`)
     # The version here is missing `__narwhals_namespace__`
     def map_batches(
-        self, node: ir.AnonymousExpr, frame: Frame, name: str
+        self, node: ir.AnonymousExpr, frame: Frame, name: str, /
     ) -> Self | Scalar:
         series = self._dispatch_expr(node.input[0], frame, name)
         udf = node.function.function
@@ -677,42 +677,44 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     def rank(self, f: F.Rank, previous: ChunkedArrayAny) -> ChunkedArrayAny:
         return fn.rank(previous, f.options)
 
-    def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str) -> Self:
+    def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str, /) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.cumulative(native, node.function), name)
 
-    def unique(self, node: FExpr[F.Unique], frame: Frame, name: str) -> Self:
+    def unique(self, node: FExpr[F.Unique], frame: Frame, name: str, /) -> Self:
         return self.from_series(self._dispatch_expr(node.input[0], frame, name).unique())
 
-    def gather_every(self, node: FExpr[F.GatherEvery], frame: Frame, name: str) -> Self:
+    def gather_every(
+        self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
+    ) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)
         n, offset = node.function.n, node.function.offset
         return self.from_series(series.gather_every(n=n, offset=offset))
 
-    def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str) -> Self:
+    def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str, /) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)
         func = node.function
         n, replace, seed = func.n, func.with_replacement, func.seed
         result = series.sample_n(n, with_replacement=replace, seed=seed)
         return self.from_series(result)
 
-    def sample_frac(self, node: FExpr[F.SampleFrac], frame: Frame, name: str) -> Self:
+    def sample_frac(self, node: FExpr[F.SampleFrac], frame: Frame, name: str, /) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)
         func = node.function
         fraction, replace, seed = func.fraction, func.with_replacement, func.seed
         result = series.sample_frac(fraction, with_replacement=replace, seed=seed)
         return self.from_series(result)
 
-    def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str) -> Self:
+    def drop_nulls(self, node: FExpr[F.DropNulls], frame: Frame, name: str, /) -> Self:
         series = self._dispatch_expr(node.input[0], frame, name)
         return self.from_series(series.drop_nulls())
 
-    def mode_any(self, node: FExpr[F.ModeAny], frame: Frame, name: str) -> Scalar:
+    def mode_any(self, node: FExpr[F.ModeAny], frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.input[0], frame, name).native
         return self._with_native(fn.mode_any(native), name)
 
     def fill_null_with_strategy(
-        self, node: FExpr[F.FillNullWithStrategy], frame: Frame, name: str
+        self, node: FExpr[F.FillNullWithStrategy], frame: Frame, name: str, /
     ) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
         strategy, limit = node.function.strategy, node.function.limit
@@ -736,7 +738,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         F.RollingStd: Series.rolling_std,
     }
 
-    def _rolling(self, node: FExpr[F.RollingWindow], frame: Frame, name: str) -> Self:
+    def _rolling(self, node: FExpr[F.RollingWindow], frame: Frame, name: str, /) -> Self:
         s = self._dispatch_expr(node.input[0], frame, name)
         f = node.function
         return self.from_series(self._ROLLING[type(f)](s, **(f.options.to_dict())))
@@ -754,7 +756,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
             series = ns._dataframe.from_dict(data, version=ns.version).to_struct(name)
         return self.from_series(series)
 
-    def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str) -> Self:
+    def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str, /) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
         func = node.function
         bins = func.bins
@@ -768,7 +770,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         return self._hist_finish(data, name)
 
     def hist_bin_count(
-        self, node: FExpr[F.HistBinCount], frame: Frame, name: str
+        self, node: FExpr[F.HistBinCount], frame: Frame, name: str, /
     ) -> Self:
         native = self._dispatch_expr(node.input[0], frame, name).native
         func = node.function
@@ -899,7 +901,7 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
             chunked = fn.chunked_array(fn.repeat_unchecked(scalar, length))
         return Series.from_native(chunked, self.name, version=self.version)
 
-    def count(self, node: Count, frame: Frame, name: str) -> Scalar:
+    def count(self, node: Count, frame: Frame, name: str, /) -> Scalar:
         native = node.expr.dispatch(self, frame, name).native
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
 
@@ -977,7 +979,9 @@ class ArrowAccessor(Generic[ExprOrScalarT_co]):
 class ArrowCatNamespace(
     ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT_co]
 ):
-    def get_categories(self, node: FExpr[GetCategories], frame: Frame, name: str) -> Expr:
+    def get_categories(
+        self, node: FExpr[GetCategories], frame: Frame, name: str, /
+    ) -> Expr:
         native = node.input[0].dispatch(self.compliant, frame, name).native
         return ArrowExpr.from_native(fn.cat.get_categories(native), name, frame.version)
 
@@ -996,7 +1000,7 @@ class ArrowListNamespace(
         return fn.list.join_scalar(previous, f.separator, ignore_nulls=f.ignore_nulls)
 
     def contains(
-        self, node: FExpr[lists.Contains], frame: Frame, name: str
+        self, node: FExpr[lists.Contains], frame: Frame, name: str, /
     ) -> Expr | Scalar:
         expr, other = node.input
         prev = expr.dispatch(self.compliant, frame, name)
@@ -1007,7 +1011,7 @@ class ArrowListNamespace(
         return self.with_native(fn.list.contains(prev.native, item.native), name)
 
     def aggregate(
-        self, node: FExpr[lists.Aggregation], frame: Frame, name: str
+        self, node: FExpr[lists.Aggregation], frame: Frame, name: str, /
     ) -> Expr | Scalar:
         previous = node.input[0].dispatch(self.compliant, frame, name)
         agg = group_by.AggSpec._from_list_agg(node.function, "values")
@@ -1056,7 +1060,7 @@ class ArrowStringNamespace(
         return fn.str.ends_with(previous, f.suffix)
 
     def replace(
-        self, node: FExpr[strings.Replace], frame: Frame, name: str
+        self, node: FExpr[strings.Replace], frame: Frame, name: str, /
     ) -> Expr | Scalar:
         func = node.function
         pattern, literal, n = (func.pattern, func.literal, func.n)
@@ -1078,7 +1082,7 @@ class ArrowStringNamespace(
         return self.with_native(result, name)
 
     def replace_all(
-        self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str
+        self, node: FExpr[strings.ReplaceAll], frame: Frame, name: str, /
     ) -> Expr | Scalar:
         rewrite: FExpr[Any] = common.replace(
             node, function=node.function.to_replace_n(-1)
