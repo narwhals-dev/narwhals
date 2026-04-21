@@ -9,16 +9,16 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame
 
 
-__all__ = ("Data", "EagerFrameConstructor", "FrameConstructor", "LazyFrameConstructor")
+__all__ = ("Data", "DataFrameConstructor", "FrameConstructor", "LazyFrameConstructor")
 
 FrameConstructor: TypeAlias = "frame_constructor[IntoFrame]"
+"""Type alias for a constructor that returns a native eager or lazy frame."""
 
-EagerFrameConstructor: TypeAlias = "frame_constructor[IntoDataFrame]"
+DataFrameConstructor: TypeAlias = "frame_constructor[IntoDataFrame]"
 """Type alias for a constructor that returns an eager native dataframe."""
 
 LazyFrameConstructor: TypeAlias = "frame_constructor[IntoLazyFrame]"
 """Type alias for a constructor that returns a lazy native frame."""
-
 
 Data: TypeAlias = dict[str, Any]  # TODO(Unassined): This should have a better annotation
 """A column-oriented mapping used as input to a frame constructor."""

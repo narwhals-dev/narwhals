@@ -44,9 +44,13 @@ def _default_constructor_ids() -> list[str]:
     """
     if env := os.environ.get("NARWHALS_DEFAULT_CONSTRUCTORS"):  # pragma: no cover
         return env.split(",")
-    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, prepare_constructors
+    from narwhals.testing.constructors import DEFAULT_CONSTRUCTORS, frame_constructor
 
-    return [c.name for c in prepare_constructors(include=DEFAULT_CONSTRUCTORS)]
+    return [
+        name
+        for name, constructor in frame_constructor._registry.items()
+        if constructor.is_available and name in DEFAULT_CONSTRUCTORS
+    ]
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
