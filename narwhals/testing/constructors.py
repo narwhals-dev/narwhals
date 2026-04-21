@@ -75,7 +75,7 @@ __all__ = (
     "sqlframe_session",
 )
 
-T_co = TypeVar("T_co", covariant=True, bound="IntoFrame", default="IntoFrame")
+T_co = TypeVar("T_co", covariant=True, bound="IntoFrame")
 R = TypeVar("R", bound="IntoFrame")
 
 
