@@ -1,3 +1,5 @@
+# TODO @dangotbanned: Make use of module doc for impl details
+
 from __future__ import annotations
 
 # mypy: disable-error-code="misc"
@@ -5,7 +7,6 @@ from __future__ import annotations
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
 from typing import TYPE_CHECKING, Generic, overload
 
-from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import nodes
@@ -30,10 +31,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-renamed = DispatcherOptions.renamed
-
-
 # TODO @dangotbanned: How painful will a rename for `input` -> `args` be?
 # TODO @dangotbanned: Docs should complement `Function`
 # - The two are very tightly coupled
@@ -54,12 +51,14 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     - So what is a `FunctionExpr` then?
         - ...
     - What behaviors can we describe with this type?
+    - Most operations (by count) are represented using this guy or some flavor of it
     """
 
     __slots__ = ("function", "input")
     input: Seq[ExprIR] = nodes()
     function: FunctionT_co
 
+    # TODO @dangotbanned: (Docs) Maybe just duplicate `Function.__function_flags__`
     @property
     def flags(self) -> FunctionFlags:
         return self.function.__function_flags__
@@ -88,6 +87,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     def dispatch(self: Self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
+    # TODO @dangotbanned: Convert docs into a comment
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         """NOTE: Supported on many functions, but there are important gaps.
 
@@ -111,11 +111,12 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         for root in input_root.iter_expand(ctx):
             yield self.__replace__(input=(root, *children))
 
+    # TODO @dangotbanned: Either document this or remove it and update the `Parameters` doctests
     @property
     def parameters(self) -> Parameters:
-        # referenced in doctests
         return self.function.__function_parameters__
 
+    # TODO @dangotbanned: (Docs) see `ExprIR.dispatch`
     def dispatch_arg(
         self: FunctionExpr[UnaryFunction],
         ctx: Ctx[FrameT, R_co],
@@ -129,6 +130,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """
         return self.input[0].dispatch(ctx, frame, name)
 
+    # TODO @dangotbanned: (Docs) see `ExprIR.dispatch`
     @overload
     def dispatch_args(
         self: FunctionExpr[UnaryFunction],
@@ -161,22 +163,24 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
 
 
-class AnonymousExpr(FunctionExpr["MapBatches"], dispatch=renamed("map_batches")):
-    """https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/expr.rs#L158-L166."""
+class AnonymousExpr(FunctionExpr["MapBatches"]):
+    """A user-defined function expression.
+
+    Represents `map_batches`, but could later be adapted to support [`map_elements`].
+
+    [`map_elements`]: https://github.com/narwhals-dev/narwhals/issues/3512
+    """
 
     @property
     def flags(self) -> FunctionFlags:
+        # NOTE: Why another `FunctionExpr` subclass?
+        # - Every other `Function` has it's flags defined in `type[Function].__dict__`
+        # - `MapBatches` haccepts these hints from the caller and stores on the instance
+        #   so a common property at a higher level avoids a `__slots__` conflict
         return self.function.flags
 
-    def dispatch(self: Self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
-        return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
-        if dtype := self.function.return_dtype:
-            return dtype
-        return super().resolve_dtype(schema)
-
-
+# TODO @dangotbanned: (Docs) Add a note and point to `HorizontalFunction` explainer on expansion
 class HorizontalExpr(FunctionExpr[HorizontalT_co]):
     iter_expand = ExprIR.iter_expand
 
@@ -185,6 +189,9 @@ class RangeExpr(FunctionExpr[RangeT_co]):
     """E.g. `int_range(...)`."""
 
     def __repr__(self) -> str:
+        # TODO @dangotbanned: (very low-priority) `Function` could take a format string
+        # when subclassing instead of this
+        # `dt.timestamp` and `struct.field` have some weirdness too
         return f"{self.function!r}({list(self.input)!r})"
 
 

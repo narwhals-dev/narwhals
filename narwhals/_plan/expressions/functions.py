@@ -302,6 +302,13 @@ class MapBatches(UnaryFunction):
 
         return AnonymousExpr
 
+    def resolve_dtype(
+        self, node: FunctionExpr[Self], schema: FrozenSchema, /
+    ) -> DType:  # pragma: no cover
+        if dtype := self.return_dtype:
+            return dtype
+        return super().resolve_dtype(node, schema)
+
 
 class SampleN(_UnarySameDType):
     __slots__ = ("n", "seed", "with_replacement")
