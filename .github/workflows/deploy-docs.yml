@@ -32,7 +32,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - name: Install dependencies
-        run: uv pip install -e . --group docs
+        run: uv pip install -e ".[dask,ibis]" --group docs
       - name: Run hooks manually
         run: |
           python utils/generate_backend_completeness.py

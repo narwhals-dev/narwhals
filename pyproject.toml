@@ -90,15 +90,10 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
 docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
-  "duckdb",
-  "narwhals[sql]",
   "markdown-exec[ansi]",
   "mkdocs-autorefs",
   "mkdocstrings-python>=2.0.3",
-  "sqlframe",
-  "pandas",
-  "polars>=1.0.0",
-  "pyarrow",
+  "narwhals[duckdb,pandas,pyarrow,polars,sql,sqlframe]",
   "zensical>=0.0.28"
 ]
 dev = [
