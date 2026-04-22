@@ -13,8 +13,8 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
+    from narwhals.testing.typing import Data
     from narwhals.typing import IntoSchema, IntoSeriesT
-    from tests.conftest import Data
     from tests.utils import ConstructorEager
 
     SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
@@ -406,7 +406,7 @@ def test_categorical_as_str(
         "left": ["beluga", "dolphin", "narwhal", "orca"],
         "right": ["unicorn", "orca", "narwhal", "orca"],
     }
-    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    frame = constructor_eager(data, namespace=nw)
     left = frame["left"].cast(nw.Categorical())[2:]
     right = frame["right"].cast(nw.Categorical())[2:]
 

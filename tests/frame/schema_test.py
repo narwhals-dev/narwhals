@@ -9,7 +9,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
+from tests.utils import PANDAS_VERSION, POLARS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         IntoPandasSchema,
         IntoPolarsSchema,
     )
-    from tests.utils import Constructor, ConstructorEager
+    from tests.utils import Constructor, ConstructorEager, ConstructorPandasLike
 
     TimeUnit: TypeAlias = Literal["ns", "us"]
 
@@ -578,7 +578,7 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).dtypes.to_dict()
+    return constructor_pandas_like(data).to_native().dtypes.to_dict()
 
 
 @pytest.fixture

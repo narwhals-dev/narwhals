@@ -11,13 +11,11 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from narwhals.testing.constructors import get_backend_constructor
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.testing.constructors import EagerName
 
 rnd = Random(0)  # noqa: S311
 
@@ -49,14 +47,6 @@ param_include_breakpoint = pytest.mark.parametrize(
 param_name = pytest.mark.parametrize("name", ["pandas", "polars[eager]", "pyarrow"])
 
 
-def maybe_name_to_constructor(name: EagerName) -> ConstructorEager:
-    constructor = get_backend_constructor(name)
-    if constructor.is_available:
-        return constructor
-
-    pytest.skip()
-
-
 SHIFT_BINS_BY = 10
 """shift bins property"""
 
@@ -75,15 +65,13 @@ SHIFT_BINS_BY = 10
     ],
     ids=str,
 )
-@param_name
 def test_hist_bin(
-    name: EagerName,
+    constructor_eager: ConstructorEager,
     bins: list[float],
     expected: Sequence[float],
     *,
     include_breakpoint: bool,
 ) -> None:
-    constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
@@ -126,11 +114,12 @@ def test_hist_bin(
 
 @pytest.mark.parametrize("params", counts_and_expected)
 @param_include_breakpoint
-@param_name
 def test_hist_count(
-    name: EagerName, *, params: dict[str, Any], include_breakpoint: bool
+    constructor_eager: ConstructorEager,
+    *,
+    params: dict[str, Any],
+    include_breakpoint: bool,
 ) -> None:
-    constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager(data)).with_columns(
         float=nw.col("int").cast(nw.Float64)
     )
@@ -171,9 +160,7 @@ def test_hist_count(
             )
 
 
-@param_name
-def test_hist_count_no_spread(name: EagerName) -> None:
-    constructor_eager = maybe_name_to_constructor(name)
+def test_hist_count_no_spread(constructor_eager: ConstructorEager) -> None:
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
     df = nw.from_native(constructor_eager(data))
 
@@ -203,9 +190,9 @@ def test_hist_bin_and_bin_count() -> None:
 
 
 @param_include_breakpoint
-@param_name
-def test_hist_no_data(name: EagerName, *, include_breakpoint: bool) -> None:
-    constructor_eager = maybe_name_to_constructor(name)
+def test_hist_no_data(
+    constructor_eager: ConstructorEager, *, include_breakpoint: bool
+) -> None:
     s = nw.from_native(constructor_eager({"values": []})).select(
         nw.col("values").cast(nw.Float64)
     )["values"]
@@ -225,9 +212,7 @@ def test_hist_no_data(name: EagerName, *, include_breakpoint: bool) -> None:
     assert result["count"].sum() == 0
 
 
-@param_name
-def test_hist_small_bins(name: EagerName) -> None:
-    constructor_eager = maybe_name_to_constructor(name)
+def test_hist_small_bins(constructor_eager: ConstructorEager) -> None:
     s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
@@ -275,13 +260,11 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     POLARS_VERSION < (1, 27),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
-@param_name
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    name: EagerName, data: list[float], bin_deltas: list[float]
+    constructor_eager: ConstructorEager, data: list[float], bin_deltas: list[float]
 ) -> None:
-    constructor_eager = maybe_name_to_constructor(name)
     pytest.importorskip("polars")
     import polars as pl
 
@@ -317,15 +300,16 @@ def test_hist_bin_hypotheis(
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
-@param_name
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    name: EagerName, data: list[float], bin_count: int, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager,
+    data: list[float],
+    bin_count: int,
+    request: pytest.FixtureRequest,
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    constructor_eager = maybe_name_to_constructor(name)
     df = nw.from_native(constructor_eager({"values": data})).select(
         nw.col("values").cast(nw.Float64)
     )

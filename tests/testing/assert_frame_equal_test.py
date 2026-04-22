@@ -12,8 +12,8 @@ from narwhals.testing.asserts.frame import GUARANTEES_ROW_ORDER
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import Data
     from narwhals.typing import IntoSchema
-    from tests.conftest import Data
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -24,12 +24,12 @@ def _assertion_error(detail: str) -> pytest.RaisesExc:
 
 def test_check_narwhals_objects(constructor: Constructor) -> None:
     """Test that a type error is raised if the input is not a Narwhals object."""
-    frame = constructor({"a": [1, 2, 3]})
+    frame = constructor({"a": [1, 2, 3]}).to_native()
     msg = re.escape(
         "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found"
     )
     with pytest.raises(TypeError, match=msg):
-        assert_frame_equal(frame, frame)  # type: ignore[arg-type]
+        assert_frame_equal(frame, frame)
 
 
 def test_implementation_mismatch() -> None:

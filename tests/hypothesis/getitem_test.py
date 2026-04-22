@@ -158,7 +158,7 @@ def test_getitem(
         # rows/columns sides.
         return
 
-    df_other = nw.from_native(pandas_or_pyarrow_constructor(TEST_DATA))
+    df_other = pandas_or_pyarrow_constructor(TEST_DATA, nw)
     result_other = df_other[cast("Any", selector)]
 
     if isinstance(result_polars, nw.Series):
