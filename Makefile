@@ -35,7 +35,7 @@ docs-serve:  # Build and serve the docs locally
 	$(VENV_BIN)/uv pip install \
 		--upgrade \
 		--editable test-plugin/. \
-		--editable . \
+		--editable ".[dask, ibis]" \
 		--group docs
 	$(VENV_BIN)/uv run --no-sync utils/generate_backend_completeness.py
 	$(VENV_BIN)/uv run --no-sync utils/generate_zen_content.py

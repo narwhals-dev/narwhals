@@ -93,7 +93,7 @@ docs = [
   "markdown-exec[ansi]",
   "mkdocs-autorefs",
   "mkdocstrings-python>=2.0.3",
-  "narwhals[dask,duckdb,ibis,pandas,pyarrow,polars,sql,sqlframe]",
+  "narwhals[duckdb,pandas,pyarrow,polars,sql,sqlframe]",
   "zensical>=0.0.28"
 ]
 dev = [
