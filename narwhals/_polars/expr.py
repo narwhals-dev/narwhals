@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
 
 import polars as pl
 
@@ -41,7 +41,6 @@ class PolarsExpr:
     _evaluate_output_names: Any
     _alias_output_names: Any
     __call__: Any
-    _opt_metadata: ExprMetadata | None
 
     @classmethod
     def _from_series(cls, series: PolarsSeries) -> Self:
@@ -90,7 +89,7 @@ class PolarsExpr:
     @property
     def _metadata(self) -> ExprMetadata:
         assert self._opt_metadata is not None  # noqa: S101
-        return self._opt_metadata
+        return cast("ExprMetadata", self._opt_metadata)
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -348,7 +347,6 @@ class PolarsExpr:
     arg_min: Method[Self]
     arg_true: Method[Self]
     ceil: Method[Self]
-    clip: Method[Self]
     count: Method[Self]
     cos: Method[Self]
     cum_max: Method[Self]

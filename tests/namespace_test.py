@@ -91,7 +91,8 @@ def test_namespace_from_backend_typing(backend: _EagerAllowed) -> None:
     if TYPE_CHECKING:
         assert_type(
             namespace,
-            "Namespace[PolarsNamespace] | Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace]",
+            # pyrefly: `PolarsNamespace` is not assignable to upper bound `CompliantNamespace` of type variable `CompliantNamespaceT_co`
+            "Namespace[PolarsNamespace] | Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace]",  # pyrefly: ignore[bad-specialization]
         )
     assert repr(namespace) in {
         "Namespace[PolarsNamespace]",
@@ -227,6 +228,7 @@ def test_namespace_is_native() -> None:
             assert_type(native_2, "Never")
 
         always_item = always_native[1]
+        # pyrefly: `always_item` is `Unknown`
         assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
         if ns.is_native(always_item):
             assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
@@ -235,6 +237,6 @@ def test_namespace_is_native() -> None:
             elif ns._series._is_native(always_item):
                 assert_type(always_item, "pl.Series")
             else:
-                assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
+                assert_type(always_item, "Never")  # pyrefly: ignore[assert-type] (todo)
         else:
-            assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
+            assert_type(always_item, "Never")  # pyrefly: ignore[assert-type] (todo)

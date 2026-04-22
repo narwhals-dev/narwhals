@@ -256,9 +256,9 @@ if TYPE_CHECKING:
 
         # [True Negative]
         any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
         any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
 
         assert_type(df_impl, _ModinImpl)
         assert_type(ser_impl, _ModinImpl)

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
 
 import polars as pl
 
+from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
     FROM_DICTS_ACCEPTS_MAPPINGS,
@@ -43,7 +44,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.group_by import PolarsGroupBy, PolarsLazyGroupBy
-    from narwhals._polars.namespace import PolarsNamespace
     from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
@@ -153,8 +153,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self.native.columns
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        from narwhals._polars.namespace import PolarsNamespace
-
         return PolarsNamespace(version=self._version)
 
     def __native_namespace__(self) -> ModuleType:

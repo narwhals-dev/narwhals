@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
-from narwhals._compliant.namespace import CompliantNamespace
-from narwhals._polars.dataframe import PolarsDataFrame
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
@@ -21,13 +19,13 @@ if TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._compliant import CompliantSelectorNamespace
-    from narwhals._polars.dataframe import Method, PolarsLazyFrame
+    from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
-class PolarsNamespace(CompliantNamespace[PolarsDataFrame, PolarsExpr]):
+class PolarsNamespace:
     all: Method[PolarsExpr]
     coalesce: Method[PolarsExpr]
     col: Method[PolarsExpr]
@@ -132,8 +130,7 @@ class PolarsNamespace(CompliantNamespace[PolarsDataFrame, PolarsExpr]):
         it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
 
-    # Type "PolarsDataFrame | PolarsLazyFrame" is not assignable to type "PolarsDataFrame"
-    def concat(  # type: ignore[override]
+    def concat(
         self,
         items: Iterable[FrameT],
         *,
