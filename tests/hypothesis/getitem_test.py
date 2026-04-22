@@ -7,7 +7,7 @@ import pytest
 from hypothesis import assume, given
 
 import narwhals as nw
-from narwhals.testing.constructors import get_constructor
+from narwhals.testing.constructors import get_backend_constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -21,7 +21,8 @@ import polars as pl
 
 
 @pytest.fixture(
-    params=[get_constructor("pandas"), get_constructor("pyarrow")], scope="module"
+    params=[get_backend_constructor("pandas"), get_backend_constructor("pyarrow")],
+    scope="module",
 )
 def pandas_or_pyarrow_constructor(request: pytest.FixtureRequest) -> DataFrameConstructor:
     return request.param  # type: ignore[no-any-return]

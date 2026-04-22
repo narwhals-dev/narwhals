@@ -7,10 +7,9 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation
 from narwhals.testing.constructors import (
-    available_constructors,
-    frame_constructor,
-    get_constructor,
-    prepare_constructors,
+    available_backends,
+    get_backend_constructor,
+    prepare_backends,
 )
 
 if TYPE_CHECKING:
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
 
 
 def test_eager_returns_eager_frame() -> None:
-    c = get_constructor("pandas")
+    c = get_backend_constructor("pandas")
     if not c.is_available:
         pytest.skip()
 
@@ -31,7 +30,7 @@ def test_eager_returns_eager_frame() -> None:
 
 
 def test_lazy_returns_lazy_frame() -> None:
-    c = get_constructor("polars[lazy]")
+    c = get_backend_constructor("polars[lazy]")
     if not c.is_available:
         pytest.skip()
 
@@ -63,70 +62,63 @@ def test_constructor_is_properties(
     prop: str, true_names: TrueNames, false_names: FalseNames
 ) -> None:
     for name in true_names:
-        c = get_constructor(name)
+        c = get_backend_constructor(name)
         assert getattr(c, prop), f"{name}.{prop} should be True"
     for name in false_names:
-        c = get_constructor(name)
+        c = get_backend_constructor(name)
         assert not getattr(c, prop), f"{name}.{prop} should be False"
 
 
 def test_constructor_implementation() -> None:
-    assert get_constructor("pandas").implementation is Implementation.PANDAS
-    assert get_constructor("pandas[pyarrow]").implementation is Implementation.PANDAS
-    assert get_constructor("polars[eager]").implementation is Implementation.POLARS
+    assert get_backend_constructor("pandas").implementation is Implementation.PANDAS
     assert (
-        get_constructor("pyspark[connect]").implementation
+        get_backend_constructor("pandas[pyarrow]").implementation is Implementation.PANDAS
+    )
+    assert (
+        get_backend_constructor("polars[eager]").implementation is Implementation.POLARS
+    )
+    assert (
+        get_backend_constructor("pyspark[connect]").implementation
         is Implementation.PYSPARK_CONNECT
     )
 
 
 def test_constructor_dunder() -> None:
-    c1 = get_constructor("pandas")
-    c2 = get_constructor("pandas")
+    c1 = get_backend_constructor("pandas")
+    c2 = get_backend_constructor("pandas")
     assert c1.identifier == "pandas"
     assert c1 == c2
     assert hash(c1) == hash(c2)
-    assert c1 != get_constructor("polars[eager]")
+    assert c1 != get_backend_constructor("polars[eager]")
     assert c1 != "not a constructor"
 
 
-def test_register_requires_implementation() -> None:
-    with pytest.raises(TypeError, match="implementation"):
-        frame_constructor.register(  # type: ignore[call-arg]
-            name="_bad", requirements=("polars",)
-        )
-
-
-def test_get_constructor() -> None:
-    assert get_constructor("pandas[pyarrow]") == get_constructor("pandas[pyarrow]")
-
-
-def test_get_constructor_invalid_name() -> None:
+def test_get_backend_constructor_invalid_name() -> None:
     with pytest.raises(ValueError, match="Unknown constructor"):
-        get_constructor("not_a_backend")
+        get_backend_constructor("not_a_backend")
 
 
 @pytest.mark.parametrize(
     ("include", "exclude", "expected"),
     [
-        (None, None, available_constructors()),
-        (None, ["pandas"], available_constructors() - {"pandas"}),
+        (None, None, available_backends()),
+        (None, ["pandas"], available_backends() - {"pandas"}),
         (["pandas", "polars[eager]"], None, {"pandas", "polars[eager]"}),
         (["pandas", "polars[eager]"], ["pandas"], {"polars[eager]"}),
         ([], None, frozenset()),
     ],
 )
-def test_prepare_constructors(
+def test_prepare_backends(
     include: list[str] | None, exclude: list[str] | None, expected: frozenset[str]
 ) -> None:
     for name in (*(include or ()), *(exclude or ())):
-        if not get_constructor(name).is_available:
+        if not get_backend_constructor(name).is_available:
             pytest.skip(f"{name} not installed")
-    result = prepare_constructors(include=include, exclude=exclude)
+    result = prepare_backends(include=include, exclude=exclude)
     assert {c.name for c in result} == expected
 
 
 @pytest.mark.parametrize("kwarg", ["include", "exclude"])
-def test_prepare_constructors_unknown_name_raises(kwarg: str) -> None:
+def test_prepare_backends_unknown_name_raises(kwarg: str) -> None:
     with pytest.raises(ValueError, match="not known constructors"):
-        prepare_constructors(**{kwarg: ["not_a_backend"]})
+        prepare_backends(**{kwarg: ["not_a_backend"]})

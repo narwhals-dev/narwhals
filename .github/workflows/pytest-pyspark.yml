@@ -42,7 +42,7 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors pyspark
+          coverage run -m pytest tests --runslow --nw-backends pyspark
           coverage combine
           coverage report --fail-under=95 --include "narwhals/_spark_like/*"
 
@@ -71,7 +71,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors pyspark
+        run: pytest tests --nw-backends pyspark
 
   pytest-pyspark-connect-constructor:
     strategy:
@@ -138,7 +138,7 @@ jobs:
 
       - name: Run pytest
         run: |
-          coverage run -m pytest tests --runslow --constructors "pyspark[connect]"
+          coverage run -m pytest tests --runslow --nw-backends "pyspark[connect]"
           coverage combine
           coverage report --fail-under=95 --include="narwhals/_spark_like/*"
 

@@ -65,12 +65,12 @@ if TYPE_CHECKING:
 
 
 __all__ = (
-    "available_constructors",
-    "available_cpu_constructors",
+    "available_backends",
+    "available_cpu_backends",
     "frame_constructor",
-    "get_constructor",
+    "get_backend_constructor",
     "is_backend_available",
-    "prepare_constructors",
+    "prepare_backends",
     "pyspark_session",
     "sqlframe_session",
 )
@@ -464,7 +464,7 @@ def ibis_lazy_constructor(obj: Data, /, **kwds: Any) -> ibis.Table:  # pragma: n
     return _ibis_backend().create_table(table_name, table, **kwds)
 
 
-DEFAULT_CONSTRUCTORS: frozenset[str] = frozenset(
+DEFAULT_BACKENDS: frozenset[str] = frozenset(
     {
         "pandas",
         "pandas[pyarrow]",
@@ -475,17 +475,17 @@ DEFAULT_CONSTRUCTORS: frozenset[str] = frozenset(
         "ibis",
     }
 )
-"""Subset of constructors enabled by default for parametrised tests when the
-user does not pass `--constructors` (mirrors the historical Narwhals defaults).
+"""Subset of backends enabled by default for parametrised tests when the
+user does not pass `--nw-backends` (mirrors the historical Narwhals defaults).
 """
 
 
-def available_constructors() -> frozenset[str]:
+def available_backends() -> frozenset[str]:
     """Return the names of every constructor whose backend is importable.
 
     Examples:
-        >>> from narwhals.testing.constructors import available_constructors
-        >>> "pandas" in available_constructors()
+        >>> from narwhals.testing.constructors import available_backends
+        >>> "pandas" in available_backends()
         True
     """
     return frozenset(
@@ -493,12 +493,12 @@ def available_constructors() -> frozenset[str]:
     )
 
 
-def available_cpu_constructors() -> frozenset[str]:  # pragma: no cover
+def available_cpu_backends() -> frozenset[str]:  # pragma: no cover
     """Return the names of every CPU constructor whose backend is importable.
 
     Examples:
-        >>> from narwhals.testing.constructors import available_cpu_constructors
-        >>> "pandas" in available_cpu_constructors()
+        >>> from narwhals.testing.constructors import available_cpu_backends
+        >>> "pandas" in available_cpu_backends()
         True
     """
     return frozenset(
@@ -524,14 +524,14 @@ LazyName: TypeAlias = Literal[
 
 
 @overload
-def get_constructor(name: EagerName) -> frame_constructor[IntoDataFrame]: ...
+def get_backend_constructor(name: EagerName) -> frame_constructor[IntoDataFrame]: ...
 @overload
-def get_constructor(name: LazyName) -> frame_constructor[IntoLazyFrame]: ...
+def get_backend_constructor(name: LazyName) -> frame_constructor[IntoLazyFrame]: ...
 @overload
-def get_constructor(name: str) -> frame_constructor[IntoFrame]: ...
+def get_backend_constructor(name: str) -> frame_constructor[IntoFrame]: ...
 
 
-def get_constructor(name: str) -> frame_constructor[IntoFrame]:
+def get_backend_constructor(name: str) -> frame_constructor[IntoFrame]:
     """Return the registered constructor for `name`.
 
     Arguments:
@@ -542,8 +542,8 @@ def get_constructor(name: str) -> frame_constructor[IntoFrame]:
         ValueError: If `name` is not a registered constructor identifier.
 
     Examples:
-        >>> from narwhals.testing.constructors import get_constructor
-        >>> get_constructor("pandas")
+        >>> from narwhals.testing.constructors import get_backend_constructor
+        >>> get_backend_constructor("pandas")
         frame_constructor(name='pandas')
     """
     try:
@@ -554,7 +554,7 @@ def get_constructor(name: str) -> frame_constructor[IntoFrame]:
         raise ValueError(msg) from exc
 
 
-def prepare_constructors(
+def prepare_backends(
     *, include: Iterable[str] | None = None, exclude: Iterable[str] | None = None
 ) -> list[frame_constructor[IntoFrame]]:
     """Return available constructors, optionally filtered.
@@ -563,14 +563,14 @@ def prepare_constructors(
         `exclude` is given precedence in the selection.
 
     Arguments:
-        include: If given, only return constructors whose name is in this set.
-        exclude: If given, remove constructors whose name is in this set.
+        include: If given, only return backends whose name is in this set.
+        exclude: If given, remove backends whose name is in this set.
 
     Examples:
-        >>> from narwhals.testing.constructors import prepare_constructors
-        >>> constructors = prepare_constructors(include=["pandas", "polars[eager]"])
+        >>> from narwhals.testing.constructors import prepare_backends
+        >>> backends = prepare_backends(include=["pandas", "polars[eager]"])
     """
-    available = available_constructors()
+    available = available_backends()
     candidates: list[frame_constructor[Any]] = [
         c for name, c in frame_constructor._registry.items() if name in available
     ]

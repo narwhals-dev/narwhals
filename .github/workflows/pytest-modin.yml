@@ -35,4 +35,4 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors modin[pyarrow]
+        run: pytest tests --nw-backends modin[pyarrow]
