@@ -4,14 +4,13 @@ from collections.abc import Iterable, Sized
 from typing import TYPE_CHECKING, Protocol
 
 from narwhals._plan.compliant.typing import (
-    FrameT_contra,
-    HasVersion,
+    ExprAny,
+    ExprT,
+    FrameAny,
     LengthT,
-    NamespaceT_co,
-    R_co,
+    ScalarAny,
     SeriesT,
 )
-from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -105,42 +104,3 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         return max_length if required else default
 
 
-class ExprDispatch(HasVersion, Protocol[FrameT_contra, R_co, NamespaceT_co]):
-    # NOTE: Needs to stay `covariant` and never be used as a parameter
-    def __narwhals_namespace__(self) -> NamespaceT_co: ...
-    @classmethod
-    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str, /) -> R_co:
-        obj = cls.__new__(cls)
-        obj._version = frame.version
-        return node.dispatch(obj, frame, name)
-
-    @classmethod
-    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra, /) -> R_co:
-        return cls.from_ir(named_ir.expr, frame, named_ir.name)
-
-
-class SelfDispatch(Protocol[FrameT_contra, NamespaceT_co]):
-    """WIP: Fixing the unknown `R_co` complication.
-
-    Eventually will either replace `ExprDispatch` or be folded into `CompliantExpr`.
-    """
-
-    def __narwhals_namespace__(self) -> NamespaceT_co: ...
-
-    # NOTE: Want to lose this ASAP
-    _version: Version
-
-    @property
-    def version(self) -> Version:
-        return self._version
-
-    @classmethod
-    def from_ir(cls, node: ir.ExprIR, frame: FrameT_contra, name: str) -> Self:
-        obj = cls.__new__(cls)
-        obj._version = frame.version
-        # NOTE: The typing in `ExprIR.dispatch` (+ friends) will need updating if this path is right
-        return node.dispatch(obj, frame, name)  # type: ignore[return-value]
-
-    @classmethod
-    def from_named_ir(cls, named_ir: ir.NamedIR, frame: FrameT_contra, /) -> Self:
-        return cls.from_ir(named_ir.expr, frame, named_ir.name)

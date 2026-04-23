@@ -56,18 +56,19 @@ MAIN = Version.MAIN
 class ArrowDataFrame(
     FrameSeries["pa.Table"], EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]
 ):
+    _version = Version.MAIN
+
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
 
     @classmethod
-    def from_native(cls, native: pa.Table, /, version: Version) -> Self:
+    def from_native(cls, native: pa.Table, /, version: Version = Version.MAIN) -> Self:  # noqa: ARG003
         obj = cls.__new__(cls)
         obj._native = native
-        obj._version = version
         return obj
 
     def _with_native(self, native: pa.Table) -> Self:
-        return self.from_native(native, self.version)
+        return self.from_native(native)
 
     @property
     def _group_by(self) -> type[GroupBy]:
@@ -104,7 +105,7 @@ class ArrowDataFrame(
         return self.native.num_rows
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, version: Version = MAIN) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /, version: Version = MAIN) -> Self:  # noqa: ARG003
         if isinstance(data, pa.Table):
             native = data
         elif compat.BACKEND_VERSION >= (14,) or isinstance(data, Collection):
@@ -115,20 +116,20 @@ class ArrowDataFrame(
         else:  # pragma: no cover
             msg = f"`from_arrow` is not supported for object of type {type(data).__name__!r}."
             raise TypeError(msg)
-        return cls.from_native(native, version)
+        return cls.from_native(native)
 
     @classmethod
-    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self:
-        return cls.from_native(pa.Table.from_pandas(frame), version)
+    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self:  # noqa: ARG003
+        return cls.from_native(pa.Table.from_pandas(frame))
 
     @classmethod
     def from_compliant(
         cls,
         frame: pl.DataFrame | NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any],
         /,
-        version: Version = MAIN,
+        version: Version = MAIN,  # noqa: ARG003
     ) -> Self:
-        return cls.from_native(frame.to_arrow(), version)
+        return cls.from_native(frame.to_arrow())
 
     from_polars = from_narwhals = from_compliant
 
@@ -151,8 +152,9 @@ class ArrowDataFrame(
         return zip(self.native.column_names, self.native.itercolumns())
 
     def iter_columns(self) -> Iterator[Series]:
+        series_ = namespace(self)._series
         for name, series in self._iter_columns():
-            yield Series.from_native(series, name, version=self.version)
+            yield series_.from_native(series, name)
 
     def to_series(self, index: int = 0) -> Series:
         return self.get_column(self.columns[index])
@@ -172,8 +174,9 @@ class ArrowDataFrame(
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR], /, *, length: int | None = None
     ) -> Iterator[Series]:
-        expr = namespace(self)._expr
-        from_named_ir = expr.from_named_ir
+        ns = namespace(self)
+        expr = ns._expr
+        from_named_ir = ns.from_named_ir
         yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
 
     def select(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
@@ -289,7 +292,7 @@ class ArrowDataFrame(
                 struct = fn.chunked_array([], pa.struct(native.schema))
         else:
             struct = fn.struct.into_struct(native.columns, native.column_names)
-        return Series.from_native(struct, name, version=self.version)
+        return namespace(self)._series.from_native(struct, name, version=self.version)
 
     def unnest(self, columns: Sequence[str]) -> Self:
         if len(columns) == 1:
@@ -320,7 +323,7 @@ class ArrowDataFrame(
 
     def get_column(self, name: str) -> Series:
         chunked = self.native.column(name)
-        return Series.from_native(chunked, name, version=self.version)
+        return namespace(self)._series.from_native(chunked, name, version=self.version)
 
     def drop(self, columns: Sequence[str]) -> Self:
         return self._with_native(self.native.drop(list(columns)))
@@ -427,7 +430,7 @@ class ArrowDataFrame(
 
     def filter(self, predicate: NamedIR) -> Self:
         mask: pc.Expression | ChunkedArrayAny
-        resolved = Expr.from_named_ir(predicate, self)
+        resolved = predicate.dispatch(namespace(self), self)
         if isinstance(resolved, Expr):
             mask = resolved.broadcast(len(self)).native
         else:

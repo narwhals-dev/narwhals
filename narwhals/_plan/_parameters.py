@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.compliant.typing import Ctx, FrameT_contra as Frame, R_co
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr as FExpr
     from narwhals._plan.typing import Seq
 
@@ -114,8 +114,12 @@ class Parameters(metaclass=SlottedMeta):
         return exprs
 
     def dispatch_args(
-        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
-    ) -> Seq[R_co]:
+        self,
+        node: FExpr,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> Seq[ct.ET_co | ct.ST_co]:
         """Call `ExprIR.dispatch` on **all inputs** to `node`.
 
         `name` is used for the first input.
@@ -162,8 +166,12 @@ class Unary(Parameters, arity=1):
         self._constraints: tuple[Constraint] = (arg,)
 
     def dispatch_args(
-        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
-    ) -> tuple[R_co]:  # pragma: no cover
+        self,
+        node: FExpr,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> tuple[ct.ET_co | ct.ST_co]:  # pragma: no cover
         return (node.input[0].dispatch(ctx, frame, name),)
 
 
@@ -187,8 +195,12 @@ class Binary(Parameters, arity=2):
         self._constraints: tuple[Constraint, Constraint] = left, right
 
     def dispatch_args(
-        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
-    ) -> tuple[R_co, R_co]:
+        self,
+        node: FExpr,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]:
         left, right = node.input
         return (left.dispatch(ctx, frame, name), right.dispatch(ctx, frame, ""))
 
@@ -213,8 +225,12 @@ class Ternary(Parameters, arity=3):
         self._constraints: tuple[Constraint, Constraint, Constraint] = arg_1, arg_2, arg_3
 
     def dispatch_args(
-        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
-    ) -> tuple[R_co, R_co, R_co]:
+        self,
+        node: FExpr,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]:
         arg_1, arg_2, arg_3 = node.input
         return (
             arg_1.dispatch(ctx, frame, name),
@@ -246,8 +262,12 @@ class Variadic(Parameters, arity="*"):
     # TODO @dangotbanned: Revisit later for coverage
     # `ArrowNamespace._horizontal` is handling the `ArrowExpr.from_ir` part, so this is more complicated
     def dispatch_args(
-        self, node: FExpr, ctx: Ctx[Frame, R_co], frame: Frame, name: str
-    ) -> tuple[R_co, ...]:  # pragma: no cover
+        self,
+        node: FExpr,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> tuple[ct.ET_co | ct.ST_co, ...]:  # pragma: no cover
         it = iter(node.input)
         return (
             next(it).dispatch(ctx, frame, name),

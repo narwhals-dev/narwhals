@@ -82,7 +82,7 @@ def explode_todo(
 class PolarsNamespace(
     FromIterable[pl.Series],
     FromDict[pl.DataFrame, pl.Series],
-    CompliantNamespace[Incomplete, "Expr", Incomplete],
+    CompliantNamespace[Incomplete, "Expr", "Expr"],
 ):
     __slots__ = ("_version",)
     _version: Version
@@ -114,12 +114,15 @@ class PolarsNamespace(
         return PolarsExpr
 
     @property
+    def _scalar(self) -> type[Expr]:
+        return self._expr
+
+    @property
     def _series(self) -> type[Series]:
         from narwhals._plan.polars.series import PolarsSeries
 
         return PolarsSeries
 
-    _scalar = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     _frame = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
     def from_dict(

@@ -25,7 +25,7 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
     _version: Version
 
     def _with_native(self, native: pl.Expr, name: str = "", /) -> Self:
-        return self.from_native(native, name, self.version)
+        return self.from_native(native, name)
 
     # NOTE: Unsure how much of `name` might be needed for polars
     @classmethod
@@ -58,7 +58,7 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
     # NOTE: `ExprDispatch` isn't part of the `Compliant*` protocols,
     # but is required for `ExprIR.dispatch`
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace(self.version)
+        return PolarsNamespace()
 
     @classmethod
     def from_ir(cls, node: ir.ExprIR, frame: Incomplete, name: str) -> PolarsExpr:

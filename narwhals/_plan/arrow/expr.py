@@ -28,7 +28,6 @@ from narwhals._plan.compliant.accessors import (
     ExprStringNamespace,
     ExprStructNamespace,
 )
-from narwhals._plan.compliant.column import SelfDispatch
 from narwhals._plan.compliant.expr import EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.exceptions import shape_error
@@ -184,7 +183,7 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
 
         def _wrapper(self: S2, node: FExpr[U2], frame: Frame, name: str) -> S2:
             previous = node.dispatch_arg(self, frame, name).native
-            return self._with_native(fn_partial(self, node.function, previous), name)
+            return self._with_native(fn_partial(self, node.function, previous), name)  # pyright: ignore[reportArgumentType]
 
         return unary(_wrapper)
 
@@ -224,10 +223,13 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
 AS1 = TypeVar("AS1", bound=_AccessorSelf)
 AS2 = TypeVar("AS2", bound=_AccessorSelf)
 
+_ExprOrScalar: TypeAlias = "Expr | Scalar"
+"""Forward ref safety for `unary_accessor`."""
+
 
 @final
 class unary_accessor(  # noqa: N801
-    _BaseWrapper[FunctionImplMethod[AS1, U1, Expr | Scalar]], Generic[AS1, U1]
+    _BaseWrapper[FunctionImplMethod[AS1, U1, _ExprOrScalar]], Generic[AS1, U1]
 ):
     """`ArrowAccessor` equivalent of `unary`.
 
@@ -295,9 +297,7 @@ class unary_accessor(  # noqa: N801
         return unary_accessor(_wrapper)
 
 
-class _ArrowDispatch(
-    SelfDispatch["Frame", Namespace], EagerExpr["Frame", Series], Protocol[Native_co]
-):
+class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
     @property
@@ -308,7 +308,7 @@ class _ArrowDispatch(
         raise NotImplementedError
 
     def __narwhals_namespace__(self) -> Namespace:
-        return Namespace(self.version)
+        return Namespace()
 
     def cast(self, node: ir.Cast, frame: Frame, name: str, /) -> Self:
         data_type = fn.dtype_native(node.dtype, frame.version)
@@ -379,7 +379,7 @@ class _ArrowDispatch(
 
     @unary.partial
     def replace_strict(self, f: F.ReplaceStrict, previous: Native) -> Native:
-        dtype = fn.dtype_native(f.return_dtype, self.version)
+        dtype = fn.dtype_native(f.return_dtype, Version.MAIN)
         return fn.replace_strict(previous, f.old, f.new, dtype)
 
     def replace_strict_default(
@@ -406,7 +406,6 @@ class _ArrowDispatch(
     all: Callable[..., Scalar] = unary.no_args(fn.all)
 
 
-@final
 class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     _evaluated: Series
     _version: Version
@@ -436,8 +435,8 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     def _with_native(self, result: Native, name: str, /) -> Scalar | Self: ...
     def _with_native(self, result: Native, name: str, /) -> Scalar | Self:
         if isinstance(result, pa.Scalar):
-            return ArrowScalar.from_native(result, name, version=self.version)
-        return self.from_native(result, name, self.version)
+            return ArrowScalar.from_native(result, name)
+        return self.from_native(result, name)
 
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         """Use instead of `_dispatch` *iff* an operation is only supported on `ChunkedArray`.
@@ -676,7 +675,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
 
     def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str, /) -> Self:
         native = node.dispatch_arg(self, frame, name).native
-        return self._with_native(fn.cumulative(native, node.function), name)
+        return self._with_native(fn.cumulative(native, node.function), name)  # pyright: ignore[reportArgumentType]
 
     def gather_every(
         self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
@@ -799,7 +798,6 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     ewm_mean = not_implemented()
 
 
-@final
 class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
     _evaluated: NativeScalar
     _version: Version
@@ -866,7 +864,7 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
         raise InvalidOperationError(msg)
 
     def _with_native(self, native: Any, name: str, /) -> Self:
-        return self.from_native(native, name or self.name, self.version)
+        return self.from_native(native, name or self.name)
 
     @property
     def native(self) -> NativeScalar:
@@ -885,7 +883,7 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
             chunked = fn.chunked_array(scalar)
         else:
             chunked = fn.chunked_array(fn.repeat_unchecked(scalar, length))
-        return Series.from_native(chunked, self.name, version=self.version)
+        return Series.from_native(chunked, self.name)
 
     def count(self, node: Count, frame: Frame, name: str, /) -> Scalar:
         native = node.expr.dispatch(self, frame, name).native
@@ -952,11 +950,7 @@ class ArrowAccessor(Generic[ExprOrScalarT_co]):
         return self._compliant
 
     def __narwhals_namespace__(self) -> Namespace:
-        return Namespace(self.version)
-
-    @property
-    def version(self) -> Version:
-        return self.compliant.version
+        return Namespace()
 
     def with_native(self, native: Native, name: str, /) -> Expr | Scalar:
         return self.compliant._with_native(native, name)
@@ -965,7 +959,7 @@ class ArrowAccessor(Generic[ExprOrScalarT_co]):
 class ArrowCatNamespace(
     ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT_co]
 ):
-    get_categories = unary_accessor.no_args(fn.cat.get_categories)
+    get_categories = unary_accessor.no_args(fn.cat.get_categories)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 class ArrowListNamespace(
@@ -1018,8 +1012,8 @@ class ArrowListNamespace(
     first = aggregate
     last = aggregate
     n_unique = aggregate
-    len = unary_accessor.no_args(fn.list.len)
-    unique = unary_accessor.no_args(fn.list.unique)
+    len = unary_accessor.no_args(fn.list.len)  # pyright: ignore[reportGeneralTypeIssues]
+    unique = unary_accessor.no_args(fn.list.unique)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 class ArrowStringNamespace(
@@ -1083,10 +1077,10 @@ class ArrowStringNamespace(
     def strip_chars(self, f: strings.StripChars, previous: Native) -> Native:
         return fn.str.strip_chars(previous, f.characters)
 
-    len_chars = unary_accessor.no_args(fn.str.len_chars)
-    to_uppercase = unary_accessor.no_args(fn.str.to_uppercase)
-    to_lowercase = unary_accessor.no_args(fn.str.to_lowercase)
-    to_titlecase = unary_accessor.no_args(fn.str.to_titlecase)
+    len_chars = unary_accessor.no_args(fn.str.len_chars)  # pyright: ignore[reportGeneralTypeIssues]
+    to_uppercase = unary_accessor.no_args(fn.str.to_uppercase)  # pyright: ignore[reportGeneralTypeIssues]
+    to_lowercase = unary_accessor.no_args(fn.str.to_lowercase)  # pyright: ignore[reportGeneralTypeIssues]
+    to_titlecase = unary_accessor.no_args(fn.str.to_titlecase)  # pyright: ignore[reportGeneralTypeIssues]
     to_date = not_implemented()
     to_datetime = not_implemented()
 

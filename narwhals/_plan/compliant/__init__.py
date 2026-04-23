@@ -31,7 +31,7 @@ from narwhals._plan.compliant import (
     scalar,
     series,
 )
-from narwhals._plan.compliant.column import ExprDispatch, SupportsBroadcast
+from narwhals._plan.compliant.column import SupportsBroadcast
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._plan.compliant.expr import CompliantExpr
 from narwhals._plan.compliant.group_by import CompliantGroupBy
@@ -48,7 +48,6 @@ __all__ = [
     "CompliantNamespace",
     "CompliantScalar",
     "CompliantSeries",
-    "ExprDispatch",
     "SupportsBroadcast",
     "accessors",
     "column",

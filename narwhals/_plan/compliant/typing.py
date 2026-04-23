@@ -3,18 +3,19 @@
 This module has 0 runtime dependencies on the rest of `compliant.*`.
 """
 
+# ruff: noqa: PLC0105
 from __future__ import annotations
 
-# ruff: noqa: PLC0105
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.compliant.column import ExprDispatch
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
         CompliantFrame,
@@ -48,6 +49,7 @@ FrameAny: TypeAlias = "CompliantFrame[Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any]"
 LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
+Namespace: TypeAlias = "CompliantNamespace[FrameT, ExprT_co, ScalarT_co]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
@@ -55,7 +57,7 @@ EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 
 ExprT = TypeVar("ExprT", bound=ExprAny)
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
-ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
+ScalarT_co = TypeVar("ScalarT_co", bound="ExprAny | ScalarAny", covariant=True)
 """TODO @dangotbanned: Investigate using `ExprT_co` as a default.
 
 Could also/alternatively use `bound=ExprAny`.
@@ -71,25 +73,21 @@ DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
 LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
 LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
 LazyFrameT_contra = TypeVar("LazyFrameT_contra", bound=LazyFrameAny, contravariant=True)
-NamespaceT_co = TypeVar(
-    "NamespaceT_co", bound="NamespaceAny", covariant=True, default="NamespaceAny"
-)
+NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 
 
-Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co]"
-"""Type of an unknown expression dispatch context.
-
-- `FrameT_contra`: Compliant data/lazyframe
-- `R_co`: Upper bound return type of the context
-"""
-
-
 class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
+
+
+class CanNamespace(Protocol[FrameT, ExprT_co, ScalarT_co]):
+    """Use this instead of `Namespace` or `*Frame`, when all that's needed is access to a namespace."""
+
+    def __narwhals_namespace__(self) -> Namespace[FrameT, ExprT_co, ScalarT_co]: ...
 
 
 # TODO @dangotbanned: `_version` (attribute) is not implemented, but typed in a `HasVersion` as `Version`
@@ -160,3 +158,107 @@ class BoundExprMethod(Protocol[IR, Frame, R]):
 # runtime requires that `FunctionExpr` is not a ForwardRef
 FunctionImplMethod = ExprMethod[Self_, ir.FunctionExpr[F_contra], Frame, R]
 BoundFunctionImplMethod = BoundExprMethod[ir.FunctionExpr[F_contra], Frame, R]
+
+
+# NOTE: Very important that these stay covariant!
+ET_co = TypeVar("ET_co", bound="ExprAny", covariant=True)
+"""`CompliantExpr`"""
+ST_co = TypeVar("ST_co", bound="ExprAny | ScalarAny", covariant=True)
+"""`CompliantScalar`"""
+
+
+def dispatch_function_expr_from_namespace(
+    self: Namespace[Frame, ET_co, ST_co], node: ir.FunctionExpr, frame: Frame, name: str
+) -> Iterator[ET_co | ST_co]:
+    """`ArrowNamespace` horizontal and range functions use `_expr.from_ir` on their inputs.
+
+    basically what I had in `_parameters.Variadic.iter_dispatch_args`
+    """
+    ns = self.__narwhals_namespace__()
+    expr_irs = iter(node.input)
+    yield ns.from_ir(next(expr_irs), frame, name)
+    for expr_ir in expr_irs:
+        yield ns.from_ir(expr_ir, frame, "")
+
+
+def dispatch_from_scalar_ensure_scalar(
+    ctx: DispatchScopeScalar[Frame, ST_co], node: ir.ExprIR, frame: Frame, name: str
+) -> ST_co:
+    result = node.dispatch(ctx, frame, name)
+    ns = ctx.__narwhals_namespace__()
+    scalar = ns._scalar
+    if isinstance(result, scalar):
+        return result
+    raise NotImplementedError
+
+
+# TODO @dangotbanned: Decide on a better name
+class DispatchScope(Protocol[NamespaceT_co, ET_co]):
+    """Represents either `*Expr` or `*Namespace`.
+
+    E.g. the widest possible type you can dispatch from.
+    """
+
+    def __narwhals_expr_prepare__(self) -> ET_co:
+        """Return a partially initialized `CompliantExpr`.
+
+        ## Notes
+        - The only external (narwhals-level) requirement is that we have an instance to call methods on
+        - If there are any other bits of state you need in an implementation, add them here
+        - Defaults
+            - Namespace -> Expr
+            - Expr -> Expr
+            - Scalar -> Scalar
+        - Needed because dispatching starts at the last expression
+            - Whether that's a good choice is up in the air
+        """
+        ...
+
+    def __narwhals_namespace__(self) -> NamespaceT_co: ...
+
+
+DispatchScopeAny: TypeAlias = (
+    "DispatchScope[Namespace[Frame, ET_co, ST_co], ET_co | ST_co]"
+)
+DispatchScopeExpr: TypeAlias = "DispatchScope[Namespace[Frame, ET_co, Any], ET_co]"
+DispatchScopeScalar: TypeAlias = "DispatchScope[Namespace[Frame, Any, ST_co], ST_co]"
+
+
+class CallNamespace(Protocol):
+    def __call__(self, obj: DispatchScope[NamespaceT_co, ET_co], /) -> NamespaceT_co: ...
+
+
+class CallExprPrepare(Protocol):
+    def __call__(self, obj: DispatchScope[NamespaceT_co, ET_co], /) -> ET_co: ...
+
+
+class GetMethod(Protocol):
+    def __call__(
+        self, obj: ET_co | ST_co | Namespace[Frame, ET_co, ST_co], /
+    ) -> BoundMethod[Any, Frame, ET_co | ST_co]: ...
+
+
+ExprIR_contra = TypeVar("ExprIR_contra", bound="ir.ExprIR", contravariant=True)
+
+
+class Binder(Protocol[ExprIR_contra]):
+    """The type of `ExprIR.__expr_ir_dispatch__.bind`.
+
+    - Takes a context that we try to access the method on.
+    - This step can fail (`AttributeError`), and that represents a different kind of error than if the call failed
+    """
+
+    def __call__(
+        self, ctx: DispatchScopeAny[Frame, ET_co, ST_co], /
+    ) -> BoundMethod[ExprIR_contra, Frame, ET_co | ST_co]: ...
+
+
+class BoundMethod(Protocol[ExprIR_contra, Frame, ET_co]):
+    """The return type of `ExprIR.__expr_ir_dispatch__.bind`.
+
+    - `None` can be returned when subclassing `*Expr`, but not implementing the method
+    """
+
+    def __call__(
+        self, node: ExprIR_contra, frame: Frame, name: str, /
+    ) -> ET_co | None: ...

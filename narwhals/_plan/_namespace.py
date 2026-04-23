@@ -41,7 +41,7 @@ def namespace_from_backend(
     if impl is Implementation.PYARROW:
         from narwhals._plan import arrow as _arrow
 
-        return _arrow.Namespace(Version.MAIN)
+        return _arrow.Namespace()
     msg = f"Not yet supported in `narwhals._plan`, got: {impl!r}"
     raise NotImplementedError(msg)
 

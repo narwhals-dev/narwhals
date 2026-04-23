@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
-from narwhals._plan.compliant.typing import FrameT_contra as FrameT, SeriesT
+from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, SeriesT
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -83,34 +83,48 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
         version: Version,
     ) -> Self: ...
 
-    def count(self, node: agg.Count, frame: FrameT, name: str, /) -> Self:
+    def count(
+        self, node: agg.Count, frame: FrameT, name: str, /
+    ) -> CompliantScalar[FrameT]:
         """Returns 0 if null, else 1."""
         ...
 
-    def ewm_mean(self, node: FExpr[F.EwmMean], frame: FrameT, name: str, /) -> Self:
+    def ewm_mean(
+        self, node: FExpr[F.EwmMean], frame: FrameT, name: str, /
+    ) -> CompliantScalar[FrameT]:
         return self._cast_float(node.input[0], frame, name)
 
-    def mean(self, node: agg.Mean, frame: FrameT, name: str, /) -> Self:
+    def mean(
+        self, node: agg.Mean, frame: FrameT, name: str, /
+    ) -> CompliantScalar[FrameT]:
         return self._cast_float(node.expr, frame, name)
 
-    def median(self, node: agg.Median, frame: FrameT, name: str, /) -> Self:
+    def median(
+        self, node: agg.Median, frame: FrameT, name: str, /
+    ) -> CompliantScalar[FrameT]:
         return self._cast_float(node.expr, frame, name)
 
-    def null_count(self, node: FExpr[F.NullCount], frame: FrameT, name: str) -> Self:
+    def null_count(
+        self, node: FExpr[F.NullCount], frame: FrameT, name: str
+    ) -> CompliantScalar[FrameT]:
         """Returns 1 if null, else 0."""
         ...
 
-    def quantile(self, node: agg.Quantile, frame: FrameT, name: str, /) -> Self:
+    def quantile(
+        self, node: agg.Quantile, frame: FrameT, name: str, /
+    ) -> CompliantScalar[FrameT]:
         return self._cast_float(node.expr, frame, name)
 
-    def shift(self, node: FExpr[F.Shift], frame: FrameT, name: str, /) -> Self:
+    def shift(
+        self, node: FExpr[F.Shift], frame: FrameT, name: str, /
+    ) -> CompliantScalar[FrameT]:
         if node.function.n == 0:
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None, version=self.version)
 
     def drop_nulls(  # type: ignore[override]
         self, node: FExpr[F.DropNulls], frame: FrameT, name: str, /
-    ) -> Self | CompliantExpr[FrameT]:
+    ) -> CompliantScalar[FrameT] | CompliantExpr[FrameT]:
         """Returns a 0-length Series if null, else noop."""
         ...
 
@@ -143,7 +157,9 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
 
 
 class EagerScalar(
-    CompliantScalar[FrameT], EagerExpr[FrameT, SeriesT], Protocol[FrameT, SeriesT]
+    CompliantScalar[EagerDataFrameT],
+    EagerExpr[EagerDataFrameT, SeriesT],
+    Protocol[EagerDataFrameT, SeriesT],
 ):
     """`[FrameT_contra, SeriesT]`."""
 

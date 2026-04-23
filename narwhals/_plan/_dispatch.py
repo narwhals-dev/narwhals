@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, final
+from operator import attrgetter as _attrgetter, methodcaller as _methodcaller
+from typing import TYPE_CHECKING, Any, Final, Generic, Literal, final
 
 from narwhals._plan._guards import is_function_expr
 from narwhals._typing_compat import TypeVar
@@ -11,23 +11,9 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import Never, Self, TypeAlias
 
-    from narwhals._plan.compliant.typing import Ctx, FrameT_contra, R_co
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
     from narwhals._plan.typing import Accessor, ExprIRT, FunctionT
-
-    Node_contra = TypeVar(
-        "Node_contra", bound="ExprIR | FunctionExpr[Any]", contravariant=True
-    )
-
-    class Binder(Protocol[Node_contra]):
-        def __call__(
-            self, ctx: Ctx[FrameT_contra, R_co], /
-        ) -> BoundMethod[Node_contra, FrameT_contra, R_co]: ...
-
-    class BoundMethod(Protocol[Node_contra, FrameT_contra, R_co]):
-        def __call__(
-            self, node: Node_contra, frame: FrameT_contra, name: str, /
-        ) -> R_co: ...
 
 
 __all__ = ["Dispatcher", "DispatcherOptions", "get_dispatch_name"]
@@ -81,7 +67,7 @@ class Dispatcher(Generic[Node]):
     __slots__ = ("_name", "_options", "bind")
 
     # TODO @dangotbanned: Improve or remove doc
-    bind: Binder[Node]
+    bind: ct.Binder[Node]
     """Retrieve the implementation of this expression from `ctx`.
 
     Binds an instance method, most commonly via:
@@ -138,16 +124,16 @@ class Dispatcher(Generic[Node]):
     def __call__(
         self,
         node: Node,
-        ctx: Ctx[FrameT_contra, R_co],
-        frame: FrameT_contra,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
         name: str,
         /,
-    ) -> R_co:
+    ) -> ct.ET_co | ct.ST_co:
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
         try:
             method = self.bind(ctx)
-        except AttributeError:
-            raise self._not_implemented_error(ctx, "compliant") from None
+        except AttributeError as err:
+            raise self._not_implemented_error(ctx, "compliant") from err
         if result := method(node, frame, name):
             return result
         raise self._not_implemented_error(ctx, "context")
@@ -198,8 +184,8 @@ class Dispatcher(Generic[Node]):
         name = options.override_name or _pascal_to_snake_case(tp.__name__)
         if ns := options.accessor_name:
             name = f"{ns}.{name}"
-        getter = attrgetter(name)
-        bind = _via_namespace(getter) if options.is_namespaced else getter
+        m_caller = _CALL_NAMESPACE if options.is_namespaced else _CALL_EXPR_PREPARE
+        bind = _binder(m_caller, _ATTR_GETTER(name))
         return Dispatcher(name, bind, options)
 
     def __get__(self, instance: Any, owner: Any) -> Self:
@@ -214,7 +200,7 @@ class Dispatcher(Generic[Node]):
     def __init__(
         self,
         name: str = "",
-        bind: Binder[Node] | None = None,
+        bind: ct.Binder[Node] | None = None,
         options: DispatcherOptions | None = None,
     ) -> None:
         self._name = name
@@ -235,7 +221,10 @@ class Dispatcher(Generic[Node]):
         return getter
 
     def _not_implemented_error(
-        self, ctx: Ctx[Any, Any], /, missing: Literal["compliant", "context"]
+        self,
+        ctx: ct.CanNamespace[Any, Any, Any],
+        /,
+        missing: Literal["compliant", "context"],
     ) -> NotImplementedError:
         is_namespaced = self.options.is_namespaced
         if missing == "context":
@@ -248,6 +237,22 @@ class Dispatcher(Generic[Node]):
                 f"Hint: Try adding `Compliant{base_name}.{self.name}()`"
             )
         return NotImplementedError(msg)
+
+
+_CALL_NAMESPACE: Final[ct.CallNamespace] = _methodcaller("__narwhals_namespace__")
+_CALL_EXPR_PREPARE: Final[ct.CallExprPrepare] = _methodcaller("__narwhals_expr_prepare__")
+_ATTR_GETTER: Final[Callable[[str], ct.GetMethod]] = _attrgetter
+
+
+def _binder(
+    f1: ct.CallNamespace | ct.CallExprPrepare, f2: ct.GetMethod, /
+) -> ct.Binder[Incomplete]:
+    def bind(
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co], /
+    ) -> ct.BoundMethod[Any, ct.Frame, ct.ET_co | ct.ST_co]:
+        return f2(f1(ctx))
+
+    return bind
 
 
 @final
@@ -406,13 +411,6 @@ class DispatcherOptions:
             parts.append(f"override_name={override!r}")
         inner = (", ".join(parts)) if parts else "<default>"
         return f"{type(self).__name__}({inner})"
-
-
-def _via_namespace(getter: Callable[[Any], Any], /) -> Callable[[Any], Any]:
-    def _(ctx: Any, /) -> Any:
-        return getter(ctx.__narwhals_namespace__())
-
-    return _
 
 
 def _pascal_to_snake_case(s: str) -> str:

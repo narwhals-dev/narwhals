@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.column import EagerBroadcast
-from narwhals._plan.compliant.typing import FrameT_contra as FrameT, HasVersion, SeriesT
+from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, HasVersion, SeriesT
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.accessors import (
@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         ExprStringNamespace,
         ExprStructNamespace,
     )
+    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar as Scalar, EagerScalar
     from narwhals._plan.expressions import (
         BinaryExpr,
@@ -36,6 +37,8 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.typing import IncompleteCyclic
 
+Incomplete: TypeAlias = Any
+
 
 # TODO @dangotbanned: Rethink `FrameT`
 # - Needs to support `.version` and probably `__narwhals_namespace__`
@@ -52,6 +55,7 @@ class CompliantExpr(HasVersion, Protocol[FrameT]):
     `[FrameT_contra]`.
     """
 
+    # NOTE: May need to change returning `Self` to `CompliantExpr[FrameT]`
     # Expr -> Expr
     # Scalar -> Scalar
     def abs(self, node: FExpr[F.Abs], frame: FrameT, name: str, /) -> Self: ...
@@ -202,6 +206,21 @@ class CompliantExpr(HasVersion, Protocol[FrameT]):
         self, node: FExpr[F.Skew], frame: FrameT, name: str, /
     ) -> Scalar[FrameT]: ...
 
+    # `CanExprNS` / `ContextExpr` stuff
+    def __narwhals_namespace__(
+        self,
+    ) -> CompliantNamespace[FrameT, CompliantExpr[FrameT], CompliantExpr[FrameT]]: ...
+
+    def __narwhals_expr_prepare__(self) -> Self:
+        """Return a partially initialized instance of this class.
+
+        The only external (narwhals-level) requirement is that we have an instance to call methods on.
+
+        If there are any other bits of state you need in an implementation, add them here.
+        """
+        tp = type(self)
+        return tp.__new__(tp)
+
     @property
     def cat(self) -> ExprCatNamespace[FrameT, CompliantExpr[FrameT]]: ...
     @property
@@ -215,7 +234,9 @@ class CompliantExpr(HasVersion, Protocol[FrameT]):
 
 
 class EagerExpr(
-    EagerBroadcast[SeriesT], CompliantExpr[FrameT], Protocol[FrameT, SeriesT]
+    EagerBroadcast[SeriesT],
+    CompliantExpr[EagerDataFrameT],
+    Protocol[EagerDataFrameT, SeriesT],
 ):
     """`[FrameT_contra, SeriesT]`."""
 
@@ -224,22 +245,34 @@ class EagerExpr(
         return True
 
     def gather_every(
-        self, node: FExpr[F.GatherEvery], frame: FrameT, name: str, /
+        self, node: FExpr[F.GatherEvery], frame: EagerDataFrameT, name: str, /
     ) -> Self: ...
     def is_in_series(
         self,
         node: FExpr[ir.boolean.IsInSeries[IncompleteCyclic]],
-        frame: FrameT,
+        frame: EagerDataFrameT,
         name: str,
         /,
     ) -> Self: ...
     # NOTE: `Scalar` when using `returns_scalar=True`
     def map_batches(
-        self, node: ir.AnonymousExpr, frame: FrameT, name: str, /
-    ) -> Self | EagerScalar[FrameT, SeriesT]: ...
+        self, node: ir.AnonymousExpr, frame: EagerDataFrameT, name: str, /
+    ) -> Self | EagerScalar[EagerDataFrameT, SeriesT]: ...
     def sample_frac(
-        self, node: FExpr[F.SampleFrac], frame: FrameT, name: str, /
+        self, node: FExpr[F.SampleFrac], frame: EagerDataFrameT, name: str, /
     ) -> Self: ...
     # NOTE: `n=1` can behave similar to an aggregation in `select(...)`, but requires `.first()`
     # to trigger broadcasting in `with_columns(...)`
-    def sample_n(self, node: FExpr[F.SampleN], frame: FrameT, name: str, /) -> Self: ...
+    def sample_n(
+        self, node: FExpr[F.SampleN], frame: EagerDataFrameT, name: str, /
+    ) -> Self: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[
+        EagerDataFrameT,
+        SeriesT,
+        EagerExpr[EagerDataFrameT, SeriesT],
+        EagerScalar[EagerDataFrameT, SeriesT],
+        Incomplete,
+        Incomplete,
+    ]: ...

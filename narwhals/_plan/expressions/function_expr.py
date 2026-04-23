@@ -25,7 +25,7 @@ if TYPE_CHECKING:
         UnaryFunction,
     )
     from narwhals._plan._parameters import Parameters
-    from narwhals._plan.compliant.typing import Ctx, FrameT_contra as FrameT, R_co
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
@@ -84,7 +84,12 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
 
-    def dispatch(self: Self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str) -> R_co:
+    def dispatch(
+        self: Self,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> ct.ET_co | ct.ST_co:
         return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
     # TODO @dangotbanned: Convert docs into a comment
@@ -119,10 +124,10 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     # TODO @dangotbanned: (Docs) see `ExprIR.dispatch`
     def dispatch_arg(
         self: FunctionExpr[UnaryFunction],
-        ctx: Ctx[FrameT, R_co],
-        frame: FrameT,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
         name: str,
-    ) -> R_co:
+    ) -> ct.ET_co | ct.ST_co:
         """Call `ExprIR.dispatch` on the **only** expression argument to this function.
 
         Important:
@@ -134,31 +139,37 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     @overload
     def dispatch_args(
         self: FunctionExpr[UnaryFunction],
-        ctx: Ctx[FrameT, R_co],
-        frame: FrameT,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
         name: str,
-    ) -> tuple[R_co]: ...
+    ) -> tuple[ct.ET_co | ct.ST_co]: ...
     @overload
     def dispatch_args(
         self: FunctionExpr[BinaryFunction],
-        ctx: Ctx[FrameT, R_co],
-        frame: FrameT,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
         name: str,
-    ) -> tuple[R_co, R_co]: ...
+    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]: ...
     @overload
     def dispatch_args(
         self: FunctionExpr[TernaryFunction],
-        ctx: Ctx[FrameT, R_co],
-        frame: FrameT,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
         name: str,
-    ) -> tuple[R_co, R_co, R_co]: ...
+    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[Function], ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-    ) -> Seq[R_co]: ...
+        self: FunctionExpr[Function],
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> Seq[ct.ET_co | ct.ST_co]: ...
     def dispatch_args(
-        self, ctx: Ctx[FrameT, R_co], frame: FrameT, name: str
-    ) -> Seq[R_co]:
+        self,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
+        name: str,
+    ) -> Seq[ct.ET_co | ct.ST_co]:
         """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
 

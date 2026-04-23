@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Collection
+from collections.abc import Callable, Collection
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Literal, overload
 
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan._dispatch import BoundMethod
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.series import ArrowSeries as Series
@@ -63,7 +62,7 @@ if TYPE_CHECKING:
         PythonLiteral,
     )
 
-    HWrapper: TypeAlias = BoundMethod[HExpr[Any], Frame, Expr | Scalar]
+    HWrapper: TypeAlias = Callable[[HExpr[Any], Frame, str], Expr | Scalar]
 
 
 Int64 = Version.MAIN.dtypes.Int64()
@@ -75,9 +74,12 @@ class ArrowNamespace(
     EagerNamespace["Frame", "Series", "Expr", "Scalar", "pa.Table", "ChunkedArrayAny"],
 ):
     implementation = Implementation.PYARROW
+    _version = Version.MAIN
 
-    def __init__(self, version: Version = Version.MAIN) -> None:
-        self._version = version
+    def __narwhals_expr_prepare__(self) -> Expr:
+        expr = super().__narwhals_expr_prepare__()
+        expr._version = self.version
+        return expr
 
     @property
     def _expr(self) -> type[Expr]:
@@ -111,7 +113,7 @@ class ArrowNamespace(
         schema: IntoSchema | None = None,
         version: Version = Version.MAIN,
     ) -> Frame:
-        return self._dataframe.from_dict(data, schema=schema, version=version)
+        return self._dataframe.from_dict(data, schema=schema)
 
     def from_iterable(
         self,
@@ -121,22 +123,22 @@ class ArrowNamespace(
         dtype: IntoDType | None = None,
         version: Version = Version.MAIN,
     ) -> Series:
-        return self._series.from_iterable(data, name=name, dtype=dtype, version=version)
+        return self._series.from_iterable(data, name=name, dtype=dtype)
 
     def col(self, node: ir.Column, frame: Frame, name: str) -> Expr:
         return self._expr.from_native(
-            frame.native.column(node.name), name, version=frame.version
+            frame.native.column(node.name), name
         )
 
     def lit(self, node: ir.Lit[PythonLiteral], frame: Frame, name: str) -> Scalar:
         return self._scalar.from_python(
-            node.value, name, dtype=node.dtype, version=frame.version
+            node.value, name, dtype=node.dtype
         )
 
     def lit_series(
         self, node: ir.LitSeries[ChunkedArrayAny], frame: Frame, name: str
     ) -> Expr:
-        return self._expr.from_native(node.native, name or node.name, node.version)
+        return self._expr.from_native(node.native, name or node.name)
 
     @overload
     def _horizontal(
@@ -164,11 +166,11 @@ class ArrowNamespace(
         """
 
         def func(node: FExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
-            it = (self._expr.from_ir(e, frame, name).native for e in node.input)
+            it = (self.from_ir(e, frame, name).native for e in node.input)
             if fill is not None:
                 it = (fn.fill_null(native, fill) for native in it)
             result = function(*it) if variadic else reduce(function, it)
-            return self._into_expr(result, name, frame.version)
+            return self._into_expr(result, name)
 
         return func
 
@@ -206,7 +208,7 @@ class ArrowNamespace(
         self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str
     ) -> Expr | Scalar:
         int64 = pa.int64()
-        inputs = [self._expr.from_ir(e, frame, name).native for e in node.input]
+        inputs = [self.from_ir(e, frame, name).native for e in node.input]
         filled = (fn.fill_null(native, 0) for native in inputs)
         # NOTE: `mypy` doesn't like that `add` is overloaded
         sum_not_null = reduce(
@@ -214,26 +216,26 @@ class ArrowNamespace(
             (fn.cast(fn.is_not_null(native), int64) for native in inputs),
         )
         result = fn.truediv(reduce(fn.add, filled), sum_not_null)
-        return self._into_expr(result, name, frame.version)
+        return self._into_expr(result, name)
 
     def concat_str(
         self, node: HExpr[ConcatStr], frame: Frame, name: str
     ) -> Expr | Scalar:
-        exprs = (self._expr.from_ir(e, frame, name) for e in node.input)
+        exprs = (self.from_ir(e, frame, name) for e in node.input)
         aligned = (ser.native for ser in self._expr.align(exprs))
         separator = node.function.separator
         ignore_nulls = node.function.ignore_nulls
         result = fn.str.concat_str(
             *aligned, separator=separator, ignore_nulls=ignore_nulls
         )
-        return self._into_expr(result, name, frame.version)
+        return self._into_expr(result, name)
 
     def _into_expr(
-        self, native: ChunkedOrScalarAny, name: str, version: Version
+        self, native: ChunkedOrScalarAny, name: str
     ) -> Expr | Scalar:
         if isinstance(native, pa.Scalar):
-            return self._scalar.from_native(native, name, version)
-        return self._expr.from_native(native, name, version)
+            return self._scalar.from_native(native, name)
+        return self._expr.from_native(native, name)
 
     # TODO @dangotbanned: Consider returning the supertype of inputs
     def _range_function_inputs(
@@ -243,8 +245,8 @@ class ArrowNamespace(
         if fastpath := func.try_unwrap_literals(node):
             return fastpath
         _start, _end = node.input
-        start = self._expr.from_ir(_start, frame, "")
-        end = self._expr.from_ir(_end, frame, "")
+        start = self.from_ir(_start, frame, "")
+        end = self.from_ir(_end, frame, "")
         if isinstance(start, self._scalar) and isinstance(end, self._scalar):
             return func.ensure_py_scalars(start.to_python(), end.to_python())
         # TODO @dangotbanned: Add some variant of `self._expr.from_ir` that ensures we got a `ArrowScalar`
@@ -265,7 +267,7 @@ class ArrowNamespace(
     def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         native = self._int_range(start, end, node.function.step, node.function.dtype)
-        return self._expr.from_native(native, name, frame.version)
+        return self._expr.from_native(native, name)
 
     def int_range_eager(
         self,
@@ -277,13 +279,13 @@ class ArrowNamespace(
         name: str = "literal",
     ) -> Series:
         native = self._int_range(start, end, step, dtype)
-        return self._series.from_native(native, name, version=self.version)
+        return self._series.from_native(native, name)
 
     def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         func = node.function
         native = fn.date_range(start, end, func.interval, closed=func.closed)
-        return self._expr.from_native(native, name, frame.version)
+        return self._expr.from_native(native, name)
 
     def date_range_eager(
         self,
@@ -295,13 +297,13 @@ class ArrowNamespace(
         name: str = "literal",
     ) -> Series:
         native = fn.date_range(start, end, interval, closed=closed)
-        return self._series.from_native(native, name, version=self.version)
+        return self._series.from_native(native, name)
 
     def linear_space(self, node: RangeExpr[LinearSpace], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         func = node.function
         native = fn.linear_space(start, end, func.num_samples, closed=func.closed)
-        return self._expr.from_native(native, name, frame.version)
+        return self._expr.from_native(native, name)
 
     def linear_space_eager(
         self,
@@ -313,7 +315,7 @@ class ArrowNamespace(
         name: str = "literal",
     ) -> Series:
         native = fn.linear_space(start, end, num_samples, closed=closed)
-        return self._series.from_native(native, name, version=self.version)
+        return self._series.from_native(native, name)
 
     def concat_df_vertical(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
         dfs = dfs if isinstance(dfs, tuple) else tuple(dfs)
@@ -343,7 +345,7 @@ class ArrowNamespace(
     def concat_series(self, series: Iterable[CompliantSeries]) -> Series:
         series = series if isinstance(series, tuple) else tuple(series)
         result = fn.concat_vertical(ser.native for ser in series)
-        return self._series.from_native(result, series[0].name, version=self.version)
+        return self._series.from_native(result, series[0].name)
 
     def concat_series_horizontal(self, series: Iterable[CompliantSeries], /) -> Frame:
         """Used for `ArrowExpr.sort_by`, seems like only pandas needs `stack_horizontal`?"""

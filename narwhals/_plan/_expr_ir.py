@@ -63,8 +63,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expansion import Expander
-    from narwhals._plan.compliant.column import ExprDispatch
-    from narwhals._plan.compliant.typing import FrameT_contra, R_co
+    from narwhals._plan.compliant import CompliantNamespace, typing as ct
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, BinaryExpr, Cast, Column
     from narwhals._plan.expressions.operators import Eq
@@ -264,11 +263,11 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     # TODO @dangotbanned: Come back to this doc after slimming down `Compliant{Expr,Scalar}`
     def dispatch(
         self: Self,
-        ctx: ExprDispatch[FrameT_contra, R_co],
-        frame: FrameT_contra,
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
+        frame: ct.Frame,
         name: str,
         /,
-    ) -> R_co:
+    ) -> ct.ET_co | ct.ST_co:
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`.
 
         Arguments:
@@ -1091,6 +1090,12 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         return self.expr.resolve_dtype(schema)
+
+    def dispatch(
+        self, ctx: CompliantNamespace[ct.Frame, ct.ET_co, ct.ST_co], frame: ct.Frame, /
+    ) -> ct.ET_co | ct.ST_co:
+        # NOTE: Has an intentionally narrower type, to hint that it's top-level
+        return self.expr.dispatch(ctx, frame, self.name)
 
 
 @functools.lru_cache(maxsize=128)

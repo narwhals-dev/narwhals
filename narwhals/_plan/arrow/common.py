@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Generic
 from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions import random_indices
 from narwhals._plan.arrow.guards import is_series
+from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, Version, _StoresNative
 
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, Indices
 
 
@@ -35,9 +35,7 @@ class ArrowFrameSeries(Generic[NativeT]):
         return self._native
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
+        return ArrowNamespace()
 
     def _with_native(self, native: NativeT) -> Self:
         msg = f"{type(self).__name__}._with_native"

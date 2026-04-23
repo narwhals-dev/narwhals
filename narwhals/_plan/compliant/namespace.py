@@ -17,7 +17,7 @@ from narwhals._plan.compliant.typing import (
 from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT_co
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
@@ -75,6 +75,23 @@ class CompliantNamespace(
     def sum_horizontal(
         self, node: HExpr[F.SumHorizontal], frame: FrameT, name: str, /
     ) -> ExprT_co | ScalarT_co: ...
+
+    def __narwhals_namespace__(self) -> Self:
+        return self
+
+    # TODO @dangotbanned: Make sure this works after updating `dispatch` bits
+    def from_named_ir(
+        self, named_ir: ir.NamedIR, frame: FrameT, /
+    ) -> ExprT_co | ScalarT_co:
+        return named_ir.dispatch(self, frame)
+
+    def from_ir(
+        self, node: ir.ExprIR, frame: FrameT, name: str, /
+    ) -> ExprT_co | ScalarT_co:
+        return node.dispatch(self, frame, name)
+
+    def __narwhals_expr_prepare__(self) -> ExprT_co:
+        return self._expr.__new__(self._expr)
 
 
 class EagerNamespace(
