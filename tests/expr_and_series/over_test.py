@@ -463,7 +463,7 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
