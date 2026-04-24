@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from narwhals._plan.compliant.column import EagerBroadcast
-from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, HasVersion, SeriesT
+from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, SeriesT
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         Not,
     )
     from narwhals._plan.typing import IncompleteCyclic
+    from narwhals._utils import Version
 
 Incomplete: TypeAlias = Any
 
@@ -49,11 +50,13 @@ Incomplete: TypeAlias = Any
 #     - `ExprIR.dispatch`
 #     - `_dispatch.{Binder,BoundMethod}`
 #     - `_dispatch.Dispatcher.{bind,__call__}`
-class CompliantExpr(HasVersion, Protocol[FrameT]):
+class CompliantExpr(Protocol[FrameT]):
     """Everything common to `Expr`/`Series` and `Scalar` literal values.
 
-    `[FrameT_contra]`.
+    `[FrameT]`.
     """
+
+    version: ClassVar[Version]
 
     # NOTE: May need to change returning `Self` to `CompliantExpr[FrameT]`
     # Expr -> Expr
@@ -206,7 +209,6 @@ class CompliantExpr(HasVersion, Protocol[FrameT]):
         self, node: FExpr[F.Skew], frame: FrameT, name: str, /
     ) -> Scalar[FrameT]: ...
 
-    # `CanExprNS` / `ContextExpr` stuff
     def __narwhals_namespace__(
         self,
     ) -> CompliantNamespace[FrameT, CompliantExpr[FrameT], CompliantExpr[FrameT]]: ...
@@ -238,7 +240,7 @@ class EagerExpr(
     CompliantExpr[EagerDataFrameT],
     Protocol[EagerDataFrameT, SeriesT],
 ):
-    """`[FrameT_contra, SeriesT]`."""
+    """`[EagerDataFrameT, SeriesT]`."""
 
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` (via `EagerBroadcast`) when truth-testing on dispatch

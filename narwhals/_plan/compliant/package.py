@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._plan.compliant.typing import Native as NativeLazy
 from narwhals._plan.typing import (
     NativeDataFrameT as NativeEager,
+    NativeDataFrameT_co as NativeEager_co,
     NativeSeriesT as NativeSeries,
     NativeSeriesT_co as NativeSeries_co,
 )
@@ -84,17 +85,23 @@ class HasExpr(Protocol):
         ...
 
 
-class HasPlanEvaluator(Protocol[NativeLazy_co]):
+class HasPlanEvaluator(Protocol[NativeLazy]):
     """Can translate a `ResolvedPlan` into `CompliantLazyFrame` operations."""
 
     @property
-    def PlanEvaluator(self) -> type[ResolvedToCompliant[NativeLazy_co]] | Incomplete:
+    def PlanEvaluator(self) -> type[ResolvedToCompliant[NativeLazy]]:
         """Required, but not implemented for `pyarrow` yet."""
+        ...
 
 
-class HasDataFrame(Protocol[NativeEager, NativeSeries_co]):
+class MaybeHasPlanEvaluator(Protocol[NativeLazy]):
     @property
-    def DataFrame(self) -> type[CompliantDataFrame[NativeEager, NativeSeries_co]]: ...
+    def PlanEvaluator(self) -> type[ResolvedToCompliant[NativeLazy]] | None: ...
+
+
+class HasDataFrame(Protocol[NativeEager_co, NativeSeries_co]):
+    @property
+    def DataFrame(self) -> type[CompliantDataFrame[NativeEager_co, NativeSeries_co]]: ...
 
 
 class HasSeries(Protocol[NativeSeries_co]):
@@ -140,9 +147,9 @@ class LazyPackage(
 class EagerPackage(
     HasExpr,
     HasNamespace,
-    HasDataFrame[NativeEager, NativeSeries_co],
+    HasDataFrame[NativeEager_co, NativeSeries_co],
     HasSeries[NativeSeries_co],
-    Protocol[NativeEager, NativeSeries_co],
+    Protocol[NativeEager_co, NativeSeries_co],
 ): ...
 
 
@@ -150,11 +157,11 @@ class EagerPackage(
 class HybridPackage(
     HasExpr,
     HasNamespace,
-    HasDataFrame[NativeEager, NativeSeries_co],
+    HasDataFrame[NativeEager_co, NativeSeries_co],
     HasLazyFrame[NativeLazy],
-    HasPlanEvaluator[NativeLazy],
+    MaybeHasPlanEvaluator[NativeLazy],
     HasSeries[NativeSeries_co],
-    Protocol[NativeLazy, NativeEager, NativeSeries_co],
+    Protocol[NativeLazy, NativeEager_co, NativeSeries_co],
 ): ...
 
 
@@ -205,7 +212,7 @@ def rewrap_as_plugin(package: LazyPackageT) -> LazyPackageT:
 def try_arrow() -> LazyPackage[pa.Table]:
     import narwhals._plan.arrow
 
-    return try_lazy_package(narwhals._plan.arrow)
+    return try_lazy_package(narwhals._plan.arrow)  # pyright: ignore[reportArgumentType]
 
 
 # NOTE: This version reveals (<package-type>, (<native-types>, ...))

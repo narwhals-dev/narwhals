@@ -35,8 +35,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT_co
-from narwhals._utils import Version, _hasattr_static
+from narwhals._plan.typing import NativeDataFrameT, NativeDataFrameT_co, NativeSeriesT_co
+from narwhals._utils import _hasattr_static
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -50,27 +50,17 @@ if TYPE_CHECKING:
 __all__ = ["FromDict", "FromIterable", "can_from_dict", "can_from_iterable"]
 
 
-class FromDict(Protocol[NativeDataFrameT, NativeSeriesT_co]):
+class FromDict(Protocol[NativeDataFrameT_co, NativeSeriesT_co]):
     """Namespace-level instance method, for initializing a dataframe."""
 
     def from_dict(
-        self,
-        data: Mapping[str, Any],
-        /,
-        *,
-        schema: IntoSchema | None = None,
-        version: Version = Version.MAIN,
-    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT_co]: ...
+        self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
+    ) -> CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]: ...
 
 
 class FromIterable(Protocol[NativeSeriesT_co]):
     def from_iterable(
-        self,
-        data: Iterable[Any],
-        *,
-        name: str = "",
-        dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
+        self, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> CompliantSeries[NativeSeriesT_co]: ...
 
 

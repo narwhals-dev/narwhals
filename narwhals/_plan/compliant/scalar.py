@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
 from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, SeriesT
-from narwhals._utils import not_implemented
+from narwhals._utils import Version, not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -15,8 +15,9 @@ if TYPE_CHECKING:
         aggregation as agg,
         functions as F,
     )
-    from narwhals._utils import Version
     from narwhals.typing import IntoDType, PythonLiteral
+
+_F64 = Version.MAIN.dtypes.Float64()
 
 
 class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
@@ -33,8 +34,7 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
 
     def _cast_float(self, node: ir.ExprIR, frame: FrameT, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
-        dtype = self.version.dtypes.Float64()
-        return self.cast(node.cast(dtype), frame, name)
+        return self.cast(node.cast(_F64), frame, name)
 
     def _with_evaluated(self, evaluated: Any, name: str) -> Self:
         """Expr is based on a series having these via accessors, but a scalar needs to keep passing through."""
@@ -42,31 +42,30 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
         obj = cls.__new__(cls)
         obj._evaluated = evaluated
         obj._name = name or self.name
-        obj._version = self.version
         return obj
 
     # NOTE: Constant behaviors with scalars observed in `polars`
 
     def _always_nan(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
-        return self.from_python(float("nan"), name, dtype=None, version=self.version)
+        return self.from_python(float("nan"), name, dtype=None)
 
     def _always_noop(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
         return self._with_evaluated(self._evaluated, name)
 
     def _always_true(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
-        return self.from_python(True, name, dtype=None, version=self.version)
+        return self.from_python(True, name, dtype=None)
 
     def _always_false(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
-        return self.from_python(False, name, dtype=None, version=self.version)
+        return self.from_python(False, name, dtype=None)
 
     def _always_null(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
-        return self.from_python(None, name, dtype=None, version=self.version)
+        return self.from_python(None, name, dtype=None)
 
     def _always_zero(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
-        return self.from_python(0, name, dtype=None, version=self.version)
+        return self.from_python(0, name, dtype=None)
 
     def _always_one(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
-        return self.from_python(1, name, dtype=None, version=self.version)
+        return self.from_python(1, name, dtype=None)
 
     @property
     def name(self) -> str:
@@ -74,13 +73,7 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
 
     @classmethod
     def from_python(
-        cls,
-        value: PythonLiteral,
-        name: str = "literal",
-        /,
-        *,
-        dtype: IntoDType | None,
-        version: Version,
+        cls, value: PythonLiteral, name: str = "literal", /, *, dtype: IntoDType | None
     ) -> Self: ...
 
     def count(
@@ -120,7 +113,7 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
     ) -> CompliantScalar[FrameT]:
         if node.function.n == 0:
             return self._with_evaluated(self._evaluated, name)
-        return self.from_python(None, name, dtype=None, version=self.version)
+        return self.from_python(None, name, dtype=None)
 
     def drop_nulls(  # type: ignore[override]
         self, node: FExpr[F.DropNulls], frame: FrameT, name: str, /

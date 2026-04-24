@@ -21,31 +21,32 @@ MAIN = Version.MAIN
 class PolarsFrame:
     __slots__ = ()
     implementation: ClassVar = Implementation.POLARS
+    version: ClassVar[Version] = Version.MAIN
 
     @classmethod
-    def from_arrow(cls, data: IntoArrowTable, /, version: Version = MAIN) -> Self:
+    def from_arrow(cls, data: IntoArrowTable, /) -> Self:
         if compat.CONSTRUCTOR_ACCEPTS_PYCAPSULE:
             native = pl.DataFrame(data)
         else:  # pragma: no cover
             # NOTE: Hack to reuse `main`
-            context = version.namespace.from_backend("polars").compliant
+            context = cls.version.namespace.from_backend("polars").compliant
             native = cast("pl.DataFrame", pl.from_arrow(_into_arrow_table(data, context)))
-        return cls.from_polars(native, version)
+        return cls.from_polars(native)
 
     @classmethod
-    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self:
+    def from_polars(cls, frame: pl.DataFrame, /) -> Self:
         # the impl of this will differ for eager and lazy
         raise NotImplementedError
 
     @classmethod
-    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self:
-        return cls.from_polars(pl.from_pandas(frame), version)
+    def from_pandas(cls, frame: pd.DataFrame, /) -> Self:
+        return cls.from_polars(pl.from_pandas(frame))
 
     @classmethod
     def from_narwhals(
         cls, frame: NwDataFrame[Any, Any] | CompliantDataFrame[Any, Any], /
     ) -> Self:
-        return cls.from_polars(frame.to_polars(), frame.version)
+        return cls.from_polars(frame.to_polars())
 
     @classmethod
     def from_compliant(cls, frame: CompliantDataFrame[Any, Any], /) -> Self:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
 
@@ -22,19 +22,16 @@ Incomplete: TypeAlias = Any
 
 class PolarsExpr(CompliantExpr["DataFrame"]):
     _native: pl.Expr
-    _version: Version
+    version: ClassVar = Version.MAIN
 
     def _with_native(self, native: pl.Expr, name: str = "", /) -> Self:
         return self.from_native(native, name)
 
     # NOTE: Unsure how much of `name` might be needed for polars
     @classmethod
-    def from_native(
-        cls, native: pl.Expr, name: str = "", /, version: Version = Version.MAIN
-    ) -> Self:
+    def from_native(cls, native: pl.Expr, name: str = "", /) -> Self:
         obj = cls.__new__(cls)
         obj._native = native if not name else native.alias(name)
-        obj._version = version
         return obj
 
     @classmethod
@@ -45,25 +42,21 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
         /,
         *,
         dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
     ) -> Self:
-        unknown = version.dtypes.Unknown
-        dtype_pl = None if dtype == unknown else dtype_to_native(dtype, version)
-        return cls.from_native(pl.lit(value, dtype_pl), name, version)
+        unknown = cls.version.dtypes.Unknown
+        dtype_pl = None if dtype == unknown else dtype_to_native(dtype, cls.version)
+        return cls.from_native(pl.lit(value, dtype_pl), name)
 
     @property
     def native(self) -> pl.Expr:
         return self._native
 
-    # NOTE: `ExprDispatch` isn't part of the `Compliant*` protocols,
-    # but is required for `ExprIR.dispatch`
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace()
 
     @classmethod
     def from_ir(cls, node: ir.ExprIR, frame: Incomplete, name: str) -> PolarsExpr:
         obj = cls.__new__(cls)
-        obj._version = frame.version
         return node.dispatch(obj, frame, name)
 
     @classmethod
@@ -78,7 +71,7 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
     binary_expr = todo()
 
     def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
-        dtype = dtype_to_native(node.dtype, version=frame.version)
+        dtype = dtype_to_native(node.dtype, self.version)
         return self._with_native(node.expr.dispatch(self, frame, name).native.cast(dtype))
 
     ceil = todo()

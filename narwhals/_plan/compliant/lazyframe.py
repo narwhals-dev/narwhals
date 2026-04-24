@@ -98,34 +98,34 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     __slots__ = ()
 
     implementation: ClassVar[Implementation]
+    version: ClassVar[Version]
 
     def __narwhals_hash_values__(self) -> Iterator[object]:
         yield self.version, self.implementation, id(self.native)
 
     @classmethod
     def from_native(
-        cls: type[CompliantLazyFrame[Any]], native: Native, /, version: Version = MAIN
+        cls: type[CompliantLazyFrame[Any]], native: Native, /
     ) -> CompliantLazyFrame[Native]: ...
     @classmethod
-    def from_arrow(cls, frame: IntoArrowTable, /, version: Version = MAIN) -> Self: ...
+    def from_arrow(cls, frame: IntoArrowTable, /) -> Self: ...
     @classmethod
     def from_arrow_c_stream(
         cls,
         exportable: ArrowStreamExportable,
         /,
-        version: Version = MAIN,
         *,
         requested_schema: object | None = None,
     ) -> Self:
         if requested_schema is not None:
             msg = f"{cls.__name__}.from_arrow_c_stream"
             raise NotImplementedError(msg)
-        return cls.from_arrow(exportable, version)
+        return cls.from_arrow(exportable)
 
     @classmethod
-    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self: ...
+    def from_pandas(cls, frame: pd.DataFrame, /) -> Self: ...
     @classmethod
-    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self: ...
+    def from_polars(cls, frame: pl.DataFrame, /) -> Self: ...
     @classmethod
     def from_narwhals(cls, frame: NwDataFrame[Any, Any], /) -> Self: ...
     @classmethod
@@ -133,6 +133,8 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def collect_arrow(self, **kwds: Any) -> pa.Table: ...
     def collect_pandas(self, **kwds: Any) -> pd.DataFrame: ...
     def collect_polars(self, **kwds: Any) -> pl.DataFrame: ...
+
+    # TODO @dangotbanned: Review version/implementation entrypoint
     def collect_compliant(
         self, backend: IntoBackend[EagerAllowed], **kwds: Any
     ) -> CompliantDataFrame[Any, Any]:
@@ -140,11 +142,11 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         if impl is Implementation.PYARROW:
             from narwhals._plan import arrow
 
-            return arrow.DataFrame.from_native(self.collect_arrow(**kwds), self.version)
+            return arrow.DataFrame.from_native(self.collect_arrow(**kwds))
         if impl is Implementation.POLARS:
             from narwhals._plan import polars
 
-            return polars.DataFrame.from_native(self.collect_polars(**kwds), self.version)
+            return polars.DataFrame.from_native(self.collect_polars(**kwds))
         if impl is Implementation.PANDAS:
             raise NotImplementedError(impl)
         assert_never(impl)
@@ -166,8 +168,6 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
 
     @property
     def native(self) -> Native: ...
-    @property
-    def version(self) -> Version: ...
 
     def to_logical(self) -> lp.ScanLazyFrame[Native]:
         from narwhals._plan.plans import LogicalPlan

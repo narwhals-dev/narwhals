@@ -24,7 +24,10 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals._plan.polars.expr import PolarsExpr as Expr
-    from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
+    from narwhals._plan.polars.lazyframe import (
+        PolarsEvaluator as Evaluator,
+        PolarsLazyFrame as LazyFrame,
+    )
     from narwhals._plan.polars.series import PolarsSeries as Series
     from narwhals._plan.polars.typing import CompliantDataFrame
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
@@ -84,16 +87,9 @@ class PolarsNamespace(
     FromDict[pl.DataFrame, pl.Series],
     CompliantNamespace[Incomplete, "Expr", "Expr"],
 ):
-    __slots__ = ("_version",)
-    _version: Version
+    __slots__ = ()
+    version: ClassVar[Version] = MAIN
     implementation: ClassVar = Implementation.POLARS
-
-    def __init__(self, version: Version = MAIN) -> None:
-        self._version = version
-
-    @property
-    def version(self) -> Version:
-        return self._version
 
     @property
     def _dataframe(self) -> type[DataFrame]:
@@ -125,61 +121,55 @@ class PolarsNamespace(
 
     _frame = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
+    @property
+    def _evaluator(self) -> type[Evaluator]:
+        from narwhals._plan.polars.lazyframe import PolarsEvaluator
+
+        return PolarsEvaluator
+
     def from_dict(
-        self,
-        data: Mapping[str, Any],
-        /,
-        *,
-        schema: IntoSchema | None = None,
-        version: Version = MAIN,
+        self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> DataFrame:
-        return self._dataframe.from_dict(data, schema=schema, version=version)
+        return self._dataframe.from_dict(data, schema=schema)
 
     def from_iterable(
-        self,
-        data: Iterable[Any],
-        *,
-        name: str = "",
-        dtype: IntoDType | None = None,
-        version: Version = MAIN,
+        self, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Series:
-        return self._series.from_iterable(data, name=name, dtype=dtype, version=version)
+        return self._series.from_iterable(data, name=name, dtype=dtype)
 
     def read_csv(self, source: str, /, **kwds: Any) -> DataFrame:
-        return self._dataframe.from_native(pl.read_csv(source, **kwds), self.version)
+        return self._dataframe.from_native(pl.read_csv(source, **kwds))
 
     def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema:
         schema = pl.scan_csv(source, **kwds).collect_schema()
         return into_version(self.version).schema.from_polars(schema)
 
     def read_parquet(self, source: str, /, **kwds: Any) -> DataFrame:
-        return self._dataframe.from_native(pl.read_parquet(source, **kwds), self.version)
+        return self._dataframe.from_native(pl.read_parquet(source, **kwds))
 
     def read_parquet_schema(self, source: str, /, **kwds: Any) -> Schema:
         schema = pl.read_parquet_schema(source, **kwds)
         return into_version(self.version).schema.from_polars(schema)
 
     def scan_csv(self, source: str, /, **kwds: Any) -> LazyFrame:
-        return self._lazyframe.from_native(pl.scan_csv(source, **kwds), self.version)
+        return self._lazyframe.from_native(pl.scan_csv(source, **kwds))
 
     def scan_parquet(self, source: str, /, **kwds: Any) -> LazyFrame:
-        return self._lazyframe.from_native(pl.scan_parquet(source, **kwds), self.version)
+        return self._lazyframe.from_native(pl.scan_parquet(source, **kwds))
 
     def col(self, node: ir.Column, frame: Incomplete, name: str) -> Expr:
-        return self._expr.from_native(pl.col(node.name), name, self.version)
+        return self._expr.from_native(pl.col(node.name), name)
 
     def len(self, node: ir.Len, frame: Incomplete, name: str) -> Expr:
-        return self._expr.from_native(pl.len(), name, self.version)
+        return self._expr.from_native(pl.len(), name)
 
     def lit(self, node: ir.Lit[PythonLiteral], frame: Incomplete, name: str) -> Expr:
-        return self._expr.from_python(
-            node.value, name, dtype=node.dtype, version=self.version
-        )
+        return self._expr.from_python(node.value, name, dtype=node.dtype)
 
     def lit_series(
         self, node: ir.LitSeries[pl.Series], frame: Incomplete, name: str
     ) -> Expr:
-        return self._expr.from_native(pl.lit(node.native), name, self.version)
+        return self._expr.from_native(pl.lit(node.native), name)
 
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
@@ -188,7 +178,7 @@ class PolarsNamespace(
         if fastpath := func.try_unwrap_literals(node):
             dtype = dtype_to_native_fast(func.dtype)
             native = pl.int_range(*fastpath, func.step, dtype=dtype)
-            return self._expr.from_native(native, name, self.version)
+            return self._expr.from_native(native, name)
         msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.input[0]!r}\n{node.input[1]!r}"
         raise NotImplementedError(msg)
 
@@ -203,7 +193,7 @@ class PolarsNamespace(
     ) -> Series:
         dtype_ = dtype_to_native_fast(dtype)
         native = pl.int_range(start, end, step, dtype=dtype_, eager=True)
-        return self._series.from_native(native, name, version=self.version)
+        return self._series.from_native(native, name)
 
     def date_range_eager(
         self,
@@ -215,7 +205,7 @@ class PolarsNamespace(
         name: str = "literal",
     ) -> Series:
         native = pl.date_range(start, end, f"{interval}d", closed=closed, eager=True)
-        return self._series.from_native(native, name, version=self.version)
+        return self._series.from_native(native, name)
 
     def linear_space_eager(
         self,
@@ -227,13 +217,13 @@ class PolarsNamespace(
         name: str = "literal",
     ) -> Series:
         native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
-        return self._series.from_native(native, name, version=self.version)
+        return self._series.from_native(native, name)
 
     def concat_df(
         self, dfs: Iterable[CompliantDataFrame], /, how: ConcatMethod = "vertical"
     ) -> DataFrame:
         result = pl.concat((df.native for df in dfs), how=how)
-        return self._dataframe.from_native(result, version=self.version)
+        return self._dataframe.from_native(result)
 
     concat_df_vertical = concat_df
 

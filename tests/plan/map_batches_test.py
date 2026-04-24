@@ -44,7 +44,7 @@ def elementwise_series(s: CompliantSeriesT, /) -> CompliantSeriesT:
     dtype_name = type(s.dtype).__name__.lower()
     repeat_name = (dtype_name,) * (len(s) - 1)
     values = [*repeat_name, "last"]
-    return s.from_iterable(values, version=s.version, name="funky")
+    return s.from_iterable(values, name="funky")
 
 
 def elementwise_1d_array(s: CompliantSeriesAny, /) -> _1DArray:

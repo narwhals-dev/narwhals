@@ -51,7 +51,7 @@ class Series(Generic[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.MAIN
 
     @property
-    def version(self) -> Version:
+    def version(self) -> Version:  # pragma: no cover
         return self._version
 
     @property
@@ -76,6 +76,7 @@ class Series(Generic[NativeSeriesT_co]):
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
+    # TODO @dangotbanned: Review backend/version entrypoint
     @classmethod
     def from_iterable(
         cls: type[Series[Any]],
@@ -87,13 +88,12 @@ class Series(Generic[NativeSeriesT_co]):
     ) -> Series[Any]:
         ns = namespace_from_backend(backend)
         if can_from_iterable(ns):
-            return cls(
-                ns.from_iterable(values, name=name, dtype=dtype, version=cls._version)
-            )
+            return cls(ns.from_iterable(values, name=name, dtype=dtype))
         raise unsupported_backend_operation_error(
             backend, "from_iterable"
         )  # pragma: no cover
 
+    # TODO @dangotbanned: Review backend/version entrypoint
     # TODO @dangotbanned: Add a protocol in `translate`, rinse/repeat `from_{dict,iterable}`
     @classmethod
     def from_native(
@@ -102,11 +102,11 @@ class Series(Generic[NativeSeriesT_co]):
         if is_pyarrow_chunked_array(native):
             from narwhals._plan import arrow as _arrow
 
-            return cls(_arrow.Series.from_native(native, name, version=cls._version))
+            return cls(_arrow.Series.from_native(native, name))
         if is_polars_series(native):
             from narwhals._plan import polars as _polars
 
-            return cls(_polars.Series.from_native(native, name, version=cls._version))
+            return cls(_polars.Series.from_native(native, name))
 
         raise NotImplementedError(type(native))
 
@@ -175,7 +175,7 @@ class Series(Generic[NativeSeriesT_co]):
     ) -> CompliantSeries[NativeSeriesT_co]:
         if is_series(other):
             return self._unwrap_compliant(other)
-        return self._compliant.from_iterable(other, version=self.version)
+        return self._compliant.from_iterable(other)
 
     def scatter(
         self,

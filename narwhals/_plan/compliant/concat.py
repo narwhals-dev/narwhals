@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
+from narwhals._plan.typing import NativeDataFrameT, NativeDataFrameT_co, NativeSeriesT
 from narwhals._utils import _hasattr_static
 
 if TYPE_CHECKING:
@@ -49,10 +49,10 @@ class ConcatSeries(Protocol[NativeSeriesT]):
     ) -> CompliantSeries[NativeSeriesT]: ...
 
 
-class ConcatSeriesHorizontal(Protocol[NativeDataFrameT, NativeSeriesT]):
+class ConcatSeriesHorizontal(Protocol[NativeDataFrameT_co, NativeSeriesT]):
     def concat_series_horizontal(
         self, series: Iterable[CompliantSeries[NativeSeriesT]], /
-    ) -> CompliantDataFrame[NativeDataFrameT, NativeSeriesT]: ...
+    ) -> CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT]: ...
 
 
 def can_concat_dataframe(

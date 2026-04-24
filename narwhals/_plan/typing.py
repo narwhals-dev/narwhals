@@ -215,3 +215,17 @@ Mainly for spelling `(Compliant)DataFrame` from within `(Compliant)Series`.
 On `main`, this works fine when running a type checker from the CLI - but causes
 intermittent warnings when running in a language server.
 """
+
+
+IncompleteVarianceLie: TypeAlias = "t.Any"
+"""Placeholder for typing that would make a type parameter be [inferred] as invariant.
+
+Escape hatch for protocols with `@classmethod`s that should be treated the same as `__init__`.
+
+We need to define a constructor, but it can only be typed (and remain covariant),
+if it is named `__init__`.
+
+Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
+
+[inferred]: https://typing.python.org/en/latest/spec/generics.html#variance
+"""

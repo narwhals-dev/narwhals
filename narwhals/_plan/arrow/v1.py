@@ -1,42 +1,61 @@
 from __future__ import annotations
 
+from typing import ClassVar, final
+
 from narwhals._plan.arrow.dataframe import ArrowDataFrame
 from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
+from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
 from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._utils import Version
 
 
+# TODO @dangotbanned: Move all the classes + protocols to `version: ClassVar[Version]`
+# TODO @dangotbanned: Review reducing boilerplate
+@final
 class ArrowExprV1(ArrowExpr):
-    _version = Version.V1
+    version: ClassVar = Version.V1
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
 
+@final
 class ArrowScalarV1(ArrowScalar):
-    _version = Version.V1
+    version: ClassVar = Version.V1
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
 
+@final
 class ArrowSeriesV1(ArrowSeries):
-    _version = Version.V1
+    version: ClassVar = Version.V1
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
 
+@final
 class ArrowDataFrameV1(ArrowDataFrame):
-    _version = Version.V1
+    version: ClassVar = Version.V1
 
-    def __narwhals_namespace__(self) -> ArrowNamespace:
+    def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
 
+@final
+class ArrowLazyFrameV1(ArrowLazyFrame):
+    __slots__ = ()
+    version: ClassVar = Version.V1
+
+    def __narwhals_namespace__(self) -> ArrowNamespaceV1:
+        return ArrowNamespaceV1()
+
+
+@final
 class ArrowNamespaceV1(ArrowNamespace):
-    _version = Version.V1
+    version: ClassVar = Version.V1
 
     @property
     def _expr(self) -> type[ArrowExpr]:
@@ -51,5 +70,9 @@ class ArrowNamespaceV1(ArrowNamespace):
         return ArrowSeriesV1
 
     @property
-    def _dataframe(self) -> type[ArrowDataFrame]:
+    def _dataframe(self) -> type[ArrowDataFrameV1]:
         return ArrowDataFrameV1
+
+    @property
+    def _lazyframe(self) -> type[ArrowLazyFrame]:
+        return ArrowLazyFrameV1

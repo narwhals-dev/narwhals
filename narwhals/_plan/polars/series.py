@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Generic, overload
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, overload
 
 import polars as pl
 
@@ -62,7 +62,7 @@ def _make_bin_op(name: str, /) -> Callable[[SeriesT], Callable[[Any], SeriesT]]:
         def inner(other: Any, /) -> SeriesT:
             other = other.native if isinstance(other, type(self)) else other
             result = method_native(self.native, other)
-            return self.from_native(result, version=self.version)
+            return self.from_native(result)
 
         return inner
 
@@ -113,7 +113,7 @@ class bin_op(Generic[SeriesT]):  # noqa: N801
 class PolarsSeries(CompliantSeries[pl.Series]):
     implementation = Implementation.POLARS
     _native: pl.Series
-    _version: Version
+    version: ClassVar[Version] = Version.MAIN
 
     # NOTE: Aliases to integrate with `@requires.backend_version`
     _backend_version = compat.BACKEND_VERSION
@@ -129,21 +129,16 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
     @property
     def dtype(self) -> DType:
-        return dtype_from_native(self.native.dtype, self._version)
+        return dtype_from_native(self.native.dtype, self.version)
 
     def __narwhals_namespace__(self) -> Namespace:
-        return Namespace(self.version)
+        return Namespace()
 
     @classmethod
     def from_iterable(
-        cls,
-        data: Iterable[Any],
-        *,
-        name: str = "",
-        dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
+        cls, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Self:
-        dtype_pl = dtype_to_native(dtype, version)
+        dtype_pl = dtype_to_native(dtype, cls.version)
         values: Incomplete = data
         if compat.SERIES_RESPECTS_DTYPE:
             native = pl.Series(name, values, dtype=dtype_pl)
@@ -153,26 +148,21 @@ class PolarsSeries(CompliantSeries[pl.Series]):
             native = pl.Series(name, values)
             if dtype_pl:
                 native = native.cast(dtype_pl)
-        return cls.from_native(native, version=version)
+        return cls.from_native(native)
 
     @classmethod
-    def from_native(
-        cls, native: pl.Series, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self:
+    def from_native(cls, native: pl.Series, name: str = "", /) -> Self:
         obj = cls.__new__(cls)
         obj._native = native if not name else native.alias(name)
-        obj._version = version
         return obj
 
     @classmethod
-    def from_numpy(
-        cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self:
+    def from_numpy(cls, data: Into1DArray, name: str = "", /) -> Self:
         native = pl.Series(data if is_numpy_array_1d(data) else [data])
-        return cls.from_native(native, name, version=version)
+        return cls.from_native(native, name)
 
     def _with_native(self, native: pl.Series) -> Self:
-        return self.from_native(native, version=self.version)
+        return self.from_native(native)
 
     def to_list(self) -> list[Any]:
         return self.native.to_list()
@@ -181,7 +171,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self.native
 
     def cast(self, dtype: IntoDType) -> Self:
-        result = self.native.cast(dtype_to_native(dtype, self._version))
+        result = self.native.cast(dtype_to_native(dtype, self.version))
         return self._with_native(result)
 
     def has_nulls(self) -> bool:
@@ -209,7 +199,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
     def to_frame(self) -> DataFrame:
         df = self.native.to_frame()
-        return namespace(self)._dataframe.from_native(df, self.version)
+        return namespace(self)._dataframe.from_native(df)
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)
@@ -425,7 +415,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", PolarsSeries]):
 
     def unnest(self) -> PolarsDataFrame:
         df = self.native.struct.unnest()
-        return Namespace(self.version)._dataframe.from_native(df, self.version)
+        return self.compliant.__narwhals_namespace__()._dataframe.from_native(df)
 
     @property
     def schema(self) -> Schema:

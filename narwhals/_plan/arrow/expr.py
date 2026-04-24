@@ -182,8 +182,8 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
         """
 
         def _wrapper(self: S2, node: FExpr[U2], frame: Frame, name: str) -> S2:
-            previous = node.dispatch_arg(self, frame, name).native
-            return self._with_native(fn_partial(self, node.function, previous), name)  # pyright: ignore[reportArgumentType]
+            previous = node.dispatch_arg(self, frame, name).native  # type: ignore[arg-type]
+            return self._with_native(fn_partial(self, node.function, previous), name)  # type: ignore[arg-type]
 
         return unary(_wrapper)
 
@@ -214,8 +214,8 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
         """
 
         def _wrapper(self: _Self, node: FExpr[UnaryFn], frame: Frame, name: str) -> _Self:
-            previous = node.dispatch_arg(self, frame, name).native
-            return self._with_native(fn_native(previous), name)
+            previous = node.dispatch_arg(self, frame, name).native  # type: ignore[arg-type]
+            return self._with_native(fn_native(previous), name)  # type: ignore[arg-type]
 
         return unary(_wrapper)
 
@@ -300,6 +300,8 @@ class unary_accessor(  # noqa: N801
 class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
+    version: ClassVar[Version] = Version.MAIN
+
     @property
     def native(self) -> Native_co:
         raise NotImplementedError
@@ -311,26 +313,26 @@ class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
         return Namespace()
 
     def cast(self, node: ir.Cast, frame: Frame, name: str, /) -> Self:
-        data_type = fn.dtype_native(node.dtype, frame.version)
-        native = node.expr.dispatch(self, frame, name).native
+        data_type = fn.dtype_native(node.dtype, self.version)
+        native = node.expr.dispatch(self, frame, name).native  # type: ignore[arg-type]
         return self._with_native(fn.cast(native, data_type), name)
 
     def pow(self, node: FExpr[F.Pow], frame: Frame, name: str, /) -> Self:
-        base, exponent = node.dispatch_args(self, frame, name)
+        base, exponent = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
         return self._with_native(fn.power(base.native, exponent.native), name)
 
     def fill_null(self, node: FExpr[F.FillNull], frame: Frame, name: str, /) -> Self:
-        expr, value = node.dispatch_args(self, frame, name)
+        expr, value = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
         return self._with_native(pc.fill_null(expr.native, value.native), name)
 
     def is_between(self, node: FExpr[IsBetween], frame: Frame, name: str, /) -> Self:
-        expr, lb, ub = node.dispatch_args(self, frame, name)
+        expr, lb, ub = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
         closed = node.function.closed
         result = fn.is_between(expr.native, lb.native, ub.native, closed=closed)
         return self._with_native(result, name)
 
     def is_in_expr(self, node: FExpr[IsInExpr], frame: Frame, name: str, /) -> Self:
-        native, right = (s.native for s in node.dispatch_args(self, frame, name))
+        native, right = (s.native for s in node.dispatch_args(self, frame, name))  # type: ignore[arg-type]
         arr = fn.array(right) if isinstance(right, pa.Scalar) else right
         return self._with_native(fn.is_in(native, arr), name)
 
@@ -344,16 +346,16 @@ class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
 
     def binary_expr(self, node: ir.BinaryExpr, frame: Frame, name: str, /) -> Self:
         lhs, rhs = (
-            node.left.dispatch(self, frame, name),
-            node.right.dispatch(self, frame, name),
+            node.left.dispatch(self, frame, name),  # type: ignore[arg-type]
+            node.right.dispatch(self, frame, name),  # type: ignore[arg-type]
         )
         result = fn.binary(lhs.native, node.op.__class__, rhs.native)
         return self._with_native(result, name)
 
     def ternary_expr(self, node: ir.TernaryExpr, frame: Frame, name: str, /) -> Self:
-        when = node.predicate.dispatch(self, frame, name)
-        then = node.truthy.dispatch(self, frame, name)
-        otherwise = node.falsy.dispatch(self, frame, name)
+        when = node.predicate.dispatch(self, frame, name)  # type: ignore[arg-type]
+        then = node.truthy.dispatch(self, frame, name)  # type: ignore[arg-type]
+        otherwise = node.falsy.dispatch(self, frame, name)  # type: ignore[arg-type]
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
@@ -366,28 +368,28 @@ class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
         return fn.round(previous, f.decimals)
 
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str, /) -> Self:
-        expr, lb, ub = node.dispatch_args(self, frame, name)
+        expr, lb, ub = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
         return self._with_native(fn.clip(expr.native, lb.native, ub.native), name)
 
     def clip_lower(self, node: FExpr[F.ClipLower], frame: Frame, name: str, /) -> Self:
-        expr, other = node.dispatch_args(self, frame, name)
+        expr, other = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
         return self._with_native(fn.clip_lower(expr.native, other.native), name)
 
     def clip_upper(self, node: FExpr[F.ClipUpper], frame: Frame, name: str, /) -> Self:
-        expr, other = node.dispatch_args(self, frame, name)
+        expr, other = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
         return self._with_native(fn.clip_upper(expr.native, other.native), name)
 
     @unary.partial
     def replace_strict(self, f: F.ReplaceStrict, previous: Native) -> Native:
-        dtype = fn.dtype_native(f.return_dtype, Version.MAIN)
+        dtype = fn.dtype_native(f.return_dtype, self.version)
         return fn.replace_strict(previous, f.old, f.new, dtype)
 
     def replace_strict_default(
         self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str, /
     ) -> Self:
         f = node.function
-        native, default = (s.native for s in node.dispatch_args(self, frame, name))
-        dtype = fn.dtype_native(f.return_dtype, frame.version)
+        native, default = (s.native for s in node.dispatch_args(self, frame, name))  # type: ignore[arg-type]
+        dtype = fn.dtype_native(f.return_dtype, self.version)
         result = fn.replace_strict_default(native, f.old, f.new, default, dtype)
         return self._with_native(result, name)
 
@@ -408,7 +410,6 @@ class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
 
 class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     _evaluated: Series
-    _version: Version
 
     @property
     def name(self) -> str:
@@ -418,14 +419,11 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     def from_series(cls, series: Series, /) -> Self:
         obj = cls.__new__(cls)
         obj._evaluated = series
-        obj._version = series.version
         return obj
 
     @classmethod
-    def from_native(
-        cls, native: ChunkedArrayAny, name: str = "", /, version: Version = Version.MAIN
-    ) -> Self:
-        return cls.from_series(Series.from_native(native, name, version=version))
+    def from_native(cls, native: ChunkedArrayAny, name: str = "", /) -> Self:
+        return cls.from_series(Series.from_native(native, name))
 
     @overload
     def _with_native(self, result: ChunkedArrayAny, name: str, /) -> Self: ...
@@ -648,12 +646,12 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         udf_result: Series | Iterable[Any] | Any = udf(series)
         if node.is_scalar():
             return ArrowScalar.from_unknown(
-                udf_result, name, dtype=node.function.return_dtype, version=frame.version
+                udf_result, name, dtype=node.function.return_dtype
             )
         if isinstance(udf_result, Series):
             result = udf_result
         elif isinstance(udf_result, Iterable) and not is_iterable_reject(udf_result):
-            result = Series.from_iterable(udf_result, name=name, version=frame.version)
+            result = Series.from_iterable(udf_result, name=name)
         else:
             msg = (
                 "`map_batches` with `returns_scalar=False` must return a Series; "
@@ -675,7 +673,7 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
 
     def _cumulative(self, node: FExpr[F.CumAgg], frame: Frame, name: str, /) -> Self:
         native = node.dispatch_arg(self, frame, name).native
-        return self._with_native(fn.cumulative(native, node.function), name)  # pyright: ignore[reportArgumentType]
+        return self._with_native(fn.cumulative(native, node.function), name)  # type: ignore[arg-type]
 
     def gather_every(
         self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
@@ -736,9 +734,9 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
         ns = namespace(self)
         if len(data) == 1:
             count = next(iter(data.values()))
-            series = ns._series.from_iterable(count, version=ns.version, name=name)
+            series = ns._series.from_iterable(count, name=name)
         else:
-            series = ns._dataframe.from_dict(data, version=ns.version).to_struct(name)
+            series = ns._dataframe.from_dict(data).to_struct(name)
         return self.from_series(series)
 
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str, /) -> Self:
@@ -800,21 +798,13 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
 
 class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
     _evaluated: NativeScalar
-    _version: Version
     _name: str
 
     @classmethod
-    def from_native(
-        cls,
-        scalar: NativeScalar,
-        name: str = "literal",
-        /,
-        version: Version = Version.MAIN,
-    ) -> Self:
+    def from_native(cls, scalar: NativeScalar, name: str = "literal", /) -> Self:
         obj = cls.__new__(cls)
         obj._evaluated = scalar
         obj._name = name
-        obj._version = version
         return obj
 
     @classmethod
@@ -825,39 +815,30 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
         /,
         *,
         dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
     ) -> Self:
-        unknown = version.dtypes.Unknown
-        dtype_pa = None if dtype == unknown else fn.dtype_native(dtype, version)
-        return cls.from_native(fn.lit(value, dtype_pa), name, version)
+        unknown = cls.version.dtypes.Unknown
+        dtype_pa = None if dtype == unknown else fn.dtype_native(dtype, cls.version)
+        return cls.from_native(fn.lit(value, dtype_pa), name)
 
     @classmethod
     def from_series(cls, series: Series) -> Self:
         if len(series) == 1:
-            return cls.from_native(series.native[0], series.name, series.version)
+            return cls.from_native(series.native[0], series.name)
         if len(series) == 0:
-            return cls.from_python(
-                None, series.name, dtype=series.dtype, version=series.version
-            )
+            return cls.from_python(None, series.name, dtype=series.dtype)
         msg = f"Too long {len(series)!r}"
         raise InvalidOperationError(msg)
 
     @classmethod
     def from_unknown(
-        cls,
-        value: Any,
-        name: str = "literal",
-        /,
-        *,
-        dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
+        cls, value: Any, name: str = "literal", /, *, dtype: IntoDType | None = None
     ) -> Self:
         if isinstance(value, pa.Scalar):
-            return cls.from_native(value, name, version)
+            return cls.from_native(value, name)
         if is_python_literal(value):
-            return cls.from_python(value, name, dtype=dtype, version=version)
-        native = fn.lit(value, fn.dtype_native(dtype, version))
-        return cls.from_native(native, name, version)
+            return cls.from_python(value, name, dtype=dtype)
+        native = fn.lit(value, fn.dtype_native(dtype, cls.version))
+        return cls.from_native(native, name)
 
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
         msg = f"Expected unreachable, but hit at: {node!r}"
@@ -900,7 +881,7 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
         if previous.native.is_valid:
             return previous
         chunked = fn.chunked_array([], previous.native.type)
-        return ArrowExpr.from_native(chunked, name, version=frame.version)
+        return ArrowExpr.from_native(chunked, name)
 
     @property
     def cat(self) -> ArrowCatNamespace[Scalar]:

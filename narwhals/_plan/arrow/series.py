@@ -10,10 +10,11 @@ from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import compat, functions as fn, options
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
+from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.expressions import functions as F
-from narwhals._utils import Version, generate_repr
+from narwhals._utils import generate_repr
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
@@ -48,8 +49,7 @@ def bin_op(
 
     def f(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
         right = other.native if isinstance(other, type(self)) else fn.lit(other)
-        version = self.version
-        return self.from_native(function(self.native, right), self.name, version=version)
+        return self.from_native(function(self.native, right), self.name)
 
     def f_reflect(self: SeriesT, other: SeriesT | Any, /) -> SeriesT:
         if isinstance(other, type(self)):
@@ -58,8 +58,7 @@ def bin_op(
         else:
             name = "literal"
             right = fn.lit(other)
-        version = self.version
-        return self.from_native(function(right, self.native), name, version=version)
+        return self.from_native(function(right, self.native), name)
 
     return f_reflect if reflect else f
 
@@ -71,11 +70,14 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     def name(self) -> str:
         return self._name
 
+    def __narwhals_namespace__(self) -> ArrowNamespace:
+        return ArrowNamespace()
+
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
 
     def _with_native(self, native: ChunkedArrayAny) -> Self:
-        return self.from_native(native, self.name, version=self.version)
+        return self.from_native(native, self.name)
 
     def to_frame(self) -> DataFrame:
         return namespace(self)._dataframe.from_dict({self.name: self.native})
@@ -98,42 +100,25 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
 
     @property
     def dtype(self) -> DType:
-        return native_to_narwhals_dtype(self.native.type, self._version)
+        return native_to_narwhals_dtype(self.native.type, self.version)
 
     @classmethod
-    def from_native(
-        cls,
-        native: ChunkedArrayAny,
-        name: str = "",
-        /,
-        *,
-        version: Version = Version.MAIN,
-    ) -> Self:
+    def from_native(cls, native: ChunkedArrayAny, name: str = "", /) -> Self:
         obj = cls.__new__(cls)
         obj._native = native
         obj._name = name
-        obj._version = version
         return obj
 
     @classmethod
-    def from_numpy(
-        cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self:
-        return cls.from_iterable(
-            data if is_numpy_array_1d(data) else [data], name=name, version=version
-        )
+    def from_numpy(cls, data: Into1DArray, name: str = "", /) -> Self:
+        return cls.from_iterable(data if is_numpy_array_1d(data) else [data], name=name)
 
     @classmethod
     def from_iterable(
-        cls,
-        data: Iterable[Any],
-        *,
-        name: str = "",
-        dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
+        cls, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Self:
-        dtype_pa = fn.dtype_native(dtype, version)
-        return cls.from_native(fn.chunked_array([data], dtype_pa), name, version=version)
+        dtype_pa = fn.dtype_native(dtype, cls.version)
+        return cls.from_native(fn.chunked_array([data], dtype_pa), name)
 
     def cast(self, dtype: IntoDType) -> Self:
         dtype_pa = fn.dtype_native(dtype, self.version)
@@ -384,7 +369,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
         return namespace(self.compliant)
 
     def with_native(self, native: ChunkedArrayAny, name: str, /) -> ArrowSeries:
-        return self.compliant.from_native(native, name, version=self.version)
+        return self.compliant.from_native(native, name)
 
     def unnest(self) -> DataFrame:
         native = cast("pa.ChunkedArray[pa.StructScalar]", self.native)
@@ -398,7 +383,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
             rec_batch: Incomplete = pa.RecordBatch.from_struct_array
             batches = (rec_batch(chunk) for chunk in native.chunks)
             table = pa.Table.from_batches(batches, fn.struct.schema(native))
-        return namespace(self)._dataframe.from_native(table, self.version)
+        return namespace(self)._dataframe.from_native(table)
 
     # name overriding *may* be wrong
     def field(self, name: str) -> ArrowSeries:

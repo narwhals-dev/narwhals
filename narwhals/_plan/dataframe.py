@@ -171,7 +171,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         if names := expand_selectors((s_ir,), schema=self, require_any=False):
             compliant = self._compliant.drop(names)
         else:
-            compliant = self._compliant._with_native(self.to_native())
+            compliant = self._compliant.from_native(self.to_native())
         return self._with_compliant(compliant)
 
     def drop_nulls(
@@ -463,7 +463,7 @@ class DataFrame(
             backend_ = backend
         ns = namespace_from_backend(backend_)
         if can_from_dict(ns):
-            return ns.from_dict(data, schema=schema, version=cls._version).to_narwhals()
+            return ns.from_dict(data, schema=schema).to_narwhals()
         raise unsupported_backend_operation_error(
             backend_, "from_dict"
         )  # pragma: no cover

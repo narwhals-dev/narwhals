@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Collection
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 import pyarrow as pa  # ignore-banned-import
 
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
+    from narwhals._plan.arrow.lazyframe import ArrowLazyFrame as LazyFrame
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
@@ -74,12 +75,7 @@ class ArrowNamespace(
     EagerNamespace["Frame", "Series", "Expr", "Scalar", "pa.Table", "ChunkedArrayAny"],
 ):
     implementation = Implementation.PYARROW
-    _version = Version.MAIN
-
-    def __narwhals_expr_prepare__(self) -> Expr:
-        expr = super().__narwhals_expr_prepare__()
-        expr._version = self.version
-        return expr
+    version: ClassVar[Version] = Version.MAIN
 
     @property
     def _expr(self) -> type[Expr]:
@@ -105,35 +101,27 @@ class ArrowNamespace(
 
         return ArrowDataFrame
 
+    @property
+    def _lazyframe(self) -> type[LazyFrame]:
+        from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
+
+        return ArrowLazyFrame
+
     def from_dict(
-        self,
-        data: Mapping[str, Any],
-        /,
-        *,
-        schema: IntoSchema | None = None,
-        version: Version = Version.MAIN,
+        self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Frame:
         return self._dataframe.from_dict(data, schema=schema)
 
     def from_iterable(
-        self,
-        data: Iterable[Any],
-        *,
-        name: str = "",
-        dtype: IntoDType | None = None,
-        version: Version = Version.MAIN,
+        self, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Series:
         return self._series.from_iterable(data, name=name, dtype=dtype)
 
     def col(self, node: ir.Column, frame: Frame, name: str) -> Expr:
-        return self._expr.from_native(
-            frame.native.column(node.name), name
-        )
+        return self._expr.from_native(frame.native.column(node.name), name)
 
     def lit(self, node: ir.Lit[PythonLiteral], frame: Frame, name: str) -> Scalar:
-        return self._scalar.from_python(
-            node.value, name, dtype=node.dtype
-        )
+        return self._scalar.from_python(node.value, name, dtype=node.dtype)
 
     def lit_series(
         self, node: ir.LitSeries[ChunkedArrayAny], frame: Frame, name: str
@@ -230,9 +218,7 @@ class ArrowNamespace(
         )
         return self._into_expr(result, name)
 
-    def _into_expr(
-        self, native: ChunkedOrScalarAny, name: str
-    ) -> Expr | Scalar:
+    def _into_expr(self, native: ChunkedOrScalarAny, name: str) -> Expr | Scalar:
         if isinstance(native, pa.Scalar):
             return self._scalar.from_native(native, name)
         return self._expr.from_native(native, name)
@@ -330,16 +316,16 @@ class ArrowNamespace(
                 )
                 raise TypeError(msg)
         result = fn.concat_tables(df.native for df in dfs)
-        return self._dataframe.from_native(result, self.version)
+        return self._dataframe.from_native(result)
 
     def concat_df_diagonal(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
         return self._dataframe.from_native(
-            fn.concat_tables((df.native for df in dfs), "default"), self.version
+            fn.concat_tables((df.native for df in dfs), "default")
         )
 
     def concat_df_horizontal(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
         return self._dataframe.from_native(
-            fn.concat_tables_horizontal(df.native for df in dfs), self.version
+            fn.concat_tables_horizontal(df.native for df in dfs)
         )
 
     def concat_series(self, series: Iterable[CompliantSeries]) -> Series:
@@ -357,15 +343,15 @@ class ArrowNamespace(
                 arrays.append(s.native)
                 names.append(s.name)
         result = fn.concat_horizontal(arrays, names)
-        return self._dataframe.from_native(result, self.version)
+        return self._dataframe.from_native(result)
 
     def read_csv(self, source: FileSource, /, **kwds: Any) -> Frame:
         native = io.read_csv(source, **kwds)
-        return self._dataframe.from_native(native, version=self.version)
+        return self._dataframe.from_native(native)
 
     def read_parquet(self, source: IOSource, /, **kwds: Any) -> Frame:
         native = io.read_parquet(source, **kwds)
-        return self._dataframe.from_native(native, version=self.version)
+        return self._dataframe.from_native(native)
 
     def read_csv_schema(self, source: FileSource, /, **kwds: Any) -> Schema:
         return into_version(self).schema.from_arrow(io.read_csv_schema(source, **kwds))

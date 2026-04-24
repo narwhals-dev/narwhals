@@ -11,9 +11,11 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
+    import polars as pl
     from typing_extensions import TypeAlias
 
     from narwhals._plan.compliant.namespace import CompliantNamespace
+    from narwhals._plan.compliant.package import HasPlanEvaluator
     from narwhals._plan.compliant.typing import NamespaceT_co, SupportsNarwhalsNamespace
     from narwhals._plan.plans.visitors import ResolvedToCompliant
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
@@ -37,7 +39,7 @@ def namespace_from_backend(
     if impl is Implementation.POLARS:
         from narwhals._plan import polars as _polars
 
-        return _polars.Namespace(Version.MAIN)
+        return _polars.Namespace()
     if impl is Implementation.PYARROW:
         from narwhals._plan import arrow as _arrow
 
@@ -76,9 +78,17 @@ def collect_implementation(backend: IntoBackend[Backend] | Any) -> _LazyFrameCol
     raise TypeError(msg)  # pragma: no cover
 
 
-def evaluator(backend: KnownImpl) -> type[ResolvedToCompliant[Any]]:
+def evaluator(backend: KnownImpl, version: Version) -> type[ResolvedToCompliant[Any]]:
     if backend is Implementation.POLARS:
-        from narwhals._plan.polars.lazyframe import PolarsEvaluator
+        from narwhals._plan import polars as _polars
 
-        return PolarsEvaluator
+        pl_module: HasPlanEvaluator[pl.LazyFrame]
+        if version is Version.MAIN:
+            pl_module = _polars
+        elif version is Version.V1:  # pragma: no cover
+            pl_module = _polars.v1
+        else:
+            raise NotImplementedError(version)
+        result: type[ResolvedToCompliant[Any]] = pl_module.PlanEvaluator
+        return result
     raise NotImplementedError(backend)

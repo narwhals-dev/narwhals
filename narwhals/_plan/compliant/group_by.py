@@ -8,7 +8,8 @@ from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.common import replace, temp
 from narwhals._plan.compliant.typing import (
     DataFrameT,
-    EagerDataFrameT,
+    DataFrameT_co,
+    EagerDataFrameT_co,
     FrameT_co,
     ResolverT_co,
 )
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
-    from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
+    from narwhals._plan.typing import IncompleteVarianceLie, IntoExpr, OneOrIterable, Seq
 
 
 class CompliantGroupBy(Protocol[FrameT_co]):
@@ -30,19 +31,17 @@ class CompliantGroupBy(Protocol[FrameT_co]):
     def compliant(self) -> FrameT_co: ...
 
 
-class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
+class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co]):
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
+    def __iter__(self) -> Iterator[tuple[Any, DataFrameT_co]]: ...
     @classmethod
-    def by_names(
-        cls, df: DataFrameT, names: Seq[str], /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
+    def by_names(cls, df: IncompleteVarianceLie, names: Seq[str], /) -> Self: ...
     @classmethod
     def from_resolver(
-        cls, df: DataFrameT, resolver: GroupByResolver, /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
+        cls, df: IncompleteVarianceLie, resolver: GroupByResolver, /
+    ) -> Self: ...
     @property
     def keys(self) -> Seq[NamedIR]:
         return self._keys
@@ -54,17 +53,20 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
         raise group_by_no_keys_error()
 
 
-class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDataFrameT]):
-    _df: EagerDataFrameT
+class EagerDataFrameGroupBy(
+    DataFrameGroupBy[EagerDataFrameT_co], Protocol[EagerDataFrameT_co]
+):
+    _df: IncompleteVarianceLie
     _key_names: Seq[str]
     _key_names_original: Seq[str]
     _column_names_original: Seq[str]
 
     @property
-    def compliant(self) -> EagerDataFrameT:
-        return self._df
+    def compliant(self) -> EagerDataFrameT_co:
+        r: EagerDataFrameT_co = self._df
+        return r
 
-    def agg_over(self, irs: Seq[NamedIR]) -> EagerDataFrameT:
+    def agg_over(self, irs: Seq[NamedIR]) -> EagerDataFrameT_co:
         """Perform a windowed aggregation.
 
         Returns the re-joined aggregation results.
@@ -72,7 +74,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         ...
 
     @classmethod
-    def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
+    def by_names(cls, df: IncompleteVarianceLie, names: Seq[str], /) -> Self:
         obj = cls.__new__(cls)
         obj._df = df
         obj._keys = ()
@@ -82,7 +84,9 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         return obj
 
     @classmethod
-    def from_resolver(cls, df: EagerDataFrameT, resolver: GroupByResolver, /) -> Self:
+    def from_resolver(
+        cls, df: IncompleteVarianceLie, resolver: GroupByResolver, /
+    ) -> Self:
         key_names = resolver.key_names
         if not resolver.requires_projection():
             df = df.drop_nulls(key_names) if resolver._drop_null_keys else df

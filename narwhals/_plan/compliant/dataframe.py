@@ -9,14 +9,15 @@ from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.compliant.typing import LazyFrameAny, SeriesT_co
 from narwhals._plan.typing import (
     IncompleteCyclic,
+    IncompleteVarianceLie,
     IntoExpr,
     NativeDataFrameT,
+    NativeDataFrameT_co,
     NativeFrameT_co,
     NativeSeriesT_co,
     NonCrossJoinStrategy,
     OneOrIterable,
 )
-from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.group_by import (
@@ -34,46 +35,39 @@ if TYPE_CHECKING:
         EagerDataFrameGroupBy,
         GroupByResolver,
     )
-    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
+    from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._plan.dataframe import BaseFrame, DataFrame
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
     from narwhals._typing import _LazyAllowedImpl
-    from narwhals._utils import Implementation
+    from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
-
-Incomplete: TypeAlias = Any
-
-MAIN = Version.MAIN
 
 
 class CompliantFrame(Protocol[NativeFrameT_co]):
     """`[NativeFrameT_co]`."""
 
     implementation: ClassVar[Implementation]
+    version: ClassVar[Version]
 
     def __narwhals_namespace__(self) -> IncompleteCyclic: ...
     @property
     def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
-    def _with_native(self, native: Incomplete) -> Self: ...
     @classmethod
-    def from_native(cls, native: Incomplete, /, version: Version) -> Self: ...
+    def from_native(cls, native: IncompleteVarianceLie, /) -> Self: ...
     @property
     def native(self) -> NativeFrameT_co: ...
-    @property
-    def version(self) -> Version: ...
-    def to_narwhals(self) -> BaseFrame[NativeFrameT_co]: ...
     @property
     def columns(self) -> list[str]: ...
     def drop(self, columns: Sequence[str]) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
     def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self: ...
     # Shouldn't *need* to be `NamedIR`, but current impl depends on a name being passed around
-    def filter(self, predicate: NamedIR, /) -> Self: ...
+    def filter(self, predicate: NamedIR, /) -> CompliantFrame[NativeFrameT_co]: ...
     def join(
         self,
         other: Self,
@@ -126,26 +120,23 @@ class CompliantFrame(Protocol[NativeFrameT_co]):
     ) -> Self: ...
 
 
-class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
+class CompliantDataFrame(
     io.EagerOutput,
-    CompliantFrame[NativeDataFrameT],
-    Protocol[NativeDataFrameT, NativeSeriesT_co],
+    CompliantFrame[NativeDataFrameT_co],
+    Protocol[NativeDataFrameT_co, NativeSeriesT_co],
 ):
-    """`[NativeDataFrameT, NativeSeriesT_co]`.
-
-    - pyright is rejecting *any* covariant type vars?
-    - Doesn't seem to be based on usage?
-    """
+    """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
 
     def __narwhals_dataframe__(self) -> Self:
         return self
 
+    def __narwhals_namespace__(
+        self,
+    ) -> CompliantNamespace[IncompleteVarianceLie, Any, Any]: ...
+
     @property
     def _grouper(self) -> type[Grouped]:
         return Grouped
-
-    def _with_native(self, native: NativeDataFrameT) -> Self:
-        return self.from_native(native, self.version)
 
     @property
     def width(self) -> int:
@@ -156,14 +147,13 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
         cls,
         exportable: ArrowStreamExportable,
         /,
-        version: Version = MAIN,
         *,
         requested_schema: object | None = None,
     ) -> Self:
         if requested_schema is not None:
             msg = f"{cls.__name__}.from_arrow_c_stream"
             raise NotImplementedError(msg)
-        return cls.from_arrow(exportable, version)
+        return cls.from_arrow(exportable)
 
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
@@ -184,14 +174,14 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
 
     def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]:
         """Compliant-level `group_by`, allowing only `str` keys."""
-        return self._group_by.by_names(self, names)  # type: ignore[arg-type, return-value]
+        return self._group_by.by_names(self, names)  # type: ignore[return-value]
 
     def group_by_resolver(self, resolver: GroupByResolver, /) -> DataFrameGroupBy[Self]:
         """Narwhals-level resolved `group_by`.
 
         `keys`, `aggs` are already parsed and projections planned.
         """
-        return self._group_by.from_resolver(self, resolver)  # type: ignore[arg-type, return-value]
+        return self._group_by.from_resolver(self, resolver)  # type: ignore[return-value]
 
     @overload
     def to_dict(
@@ -220,36 +210,28 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
         n = int(len(self) * fraction)
         return self.sample_n(n, with_replacement=with_replacement, seed=seed)
 
-    def __narwhals_namespace__(self) -> CompliantNamespace[Self, Any, Any]: ...
     def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny: ...
     @property
     def shape(self) -> tuple[int, int]: ...
     def __len__(self) -> int: ...
+
+    # NOTE: `pyright` includes `Self` in `_group_by` to calculate variance (`mypy` doesn't)
     @property
     def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
     @classmethod
-    def from_native(cls, native: NativeDataFrameT, /, version: Version) -> Self: ...
+    def from_arrow(cls, frame: IntoArrowTable, /) -> Self: ...
     @classmethod
-    def from_arrow(cls, frame: IntoArrowTable, /, version: Version = MAIN) -> Self: ...
+    def from_pandas(cls, frame: pd.DataFrame, /) -> Self: ...
     @classmethod
-    def from_pandas(cls, frame: pd.DataFrame, /, version: Version = MAIN) -> Self: ...
-    @classmethod
-    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self: ...
+    def from_polars(cls, frame: pl.DataFrame, /) -> Self: ...
     @classmethod
     def from_narwhals(cls, frame: DataFrame[Any, Any], /) -> Self: ...
     @classmethod
     def from_compliant(cls, frame: CompliantDataFrame[Any, Any], /) -> Self: ...
-    @property
-    def native(self) -> NativeDataFrameT: ...
     def clone(self) -> Self: ...
     @classmethod
     def from_dict(
-        cls,
-        data: Mapping[str, Any],
-        /,
-        *,
-        schema: IntoSchema | None = None,
-        version: Version = MAIN,
+        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> Self: ...
     def gather_every(self, n: int, offset: int = 0) -> Self: ...
     def get_column(self, name: str) -> CompliantSeries[NativeSeriesT_co]: ...
@@ -310,16 +292,13 @@ class CompliantDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     ) -> Self: ...
 
 
-class EagerDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
+class EagerDataFrame(
     io.LazyOutput,
-    CompliantDataFrame[NativeDataFrameT, NativeSeriesT_co],
-    Protocol[SeriesT_co, NativeDataFrameT, NativeSeriesT_co],
+    CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co],
+    Protocol[SeriesT_co, NativeDataFrameT_co, NativeSeriesT_co],
 ):
     """`[SeriesT, NativeDataFrameT, NativeSeriesT_co]`."""
 
-    def __narwhals_namespace__(
-        self,
-    ) -> EagerNamespace[Self, SeriesT_co, Any, Any, NativeDataFrameT, Any]: ...
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
     def _evaluate_irs(
@@ -329,7 +308,7 @@ class EagerDataFrame(  # pyright: ignore[reportInvalidTypeVarUse]
     def group_by_resolver(
         self, resolver: GroupByResolver, /
     ) -> EagerDataFrameGroupBy[Self]:
-        return self._group_by.from_resolver(self, resolver)  # type: ignore[arg-type, return-value]
+        return self._group_by.from_resolver(self, resolver)  # type: ignore[return-value]
 
     def sink_parquet(self, target: str | BytesIO, /) -> None:
         self.write_parquet(target)

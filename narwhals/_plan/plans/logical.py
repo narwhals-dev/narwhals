@@ -427,6 +427,7 @@ class Scan(LogicalPlan, has_inputs=False):
     def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield from ()
 
+    # TODO @dangotbanned: Review backend/version entrypoint
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Any]:
@@ -444,6 +445,7 @@ class ScanFile(Scan):
     def from_source(cls, source: FileSource, /) -> Self:
         return cls(source=normalize_path(source))
 
+    # TODO @dangotbanned: Review backend/version entrypoint
     # TODO @dangotbanned: Typing needs injecting here
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
@@ -502,6 +504,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_dataframe(self)
 
+    # TODO @dangotbanned: Review backend/version entrypoint
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Any]:
@@ -546,6 +549,7 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_lazyframe(self)
 
+    # TODO @dangotbanned: Review backend/version entrypoint
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Native]:

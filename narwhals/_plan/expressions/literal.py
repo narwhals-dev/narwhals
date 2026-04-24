@@ -138,7 +138,7 @@ class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=namespaced()):
         return self.value.to_native()
 
     @property
-    def version(self) -> Version:
+    def version(self) -> Version:  # pragma: no cover
         return self.value.version
 
     # TODO @dangotbanned: Maybe show more detail on origin (not values)?

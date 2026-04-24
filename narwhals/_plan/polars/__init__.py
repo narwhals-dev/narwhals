@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from narwhals._plan.polars import v1
 from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
 from narwhals._plan.polars.expr import PolarsExpr as Expr
 from narwhals._plan.polars.lazyframe import (
@@ -21,4 +22,5 @@ __all__ = [
     "PlanResolver",
     "Scalar",
     "Series",
+    "v1",
 ]

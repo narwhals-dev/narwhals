@@ -317,13 +317,13 @@ class LazyFrame(Generic[Native]):
         eager = eager_implementation(backend) if backend else None
         logical = self._plan.collect(closed_kwds(**kwds))
         resolved = Resolver.from_backend(lazy).collect(logical)
-        return evaluator(lazy).collect(resolved, eager, self.version).to_narwhals()
+        return evaluator(lazy, self.version).collect(resolved, eager).to_narwhals()
 
     def sink_parquet(self, file: FileSource | BytesIO) -> None:
         lazy = known_implementation(self.implementation)
         logical = self._plan.sink_parquet(file)
         resolved = Resolver.from_backend(lazy).sink_parquet(logical)
-        evaluator(lazy).sink_parquet(resolved, self.version)
+        evaluator(lazy, self.version).sink_parquet(resolved)
 
     def sort(
         self,

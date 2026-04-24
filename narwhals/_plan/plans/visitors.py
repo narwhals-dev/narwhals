@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 from narwhals._plan.compliant.typing import Native
-from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -12,6 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny
     from narwhals._plan.plans import logical as lp, resolved as rp
     from narwhals._plan.plans.resolved import ResolvedPlan
+    from narwhals._utils import Version
     from narwhals.typing import EagerAllowed
 
 R_co = TypeVar("R_co", covariant=True)
@@ -67,19 +67,14 @@ class ResolvedToCompliant(Protocol[Native]):
     """
 
     __slots__ = ()
+    version: ClassVar[Version]
 
     @classmethod
     def collect(
-        cls,
-        plan: rp.Collect,
-        /,
-        backend: EagerAllowed | None = None,
-        version: Version = Version.MAIN,
+        cls, plan: rp.Collect, /, backend: EagerAllowed | None = None
     ) -> CompliantDataFrameAny: ...
     @classmethod
-    def sink_parquet(
-        cls, plan: rp.SinkParquet, /, version: Version = Version.MAIN
-    ) -> None: ...
+    def sink_parquet(cls, plan: rp.SinkParquet, /) -> None: ...
     def map_function(
         self, plan: rp.MapFunction[rp.RpFunctionT_co], /
     ) -> CompliantLazyFrame[Native]:

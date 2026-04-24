@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
 
@@ -29,22 +29,20 @@ MAIN = Version.MAIN
 
 
 class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
-    __slots__ = ("_input_schema", "_native", "_version")
+    __slots__ = ("_input_schema", "_native")
     _native: pl.LazyFrame
-    _version: Version
     _input_schema: Schema | None
 
     @classmethod
-    def from_native(cls, native: pl.LazyFrame, /, version: Version = MAIN) -> Self:
+    def from_native(cls, native: pl.LazyFrame, /) -> Self:
         obj = cls.__new__(cls)
         obj._native = native
-        obj._version = version
         obj._input_schema = None
         return obj
 
     @classmethod
-    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self:
-        return cls.from_native(frame.lazy(), version)
+    def from_polars(cls, frame: pl.DataFrame, /) -> Self:
+        return cls.from_native(frame.lazy())
 
     def collect_polars(self, **kwds: Any) -> pl.DataFrame:
         if "background" in kwds:
@@ -67,10 +65,6 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
     def native(self) -> pl.LazyFrame:
         return self._native
 
-    @property
-    def version(self) -> Version:
-        return self._version
-
     collect_schema = todo()
     collect_arrow = todo()
     collect_pandas = todo()
@@ -79,35 +73,30 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
 class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     """*Somewhat* of a mix between `*Namespace` and `*LazyFrame`."""
 
-    __slots__ = ("_version",)
-    _version: Version
+    __slots__ = ()
+    version: ClassVar[Version] = Version.MAIN
 
-    @property
-    def version(self) -> Version:
-        return self._version
+    def __narwhals_namespace__(self) -> Namespace:
+        return Namespace()
 
-    def __init__(self, version: Version = MAIN) -> None:
-        self._version = version
+    # NOTE: These get special treatment as they're hot paths
+    _lazyframe: ClassVar = PolarsLazyFrame
+
+    to_lazy = _lazyframe.from_native
+
+    def _into_compliant(self, native: pl.LazyFrame, /) -> PolarsLazyFrame:
+        return self._lazyframe.from_native(native)
 
     @classmethod
     def collect(
-        cls,
-        plan: rp.Collect,
-        /,
-        backend: EagerAllowed | None = None,
-        version: Version = MAIN,
+        cls, plan: rp.Collect, /, backend: EagerAllowed | None = None
     ) -> DataFrameAny:
         kwds = plan.kwds()
-        return plan.input.evaluate(cls(version)).collect_compliant(
-            backend or "polars", **kwds
-        )
+        return plan.input.evaluate(cls()).collect_compliant(backend or "polars", **kwds)
 
     @classmethod
-    def sink_parquet(cls, plan: rp.SinkParquet, /, version: Version = MAIN) -> None:
-        plan.input.evaluate(cls(version)).native.sink_parquet(plan.target)
-
-    def _into_compliant(self, native: pl.LazyFrame, /) -> PolarsLazyFrame:
-        return PolarsLazyFrame.from_native(native, self.version)
+    def sink_parquet(cls, plan: rp.SinkParquet, /) -> None:
+        plan.input.evaluate(cls()).native.sink_parquet(plan.target)
 
     def concat_horizontal(self, plan: rp.HConcat) -> PolarsLazyFrame:
         inputs = (input.evaluate(self).native for input in plan.inputs)
@@ -160,10 +149,10 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         )
 
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
-        return Namespace(self.version).scan_csv(plan.source)
+        return self.__narwhals_namespace__().scan_csv(plan.source)
 
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> PolarsLazyFrame:
-        return PolarsLazyFrame.from_narwhals(plan.frame)
+        return self._lazyframe.from_narwhals(plan.frame)
 
     def scan_lazyframe(self, plan: rp.ScanLazyFrame[Any], /) -> PolarsLazyFrame:
         if plan.frame.implementation.is_polars() and isinstance(
@@ -173,7 +162,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         raise NotImplementedError(plan.frame.implementation, type(plan.frame))
 
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
-        return Namespace(self.version).scan_parquet(plan.source)
+        return self.__narwhals_namespace__().scan_parquet(plan.source)
 
     def select_names(self, plan: rp.SelectNames) -> PolarsLazyFrame:
         return self._into_compliant(plan.input.evaluate(self).native.select(plan.names))

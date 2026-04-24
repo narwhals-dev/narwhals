@@ -37,10 +37,11 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
       - Has both `dataset_schema` and (uniquely) `projected_schema` properties
     """
 
-    __slots__ = ("_input_schema", "_native", "_version")
+    __slots__ = ("_input_schema", "_native")
     implementation: ClassVar = Implementation.PYARROW
+    version: ClassVar[Version] = Version.MAIN
+
     _native: pa.Table
-    _version: Version
     _input_schema: Schema | None
 
     from_arrow = todo()
@@ -48,10 +49,9 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
     from_narwhals = todo()
 
     @classmethod
-    def from_native(cls, native: pa.Table, /, version: Version = MAIN) -> Self:
+    def from_native(cls, native: pa.Table, /, version: Version = MAIN) -> Self:  # noqa: ARG003
         obj = cls.__new__(cls)
         obj._native = native
-        obj._version = version
         return obj
 
     @classmethod
@@ -67,10 +67,6 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
     @property
     def native(self) -> pa.Table:
         return self._native
-
-    @property
-    def version(self) -> Version:
-        return self._version
 
     collect_schema = todo()
     collect_arrow = todo()

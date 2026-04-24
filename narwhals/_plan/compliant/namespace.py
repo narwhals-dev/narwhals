@@ -10,11 +10,15 @@ from narwhals._plan.compliant.typing import (
     EagerScalarT_co,
     ExprT_co,
     FrameT,
-    HasVersion,
     ScalarT_co,
     SeriesT_co,
 )
-from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT_co
+from narwhals._plan.typing import (
+    IncompleteVarianceLie,
+    NativeDataFrameT,
+    NativeSeriesT_co,
+)
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
@@ -22,28 +26,35 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
-    from narwhals._utils import Implementation
+    from narwhals._utils import Implementation, Version
     from narwhals.typing import PythonLiteral
 
 Incomplete: TypeAlias = Any
 
 
-# TODO @dangotbanned: Define `CompliantNamespace().from_native`
-# - will reduce direct calls to `*Namespace._<compliant-type>`
+# TODO @dangotbanned: Resolve `FrameT` invariance
 class CompliantNamespace(
-    HasVersion,
-    # NOTE: Using `FrameT` in `LazyRangeGenerator` *could* be an issue if that can be either eager or lazy
-    ranges.LazyRangeGenerator[FrameT, ExprT_co],
-    Protocol[FrameT, ExprT_co, ScalarT_co],
+    ranges.LazyRangeGenerator[FrameT, ExprT_co], Protocol[FrameT, ExprT_co, ScalarT_co]
 ):
-    """`[FrameT, ExprT_co, ScalarT_co]`."""
+    """`[FrameT, ExprT_co, ScalarT_co]`.
+
+    ## Notes of `FrameT` variance
+    - An issue for `LazyRangeGenerator` if that can be either eager or lazy
+    - Having `CompliantFrameV*` and using `Self` is fragile
+    - Need to separate the types from the operations (e.g. `Package`)
+        - That should be able to use covariance for the compliant types
+    """
 
     implementation: ClassVar[Implementation]
+    version: ClassVar[Version]
 
     @property
     def _expr(self) -> type[ExprT_co]: ...
     @property
-    def _frame(self) -> type[FrameT]: ...
+    def _frame(self) -> type[FrameT]:
+        """The invariance of `FrameT` is a big ol problemo."""
+        ...
+
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
     def all_horizontal(
@@ -79,7 +90,6 @@ class CompliantNamespace(
     def __narwhals_namespace__(self) -> Self:
         return self
 
-    # TODO @dangotbanned: Make sure this works after updating `dispatch` bits
     def from_named_ir(
         self, named_ir: ir.NamedIR, frame: FrameT, /
     ) -> ExprT_co | ScalarT_co:
@@ -93,13 +103,16 @@ class CompliantNamespace(
     def __narwhals_expr_prepare__(self) -> ExprT_co:
         return self._expr.__new__(self._expr)
 
+    # NOTE: will reduce direct calls to `*Namespace._<compliant-type>`
+    from_native: not_implemented = not_implemented()
+
 
 class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
     io.LazyInput[Incomplete],
     io.EagerInput[EagerDataFrameT],
-    ConcatDataFrame[NativeDataFrameT, Incomplete],
-    ConcatSeriesHorizontal[NativeDataFrameT, Incomplete],
+    ConcatDataFrame[NativeDataFrameT, IncompleteVarianceLie],
+    ConcatSeriesHorizontal[NativeDataFrameT, IncompleteVarianceLie],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[
         EagerDataFrameT,
@@ -129,9 +142,7 @@ class EagerNamespace(
     def _series(self) -> type[SeriesT_co]: ...
 
     def len(self, node: ir.Len, frame: EagerDataFrameT, name: str, /) -> EagerScalarT_co:
-        return self._scalar.from_python(
-            len(frame), name or node.name, dtype=None, version=frame.version
-        )
+        return self._scalar.from_python(len(frame), name or node.name, dtype=None)
 
     def lit_series(
         self, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str, /

@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
-from narwhals._plan.compliant.typing import HasVersion
-from narwhals._plan.typing import IncompleteCyclic, NativeSeriesT_co
+from narwhals._plan.typing import (
+    IncompleteCyclic,
+    IncompleteVarianceLie,
+    NativeSeriesT_co,
+)
 from narwhals._utils import Implementation, Version, unstable
 
 if TYPE_CHECKING:
@@ -11,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     import polars as pl
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.accessors import SeriesStructNamespace
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -29,20 +32,12 @@ if TYPE_CHECKING:
         _1DArray,
     )
 
-Incomplete: TypeAlias = Any
-"""Hack to get covariance on `CompliantSeries`.
 
-We need to define a constructor, but it can only be typed (and remain covariant),
-if it is named `__init__`.
-
-Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
-"""
-
-
-class CompliantSeries(HasVersion, Protocol[NativeSeriesT_co]):
+class CompliantSeries(Protocol[NativeSeriesT_co]):
     """`[NativeSeriesT_co]`."""
 
     implementation: ClassVar[Implementation]
+    version: ClassVar[Version]
 
     def __narwhals_series__(self) -> Self:
         return self
@@ -51,7 +46,7 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT_co]):
         return len(self.native)
 
     def alias(self, name: str) -> Self:
-        return self.from_native(self.native, name, version=self.version)
+        return self.from_native(self.native, name)
 
     def len(self) -> int:
         return len(self.native)
@@ -146,21 +141,12 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT_co]):
     def __narwhals_namespace__(self) -> IncompleteCyclic: ...
     @classmethod
     def from_iterable(
-        cls,
-        data: Iterable[Any],
-        *,
-        version: Version,
-        name: str = "",
-        dtype: IntoDType | None = None,
+        cls, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Self: ...
     @classmethod
-    def from_native(
-        cls, native: Incomplete, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self: ...
+    def from_native(cls, native: IncompleteVarianceLie, name: str = "", /) -> Self: ...
     @classmethod
-    def from_numpy(
-        cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self: ...
+    def from_numpy(cls, data: Into1DArray, name: str = "", /) -> Self: ...
     @property
     def dtype(self) -> DType: ...
     @property

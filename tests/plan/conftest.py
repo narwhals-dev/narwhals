@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from operator import attrgetter
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
+
+import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Collection
 
-    import pytest
     from typing_extensions import LiteralString
 
     from narwhals.typing import EagerAllowed
@@ -49,6 +50,10 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
+_option = cast("Callable[[pytest.Config, str], Any]", pytest.Config.getoption)
+"""Hack to avoid `pyright` using `Any | None` as the return type."""
+
+
 def _resolve_options(
     config: pytest.Config,
 ) -> tuple[Collection[Identifier] | Literal["ALL"], Collection[Identifier] | None]:
@@ -60,7 +65,7 @@ def _resolve_options(
     exclude: set[Identifier] = set()
 
     # Try and integrate a lil bit
-    opt_main: str = config.getoption("--constructors")
+    opt_main: str = _option(config, "--constructors")
     if opt_main != _MAIN_DEFAULT_CONSTRUCTORS:
         relevant = {"pyarrow", "polars[eager]", "polars[lazy]"}
         constructors = relevant.intersection(opt_main.split(","))
@@ -70,10 +75,10 @@ def _resolve_options(
             exclude.add("polars")
 
     # The actual options specific to `narwhals._plan`
-    opt_include: LiteralString = config.getoption("--plan-include")
+    opt_include: LiteralString = _option(config, "--plan-include")
     if opt_include != "ALL":
         include.update(opt_include.split(","))
-    opt_exclude: LiteralString = config.getoption("--plan-exclude")
+    opt_exclude: LiteralString = _option(config, "--plan-exclude")
     if opt_exclude != "":
         exclude.update(opt_exclude.split(","))
 

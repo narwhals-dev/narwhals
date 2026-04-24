@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._utils import Version
 
 
 # TODO @dangotbanned: Investigate replacing this (in `ExprDispatch`) with something more useful
@@ -78,7 +77,7 @@ NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
-
+EagerDataFrameT_co = TypeVar("EagerDataFrameT_co", bound=EagerDataFrameAny, covariant=True)
 
 class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
@@ -88,23 +87,6 @@ class CanNamespace(Protocol[FrameT, ExprT_co, ScalarT_co]):
     """Use this instead of `Namespace` or `*Frame`, when all that's needed is access to a namespace."""
 
     def __narwhals_namespace__(self) -> Namespace[FrameT, ExprT_co, ScalarT_co]: ...
-
-
-# TODO @dangotbanned: `_version` (attribute) is not implemented, but typed in a `HasVersion` as `Version`
-# - `version` (property) is implemented there, defined as referencing `self._version`
-# - I remember this being an issue for pyarrow typing
-# NOTE: Most of the `Compliant*` protocols are using this detail to provide constructors that assign to it
-# - Would be better if we didn't need to pass this around everywhere
-# - Really the version should be scoped to all operations
-#  - the property would reference that new place
-class HasVersion(Protocol):
-    _version: Version
-
-    # NOTE: Unlike `nw._utils._StoresVersion`, here the property is public
-    @property
-    def version(self) -> Version:
-        """Narwhals API version (V1 or MAIN)."""
-        return self._version
 
 
 # - `Self_` and `Frame` need to share a `*Namespace`

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._utils import Version as _NwVersion
 
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 __all__ = ["into_version"]
 
 
-def into_version(version: _NwVersion | _HasVersion, /) -> _Version:
+def into_version(version: _NwVersion | _HasVersion | _HasVersionClass, /) -> _Version:
     """Create a namespace for accessing versioned narwhals-level types.
 
     Rewraps the `Version` enum to use `narwhals._plan` package *and* cache the imports.
@@ -124,6 +124,10 @@ def _import_expr(version: _NwVersion, /) -> type[NwExpr]:
 class _HasVersion(Protocol):
     @property
     def version(self) -> _NwVersion: ...
+
+
+class _HasVersionClass(Protocol):
+    version: ClassVar[_NwVersion]
 
 
 def _not_implemented(version: _NwVersion) -> NotImplementedError:  # pragma: no cover

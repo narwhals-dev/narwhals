@@ -5,7 +5,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import narwhals.dependencies as deps
-from narwhals._utils import Version, qualified_type_name
+from narwhals._utils import qualified_type_name
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -107,18 +107,20 @@ def _try_known_dataframes(native: Eager, /) -> CompliantDataFrame[Eager, Any] | 
     return None
 
 
+# TODO @dangotbanned: Review backend/version entrypoint
 def _from_polars_lazyframe(native: pl.LazyFrame, /) -> CompliantLazyFrame[pl.LazyFrame]:
     from narwhals._plan.polars import LazyFrame
 
-    return LazyFrame.from_native(native, Version.MAIN)
+    return LazyFrame.from_native(native)
 
 
+# TODO @dangotbanned: Review backend/version entrypoint
 def _from_polars_dataframe(
     native: pl.DataFrame, /
 ) -> CompliantDataFrame[pl.DataFrame, pl.Series]:
     from narwhals._plan.polars import DataFrame
 
-    return DataFrame.from_native(native, Version.MAIN)
+    return DataFrame.from_native(native)
 
 
 def _import_polars_lazyframe() -> type[pl.LazyFrame]:
@@ -133,12 +135,13 @@ def _import_polars_dataframe() -> type[pl.DataFrame]:
     return pl.DataFrame
 
 
+# TODO @dangotbanned: Review backend/version entrypoint
 def _from_pyarrow_table(
     native: pa.Table, /
 ) -> CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]:
     from narwhals._plan.arrow import DataFrame
 
-    return DataFrame.from_native(native, Version.MAIN)
+    return DataFrame.from_native(native)
 
 
 def _import_pyarrow_table() -> type[pa.Table]:
