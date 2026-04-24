@@ -49,14 +49,14 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
     from_narwhals = todo()
 
     @classmethod
-    def from_native(cls, native: pa.Table, /, version: Version = MAIN) -> Self:  # noqa: ARG003
+    def from_native(cls, native: pa.Table, /) -> Self:
         obj = cls.__new__(cls)
         obj._native = native
         return obj
 
     @classmethod
-    def from_polars(cls, frame: pl.DataFrame, /, version: Version = MAIN) -> Self:
-        return cls.from_native(frame.to_arrow(), version)
+    def from_polars(cls, frame: pl.DataFrame, /) -> Self:
+        return cls.from_native(frame.to_arrow())
 
     @property
     def input_schema(self) -> Schema:
