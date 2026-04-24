@@ -50,7 +50,6 @@ from narwhals._utils import Implementation, generate_temporary_column_name
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from types import ModuleType
-    from typing import Protocol
 
     import ibis
     import pandas as pd
@@ -71,14 +70,6 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoLazyFrameT,
     )
-
-    class NarwhalsNamespace(Protocol):
-        """Minimal shape of a narwhals namespace (e.g. `narwhals`, `narwhals.stable.v1`)."""
-
-        @staticmethod
-        def from_native(
-            native_object: Any, /, **kwds: Any
-        ) -> DataFrame[Any] | LazyFrame[Any]: ...
 
 
 __all__ = (
