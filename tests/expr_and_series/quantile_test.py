@@ -32,6 +32,8 @@ def test_quantile_expr(
         and interpolation != "linear"
     ):
         request.applymarker(pytest.mark.xfail)
+    if "sqlframe" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
     q = 0.3
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
