@@ -11,10 +11,12 @@ from hypothesis import given
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from narwhals.testing.typing import DataFrameConstructor
 
 
 rnd = Random(0)  # noqa: S311
@@ -66,15 +68,13 @@ SHIFT_BINS_BY = 10
     ids=str,
 )
 def test_hist_bin(
-    constructor_eager: ConstructorEager,
+    nw_dataframe: DataFrameConstructor,
     bins: list[float],
     expected: Sequence[float],
     *,
     include_breakpoint: bool,
 ) -> None:
-    df = nw.from_native(constructor_eager(data)).with_columns(
-        float=nw.col("int").cast(nw.Float64)
-    )
+    df = nw_dataframe(data, nw).with_columns(float=nw.col("int").cast(nw.Float64))
     expected_full = {"count": expected}
     if include_breakpoint:
         expected_full = {"breakpoint": bins[1:], **expected_full}
@@ -99,10 +99,8 @@ def test_hist_bin(
         assert_equal_data(result, expected_full)
 
     # missing/nan results
-    df = nw.from_native(
-        constructor_eager(
-            {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
-        )
+    df = nw_dataframe(
+        {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}, nw
     )
     expected_full = {"count": expected}
     if include_breakpoint:
@@ -115,14 +113,12 @@ def test_hist_bin(
 @pytest.mark.parametrize("params", counts_and_expected)
 @param_include_breakpoint
 def test_hist_count(
-    constructor_eager: ConstructorEager,
+    nw_dataframe: DataFrameConstructor,
     *,
     params: dict[str, Any],
     include_breakpoint: bool,
 ) -> None:
-    df = nw.from_native(constructor_eager(data)).with_columns(
-        float=nw.col("int").cast(nw.Float64)
-    )
+    df = nw_dataframe(data, nw).with_columns(float=nw.col("int").cast(nw.Float64))
     bin_count = params["bin_count"]
 
     expected_bins = params["expected_bins"]
@@ -142,10 +138,8 @@ def test_hist_count(
             assert result["count"].sum() == df[col].count()
 
     # missing/nan results
-    df = nw.from_native(
-        constructor_eager(
-            {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
-        )
+    df = nw_dataframe(
+        {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}, nw
     )
 
     for col in df.columns:
@@ -160,9 +154,9 @@ def test_hist_count(
             )
 
 
-def test_hist_count_no_spread(constructor_eager: ConstructorEager) -> None:
+def test_hist_count_no_spread(nw_dataframe: DataFrameConstructor) -> None:
     data = {"all_zero": [0, 0, 0], "all_non_zero": [5, 5, 5]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw_dataframe(data, nw)
 
     result = df["all_zero"].hist(bin_count=4, include_breakpoint=True)
     expected = {"breakpoint": [-0.25, 0.0, 0.25, 0.5], "count": [0, 3, 0, 0]}
@@ -191,11 +185,11 @@ def test_hist_bin_and_bin_count() -> None:
 
 @param_include_breakpoint
 def test_hist_no_data(
-    constructor_eager: ConstructorEager, *, include_breakpoint: bool
+    nw_dataframe: DataFrameConstructor, *, include_breakpoint: bool
 ) -> None:
-    s = nw.from_native(constructor_eager({"values": []})).select(
-        nw.col("values").cast(nw.Float64)
-    )["values"]
+    s = nw_dataframe({"values": []}, nw).select(nw.col("values").cast(nw.Float64))[
+        "values"
+    ]
     for bin_count in [1, 10]:
         result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
         assert len(result) == bin_count
@@ -212,8 +206,8 @@ def test_hist_no_data(
     assert result["count"].sum() == 0
 
 
-def test_hist_small_bins(constructor_eager: ConstructorEager) -> None:
-    s = nw.from_native(constructor_eager({"values": [1, 2, 3]}))
+def test_hist_small_bins(nw_dataframe: DataFrameConstructor) -> None:
+    s = nw_dataframe({"values": [1, 2, 3]}, nw)
     result = s["values"].hist(bins=None, bin_count=None)
     assert len(result) == 10
 
@@ -221,11 +215,11 @@ def test_hist_small_bins(constructor_eager: ConstructorEager) -> None:
         s["values"].hist(bins=[1, 3], bin_count=4)
 
 
-def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
-    if "cudf" in str(constructor_eager):
+def test_hist_non_monotonic(nw_dataframe: DataFrameConstructor) -> None:
+    if "cudf" in str(nw_dataframe):
         # TODO(unassigned): too many spurious failures, report and revisit
         return
-    df = nw.from_native(constructor_eager({"int": [0, 1, 2, 3, 4, 5, 6]}))
+    df = nw_dataframe({"int": [0, 1, 2, 3, 4, 5, 6]}, nw)
 
     with pytest.raises(ComputeError, match="monotonic"):
         df["int"].hist(bins=[5, 0, 2])
@@ -263,17 +257,14 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_bin_hypotheis(
-    constructor_eager: ConstructorEager, data: list[float], bin_deltas: list[float]
+    nw_dataframe: DataFrameConstructor, data: list[float], bin_deltas: list[float]
 ) -> None:
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(constructor_eager({"values": data})).select(
-        nw.col("values").cast(nw.Float64)
-    )
-    df_bins_native = constructor_eager({"bins": bin_deltas})
+    df = nw_dataframe({"values": data}, nw).select(nw.col("values").cast(nw.Float64))
     bins = (
-        nw.from_native(df_bins_native, eager_only=True)
+        nw_dataframe({"bins": bin_deltas}, nw)
         .get_column("bins")
         .cast(nw.Float64)
         .cum_sum()
@@ -302,7 +293,7 @@ def test_hist_bin_hypotheis(
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
 @pytest.mark.slow
 def test_hist_count_hypothesis(
-    constructor_eager: ConstructorEager,
+    nw_dataframe: DataFrameConstructor,
     data: list[float],
     bin_count: int,
     request: pytest.FixtureRequest,
@@ -310,9 +301,7 @@ def test_hist_count_hypothesis(
     pytest.importorskip("polars")
     import polars as pl
 
-    df = nw.from_native(constructor_eager({"values": data})).select(
-        nw.col("values").cast(nw.Float64)
-    )
+    df = nw_dataframe({"values": data}, nw).select(nw.col("values").cast(nw.Float64))
 
     try:
         result = df["values"].hist(bin_count=bin_count, include_breakpoint=True)
@@ -333,9 +322,7 @@ def test_hist_count_hypothesis(
 
     if expected[
         "count"
-    ].sum() != expected_data.is_not_nan().sum() and "polars" not in str(
-        constructor_eager
-    ):
+    ].sum() != expected_data.is_not_nan().sum() and "polars" not in str(nw_dataframe):
         request.applymarker(pytest.mark.xfail)
 
     assert_equal_data(result, expected.to_dict(as_series=False))
