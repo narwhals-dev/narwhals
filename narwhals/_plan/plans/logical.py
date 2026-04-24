@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, get_args, overload
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._version import into_version
-from narwhals._plan.compliant.typing import FromNative, Native
+from narwhals._plan.compliant.typing import FromNative, Native, Native_co
 from narwhals._plan.expressions import selectors as s_ir
 from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.options import (
@@ -24,7 +24,7 @@ from narwhals._plan.options import (
     VConcatOptions,
 )
 from narwhals._plan.plans._base import _BasePlan
-from narwhals._plan.plans.typing import FrameT
+from narwhals._plan.plans.typing import FrameT_co
 from narwhals._plan.schema import FrozenSchema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing import _LazyAllowedImpl
@@ -467,9 +467,9 @@ class ScanParquet(ScanFile):
         return resolver.scan_parquet(self)
 
 
-class ScanFrame(Scan, Generic[FrameT]):
+class ScanFrame(Scan, Generic[FrameT_co]):
     __slots__ = ("frame", "schema")
-    frame: FrameT
+    frame: FrameT_co  # type: ignore[misc]
     schema: FrozenSchema
 
     def __str__(self) -> str:
@@ -529,12 +529,12 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
         raise TypeError(msg)
 
 
-class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
+class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native_co]"], Generic[Native_co]):
     """Target for `LazyFrame.from_native`.
 
     The resulting `LazyFrame` stores this as:
 
-        LazyFrame._plan: ScanLazyFrame[Native]
+        LazyFrame._plan: ScanLazyFrame[Native_co]
     """
 
     @staticmethod
@@ -552,7 +552,7 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     # TODO @dangotbanned: Review backend/version entrypoint
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
-    ) -> LazyFrame[Native]:
+    ) -> LazyFrame[Native_co]:
         return into_version(version).lazyframe._from_lp_scan(self, self.implementation)
 
 

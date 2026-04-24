@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
-
     from narwhals._utils import Implementation
 
 
@@ -20,5 +18,4 @@ class _FrameProperty(Protocol):
     def to_native(self) -> Any: ...
 # fmt: on
 
-Frame: TypeAlias = "_FrameClassVar | _FrameProperty"
-FrameT = TypeVar("FrameT", bound="Frame")
+FrameT_co = TypeVar("FrameT_co", bound="_FrameClassVar | _FrameProperty", covariant=True)

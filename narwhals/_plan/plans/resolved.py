@@ -20,7 +20,7 @@ from narwhals._plan import expressions as ir
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant.typing import Native
 from narwhals._plan.plans._base import _BasePlan
-from narwhals._plan.plans.typing import FrameT
+from narwhals._plan.plans.typing import FrameT_co
 from narwhals._plan.schema import FrozenSchema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing_compat import TypeVar
@@ -195,9 +195,9 @@ class ScanParquet(ScanFile):
         return evaluator.scan_parquet(self)
 
 
-class ScanFrame(Scan, Generic[FrameT]):
+class ScanFrame(Scan, Generic[FrameT_co]):
     __slots__ = ("frame", "output_schema")
-    frame: FrameT
+    frame: FrameT_co  # type: ignore[misc]
     output_schema: FrozenSchema
 
     @property
@@ -227,7 +227,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
 # TODO @dangotbanned: `[override]` is because this is the **only correct** node
 # - All of the others need to propagate `Native` from `LogicalPlan`
 # - Which requires making `LogicalPlan` generic
-#   - This also removes the need for the `LazyFrame._compiant: CompliantLazyFrame[Native]` hack
+#   - This also removes the need for the `LazyFrame._compliant: CompliantLazyFrame[Native]` hack
 class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     def evaluate(  # type: ignore[override]
         self, evaluator: ResolvedToCompliant[Native] | Incomplete, /

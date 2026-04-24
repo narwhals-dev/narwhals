@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan._namespace import collect_implementation
-from narwhals._plan.compliant.typing import Native
+from narwhals._plan.compliant.typing import Native_co
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.plans import logical as lp
+    from narwhals._plan.typing import IncompleteVarianceLie
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
     from narwhals._typing import _LazyFrameCollectImpl
     from narwhals.schema import Schema
@@ -86,7 +87,7 @@ class NarwhalsHash(Protocol):
         return hash(self) == hash(other)
 
 
-class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
+class CompliantLazyFrame(NarwhalsHash, Protocol[Native_co]):
     """Clean-slate rework of `CompliantFrame`-based design.
 
     Focused on features for `LogicalPlan`:
@@ -105,8 +106,8 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
 
     @classmethod
     def from_native(
-        cls: type[CompliantLazyFrame[Any]], native: Native, /
-    ) -> CompliantLazyFrame[Native]: ...
+        cls, native: IncompleteVarianceLie, /
+    ) -> CompliantLazyFrame[Native_co]: ...
     @classmethod
     def from_arrow(cls, frame: IntoArrowTable, /) -> Self: ...
     @classmethod
@@ -167,9 +168,9 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
         return self.input_schema.names()
 
     @property
-    def native(self) -> Native: ...
+    def native(self) -> Native_co: ...
 
-    def to_logical(self) -> lp.ScanLazyFrame[Native]:
+    def to_logical(self) -> lp.ScanLazyFrame[Native_co]:
         from narwhals._plan.plans import LogicalPlan
 
         return LogicalPlan.from_lf(self)
@@ -183,5 +184,5 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native]):
     def collect_columns(self, *args: Incomplete, **kwds: Incomplete) -> Sequence[str]:
         return self.collect_schema(*args, **kwds).names()
 
-    def to_native(self) -> Native:
+    def to_native(self) -> Native_co:
         return self.native
