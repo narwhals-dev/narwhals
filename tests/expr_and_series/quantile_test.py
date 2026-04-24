@@ -33,6 +33,7 @@ def test_quantile_expr(
     ):
         request.applymarker(pytest.mark.xfail)
     if "sqlframe" in str(constructor):
+        # bug in sqlframes: https://github.com/eakmanrq/sqlframe/issues/625
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3
