@@ -29,8 +29,6 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.series import CompliantSeries
 
 
-# TODO @dangotbanned: Investigate replacing this (in `ExprDispatch`) with something more useful
-R_co = TypeVar("R_co", covariant=True)
 LengthT = TypeVar("LengthT")
 ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 Native = TypeVar("Native")
@@ -40,6 +38,8 @@ Assume nothing, permit anything; rely on well-defined protocols to do the talkin
 """
 FromNative = TypeVar("FromNative")
 """Same as `Native`, but should be scoped to constructor method(s) and not the class."""
+
+Native_co = TypeVar("Native_co", covariant=True)
 
 ExprAny: TypeAlias = "CompliantExpr[Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any]"
@@ -54,7 +54,6 @@ EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 
-ExprT = TypeVar("ExprT", bound=ExprAny)
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT_co = TypeVar("ScalarT_co", bound="ExprAny | ScalarAny", covariant=True)
 """TODO @dangotbanned: Investigate using `ExprT_co` as a default.
@@ -71,13 +70,15 @@ DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
 DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
 LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
 LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
-LazyFrameT_contra = TypeVar("LazyFrameT_contra", bound=LazyFrameAny, contravariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
-EagerDataFrameT_co = TypeVar("EagerDataFrameT_co", bound=EagerDataFrameAny, covariant=True)
+EagerDataFrameT_co = TypeVar(
+    "EagerDataFrameT_co", bound=EagerDataFrameAny, covariant=True
+)
+
 
 class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
@@ -96,8 +97,7 @@ Frame = TypeVar("Frame", bound=FrameAny, contravariant=True)
 IR = TypeVar("IR", bound="ir.ExprIR", contravariant=True)
 F_contra = TypeVar("F_contra", bound="ir.Function", contravariant=True)
 
-# - Probably should have an upper bound of `CompliantExpr`
-R = TypeVar("R", covariant=True)
+R = TypeVar("R", bound=ExprAny, covariant=True)
 
 
 class ExprMethod(Protocol[Self_, IR, Frame, R]):

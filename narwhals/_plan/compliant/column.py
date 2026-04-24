@@ -3,21 +3,12 @@ from __future__ import annotations
 from collections.abc import Iterable, Sized
 from typing import TYPE_CHECKING, Protocol
 
-from narwhals._plan.compliant.typing import (
-    ExprAny,
-    ExprT,
-    FrameAny,
-    LengthT,
-    ScalarAny,
-    SeriesT,
-)
+from narwhals._plan.compliant.typing import LengthT, SeriesT
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
 
     from typing_extensions import Self
-
-    from narwhals._plan import expressions as ir
 
 
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
@@ -102,5 +93,3 @@ class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
         max_length = cls._length_max(lengths)
         required = any(len_ != max_length for len_ in lengths)
         return max_length if required else default
-
-
