@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, final
+from typing import ClassVar, Final, final
 
 from narwhals._plan.arrow.dataframe import ArrowDataFrame
 from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
@@ -76,3 +76,25 @@ class ArrowNamespaceV1(ArrowNamespace):
     @property
     def _lazyframe(self) -> type[ArrowLazyFrame]:
         return ArrowLazyFrameV1
+
+
+DataFrame: Final = ArrowDataFrameV1
+Expr: Final = ArrowExprV1
+LazyFrame: Final = ArrowLazyFrameV1
+Namespace: Final = ArrowNamespaceV1
+PlanEvaluator: Final = None
+PlanResolver: Final = None
+Scalar: Final = ArrowScalarV1
+Series: Final = ArrowSeriesV1
+
+
+__all__ = [
+    "DataFrame",
+    "Expr",
+    "LazyFrame",
+    "Namespace",
+    "PlanEvaluator",
+    "PlanResolver",
+    "Scalar",
+    "Series",
+]

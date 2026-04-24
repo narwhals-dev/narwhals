@@ -10,7 +10,7 @@ from narwhals._plan.polars.lazyframe import (
 from narwhals._plan.polars.namespace import PolarsNamespace as Namespace
 from narwhals._plan.polars.series import PolarsSeries as Series
 
-Scalar = None
+Scalar = Expr
 PlanResolver = None
 
 __all__ = [

@@ -85,7 +85,7 @@ LazyFrame: Final = PolarsLazyFrameV1
 Namespace: Final = PolarsNamespaceV1
 PlanEvaluator: Final = PolarsEvaluatorV1
 PlanResolver: Final = None
-Scalar: Final = None
+Scalar: Final = Expr
 Series: Final = PolarsSeriesV1
 
 
