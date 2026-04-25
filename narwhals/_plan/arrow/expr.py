@@ -292,7 +292,8 @@ class unary_accessor(  # noqa: N801
 
 
 class _ArrowDispatch(
-    EagerExpr["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny], Protocol[Native_co]
+    EagerExpr["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny],
+    Protocol[Native_co],
 ):
     """Common to `Expr`, `Scalar` + their dependencies."""
 

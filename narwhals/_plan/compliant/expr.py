@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
-# TODO @dangotbanned: Avoid invariant `CompliantFrame` (`FrameT`)
+# TODO @dangotbanned: Avoid `FrameT`?
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr`/`Series` and `Scalar` literal values.
 

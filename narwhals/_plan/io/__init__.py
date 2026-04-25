@@ -11,10 +11,9 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
-    from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.lazyframe import LazyFrame
-    from narwhals._plan.typing import NativeDataFrameT, NativeSeriesT
+    from narwhals._plan.typing import NativeDataFrameT as DF, NativeSeriesT as S
     from narwhals._typing import Arrow, Polars
     from narwhals.schema import Schema
     from narwhals.typing import Backend, EagerAllowed, FileSource, IntoBackend
@@ -100,20 +99,14 @@ def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) ->
 
 
 def _read_csv(
-    source: str,
-    kwds: dict[str, Any],
-    ns: _io.ReadCsv[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]],
-    /,
-) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    source: str, kwds: dict[str, Any], ns: _io.ReadCsv[DF, S], /
+) -> DataFrame[DF, S]:
     return ns.read_csv(source, **kwds).to_narwhals()
 
 
 def _read_parquet(
-    source: str,
-    kwds: dict[str, Any],
-    ns: _io.ReadParquet[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]],
-    /,
-) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
+    source: str, kwds: dict[str, Any], ns: _io.ReadParquet[DF, S], /
+) -> DataFrame[DF, S]:
     return ns.read_parquet(source, **kwds).to_narwhals()
 
 
