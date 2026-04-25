@@ -74,7 +74,7 @@ def test_duration_attributes_nano(
     import numpy as np
 
     data = {"c": np.array([None, 20], dtype="timedelta64[ns]")}
-    df = nw.from_native(constructor(data))
+    df = constructor(data, nw)
 
     result_c = df.select(getattr(nw.col("c").dt, attribute)().fill_null(0))
     assert_equal_data(result_c, {"c": expected_c})

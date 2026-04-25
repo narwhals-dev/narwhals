@@ -49,6 +49,7 @@ from narwhals._utils import Implementation, generate_temporary_column_name
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from types import ModuleType
 
     import ibis
     import pandas as pd
@@ -59,9 +60,16 @@ if TYPE_CHECKING:
     from sqlframe.duckdb import DuckDBSession
     from typing_extensions import Concatenate, TypeAlias
 
+    from narwhals import DataFrame, LazyFrame
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals.testing.typing import Data
-    from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame
+    from narwhals.typing import (
+        IntoDataFrame,
+        IntoDataFrameT,
+        IntoFrame,
+        IntoLazyFrame,
+        IntoLazyFrameT,
+    )
 
 
 __all__ = (
@@ -96,6 +104,8 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
     """
 
     _registry: ClassVar[dict[str, frame_constructor[IntoFrame]]] = {}
+
+    func: Callable[Concatenate[Data, ...], T_co]
 
     def __init__(
         self,
@@ -159,9 +169,44 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
 
         return decorator
 
-    def __call__(self, obj: Data, /, **kwds: Any) -> T_co:
-        """Build a native frame from `obj` by delegating to the wrapped function."""
-        return self.func(obj, **kwds)
+    @overload
+    def __call__(
+        self: frame_constructor[IntoDataFrameT],
+        obj: Data,
+        /,
+        namespace: ModuleType,
+        **kwds: Any,
+    ) -> DataFrame[IntoDataFrameT]: ...
+    @overload
+    def __call__(
+        self: frame_constructor[IntoLazyFrameT],
+        obj: Data,
+        /,
+        namespace: ModuleType,
+        **kwds: Any,
+    ) -> LazyFrame[IntoLazyFrameT]: ...
+    @overload
+    def __call__(
+        self: frame_constructor[IntoFrame],
+        obj: Data,
+        /,
+        namespace: ModuleType,
+        **kwds: Any,
+    ) -> DataFrame[Any] | LazyFrame[Any]: ...
+
+    def __call__(
+        self, obj: Data, /, namespace: ModuleType, **kwds: Any
+    ) -> DataFrame[Any] | LazyFrame[Any]:
+        """Build a native frame and wrap it with `namespace.from_native`.
+
+        Arguments:
+            obj: Column-oriented mapping passed to the wrapped builder.
+            namespace: A narwhals namespace (e.g. `narwhals`, `narwhals.stable.v1`)
+                whose `from_native` performs the wrapping.
+            **kwds: Forwarded to the wrapped builder.
+        """
+        native = self.func(obj, **kwds)
+        return namespace.from_native(native)  # type: ignore[no-any-return]
 
     @property
     def identifier(self) -> str:

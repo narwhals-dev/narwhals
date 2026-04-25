@@ -294,7 +294,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
 
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    df = get_backend_constructor("sqlframe")(data)
+    df = get_backend_constructor("sqlframe")(data, nw).to_native()
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
         nw.from_native(df, series_only=True)  # type: ignore[call-overload]
@@ -315,7 +315,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
 )
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    df = get_backend_constructor("sqlframe")(data)
+    df = get_backend_constructor("sqlframe")(data, nw).to_native()
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)
@@ -528,7 +528,7 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
     if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
         pytest.skip(reason="Non lazy or polars")
 
-    df = constructor(data)
+    df = constructor(data).to_native()
 
     r1 = nw.from_native(df, eager_only=False, pass_through=False)
     r2 = nw.from_native(df, eager_only=False, pass_through=True)

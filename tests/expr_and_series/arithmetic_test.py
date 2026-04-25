@@ -45,7 +45,7 @@ def test_arithmetic_expr(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 3.0]}
-    df = nw.from_native(constructor(data))
+    df = constructor(data, nw)
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     assert_equal_data(result, {"a": expected})
 
@@ -76,7 +76,7 @@ def test_right_arithmetic_expr(
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor(data))
+    df = constructor(data)
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     assert_equal_data(result, {"literal": expected})
 
@@ -107,7 +107,7 @@ def test_arithmetic_series(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(nw_dataframe(data), eager_only=True)
+    df = nw_dataframe(data, nw)
     result = df.select(getattr(df["a"], attr)(rhs))
     assert_equal_data(result, {"a": expected})
 
@@ -137,7 +137,7 @@ def test_right_arithmetic_series(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(nw_dataframe(data), eager_only=True)
+    df = nw_dataframe(data, nw)
     result_series = getattr(df["a"], attr)(rhs)
     assert result_series.name == "a"
     assert_equal_data({"a": result_series}, {"a": expected})
@@ -149,8 +149,8 @@ def test_truediv_same_dims(
     if "polars" in str(nw_dataframe):
         # https://github.com/pola-rs/polars/issues/17760
         request.applymarker(pytest.mark.xfail)
-    s_left = nw.from_native(nw_dataframe({"a": [1, 2, 3]}), eager_only=True)["a"]
-    s_right = nw.from_native(nw_dataframe({"a": [2, 2, 1]}), eager_only=True)["a"]
+    s_left = nw_dataframe({"a": [1, 2, 3]}, nw)["a"]
+    s_right = nw_dataframe({"a": [2, 2, 1]}, nw)["a"]
     result = s_left / s_right
     assert_equal_data({"a": result}, {"a": [0.5, 1.0, 3.0]})
     result = s_left.__rtruediv__(s_right)
@@ -166,9 +166,7 @@ def test_floordiv(nw_dataframe: ConstructorEager, *, left: int, right: int) -> N
         pytest.skip()
     assume(right != 0)
     expected = {"a": [left // right]}
-    result = nw.from_native(nw_dataframe({"a": [left]}), eager_only=True).select(
-        nw.col("a") // right
-    )
+    result = nw_dataframe({"a": [left]}, nw).select(nw.col("a") // right)
     assert_equal_data(result, expected)
 
 
@@ -182,9 +180,7 @@ def test_mod(nw_dataframe: ConstructorEager, *, left: int, right: int) -> None:
         pytest.skip()
     assume(right != 0)
     expected = {"a": [left % right]}
-    result = nw.from_native(nw_dataframe({"a": [left]}), eager_only=True).select(
-        nw.col("a") % right
-    )
+    result = nw_dataframe({"a": [left]}, nw).select(nw.col("a") % right)
     assert_equal_data(result, expected)
 
 
@@ -218,7 +214,7 @@ def test_arithmetic_expr_left_literal(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 4.0]}
-    df = nw.from_native(constructor(data))
+    df = constructor(data, nw)
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
 
@@ -249,7 +245,7 @@ def test_arithmetic_series_left_literal(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 4.0]}
-    df = nw.from_native(nw_dataframe(data))
+    df = nw_dataframe(data, nw)
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
 
@@ -258,7 +254,7 @@ def test_std_broadcating(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # `std(ddof=2)` fails for duckdb here
         pytest.skip()
-    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    df = constructor({"a": [1, 2, 3]}, nw)
     result = df.with_columns(b=nw.col("a").std()).sort("a")
     expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}
     assert_equal_data(result, expected)
