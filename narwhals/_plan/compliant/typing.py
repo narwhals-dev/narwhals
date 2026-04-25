@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeSeries
+    from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
         CompliantFrame,
@@ -60,6 +60,9 @@ NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 """
 
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeDataFrameT_co = TypeVar(
+    "NativeDataFrameT_co", bound="NativeDataFrame", covariant=True
+)
 
 ExprAny: TypeAlias = "CompliantExpr[Any, Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any, Any]"

@@ -85,7 +85,7 @@ def explode_todo(
 class PolarsNamespace(
     FromIterable[pl.Series],
     FromDict[pl.DataFrame, pl.Series],
-    CompliantNamespace[Incomplete, "Expr", "Expr"],
+    CompliantNamespace["DataFrame", "Expr", "Expr"],
 ):
     __slots__ = ()
     version: ClassVar[Version] = MAIN
