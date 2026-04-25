@@ -176,14 +176,13 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         from narwhals._plan._function import Function
         from narwhals._plan._nodes import nodes
-        from narwhals._plan.compliant import ExprDispatch
 
         class FunctionExpr(ExprIR):
             __slots__ = ("input", "function")
             input: tuple[ExprIR, ...] = nodes()
             function: Function
 
-            def dispatch(self, ctx: ExprDispatch[T, R], frame: T, name: str) -> R:
+            def dispatch(self, ctx, frame, name):
                 return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
 
     Notes:
@@ -275,12 +274,6 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             frame: A`*Frame` that shares a namespace with `ctx`.
             name: Output column name, usually `NamedIR.name`.
 
-        Notes:
-            - `ctx`/`ExprDispatch` is intended to be typed in a permissive way
-              but seems to have gone too far in that direction
-            - `_ArrowDispatch` utilizes it to define a common base for `*Expr`, `*Scalar`
-              while refining `R_co` -> `StoresNativeT_co`
-            - Neither of those types are `CompliantExpr`
         """
         return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
