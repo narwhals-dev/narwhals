@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
-from narwhals._plan.compliant.column import EagerBroadcast
+from narwhals._plan.compliant.broadcast import BroadcastSeries
 from narwhals._plan.compliant.typing import (
     EagerDataFrameT,
     FrameT,
     NativeExpr_co,
     NativeScalar_co,
-    SeriesT,
+    NativeSeriesT,
 )
 
 if TYPE_CHECKING:
@@ -282,13 +282,12 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     ]: ...
 
 
-# TODO @dangotbanned: (After fixing broadcast) avoid `SeriesT`
 class EagerExpr(
-    EagerBroadcast[SeriesT],
+    BroadcastSeries[NativeSeriesT],
     CompliantExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
-    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
+    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
-    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT]`."""
+    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
 
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` (via `EagerBroadcast`) when truth-testing on dispatch
@@ -307,7 +306,9 @@ class EagerExpr(
     # NOTE: `Scalar` when using `returns_scalar=True`
     def map_batches(
         self, node: ir.AnonymousExpr, frame: EagerDataFrameT, name: str, /
-    ) -> Self | EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT]: ...
+    ) -> (
+        Self | EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]
+    ): ...
     def sample_frac(
         self, node: FExpr[F.SampleFrac], frame: EagerDataFrameT, name: str, /
     ) -> Self: ...
@@ -320,9 +321,9 @@ class EagerExpr(
         self,
     ) -> EagerNamespace[
         EagerDataFrameT,
-        SeriesT,
-        EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
-        EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
+        Incomplete,
+        EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
+        EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
         Incomplete,
         Incomplete,
     ]: ...

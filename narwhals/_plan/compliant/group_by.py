@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
@@ -11,7 +11,6 @@ from narwhals._plan.compliant.typing import (
     DataFrameT_co,
     EagerDataFrameT_co,
     FrameT_co,
-    ResolverT_co,
 )
 from narwhals._plan.exceptions import group_by_no_keys_error
 
@@ -108,6 +107,9 @@ class EagerDataFrameGroupBy(
         obj._key_names_original = key_names
         obj._column_names_original = resolver._schema_in.names
         return obj
+
+
+ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 
 
 class Grouper(Protocol[ResolverT_co]):

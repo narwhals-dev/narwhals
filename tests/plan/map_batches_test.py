@@ -14,10 +14,7 @@ if TYPE_CHECKING:
 
     import pyarrow as pa
 
-    from narwhals._plan.compliant.typing import (
-        SeriesAny as CompliantSeriesAny,
-        SeriesT as CompliantSeriesT,
-    )
+    from narwhals._plan.compliant.typing import SeriesAny as CompliantSeriesAny
     from narwhals.typing import _1DArray, _NumpyScalar
     from tests.conftest import Data
 
@@ -40,7 +37,7 @@ def data() -> Data:
     }
 
 
-def elementwise_series(s: CompliantSeriesT, /) -> CompliantSeriesT:
+def elementwise_series(s: CompliantSeriesAny, /) -> CompliantSeriesAny:
     dtype_name = type(s.dtype).__name__.lower()
     repeat_name = (dtype_name,) * (len(s) - 1)
     values = [*repeat_name, "last"]

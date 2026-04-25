@@ -23,7 +23,6 @@ from narwhals._plan.arrow.group_by import (
 )
 from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.arrow.pivot import pivot_table
-from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.exceptions import shape_error
@@ -37,7 +36,13 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import Self, TypeAlias
 
-    from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayAny, Predicate
+    from narwhals._plan.arrow.series import ArrowSeries as Series
+    from narwhals._plan.arrow.typing import (
+        ChunkedArrayAny,
+        ChunkedOrArrayAny,
+        CompliantSeries,
+        Predicate,
+    )
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.compliant.typing import LazyFrameAny
@@ -54,7 +59,7 @@ Incomplete: TypeAlias = Any
 
 
 class ArrowDataFrame(
-    FrameSeries["pa.Table"], EagerDataFrame[Series, "pa.Table", "ChunkedArrayAny"]
+    FrameSeries["pa.Table"], EagerDataFrame["pa.Table", "ChunkedArrayAny"]
 ):
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace()
@@ -164,7 +169,7 @@ class ArrowDataFrame(
 
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR], /, *, length: int | None = None
-    ) -> Iterator[Series]:
+    ) -> Iterator[CompliantSeries]:
         ns = namespace(self)
         expr = ns._expr
         from_named_ir = ns.from_named_ir

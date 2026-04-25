@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant import io
 from narwhals._plan.compliant.group_by import Grouped
-from narwhals._plan.compliant.typing import LazyFrameAny, SeriesT_co
 from narwhals._plan.typing import (
     IncompleteCyclic,
     IncompleteVarianceLie,
@@ -37,6 +36,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.compliant.typing import LazyFrameAny
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
@@ -292,19 +292,18 @@ class CompliantDataFrame(
     ) -> Self: ...
 
 
-# TODO @dangotbanned: Remove `SeriesT_co` and use `Iterator[CompliantSeries[NativeSeriesT_co]]`
 class EagerDataFrame(
     io.LazyOutput,
     CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co],
-    Protocol[SeriesT_co, NativeDataFrameT_co, NativeSeriesT_co],
+    Protocol[NativeDataFrameT_co, NativeSeriesT_co],
 ):
-    """`[SeriesT_co, NativeDataFrameT_co, NativeSeriesT_co]`."""
+    """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
 
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR], /, *, length: int | None = None
-    ) -> Iterator[SeriesT_co]: ...
+    ) -> Iterator[CompliantSeries[NativeSeriesT_co]]: ...
 
     def group_by_resolver(
         self, resolver: GroupByResolver, /

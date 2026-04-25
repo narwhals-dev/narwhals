@@ -8,7 +8,7 @@ from narwhals._plan.compliant.typing import (
     FrameT,
     NativeExpr_co,
     NativeScalar_co,
-    SeriesT,
+    NativeSeriesT,
 )
 from narwhals._utils import Version, not_implemented
 
@@ -165,14 +165,13 @@ class CompliantScalar(
     len = _always_one  # type: ignore[misc]
 
 
-# TODO @dangotbanned: (After fixing broadcast) avoid `SeriesT`
 # TODO @dangotbanned: (After fixing expr) avoid `EagerDataFrameT`
 class EagerScalar(
     CompliantScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
-    EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
-    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
+    EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
+    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
-    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT]`."""
+    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
 
     def __len__(self) -> int:
         return 1

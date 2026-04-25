@@ -1,6 +1,9 @@
 """Useful types for `narwhals._plan.compliant`.
 
-This module has 0 runtime dependencies on the rest of `compliant.*`.
+## Notes
+- This module has 0 runtime dependencies on the rest of `compliant.*`
+- `Native*` type vars defined here *do not* have defaults
+    - If you need those, use `narwhals._plan.typing` instead
 """
 
 # ruff: noqa: PLC0105
@@ -16,21 +19,19 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
+    from narwhals._native import NativeSeries
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
         CompliantFrame,
         EagerDataFrame,
     )
     from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
-    from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.compliant.series import CompliantSeries
 
 
-LengthT = TypeVar("LengthT")
-ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 Native = TypeVar("Native")
 """Unbounded type variable, representing *any* native object.
 
@@ -51,6 +52,14 @@ This can be literally anything, but some typical candidates would be:
 """
 
 NativeScalar_co = TypeVar("NativeScalar_co", covariant=True)
+NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
+"""Be careful using this type var!
+
+- For broadcasting, it seems to be unavoidable to have *some* invariance
+- Try to keep `NativeSeriesT_co` in as many places as possible
+"""
+
+NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
 
 ExprAny: TypeAlias = "CompliantExpr[Any, Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any, Any]"
@@ -63,7 +72,7 @@ Namespace: TypeAlias = "CompliantNamespace[FrameT, ExprT_co, ScalarT_co]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any, Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any, Any]"
-EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
+EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
 ScalarT_co = TypeVar("ScalarT_co", bound="ExprAny | ScalarAny", covariant=True)

@@ -292,7 +292,7 @@ class unary_accessor(  # noqa: N801
 
 
 class _ArrowDispatch(
-    EagerExpr["Frame", ChunkedArrayAny, NativeScalar, Series], Protocol[Native_co]
+    EagerExpr["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny], Protocol[Native_co]
 ):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
@@ -300,6 +300,8 @@ class _ArrowDispatch(
 
     @property
     def native(self) -> Native_co: ...  # type: ignore[override]
+    @classmethod
+    def from_series(cls, series: Series, /) -> Self: ...
 
     def _with_native(self, native: Any, name: str, /) -> Self:
         raise NotImplementedError
@@ -406,7 +408,7 @@ class _ArrowDispatch(
 
 class ArrowExpr(
     _ArrowDispatch["ChunkedArrayAny"],
-    EagerExpr["Frame", "ChunkedArrayAny", NativeScalar, Series],
+    EagerExpr["Frame", "ChunkedArrayAny", NativeScalar, ChunkedArrayAny],
 ):
     _evaluated: Series
 
@@ -800,7 +802,7 @@ class ArrowExpr(
 
 class ArrowScalar(
     _ArrowDispatch[NativeScalar],
-    EagerScalar["Frame", ChunkedArrayAny, NativeScalar, Series],
+    EagerScalar["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny],
 ):
     _evaluated: NativeScalar
     _name: str

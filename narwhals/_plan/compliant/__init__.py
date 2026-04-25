@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from narwhals._plan.compliant import (
     accessors,
-    column,
+    broadcast,
     dataframe,
     expr,
     group_by,
@@ -31,7 +31,6 @@ from narwhals._plan.compliant import (
     scalar,
     series,
 )
-from narwhals._plan.compliant.column import SupportsBroadcast
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._plan.compliant.expr import CompliantExpr
 from narwhals._plan.compliant.group_by import CompliantGroupBy
@@ -48,9 +47,8 @@ __all__ = [
     "CompliantNamespace",
     "CompliantScalar",
     "CompliantSeries",
-    "SupportsBroadcast",
     "accessors",
-    "column",
+    "broadcast",
     "dataframe",
     "expr",
     "group_by",
