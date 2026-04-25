@@ -26,12 +26,16 @@ if TYPE_CHECKING:
 
 
 class CompliantGroupBy(Protocol[FrameT_co]):
+    """`[FrameT_co]`."""
+
     def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
     @property
     def compliant(self) -> FrameT_co: ...
 
 
 class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co]):
+    """`[DataFrameT_co]`."""
+
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
 
@@ -56,6 +60,8 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co])
 class EagerDataFrameGroupBy(
     DataFrameGroupBy[EagerDataFrameT_co], Protocol[EagerDataFrameT_co]
 ):
+    """`[EagerDataFrameT_co]`."""
+
     _df: IncompleteVarianceLie
     _key_names: Seq[str]
     _key_names_original: Seq[str]
@@ -106,6 +112,8 @@ class EagerDataFrameGroupBy(
 
 class Grouper(Protocol[ResolverT_co]):
     """`GroupBy` helper for collecting and forwarding `Expr`s for projection.
+
+    `[ResolverT_co]`.
 
     - Uses `Expr` everywhere (no need to duplicate layers)
     - Resolver only needs schema (neither needs a frame, but can use one to get `schema`)

@@ -11,8 +11,14 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 
+# TODO @dangotbanned: Somehow avoid invariant `CompliantSeries`
+# - trickles down into `Eager{Expr,Scalar}`
+# - `Series` shouldn't even be mentioned until `EagerBroadcast` anyway
 class SupportsBroadcast(Protocol[SeriesT, LengthT]):
-    """Minimal broadcasting for `Expr` results."""
+    """Minimal broadcasting for `Expr` results.
+
+    `[SeriesT, LengthT]`.
+    """
 
     def _length(self) -> LengthT:
         """Return the length of the current expression."""
@@ -73,7 +79,10 @@ class SupportsBroadcast(Protocol[SeriesT, LengthT]):
 
 
 class EagerBroadcast(Sized, SupportsBroadcast[SeriesT, int], Protocol[SeriesT]):
-    """Determines expression length via the size of the container."""
+    """Determines expression length via the size (`int`) of the container.
+
+    `[SeriesT]`.
+    """
 
     def _length(self) -> int:
         return len(self)

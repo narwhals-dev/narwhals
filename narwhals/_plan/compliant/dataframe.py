@@ -292,12 +292,13 @@ class CompliantDataFrame(
     ) -> Self: ...
 
 
+# TODO @dangotbanned: Remove `SeriesT_co` and use `Iterator[CompliantSeries[NativeSeriesT_co]]`
 class EagerDataFrame(
     io.LazyOutput,
     CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co],
     Protocol[SeriesT_co, NativeDataFrameT_co, NativeSeriesT_co],
 ):
-    """`[SeriesT, NativeDataFrameT, NativeSeriesT_co]`."""
+    """`[SeriesT_co, NativeDataFrameT_co, NativeSeriesT_co]`."""
 
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...

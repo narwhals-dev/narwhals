@@ -17,6 +17,11 @@ if TYPE_CHECKING:
 
 
 class ConcatDataFrame(Protocol[NativeDataFrameT, NativeSeriesT]):
+    """Supports concatenating dataframes.
+
+    `[NativeDataFrameT, NativeSeriesT]`.
+    """
+
     def concat_df(
         self,
         dfs: Iterable[CompliantDataFrame[NativeDataFrameT, NativeSeriesT]],
@@ -44,12 +49,22 @@ class ConcatDataFrame(Protocol[NativeDataFrameT, NativeSeriesT]):
 
 
 class ConcatSeries(Protocol[NativeSeriesT]):
+    """Supports vertically concatenating series.
+
+    `[NativeSeriesT]`.
+    """
+
     def concat_series(
         self, series: Iterable[CompliantSeries[NativeSeriesT]], /
     ) -> CompliantSeries[NativeSeriesT]: ...
 
 
 class ConcatSeriesHorizontal(Protocol[NativeDataFrameT_co, NativeSeriesT]):
+    """Supports horizontally concatenating series.
+
+    `[NativeDataFrameT_co, NativeSeriesT]`.
+    """
+
     def concat_series_horizontal(
         self, series: Iterable[CompliantSeries[NativeSeriesT]], /
     ) -> CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT]: ...

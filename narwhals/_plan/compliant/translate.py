@@ -51,7 +51,10 @@ __all__ = ["FromDict", "FromIterable", "can_from_dict", "can_from_iterable"]
 
 
 class FromDict(Protocol[NativeDataFrameT_co, NativeSeriesT_co]):
-    """Namespace-level instance method, for initializing a dataframe."""
+    """Namespace-level instance method, for initializing a dataframe.
+
+    `[NativeDataFrameT_co, NativeSeriesT_co]`.
+    """
 
     def from_dict(
         self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
@@ -59,6 +62,11 @@ class FromDict(Protocol[NativeDataFrameT_co, NativeSeriesT_co]):
 
 
 class FromIterable(Protocol[NativeSeriesT_co]):
+    """Namespace-level instance method, for initializing a series.
+
+    `[NativeSeriesT_co]`.
+    """
+
     def from_iterable(
         self, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> CompliantSeries[NativeSeriesT_co]: ...

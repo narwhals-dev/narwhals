@@ -47,15 +47,7 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
-# TODO @dangotbanned: Rethink `FrameT`
-# - Needs to support `.version` and probably `__narwhals_namespace__`
-# - Has to coordinate the change with these, but none actually require a `CompliantFrame`:
-#   - Needs `frame.version`
-#     - `compliant.column.ExprDispatch` (`compliant.typing.Ctx`)
-#   - Needs `ExprDispatch`
-#     - `ExprIR.dispatch`
-#     - `_dispatch.{Binder,BoundMethod}`
-#     - `_dispatch.Dispatcher.{bind,__call__}`
+# TODO @dangotbanned: Avoid invariant `CompliantFrame` (`FrameT`)
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr`/`Series` and `Scalar` literal values.
 
@@ -290,12 +282,13 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     ]: ...
 
 
+# TODO @dangotbanned: (After fixing broadcast) avoid `SeriesT`
 class EagerExpr(
     EagerBroadcast[SeriesT],
     CompliantExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
     Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
 ):
-    """`[EagerDataFrameT, NativeExpr_co, , NativeScalar_co, SeriesT]`."""
+    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT]`."""
 
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` (via `EagerBroadcast`) when truth-testing on dispatch

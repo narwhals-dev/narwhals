@@ -97,7 +97,10 @@ class LazyRangeGenerator(
     LinearSpace[FrameT_contra, ExprT_co],
     Protocol[FrameT_contra, ExprT_co],
 ):
-    """Supports all range generation methods that return expressions."""
+    """Supports all range generation methods that return expressions.
+
+    `[FrameT_contra, ExprT_co]`.
+    """
 
 
 class EagerRangeGenerator(
@@ -106,13 +109,21 @@ class EagerRangeGenerator(
     LinearSpaceEager[NativeSeriesT_co],
     Protocol[NativeSeriesT_co],
 ):
-    """Supports all range generation methods that return series."""
+    """Supports all range generation methods that return series.
+
+    `[NativeSeriesT_co]`.
+    """
 
 
 class HybridRangeGenerator(
-    LazyRangeGenerator[FrameT_contra, ExprT_co], EagerRangeGenerator[NativeSeriesT_co]
+    LazyRangeGenerator[FrameT_contra, ExprT_co],
+    EagerRangeGenerator[NativeSeriesT_co],
+    Protocol[FrameT_contra, ExprT_co, NativeSeriesT_co],
 ):
-    """Supports all range generation methods.."""
+    """Supports all range generation methods.
+
+    `[FrameT_contra, ExprT_co, NativeSeriesT_co]`.
+    """
 
 
 # fmt: off

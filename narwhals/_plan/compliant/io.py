@@ -44,20 +44,28 @@ __all__ = [
 
 
 class ScanCsv(Protocol[LazyFrameT_co]):
+    """`[LazyFrameT_co]`."""
+
     def scan_csv(self, source: str, /, **kwds: Any) -> LazyFrameT_co: ...
     def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema: ...
 
 
 class ScanParquet(Protocol[LazyFrameT_co]):
+    """`[LazyFrameT_co]`."""
+
     def scan_parquet(self, source: str, /, **kwds: Any) -> LazyFrameT_co: ...
     def read_parquet_schema(self, source: str, /) -> Schema: ...
 
 
 class ReadCsv(Protocol[DataFrameT_co]):
+    """`[DataFrameT_co]`."""
+
     def read_csv(self, source: str, /, **kwds: Any) -> DataFrameT_co: ...
 
 
 class ReadParquet(Protocol[DataFrameT_co]):
+    """`[DataFrameT_co]`."""
+
     def read_parquet(self, source: str, /, **kwds: Any) -> DataFrameT_co: ...
 
 
@@ -80,13 +88,19 @@ class WriteParquet(Protocol):
 class LazyInput(
     ScanCsv[LazyFrameT_co], ScanParquet[LazyFrameT_co], Protocol[LazyFrameT_co]
 ):
-    """Supports all `scan_*` methods, for lazily reading from files."""
+    """Supports all `scan_*` methods, for lazily reading from files.
+
+    `[LazyFrameT_co]`.
+    """
 
 
 class EagerInput(
     ReadCsv[DataFrameT_co], ReadParquet[DataFrameT_co], Protocol[DataFrameT_co]
 ):
-    """Supports all `read_*` methods, for eagerly reading from files."""
+    """Supports all `read_*` methods, for eagerly reading from files.
+
+    `[DataFrameT_co]`.
+    """
 
 
 class LazyOutput(SinkParquet, Protocol):

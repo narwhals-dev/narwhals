@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
+# TODO @dangotbanned: Use `Compliant*` type params less upstream of here
 # TODO @dangotbanned: Resolve `FrameT` invariance
 class CompliantNamespace(
     ranges.LazyRangeGenerator[FrameT, ExprT_co], Protocol[FrameT, ExprT_co, ScalarT_co]
@@ -107,6 +108,7 @@ class CompliantNamespace(
     from_native: not_implemented = not_implemented()
 
 
+# TODO @dangotbanned: Use `Compliant*` type params less upstream of here
 class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
     io.LazyInput[Incomplete],

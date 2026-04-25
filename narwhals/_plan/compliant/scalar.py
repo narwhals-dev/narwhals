@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 _F64 = Version.MAIN.dtypes.Float64()
 
 
+# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class CompliantScalar(
     CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co],
     Protocol[FrameT, NativeExpr_co, NativeScalar_co],
@@ -164,6 +165,8 @@ class CompliantScalar(
     len = _always_one  # type: ignore[misc]
 
 
+# TODO @dangotbanned: (After fixing broadcast) avoid `SeriesT`
+# TODO @dangotbanned: (After fixing expr) avoid `EagerDataFrameT`
 class EagerScalar(
     CompliantScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
     EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],

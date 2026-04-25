@@ -31,7 +31,6 @@ if TYPE_CHECKING:
     ]
 
 Incomplete: TypeAlias = Any
-MAIN = Version.MAIN
 
 
 class NarwhalsHash(Protocol):
@@ -89,6 +88,8 @@ class NarwhalsHash(Protocol):
 
 class CompliantLazyFrame(NarwhalsHash, Protocol[Native_co]):
     """Clean-slate rework of `CompliantFrame`-based design.
+
+    `[Native_co]`.
 
     Focused on features for `LogicalPlan`:
     - storing a native object

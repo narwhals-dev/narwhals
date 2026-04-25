@@ -22,13 +22,19 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
 
 
+# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
+    """`[FrameT, ExprT_co]`."""
+
     def get_categories(
         self, node: FExpr[GetCategories], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
 
 
+# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
+    """`[FrameT, ExprT_co]`."""
+
     def date(self, node: FExpr[dt.Date], frame: FrameT, name: str, /) -> ExprT_co: ...
     def year(self, node: FExpr[dt.Year], frame: FrameT, name: str, /) -> ExprT_co: ...
     def month(self, node: FExpr[dt.Month], frame: FrameT, name: str, /) -> ExprT_co: ...
@@ -86,7 +92,10 @@ class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
+# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprListNamespace(Protocol[FrameT, ExprT_co]):
+    """`[FrameT, ExprT_co]`."""
+
     def contains(
         self, node: FExpr[lists.Contains], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
@@ -115,7 +124,10 @@ class ExprListNamespace(Protocol[FrameT, ExprT_co]):
     def sort(self, node: FExpr[lists.Sort], frame: FrameT, name: str, /) -> ExprT_co: ...
 
 
+# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
+    """`[FrameT, ExprT_co]`."""
+
     def contains(
         self, node: FExpr[strings.Contains], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
@@ -163,13 +175,18 @@ class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
+# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprStructNamespace(Protocol[FrameT, ExprT_co]):
+    """`[FrameT, ExprT_co]`."""
+
     def field(
         self, node: FExpr[FieldByName], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
 
 
 class SeriesStructNamespace(Protocol[DataFrameT_co, SeriesT_co]):
+    """`[DataFrameT_co, SeriesT_co]`."""
+
     def field(self, name: str) -> SeriesT_co: ...
     def unnest(self) -> DataFrameT_co: ...
     @property
