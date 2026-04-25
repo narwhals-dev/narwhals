@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         BinaryFunction,
         BinaryNumericTemporal,
         ChunkedOrScalarAny,
+        ChunkedOrScalarT,
         NumericScalar,
         UnaryNumeric,
     )
@@ -65,7 +66,7 @@ def modulus(lhs: ChunkedOrScalarAny, rhs: ChunkedOrScalarAny, /) -> ChunkedOrSca
     return result
 
 
-def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
+def log(native: ChunkedOrScalarT, base: float = math.e) -> ChunkedOrScalarT:
     """Compute the logarithm to a given base."""
-    result: ChunkedOrScalarAny = call("logb", native, base)
+    result: ChunkedOrScalarT = call("logb", native, base)
     return result

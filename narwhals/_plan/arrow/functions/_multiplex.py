@@ -121,21 +121,25 @@ def replace_with_mask(
 
 
 def replace_strict(
-    native: ChunkedOrScalarAny,
+    native: ChunkedOrScalarT,
     old: Seq[Any],
     new: Seq[Any],
     dtype: pa.DataType | None = None,
-) -> ChunkedOrScalarAny:
+) -> ChunkedOrScalarT:
     """Replace all values (`old`) by different values (`new`).
 
     Raises if any values in `native` were not replaced.
     """
     if isinstance(native, pa.Scalar):
         idxs: ArrayAny = array(pc.index_in(native, pa.array(old)))
-        result: ChunkedOrScalarAny = pa.array(new).take(idxs)[0]
-    else:
-        idxs = pc.index_in(native, pa.array(old))
-        result = chunked_array(pa.array(new).take(idxs))
+        s_result: ScalarAny = pa.array(new).take(idxs)[0]
+        if err := _ensure_all_replaced(native, and_(is_not_null(native), is_null(idxs))):
+            raise err
+        if dtype:
+            return s_result.cast(dtype)
+        return s_result
+    idxs = pc.index_in(native, pa.array(old))
+    result = chunked_array(pa.array(new).take(idxs))
     if err := _ensure_all_replaced(native, and_(is_not_null(native), is_null(idxs))):
         raise err
     return result.cast(dtype) if dtype else result

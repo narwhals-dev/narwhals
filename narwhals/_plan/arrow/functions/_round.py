@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         ArrowAny,
         ChunkedOrArrayT,
         ChunkedOrScalarAny,
+        ChunkedOrScalarT,
         UnaryNumeric,
     )
 
@@ -31,6 +32,8 @@ floor = t.cast("UnaryNumeric", pc.floor)
 """Rounds down to the nearest integer value."""
 
 
+@overload
+def round(native: ChunkedOrScalarT, decimals: int = 0) -> ChunkedOrScalarT: ...
 @overload
 def round(native: ChunkedOrScalarAny, decimals: int = 0) -> ChunkedOrScalarAny: ...
 @overload

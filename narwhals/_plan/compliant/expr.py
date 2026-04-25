@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
 from narwhals._plan.compliant.column import EagerBroadcast
-from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, SeriesT
+from narwhals._plan.compliant.typing import (
+    EagerDataFrameT,
+    FrameT,
+    NativeExpr_co,
+    NativeScalar_co,
+    SeriesT,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
@@ -50,13 +56,16 @@ Incomplete: TypeAlias = Any
 #     - `ExprIR.dispatch`
 #     - `_dispatch.{Binder,BoundMethod}`
 #     - `_dispatch.Dispatcher.{bind,__call__}`
-class CompliantExpr(Protocol[FrameT]):
+class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr`/`Series` and `Scalar` literal values.
 
-    `[FrameT]`.
+    `[FrameT, NativeExpr_co, NativeScalar_co]`.
     """
 
     version: ClassVar[Version]
+
+    @property
+    def native(self) -> NativeExpr_co: ...
 
     # NOTE: May need to change returning `Self` to `CompliantExpr[FrameT]`
     # Expr -> Expr
@@ -161,33 +170,49 @@ class CompliantExpr(Protocol[FrameT]):
     # - `OverOrdered` is an outlier, and it also doesn't specify `is_scalar`?
     def all(
         self, node: FExpr[ir.boolean.All], frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def any(
         self, node: FExpr[ir.boolean.Any], frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def arg_max(
         self, node: agg.ArgMax, frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def arg_min(
         self, node: agg.ArgMin, frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
-    def count(self, node: agg.Count, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def first(self, node: agg.First, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def last(self, node: agg.Last, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def len(self, node: agg.Len, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def max(self, node: agg.Max, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def mean(self, node: agg.Mean, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def median(self, node: agg.Median, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def min(self, node: agg.Min, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def count(
+        self, node: agg.Count, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def first(
+        self, node: agg.First, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def last(
+        self, node: agg.Last, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def len(
+        self, node: agg.Len, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def max(
+        self, node: agg.Max, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def mean(
+        self, node: agg.Mean, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def median(
+        self, node: agg.Median, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def min(
+        self, node: agg.Min, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def mode_any(
         self, node: FExpr[F.ModeAny], frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def n_unique(
         self, node: agg.NUnique, frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def null_count(
         self, node: FExpr[F.NullCount], frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     # NOTE: `Scalar` is returned **only** for un-partitioned `OrderableAggExpr`
     #  - e.g. `nw.col("a").first().over(order_by="b")`
     # TODO @dangotbanned: Split (un-partitioned + ordered) into another node?
@@ -195,23 +220,33 @@ class CompliantExpr(Protocol[FrameT]):
     # - https://github.com/narwhals-dev/narwhals/blob/489bada3e9318f91c9d73744e7a6de62d2478451/narwhals/_plan/arrow/expr.py#L560-L570
     def over_ordered(
         self, node: ir.OverOrdered, frame: FrameT, name: str, /
-    ) -> Self | Scalar[FrameT]: ...
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def quantile(
         self, node: agg.Quantile, frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
-    def sum(self, node: agg.Sum, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def std(self, node: agg.Std, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
-    def var(self, node: agg.Var, frame: FrameT, name: str, /) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def sum(
+        self, node: agg.Sum, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def std(
+        self, node: agg.Std, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def var(
+        self, node: agg.Var, frame: FrameT, name: str, /
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def kurtosis(
         self, node: FExpr[F.Kurtosis], frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def skew(
         self, node: FExpr[F.Skew], frame: FrameT, name: str, /
-    ) -> Scalar[FrameT]: ...
+    ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
 
     def __narwhals_namespace__(
         self,
-    ) -> CompliantNamespace[FrameT, CompliantExpr[FrameT], CompliantExpr[FrameT]]: ...
+    ) -> CompliantNamespace[
+        FrameT,
+        CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co],
+        CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co],
+    ]: ...
 
     def __narwhals_expr_prepare__(self) -> Self:
         """Return a partially initialized instance of this class.
@@ -224,23 +259,43 @@ class CompliantExpr(Protocol[FrameT]):
         return tp.__new__(tp)
 
     @property
-    def cat(self) -> ExprCatNamespace[FrameT, CompliantExpr[FrameT]]: ...
+    def cat(
+        self,
+    ) -> ExprCatNamespace[
+        FrameT, CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def dt(self) -> ExprDateTimeNamespace[FrameT, CompliantExpr[FrameT]]: ...
+    def dt(
+        self,
+    ) -> ExprDateTimeNamespace[
+        FrameT, CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def list(self) -> ExprListNamespace[FrameT, CompliantExpr[FrameT]]: ...
+    def list(
+        self,
+    ) -> ExprListNamespace[
+        FrameT, CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def str(self) -> ExprStringNamespace[FrameT, CompliantExpr[FrameT]]: ...
+    def str(
+        self,
+    ) -> ExprStringNamespace[
+        FrameT, CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def struct(self) -> ExprStructNamespace[FrameT, CompliantExpr[FrameT]]: ...
+    def struct(
+        self,
+    ) -> ExprStructNamespace[
+        FrameT, CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+    ]: ...
 
 
 class EagerExpr(
     EagerBroadcast[SeriesT],
-    CompliantExpr[EagerDataFrameT],
-    Protocol[EagerDataFrameT, SeriesT],
+    CompliantExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
+    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
 ):
-    """`[EagerDataFrameT, SeriesT]`."""
+    """`[EagerDataFrameT, NativeExpr_co, , NativeScalar_co, SeriesT]`."""
 
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` (via `EagerBroadcast`) when truth-testing on dispatch
@@ -259,7 +314,7 @@ class EagerExpr(
     # NOTE: `Scalar` when using `returns_scalar=True`
     def map_batches(
         self, node: ir.AnonymousExpr, frame: EagerDataFrameT, name: str, /
-    ) -> Self | EagerScalar[EagerDataFrameT, SeriesT]: ...
+    ) -> Self | EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT]: ...
     def sample_frac(
         self, node: FExpr[F.SampleFrac], frame: EagerDataFrameT, name: str, /
     ) -> Self: ...
@@ -273,8 +328,8 @@ class EagerExpr(
     ) -> EagerNamespace[
         EagerDataFrameT,
         SeriesT,
-        EagerExpr[EagerDataFrameT, SeriesT],
-        EagerScalar[EagerDataFrameT, SeriesT],
+        EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
+        EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
         Incomplete,
         Incomplete,
     ]: ...

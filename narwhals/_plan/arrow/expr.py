@@ -19,7 +19,12 @@ from narwhals._plan._namespace import namespace
 from narwhals._plan.arrow import functions as fn, group_by
 from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
 from narwhals._plan.arrow.series import ArrowSeries as Series
-from narwhals._plan.arrow.typing import ChunkedArrayAny, Native, ScalarAny as NativeScalar
+from narwhals._plan.arrow.typing import (
+    ChunkedArrayAny,
+    ChunkedOrScalarT,
+    Native,
+    ScalarAny as NativeScalar,
+)
 from narwhals._plan.common import temp
 from narwhals._plan.compliant import typing as ct
 from narwhals._plan.compliant.accessors import (
@@ -95,14 +100,6 @@ UnaryFn: TypeAlias = _UnaryFunction
 Nothing to fancy here, just a short way to say *subclasses of `UnaryFunction`*.
 """
 
-
-_U_contra = TypeVar("_U_contra", bound=UnaryFn, contravariant=True)
-_NativeT = TypeVar("_NativeT", bound="Native", default="Native")
-
-
-UnaryPartial: TypeAlias = Callable[[ct.Self_, _U_contra, _NativeT], _NativeT]
-"""The type of the method being *decorated by* `@unary.partial`."""
-
 FunctionImplMethod = ct.FunctionImplMethod[ct.Self_, ct.F_contra, "Frame", ct.R]
 """The type of the wrapper method *produced by* any `unary` constructor."""
 
@@ -123,6 +120,9 @@ Native_co = TypeVar("Native_co", bound="Native", covariant=True, default="Native
 """The return type of `_ArrowDispatch.native`."""
 
 F_co = TypeVar("F_co", bound=Callable[..., Any], covariant=True)
+
+T = TypeVar("T")
+Pipe: TypeAlias = Callable[[T], T]
 
 
 class _BaseWrapper(Generic[F_co]):
@@ -163,7 +163,9 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
     __slots__ = ()
 
     @staticmethod
-    def partial(fn_partial: UnaryPartial[S2, U2, Native_co], /) -> Callable[..., S2]:
+    def partial(
+        fn_partial: Callable[[S2, U2, Incomplete], Native_co], /
+    ) -> Callable[..., S2]:
         """Decorator to fill in the boilerplate when implementing a `UnaryFunction`.
 
         The method being decorated should look like this (*parameter names are flexible*):
@@ -182,29 +184,25 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
         """
 
         def _wrapper(self: S2, node: FExpr[U2], frame: Frame, name: str) -> S2:
-            previous = node.dispatch_arg(self, frame, name).native  # type: ignore[arg-type]
-            return self._with_native(fn_partial(self, node.function, previous), name)  # type: ignore[arg-type]
+            previous = node.dispatch_arg(self, frame, name).native
+            return self._with_native(fn_partial(self, node.function, previous), name)
 
         return unary(_wrapper)
 
     @staticmethod
     @overload
-    def no_args(
-        fn_native: Callable[[Native], Native], /
-    ) -> Callable[..., Incomplete]: ...
+    def no_args(fn_native: Pipe[Native], /) -> Callable[..., Incomplete]: ...
+    @staticmethod
+    @overload
+    def no_args(fn_native: Pipe[ChunkedArrayAny], /) -> Callable[..., Expr]: ...
     @staticmethod
     @overload
     def no_args(
-        fn_native: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
-    ) -> Callable[..., Expr]: ...
-    @staticmethod
-    @overload
-    def no_args(
-        fn_native: Callable[[ChunkedArrayAny], NativeScalar], /
+        fn_native: Callable[[ChunkedArrayAny], NativeScalar] | Pipe[NativeScalar], /
     ) -> Callable[..., Scalar]: ...
     @staticmethod
     def no_args(
-        fn_native: Callable[[Native], Native] | Callable[[ChunkedArrayAny], Native], /
+        fn_native: Callable[[Incomplete], Native], /
     ) -> Callable[..., Incomplete]:
         """Non-decorating function wrapper to fill in the boilerplate when implementing a `UnaryFunction`.
 
@@ -214,8 +212,8 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
         """
 
         def _wrapper(self: _Self, node: FExpr[UnaryFn], frame: Frame, name: str) -> _Self:
-            previous = node.dispatch_arg(self, frame, name).native  # type: ignore[arg-type]
-            return self._with_native(fn_native(previous), name)  # type: ignore[arg-type]
+            previous = node.dispatch_arg(self, frame, name).native
+            return self._with_native(fn_native(previous), name)
 
         return unary(_wrapper)
 
@@ -253,7 +251,7 @@ class unary_accessor(  # noqa: N801
 
     @staticmethod
     def partial(
-        fn_partial: UnaryPartial[AS2, U2, Native], /
+        fn_partial: Callable[[AS2, U2, Native], Native], /
     ) -> Callable[..., Expr | Scalar]:
         def _wrapper(
             self: AS2, node: FExpr[U2], frame: Frame, name: str
@@ -269,9 +267,7 @@ class unary_accessor(  # noqa: N801
 
     @staticmethod
     @overload
-    def no_args(
-        fn_native: Callable[[ChunkedArrayAny], ChunkedArrayAny], /
-    ) -> Callable[..., Expr]: ...
+    def no_args(fn_native: Pipe[ChunkedArrayAny], /) -> Callable[..., Expr]: ...
     @staticmethod
     @overload
     def no_args(
@@ -279,12 +275,10 @@ class unary_accessor(  # noqa: N801
     ) -> Callable[..., Scalar]: ...
     @staticmethod
     @overload
-    def no_args(
-        fn_native: Callable[[Native], Native], /
-    ) -> Callable[..., Expr | Scalar]: ...
+    def no_args(fn_native: Pipe[Native], /) -> Callable[..., Expr | Scalar]: ...
     @staticmethod
     def no_args(
-        fn_native: Callable[[Native], Native] | Callable[[ChunkedArrayAny], Native], /
+        fn_native: Callable[[Incomplete], Native], /
     ) -> Callable[..., Expr | Scalar]:
         def _wrapper(
             self: _AccessorSelf, node: FExpr[UnaryFn], frame: Frame, name: str
@@ -297,90 +291,92 @@ class unary_accessor(  # noqa: N801
         return unary_accessor(_wrapper)
 
 
-class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
+class _ArrowDispatch(
+    EagerExpr["Frame", ChunkedArrayAny, NativeScalar, Series], Protocol[Native_co]
+):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
     version: ClassVar[Version] = Version.MAIN
 
     @property
-    def native(self) -> Native_co:
-        raise NotImplementedError
+    def native(self) -> Native_co: ...  # type: ignore[override]
 
     def _with_native(self, native: Any, name: str, /) -> Self:
         raise NotImplementedError
 
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
-
     def cast(self, node: ir.Cast, frame: Frame, name: str, /) -> Self:
         data_type = fn.dtype_native(node.dtype, self.version)
-        native = node.expr.dispatch(self, frame, name).native  # type: ignore[arg-type]
+        native = node.expr.dispatch(self, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
     def pow(self, node: FExpr[F.Pow], frame: Frame, name: str, /) -> Self:
-        base, exponent = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
+        base, exponent = node.dispatch_args(self, frame, name)
         return self._with_native(fn.power(base.native, exponent.native), name)
 
     def fill_null(self, node: FExpr[F.FillNull], frame: Frame, name: str, /) -> Self:
-        expr, value = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
+        expr, value = node.dispatch_args(self, frame, name)
         return self._with_native(pc.fill_null(expr.native, value.native), name)
 
     def is_between(self, node: FExpr[IsBetween], frame: Frame, name: str, /) -> Self:
-        expr, lb, ub = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
+        expr, lb, ub = node.dispatch_args(self, frame, name)
         closed = node.function.closed
         result = fn.is_between(expr.native, lb.native, ub.native, closed=closed)
         return self._with_native(result, name)
 
     def is_in_expr(self, node: FExpr[IsInExpr], frame: Frame, name: str, /) -> Self:
-        native, right = (s.native for s in node.dispatch_args(self, frame, name))  # type: ignore[arg-type]
+        native, right = (s.native for s in node.dispatch_args(self, frame, name))
         arr = fn.array(right) if isinstance(right, pa.Scalar) else right
         return self._with_native(fn.is_in(native, arr), name)
 
     @unary.partial
-    def is_in_series(self, f: IsInSeries[ChunkedArrayAny], previous: Native) -> Native:
+    def is_in_series(
+        self, f: IsInSeries[ChunkedArrayAny], previous: ChunkedOrScalarT
+    ) -> ChunkedOrScalarT:
         return fn.is_in(previous, f.other.native)
 
     @unary.partial
-    def is_in_seq(self, f: IsInSeq, previous: Native) -> Native:
+    def is_in_seq(self, f: IsInSeq, previous: ChunkedOrScalarT) -> ChunkedOrScalarT:
         return fn.is_in(previous, fn.array(f.other))
 
     def binary_expr(self, node: ir.BinaryExpr, frame: Frame, name: str, /) -> Self:
         lhs, rhs = (
-            node.left.dispatch(self, frame, name),  # type: ignore[arg-type]
-            node.right.dispatch(self, frame, name),  # type: ignore[arg-type]
+            node.left.dispatch(self, frame, name),
+            node.right.dispatch(self, frame, name),
         )
         result = fn.binary(lhs.native, node.op.__class__, rhs.native)
         return self._with_native(result, name)
 
     def ternary_expr(self, node: ir.TernaryExpr, frame: Frame, name: str, /) -> Self:
-        when = node.predicate.dispatch(self, frame, name)  # type: ignore[arg-type]
-        then = node.truthy.dispatch(self, frame, name)  # type: ignore[arg-type]
-        otherwise = node.falsy.dispatch(self, frame, name)  # type: ignore[arg-type]
+        when = node.predicate.dispatch(self, frame, name)
+        then = node.truthy.dispatch(self, frame, name)
+        otherwise = node.falsy.dispatch(self, frame, name)
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
     @unary.partial
-    def log(self, f: F.Log, previous: Native) -> Native:
+    def log(self, f: F.Log, previous: ChunkedOrScalarT) -> ChunkedOrScalarT:
         return fn.log(previous, f.base)
 
     @unary.partial
-    def round(self, f: F.Round, previous: Native) -> Native:
+    def round(self, f: F.Round, previous: ChunkedOrScalarT) -> ChunkedOrScalarT:
         return fn.round(previous, f.decimals)
 
     def clip(self, node: FExpr[F.Clip], frame: Frame, name: str, /) -> Self:
-        expr, lb, ub = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
+        expr, lb, ub = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip(expr.native, lb.native, ub.native), name)
 
     def clip_lower(self, node: FExpr[F.ClipLower], frame: Frame, name: str, /) -> Self:
-        expr, other = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
+        expr, other = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip_lower(expr.native, other.native), name)
 
     def clip_upper(self, node: FExpr[F.ClipUpper], frame: Frame, name: str, /) -> Self:
-        expr, other = node.dispatch_args(self, frame, name)  # type: ignore[arg-type]
+        expr, other = node.dispatch_args(self, frame, name)
         return self._with_native(fn.clip_upper(expr.native, other.native), name)
 
     @unary.partial
-    def replace_strict(self, f: F.ReplaceStrict, previous: Native) -> Native:
+    def replace_strict(
+        self, f: F.ReplaceStrict, previous: ChunkedOrScalarT
+    ) -> ChunkedOrScalarT:
         dtype = fn.dtype_native(f.return_dtype, self.version)
         return fn.replace_strict(previous, f.old, f.new, dtype)
 
@@ -388,7 +384,7 @@ class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
         self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str, /
     ) -> Self:
         f = node.function
-        native, default = (s.native for s in node.dispatch_args(self, frame, name))  # type: ignore[arg-type]
+        native, default = (s.native for s in node.dispatch_args(self, frame, name))
         dtype = fn.dtype_native(f.return_dtype, self.version)
         result = fn.replace_strict_default(native, f.old, f.new, default, dtype)
         return self._with_native(result, name)
@@ -408,8 +404,14 @@ class _ArrowDispatch(EagerExpr["Frame", Series], Protocol[Native_co]):
     all: Callable[..., Scalar] = unary.no_args(fn.all)
 
 
-class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
+class ArrowExpr(
+    _ArrowDispatch["ChunkedArrayAny"],
+    EagerExpr["Frame", "ChunkedArrayAny", NativeScalar, Series],
+):
     _evaluated: Series
+
+    def __narwhals_namespace__(self) -> Namespace:
+        return Namespace()
 
     @property
     def name(self) -> str:
@@ -796,9 +798,15 @@ class ArrowExpr(_ArrowDispatch["ChunkedArrayAny"], EagerExpr["Frame", Series]):
     ewm_mean = not_implemented()
 
 
-class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
+class ArrowScalar(
+    _ArrowDispatch[NativeScalar],
+    EagerScalar["Frame", ChunkedArrayAny, NativeScalar, Series],
+):
     _evaluated: NativeScalar
     _name: str
+
+    def __narwhals_namespace__(self) -> Namespace:
+        return Namespace()
 
     @classmethod
     def from_native(cls, scalar: NativeScalar, name: str = "literal", /) -> Self:
@@ -848,7 +856,7 @@ class ArrowScalar(_ArrowDispatch[NativeScalar], EagerScalar["Frame", Series]):
         return self.from_native(native, name or self.name)
 
     @property
-    def native(self) -> NativeScalar:
+    def native(self) -> NativeScalar:  # type: ignore[override]
         return self._evaluated
 
     def to_series(self) -> Series:

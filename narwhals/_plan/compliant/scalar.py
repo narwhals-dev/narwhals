@@ -3,7 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
-from narwhals._plan.compliant.typing import EagerDataFrameT, FrameT, SeriesT
+from narwhals._plan.compliant.typing import (
+    EagerDataFrameT,
+    FrameT,
+    NativeExpr_co,
+    NativeScalar_co,
+    SeriesT,
+)
 from narwhals._utils import Version, not_implemented
 
 if TYPE_CHECKING:
@@ -20,8 +26,11 @@ if TYPE_CHECKING:
 _F64 = Version.MAIN.dtypes.Float64()
 
 
-class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
-    """`[FrameT_contra]`."""
+class CompliantScalar(
+    CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co],
+    Protocol[FrameT, NativeExpr_co, NativeScalar_co],
+):
+    """`[FrameT, NativeExpr_co, NativeScalar_co]`."""
 
     _evaluated: Any
     """Compliant or native value.
@@ -31,6 +40,9 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
     - `PolarsExpr` uses `pl.Expr`
     """
     _name: str
+
+    @property
+    def native(self) -> NativeScalar_co: ...  # type: ignore[override]
 
     def _cast_float(self, node: ir.ExprIR, frame: FrameT, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
@@ -78,46 +90,49 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
 
     def count(
         self, node: agg.Count, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         """Returns 0 if null, else 1."""
         ...
 
     def ewm_mean(
         self, node: FExpr[F.EwmMean], frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.input[0], frame, name)
 
     def mean(
         self, node: agg.Mean, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.expr, frame, name)
 
     def median(
         self, node: agg.Median, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.expr, frame, name)
 
     def null_count(
         self, node: FExpr[F.NullCount], frame: FrameT, name: str
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         """Returns 1 if null, else 0."""
         ...
 
     def quantile(
         self, node: agg.Quantile, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.expr, frame, name)
 
     def shift(
         self, node: FExpr[F.Shift], frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT]:
+    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
         if node.function.n == 0:
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None)
 
     def drop_nulls(  # type: ignore[override]
         self, node: FExpr[F.DropNulls], frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT] | CompliantExpr[FrameT]:
+    ) -> (
+        CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]
+        | CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+    ):
         """Returns a 0-length Series if null, else noop."""
         ...
 
@@ -150,11 +165,11 @@ class CompliantScalar(CompliantExpr[FrameT], Protocol[FrameT]):
 
 
 class EagerScalar(
-    CompliantScalar[EagerDataFrameT],
-    EagerExpr[EagerDataFrameT, SeriesT],
-    Protocol[EagerDataFrameT, SeriesT],
+    CompliantScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
+    EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
+    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT],
 ):
-    """`[FrameT_contra, SeriesT]`."""
+    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, SeriesT]`."""
 
     def __len__(self) -> int:
         return 1

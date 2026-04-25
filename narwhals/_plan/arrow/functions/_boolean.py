@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         ChunkedOrArrayAny,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
+        ChunkedOrScalarT,
         ScalarAny,
         ScalarT,
         UnaryFunction,
@@ -148,9 +149,9 @@ def is_in(
     values: ChunkedArrayAny, /, other: ChunkedOrArrayAny
 ) -> ChunkedArray[pa.BooleanScalar]: ...
 @overload
-def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
+def is_in(values: ChunkedOrScalarT, /, other: ChunkedOrArrayAny) -> ChunkedOrScalarT: ...
 @overload
-def is_in(values: ScalarAny, /, other: ChunkedOrArrayAny) -> pa.BooleanScalar: ...
+def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
 @overload
 def is_in(
     values: ChunkedOrScalarAny, /, other: ChunkedOrArrayAny

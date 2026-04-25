@@ -47,11 +47,9 @@ if TYPE_CHECKING:
         ArrowSeriesV1,
     )
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
-    from narwhals._plan.compliant.expr import CompliantExpr
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
-    from narwhals._plan.compliant.namespace import CompliantNamespace
-    from narwhals._plan.compliant.scalar import CompliantScalar
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.compliant.typing import ExprAny, NamespaceAny, ScalarAny
     from narwhals._plan.plans.visitors import LogicalToResolved, ResolvedToCompliant
     from narwhals._plan.polars.dataframe import PolarsDataFrame
     from narwhals._plan.polars.expr import PolarsExpr
@@ -77,7 +75,7 @@ class HasLazyFrame(Protocol[NativeLazy_co]):
 
 class HasNamespace(Protocol):
     @property
-    def Namespace(self) -> type[CompliantNamespace[Incomplete, Incomplete, Incomplete]]:
+    def Namespace(self) -> type[NamespaceAny]:
         """Required, but the protocol should not include types that are exported here."""
         ...
 
@@ -93,7 +91,7 @@ class HasExpr(Protocol):
     """
 
     @property
-    def Expr(self) -> type[CompliantExpr[Incomplete]]:
+    def Expr(self) -> type[ExprAny]:
         """Required, but barely implemented for `polars` yet."""
         ...
 
@@ -141,9 +139,7 @@ class HasScalar(Protocol):
     """
 
     @property
-    def Scalar(
-        self,
-    ) -> type[CompliantScalar[Incomplete] | CompliantExpr[Incomplete]] | None:
+    def Scalar(self) -> type[ScalarAny | ExprAny] | None:
         """Optional for *at-least* `polars`."""
         ...
 
@@ -266,7 +262,7 @@ def try_arrow_1() -> tuple[
         type[CompliantLazyFrame[pa.Table]],
         type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]],
         type[CompliantSeries[pa.ChunkedArray[Any]]],
-        type[CompliantExpr[Incomplete]],
+        type[ExprAny],
     ],
 ]:
     import narwhals._plan.arrow
@@ -292,7 +288,7 @@ def try_arrow_v1_1() -> tuple[
         type[CompliantLazyFrame[pa.Table]],
         type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]],
         type[CompliantSeries[pa.ChunkedArray[Any]]],
-        type[CompliantExpr[Incomplete]],
+        type[ExprAny],
     ],
 ]:
     import narwhals._plan.arrow
@@ -330,7 +326,7 @@ def try_polars_1() -> tuple[
     type[CompliantLazyFrame[pl.LazyFrame]],
     type[CompliantDataFrame[pl.DataFrame, pl.Series]],
     type[CompliantSeries[pl.Series]],
-    type[CompliantExpr[Incomplete]],
+    type[ExprAny],
 ]:
     import narwhals._plan.polars
 
@@ -364,7 +360,7 @@ def try_polars_v1_1() -> tuple[
         type[CompliantLazyFrame[pl.LazyFrame]],
         type[CompliantDataFrame[pl.DataFrame, pl.Series]],
         type[CompliantSeries[pl.Series]],
-        type[CompliantExpr[Any]],
+        type[ExprAny],
         type[ResolvedToCompliant[pl.LazyFrame]],
     ],
 ]:

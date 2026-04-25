@@ -41,8 +41,19 @@ FromNative = TypeVar("FromNative")
 
 Native_co = TypeVar("Native_co", covariant=True)
 
-ExprAny: TypeAlias = "CompliantExpr[Any]"
-ScalarAny: TypeAlias = "CompliantScalar[Any]"
+NativeExpr_co = TypeVar("NativeExpr_co", covariant=True)
+"""The type of `CompliantExpr.native`.
+
+This can be literally anything, but some typical candidates would be:
+- A native expression representation
+- A native series or array
+- A native scalar
+"""
+
+NativeScalar_co = TypeVar("NativeScalar_co", covariant=True)
+
+ExprAny: TypeAlias = "CompliantExpr[Any, Any, Any]"
+ScalarAny: TypeAlias = "CompliantScalar[Any, Any, Any]"
 SeriesAny: TypeAlias = "CompliantSeries[Any]"
 FrameAny: TypeAlias = "CompliantFrame[Any]"
 DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any]"
@@ -50,8 +61,8 @@ LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 Namespace: TypeAlias = "CompliantNamespace[FrameT, ExprT_co, ScalarT_co]"
 
-EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
+EagerExprAny: TypeAlias = "EagerExpr[Any, Any, Any, Any]"
+EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)

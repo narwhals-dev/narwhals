@@ -13,14 +13,14 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
+    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals.typing import IntoDType, PythonLiteral
 
 
 Incomplete: TypeAlias = Any
 
 
-class PolarsExpr(CompliantExpr["DataFrame"]):
+class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     _native: pl.Expr
     version: ClassVar = Version.MAIN
 
@@ -55,7 +55,7 @@ class PolarsExpr(CompliantExpr["DataFrame"]):
         return PolarsNamespace()
 
     @classmethod
-    def from_ir(cls, node: ir.ExprIR, frame: Incomplete, name: str) -> PolarsExpr:
+    def from_ir(cls, node: ir.ExprIR, frame: DataFrame, name: str) -> PolarsExpr:
         obj = cls.__new__(cls)
         return node.dispatch(obj, frame, name)
 
