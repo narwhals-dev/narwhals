@@ -142,10 +142,6 @@ class EagerNamespace(
 
     @property
     def _series(self) -> type[SeriesT_co]: ...
-
-    def len(self, node: ir.Len, frame: EagerDataFrameT, name: str, /) -> EagerScalarT_co:
-        return self._scalar.from_python(len(frame), name or node.name, dtype=None)
-
     def lit_series(
         self, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str, /
     ) -> EagerExprT_co: ...

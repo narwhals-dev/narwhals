@@ -75,12 +75,9 @@ EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
-ScalarT_co = TypeVar("ScalarT_co", bound="ExprAny | ScalarAny", covariant=True)
-"""TODO @dangotbanned: Investigate using `ExprT_co` as a default.
-
-Could also/alternatively use `bound=ExprAny`.
-"""
-
+ScalarT_co = TypeVar(
+    "ScalarT_co", bound="ExprAny | ScalarAny", covariant=True, default=ExprT_co
+)
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
 SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
 FrameT = TypeVar("FrameT", bound=FrameAny)
@@ -93,7 +90,12 @@ LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
-EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
+EagerScalarT_co = TypeVar(
+    "EagerScalarT_co",
+    bound="EagerExprAny | EagerScalarAny",
+    covariant=True,
+    default=EagerExprT_co,
+)
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 EagerDataFrameT_co = TypeVar(
     "EagerDataFrameT_co", bound=EagerDataFrameAny, covariant=True

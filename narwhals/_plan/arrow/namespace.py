@@ -128,6 +128,9 @@ class ArrowNamespace(
     ) -> Expr:
         return self._expr.from_native(node.native, name or node.name)
 
+    def len(self, node: ir.Len, frame: Frame, name: str) -> Scalar:
+        return self._scalar.from_python(len(frame), name or node.name, dtype=None)
+
     @overload
     def _horizontal(
         self, function: BinaryFunction, /, fill: NonNestedLiteral = None

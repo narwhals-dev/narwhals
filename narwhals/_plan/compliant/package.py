@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, Any, Protocol
 from narwhals._plan.compliant.typing import (
     Native as NativeLazy,
     Native_co as NativeLazy_co,
-)
-from narwhals._plan.typing import (
     NativeDataFrameT_co as NativeEager_co,
-    NativeSeriesT_co as NativeSeries_co,
+    NativeExpr_co,
+    NativeScalar_co,
+    NativeSeriesT_co,
 )
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import unstable
@@ -47,6 +47,7 @@ if TYPE_CHECKING:
         ArrowSeriesV1,
     )
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
+    from narwhals._plan.compliant.expr import CompliantExpr
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.compliant.typing import ExprAny, NamespaceAny, ScalarAny
@@ -80,18 +81,9 @@ class HasNamespace(Protocol):
         ...
 
 
-class HasExpr(Protocol):
-    """This isn't particularly useful on its own.
-
-    - `ExprDispatch` is the important part *from the outside*
-    - Had to split out from `Expr` and `Scalar`, since `dispatch` can do any of:
-        - `Self`   -> `Self`
-        - `Expr`   -> `Scalar`
-        - `Scalar` -> `Expr`
-    """
-
+class HasExpr(Protocol[NativeExpr_co, NativeScalar_co]):
     @property
-    def Expr(self) -> type[ExprAny]:
+    def Expr(self) -> type[CompliantExpr[Incomplete, NativeExpr_co, NativeScalar_co]]:
         """Required, but barely implemented for `polars` yet."""
         ...
 
@@ -110,14 +102,14 @@ class MaybeHasPlanEvaluator(Protocol[NativeLazy]):
     def PlanEvaluator(self) -> type[ResolvedToCompliant[NativeLazy]] | None: ...
 
 
-class HasDataFrame(Protocol[NativeEager_co, NativeSeries_co]):
+class HasDataFrame(Protocol[NativeEager_co, NativeSeriesT_co]):
     @property
-    def DataFrame(self) -> type[CompliantDataFrame[NativeEager_co, NativeSeries_co]]: ...
+    def DataFrame(self) -> type[CompliantDataFrame[NativeEager_co, NativeSeriesT_co]]: ...
 
 
-class HasSeries(Protocol[NativeSeries_co]):
+class HasSeries(Protocol[NativeSeriesT_co]):
     @property
-    def Series(self) -> type[CompliantSeries[NativeSeries_co]]: ...
+    def Series(self) -> type[CompliantSeries[NativeSeriesT_co]]: ...
 
 
 class HasPlanResolver(Protocol):
@@ -146,33 +138,35 @@ class HasScalar(Protocol):
 
 @unstable
 class LazyPackage(
-    HasExpr,
+    HasExpr[NativeExpr_co, NativeScalar_co],
     HasNamespace,
     HasLazyFrame[NativeLazy],
     HasPlanEvaluator[NativeLazy],
-    Protocol[NativeLazy],
+    Protocol[NativeLazy, NativeExpr_co, NativeScalar_co],
 ): ...
 
 
 @unstable
 class EagerPackage(
-    HasExpr,
+    HasExpr[NativeExpr_co, NativeScalar_co],
     HasNamespace,
-    HasDataFrame[NativeEager_co, NativeSeries_co],
-    HasSeries[NativeSeries_co],
-    Protocol[NativeEager_co, NativeSeries_co],
+    HasDataFrame[NativeEager_co, NativeSeriesT_co],
+    HasSeries[NativeSeriesT_co],
+    Protocol[NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co],
 ): ...
 
 
 @unstable
 class HybridPackage(
-    HasExpr,
+    HasExpr[NativeExpr_co, NativeScalar_co],
     HasNamespace,
-    HasDataFrame[NativeEager_co, NativeSeries_co],
+    HasDataFrame[NativeEager_co, NativeSeriesT_co],
     HasLazyFrame[NativeLazy],
     MaybeHasPlanEvaluator[NativeLazy],
-    HasSeries[NativeSeries_co],
-    Protocol[NativeLazy, NativeEager_co, NativeSeries_co],
+    HasSeries[NativeSeriesT_co],
+    Protocol[
+        NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+    ],
 ): ...
 
 
@@ -180,20 +174,24 @@ class HybridPackage(
 class FullPackage(
     HasPlanResolver,
     HasScalar,
-    HybridPackage[NativeLazy, NativeEager_co, NativeSeries_co],
-    Protocol[NativeLazy, NativeEager_co, NativeSeries_co],
+    HybridPackage[
+        NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+    ],
+    Protocol[
+        NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+    ],
 ): ...
 
 
-LazyPackageT = TypeVar("LazyPackageT", bound=LazyPackage[Any])
-HybridPackageT = TypeVar("HybridPackageT", bound=HybridPackage[Any, Any, Any])
+LazyPackageT = TypeVar("LazyPackageT", bound=LazyPackage[Any, Any, Any])
+HybridPackageT = TypeVar("HybridPackageT", bound=HybridPackage[Any, Any, Any, Any, Any])
 FullPackageT_co = TypeVar(
-    "FullPackageT_co", bound=FullPackage[Any, Any, Any], covariant=True
+    "FullPackageT_co", bound=FullPackage[Any, Any, Any, Any, Any], covariant=True
 )
 
 AnyPackageT_co = TypeVar(
     "AnyPackageT_co",
-    bound="LazyPackage[Any] | HybridPackage[Any, Any, Any] | FullPackage[Any, Any, Any]",
+    bound="LazyPackage[Any, Any, Any] | HybridPackage[Any, Any, Any, Any, Any] | FullPackage[Any, Any, Any, Any, Any]",
     covariant=True,
 )
 
@@ -205,13 +203,19 @@ class HasV1(Protocol[AnyPackageT_co]):
     def v1(self) -> AnyPackageT_co: ...
 
 
-def try_lazy_package(package: LazyPackage[NativeLazy]) -> LazyPackage[NativeLazy]:
+def try_lazy_package(
+    package: LazyPackage[NativeLazy, NativeExpr_co, NativeScalar_co],
+) -> LazyPackage[NativeLazy, NativeExpr_co, NativeScalar_co]:
     return package
 
 
 def try_hybrid_package(
-    package: HybridPackage[NativeLazy, NativeEager_co, NativeSeries_co],
-) -> HybridPackage[NativeLazy, NativeEager_co, NativeSeries_co]:
+    package: HybridPackage[
+        NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+    ],
+) -> HybridPackage[
+    NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+]:
     return package
 
 
@@ -220,8 +224,16 @@ def try_hybrid_package_t(package: HybridPackageT) -> HybridPackageT:
 
 
 def try_v1_package(
-    package: HasV1[HybridPackage[NativeLazy, NativeEager_co, NativeSeries_co]],
-) -> HasV1[HybridPackage[NativeLazy, NativeEager_co, NativeSeries_co]]:
+    package: HasV1[
+        HybridPackage[
+            NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+        ]
+    ],
+) -> HasV1[
+    HybridPackage[
+        NativeLazy, NativeEager_co, NativeSeriesT_co, NativeExpr_co, NativeScalar_co
+    ]
+]:
     return package
 
 
@@ -249,7 +261,7 @@ def rewrap_as_plugin(package: LazyPackageT) -> LazyPackageT:
     return package
 
 
-def try_arrow() -> LazyPackage[pa.Table]:
+def try_arrow() -> LazyPackage[pa.Table, pa.ChunkedArray[Any], pa.Scalar[Any]]:
     import narwhals._plan.arrow
 
     return try_lazy_package(narwhals._plan.arrow)  # pyright: ignore[reportArgumentType]
@@ -257,12 +269,14 @@ def try_arrow() -> LazyPackage[pa.Table]:
 
 # NOTE: This version reveals (<package-type>, (<native-types>, ...))
 def try_arrow_1() -> tuple[
-    HybridPackage[pa.Table, pa.Table, pa.ChunkedArray[Any]],
+    HybridPackage[
+        pa.Table, pa.Table, pa.ChunkedArray[Any], pa.ChunkedArray[Any], pa.Scalar[Any]
+    ],
     tuple[
         type[CompliantLazyFrame[pa.Table]],
         type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]],
         type[CompliantSeries[pa.ChunkedArray[Any]]],
-        type[ExprAny],
+        type[CompliantExpr[Any, pa.ChunkedArray[Any], pa.Scalar[Any]]],
     ],
 ]:
     import narwhals._plan.arrow
@@ -283,12 +297,14 @@ def try_arrow_2() -> tuple[
 
 
 def try_arrow_v1_1() -> tuple[
-    HybridPackage[pa.Table, pa.Table, pa.ChunkedArray[Any]],
+    HybridPackage[
+        pa.Table, pa.Table, pa.ChunkedArray[Any], pa.ChunkedArray[Any], pa.Scalar[Any]
+    ],
     tuple[
         type[CompliantLazyFrame[pa.Table]],
         type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]],
         type[CompliantSeries[pa.ChunkedArray[Any]]],
-        type[ExprAny],
+        type[CompliantExpr[Any, pa.ChunkedArray[Any], pa.Scalar[Any]]],
     ],
 ]:
     import narwhals._plan.arrow
@@ -322,11 +338,11 @@ def try_arrow_v1_2() -> tuple[
 
 
 def try_polars_1() -> tuple[
-    HybridPackage[pl.LazyFrame, pl.DataFrame, pl.Series],
+    HybridPackage[pl.LazyFrame, pl.DataFrame, pl.Series, pl.Expr, pl.Expr],
     type[CompliantLazyFrame[pl.LazyFrame]],
     type[CompliantDataFrame[pl.DataFrame, pl.Series]],
     type[CompliantSeries[pl.Series]],
-    type[ExprAny],
+    type[CompliantExpr[Incomplete, pl.Expr, pl.Expr]],
 ]:
     import narwhals._plan.polars
 
@@ -348,14 +364,14 @@ def try_polars_2() -> tuple[
     return out, out.LazyFrame, out.DataFrame, out.Series, out.Expr, out.Scalar
 
 
-def try_polars() -> LazyPackage[pl.LazyFrame]:
+def try_polars() -> LazyPackage[pl.LazyFrame, pl.Expr, pl.Expr]:
     import narwhals._plan.polars
 
     return try_lazy_package(narwhals._plan.polars)
 
 
 def try_polars_v1_1() -> tuple[
-    HybridPackage[pl.LazyFrame, pl.DataFrame, pl.Series],
+    HybridPackage[pl.LazyFrame, pl.DataFrame, pl.Series, pl.Expr, pl.Expr],
     tuple[
         type[CompliantLazyFrame[pl.LazyFrame]],
         type[CompliantDataFrame[pl.DataFrame, pl.Series]],
