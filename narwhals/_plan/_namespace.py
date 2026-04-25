@@ -14,9 +14,8 @@ if TYPE_CHECKING:
     import polars as pl
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.compliant.namespace import CompliantNamespace
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.compliant.package import HasPlanEvaluator
-    from narwhals._plan.compliant.typing import NamespaceT_co, SupportsNarwhalsNamespace
     from narwhals._plan.plans.visitors import ResolvedToCompliant
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.typing import Backend, IntoBackend
@@ -26,14 +25,12 @@ KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
 """Equivalent to `Backend - BackendName`."""
 
 
-def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
+def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.NamespaceT_co:
     """Get the compliant namespace from `obj`."""
     return obj.__narwhals_namespace__()
 
 
-def namespace_from_backend(
-    backend: IntoBackend[Backend] | Any,
-) -> CompliantNamespace[Any, Any, Any]:
+def namespace_from_backend(backend: IntoBackend[Backend] | Any) -> ct.NamespaceAny:
     """Instantiate a compliant namespace from `backend`, routing through `Implementation`."""
     impl = Implementation.from_backend(backend)
     if impl is Implementation.POLARS:
