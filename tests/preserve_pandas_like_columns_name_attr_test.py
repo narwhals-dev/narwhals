@@ -25,7 +25,7 @@ def test_ops_preserve_column_index_name(
     df_native = constructor(data).to_native()
     df_native.columns.name = "foo"
 
-    df = constructor(df_native)
+    df = nw.from_native(df_native)
 
     result = df.with_columns(b=nw.col("a") + 1, c=nw.col("a") * 2).select("c", "b")
 
