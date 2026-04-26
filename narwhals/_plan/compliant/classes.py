@@ -63,7 +63,7 @@ class CompliantClasses(Protocol[ExprT_co, ScalarT_co]):
     def _expr(self) -> type[ExprT_co]: ...
     @property
     def _scalar(self) -> type[ScalarT_co]: ...
-    def __narwhals_expr_prepare__(self) -> ExprT_co:
+    def __narwhals_expr_prepare__(self) -> ExprT_co:  # pragma: no cover
         tp = self._expr
         return tp.__new__(tp)
 

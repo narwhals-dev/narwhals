@@ -56,6 +56,10 @@ ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["duckdb>=1.1", "sqlparse"]
 
+[project.entry-points.'narwhals.plugins-plan']
+polars = "narwhals._plan.polars:plugin"
+pyarrow = "narwhals._plan.arrow:plugin"
+
 [dependency-groups]
 core = [
   "narwhals[duckdb,pandas,polars,pyarrow,sqlframe,sql]"
@@ -367,8 +371,8 @@ exclude_also = [
   # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
   # https://docs.astral.sh/ruff/rules/f-string-in-exception/
   '^\s*msg = .+\n\s*raise NotImplementedError\b',
-  # stolen from https://github.com/pydantic/pydantic/blob/aa4d8b3fbc5f449ce1c05ebec36b1d4b3b736b69/pyproject.toml#L271
-  'class .*\bProtocol\):',
+  # Adapted from https://github.com/pydantic/pydantic/blob/aa4d8b3fbc5f449ce1c05ebec36b1d4b3b736b69/pyproject.toml#L271
+  'class .*\bProtocol(\[.+\])?\):',
   "if MYPY:"
 ]
 

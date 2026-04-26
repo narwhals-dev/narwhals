@@ -12,23 +12,29 @@ This represents the **external-view** of the backend
 
 from __future__ import annotations
 
+import functools
 import sys
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
 
-from narwhals._plan.compliant.classes import ClassesT_co, HasClasses
+from narwhals._plan._namespace import known_implementation
+from narwhals._plan.compliant.classes import ClassesAny, ClassesT_co, HasClasses
 from narwhals._plan.compliant.typing import (
     Native as LF,
     NativeDataFrameT as DF,
     NativeSeriesT as S,
 )
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from importlib.metadata import EntryPoints
 
     from typing_extensions import LiteralString, TypeAlias, TypeIs
 
     from narwhals._plan._namespace import KnownImpl
+    from narwhals._plan.arrow import ArrowPlugin
+    from narwhals.typing import Backend, IntoBackend
 
     MYPY: Final = False
     if MYPY:
@@ -37,6 +43,29 @@ if TYPE_CHECKING:
         LiteralString_: TypeAlias = Any
     else:
         from typing_extensions import LiteralString as LiteralString_
+
+
+__all__ = ["Builtin", "Implementation", "Plugin", "PluginName", "Unsupported"]
+
+PluginName: TypeAlias = "LiteralString"
+"""Name of a backend's [entry point].
+
+This is ~~supported~~ planned to be supported wherever a `backend` parameter is requested.
+
+## See Also
+- [Using package metadata](https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata)
+- [Entry points specification](https://packaging.python.org/en/latest/specifications/entry-points/#data-model)
+
+[entry point]: https://docs.python.org/3/library/importlib.metadata.html#importlib.metadata.EntryPoint
+"""
+
+# NOTE: `Never` might be another option?
+# try that out if `Any` causes *any* issues
+Unsupported: TypeAlias = Any
+"""Marker to use for types that are not planned to be implemented."""
+
+PluginAny: TypeAlias = "Plugin[ClassesAny, Any, Any, Any]"
+BuiltinAny: TypeAlias = "Builtin[ClassesAny, Any, Any, Any] | ArrowPlugin"
 
 
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
@@ -62,12 +91,12 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     def native_series_classes(self) -> Iterator[type[S]]: ...
     def native_classes(self) -> Iterator[type[DF | LF | S]]: ...
 
-    # TODO @dangotbanned: Review how entrypoints work again, do we need this *here*?
+    # TODO @dangotbanned: Maybe remove since this information is available elsewhere?
     @property
-    def plugin_name(self) -> LiteralString: ...
+    def plugin_name(self) -> PluginName: ...
 
 
-class BuiltinPlugin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
+class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     """Backends defined inside of narwhals are plugins too.
 
     `[ClassesT_co, DF, LF, S]`.
@@ -84,33 +113,60 @@ class BuiltinPlugin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF
 
     @property
     def plugin_name(self) -> LiteralString:
-        return self.implementation.name
+        return self.implementation.value
 
-    def is_loaded(self) -> bool:
+    def is_loaded(self) -> bool:  # pragma: no cover
         return all(sys.modules.get(target) for target in self.sys_modules_targets)
 
-    def is_available(self) -> bool:
+    def is_available(self) -> bool:  # pragma: no cover
         return all(find_spec(target) for target in self.sys_modules_targets)
 
-    def native_classes(self) -> Iterator[type[DF | LF | S]]:
+    def native_classes(self) -> Iterator[type[DF | LF | S]]:  # pragma: no cover
         yield from self.native_dataframe_classes()
         yield from self.native_lazyframe_classes()
         yield from self.native_series_classes()
 
-    def is_native(self, obj: Any) -> TypeIs[DF | LF | S]:
+    def is_native(self, obj: Any) -> TypeIs[DF | LF | S]:  # pragma: no cover
         if tps := tuple(self.native_classes()):
             return isinstance(obj, tps)
         msg = f"{type(self).__name__!r} ({self.plugin_name!r}) has not defined any native classes"
         raise NotImplementedError(msg)
 
-    def is_native_dataframe(self, obj: Any) -> TypeIs[DF]:
+    def is_native_dataframe(self, obj: Any) -> TypeIs[DF]:  # pragma: no cover
         it = self.native_dataframe_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
-    def is_native_lazyframe(self, obj: Any) -> TypeIs[LF]:
+    def is_native_lazyframe(self, obj: Any) -> TypeIs[LF]:  # pragma: no cover
         it = self.native_lazyframe_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
-    def is_native_series(self, obj: Any) -> TypeIs[S]:
+    def is_native_series(self, obj: Any) -> TypeIs[S]:  # pragma: no cover
         it = self.native_series_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
+
+
+@functools.cache
+def _entry_points() -> EntryPoints:
+    from importlib.metadata import entry_points
+
+    return entry_points(group="narwhals.plugins-plan")
+
+
+# TODO @dangotbanned: Add some overloads for more precise built-ins
+def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | BuiltinAny:
+    """Load a single plugin."""
+    name = backend if isinstance(backend, str) else known_implementation(backend).value
+    eps = _entry_points()
+    if selected := eps.select(name=name):
+        it = iter(selected)
+        plugin: PluginAny | BuiltinAny = next(it).load()
+        if next(it, None) is None:
+            return plugin
+        msg = f"Multiple plugins found with the same name:\n{selected!r}"
+        raise NotImplementedError(msg)
+
+    if (impl := Implementation.from_backend(name)) is not Implementation.UNKNOWN:
+        msg = f"{impl!r} is not yet supported in `narwhals._plan`, got: {backend!r}"
+        raise NotImplementedError(msg)
+    msg = f"Unsupported `backend` value.\nExpected one of {sorted(eps.names)!r}, got: {backend!r}"
+    raise TypeError(msg)

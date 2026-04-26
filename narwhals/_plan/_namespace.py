@@ -1,3 +1,4 @@
+# TODO @dangotbanned: Review what to extract into plugin features
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, get_args
@@ -50,7 +51,7 @@ def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
     """Reject the possibility of plugins via this path."""
     impl = Implementation.from_backend(backend)
     if impl is Implementation.UNKNOWN:
-        msg = f"{impl!r} is not supported in this context, got:\n{backend!r}"
+        msg = f"{impl!r} is not supported in this context, got: {backend!r}"
         raise NotImplementedError(msg)
     return impl
 
