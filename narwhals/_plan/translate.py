@@ -124,13 +124,13 @@ def _from_polars_dataframe(
 
 
 def _import_polars_lazyframe() -> type[pl.LazyFrame]:
-    import polars as pl
+    import polars as pl  # ignore-banned-import
 
     return pl.LazyFrame
 
 
 def _import_polars_dataframe() -> type[pl.DataFrame]:
-    import polars as pl
+    import polars as pl  # ignore-banned-import
 
     return pl.DataFrame
 
@@ -145,7 +145,7 @@ def _from_pyarrow_table(
 
 
 def _import_pyarrow_table() -> type[pa.Table]:
-    import pyarrow as pa
+    import pyarrow as pa  # ignore-banned-import
 
     return pa.Table
 

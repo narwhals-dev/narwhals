@@ -19,6 +19,8 @@ BANNED_IMPORTS = {
     "pyarrow",
     "pyspark",
 }
+# `narwhals.<name_1> : narwhals._plan.<name_2>`
+NW_TO_NW_PLAN = {"_arrow": "arrow", "_polars": "polars"}
 
 ALLOWED_IMPORTS = {
     "_pandas_like": {"pandas", "numpy"},
@@ -28,6 +30,8 @@ ALLOWED_IMPORTS = {
     "_duckdb": {"duckdb"},
     "_ibis": {"ibis", "ibis._", "ibis.expr.types"},
 }
+
+ALLOWED_IMPORTS |= {v: ALLOWED_IMPORTS[k] for k, v in NW_TO_NW_PLAN.items()}
 
 
 class ImportPandasChecker(ast.NodeVisitor):

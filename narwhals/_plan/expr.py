@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, LiteralString, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from narwhals._plan import _parse, common, expressions as ir
 from narwhals._plan._guards import is_series
