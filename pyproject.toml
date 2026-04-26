@@ -80,6 +80,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "typing_extensions",
   "mypy==1.20.1", # Will break CI, only testing on `_plan` locally
   "pyright",
+  "pyarrow<24", # https://github.com/narwhals-dev/narwhals/issues/3560
   "pyarrow-stubs==19.2",
   "sqlframe",
   "polars",
