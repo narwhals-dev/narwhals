@@ -113,7 +113,7 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
 
     @property
     def plugin_name(self) -> LiteralString:
-        return self.implementation.value
+        return self.implementation.value  # type: ignore[no-any-return]
 
     def is_loaded(self) -> bool:  # pragma: no cover
         return all(sys.modules.get(target) for target in self.sys_modules_targets)
