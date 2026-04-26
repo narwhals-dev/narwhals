@@ -825,7 +825,7 @@ class RowIndex(LpFunction):
     def __repr__(self) -> str:
         return f"ROW INDEX name: {self.name}"
 
-    # TODO @dangotbanned: Try to get this and `RowIndexBy` to be nicer to eachother
+    # TODO @dangotbanned: Try to get this and `RowIndexBy` to be nicer to each other
     def resolve(
         self, resolver: LogicalToResolved, plan: MapFunction[Incomplete], /
     ) -> ResolvedPlan:  # pragma: no cover
