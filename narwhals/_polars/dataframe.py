@@ -33,13 +33,13 @@ from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from types import ModuleType
-    from typing import Callable
+    from typing import TypeAlias
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
@@ -477,7 +477,11 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                     return self.select()
                 if is_boolean_selector(columns):
                     native = native.select(
-                        *(col for col, select in zip(native.columns, columns) if select)
+                        *(
+                            col
+                            for col, select in zip(native.columns, columns, strict=False)
+                            if select
+                        )
                     )
                 elif is_index_selector(columns):
                     if is_slice_index(columns) or is_range(columns):

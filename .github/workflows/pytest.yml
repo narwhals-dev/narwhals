@@ -8,10 +8,10 @@ env:
   PYTEST_ADDOPTS: "--numprocesses=logical"
   UV_SYSTEM_PYTHON: 1
 jobs:
-  pytest-39:
+  pytest-310:
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -23,7 +23,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: "true"
-          cache-suffix: pytest-39-${{ matrix.python-version }}
+          cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests
@@ -37,7 +37,7 @@ jobs:
   pytest-windows:
     strategy:
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.13"]
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:

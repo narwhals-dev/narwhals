@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from functools import partial
 from typing import TYPE_CHECKING, cast
 
-from narwhals._utils import Implementation, Version, qualified_type_name, zip_strict
+from narwhals._utils import Implementation, Version, qualified_type_name
 from narwhals.dependencies import (
     get_cudf,
     is_cudf_dtype,
@@ -305,7 +305,9 @@ class Schema(OrderedDict[str, "DType"]):
             raise ValueError(msg)
         return {
             name: to_native_dtype(dtype=dtype, dtype_backend=backend)
-            for name, dtype, backend in zip_strict(self.keys(), self.values(), backends)
+            for name, dtype, backend in zip(
+                self.keys(), self.values(), backends, strict=True
+            )
         }
 
     def to_polars(self) -> pl.Schema:

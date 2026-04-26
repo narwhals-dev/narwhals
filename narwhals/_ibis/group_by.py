@@ -29,4 +29,4 @@ class IbisGroupBy(SQLGroupBy["IbisLazyFrame", "IbisExpr", "ir.Value"]):
         native = self.compliant.native
         return self.compliant._with_native(
             native.group_by(self._keys).aggregate(*self._evaluate_exprs(exprs))
-        ).rename(dict(zip(self._keys, self._output_key_names)))
+        ).rename(dict(zip(self._keys, self._output_key_names, strict=False)))

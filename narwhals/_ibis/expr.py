@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import ibis
 
@@ -26,11 +26,10 @@ from narwhals._utils import (
     extend_bool,
     no_default,
     not_implemented,
-    zip_strict,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     import ibis.expr.types as ir
     from typing_extensions import Self
@@ -157,7 +156,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             (True, False): desc_nulls_first,
             (True, True): desc_nulls_last,
         }
-        for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last):
+        for col, _desc, _nulls_last in zip(cols, descending, nulls_last, strict=True):
             yield mapping[(_desc, _nulls_last)](col)
 
     @classmethod

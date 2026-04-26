@@ -7,13 +7,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    import sys
-    from typing import Generic, Literal
-
-    if sys.version_info >= (3, 10):
-        from typing import TypeAlias
-    else:
-        from typing_extensions import TypeAlias
+    from typing import Generic, Literal, TypeAlias
 
     import pyarrow as pa
     from pyarrow.__lib_pxi.table import (

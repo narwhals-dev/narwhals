@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar
 from narwhals._utils import CompliantT_co, _StoresCompliant
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from collections.abc import Callable
 
     from narwhals._compliant.typing import Accessor
     from narwhals.typing import NonNestedLiteral, TimeUnit

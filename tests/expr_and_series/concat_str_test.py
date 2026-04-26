@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 
@@ -8,7 +8,12 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
+from typing import TYPE_CHECKING
+
 import pyarrow as pa
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 

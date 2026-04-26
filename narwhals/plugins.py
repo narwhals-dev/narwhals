@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from functools import cache
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._typing_compat import TypeVar
@@ -10,8 +10,9 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from importlib.metadata import EntryPoints
+    from typing import TypeAlias
 
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import LiteralString
 
     from narwhals._compliant.typing import (
         CompliantDataFrameAny,
@@ -44,8 +45,6 @@ def _discover_entrypoints() -> EntryPoints:
     from importlib.metadata import entry_points as eps
 
     group = "narwhals.plugins"
-    if sys.version_info < (3, 10):
-        return cast("EntryPoints", eps().get(group, ()))
     return eps(group=group)
 
 

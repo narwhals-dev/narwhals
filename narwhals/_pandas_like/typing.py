@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING  # pragma: no cover
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, TypeAlias
 
     import pandas as pd
-    from typing_extensions import TypeAlias
 
     from narwhals._native import (
         NativePandasLikeDataFrame,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from narwhals._duration import Interval
 from narwhals._ibis.utils import (
@@ -12,6 +12,8 @@ from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import ibis.expr.types as ir
 
     from narwhals._ibis.expr import IbisExpr

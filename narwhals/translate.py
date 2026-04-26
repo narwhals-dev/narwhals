@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from narwhals import plugins
 from narwhals._constants import EPOCH, MS_PER_SECOND
@@ -38,6 +38,8 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typing_extensions import Unpack
 
     from narwhals._translate import (

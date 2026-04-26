@@ -14,7 +14,7 @@ from narwhals._native import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals.stable.v2 import DataFrame, Expr, LazyFrame, Series
 

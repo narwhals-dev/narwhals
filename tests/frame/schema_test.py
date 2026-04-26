@@ -13,9 +13,9 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from typing import TypeAlias
 
     import polars as pl
-    from typing_extensions import TypeAlias
 
     from narwhals.typing import (
         DTypeBackend,

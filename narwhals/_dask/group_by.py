@@ -1,22 +1,21 @@
 from __future__ import annotations
 
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import dask.dataframe as dd
 
 from narwhals._compliant import DepthTrackingGroupBy
 from narwhals._dask.utils import make_group_by_kwargs
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
     from dask.dataframe.api import GroupBy as _DaskGroupBy
     from pandas.core.groupby import SeriesGroupBy as _PandasSeriesGroupBy
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._dask.dataframe import DaskLazyFrame
@@ -113,7 +112,7 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             return (
                 self.compliant.simple_select(*self._keys)
                 .unique(self._keys, keep="any", order_by=None)
-                .rename(dict(zip(self._keys, self._output_key_names)))
+                .rename(dict(zip(self._keys, self._output_key_names, strict=False)))
             )
 
         self._ensure_all_simple(exprs)
@@ -140,9 +139,9 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             agg_fn = agg_fn(**last_node.kwargs) if callable(agg_fn) else agg_fn
             simple_aggregations.update(
                 (alias, (output_name, agg_fn))
-                for alias, output_name in zip_strict(aliases, output_names)
+                for alias, output_name in zip(aliases, output_names, strict=True)
             )
         return DaskLazyFrame(
             self._grouped.agg(**simple_aggregations).reset_index(),
             version=self.compliant._version,
-        ).rename(dict(zip(self._keys, self._output_key_names)))
+        ).rename(dict(zip(self._keys, self._output_key_names, strict=False)))

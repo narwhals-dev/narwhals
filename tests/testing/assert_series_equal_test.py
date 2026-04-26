@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from contextlib import AbstractContextManager, nullcontext as does_not_raise
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -11,7 +11,8 @@ from narwhals.testing import assert_series_equal
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from collections.abc import Callable
+    from typing import TypeAlias
 
     from narwhals.typing import IntoSchema, IntoSeriesT
     from tests.conftest import Data

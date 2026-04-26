@@ -10,15 +10,15 @@ from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import make_group_by_kwargs
-from narwhals._utils import zip_strict
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
     from pandas.api.typing import DataFrameGroupBy as _NativeGroupBy
-    from typing_extensions import TypeAlias, Unpack
+    from typing_extensions import Unpack
 
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -317,7 +317,7 @@ class PandasLikeGroupBy(
         return (
             self.compliant._with_native(df, validate_column_names=False)
             .simple_select(*self._keys, *new_names)
-            .rename(dict(zip(self._keys, self._output_key_names)))
+            .rename(dict(zip(self._keys, self._output_key_names, strict=False)))
         )
 
     def _getitem_aggs(
@@ -358,7 +358,7 @@ class PandasLikeGroupBy(
                 for expr in exprs
                 for keys in expr(compliant)
             )
-            out_group, out_names = zip_strict(*results) if results else ([], [])
+            out_group, out_names = zip(*results, strict=True) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 
         return fn

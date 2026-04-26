@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from narwhals.expr import Expr
 
 ExprT = TypeVar("ExprT", bound="Expr")
