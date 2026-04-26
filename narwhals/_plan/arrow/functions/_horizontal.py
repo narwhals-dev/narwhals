@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 __all__ = ["coalesce", "max_horizontal", "min_horizontal"]
 

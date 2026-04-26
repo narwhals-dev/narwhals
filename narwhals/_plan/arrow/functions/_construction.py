@@ -7,7 +7,7 @@ from collections.abc import Collection
 from itertools import chain
 from typing import TYPE_CHECKING, Any, overload
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 
 from narwhals._arrow.utils import concat_tables
 

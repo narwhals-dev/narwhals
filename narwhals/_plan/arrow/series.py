@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import native_to_narwhals_dtype

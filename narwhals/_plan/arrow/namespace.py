@@ -4,7 +4,7 @@ from collections.abc import Callable, Collection
 from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._version import into_version

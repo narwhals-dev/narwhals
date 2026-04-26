@@ -3,8 +3,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._bin_op import and_, gt, gt_eq, lt, lt_eq
 from narwhals._plan.arrow.functions._construction import array, lit

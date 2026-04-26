@@ -4,8 +4,8 @@ from collections.abc import Callable, Iterable
 from types import MethodType
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, final, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan import common, expressions as ir
 from narwhals._plan._function import UnaryFunction as _UnaryFunction

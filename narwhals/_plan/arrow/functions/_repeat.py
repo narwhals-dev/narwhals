@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 
 from narwhals._plan.arrow.functions._construction import lit
 

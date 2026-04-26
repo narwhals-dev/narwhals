@@ -11,7 +11,7 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, overload
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._horizontal import max_horizontal, min_horizontal
 

@@ -4,7 +4,7 @@ import math
 import typing as t
 from typing import TYPE_CHECKING
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 from narwhals._arrow.utils import floordiv_compat as _floordiv
 from narwhals._plan.arrow.functions._dtypes import F64, is_integer

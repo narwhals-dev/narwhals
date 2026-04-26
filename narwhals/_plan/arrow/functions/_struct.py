@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan import common
 from narwhals._plan.arrow import compat

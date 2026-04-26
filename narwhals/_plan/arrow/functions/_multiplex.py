@@ -9,8 +9,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, Any, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow.functions._arithmetic import sub

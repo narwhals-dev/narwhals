@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 
 from narwhals._utils import unstable
 

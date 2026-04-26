@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._boolean import is_not_null
 from narwhals._plan.arrow.functions._dtypes import U32

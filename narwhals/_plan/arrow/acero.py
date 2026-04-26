@@ -20,9 +20,9 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 import pyarrow.acero as pac
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 from pyarrow.acero import Declaration as Decl
 
 from narwhals._plan.arrow.guards import is_expression

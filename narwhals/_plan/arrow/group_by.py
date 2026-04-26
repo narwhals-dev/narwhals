@@ -5,8 +5,8 @@ from __future__ import annotations
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan import expressions as ir
 from narwhals._plan._dispatch import get_dispatch_name

@@ -6,8 +6,8 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan._namespace import namespace

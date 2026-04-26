@@ -7,8 +7,8 @@ import typing as t
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._aggregation import implode
 from narwhals._plan.arrow.functions._bin_op import eq, gt, not_eq, or_

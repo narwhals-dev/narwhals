@@ -5,8 +5,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, Any, Final, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _lists as list_
