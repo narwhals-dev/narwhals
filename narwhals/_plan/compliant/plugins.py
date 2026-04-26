@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan._namespace import KnownImpl
     from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.polars import PolarsPlugin
     from narwhals.typing import Backend, IntoBackend
 
     MYPY: Final = False
@@ -65,7 +66,8 @@ Unsupported: TypeAlias = Any
 """Marker to use for types that are not planned to be implemented."""
 
 PluginAny: TypeAlias = "Plugin[ClassesAny, Any, Any, Any]"
-BuiltinAny: TypeAlias = "Builtin[ClassesAny, Any, Any, Any] | ArrowPlugin"
+BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
+"""Backends defined inside of narwhals."""
 
 
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
