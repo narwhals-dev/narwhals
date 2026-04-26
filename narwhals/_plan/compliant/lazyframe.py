@@ -39,7 +39,7 @@ class NarwhalsHash(Protocol):
     def __narwhals_hash_values__(self) -> Iterator[object]:
         """Yield one or more attributes to seed a hash.
 
-        All backends *could* use a psuedo hash:
+        All backends *could* use a pseudo hash:
 
             if slots := self.__slots__:
                 yield from (id(getattr(self, key)) for key in slots)

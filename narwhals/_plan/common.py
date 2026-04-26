@@ -422,7 +422,7 @@ def _closed_kwds_reusable_impl(mapping: dict[str, Any], /) -> ClosedKwds:
     del mapping
 
     def iter_clone() -> Iterator[_Proxy]:
-        # infinte generator, maintaining the `next_copy` and exposing already deepcopy'd output
+        # infinite generator, maintaining the `next_copy` and exposing already deepcopy'd output
         nonlocal next_copy
         while True:
             out = next_copy()

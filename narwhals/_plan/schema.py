@@ -99,7 +99,7 @@ class FrozenSchema(_BaseSchema):
         >>> schema is FrozenSchema((k, v) for k, v in mapping.items())
         True
 
-        So we still get the flexibilty of `dict(...)`:
+        So we still get the flexibility of `dict(...)`:
         >>> schema is FrozenSchema(**mapping)
         True
         >>> schema is FrozenSchema(a=nw.Int64(), b=nw.String())

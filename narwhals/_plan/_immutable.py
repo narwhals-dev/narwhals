@@ -116,7 +116,7 @@ class Immutable(metaclass=ImmutableMeta):
 
     __slots__ = (_HASH_NAME,)
     if TYPE_CHECKING:
-        # NOTE: Omiting the annotation avoids this being added to synthesized `__init__`
+        # NOTE: Omitting the annotation avoids this being added to synthesized `__init__`
         # https://typing.python.org/en/latest/spec/dataclasses.html#field-specifier-parameters
         __immutable_hash_value__ = dataclasses.field(init=False)
     else:

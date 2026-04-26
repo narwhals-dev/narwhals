@@ -52,7 +52,7 @@ class Dispatcher(Generic[Node]):
 
     If something goes wrong though - we'd like to raise a more helpful error than this:
 
-        AttributeError: "<compliant-somthing> object has no attribute <method-or-namespace-or-accessor-name>"
+        AttributeError: "<compliant-something> object has no attribute <method-or-namespace-or-accessor-name>"
 
     Instead, for a user-facing error we would have:
 
@@ -98,7 +98,7 @@ class Dispatcher(Generic[Node]):
             ir.lists.NUnique.__expr_ir_dispatch__.name
             'list.n_unique'
 
-        Generated names can always be overriden at class definition time:
+        Generated names can always be overridden at class definition time:
 
             ir.Column.__expr_ir_dispatch__.name
             'col'
