@@ -60,6 +60,7 @@ NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
 """
 
 NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeDataFrameT = TypeVar("NativeDataFrameT", bound="NativeDataFrame")
 NativeDataFrameT_co = TypeVar(
     "NativeDataFrameT_co", bound="NativeDataFrame", covariant=True
 )
