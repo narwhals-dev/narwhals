@@ -183,9 +183,9 @@ class GroupByResolver:
     def key_names(self) -> Seq[str]:
         if names := self._key_names:
             return names
-        if keys := self.keys:
+        if keys := self.keys:  # pragma: no cover
             return tuple(e.name for e in keys)
-        raise group_by_no_keys_error()
+        raise group_by_no_keys_error()  # pragma: no cover
 
     def requires_projection(self, *, allow_aliasing: bool = False) -> bool:
         """Return True is group keys contain anything that is not a column selection.
@@ -204,7 +204,7 @@ class GroupByResolver:
         return False
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self._schema
 
 

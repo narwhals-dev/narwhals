@@ -341,7 +341,8 @@ omit = [
   # NOTE: Gradually adding as things become more stable
   'narwhals/_plan/arrow/*',
   'narwhals/_plan/polars/*',
-  'narwhals/_plan/compliant/*',
+  'narwhals/_plan/compliant/package.py',
+  'narwhals/_plan/compliant/scalar.py',
   'narwhals/_plan/**/typing.py',
   'narwhals/_plan/dtypes_mapper.py',
   'narwhals/_plan/plans/visitors.py',

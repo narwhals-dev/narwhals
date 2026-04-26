@@ -135,8 +135,9 @@ class EagerNamespace(
 
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...
+    # TODO @dangotbanned: Don't carry this over to `*Classes`, it was only here for typing
     @property
-    def _frame(self) -> type[EagerDataFrameT]:
+    def _frame(self) -> type[EagerDataFrameT]:  # pragma: no cover
         return self._dataframe
 
     @property

@@ -87,10 +87,10 @@ def can_read_csv_schema(obj: Any) -> TypeIs[ScanCsv[Any]]:
     return _hasattr_static(obj, "read_csv_schema")
 def can_read_parquet_schema(obj: Any) -> TypeIs[ScanParquet[Any]]:
     return _hasattr_static(obj, "read_parquet_schema")
-def can_write_csv(obj: Any) -> TypeIs[WriteCsv]:
+def can_write_csv(obj: Any) -> TypeIs[WriteCsv]:  # pragma: no cover
     return _hasattr_static(obj, "write_csv")
-def can_write_parquet(obj: Any) -> TypeIs[WriteParquet]:
+def can_write_parquet(obj: Any) -> TypeIs[WriteParquet]:  # pragma: no cover
     return _hasattr_static(obj, "write_parquet")
-def can_sink_parquet(obj: Any) -> TypeIs[SinkParquet]:
+def can_sink_parquet(obj: Any) -> TypeIs[SinkParquet]:  # pragma: no cover
     return _hasattr_static(obj, "sink_parquet")
 # fmt: on

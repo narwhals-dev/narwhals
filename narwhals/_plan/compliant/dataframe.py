@@ -127,7 +127,7 @@ class CompliantDataFrame(
 ):
     """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
 
-    def __narwhals_dataframe__(self) -> Self:
+    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 
     def __narwhals_namespace__(
@@ -149,7 +149,7 @@ class CompliantDataFrame(
         /,
         *,
         requested_schema: object | None = None,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         if requested_schema is not None:
             msg = f"{cls.__name__}.from_arrow_c_stream"
             raise NotImplementedError(msg)
@@ -157,7 +157,7 @@ class CompliantDataFrame(
 
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         """Compliant-level `group_by(by).agg(agg)`, allows `Expr`."""
         return self._grouper.by(by).agg(aggs).resolve(self).evaluate(self)
 
@@ -176,7 +176,9 @@ class CompliantDataFrame(
         """Compliant-level `group_by`, allowing only `str` keys."""
         return self._group_by.by_names(self, names)  # type: ignore[return-value]
 
-    def group_by_resolver(self, resolver: GroupByResolver, /) -> DataFrameGroupBy[Self]:
+    def group_by_resolver(
+        self, resolver: GroupByResolver, /
+    ) -> DataFrameGroupBy[Self]:  # pragma: no cover
         """Narwhals-level resolved `group_by`.
 
         `keys`, `aggs` are already parsed and projections planned.
@@ -198,7 +200,7 @@ class CompliantDataFrame(
     ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]] | dict[str, list[Any]]:
         it = self.iter_columns()
         if as_series:
-            return {ser.name: ser for ser in it}
+            return {ser.name: ser for ser in it}  # pragma: no cover
         return {ser.name: ser.to_list() for ser in it}
 
     def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT_co]:
@@ -307,8 +309,8 @@ class EagerDataFrame(
 
     def group_by_resolver(
         self, resolver: GroupByResolver, /
-    ) -> EagerDataFrameGroupBy[Self]:
+    ) -> EagerDataFrameGroupBy[Self]:  # pragma: no cover
         return self._group_by.from_resolver(self, resolver)  # type: ignore[return-value]
 
-    def sink_parquet(self, target: str | BytesIO, /) -> None:
+    def sink_parquet(self, target: str | BytesIO, /) -> None:  # pragma: no cover
         self.write_parquet(target)
