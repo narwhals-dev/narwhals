@@ -1,48 +1,84 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+import importlib
+import sys
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
-from narwhals._plan.compliant.plugins import PluginAny, load_plugin
+from narwhals._plan.compliant.plugins import BuiltinAny, PluginAny, load_plugin
+from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
+from narwhals._utils import Implementation
 from tests.plan.utils import re_compile
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
-def test_load_plugin() -> None:
-    polars_plugin = load_plugin("polars")
-    pyarrow_plugin = load_plugin("pyarrow")
-    assert polars_plugin.plugin_name == "polars"
-    assert pyarrow_plugin.plugin_name == "pyarrow"
+    from typing_extensions import LiteralString, TypeAlias, assert_type
 
-    assert hasattr(polars_plugin, "implementation")
-    assert polars_plugin.implementation.is_polars()
+    from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.polars import PolarsPlugin
+    from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
-    assert hasattr(pyarrow_plugin, "implementation")
-    assert pyarrow_plugin.implementation.is_pyarrow()
 
+SupportedBackend: TypeAlias = Literal[Arrow, Polars]
+BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
+BUILTIN_NAMES = ("polars", "pyarrow")
+
+
+@pytest.fixture
+def plugin(eager: BuiltinName) -> Generator[BuiltinAny, Any, None]:
+    """Yields the result of `load_plugin(eager)`.
+
+    We use a context manager to first clear and then reset (related) changes to `sys.modules`.
+    """
+    with pytest.MonkeyPatch.context() as mp:
+        for name in BUILTIN_NAMES:
+            mp.delitem(sys.modules, name, raising=False)
+        yield load_plugin(eager)
+
+
+def trigger_imports(plugin: BuiltinAny) -> None:
+    """Ensures the imported modules land in `sys.modules`."""
+    for target in plugin.sys_modules_targets:
+        importlib.import_module(target)
+
+
+def test_load_builtin(eager: BuiltinName) -> None:
+    plugin = load_plugin(eager)
+    assert plugin.plugin_name == eager
+    assert plugin.implementation is Implementation.from_backend(eager)
+
+
+def test_load_plugin_invalid() -> None:
     with pytest.raises(NotImplementedError, match=r"not yet"):
         assert_never(load_plugin("modin"))
-
     with pytest.raises(
         TypeError, match=re_compile(r"Unsupported `backend` .+got: 'i dont exist'")
     ):
         load_plugin("i dont exist")
 
 
-XFAIL_TODO = pytest.mark.xfail(reason="TODO", raises=NotImplementedError)
+def test_plugin_is_imported(plugin: BuiltinAny) -> None:
+    assert not plugin.is_imported()
+    trigger_imports(plugin)
+
+    assert plugin.is_imported()
+    assert load_plugin(plugin.plugin_name).is_imported()
 
 
-# TODO @dangotbanned: Cover when connected up to the rest
-@XFAIL_TODO
-def test_plugin_is_loaded() -> None:  # pragma: no cover
-    raise NotImplementedError
+def test_plugin_can_import(plugin: BuiltinAny) -> None:
+    assert not plugin.is_imported()
+    assert plugin.can_import()
 
+    trigger_imports(plugin)
+    assert plugin.is_imported()
+    assert plugin.can_import()
+    assert load_plugin(plugin.plugin_name).can_import()
 
-# TODO @dangotbanned: Cover when connected up to the rest
-@XFAIL_TODO
-def test_plugin_is_available() -> None:  # pragma: no cover
-    raise NotImplementedError
+    trigger_imports(plugin)
+    assert plugin.can_import()
 
 
 if TYPE_CHECKING:
@@ -52,28 +88,11 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import LiteralString, TypeAlias, assert_type
-
-    from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.polars import PolarsPlugin
-    from narwhals._typing import (
-        Arrow,
-        Backend,
-        EagerAllowed,
-        IntoBackend,
-        LazyAllowed,
-        Polars,
-    )
-    from narwhals._utils import Implementation
-
-    SupportedBuiltin: TypeAlias = Literal[
-        "polars", "pyarrow", Implementation.POLARS, Implementation.PYARROW
-    ]
 
     def typing_load_plugin(
         never_builtin: LiteralString,
         always_builtin_1: ModuleType,
-        always_builtin_2: SupportedBuiltin,
+        always_builtin_2: SupportedBackend,
         always_polars: Polars,
         always_pyarrow: Arrow,
         too_dynamic: str,
@@ -83,8 +102,8 @@ if TYPE_CHECKING:
     ) -> None:
         # NOTE: Purely checking the result of matching `@overload`s
         assert_type(load_plugin(never_builtin), PluginAny)
-        assert_type(load_plugin(always_builtin_1), ArrowPlugin | PolarsPlugin)
-        assert_type(load_plugin(always_builtin_2), ArrowPlugin | PolarsPlugin)
+        assert_type(load_plugin(always_builtin_1), BuiltinAny)
+        assert_type(load_plugin(always_builtin_2), BuiltinAny)
         assert_type(load_plugin(always_polars), PolarsPlugin)
         assert_type(load_plugin(always_pyarrow), ArrowPlugin)
 

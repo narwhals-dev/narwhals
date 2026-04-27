@@ -76,7 +76,7 @@ BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
 
 
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
-    """An entrypoint for using a backend to implement narwhals-level operations.
+    """An entrypoint for a backend that implements compliant-level operations.
 
     `[ClassesT_co, DF, LF, S]`.
     """
@@ -84,8 +84,62 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     __slots__ = ()
 
     # TODO @dangotbanned: Think about how the narwhals-level will use this for state
-    def is_loaded(self) -> bool: ...
-    def is_available(self) -> bool: ...
+    def is_imported(self) -> bool:
+        """Return True if all required dependencies *have already been* imported.
+
+        ## Examples
+        We use this to detect which backend to use when provided a native object:
+        >>> # User
+        >>> import polars as pl
+        >>> native = pl.DataFrame()
+
+        For `native` to *possibly* be a `pl.DataFrame`, that import had to have happened:
+        >>> # Narwhals
+        >>> plugin = load_plugin("polars")
+        >>> plugin.is_imported()
+        True
+
+        Now we can freely import `polars`, without requiring the dependency:
+        >>> import polars as pl
+        >>> isinstance(native, pl.DataFrame)
+        True
+
+        This check does not require reloading the plugin to update:
+        >>> _ = sys.modules.pop("pyarrow", None)
+        >>> plugin = load_plugin("pyarrow")
+        >>> plugin.is_imported()
+        False
+        >>> import pyarrow
+        >>> plugin.is_imported()
+        True
+        """
+        # NOTE: `sys.modules` may be populated by other tests in any order.
+        # Removing `"pyarrow"` ensure the result of this one isn't contaminated
+        ...
+
+    def can_import(self) -> bool:
+        """Return True if we *can* import all required dependencies.
+
+        Important:
+            Prefer `is_imported` if you only need the import for a runtime type check.
+
+        ## Examples
+        We use this for operations that convert between backends:
+        >>> import polars as pl
+        >>> native = pl.Series([1, 2, 3])
+        >>> load_plugin("pyarrow").can_import()
+        True
+
+        Now we can be sure this won't raise an `ImportError`:
+        >>> native.to_arrow()
+        <pyarrow.lib.Int64Array ...
+        [
+          1,
+          2,
+          3
+        ]
+        """
+        ...
 
     # TODO @dangotbanned: Do we still want to use these like in `narwhals._plan.translate.py`?
     def is_native(self, obj: Any, /) -> TypeIs[DF | LF | S]: ...
@@ -98,12 +152,11 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     def native_series_classes(self) -> Iterator[type[S]]: ...
     def native_classes(self) -> Iterator[type[DF | LF | S]]: ...
 
-    # TODO @dangotbanned: Maybe remove since this information is available elsewhere?
+    # TODO @dangotbanned: (low-priority) Populate using `EntryPoint.name`?
     @property
     def plugin_name(self) -> PluginName: ...
 
 
-# TODO @dangotbanned: Rename `Plugin.is_loaded` to reflect that it is about the native part
 # TODO @dangotbanned: (low-priority) Preserve the exact `implementation` for each backend (bad overloads)
 class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     """Backends defined inside of narwhals are plugins too.
@@ -113,7 +166,7 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     ## Notes
     - Might want to provide *parts* of this in a sub-protocol for `Plugin`
         - So it can be used for extending to get things moving quickly
-        - And `is_loaded`, `is_available` are probably the most sensible defaults
+        - And `is_imported`, `can_import` are probably the most sensible defaults
     """
 
     __slots__ = ()
@@ -124,10 +177,10 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     def plugin_name(self) -> LiteralString:
         return self.implementation.value  # type: ignore[no-any-return]
 
-    def is_loaded(self) -> bool:  # pragma: no cover
+    def is_imported(self) -> bool:
         return all(sys.modules.get(target) for target in self.sys_modules_targets)
 
-    def is_available(self) -> bool:  # pragma: no cover
+    def can_import(self) -> bool:
         return all(find_spec(target) for target in self.sys_modules_targets)
 
     def native_classes(self) -> Iterator[type[DF | LF | S]]:  # pragma: no cover
@@ -161,6 +214,7 @@ def _entry_points() -> EntryPoints:
     return entry_points(group="narwhals.plugins-plan")
 
 
+# TODO @dangotbanned: Cover the duplicate name plugin case?
 @overload
 def load_plugin(backend: Arrow, /) -> ArrowPlugin: ...
 @overload
