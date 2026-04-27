@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import Container
 from typing import TYPE_CHECKING
 
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
-    from types import MappingProxyType
+    from collections.abc import Callable, Container, Iterable
+    from types import MappingProxyType, ModuleType as _ModuleType
 
     from typing_extensions import TypeAlias
 
@@ -31,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
+    from narwhals._typing import LazyOnly, PandasLike
     from narwhals.typing import NonNestedDType, NonNestedLiteral, PythonLiteral
 
 __all__ = [
@@ -198,7 +198,7 @@ The return type of `closed_kwds`.
 OutputNames: TypeAlias = "Seq[str]"
 """Names of output columns after selectors expansion."""
 
-Ignored: TypeAlias = Container[str]
+Ignored: TypeAlias = "Container[str]"
 """Names of `group_by` key columns.
 
 When expanding a selector, these columns will be excluded [^1] from the result.
@@ -228,4 +228,15 @@ if it is named `__init__`.
 Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
 
 [inferred]: https://typing.python.org/en/latest/spec/generics.html#variance
+"""
+
+BackendTodo: TypeAlias = "PandasLike | LazyOnly"
+"""Backends that are not *yet* implemented in `narwhals._plan`."""
+
+NativeModuleType: TypeAlias = "_ModuleType"
+"""*Represents* a strict subset of what is accepted by `Implementation.from_native_namespace(...)`.
+
+The excluded modules are equivalent to the names excluded in `narwhals._plan.typing.BackendTodo`.
+
+This [isn't representable in the current type system](https://github.com/python/typing/issues/1039)
 """

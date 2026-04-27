@@ -15,7 +15,7 @@ from __future__ import annotations
 import functools
 import sys
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, overload
 
 from narwhals._plan._namespace import known_implementation
 from narwhals._plan.compliant.classes import ClassesAny, ClassesT_co, HasClasses
@@ -30,11 +30,13 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
     from importlib.metadata import EntryPoints
 
-    from typing_extensions import LiteralString, TypeAlias, TypeIs
+    from typing_extensions import LiteralString, Never, TypeAlias, TypeIs
 
     from narwhals._plan._namespace import KnownImpl
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.polars import PolarsPlugin
+    from narwhals._plan.typing import BackendTodo, NativeModuleType
+    from narwhals._typing import Arrow, Polars
     from narwhals.typing import Backend, IntoBackend
 
     MYPY: Final = False
@@ -66,6 +68,9 @@ Unsupported: TypeAlias = Any
 """Marker to use for types that are not planned to be implemented."""
 
 PluginAny: TypeAlias = "Plugin[ClassesAny, Any, Any, Any]"
+"""When used as a return type, this indicates an extension rather than a `Builtin`."""
+
+
 BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
 """Backends defined inside of narwhals."""
 
@@ -98,6 +103,8 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     def plugin_name(self) -> PluginName: ...
 
 
+# TODO @dangotbanned: Rename `Plugin.is_loaded` to reflect that it is about the native part
+# TODO @dangotbanned: (low-priority) Preserve the exact `implementation` for each backend (bad overloads)
 class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     """Backends defined inside of narwhals are plugins too.
 
@@ -154,21 +161,38 @@ def _entry_points() -> EntryPoints:
     return entry_points(group="narwhals.plugins-plan")
 
 
-# TODO @dangotbanned: Add some overloads for more precise built-ins
+@overload
+def load_plugin(backend: Arrow, /) -> ArrowPlugin: ...
+@overload
+def load_plugin(backend: Polars, /) -> PolarsPlugin: ...
+@overload
+def load_plugin(backend: BackendTodo, /) -> Never: ...
+@overload
+def load_plugin(backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
+@overload
+def load_plugin(backend: PluginName, /) -> PluginAny: ...
 def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | BuiltinAny:
-    """Load a single plugin."""
+    """Load the entry point to a backend.
+
+    The returned object can be used to query availability.
+    For built-ins, this is always safe and *does not* import the native package.
+    """
     name = backend if isinstance(backend, str) else known_implementation(backend).value
     eps = _entry_points()
-    if selected := eps.select(name=name):
-        it = iter(selected)
-        plugin: PluginAny | BuiltinAny = next(it).load()
+    plugin: PluginAny | BuiltinAny
+    if found := eps.select(name=name):
+        it = iter(found)
+        plugin = next(it).load()
         if next(it, None) is None:
             return plugin
-        msg = f"Multiple plugins found with the same name:\n{selected!r}"
+        msg = f"Multiple plugins found with the same name:\n{found!r}"  # pragma: no cover
         raise NotImplementedError(msg)
+    raise _unsupported_error(backend, name, eps)
 
+
+def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exception:
     if (impl := Implementation.from_backend(name)) is not Implementation.UNKNOWN:
         msg = f"{impl!r} is not yet supported in `narwhals._plan`, got: {backend!r}"
-        raise NotImplementedError(msg)
+        return NotImplementedError(msg)
     msg = f"Unsupported `backend` value.\nExpected one of {sorted(eps.names)!r}, got: {backend!r}"
-    raise TypeError(msg)
+    return TypeError(msg)
