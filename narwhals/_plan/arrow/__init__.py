@@ -38,6 +38,7 @@ __all__ = [
 ]
 
 
+@_t.final
 class ArrowPlugin(
     _plugins.Builtin[
         "ArrowClasses", "pa.Table", _plugins.Unsupported, "pa.ChunkedArray[_t.Any]"

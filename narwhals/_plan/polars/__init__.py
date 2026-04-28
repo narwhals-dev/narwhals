@@ -39,6 +39,7 @@ __all__ = [
 ]
 
 
+@_t.final
 class PolarsPlugin(
     _plugins.Builtin["PolarsClasses", "pl.DataFrame", "pl.LazyFrame", "pl.Series"]
 ):

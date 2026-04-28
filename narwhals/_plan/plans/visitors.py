@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny
     from narwhals._plan.plans import logical as lp, resolved as rp
     from narwhals._plan.plans.resolved import ResolvedPlan
-    from narwhals._utils import Version
+    from narwhals._utils import Implementation, Version
     from narwhals.typing import EagerAllowed
 
 R_co = TypeVar("R_co", covariant=True)
@@ -68,6 +68,7 @@ class ResolvedToCompliant(Protocol[Native]):
 
     __slots__ = ()
     version: ClassVar[Version]
+    implementation: ClassVar[Implementation]
 
     @classmethod
     def collect(

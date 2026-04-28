@@ -88,6 +88,13 @@ ScalarT_co = TypeVar(
 
 Defaults to the one used for `CompliantExpr`.
 """
+ScalarNoDefaultT_co = TypeVar(
+    "ScalarNoDefaultT_co", bound="ExprAny | ScalarAny", covariant=True
+)
+"""Trying to avoid [`mypy` PEP 696 bugs].
+
+[`mypy` PEP 696 bugs]: https://github.com/python/mypy/issues?q=sort%3Aupdated-desc%20is%3Aissue%20is%3Aopen%20label%3Atopic-pep-696
+"""
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
 SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
 """Covariant TypeVar for `CompliantSeries`."""

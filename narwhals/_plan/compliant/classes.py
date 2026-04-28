@@ -41,7 +41,7 @@ from narwhals._plan.compliant.typing import (
     LazyFrameT_co as LF,
     PlanEvaluatorT_co as PE,
     ScalarAny,
-    ScalarT_co as SC,
+    ScalarNoDefaultT_co as SC,
     SeriesAny,
     SeriesT_co as S,
 )
@@ -59,7 +59,9 @@ EagerClassesAny: TypeAlias = (
 LazyClassesAny: TypeAlias = (
     "LazyClasses[LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
 )
-ClassesAny: TypeAlias = "EagerClassesAny | LazyClassesAny"
+HybridClassesAny: TypeAlias = "HybridClasses[DataFrameAny, SeriesAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
+
+ClassesAny: TypeAlias = "EagerClassesAny | LazyClassesAny | HybridClassesAny"
 """The type of either `__narwhals_classes__` or `__narwhals_classes__.v*`.
 
 Can provide eager, lazy or a combination of the two.
@@ -88,6 +90,7 @@ HasClassesV2T_co = TypeVar("HasClassesV2T_co", bound="ClassesV2Any", covariant=T
 # Not used yet
 EagerClassesT_co = TypeVar("EagerClassesT_co", bound=EagerClassesAny, covariant=True)
 LazyClassesT_co = TypeVar("LazyClassesT_co", bound=LazyClassesAny, covariant=True)
+HybridClassesT_co = TypeVar("HybridClassesT_co", bound=HybridClassesAny, covariant=True)
 
 
 class HasClasses(Protocol[ClassesT_co]):
@@ -171,6 +174,12 @@ class LazyClasses(CompliantClasses[E, SC], Protocol[LF, PE, E, SC]):
     def _evaluator(self) -> type[PE]:
         """Translate a `ResolvedPlan` into `CompliantLazyFrame` operations."""
         ...
+
+
+class HybridClasses(
+    EagerClasses[DF, S, E, SC], LazyClasses[LF, PE, E, SC], Protocol[DF, S, LF, PE, E, SC]
+):
+    __slots__ = ()
 
 
 def can_eager(

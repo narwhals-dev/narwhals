@@ -51,11 +51,5 @@ class PolarsClasses:
         return tp.__new__(tp)
 
 
-class PolarsHasClassesTest:
-    @property
-    def __narwhals_classes__(self) -> PolarsClasses:
-        return PolarsClasses()
-
-
 __narwhals_classes__: Final[PolarsClasses] = PolarsClasses()
 """`mypy` is requiring `[PolarsClasses]`, pyright is fine with `Final`."""
