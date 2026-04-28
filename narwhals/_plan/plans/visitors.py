@@ -120,3 +120,6 @@ class ResolvedToCompliant(Protocol[Native]):
     def with_row_index_by(
         self, plan: rp.MapFunction[rp.RowIndexBy], /
     ) -> CompliantLazyFrame[Native]: ...
+
+
+ResolvedToCompliantAny: TypeAlias = ResolvedToCompliant[Any]

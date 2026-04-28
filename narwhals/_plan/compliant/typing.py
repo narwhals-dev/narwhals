@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
 
 
 Native = TypeVar("Native")
@@ -79,18 +80,26 @@ EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
+"""Covariant TypeVar for `CompliantExpr`."""
 ScalarT_co = TypeVar(
     "ScalarT_co", bound="ExprAny | ScalarAny", covariant=True, default=ExprT_co
 )
+"""Covariant TypeVar for `CompliantScalar`.
+
+Defaults to the one used for `CompliantExpr`.
+"""
 SeriesT = TypeVar("SeriesT", bound=SeriesAny)
 SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
+"""Covariant TypeVar for `CompliantSeries`."""
 FrameT = TypeVar("FrameT", bound=FrameAny)
 FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
 FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
 DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
 DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
+"""Covariant TypeVar for `CompliantDataFrame`."""
 LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
 LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
+"""Covariant TypeVar for `CompliantLazyFrame`."""
 NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
@@ -104,6 +113,14 @@ EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 EagerDataFrameT_co = TypeVar(
     "EagerDataFrameT_co", bound=EagerDataFrameAny, covariant=True
 )
+
+PlanEvaluatorT_co = TypeVar("PlanEvaluatorT_co", bound="PlanEvaluatorAny", covariant=True)
+"""Covariant TypeVar for `ResolvedToCompliant`.
+
+Provides the conversion:
+
+    ResolvedPlan -> CompliantLazyFrame[Native]
+"""
 
 
 class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
@@ -212,7 +229,6 @@ class DispatchScope(Protocol[NamespaceT_co, ET_co]):
 
         ## Notes
         - The only external (narwhals-level) requirement is that we have an instance to call methods on
-        - If there are any other bits of state you need in an implementation, add them here
         - Defaults
             - Namespace -> Expr
             - Expr -> Expr
