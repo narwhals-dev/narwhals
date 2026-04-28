@@ -22,11 +22,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
+from narwhals._plan.common import hasattrs_static
 from narwhals._plan.compliant.typing import (
-    DataFrameAny,
     # NOTE: The names are simply too long!
+    DataFrameAny,
     DataFrameT_co as DF,
     EagerDataFrameAny,
     EagerDataFrameT_co,
@@ -46,7 +47,7 @@ from narwhals._plan.compliant.typing import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._utils import Version
@@ -170,6 +171,16 @@ class LazyClasses(CompliantClasses[E, SC], Protocol[LF, PE, E, SC]):
     def _evaluator(self) -> type[PE]:
         """Translate a `ResolvedPlan` into `CompliantLazyFrame` operations."""
         ...
+
+
+def can_eager(
+    obj: EagerClasses[DF, S, E, SC] | Any,
+) -> TypeIs[EagerClasses[DF, S, E, SC]]:
+    return hasattrs_static(obj, "_dataframe", "_series")
+
+
+def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE, E, SC]]:
+    return hasattrs_static(obj, "_lazyframe", "_evaluator")
 
 
 # NOTE: As `ScalarT_co` has a default, it must be listed at the end of the type parameters

@@ -3,22 +3,23 @@ from __future__ import annotations
 import sys
 from collections.abc import Iterable
 from copy import deepcopy
+from inspect import getattr_static as _getattr_static
 from io import BytesIO
 from secrets import token_hex
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Literal, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
-from narwhals._utils import _hasattr_static, qualified_type_name
+from narwhals._utils import qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
     import reprlib
     from collections.abc import Iterator
-    from typing import Any, ClassVar, TypeVar
+    from typing import Any, ClassVar, Final, TypeVar
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
@@ -47,6 +48,26 @@ else:  # pragma: no cover
             msg = f"replace() does not support {cls.__name__} objects"
             raise TypeError(msg)
         return func(obj, **changes)  # type: ignore[no-any-return]
+
+
+_SENTINEL: Final = object()
+
+
+def hasattrs_static(
+    obj: object | type, *attrs: Unpack[tuple[str, Unpack[tuple[str, ...]]]]
+) -> bool:
+    """Check attributes exist without triggering dynamic lookup [^1].
+
+    Arguments:
+        obj: Target object or type.
+        *attrs: One or more attribute names.
+
+    Note:
+        Reimplements `_utils._hasattr_static` to inline the `getattr_static` usage.
+
+    [^1]: via `__get__`, `__getattr__` or `__getattribute__`
+    """
+    return all(_getattr_static(obj, name, _SENTINEL) is not _SENTINEL for name in attrs)
 
 
 @overload
@@ -109,7 +130,7 @@ def ensure_list_str(obj: OneOrIterable[str], /) -> list[str]:
 
 
 def _has_columns(obj: Any) -> TypeIs[_StoresColumns]:
-    return _hasattr_static(obj, "columns")
+    return hasattrs_static(obj, "columns")
 
 
 def _reprlib_repr_backport() -> reprlib.Repr:
