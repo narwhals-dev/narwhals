@@ -28,9 +28,12 @@ def test_quantile_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        any(x in str(constructor) for x in ("dask", "duckdb", "ibis"))
+        any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "pyspark"))
         and interpolation != "linear"
-    ) or "pyspark" in str(constructor):
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if "sqlframe" in str(constructor):
+        # bug in sqlframes: https://github.com/eakmanrq/sqlframe/issues/625
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3
