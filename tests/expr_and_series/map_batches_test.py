@@ -103,7 +103,7 @@ def test_map_batches_exception(
         df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))
 
 
-def test_map_batches_pyspark_scalar(constructor: Constructor) -> None:
+def test_map_batches_pyspark_scalar(constructor: Constructor) -> None:  # pragma: no cover
     if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
         pytest.xfail("Test only valid for pyspark")
     df = nw.from_native(constructor(data))
