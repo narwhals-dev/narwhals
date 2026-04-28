@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant import io as _io
-from narwhals._plan.exceptions import unsupported_backend_operation_error
+from narwhals._plan.exceptions import unsupported_error
 from narwhals._utils import normalize_path, unstable
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ def read_csv(
     ns = namespace_from_backend(backend)
     if _io.can_read_csv(ns):
         return _read_csv(source, kwds, ns)
-    raise unsupported_backend_operation_error(backend, "read_csv")  # pragma: no cover
+    raise unsupported_error(backend, "read_csv")  # pragma: no cover
 
 
 @overload
@@ -60,7 +60,7 @@ def read_parquet(
     ns = namespace_from_backend(backend)
     if _io.can_read_parquet(ns):
         return _read_parquet(source, kwds, ns)
-    raise unsupported_backend_operation_error(backend, "read_parquet")  # pragma: no cover
+    raise unsupported_error(backend, "read_parquet")  # pragma: no cover
 
 
 def scan_csv(
@@ -83,9 +83,7 @@ def read_csv_schema(
     ns = namespace_from_backend(backend)
     if _io.can_read_csv_schema(ns):
         return ns.read_csv_schema(normalize_path(source), **kwds)
-    raise unsupported_backend_operation_error(
-        backend, "read_csv_schema"
-    )  # pragma: no cover
+    raise unsupported_error(backend, "read_csv_schema")  # pragma: no cover
 
 
 def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:
@@ -93,9 +91,7 @@ def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) ->
     ns = namespace_from_backend(backend)
     if _io.can_read_parquet_schema(ns):
         return ns.read_parquet_schema(normalize_path(source))
-    raise unsupported_backend_operation_error(
-        backend, "read_parquet_schema"
-    )  # pragma: no cover
+    raise unsupported_error(backend, "read_parquet_schema")  # pragma: no cover
 
 
 def _read_csv(
@@ -127,4 +123,4 @@ def _scan_file(
         return LogicalPlan.scan_csv(source).to_narwhals(backend)
     if method == "scan_parquet" and _io.can_scan_parquet(ns):
         return LogicalPlan.scan_parquet(source).to_narwhals(backend)
-    raise unsupported_backend_operation_error(backend, method)  # pragma: no cover
+    raise unsupported_error(backend, method)  # pragma: no cover

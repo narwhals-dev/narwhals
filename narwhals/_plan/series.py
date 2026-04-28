@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 from narwhals._plan._guards import is_series
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant.translate import can_from_iterable
-from narwhals._plan.exceptions import unsupported_backend_operation_error
+from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.typing import (
     IncompleteCyclic,
     NativeSeriesT,
@@ -89,9 +89,7 @@ class Series(Generic[NativeSeriesT_co]):
         ns = namespace_from_backend(backend)
         if can_from_iterable(ns):
             return cls(ns.from_iterable(values, name=name, dtype=dtype))
-        raise unsupported_backend_operation_error(
-            backend, "from_iterable"
-        )  # pragma: no cover
+        raise unsupported_error(backend, "Series.from_iterable")  # pragma: no cover
 
     # TODO @dangotbanned: Review backend/version entrypoint
     # TODO @dangotbanned: Add a protocol in `translate`, rinse/repeat `from_{dict,iterable}`

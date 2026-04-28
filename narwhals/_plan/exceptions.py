@@ -34,6 +34,25 @@ if TYPE_CHECKING:
 
 ExprFunction: TypeAlias = Literal["filter", "when", "sort_by"]
 SelectorValue: TypeAlias = Literal["index", "name"]
+
+Unsupported: TypeAlias = Literal[
+    "concat",
+    "date_range",
+    "int_range",
+    "linear_space",
+    "read_csv",
+    "read_csv_schema",
+    "read_parquet",
+    "read_parquet_schema",
+    "scan_csv",
+    "scan_parquet",
+    "DataFrame",
+    "DataFrame.from_dict",
+    "LazyFrame.collect",
+    "Series.from_iterable",
+]
+
+
 # NOTE: Using verbose names to start with
 # TODO @dangotbanned: Think about something better/more consistent once the new messages are finalized
 
@@ -326,16 +345,13 @@ def expand_multi_output_error(
     return MultiOutputExpressionError(msg)
 
 
-def unsupported_backend_operation_error(
-    backend: IntoBackend[Backend] | Any, method_name: str, /
+def unsupported_error(
+    backend: IntoBackend[Backend] | Any, name: Unsupported, /
 ) -> NotImplementedError:  # pragma: no cover
-    """Currently only needed for typing purposes.
-
-    For `{read,scan}_*` we have to get from `IntoBackend[Backend]` to
-    a method that returns a `{Data,Lazy}Frame`.
-    """
-    backend_name = Implementation.from_backend(backend).value
-    msg = f"`{method_name}`() is not yet supported for {backend_name!r}"
+    """Return an error for an unsupported operation in `backend`."""
+    if not isinstance(backend, str):
+        backend = Implementation.from_backend(backend).value
+    msg = f"`{name}()` is not yet supported for {backend!r}"
     return NotImplementedError(msg)
 
 

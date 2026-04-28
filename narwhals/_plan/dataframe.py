@@ -14,7 +14,7 @@ from narwhals._plan._namespace import eager_implementation, namespace_from_backe
 from narwhals._plan._version import into_version
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
 from narwhals._plan.compliant.translate import can_from_dict
-from narwhals._plan.exceptions import unsupported_backend_operation_error
+from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.plans import LogicalPlan
@@ -464,9 +464,7 @@ class DataFrame(
         ns = namespace_from_backend(backend_)
         if can_from_dict(ns):
             return ns.from_dict(data, schema=schema).to_narwhals()
-        raise unsupported_backend_operation_error(
-            backend_, "from_dict"
-        )  # pragma: no cover
+        raise unsupported_error(backend_, "DataFrame.from_dict")  # pragma: no cover
 
     @overload
     def to_dict(
