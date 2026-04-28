@@ -6,6 +6,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  COVERAGE_PROCESS_START: pyproject.toml
   UV_SYSTEM_PYTHON: 1
 jobs:
   minimum_versions:
@@ -44,7 +45,10 @@ jobs:
           echo "$DEPS" | grep 'scikit-learn==1.1.0'
           echo "$DEPS" | grep 'duckdb==1.1'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+        run: |
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+          coverage combine
+          coverage report --fail-under=50
 
   pretty_old_versions:
     strategy:
@@ -82,7 +86,10 @@ jobs:
           echo "$DEPS" | grep 'scikit-learn==1.1.0'
           echo "$DEPS" | grep 'duckdb==1.2'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+        run: |
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+          coverage combine
+          coverage report --fail-under=50
 
   not_so_old_versions:
     strategy:
@@ -119,7 +126,10 @@ jobs:
           echo "$DEPS" | grep 'dask==2024.10'
           echo "$DEPS" | grep 'duckdb==1.3'
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
+        run: |
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
+          coverage combine
+          coverage report --fail-under=50 
 
   nightlies:
     strategy:
@@ -175,5 +185,6 @@ jobs:
           echo "$DEPS" | grep 'dask.*@'
       - name: Run pytest
         run: |
-          pytest tests --cov=narwhals --cov=tests --cov-fail-under=50 --runslow \
-          --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb
+          coverage run -m pytest tests --runslow --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb
+          coverage combine
+          coverage report --fail-under=50

@@ -42,8 +42,7 @@ def test_implementation_mismatch() -> None:
 
     with _assertion_error("implementation mismatch"):
         assert_frame_equal(
-            nw.from_native(pd.DataFrame({"a": [1]})),
-            nw.from_native(pa.table({"a": [1]})),  # type: ignore[type-var] # pyright: ignore[reportArgumentType]
+            nw.from_native(pd.DataFrame({"a": [1]})), nw.from_native(pa.table({"a": [1]}))
         )
 
 

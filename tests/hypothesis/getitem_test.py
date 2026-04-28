@@ -1,29 +1,30 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import assume, given
 
 import narwhals as nw
-from tests.conftest import pandas_constructor, pyarrow_table_constructor
+from narwhals.testing.constructors import get_backend_constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.typing import IntoDataFrame
+    from narwhals.testing.typing import DataFrameConstructor
 
 pytest.importorskip("pandas")
 pytest.importorskip("polars")
 import polars as pl
 
 
-@pytest.fixture(params=[pandas_constructor, pyarrow_table_constructor], scope="module")
-def pandas_or_pyarrow_constructor(
-    request: pytest.FixtureRequest,
-) -> Callable[[Any], IntoDataFrame]:
+@pytest.fixture(
+    params=[get_backend_constructor("pandas"), get_backend_constructor("pyarrow")],
+    scope="module",
+)
+def pandas_or_pyarrow_constructor(request: pytest.FixtureRequest) -> DataFrameConstructor:
     return request.param  # type: ignore[no-any-return]
 
 
@@ -117,7 +118,9 @@ def tuple_selector(draw: st.DrawFn) -> tuple[Any, Any]:
 
 @given(selector=st.one_of(single_selector, tuple_selector()))
 @pytest.mark.slow
-def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
+def test_getitem(
+    pandas_or_pyarrow_constructor: DataFrameConstructor, selector: Any
+) -> None:
     """Compare __getitem__ against polars."""
     # TODO(PR - clean up): documenting current differences
     # These assume(...) lines each filter out a known difference.
@@ -125,7 +128,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor.is_pyarrow
             and isinstance(selector, slice)
             and selector.step is not None
         )
@@ -134,7 +137,7 @@ def test_getitem(pandas_or_pyarrow_constructor: Any, selector: Any) -> None:
     # NotImplementedError: Slicing with step is not supported on PyArrow tables
     assume(
         not (
-            pandas_or_pyarrow_constructor is pyarrow_table_constructor
+            pandas_or_pyarrow_constructor.is_pyarrow
             and isinstance(selector, tuple)
             and (
                 (isinstance(selector[0], slice) and selector[0].step is not None)

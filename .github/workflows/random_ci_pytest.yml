@@ -6,6 +6,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  COVERAGE_PROCESS_START: pyproject.toml
 
 jobs:
   tox:
@@ -36,5 +37,6 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-            pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 \
-            --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+            coverage run -m pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]
+            coverage combine
+            coverage report --fail-under=75

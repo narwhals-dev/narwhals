@@ -14,6 +14,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  COVERAGE_PROCESS_START: pyproject.toml
   UV_SYSTEM_PYTHON: 1
 jobs:
   pytest-pyspark-constructor:
@@ -40,7 +41,10 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
+        run: |
+          coverage run -m pytest tests --runslow --nw-backends pyspark
+          coverage combine
+          coverage report --fail-under=95 --include "narwhals/_spark_like/*"
 
 
   pytest-pyspark-min-version-constructor:
@@ -67,7 +71,7 @@ jobs:
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors pyspark
+        run: pytest tests --nw-backends pyspark
 
   pytest-pyspark-connect-constructor:
     strategy:
@@ -133,7 +137,10 @@ jobs:
           echo "Spark Connect server started"
 
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+        run: |
+          coverage run -m pytest tests --runslow --nw-backends "pyspark[connect]"
+          coverage combine
+          coverage report --fail-under=95 --include="narwhals/_spark_like/*"
 
       - name: Stop Spark Connect server
         if: always()

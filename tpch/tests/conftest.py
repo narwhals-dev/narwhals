@@ -36,13 +36,6 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    from tests.conftest import DEFAULT_CONSTRUCTORS
-
-    parser.addoption(
-        "--constructors",
-        default=DEFAULT_CONSTRUCTORS,
-        help="<sink for defaults in VSC getting injected>",
-    )
     parser.addoption(
         "--scale-factor",
         default=constants.SCALE_FACTOR_DEFAULT,

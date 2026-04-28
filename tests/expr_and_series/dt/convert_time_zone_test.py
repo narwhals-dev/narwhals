@@ -7,13 +7,13 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
+from narwhals.testing.constructors import pyspark_session
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     assert_equal_data,
     is_windows,
-    pyspark_session,
 )
 
 if TYPE_CHECKING:

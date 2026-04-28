@@ -8,7 +8,12 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._native import NativeDataFrame, NativeDuckDB, NativeLazyFrame
+    from narwhals._native import (
+        NativeDataFrame,
+        NativeDuckDB,
+        NativeIbis,
+        NativeLazyFrame,
+    )
     from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series
 
     class DataFrameLike(Protocol):
@@ -25,7 +30,9 @@ typed to accept `IntoExpr`, as it can either accept a `nw.Expr`
 `nw.Expr`, e.g. `df.select('a')`.
 """
 
-IntoDataFrame: TypeAlias = Union["NativeDataFrame", "DataFrameLike", "NativeDuckDB"]
+IntoDataFrame: TypeAlias = Union[
+    "NativeDataFrame", "DataFrameLike", "NativeDuckDB", "NativeIbis"
+]
 """Anything which can be converted to a Narwhals DataFrame.
 
 Use this if your function accepts a narwhalifiable object but doesn't care about its backend.

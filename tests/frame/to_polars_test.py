@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
+    from narwhals.testing.typing import Data
     from tests.utils import ConstructorEager
 
 pytest.importorskip("polars")
@@ -20,7 +19,7 @@ def test_convert_polars(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("pyarrow")
     from polars.testing import assert_frame_equal
 
-    data: Mapping[str, Any] = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
+    data: Data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.1, 8.0, 9.0]}
     df_raw = constructor_eager(data)
     result = nw.from_native(df_raw).to_polars()
 
