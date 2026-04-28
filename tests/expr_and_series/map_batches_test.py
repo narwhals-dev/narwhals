@@ -24,7 +24,6 @@ def xfail_not_implemented(
 ) -> None:
     """XFAIL if the constructor doesn't support map_batches."""
     constructor_id = str(request.node.callspec.id)
-    print(constructor_id)
     if any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "sqlframe")) or (
         constructor_id == "pyspark[connect]"
     ):
