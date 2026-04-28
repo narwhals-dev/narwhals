@@ -526,6 +526,21 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         for series in self.native.iter_columns():
             yield PolarsSeries.from_native(series, context=self)
 
+    def with_backend(self, backend: _EagerAllowedImpl) -> CompliantDataFrameAny:
+        native = self.native
+        if backend is Implementation.POLARS:
+            return PolarsDataFrame.from_native(native, context=self)
+
+        ns = self._version.namespace.from_backend(backend).compliant
+        if backend is Implementation.PYARROW:
+            from narwhals._arrow.dataframe import ArrowDataFrame
+
+            return ArrowDataFrame.from_native(native.to_arrow(), context=ns)
+
+        from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+        return PandasLikeDataFrame._from_pandas(native.to_pandas(), context=ns)
+
     def lazy(
         self,
         backend: _LazyAllowedImpl | None = None,
