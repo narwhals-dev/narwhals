@@ -104,7 +104,8 @@ def test_map_batches_exception(
 
 
 def test_map_batches_pyspark_scalar(constructor: Constructor) -> None:
-    xfail_not_implemented(constructor)
+    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+        pytest.xfail("Test only valid for pyspark")
     df = nw.from_native(constructor(data))
     expected = df.select(nw.col("a").map_batches(lambda _: 1.0))
     assert_equal_data(expected, {"a": [1.0] * 3})
