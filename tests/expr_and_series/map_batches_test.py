@@ -19,17 +19,25 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-def xfail_not_implemented(constructor: Constructor) -> None:
+def xfail_not_implemented(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     """XFAIL if the constructor doesn't support map_batches."""
-    if any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "sqlframe")):
+    constructor_id = str(request.node.callspec.id)
+    print(constructor_id)
+    if any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "sqlframe")) or (
+        constructor_id == "pyspark[connect]"
+    ):
         pytest.xfail("constructor doesn't support map_batches")
 
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
 
-def test_map_batches_expr_compliant(constructor: Constructor) -> None:
-    xfail_not_implemented(constructor)
+def test_map_batches_expr_compliant(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    xfail_not_implemented(constructor, request)
     df = nw.from_native(constructor(data))
     expected = df.select(nw.col("a", "b").map_batches(lambda s: s + 1).name.suffix("1"))
     assert_equal_data(expected, {"a1": [2, 3, 4], "b1": [5, 6, 7]})
@@ -67,8 +75,10 @@ def test_map_batches_expr_numpy_scalar(constructor_eager: ConstructorEager) -> N
     assert_equal_data(expected, {"a": [2], "b": [2], "z": [2]})
 
 
-def test_map_batches_expr_numpy_array(constructor: Constructor) -> None:
-    xfail_not_implemented(constructor)
+def test_map_batches_expr_numpy_array(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    xfail_not_implemented(constructor, request)
     df = nw.from_native(constructor(data))
     expected = df.select(
         nw.col("a")
@@ -78,8 +88,10 @@ def test_map_batches_expr_numpy_array(constructor: Constructor) -> None:
     assert_equal_data(expected, {"a": [9.0]})
 
 
-def test_map_batches_expr_names(constructor: Constructor) -> None:
-    xfail_not_implemented(constructor)
+def test_map_batches_expr_names(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    xfail_not_implemented(constructor, request)
     df = nw.from_native(constructor(data))
     expected = nw.from_native(df.select(nw.all().map_batches(lambda x: x.to_numpy())))
     assert_equal_data(expected, {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]})
@@ -103,8 +115,11 @@ def test_map_batches_exception(
         df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))
 
 
-def test_map_batches_pyspark_scalar(constructor: Constructor) -> None:  # pragma: no cover
-    if "pyspark" not in str(constructor) or "sqlframe" in str(constructor):
+def test_map_batches_pyspark_scalar(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:  # pragma: no cover
+    constructor_id = str(request.node.callspec.id)
+    if constructor_id != "pyspark":
         pytest.xfail("Test only valid for pyspark")
     df = nw.from_native(constructor(data))
     expected = df.select(nw.col("a").map_batches(lambda _: 1.0))
