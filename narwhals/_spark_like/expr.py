@@ -414,7 +414,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return_dtype: IntoDType | None,
         *,
         returns_scalar: bool,
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         if self._implementation.is_sqlframe():
             msg = "`Expr.map_batches` is not supported for the sqlframe backend."
             raise NotImplementedError(msg)
