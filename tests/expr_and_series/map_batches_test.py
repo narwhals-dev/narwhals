@@ -10,6 +10,7 @@ import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
+    Constructor,
     ConstructorEager,
     assert_equal_data,
 )
@@ -17,15 +18,24 @@ from tests.utils import (
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
+
+def xfail_not_implemeted(constructor: Constructor) -> None:
+    """XFAIL if the constructor doesn't support map_batches."""
+    if any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "sqlframe")):
+        pytest.xfail("constructor doesn't support map_batches")
+
+
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
 
-def test_map_batches_expr_compliant(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_map_batches_expr_compliant(constructor: Constructor) -> None:
+    xfail_not_implemeted(constructor)
+    df = nw.from_native(constructor(data))
     expected = df.select(nw.col("a", "b").map_batches(lambda s: s + 1).name.suffix("1"))
     assert_equal_data(expected, {"a1": [2, 3, 4], "b1": [5, 6, 7]})
 
 
+# pyspark doesn't support returns_scalar=True
 @pytest.mark.parametrize(
     ("value", "dtype"),
     [(1, nw.Int64()), ("foo", nw.String()), ([1, 2], nw.List(nw.Int64()))],
@@ -48,16 +58,6 @@ def test_map_batches_expr_scalar(
     assert_equal_data(expected, {"a": [value], "b": [value]})
 
 
-def test_map_batches_expr_numpy_array(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
-    expected = df.select(
-        nw.col("a")
-        .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64())
-        .sum()
-    )
-    assert_equal_data(expected, {"a": [9.0]})
-
-
 def test_map_batches_expr_numpy_scalar(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
 
@@ -67,8 +67,20 @@ def test_map_batches_expr_numpy_scalar(constructor_eager: ConstructorEager) -> N
     assert_equal_data(expected, {"a": [2], "b": [2], "z": [2]})
 
 
-def test_map_batches_expr_names(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data))
+def test_map_batches_expr_numpy_array(constructor: Constructor) -> None:
+    xfail_not_implemeted(constructor)
+    df = nw.from_native(constructor(data))
+    expected = df.select(
+        nw.col("a")
+        .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64())
+        .sum()
+    )
+    assert_equal_data(expected, {"a": [9.0]})
+
+
+def test_map_batches_expr_names(constructor: Constructor) -> None:
+    xfail_not_implemeted(constructor)
+    df = nw.from_native(constructor(data))
     expected = nw.from_native(df.select(nw.all().map_batches(lambda x: x.to_numpy())))
     assert_equal_data(expected, {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]})
 
@@ -89,3 +101,13 @@ def test_map_batches_exception(
 
     with pytest.raises(TypeError, match=msg):
         df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))
+
+
+def test_map_batches_pyspark_scalar(constructor: Constructor) -> None:
+    xfail_not_implemeted(constructor)
+    df = nw.from_native(constructor(data))
+    expected = df.select(nw.col("a").map_batches(lambda _: 1.0))
+    assert_equal_data(expected, {"a": [1.0] * 3})
+
+    expected = df.select(nw.col("a").map_batches(lambda _: "asd", nw.String()))
+    assert_equal_data(expected, {"a": ["asd"] * 3})
