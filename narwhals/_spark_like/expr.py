@@ -16,6 +16,7 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, extend_bool, no_default, zip_strict
+from narwhals.dependencies import get_pandas
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -423,8 +424,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             raise NotImplementedError(msg)
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            import pandas as pd
-
+            pd = get_pandas()
             F = self._F
 
             native_cols = self(df)
