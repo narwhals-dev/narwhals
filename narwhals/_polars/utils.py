@@ -341,6 +341,7 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     split: Method[CompliantT]
     to_date: Method[CompliantT]
     to_datetime: Method[CompliantT]
+    to_time: Method[CompliantT]
     to_lowercase: Method[CompliantT]
     to_uppercase: Method[CompliantT]
     pad_start: Method[CompliantT]

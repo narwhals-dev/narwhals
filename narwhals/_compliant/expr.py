@@ -1154,6 +1154,9 @@ class EagerExprStringNamespace(
     def to_date(self, format: str | None) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_date", format=format)
 
+    def to_time(self, format: str | None) -> EagerExprT:
+        return self.compliant._reuse_series_namespace("str", "to_time", format=format)
+
     def to_lowercase(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "to_lowercase")
 
