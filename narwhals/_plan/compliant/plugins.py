@@ -207,14 +207,29 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
 
+# TODO @dangotbanned: (low-priority) Remove 3.10 guard after https://github.com/narwhals-dev/narwhals/issues/3204
+# TODO @dangotbanned: (low-priority) Cover the duplicate name plugin case
 @functools.cache
 def _entry_points() -> EntryPoints:
+    # NOTE: Wrappped with some one-time validation, so everything outside is simpler
     from importlib.metadata import entry_points
 
-    return entry_points(group="narwhals.plugins-plan")
+    if sys.version_info < (3, 10):
+        msg = "Need `EntryPoints.{select,names}`, this can wait until 3.10 "
+        raise NotImplementedError(msg)
+    group = "narwhals.plugins-plan"
+    if (eps := entry_points(group=group)) and len(eps) == len(eps.names):
+        return eps
+    if not eps:  # pragma: no cover
+        # If you're developing narwhals, this may have failed due to the `group` being renamed,
+        # see `[project.entry-points.<group>]` in pyproject.toml
+        call = f"{entry_points.__qualname__}(group={group!r})"
+        msg = f"Expected to find built-in backends, but `{call}`\nreturned {eps!r}"
+        raise NotImplementedError(msg)
+    msg = f"Multiple plugins found with the same `name`:\n{eps!r}"  # pragma: no cover
+    raise NotImplementedError(msg)
 
 
-# TODO @dangotbanned: Cover the duplicate name plugin case?
 @overload
 def load_plugin(backend: Arrow, /) -> ArrowPlugin: ...
 @overload
@@ -235,12 +250,8 @@ def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | Bu
     eps = _entry_points()
     plugin: PluginAny | BuiltinAny
     if found := eps.select(name=name):
-        it = iter(found)
-        plugin = next(it).load()
-        if next(it, None) is None:
-            return plugin
-        msg = f"Multiple plugins found with the same name:\n{found!r}"  # pragma: no cover
-        raise NotImplementedError(msg)
+        plugin = next(iter(found)).load()
+        return plugin
     raise _unsupported_error(backend, name, eps)
 
 
