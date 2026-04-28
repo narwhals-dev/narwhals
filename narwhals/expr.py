@@ -533,9 +533,9 @@ class Expr:
             └───────────────────────────┘
         """
         kind = (
-            ExprKind.ORDERABLE_AGGREGATION
+            ExprKind.AGGREGATION
             if returns_scalar
-            else ExprKind.ORDERABLE_FILTRATION
+            else ExprKind.ELEMENTWISE
         )
         return self._append_node(
             ExprNode(
