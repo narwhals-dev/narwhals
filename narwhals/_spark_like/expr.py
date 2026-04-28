@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from contextlib import suppress
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -23,6 +24,7 @@ from narwhals._utils import (
     not_implemented,
     zip_strict,
 )
+from narwhals.dtypes import DType, _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -40,6 +42,7 @@ if TYPE_CHECKING:
     )
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.utils import _NativeDType
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RankMethod
@@ -246,19 +249,31 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(invert)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            spark_dtype = narwhals_to_native_dtype(
+        def _validated_dtype(dtype: IntoDType, df: SparkLikeLazyFrame) -> _NativeDType:
+            if dtype.is_numeric():
+                schema: dict[str, DType] = {}
+                with suppress(Exception):
+                    schema = df.collect_schema()
+
+                if schema:
+                    for name in self._evaluate_output_names(df):
+                        _validate_cast_temporal_to_numeric(
+                            source=schema[name], target=dtype
+                        )
+
+            return narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
-            return [expr.cast(spark_dtype) for expr in self(df)]
+
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
+            native_dtype = _validated_dtype(dtype, df)
+            return [expr.cast(native_dtype) for expr in self(df)]
 
         def window_f(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_dtypes, df.native.sparkSession
-            )
-            return [expr.cast(spark_dtype) for expr in self.window_function(df, inputs)]
+            native_dtype = _validated_dtype(dtype, df)
+            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,
