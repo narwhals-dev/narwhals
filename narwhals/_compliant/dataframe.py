@@ -12,8 +12,7 @@ from narwhals._compliant.typing import (
     CompliantSeriesT,
     EagerExprT,
     EagerSeriesT,
-    NativeDataFrameT,
-    NativeLazyFrameT,
+    NativeFrameT,
     NativeSeriesT,
 )
 from narwhals._translate import (
@@ -179,8 +178,8 @@ class CompliantDataFrame(
     DictConvertible["_ToDict[CompliantSeriesT]", Mapping[str, Any]],
     ArrowConvertible["pa.Table", "IntoArrowTable"],
     Sized,
-    CompliantFrame[CompliantExprT_contra, NativeDataFrameT, ToNarwhalsT_co],
-    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeDataFrameT, ToNarwhalsT_co],
+    CompliantFrame[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
+    Protocol[CompliantSeriesT, CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
 ):
     def __narwhals_dataframe__(self) -> Self: ...
     @classmethod
@@ -292,8 +291,8 @@ class CompliantDataFrame(
 
 
 class CompliantLazyFrame(
-    CompliantFrame[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
-    Protocol[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
+    CompliantFrame[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
+    Protocol[CompliantExprT_contra, NativeFrameT, ToNarwhalsT_co],
 ):
     def __narwhals_lazyframe__(self) -> Self: ...
     # `LazySelectorNamespace._iter_columns` depends
@@ -312,12 +311,10 @@ class CompliantLazyFrame(
 
 
 class EagerDataFrame(
-    CompliantDataFrame[
-        EagerSeriesT, EagerExprT, NativeDataFrameT, "DataFrame[NativeDataFrameT]"
-    ],
-    CompliantLazyFrame[EagerExprT, "Incomplete", "DataFrame[NativeDataFrameT]"],
+    CompliantDataFrame[EagerSeriesT, EagerExprT, NativeFrameT, "DataFrame[NativeFrameT]"],
+    CompliantLazyFrame[EagerExprT, "Incomplete", "DataFrame[NativeFrameT]"],
     ValidateBackendVersion,
-    Protocol[EagerSeriesT, EagerExprT, NativeDataFrameT, NativeSeriesT],
+    Protocol[EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT],
 ):
     @property
     def _backend_version(self) -> tuple[int, ...]:
@@ -325,11 +322,9 @@ class EagerDataFrame(
 
     def __narwhals_namespace__(
         self,
-    ) -> EagerNamespace[
-        Self, EagerSeriesT, EagerExprT, NativeDataFrameT, NativeSeriesT
-    ]: ...
+    ) -> EagerNamespace[Self, EagerSeriesT, EagerExprT, NativeFrameT, NativeSeriesT]: ...
 
-    def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
+    def to_narwhals(self) -> DataFrame[NativeFrameT]:
         return self._version.dataframe(self, level="full")
 
     def aggregate(self, *exprs: EagerExprT) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
@@ -343,7 +338,7 @@ class EagerDataFrame(
         return self.select(*exprs)  # pyright: ignore[reportArgumentType]
 
     def _with_native(
-        self, df: NativeDataFrameT, *, validate_column_names: bool = True
+        self, df: NativeFrameT, *, validate_column_names: bool = True
     ) -> Self: ...
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
