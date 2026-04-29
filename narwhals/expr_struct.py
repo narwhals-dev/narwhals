@@ -45,3 +45,32 @@ class ExprStructNamespace(Generic[ExprT]):
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "struct.field", name=name)
         )
+
+    def unnest(self) -> ExprT:
+        r"""Expand the struct column into individual fields as separate columns.
+
+        Each field of the struct becomes a separate column in the result.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame(
+            ...     {"user": [{"id": 0, "name": "john"}, {"id": 1, "name": "jane"}]}
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("user").struct.unnest())
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 2)   |
+            |  ┌─────┬──────┐  |
+            |  │ id  ┆ name │  |
+            |  │ --- ┆ ---  │  |
+            |  │ i64 ┆ str  │  |
+            |  ╞═════╪══════╡  |
+            |  │ 0   ┆ john │  |
+            |  │ 1   ┆ jane │  |
+            |  └─────┴──────┘  |
+            └──────────────────┘
+        """
+        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "struct.unnest"))
