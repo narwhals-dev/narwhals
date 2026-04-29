@@ -21,13 +21,13 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.plugins import BuiltinAny, Plugin, PluginAny, PluginName
     from narwhals._plan.compliant.typing import (
         DataFrameAny,
-        DataFrameT_co as _DF,
-        EagerDataFrameT_co as _EagerDF,
-        ExprT_co as _E,
-        LazyFrameT_co as _LF,
-        PlanEvaluatorT_co as _PE,
-        ScalarNoDefaultT_co as _SC,
-        SeriesT_co as _S,
+        DataFrameT_co as DF,
+        EagerDataFrameT_co as EagerDF,
+        ExprT_co as E,
+        LazyFrameT_co as LF,
+        PlanEvaluatorT_co as PE,
+        ScalarNoDefaultT_co as SC,
+        SeriesT_co as S,
     )
     from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._plan.polars import PolarsPlugin
@@ -139,8 +139,8 @@ def _get_plugin_importable(
 
 
 def import_evaluator(
-    plugin: Plugin[cc.LazyClasses[_LF, _PE, _E, _SC], Any, Any, Any] | PluginAny,
-) -> type[_PE]:
+    plugin: Plugin[cc.LazyClasses[LF, PE, E, SC], Any, Any, Any] | PluginAny,
+) -> type[PE]:
     """Seemingly the only thing mypy is fine with*.
 
     *But it forgets what this means as soon as you leave the function 😭
@@ -152,9 +152,8 @@ def import_evaluator(
 
 
 def import_dataframe(
-    plugin: Plugin[cc.EagerClasses[_DF | _EagerDF, _S, _E, _SC], Any, Any, Any]
-    | PluginAny,
-) -> type[_DF | _EagerDF]:
+    plugin: Plugin[cc.EagerClasses[DF | EagerDF, S, E, SC], Any, Any, Any] | PluginAny,
+) -> type[DF | EagerDF]:
     classes = plugin.__narwhals_classes__
     if cc.can_eager(classes):
         return classes._dataframe
