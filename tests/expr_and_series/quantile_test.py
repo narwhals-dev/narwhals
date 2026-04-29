@@ -58,9 +58,7 @@ def test_quantile_expr(
 def test_quantile_expr_group_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(
-        x in str(constructor) for x in ("dask", "duckdb", "ibis", "pyspark", "pyarrow")
-    ):
+    if any(x in str(constructor) for x in ("dask", "pyspark", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
 
     expected = {"a": [1, 2, 3], "b": [4.0, 6.0, 4.0]}
