@@ -365,7 +365,7 @@ def test_dataframe_recursive() -> None:
     pl_frame = pl.DataFrame({"a": [1, 2, 3]})
     nw_frame = nw.from_native(pl_frame)
     with pytest.raises(AssertionError):
-        nw.DataFrame(nw_frame, level="full")
+        nw.DataFrame(nw_frame)
 
     nw_frame_early_return = nw.from_native(nw_frame)
 
@@ -373,7 +373,7 @@ def test_dataframe_recursive() -> None:
         assert_type(pl_frame, pl.DataFrame)
         assert_type(nw_frame, nw.DataFrame[pl.DataFrame])
 
-        nw_frame_depth_2 = nw.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
+        nw_frame_depth_2 = nw.DataFrame(nw_frame)  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.DataFrame[Any])
         assert_type(nw_frame_early_return, nw.DataFrame[pl.DataFrame])
@@ -400,7 +400,7 @@ def test_lazyframe_recursive() -> None:
     pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
     nw_frame = nw.from_native(pl_frame)
     with pytest.raises(AssertionError):
-        nw.LazyFrame(nw_frame, level="lazy")
+        nw.LazyFrame(nw_frame)
 
     nw_frame_early_return = nw.from_native(nw_frame)
 
@@ -408,7 +408,7 @@ def test_lazyframe_recursive() -> None:
         assert_type(pl_frame, pl.LazyFrame)
         assert_type(nw_frame, nw.LazyFrame[pl.LazyFrame])
 
-        nw_frame_depth_2 = nw.LazyFrame(nw_frame, level="lazy")  # type: ignore[var-annotated]
+        nw_frame_depth_2 = nw.LazyFrame(nw_frame)  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw.LazyFrame[pl.LazyFrame])
@@ -441,7 +441,7 @@ def test_series_recursive() -> None:
     pl_series = pl.Series(name="test", values=[1, 2, 3])
     nw_series = nw.from_native(pl_series, series_only=True)
     with pytest.raises(AssertionError):
-        nw.Series(nw_series, level="full")
+        nw.Series(nw_series)
 
     nw_series_early_return = nw.from_native(nw_series, series_only=True)
 
@@ -449,7 +449,7 @@ def test_series_recursive() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, nw.Series[pl.Series])
 
-        nw_series_depth_2 = nw.Series(nw_series, level="full")  # type: ignore[var-annotated]
+        nw_series_depth_2 = nw.Series(nw_series)  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `Series[Unknown]`
         assert_type(nw_series_depth_2, nw.Series[Any])
         assert_type(nw_series_early_return, nw.Series[pl.Series])

@@ -75,7 +75,7 @@ class IbisLazyFrame(
             from narwhals.stable.v1 import DataFrame
 
             return DataFrame(self, level="interchange")
-        return self._version.lazyframe(self, level="lazy")
+        return self._version.lazyframe(self)
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         # Keep around for backcompat.

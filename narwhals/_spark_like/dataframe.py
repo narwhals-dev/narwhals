@@ -114,7 +114,7 @@ class SparkLikeLazyFrame(
         return cls(data, version=context._version, implementation=context._implementation)
 
     def to_narwhals(self) -> LazyFrame[SQLFrameDataFrame]:
-        return self._version.lazyframe(self, level="lazy")
+        return self._version.lazyframe(self)
 
     def __native_namespace__(self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn, Protocol
 
 from narwhals._utils import Version, parse_version
 
@@ -12,7 +12,10 @@ if TYPE_CHECKING:
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import DataFrameLike
+
+
+class DataFrameLike(Protocol):
+    def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class DtypeKind(enum.IntEnum):
