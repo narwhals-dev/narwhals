@@ -407,7 +407,8 @@ def lazyframe_collect(
 
     plugins = dict(_load_plugins())
     lazy = _get_plugin_importable(plugins, current_backend)
-    evaluator = import_evaluator(lazy)  # type: ignore[var-annotated]
+    evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy)
     eager = _get_plugin_importable(plugins, collect_backend) if collect_backend else lazy
+    # NOTE: Annotating this to please `mypy` prevents `pyright` from inferring ` type[PolarsDataFrame] | type[ArrowDataFrame]`
     dataframe = import_dataframe(eager)  # type: ignore[var-annotated]
     return evaluator, dataframe
