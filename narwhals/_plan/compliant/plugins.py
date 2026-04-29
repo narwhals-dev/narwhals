@@ -15,18 +15,31 @@ from __future__ import annotations
 import functools
 import sys
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, overload
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    ClassVar,
+    Final,
+    Protocol,
+    TypeVar,
+    overload,
+)
 
 from narwhals._plan.compliant import classes as cc
 from narwhals._plan.compliant.classes import ClassesAny, ClassesT_co, HasClasses
 from narwhals._plan.compliant.typing import (
     DataFrameAny,
     DataFrameT_co as _DF,
-    EagerDataFrameT_co as EagerDF,
+    EagerDataFrameT_co as _EagerDF,
+    ExprT_co as _E,
+    LazyFrameT_co as _LF,
     Native as LF,
     NativeDataFrameT as DF,
     NativeSeriesT as S,
-    PlanEvaluatorT_co as PE,
+    PlanEvaluatorT_co as _PE,
+    ScalarNoDefaultT_co as _SC,
+    SeriesT_co as _S,
 )
 from narwhals._plan.exceptions import unsupported_error
 from narwhals._utils import Implementation, Version
@@ -74,7 +87,17 @@ This is ~~supported~~ planned to be supported wherever a `backend` parameter is 
 Unsupported: TypeAlias = Any
 """Marker to use for types that are not planned to be implemented."""
 
-_PluginAny: TypeAlias = "Plugin[ClassesT_co, Any, Any, Any]"
+T = TypeVar("T")
+
+Deprecated: TypeAlias = Annotated[T, "Remove ASAP!"]
+"""`PluginAny` cannot work with mypy.
+
+- pyright kinda works
+- but the negative case doesn't fully remove the intersected types
+- although it does remove `BuiltinAny`
+    - because they have a concrete classes def and not the union
+"""
+
 PluginAny: TypeAlias = "Plugin[ClassesAny, Any, Any, Any]"
 """When used as a return type, this indicates an extension rather than a `Builtin`."""
 
@@ -280,7 +303,7 @@ def _get_plugin_importable(
     plugins: TemporaryPluginsType,
     backend: IntoBackend[Backend] | PluginName | Implementation,
     /,
-) -> PluginAny | BuiltinAny:
+) -> Deprecated[PluginAny] | BuiltinAny:
     # NOTE:  this will be a method of "plugins"
     name = _backend_to_plugin_name(backend)
     if (plugin := plugins.get(name)) is None:
@@ -292,24 +315,30 @@ def _get_plugin_importable(
 
 # TODO @dangotbanned: Try swapping this version of `Plugin` with the same shape inside `HasClasses`
 def import_evaluator(
-    plugin: _PluginAny[cc.LazyClasses[Any, PE, Any, Any]] | _PluginAny[Any],
-) -> type[PE]:
+    plugin: Plugin[cc.LazyClasses[_LF, _PE, _E, _SC], Any, Any, Any] | Any,
+) -> type[_PE]:
     """Seemingly the only thing mypy is fine with*.
 
     *But it forgets what this means as soon as you leave the function 😭
     """
+    from typing_extensions import reveal_type
+
     classes = plugin.__narwhals_classes__
     if cc.can_lazy(classes):
+        reveal_type(classes._evaluator)
         return classes._evaluator
     raise unsupported_error(plugin.plugin_name, "LazyFrame.collect")  # pragma: no cover
 
 
 # TODO @dangotbanned: Try swapping this version of `Plugin` with the same shape inside `HasClasses`
 def import_dataframe(
-    plugin: _PluginAny[cc.EagerClasses[_DF | EagerDF, Any, Any, Any]] | _PluginAny[Any],
-) -> type[_DF | EagerDF]:
+    plugin: Plugin[cc.EagerClasses[_DF | _EagerDF, _S, _E, _SC], Any, Any, Any] | Any,
+) -> type[_DF | _EagerDF]:
+    from typing_extensions import reveal_type
+
     classes = plugin.__narwhals_classes__
     if cc.can_eager(classes):
+        reveal_type(classes._dataframe)
         return classes._dataframe
     raise unsupported_error(plugin.plugin_name, "DataFrame")  # pragma: no cover
 
@@ -323,8 +352,10 @@ def load_plugin(backend: BackendTodo, /) -> Never: ...
 @overload
 def load_plugin(backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
 @overload
-def load_plugin(backend: PluginName, /) -> PluginAny: ...
-def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | BuiltinAny:
+def load_plugin(backend: PluginName, /) -> Deprecated[PluginAny]: ...
+def load_plugin(
+    backend: IntoBackend[Backend] | PluginName, /
+) -> Deprecated[PluginAny] | BuiltinAny:
     """Load the entry point to a backend.
 
     The returned object can be used to query availability.
@@ -340,7 +371,7 @@ def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | Bu
 
 
 # TODO @dangotbanned: Figure out what self-entry points are needed
-def _load_plugins() -> Iterator[tuple[str, PluginAny | BuiltinAny]]:
+def _load_plugins() -> Iterator[tuple[str, Deprecated[PluginAny] | BuiltinAny]]:
     """Load all entry points.
 
     ## Notes
@@ -362,7 +393,7 @@ def _load_plugins() -> Iterator[tuple[str, PluginAny | BuiltinAny]]:
     """
     for entry_point in _entry_points():
         name = entry_point.name
-        plugin: PluginAny | BuiltinAny = entry_point.load()
+        plugin: Deprecated[PluginAny] | BuiltinAny = entry_point.load()
         yield name, plugin
 
 
