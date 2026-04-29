@@ -114,15 +114,20 @@ def test_map_batches_exception(
         df.select(nw.all().map_batches(lambda s: s.to_numpy().argmax()))
 
 
+@pytest.mark.parametrize(
+    ("value", "dtype", "expected"),
+    [(1, None, [1.0] * 3), ("asd", nw.String(), ["asd"] * 3)],
+)
 def test_map_batches_pyspark_scalar(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    value: Any,
+    dtype: DType,
+    expected: Any,
 ) -> None:  # pragma: no cover
     constructor_id = str(request.node.callspec.id)
     if constructor_id != "pyspark":
         pytest.xfail("Test only valid for pyspark")
     df = nw.from_native(constructor(data))
-    expected = df.select(nw.col("a").map_batches(lambda _: 1.0))
-    assert_equal_data(expected, {"a": [1.0] * 3})
-
-    expected = df.select(nw.col("a").map_batches(lambda _: "asd", nw.String()))
-    assert_equal_data(expected, {"a": ["asd"] * 3})
+    expected = df.select(nw.col("a").map_batches(lambda _: value, dtype))
+    assert_equal_data(expected, {"a": expected})
