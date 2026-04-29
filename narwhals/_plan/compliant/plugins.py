@@ -88,6 +88,18 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     @property
     def name(self) -> PluginName: ...
 
+    def __hash__(self) -> int:
+        # Each plugin must have a unique name
+        return hash(self.name)
+
+    def __eq__(self, other: object) -> bool:
+        # Loose guard to avoid `self == self.name`
+        return (
+            hasattr(other, "requirements")
+            and hasattr(other, "native_classes")
+            and hash(self) == hash(other)
+        )
+
     # TODO @dangotbanned: Think about how the narwhals-level will use this for state
     def is_imported(self) -> bool:
         """Return True if all required dependencies *have already been* imported.

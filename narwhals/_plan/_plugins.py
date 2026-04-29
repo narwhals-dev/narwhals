@@ -4,8 +4,19 @@ from __future__ import annotations
 
 import functools
 import sys
+from importlib import import_module
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Final,
+    Literal,
+    Protocol,
+    TypeVar,
+    final,
+    overload,
+)
 
 from narwhals._plan.compliant import classes as cc
 from narwhals._plan.exceptions import unsupported_error
@@ -13,11 +24,12 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from importlib.metadata import EntryPoint, EntryPoints
 
     from typing_extensions import Never, TypeAlias
 
+    from narwhals._native import NativeDataFrame
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant.classes import (
         ClassesT_co as C,
@@ -47,6 +59,9 @@ TemporaryPluginsType: TypeAlias = "dict[str, BuiltinAny | PluginAny]"
 """Obviously don't want to keep this for long"""
 
 IntoBackendExt: TypeAlias = "IntoBackend[Backend] | PluginName | Implementation"
+
+RequireMethod: TypeAlias = Literal["is_imported", "can_import"]
+"""Raise if calling this method on `Plugin` returns False."""
 
 _UNKNOWN: Final = Implementation.UNKNOWN
 
@@ -249,6 +264,98 @@ def lazyframe_collect(
     return evaluator, dataframe
 
 
+LowDetailRepr: TypeAlias = Any
+"""E.g. `Plugin` or `Plugin.name`."""
+
+
+# TODO @dangotbanned: Probably rename to `PluginManager`
+@final
+class PlugMan:
+    """Singleton plugin manager."""
+
+    __slots__ = ("_discovered", "_loaded")
+
+    _discovered: dict[str, EntryPoint]
+    _loaded: dict[str, PluginAny | BuiltinAny]
+    __instance: ClassVar[Any | None] = None
+
+    def __new__(cls) -> PlugMan:
+        if not isinstance(cls.__instance, PlugMan):
+            self = object.__new__(PlugMan)
+            self._discovered = {ep.name: ep for ep in _entry_points()}
+            self._loaded = {}
+            cls.__instance = self
+        return cls.__instance
+
+    def _load(self, name: str, /) -> PluginAny | BuiltinAny:
+        plugin: PluginAny | BuiltinAny
+        if loaded := self._loaded.get(name):
+            return loaded
+        if discovered := self._discovered.pop(name, None):
+            self._loaded[name] = plugin = discovered.load()
+            return plugin
+        raise _unsupported_error(name, name, _entry_points())
+
+    def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:
+        plugin: PluginAny | BuiltinAny
+        yield from self._loaded.values()
+        while self._discovered:
+            name, ep = self._discovered.popitem()
+            self._loaded[name] = plugin = ep.load()
+            yield plugin
+
+    def get(
+        self, backend: IntoBackendExt, /, require: RequireMethod | None = None
+    ) -> PluginAny:
+        """Return the plugin matching `backend`, raising if `require` returns False."""
+        plugin = self._load(_backend_to_plugin_name(backend))
+        if not require:
+            return plugin
+        if plugin.is_imported() if require == "is_imported" else _can_import(plugin):
+            return plugin
+        raise _unavailable_error(plugin, require)
+
+    def get_eager(
+        self, backend: IntoBackendExt
+    ) -> Plugin[cc.EagerClassesAny, Any, Any, Any]:
+        raise NotImplementedError
+
+    def get_lazy(
+        self, backend: IntoBackendExt
+    ) -> Plugin[cc.LazyClassesAny, Any, Any, Any]:
+        raise NotImplementedError
+
+    def get_hybrid(
+        self, backend: IntoBackendExt
+    ) -> Plugin[cc.HybridClassesAny, Any, Any, Any]:
+        raise NotImplementedError
+
+    # TODO @dangotbanned: Plan this and the other singledispatch bits
+    def iter_native_dataframe(self) -> Iterator[type[NativeDataFrame]]:
+        for plugin in self._iter_plugins():
+            yield from plugin.native_dataframe_classes()
+
+    def import_modules(self, backend: IntoBackendExt, /) -> None:
+        """Import the requirements for `backend`."""
+        plugin = self.get(backend, require="can_import")
+        if not plugin.is_imported():
+            for module in plugin.requirements:
+                import_module(module)
+
+    def importable(self) -> Iterable[LowDetailRepr]:
+        raise NotImplementedError
+
+    def imported(self) -> Iterable[LowDetailRepr]:
+        raise NotImplementedError
+
+    def known(self) -> Iterable[LowDetailRepr]:
+        for ep in _entry_points():
+            yield ep.name
+
+    def show_versions(self) -> None:
+        raise NotImplementedError
+
+
 def _backend_to_plugin_name(
     backend: IntoBackendExt, /
 ) -> BackendName | PluginName:  # pragma: no cover
@@ -261,6 +368,12 @@ def _backend_to_plugin_name(
     return name
 
 
+@functools.cache
+def _can_import(plugin: PluginAny, /) -> bool:
+    """Cached `Plugin.can_import`, bounded by the total number of plugins."""
+    return plugin.can_import()
+
+
 def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exception:
     if (impl := Implementation.from_backend(name)) is not _UNKNOWN:
         msg = f"{impl!r} is not yet supported in `narwhals._plan`, got: {backend!r}"
@@ -269,7 +382,15 @@ def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exceptio
     return TypeError(msg)
 
 
-def _unavailable_error(plugin: PluginAny) -> Exception:  # pragma: no cover
-    missing = [name for name in plugin.requirements if find_spec(name) is None]
-    msg = f"Plugin {plugin.name!r} was found but could not import the following required modules: {missing!r}"
+def _unavailable_error(
+    plugin: PluginAny, require: RequireMethod = "can_import"
+) -> Exception:  # pragma: no cover
+    msg = f"Plugin {plugin.name!r} was found but"
+    if require == "is_imported" and plugin.can_import():
+        missing = [name for name in plugin.requirements if sys.modules.get(name) is None]
+        reason = "the following available modules have not yet been imported"
+    else:
+        missing = [name for name in plugin.requirements if find_spec(name) is None]
+        reason = "could not import the following required modules"
+    msg = f"{msg} {reason}: {missing!r}"
     return ModuleNotFoundError(msg)
