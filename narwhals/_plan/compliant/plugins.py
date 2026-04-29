@@ -309,11 +309,8 @@ def import_evaluator(
 
     *But it forgets what this means as soon as you leave the function 😭
     """
-    from typing_extensions import reveal_type
-
     classes = plugin.__narwhals_classes__
     if cc.can_lazy(classes):
-        reveal_type(classes._evaluator)
         return classes._evaluator
     raise unsupported_error(plugin.plugin_name, "LazyFrame.collect")  # pragma: no cover
 
@@ -322,11 +319,8 @@ def import_dataframe(
     plugin: Plugin[cc.EagerClasses[_DF | _EagerDF, _S, _E, _SC], Any, Any, Any]
     | PluginAny,
 ) -> type[_DF | _EagerDF]:
-    from typing_extensions import reveal_type
-
     classes = plugin.__narwhals_classes__
     if cc.can_eager(classes):
-        reveal_type(classes._dataframe)
         return classes._dataframe
     raise unsupported_error(plugin.plugin_name, "DataFrame")  # pragma: no cover
 
