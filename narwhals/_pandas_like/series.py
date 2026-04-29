@@ -13,6 +13,7 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     NUMPY_VERSION,
     align_and_extract_native,
+    binary_string_sum_fallback,
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
@@ -399,23 +400,22 @@ class PandasLikeSeries(EagerSeries[Any]):
     def last(self) -> PythonLiteral:
         return self.native.iloc[-1] if len(self.native) else None
 
-    def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary(self, op: Callable[..., pd.Series], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
-        if (
-            str(self.native.dtype) == "large_string[pyarrow]"
-            and isinstance(other_native, str)
-            and op.__name__ == "add"
-        ):
-            # https://github.com/pandas-dev/pandas/issues/64393
-            import pyarrow as pa  # ignore-banned-import
+        try:
+            res = op(ser, other_native)
+        except Exception:
+            if op.__name__ == "add":
+                pdx = self.__native_namespace__()
+                res = binary_string_sum_fallback(ser, other_native, pdx)
+            else:
+                raise
+        return self._with_native(res, preserve_broadcast=preserve_broadcast).alias(
+            self.name
+        )
 
-            other_native = pa.scalar(other_native, type=pa.large_string())
-        return self._with_native(
-            op(ser, other_native), preserve_broadcast=preserve_broadcast
-        ).alias(self.name)
-
-    def _with_binary_right(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary_right(self, op: Callable[..., pd.Series], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
