@@ -108,7 +108,7 @@ BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
 _UNKNOWN: Final = Implementation.UNKNOWN
 
 
-# TODO @dangotbanned: Rename and move `sys_modules_targets` up here
+# TODO @dangotbanned: Rename `sys_modules_targets`
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     """An entrypoint for a backend that implements compliant-level operations.
 
@@ -116,6 +116,7 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     """
 
     __slots__ = ()
+    sys_modules_targets: ClassVar[tuple[LiteralString_, ...]]
 
     # TODO @dangotbanned: Think about how the narwhals-level will use this for state
     def is_imported(self) -> bool:
@@ -148,7 +149,7 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
         True
         """
         # NOTE: `sys.modules` may be populated by other tests in any order.
-        # Removing `"pyarrow"` ensure the result of this one isn't contaminated
+        # Removing `"pyarrow"` ensures the result of this one isn't contaminated
         ...
 
     def can_import(self) -> bool:
@@ -205,7 +206,6 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     """
 
     __slots__ = ()
-    sys_modules_targets: ClassVar[tuple[LiteralString_, ...]]
     implementation: ClassVar[KnownImpl]
 
     @property
@@ -273,11 +273,10 @@ def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exceptio
     return TypeError(msg)
 
 
-def _unavailable_error(plugin: PluginAny | BuiltinAny) -> Exception:  # pragma: no cover
-    required: tuple[str, ...] | None
-    if (required := getattr(plugin, "sys_modules_targets", None)) is None:
-        msg = f"Need to define requirements for plugin {plugin.plugin_name!r}\n{plugin!r}"
-        raise NotImplementedError(msg)
+def _unavailable_error(
+    plugin: Plugin[Any, Any, Any, Any],
+) -> Exception:  # pragma: no cover
+    required = plugin.sys_modules_targets
     missing = [name for name in required if find_spec(name) is None]
     msg = f"Plugin {plugin.plugin_name!r} was found but could not import the following required modules: {missing!r}"
     return ModuleNotFoundError(msg)
