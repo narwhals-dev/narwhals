@@ -74,7 +74,6 @@ BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
 """Backends defined inside of narwhals."""
 
 
-# TODO @dangotbanned: Rename `sys_modules_targets`
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     """An entrypoint for a backend that implements compliant-level operations.
 
@@ -82,7 +81,12 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     """
 
     __slots__ = ()
-    sys_modules_targets: ClassVar[tuple[LiteralString_, ...]]
+    requirements: ClassVar[tuple[LiteralString_, ...]]
+    """One or more native package/module names which must be available to use this plugin."""
+
+    # TODO @dangotbanned: (low-priority) Populate using `EntryPoint.name`?
+    @property
+    def name(self) -> PluginName: ...
 
     # TODO @dangotbanned: Think about how the narwhals-level will use this for state
     def is_imported(self) -> bool:
@@ -155,10 +159,6 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     def native_series_classes(self) -> Iterator[type[S]]: ...
     def native_classes(self) -> Iterator[type[DF | LF | S]]: ...
 
-    # TODO @dangotbanned: (low-priority) Populate using `EntryPoint.name`?
-    @property
-    def name(self) -> PluginName: ...
-
 
 # TODO @dangotbanned: (low-priority) Preserve the exact `implementation` for each backend (bad overloads)
 class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
@@ -181,10 +181,10 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
         return name
 
     def is_imported(self) -> bool:
-        return all(sys.modules.get(target) for target in self.sys_modules_targets)
+        return all(sys.modules.get(target) for target in self.requirements)
 
     def can_import(self) -> bool:
-        return all(find_spec(target) for target in self.sys_modules_targets)
+        return all(find_spec(target) for target in self.requirements)
 
     def native_classes(self) -> Iterator[type[DF | LF | S]]:  # pragma: no cover
         yield from self.native_dataframe_classes()

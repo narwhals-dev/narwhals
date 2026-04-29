@@ -46,7 +46,7 @@ class PolarsPlugin(
 ):
     __slots__ = ()
     implementation = _plugins.Implementation.POLARS
-    sys_modules_targets = ("polars",)
+    requirements = ("polars",)
 
     def is_native(self, obj: _t.Any) -> TypeIs[NativePolars]:
         import polars as pl

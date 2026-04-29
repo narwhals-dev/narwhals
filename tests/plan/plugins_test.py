@@ -42,7 +42,7 @@ def plugin(eager: BuiltinName) -> Generator[BuiltinAny, Any, None]:
 
 def trigger_imports(plugin: BuiltinAny) -> None:
     """Ensures the imported modules land in `sys.modules`."""
-    for target in plugin.sys_modules_targets:
+    for target in plugin.requirements:
         importlib.import_module(target)
 
 

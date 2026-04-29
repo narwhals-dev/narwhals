@@ -47,7 +47,7 @@ class ArrowPlugin(
 ):
     __slots__ = ()
     implementation = _plugins.Implementation.PYARROW
-    sys_modules_targets = ("pyarrow",)
+    requirements = ("pyarrow",)
 
     def is_native(self, obj: _t.Any) -> TypeIs[NativeArrow]:
         import pyarrow as pa

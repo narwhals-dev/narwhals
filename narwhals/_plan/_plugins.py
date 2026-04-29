@@ -270,6 +270,6 @@ def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exceptio
 
 
 def _unavailable_error(plugin: PluginAny) -> Exception:  # pragma: no cover
-    missing = [name for name in plugin.sys_modules_targets if find_spec(name) is None]
+    missing = [name for name in plugin.requirements if find_spec(name) is None]
     msg = f"Plugin {plugin.name!r} was found but could not import the following required modules: {missing!r}"
     return ModuleNotFoundError(msg)
