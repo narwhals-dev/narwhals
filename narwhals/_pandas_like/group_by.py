@@ -66,13 +66,30 @@ _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
 }
 
 
+def groupby_agg_kwargs_to_pandas_equivalent(
+    function_name: NativeAggregation, kwargs: ScalarKwargs
+) -> dict[str, Any]:
+    if function_name == "quantile":
+        assert "quantile" in kwargs  # noqa: S101
+        assert "interpolation" in kwargs  # noqa: S101
+        pandas_kwargs = {
+            "q": kwargs["quantile"],
+            "interpolation": kwargs["interpolation"],
+        }
+    else:  # sum, len, ...
+        pandas_kwargs = dict(kwargs)
+    return pandas_kwargs
+
+
 @lru_cache(maxsize=32)
 def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
-    return methodcaller(name, **kwds)
+
+    kwargs = groupby_agg_kwargs_to_pandas_equivalent(name, kwds)
+    return methodcaller(name, **kwargs)
 
 
 class AggExpr:
