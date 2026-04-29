@@ -60,7 +60,7 @@ class _Plugin(Protocol[_R_co]):
     """
 
     @property
-    def plugin_name(self) -> PluginName: ...
+    def name(self) -> PluginName: ...
     @property
     def __narwhals_classes__(self) -> _R_co: ...
 
@@ -171,7 +171,7 @@ def import_evaluator(
     classes = import_classes(plugin, version)
     if cc.can_lazy(classes):
         return classes._evaluator
-    raise unsupported_error(plugin.plugin_name, "LazyFrame.collect")  # pragma: no cover
+    raise unsupported_error(plugin.name, "LazyFrame.collect")  # pragma: no cover
 
 
 def import_dataframe(
@@ -181,7 +181,7 @@ def import_dataframe(
     classes = import_classes(plugin, version)
     if cc.can_eager(classes):
         return classes._dataframe
-    raise unsupported_error(plugin.plugin_name, "DataFrame")  # pragma: no cover
+    raise unsupported_error(plugin.name, "DataFrame")  # pragma: no cover
 
 
 @overload
@@ -204,11 +204,11 @@ def import_classes(
     if version is Version.V1:
         if cc.can_v1(classes):
             return classes.v1
-        raise unsupported_error(plugin.plugin_name, "v1")  # pragma: no cover
+        raise unsupported_error(plugin.name, "v1")  # pragma: no cover
     if version is Version.V2:
         if cc.can_v2(classes):
             return classes.v2
-        raise unsupported_error(plugin.plugin_name, "v2")  # pragma: no cover
+        raise unsupported_error(plugin.name, "v2")  # pragma: no cover
     assert_never(version)
 
 
@@ -271,5 +271,5 @@ def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exceptio
 
 def _unavailable_error(plugin: PluginAny) -> Exception:  # pragma: no cover
     missing = [name for name in plugin.sys_modules_targets if find_spec(name) is None]
-    msg = f"Plugin {plugin.plugin_name!r} was found but could not import the following required modules: {missing!r}"
+    msg = f"Plugin {plugin.name!r} was found but could not import the following required modules: {missing!r}"
     return ModuleNotFoundError(msg)

@@ -48,7 +48,7 @@ def trigger_imports(plugin: BuiltinAny) -> None:
 
 def test_load_builtin(eager: BuiltinName) -> None:
     plugin = load_plugin(eager)
-    assert plugin.plugin_name == eager
+    assert plugin.name == eager
     assert plugin.implementation is Implementation.from_backend(eager)
 
 
@@ -66,7 +66,7 @@ def test_plugin_is_imported(plugin: BuiltinAny) -> None:
     trigger_imports(plugin)
 
     assert plugin.is_imported()
-    assert load_plugin(plugin.plugin_name).is_imported()
+    assert load_plugin(plugin.name).is_imported()
 
 
 def test_plugin_can_import(plugin: BuiltinAny) -> None:
@@ -76,7 +76,7 @@ def test_plugin_can_import(plugin: BuiltinAny) -> None:
     trigger_imports(plugin)
     assert plugin.is_imported()
     assert plugin.can_import()
-    assert load_plugin(plugin.plugin_name).can_import()
+    assert load_plugin(plugin.name).can_import()
 
     trigger_imports(plugin)
     assert plugin.can_import()

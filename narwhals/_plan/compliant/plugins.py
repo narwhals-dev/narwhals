@@ -155,10 +155,9 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
     def native_series_classes(self) -> Iterator[type[S]]: ...
     def native_classes(self) -> Iterator[type[DF | LF | S]]: ...
 
-    # TODO @dangotbanned: Rename to `name`
     # TODO @dangotbanned: (low-priority) Populate using `EntryPoint.name`?
     @property
-    def plugin_name(self) -> PluginName: ...
+    def name(self) -> PluginName: ...
 
 
 # TODO @dangotbanned: (low-priority) Preserve the exact `implementation` for each backend (bad overloads)
@@ -177,7 +176,7 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     implementation: ClassVar[KnownImpl]
 
     @property
-    def plugin_name(self) -> BackendName:
+    def name(self) -> BackendName:
         name: BackendName = self.implementation.value
         return name
 
@@ -195,7 +194,9 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     def is_native(self, obj: Any) -> TypeIs[DF | LF | S]:  # pragma: no cover
         if tps := tuple(self.native_classes()):
             return isinstance(obj, tps)
-        msg = f"{type(self).__name__!r} ({self.plugin_name!r}) has not defined any native classes"
+        msg = (
+            f"{type(self).__name__!r} ({self.name!r}) has not defined any native classes"
+        )
         raise NotImplementedError(msg)
 
     def is_native_dataframe(self, obj: Any) -> TypeIs[DF]:
