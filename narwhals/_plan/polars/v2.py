@@ -11,81 +11,81 @@ from narwhals._utils import Version
 
 
 # TODO @dangotbanned: Review reducing boilerplate
-class PolarsExprV1(PolarsExpr):
-    version: ClassVar = Version.V1
+class PolarsExprV2(PolarsExpr):
+    version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespaceV1()
+        return PolarsNamespaceV2()
 
 
-class PolarsSeriesV1(PolarsSeries):
-    version: ClassVar = Version.V1
-
-    def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespaceV1()
-
-
-class PolarsDataFrameV1(PolarsDataFrame):
-    version: ClassVar = Version.V1
+class PolarsSeriesV2(PolarsSeries):
+    version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespaceV1()
+        return PolarsNamespaceV2()
 
 
-class PolarsLazyFrameV1(PolarsLazyFrame):
+class PolarsDataFrameV2(PolarsDataFrame):
+    version: ClassVar = Version.V2
+
+    def __narwhals_namespace__(self) -> PolarsNamespace:
+        return PolarsNamespaceV2()
+
+
+class PolarsLazyFrameV2(PolarsLazyFrame):
     __slots__ = ()
-    version: ClassVar = Version.V1
+    version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespaceV1()
+        return PolarsNamespaceV2()
 
 
-class PolarsEvaluatorV1(PolarsEvaluator):
+class PolarsEvaluatorV2(PolarsEvaluator):
     __slots__ = ()
-    version: ClassVar = Version.V1
+    version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespaceV1()
+        return PolarsNamespaceV2()
 
-    _lazyframe: ClassVar = PolarsLazyFrameV1
+    _lazyframe: ClassVar = PolarsLazyFrameV2
     # TODO @dangotbanned: Still need to check out the runtime behavior of this
     to_lazy = _lazyframe.from_native
 
 
-class PolarsNamespaceV1(PolarsNamespace):
+class PolarsNamespaceV2(PolarsNamespace):
     __slots__ = ()
-    version: ClassVar = Version.V1
+    version: ClassVar = Version.V2
 
     # NOTE: `_scalar` defers here already
     @property
     def _expr(self) -> type[PolarsExpr]:
-        return PolarsExprV1
+        return PolarsExprV2
 
     @property
     def _series(self) -> type[PolarsSeries]:
-        return PolarsSeriesV1
+        return PolarsSeriesV2
 
     @property
     def _dataframe(self) -> type[PolarsDataFrame]:
-        return PolarsDataFrameV1
+        return PolarsDataFrameV2
 
     @property
     def _lazyframe(self) -> type[PolarsLazyFrame]:
-        return PolarsLazyFrameV1
+        return PolarsLazyFrameV2
 
     @property
     def _evaluator(self) -> type[PolarsEvaluator]:
-        return PolarsEvaluatorV1
+        return PolarsEvaluatorV2
 
 
-DataFrame = PolarsDataFrameV1
-Expr = PolarsExprV1
-LazyFrame = PolarsLazyFrameV1
-Namespace = PolarsNamespaceV1
-PlanEvaluator = PolarsEvaluatorV1
+DataFrame = PolarsDataFrameV2
+Expr = PolarsExprV2
+LazyFrame = PolarsLazyFrameV2
+Namespace = PolarsNamespaceV2
+PlanEvaluator = PolarsEvaluatorV2
 PlanResolver = None
 Scalar = Expr
-Series = PolarsSeriesV1
+Series = PolarsSeriesV2
 
 
 __all__ = [

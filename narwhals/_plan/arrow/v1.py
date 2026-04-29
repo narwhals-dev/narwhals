@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import ClassVar, Final, final
+from typing import ClassVar, final
 
 from narwhals._plan.arrow.dataframe import ArrowDataFrame
 from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
@@ -10,7 +10,6 @@ from narwhals._plan.arrow.series import ArrowSeries
 from narwhals._utils import Version
 
 
-# TODO @dangotbanned: Move all the classes + protocols to `version: ClassVar[Version]`
 # TODO @dangotbanned: Review reducing boilerplate
 @final
 class ArrowExprV1(ArrowExpr):
@@ -78,14 +77,14 @@ class ArrowNamespaceV1(ArrowNamespace):
         return ArrowLazyFrameV1
 
 
-DataFrame: Final = ArrowDataFrameV1
-Expr: Final = ArrowExprV1
-LazyFrame: Final = ArrowLazyFrameV1
-Namespace: Final = ArrowNamespaceV1
-PlanEvaluator: Final = None
-PlanResolver: Final = None
-Scalar: Final = ArrowScalarV1
-Series: Final = ArrowSeriesV1
+DataFrame = ArrowDataFrameV1
+Expr = ArrowExprV1
+LazyFrame = ArrowLazyFrameV1
+Namespace = ArrowNamespaceV1
+PlanEvaluator = None
+PlanResolver = None
+Scalar = ArrowScalarV1
+Series = ArrowSeriesV1
 
 
 __all__ = [

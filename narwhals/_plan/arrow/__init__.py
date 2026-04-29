@@ -11,7 +11,7 @@ if _t.TYPE_CHECKING:
     from typing_extensions import TypeIs
 
     from narwhals._native import NativeArrow
-    from narwhals._plan.arrow import v1
+    from narwhals._plan.arrow import v1, v2
     from narwhals._plan.arrow.classes import ArrowClasses
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
@@ -35,6 +35,7 @@ __all__ = [
     "Series",
     "plugin",
     "v1",
+    "v2",
 ]
 
 
@@ -89,9 +90,9 @@ if not _t.TYPE_CHECKING:
         prefix = "Arrow"
         # NOTE: Yes, this is quite ugly - just need something to keep these imports working temporarily
         globs = globals()
-        if name == "v1":
-            v1 = globs[name] = import_module(f"{package_name}.{name}")
-            return v1
+        if name in {"v1", "v2"}:
+            vn = globs[name] = import_module(f"{package_name}.{name}")
+            return vn
         if name in {"Scalar", "Expr"}:
             expr = import_module(f"{package_name}.expr")
             globs.update(Expr=expr.ArrowExpr, Scalar=expr.ArrowScalar)

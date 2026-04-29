@@ -192,6 +192,14 @@ def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE
     return hasattrs_static(obj, "_lazyframe", "_evaluator")
 
 
+def can_v1(obj: HasV1[ClassesV1T_co] | Any) -> TypeIs[HasV1[ClassesV1T_co]]:
+    return hasattrs_static(obj, "v1")
+
+
+def can_v2(obj: HasV2[ClassesV2T_co] | Any) -> TypeIs[HasV2[ClassesV2T_co]]:
+    return hasattrs_static(obj, "v2")
+
+
 # NOTE: As `ScalarT_co` has a default, it must be listed at the end of the type parameters
 # The important addition to this level is `HasV1[...]`, so  `...` is listed first
 # fmt: off

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from itertools import groupby
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Final, Literal
 
 from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import (
@@ -50,8 +50,12 @@ Unsupported: TypeAlias = Literal[
     "DataFrame.from_dict",
     "LazyFrame.collect",
     "Series.from_iterable",
+    "v1",
+    "v2",
 ]
+"""A method/function/feature that is not supported for a backend."""
 
+OMIT_PARENS: Final = frozenset[Unsupported](("v1", "v2"))
 
 # NOTE: Using verbose names to start with
 # TODO @dangotbanned: Think about something better/more consistent once the new messages are finalized
@@ -351,7 +355,8 @@ def unsupported_error(
     """Return an error for an unsupported operation in `backend`."""
     if not isinstance(backend, str):
         backend = Implementation.from_backend(backend).value
-    msg = f"`{name}()` is not yet supported for {backend!r}"
+    what = name if name in OMIT_PARENS else f"{name}()"
+    msg = f"`{what}` is not yet supported for {backend!r}"
     return NotImplementedError(msg)
 
 

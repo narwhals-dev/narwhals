@@ -5,10 +5,11 @@ from __future__ import annotations
 import functools
 import sys
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Final, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, overload
 
 from narwhals._plan.compliant import classes as cc
 from narwhals._plan.exceptions import unsupported_error
+from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -18,6 +19,11 @@ if TYPE_CHECKING:
     from typing_extensions import Never, TypeAlias
 
     from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.compliant.classes import (
+        ClassesT_co as C,
+        ClassesV1T_co as C1,
+        ClassesV2T_co as C2,
+    )
     from narwhals._plan.compliant.plugins import BuiltinAny, Plugin, PluginAny, PluginName
     from narwhals._plan.compliant.typing import (
         DataFrameAny,
@@ -35,12 +41,32 @@ if TYPE_CHECKING:
     from narwhals._typing import Arrow, BackendName, Polars
     from narwhals.typing import Backend, IntoBackend
 
+Incomplete: TypeAlias = Any
 
 TemporaryPluginsType: TypeAlias = "dict[str, BuiltinAny | PluginAny]"
 """Obviously don't want to keep this for long"""
 
+IntoBackendExt: TypeAlias = "IntoBackend[Backend] | PluginName | Implementation"
 
 _UNKNOWN: Final = Implementation.UNKNOWN
+
+_R_co = TypeVar("_R_co", covariant=True)
+
+
+class _Plugin(Protocol[_R_co]):
+    """Minimal interface for typing.
+
+    Doesn't set a bound for `__narwhals_classes__`.
+    """
+
+    @property
+    def plugin_name(self) -> PluginName: ...
+    @property
+    def __narwhals_classes__(self) -> _R_co: ...
+
+
+_PluginV1: TypeAlias = _Plugin[cc.HasV1["C1"]]
+_PluginV2: TypeAlias = _Plugin[cc.HasV2["C2"]]
 
 
 # TODO @dangotbanned: (low-priority) Remove 3.10 guard after https://github.com/narwhals-dev/narwhals/issues/3204
@@ -125,9 +151,7 @@ def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | Bu
 
 # TODO @dangotbanned: Replace ASAP
 def _get_plugin_importable(
-    plugins: TemporaryPluginsType,
-    backend: IntoBackend[Backend] | PluginName | Implementation,
-    /,
+    plugins: TemporaryPluginsType, backend: IntoBackendExt, /
 ) -> PluginAny | BuiltinAny:
     # NOTE:  this will be a method of "plugins"
     name = _backend_to_plugin_name(backend)
@@ -140,12 +164,11 @@ def _get_plugin_importable(
 
 def import_evaluator(
     plugin: Plugin[cc.LazyClasses[LF, PE, E, SC], Any, Any, Any] | PluginAny,
+    version: Version,
 ) -> type[PE]:
-    """Seemingly the only thing mypy is fine with*.
-
-    *But it forgets what this means as soon as you leave the function 😭
-    """
-    classes = plugin.__narwhals_classes__
+    # NOTE: Seemingly the only thing mypy is fine with
+    # But it forgets what this means as soon as you leave the function 😭
+    classes = import_classes(plugin, version)
     if cc.can_lazy(classes):
         return classes._evaluator
     raise unsupported_error(plugin.plugin_name, "LazyFrame.collect")  # pragma: no cover
@@ -153,18 +176,46 @@ def import_evaluator(
 
 def import_dataframe(
     plugin: Plugin[cc.EagerClasses[DF | EagerDF, S, E, SC], Any, Any, Any] | PluginAny,
+    version: Version,
 ) -> type[DF | EagerDF]:
-    classes = plugin.__narwhals_classes__
+    classes = import_classes(plugin, version)
     if cc.can_eager(classes):
         return classes._dataframe
     raise unsupported_error(plugin.plugin_name, "DataFrame")  # pragma: no cover
 
 
-# TODO @dangotbanned: Support `v1`, `v2`
+@overload
+def import_classes(plugin: _Plugin[C], version: Literal[Version.MAIN]) -> C: ...
+@overload
+def import_classes(plugin: _PluginV1[C1], version: Literal[Version.V1]) -> C1: ...
+@overload
+def import_classes(plugin: _PluginV2[C2], version: Literal[Version.V2]) -> C2: ...
+@overload
+def import_classes(
+    plugin: _Plugin[C] | _PluginV1[C1] | _PluginV2[C2], version: Version
+) -> C | C1 | C2: ...
+def import_classes(
+    plugin: _Plugin[C] | _PluginV1[C1] | _PluginV2[C2], version: Version
+) -> Incomplete:
+    """Import the accessor to the compliant classes compatible with `version`."""
+    classes = plugin.__narwhals_classes__
+    if version is Version.MAIN:
+        return classes
+    if version is Version.V1:
+        if cc.can_v1(classes):
+            return classes.v1
+        raise unsupported_error(plugin.plugin_name, "v1")  # pragma: no cover
+    if version is Version.V2:
+        if cc.can_v2(classes):
+            return classes.v2
+        raise unsupported_error(plugin.plugin_name, "v2")  # pragma: no cover
+    assert_never(version)
+
+
 # TODO @dangotbanned: (low-priority) get the optional `Resolver` using this backend
 def lazyframe_collect(
-    current_backend: IntoBackend[Backend] | PluginName | Implementation,
-    collect_backend: IntoBackend[Backend] | PluginName | Implementation | None = None,
+    current_backend: IntoBackendExt,
+    collect_backend: IntoBackendExt | None = None,
     version: Version = Version.MAIN,
 ) -> tuple[type[PlanEvaluatorAny], type[DataFrameAny]]:
     """Mocking this call as it does some gymnastics I'd like to avoid.
@@ -188,21 +239,18 @@ def lazyframe_collect(
             "`LazyFrame` needs a connection back to the plugin that handles the native object (e.g. `plugin_name`)."
         )
         raise TypeError(msg)
-    if version is not Version.MAIN:
-        msg = f"TODO: check for `.{version.name.lower()}` and navigate to it"
-        raise NotImplementedError(msg)
 
     plugins = dict(_load_plugins())
     lazy = _get_plugin_importable(plugins, current_backend)
-    evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy)
+    evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy, version)
     eager = _get_plugin_importable(plugins, collect_backend) if collect_backend else lazy
     # NOTE: Annotating this to please `mypy` prevents `pyright` from inferring ` type[PolarsDataFrame] | type[ArrowDataFrame]`
-    dataframe = import_dataframe(eager)  # type: ignore[var-annotated]
+    dataframe = import_dataframe(eager, version)  # type: ignore[var-annotated]
     return evaluator, dataframe
 
 
 def _backend_to_plugin_name(
-    backend: IntoBackend[Backend] | PluginName | Implementation, /
+    backend: IntoBackendExt, /
 ) -> BackendName | PluginName:  # pragma: no cover
     if isinstance(backend, str):
         return backend

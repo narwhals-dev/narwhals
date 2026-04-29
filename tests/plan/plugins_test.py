@@ -82,19 +82,10 @@ def test_plugin_can_import(plugin: BuiltinAny) -> None:
     assert plugin.can_import()
 
 
-XFAIL_VERSIONED = pytest.mark.xfail(reason="TODO: Versions", raises=NotImplementedError)
-
-
-@pytest.mark.parametrize(
-    "version",
-    [
-        Version.MAIN,
-        pytest.param(Version.V1, marks=XFAIL_VERSIONED),
-        pytest.param(Version.V2, marks=XFAIL_VERSIONED),
-    ],
-)
+@pytest.mark.parametrize("version", Version)
 def test_lazyframe_collect(eager: EagerAllowed, version: Version) -> None:
     """WIP, not a real API!"""
+    pytest.importorskip("polars")
     current = "polars"
     evaluator, dataframe = lazyframe_collect(current, eager, version)
     assert evaluator.implementation.is_polars()
