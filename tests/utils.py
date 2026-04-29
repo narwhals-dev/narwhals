@@ -187,6 +187,7 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
         from pyspark.sql.connect.session import SparkSession
     else:
         from pyspark.sql import SparkSession
+    os.environ.setdefault("PYSPARK_PYTHON", sys.executable)
     builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")

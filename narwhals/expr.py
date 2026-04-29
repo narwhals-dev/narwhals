@@ -532,11 +532,7 @@ class Expr:
             |2  3  6       4.0       7.0|
             └───────────────────────────┘
         """
-        kind = (
-            ExprKind.ORDERABLE_AGGREGATION
-            if returns_scalar
-            else ExprKind.ORDERABLE_FILTRATION
-        )
+        kind = ExprKind.AGGREGATION if returns_scalar else ExprKind.ELEMENTWISE
         return self._append_node(
             ExprNode(
                 kind,
