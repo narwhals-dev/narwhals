@@ -12,43 +12,27 @@ This represents the **external-view** of the backend
 
 from __future__ import annotations
 
-import functools
 import sys
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
 
-from narwhals._plan.compliant import classes as cc
 from narwhals._plan.compliant.classes import ClassesT_co, HasClasses
 from narwhals._plan.compliant.typing import (
-    DataFrameAny,
-    DataFrameT_co as _DF,
-    EagerDataFrameT_co as _EagerDF,
-    ExprT_co as _E,
-    LazyFrameT_co as _LF,
     Native as LF,
     NativeDataFrameT as DF,
     NativeSeriesT as S,
-    PlanEvaluatorT_co as _PE,
-    ScalarNoDefaultT_co as _SC,
-    SeriesT_co as _S,
 )
-from narwhals._plan.exceptions import unsupported_error
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation
 
-# mypy: disable-error-code="no-any-return"
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from importlib.metadata import EntryPoint, EntryPoints
 
-    from typing_extensions import LiteralString, Never, TypeAlias, TypeIs
+    from typing_extensions import LiteralString, TypeAlias, TypeIs
 
     from narwhals._plan._namespace import KnownImpl
     from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._plan.polars import PolarsPlugin
-    from narwhals._plan.typing import BackendTodo, NativeModuleType
-    from narwhals._typing import Arrow, BackendName, Polars
-    from narwhals.typing import Backend, IntoBackend
+    from narwhals._typing import BackendName
 
     MYPY: Final = False
     if MYPY:
@@ -89,8 +73,6 @@ Tip:
 BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
 """Backends defined inside of narwhals."""
 
-_UNKNOWN: Final = Implementation.UNKNOWN
-
 
 # TODO @dangotbanned: Rename `sys_modules_targets`
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
@@ -114,6 +96,7 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
 
         For `native` to *possibly* be a `pl.DataFrame`, that import had to have happened:
         >>> # Narwhals
+        >>> from narwhals._plan._plugins import load_plugin
         >>> plugin = load_plugin("polars")
         >>> plugin.is_imported()
         True
@@ -144,6 +127,7 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
 
         ## Examples
         We use this for operations that convert between backends:
+        >>> from narwhals._plan._plugins import load_plugin
         >>> import polars as pl
         >>> native = pl.Series([1, 2, 3])
         >>> load_plugin("pyarrow").can_import()
@@ -193,8 +177,9 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     implementation: ClassVar[KnownImpl]
 
     @property
-    def plugin_name(self) -> LiteralString:
-        return self.implementation.value
+    def plugin_name(self) -> BackendName:
+        name: BackendName = self.implementation.value
+        return name
 
     def is_imported(self) -> bool:
         return all(sys.modules.get(target) for target in self.sys_modules_targets)
@@ -213,7 +198,7 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
         msg = f"{type(self).__name__!r} ({self.plugin_name!r}) has not defined any native classes"
         raise NotImplementedError(msg)
 
-    def is_native_dataframe(self, obj: Any) -> TypeIs[DF]:  # pragma: no cover
+    def is_native_dataframe(self, obj: Any) -> TypeIs[DF]:
         it = self.native_dataframe_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
@@ -224,191 +209,3 @@ class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
     def is_native_series(self, obj: Any) -> TypeIs[S]:  # pragma: no cover
         it = self.native_series_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
-
-
-# TODO @dangotbanned: (low-priority) Remove 3.10 guard after https://github.com/narwhals-dev/narwhals/issues/3204
-# TODO @dangotbanned: (low-priority) Cover the duplicate name plugin case
-@functools.cache
-def _entry_points() -> EntryPoints:
-    # NOTE: Wrappped with some one-time validation, so everything outside is simpler
-    from importlib.metadata import entry_points
-
-    if sys.version_info < (3, 10):
-        msg = "Need `EntryPoints.{select,names}`, this can wait until 3.10 "
-        raise NotImplementedError(msg)
-    group = "narwhals.plugins-plan"
-    if (eps := entry_points(group=group)) and len(eps) == len(eps.names):
-        return eps
-    if not eps:  # pragma: no cover
-        # If you're developing narwhals, this may have failed due to the `group` being renamed,
-        # see `[project.entry-points.<group>]` in pyproject.toml
-        call = f"{entry_points.__qualname__}(group={group!r})"
-        msg = f"Expected to find built-in backends, but `{call}`\nreturned {eps!r}"
-        raise NotImplementedError(msg)
-    msg = f"Multiple plugins found with the same `name`:\n{eps!r}"  # pragma: no cover
-    raise NotImplementedError(msg)
-
-
-def _load_entry_point(entry_point: EntryPoint, /) -> PluginAny | BuiltinAny:
-    """Use this to add the typing in a consistent way.
-
-    May need to iterate on what the initial type(s) are some more.
-    """
-    plugin: PluginAny | BuiltinAny = entry_point.load()
-    return plugin
-
-
-def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exception:
-    if (impl := Implementation.from_backend(name)) is not _UNKNOWN:
-        msg = f"{impl!r} is not yet supported in `narwhals._plan`, got: {backend!r}"
-        return NotImplementedError(msg)
-    msg = f"Unsupported `backend` value.\nExpected one of {sorted(eps.names)!r}, got: {backend!r}"
-    return TypeError(msg)
-
-
-def _unavailable_error(plugin: PluginAny) -> Exception:  # pragma: no cover
-    missing = [name for name in plugin.sys_modules_targets if find_spec(name) is None]
-    msg = f"Plugin {plugin.plugin_name!r} was found but could not import the following required modules: {missing!r}"
-    return ModuleNotFoundError(msg)
-
-
-def _backend_to_plugin_name(
-    backend: IntoBackend[Backend] | PluginName | Implementation, /
-) -> BackendName | PluginName:  # pragma: no cover
-    if isinstance(backend, str):
-        return backend
-    if backend is _UNKNOWN or (impl := Implementation.from_backend(backend)) is _UNKNOWN:
-        msg = f"{_UNKNOWN!r} is not supported in this context, got: {backend!r}"
-        raise NotImplementedError(msg)
-    return impl.value
-
-
-TemporaryPluginsType: TypeAlias = "dict[str, BuiltinAny | PluginAny]"
-"""Obviously don't want to keep this for long"""
-
-
-# TODO @dangotbanned: Replace ASAP
-def _get_plugin_importable(
-    plugins: TemporaryPluginsType,
-    backend: IntoBackend[Backend] | PluginName | Implementation,
-    /,
-) -> PluginAny | BuiltinAny:
-    # NOTE:  this will be a method of "plugins"
-    name = _backend_to_plugin_name(backend)
-    if (plugin := plugins.get(name)) is None:
-        raise _unsupported_error(backend, name, _entry_points())  # pragma: no cover
-    if not plugin.can_import():
-        raise _unavailable_error(plugin)  # pragma: no cover
-    return plugin
-
-
-def import_evaluator(
-    plugin: Plugin[cc.LazyClasses[_LF, _PE, _E, _SC], Any, Any, Any] | PluginAny,
-) -> type[_PE]:
-    """Seemingly the only thing mypy is fine with*.
-
-    *But it forgets what this means as soon as you leave the function 😭
-    """
-    classes = plugin.__narwhals_classes__
-    if cc.can_lazy(classes):
-        return classes._evaluator
-    raise unsupported_error(plugin.plugin_name, "LazyFrame.collect")  # pragma: no cover
-
-
-def import_dataframe(
-    plugin: Plugin[cc.EagerClasses[_DF | _EagerDF, _S, _E, _SC], Any, Any, Any]
-    | PluginAny,
-) -> type[_DF | _EagerDF]:
-    classes = plugin.__narwhals_classes__
-    if cc.can_eager(classes):
-        return classes._dataframe
-    raise unsupported_error(plugin.plugin_name, "DataFrame")  # pragma: no cover
-
-
-@overload
-def load_plugin(backend: Arrow, /) -> ArrowPlugin: ...
-@overload
-def load_plugin(backend: Polars, /) -> PolarsPlugin: ...
-@overload
-def load_plugin(backend: BackendTodo, /) -> Never: ...
-@overload
-def load_plugin(backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
-@overload
-def load_plugin(backend: PluginName, /) -> PluginAny: ...
-def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | BuiltinAny:
-    """Load the entry point to a backend.
-
-    The returned object can be used to query availability.
-    For built-ins, this is always safe and *does not* import the native package.
-    """
-    name = _backend_to_plugin_name(backend)
-    eps = _entry_points()
-    if found := eps.select(name=name):
-        return _load_entry_point(next(iter(found)))
-    raise _unsupported_error(backend, name, eps)
-
-
-# TODO @dangotbanned: Figure out what self-entry points are needed
-def _load_plugins() -> Iterator[tuple[str, PluginAny | BuiltinAny]]:
-    """Load all entry points.
-
-    ## Notes
-    - what does a `Plugin` manager look like?
-    - if there is state, how can we avoid knowledge of that leaking everywhere?
-        - it's okay for state to exist
-        - but shouldn't be something the caller has to deal with
-            - parsing/error handling stays within it
-            - maybe allow providing an error message on fail
-    - 3 groups of plugins
-        - `is_imported()`
-        - `(not is_imported()) and can_import()`
-            - Allow access to the plugin when explicitly asked (`to_*`, `backend=*`)
-            - During inference, check here when all of `is_imported` is exhausted
-            - Promote to `is_imported` when found
-      - `not can_import()`
-            - Once here, the plugin is unreachable
-            - Stop checking
-    """
-    for ep in _entry_points():
-        yield ep.name, _load_entry_point(ep)
-
-
-# TODO @dangotbanned: Support `v1`, `v2`
-# TODO @dangotbanned: (low-priority) get the optional `Resolver` using this backend
-def lazyframe_collect(
-    current_backend: IntoBackend[Backend] | PluginName | Implementation,
-    collect_backend: IntoBackend[Backend] | PluginName | Implementation | None = None,
-    version: Version = Version.MAIN,
-) -> tuple[type[PlanEvaluatorAny], type[DataFrameAny]]:
-    """Mocking this call as it does some gymnastics I'd like to avoid.
-
-    Important:
-        Pretending that we have zero plugins loaded *for now*, need to start somewhere
-
-    ## Overview of current
-    - [`collect`] and [`sink_parquet`] both are acrobats
-    - `Resolver.from_backend` does a second call to `known_implementation` on `current_implementation` (lazy)
-        - Starting the plan would've validated at least once already
-    - `PolarsEvaluator.collect` does `(backend or "polars")` before ...
-        - `CompliantLazyFrame.collect_compliant` does a second validation on `collect_backend` (backend)
-
-    [`collect`]: https://github.com/narwhals-dev/narwhals/blob/be25d3fdd96a51aad08f513d5e45e41703960c49/narwhals/_plan/lazyframe.py#L312-L320
-    [`sink_parquet`]: https://github.com/narwhals-dev/narwhals/blob/be25d3fdd96a51aad08f513d5e45e41703960c49/narwhals/_plan/lazyframe.py#L322-L326
-    """
-    if current_backend is _UNKNOWN:  # pragma: no cover
-        msg = (
-            "Storing an unknown implementation on `LazyFrame` cannot work with plugins.\n"
-            "`LazyFrame` needs a connection back to the plugin that handles the native object (e.g. `plugin_name`)."
-        )
-        raise TypeError(msg)
-    if version is not Version.MAIN:
-        msg = f"TODO: check for `.{version.name.lower()}` and navigate to it"
-        raise NotImplementedError(msg)
-
-    plugins = dict(_load_plugins())
-    lazy = _get_plugin_importable(plugins, current_backend)
-    evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy)
-    eager = _get_plugin_importable(plugins, collect_backend) if collect_backend else lazy
-    # NOTE: Annotating this to please `mypy` prevents `pyright` from inferring ` type[PolarsDataFrame] | type[ArrowDataFrame]`
-    dataframe = import_dataframe(eager)  # type: ignore[var-annotated]
-    return evaluator, dataframe

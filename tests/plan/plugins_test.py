@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
-from narwhals._plan.compliant import plugins
-from narwhals._plan.compliant.plugins import BuiltinAny, PluginAny, load_plugin
+from narwhals._plan._plugins import lazyframe_collect, load_plugin
 from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, TypeAlias, assert_type
 
     from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.compliant.plugins import BuiltinAny, PluginAny
     from narwhals._plan.polars import PolarsPlugin
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
@@ -96,7 +96,7 @@ XFAIL_VERSIONED = pytest.mark.xfail(reason="TODO: Versions", raises=NotImplement
 def test_lazyframe_collect(eager: EagerAllowed, version: Version) -> None:
     """WIP, not a real API!"""
     current = "polars"
-    evaluator, dataframe = plugins.lazyframe_collect(current, eager, version)
+    evaluator, dataframe = lazyframe_collect(current, eager, version)
     assert evaluator.implementation.is_polars()
     assert dataframe.implementation is Implementation.from_backend(eager)
     assert dataframe.version is evaluator.version is version
