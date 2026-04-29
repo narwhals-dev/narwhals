@@ -220,8 +220,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def len(self) -> Self:
-        def func(df: IbisLazyFrame) -> Sequence[ir.IntegerScalar]:
-            return [df.native.count() for _ in self._evaluate_output_names(df)]
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            if not self._metadata.preserves_length:
+                msg = "`len` is not supported after a length-changing expression"
+                raise NotImplementedError(msg)
+
+            return [df.native.count() for _ in self(df)]
 
         return self.__class__(
             func,
