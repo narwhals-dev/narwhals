@@ -77,6 +77,9 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
             and hash(self) == hash(other)
         )
 
+    def __repr__(self) -> str:
+        return f"Plugin[{self.name}]"
+
     # TODO @dangotbanned: Think about how the narwhals-level will use this for state
     def is_imported(self) -> bool:
         """Return True if all required dependencies *have already been* imported.
@@ -91,6 +94,8 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
         >>> # Narwhals
         >>> from narwhals._plan.plugins import load_plugin
         >>> plugin = load_plugin("polars")
+        >>> plugin
+        Plugin[polars]
         >>> plugin.is_imported()
         True
 
@@ -102,6 +107,8 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
         This check does not require reloading the plugin to update:
         >>> _ = sys.modules.pop("pyarrow", None)
         >>> plugin = load_plugin("pyarrow")
+        >>> plugin
+        Plugin[pyarrow]
         >>> plugin.is_imported()
         False
         >>> import pyarrow

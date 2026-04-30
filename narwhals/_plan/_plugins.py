@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from importlib.metadata import EntryPoint, EntryPoints
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._native import NativeDataFrame
     from narwhals._plan.compliant.classes import CB, C
@@ -55,6 +55,7 @@ RequireMethod: TypeAlias = Literal["is_imported", "can_import"]
 """Raise if calling this method on `Plugin` returns False."""
 
 _UNKNOWN: Final = Implementation.UNKNOWN
+_GROUP: Final = "narwhals.plugins-plan"
 
 _R_co = TypeVar("_R_co", covariant=True)
 
@@ -92,13 +93,12 @@ def _entry_points() -> EntryPoints:
     if sys.version_info < (3, 10):
         msg = "Need `EntryPoints.{select,names}`, this can wait until 3.10 "
         raise NotImplementedError(msg)
-    group = "narwhals.plugins-plan"
-    if (eps := entry_points(group=group)) and len(eps) == len(eps.names):
+    if (eps := entry_points(group=_GROUP)) and len(eps) == len(eps.names):
         return eps
     if not eps:  # pragma: no cover
         # If you're developing narwhals, this may have failed due to the `group` being renamed,
         # see `[project.entry-points.<group>]` in pyproject.toml
-        call = f"{entry_points.__qualname__}(group={group!r})"
+        call = f"{entry_points.__qualname__}(group={_GROUP!r})"
         msg = f"Expected to find built-in backends, but `{call}`\nreturned {eps!r}"
         raise NotImplementedError(msg)
     msg = f"Multiple plugins found with the same `name`:\n{eps!r}"  # pragma: no cover
@@ -272,6 +272,21 @@ class PlugMan:
             self._loaded = {}
             cls.__instance = self
         return cls.__instance
+
+    def __repr__(self) -> str:
+        n_discovered = len(self._discovered)
+        n_loaded = len(self._loaded)
+        indent = " " * 4
+        indent_2 = indent * 2
+        join = f"\n{indent_2}".join
+        s = ""
+        if n_loaded:
+            s_plugins = join(map(repr, self._loaded.values()))
+            s += f"\n{indent}loaded\n{indent_2}{s_plugins}"
+        if n_discovered:
+            s_eps = join(f"EntryPoint[{name}]" for name in self._discovered)
+            s += f"\n{indent}discovered\n{indent_2}{s_eps}"
+        return f"{type(self).__name__}[{n_discovered + n_loaded}]{s}"
 
     def _load(self, name: str, /) -> PluginAny | BuiltinAny:
         plugin: PluginAny | BuiltinAny
