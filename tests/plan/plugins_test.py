@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import importlib
 import sys
 from typing import TYPE_CHECKING, Any, Final, Literal
 
 import pytest
 
-from narwhals._plan._plugins import lazyframe_collect
+from narwhals._plan._plugins import PluginManager, lazyframe_collect
 from narwhals._plan.plugins import load_plugin
 from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
@@ -50,12 +49,6 @@ def plugin(eager: BuiltinName) -> Generator[BuiltinAny, Any, None]:
         yield load_plugin(eager)
 
 
-def trigger_imports(plugin: BuiltinAny) -> None:
-    """Ensures the imported modules land in `sys.modules`."""
-    for target in plugin.requirements:
-        importlib.import_module(target)
-
-
 def test_load_builtin(eager: BuiltinName) -> None:
     plugin = load_plugin(eager)
     assert plugin.name == eager
@@ -73,7 +66,7 @@ def test_load_plugin_invalid() -> None:
 
 def test_plugin_is_imported(plugin: BuiltinAny) -> None:
     assert not plugin.is_imported()
-    trigger_imports(plugin)
+    PluginManager().import_modules(plugin.name)
 
     assert plugin.is_imported()
     assert load_plugin(plugin.name).is_imported()
@@ -83,12 +76,12 @@ def test_plugin_can_import(plugin: BuiltinAny) -> None:
     assert not plugin.is_imported()
     assert plugin.can_import()
 
-    trigger_imports(plugin)
+    PluginManager().import_modules(plugin.name)
     assert plugin.is_imported()
     assert plugin.can_import()
     assert load_plugin(plugin.name).can_import()
 
-    trigger_imports(plugin)
+    PluginManager().import_modules(plugin.name)
     assert plugin.can_import()
 
 
@@ -206,7 +199,7 @@ if TYPE_CHECKING:
         - Assertions are more detailed that usual
         - Need this here while I try to minimize the typing
         """
-        plugins = _plugins.PluginManager()
+        plugins = PluginManager()
         lazy = plugins.get(current)
         assert_type(lazy, PluginAny | BuiltinAny)
         classes_1 = _plugins.import_classes(lazy, version)

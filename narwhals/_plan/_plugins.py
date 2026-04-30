@@ -333,7 +333,7 @@ class PluginManager:
         for plugin in self._iter_plugins():
             yield from plugin.native_dataframe_classes()
 
-    def import_modules(self, backend: IntoBackendExt, /) -> None:  # pragma: no cover
+    def import_modules(self, backend: IntoBackendExt, /) -> None:
         """Import the requirements for `backend`."""
         plugin = self.get(backend, require="can_import")
         if not plugin.is_imported():
