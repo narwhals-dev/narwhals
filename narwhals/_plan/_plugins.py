@@ -51,9 +51,6 @@ MYPY: Final = False
 
 Incomplete: TypeAlias = Any
 
-TemporaryPluginsType: TypeAlias = "dict[str, BuiltinAny | PluginAny]"
-"""Obviously don't want to keep this for long"""
-
 RequireMethod: TypeAlias = Literal["is_imported", "can_import"]
 """Raise if calling this method on `Plugin` returns False."""
 
@@ -106,53 +103,6 @@ def _entry_points() -> EntryPoints:
         raise NotImplementedError(msg)
     msg = f"Multiple plugins found with the same `name`:\n{eps!r}"  # pragma: no cover
     raise NotImplementedError(msg)
-
-
-def _load_entry_point(entry_point: EntryPoint, /) -> PluginAny | BuiltinAny:
-    """Use this to add the typing in a consistent way.
-
-    May need to iterate on what the initial type(s) are some more.
-    """
-    plugin: PluginAny | BuiltinAny = entry_point.load()
-    return plugin
-
-
-# TODO @dangotbanned: Figure out what self-entry points are needed
-def _load_plugins() -> Iterator[tuple[str, PluginAny | BuiltinAny]]:
-    """Load all entry points.
-
-    ## Notes
-    - what does a `Plugin` manager look like?
-    - if there is state, how can we avoid knowledge of that leaking everywhere?
-        - it's okay for state to exist
-        - but shouldn't be something the caller has to deal with
-            - parsing/error handling stays within it
-            - maybe allow providing an error message on fail
-    - 3 groups of plugins
-        - `is_imported()`
-        - `(not is_imported()) and can_import()`
-            - Allow access to the plugin when explicitly asked (`to_*`, `backend=*`)
-            - During inference, check here when all of `is_imported` is exhausted
-            - Promote to `is_imported` when found
-      - `not can_import()`
-            - Once here, the plugin is unreachable
-            - Stop checking
-    """
-    for ep in _entry_points():
-        yield ep.name, _load_entry_point(ep)
-
-
-# TODO @dangotbanned: Replace ASAP
-def _get_plugin_importable(
-    plugins: TemporaryPluginsType, backend: IntoBackendExt, /
-) -> PluginAny | BuiltinAny:
-    # NOTE:  this will be a method of "plugins"
-    name = _backend_to_plugin_name(backend)
-    if (plugin := plugins.get(name)) is None:
-        raise _unsupported_error(backend, name, _entry_points())  # pragma: no cover
-    if not plugin.can_import():
-        raise _unavailable_error(plugin)  # pragma: no cover
-    return plugin
 
 
 def import_evaluator(
@@ -256,9 +206,6 @@ def lazyframe_collect(
 ) -> tuple[type[PlanEvaluatorAny], type[DataFrameAny]]:
     """Mocking this call as it does some gymnastics I'd like to avoid.
 
-    Important:
-        Pretending that we have zero plugins loaded *for now*, need to start somewhere
-
     ## Overview of current
     - [`collect`] and [`sink_parquet`] both are acrobats
     - `Resolver.from_backend` does a second call to `known_implementation` on `current_implementation` (lazy)
@@ -276,10 +223,10 @@ def lazyframe_collect(
         )
         raise TypeError(msg)
 
-    plugins = dict(_load_plugins())
-    lazy = _get_plugin_importable(plugins, current_backend)
+    plugins = PlugMan()
+    lazy = plugins.get(current_backend, "can_import")
     evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy, version)
-    eager = _get_plugin_importable(plugins, collect_backend) if collect_backend else lazy
+    eager = plugins.get(collect_backend, "can_import") if collect_backend else lazy
     # NOTE: Annotating this to please `mypy` prevents `pyright` from inferring ` type[PolarsDataFrame] | type[ArrowDataFrame]`
     dataframe = import_dataframe(eager, version)  # type: ignore[var-annotated]
     return evaluator, dataframe
@@ -292,7 +239,25 @@ LowDetailRepr: TypeAlias = Any
 # TODO @dangotbanned: Probably rename to `PluginManager`
 @final
 class PlugMan:
-    """Singleton plugin manager."""
+    """Singleton plugin manager.
+
+    ## Notes
+    - what does a `Plugin` manager look like?
+    - if there is state, how can we avoid knowledge of that leaking everywhere?
+        - it's okay for state to exist
+        - but shouldn't be something the caller has to deal with
+            - parsing/error handling stays within it
+            - maybe allow providing an error message on fail
+    - 3 groups of plugins
+        - `is_imported()`
+        - `(not is_imported()) and can_import()`
+            - Allow access to the plugin when explicitly asked (`to_*`, `backend=*`)
+            - During inference, check here when all of `is_imported` is exhausted
+            - Promote to `is_imported` when found
+      - `not can_import()`
+            - Once here, the plugin is unreachable
+            - Stop checking
+    """
 
     __slots__ = ("_discovered", "_loaded")
 
@@ -315,7 +280,7 @@ class PlugMan:
         if discovered := self._discovered.pop(name, None):
             self._loaded[name] = plugin = discovered.load()
             return plugin
-        raise _unsupported_error(name, name, _entry_points())
+        raise _unsupported_error(name, name)
 
     def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:  # pragma: no cover
         plugin: PluginAny | BuiltinAny
@@ -393,11 +358,11 @@ def _can_import(plugin: PluginAny, /) -> bool:  # pragma: no cover
     return plugin.can_import()
 
 
-def _unsupported_error(backend: Any, name: str, eps: EntryPoints, /) -> Exception:
+def _unsupported_error(backend: Any, name: str, /) -> Exception:
     if (impl := Implementation.from_backend(name)) is not _UNKNOWN:
         msg = f"{impl!r} is not yet supported in `narwhals._plan`, got: {backend!r}"
         return NotImplementedError(msg)
-    msg = f"Unsupported `backend` value.\nExpected one of {sorted(eps.names)!r}, got: {backend!r}"
+    msg = f"Unsupported `backend` value.\nExpected one of {sorted(_entry_points().names)!r}, got: {backend!r}"
     return TypeError(msg)
 
 
