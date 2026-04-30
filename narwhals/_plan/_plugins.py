@@ -19,6 +19,7 @@ from typing import (
 )
 
 from narwhals._plan.compliant import classes as cc
+from narwhals._plan.compliant.classes import C1, C2
 from narwhals._plan.exceptions import unsupported_error
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
@@ -30,12 +31,8 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame
-    from narwhals._plan.compliant.classes import (
-        ClassesT_co as C,
-        ClassesV1T_co as C1,
-        ClassesV2T_co as C2,
-    )
-    from narwhals._plan.compliant.plugins import Plugin
+    from narwhals._plan.compliant.classes import CB, C
+    from narwhals._plan.compliant.plugins import Builtin, Plugin
     from narwhals._plan.compliant.typing import (
         DataFrameAny,
         DataFrameT_co as DF,
@@ -49,6 +46,8 @@ if TYPE_CHECKING:
     from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
     from narwhals._typing import BackendName
+
+MYPY: Final = False
 
 Incomplete: TypeAlias = Any
 
@@ -69,14 +68,21 @@ class _Plugin(Protocol[_R_co]):
     Doesn't set a bound for `__narwhals_classes__`.
     """
 
+    __slots__ = ()
+
     @property
     def name(self) -> PluginName: ...
     @property
     def __narwhals_classes__(self) -> _R_co: ...
 
 
-_PluginV1: TypeAlias = _Plugin[cc.HasV1["C1"]]
-_PluginV2: TypeAlias = _Plugin[cc.HasV2["C2"]]
+_PluginV1: TypeAlias = _Plugin[cc.HasV1[C1]]
+_PluginV2: TypeAlias = _Plugin[cc.HasV2[C2]]
+_PluginVAll: TypeAlias = _Plugin[cc.HasVAll[C1, C2]]
+
+MAIN: TypeAlias = Literal[Version.MAIN]
+V1: TypeAlias = Literal[Version.V1]
+V2: TypeAlias = Literal[Version.V2]
 
 
 # TODO @dangotbanned: (low-priority) Remove 3.10 guard after https://github.com/narwhals-dev/narwhals/issues/3204
@@ -171,18 +177,61 @@ def import_dataframe(
     raise unsupported_error(plugin.name, "DataFrame")  # pragma: no cover
 
 
-@overload
-def import_classes(plugin: _Plugin[C], version: Literal[Version.MAIN]) -> C: ...
-@overload
-def import_classes(plugin: _PluginV1[C1], version: Literal[Version.V1]) -> C1: ...
-@overload
-def import_classes(plugin: _PluginV2[C2], version: Literal[Version.V2]) -> C2: ...
-@overload
+if MYPY:
+    # `Incomplete` avoids `mypy` from thinking overloads 1, 3, 5, 7 are bad
+    _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | _Plugin[Incomplete]"
+else:
+    _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | Builtin[CB, Any, Any, Any] | Plugin[C, Any, Any, Any]"
+
+
+# MAIN
+@overload  # 1
+def import_classes(plugin: _Plugin[CB], version: MAIN, /) -> CB: ...
+@overload  # 2
+def import_classes(plugin: _Plugin[C], version: MAIN, /) -> C: ...
+
+
+# V1
+@overload  # 3
+def import_classes(plugin: _PluginVAll[C1, C2], version: V1, /) -> C1: ...
+@overload  # 4
+def import_classes(plugin: _PluginV1[C1], version: V1, /) -> C1: ...
+
+
+# V2
+@overload  # 5
+def import_classes(plugin: _PluginVAll[C1, C2], version: V2, /) -> C2: ...
+@overload  # 6
+def import_classes(plugin: _PluginV2[C2], version: V2, /) -> C2: ...
+
+
+# OPAQUE
+# NOTE: `_Plugin[C] | _Plugin[CB]` avoids `PluginAny` from reporting as a builtin
+# when we have `(PluginAny | BuiltinAny, Version)`
+@overload  # 7
 def import_classes(
-    plugin: _Plugin[C] | _PluginV1[C1] | _PluginV2[C2], version: Version
-) -> C | C1 | C2: ...
+    plugin: _Plugin[C]
+    | _Plugin[CB]
+    | _Plugin[cc.EagerImplC]
+    | _PluginV1[C1]
+    | _PluginV2[C2]
+    | _PluginVAll[C1, C2]
+    | _PluginVAll[cc.CB1, cc.CB2],
+    version: Version,
+    /,
+) -> C | CB | C1 | C2 | cc.CB1 | cc.CB2 | cc.EagerImplC: ...
+
+
+if MYPY:
+    # avoids `mypy` deciding that every type parameter is `Never`
+    @overload  # 8
+    def import_classes(
+        plugin: _Plugin[Incomplete], version: Version, /
+    ) -> Incomplete: ...
+
+
 def import_classes(
-    plugin: _Plugin[C] | _PluginV1[C1] | _PluginV2[C2], version: Version
+    plugin: _ImportClasses[C, CB, C1, C2], version: Version, /
 ) -> Incomplete:
     """Import the accessor to the compliant classes compatible with `version`."""
     classes = plugin.__narwhals_classes__
@@ -289,19 +338,13 @@ class PlugMan:
             return plugin
         raise _unavailable_error(plugin, require)  # pragma: no cover
 
-    def get_eager(
-        self, backend: IntoBackendExt
-    ) -> Plugin[cc.EagerClassesAny, Any, Any, Any]:
+    def get_eager(self, backend: IntoBackendExt) -> Plugin[cc.EagerAny, Any, Any, Any]:
         raise NotImplementedError
 
-    def get_lazy(
-        self, backend: IntoBackendExt
-    ) -> Plugin[cc.LazyClassesAny, Any, Any, Any]:
+    def get_lazy(self, backend: IntoBackendExt) -> Plugin[cc.LazyAny, Any, Any, Any]:
         raise NotImplementedError
 
-    def get_hybrid(
-        self, backend: IntoBackendExt
-    ) -> Plugin[cc.HybridClassesAny, Any, Any, Any]:
+    def get_hybrid(self, backend: IntoBackendExt) -> Plugin[cc.HybridAny, Any, Any, Any]:
         raise NotImplementedError
 
     # TODO @dangotbanned: Plan this and the other singledispatch bits

@@ -91,7 +91,9 @@ Defaults to the one used for `CompliantExpr`.
 ScalarNoDefaultT_co = TypeVar(
     "ScalarNoDefaultT_co", bound="ExprAny | ScalarAny", covariant=True
 )
-"""Trying to avoid [`mypy` PEP 696 bugs].
+"""Covariant TypeVar for `CompliantScalar`.
+
+Does not use a default due to [`mypy` PEP 696 bugs].
 
 [`mypy` PEP 696 bugs]: https://github.com/python/mypy/issues?q=sort%3Aupdated-desc%20is%3Aissue%20is%3Aopen%20label%3Atopic-pep-696
 """
@@ -115,6 +117,9 @@ EagerScalarT_co = TypeVar(
     bound="EagerExprAny | EagerScalarAny",
     covariant=True,
     default=EagerExprT_co,
+)
+EagerScalarNoDefaultT_co = TypeVar(
+    "EagerScalarNoDefaultT_co", bound="EagerExprAny | EagerScalarAny", covariant=True
 )
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 EagerDataFrameT_co = TypeVar(

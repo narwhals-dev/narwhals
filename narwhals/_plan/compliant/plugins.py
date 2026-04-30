@@ -16,7 +16,7 @@ import sys
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
 
-from narwhals._plan.compliant.classes import ClassesT_co, HasClasses
+from narwhals._plan.compliant.classes import CB, C, HasClasses
 from narwhals._plan.compliant.typing import (
     Native as LF,
     NativeDataFrameT as DF,
@@ -50,10 +50,11 @@ Unsupported: TypeAlias = Any
 """Marker to use for types that are not planned to be implemented."""
 
 
-class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
+# TODO @dangotbanned: Should this use something wider than `ClassesAny`?
+class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
     """An entrypoint for a backend that implements compliant-level operations.
 
-    `[ClassesT_co, DF, LF, S]`.
+    `[C, DF, LF, S]`.
     """
 
     __slots__ = ()
@@ -149,15 +150,15 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
 
 
 # TODO @dangotbanned: (low-priority) Preserve the exact `implementation` for each backend (bad overloads)
-class Builtin(Plugin[ClassesT_co, DF, LF, S], Protocol[ClassesT_co, DF, LF, S]):
+class Builtin(Plugin[CB, DF, LF, S], Protocol[CB, DF, LF, S]):
     """Backends defined inside of narwhals are plugins too.
 
-    `[ClassesT_co, DF, LF, S]`.
+    `[CB, DF, LF, S]`.
 
     ## Notes
     - Might want to provide *parts* of this in a sub-protocol for `Plugin`
-        - So it can be used for extending to get things moving quickly
-        - And `is_imported`, `can_import` are probably the most sensible defaults
+    - So it can be used for extending to get things moving quickly
+    - And `is_imported`, `can_import` are probably the most sensible defaults
     """
 
     __slots__ = ()

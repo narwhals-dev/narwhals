@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib
 import sys
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import pytest
 
@@ -18,15 +18,24 @@ if TYPE_CHECKING:
 
     from typing_extensions import LiteralString, TypeAlias, assert_type
 
+    from narwhals._plan import _plugins
     from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.compliant.typing import DataFrameAny
     from narwhals._plan.polars import PolarsPlugin
-    from narwhals._plan.typing import BuiltinAny, PluginAny
+    from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 
 SupportedBackend: TypeAlias = Literal[Arrow, Polars]
 BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
 BUILTIN_NAMES = ("polars", "pyarrow")
+
+
+MYPY: Final = False
+"""Maybe one day mypy will understand better.
+
+Currently just aiming for not getting `Never` everywhere.
+"""
 
 
 @pytest.fixture
@@ -103,6 +112,18 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
 
+    from narwhals._plan import arrow as pa_main, polars as pl_main
+    from narwhals._plan.arrow import v1 as pa_v1, v2 as pa_v2
+    from narwhals._plan.arrow.classes import ArrowClasses, ArrowClassesV1, ArrowClassesV2
+    from narwhals._plan.compliant import classes as cc
+    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
+    from narwhals._plan.polars import v1 as pl_v1, v2 as pl_v2
+    from narwhals._plan.polars.classes import (
+        PolarsClasses,
+        PolarsClassesV1,
+        PolarsClassesV2,
+    )
+
     def typing_load_plugin(
         never_builtin: LiteralString,
         always_builtin_1: ModuleType,
@@ -175,3 +196,155 @@ if TYPE_CHECKING:
         pyarrow_1 = load_plugin("polars").implementation
         pyarrow_2 = load_plugin(pyarrow_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
         assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
+
+    def typing_can_eager_lazy_integration(
+        current: IntoBackendExt, collect: IntoBackendExt | None, version: Version
+    ) -> tuple[type[PlanEvaluatorAny], type[DataFrameAny]]:
+        """By far the most insane idea yet.
+
+        - This took an incredibly long time to get (mostly) working
+        - Assertions are more detailed that usual
+        - Need this here while I try to minimize the typing
+        """
+        plugins = _plugins.PlugMan()
+        lazy = plugins.get(current)
+        assert_type(lazy, PluginAny | BuiltinAny)
+        classes_1 = _plugins.import_classes(lazy, version)
+
+        if MYPY:
+            assert_type(classes_1, Any)
+        else:
+            assert_type(
+                classes_1,
+                PolarsClasses
+                | ArrowClasses
+                | PolarsClassesV1
+                | PolarsClassesV2
+                | ArrowClassesV1
+                | ArrowClassesV2
+                | Any,
+            )
+
+        if cc.can_lazy(classes_1):
+            evaluator = classes_1._evaluator
+            if MYPY:
+                assert_type(evaluator, type[Any])
+            else:
+                assert_type(
+                    evaluator,
+                    type[
+                        pl_main.PlanEvaluator | pl_v1.PlanEvaluator | pl_v2.PlanEvaluator
+                    ],
+                )
+        else:
+            raise NotImplementedError
+
+        eager = plugins.get(collect) if collect else lazy
+        assert_type(eager, PluginAny | BuiltinAny)
+
+        classes_2 = _plugins.import_classes(eager, version)
+        if MYPY:
+            assert_type(classes_2, Any)
+        else:
+            assert_type(
+                classes_2,
+                PolarsClasses
+                | ArrowClasses
+                | PolarsClassesV1
+                | PolarsClassesV2
+                | ArrowClassesV1
+                | ArrowClassesV2
+                | Any,
+            )
+
+        if cc.can_eager(classes_2):
+            dataframe = classes_2._dataframe
+            if MYPY:
+                assert_type(dataframe, type[Any])
+            else:
+                assert_type(
+                    dataframe,
+                    type[
+                        pa_main.DataFrame
+                        | pa_v1.DataFrame
+                        | pa_v2.DataFrame
+                        | pl_main.DataFrame
+                        | pl_v1.DataFrame
+                        | pl_v2.DataFrame
+                    ],
+                )
+
+        else:
+            raise NotImplementedError
+        return evaluator, dataframe
+
+    def typing_import_classes(
+        builtin: BuiltinAny,
+        unknown: PluginAny,
+        builtin_unknown: BuiltinAny | PluginAny,
+        pyarrow_unknown: ArrowPlugin | PluginAny,
+        polars_unknown: PolarsPlugin | PluginAny,
+        version: Version,
+        main: Literal[Version.MAIN],
+        v1: Literal[Version.V1],
+        v2: Literal[Version.V2],
+    ) -> None:
+        # NOTE: Has nothing to match on
+        unknown_any_version = _plugins.import_classes(unknown, version)  # type: ignore[var-annotated]
+        unknown_main = _plugins.import_classes(unknown, main)
+        unknown_v1 = _plugins.import_classes(unknown, v1)
+        unknown_v2 = _plugins.import_classes(unknown, v2)
+        assert_type(unknown_any_version, Any)
+        assert_type(unknown_main, Any)
+        assert_type(unknown_v1, Any)
+        assert_type(unknown_v2, Any)
+
+        # NOTE: We know all classes will be builtin, just need to narrow on version
+        builtin_any_version = _plugins.import_classes(builtin, version)
+        builtin_main = _plugins.import_classes(builtin, main)
+        builtin_v1 = _plugins.import_classes(builtin, v1)
+        builtin_v2 = _plugins.import_classes(builtin, v2)
+        assert_type(
+            builtin_any_version,
+            PolarsClasses
+            | ArrowClasses
+            | PolarsClassesV1
+            | PolarsClassesV2
+            | ArrowClassesV1
+            | ArrowClassesV2,
+        )
+        assert_type(builtin_main, PolarsClasses | ArrowClasses)
+        assert_type(builtin_v1, PolarsClassesV1 | ArrowClassesV1)
+        assert_type(builtin_v2, PolarsClassesV2 | ArrowClassesV2)
+
+        # NOTE: Mixing an unknown with all or a subset of builtins should simply add `Any`
+        builtin_unknown_any_version = _plugins.import_classes(builtin_unknown, version)
+        pyarrow_unknown_any_version = _plugins.import_classes(pyarrow_unknown, version)
+        polars_unknown_any_version = _plugins.import_classes(polars_unknown, version)
+        # NOTE: This first one is the most important, as it reflects `(PluginAny | BuiltinAny, Version)`
+        assert_type(
+            builtin_unknown_any_version,
+            PolarsClasses
+            | ArrowClasses
+            | PolarsClassesV1
+            | PolarsClassesV2
+            | ArrowClassesV1
+            | ArrowClassesV2
+            | Any,
+        )
+        assert_type(
+            pyarrow_unknown_any_version,
+            ArrowClasses | ArrowClassesV1 | ArrowClassesV2 | Any,
+        )
+        assert_type(
+            polars_unknown_any_version,
+            PolarsClasses | PolarsClassesV1 | PolarsClassesV2 | Any,
+        )
+
+        # TODO @dangotbanned: Preserve the `Any` for unknown
+        builtin_unknown_main = _plugins.import_classes(builtin_unknown, main)
+        builtin_unknown_v1 = _plugins.import_classes(builtin_unknown, v1)
+        builtin_unknown_v2 = _plugins.import_classes(builtin_unknown, v2)
+        assert_type(builtin_unknown_main, PolarsClasses | ArrowClasses | Any)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(builtin_unknown_v1, PolarsClassesV1 | ArrowClassesV1 | Any)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(builtin_unknown_v2, PolarsClassesV2 | ArrowClassesV2 | Any)  # pyright: ignore[reportAssertTypeFailure]
