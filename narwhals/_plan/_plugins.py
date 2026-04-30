@@ -25,7 +25,7 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterator
     from importlib.metadata import EntryPoint, EntryPoints
 
     from typing_extensions import TypeAlias, TypeIs
@@ -232,10 +232,6 @@ def lazyframe_collect(
     return evaluator, dataframe
 
 
-LowDetailRepr: TypeAlias = Any
-"""E.g. `Plugin` or `Plugin.name`."""
-
-
 @final
 class PluginManager:
     """Singleton plugin manager.
@@ -340,15 +336,23 @@ class PluginManager:
             for module in plugin.requirements:
                 import_module(module)
 
-    def importable(self) -> Iterable[LowDetailRepr]:
-        raise NotImplementedError
+    def importable(self) -> Iterator[BackendName | PluginName]:
+        """Yield the names of all importable plugins."""
+        for plugin in self._iter_plugins():
+            if plugin.can_import():
+                yield plugin.name
+            else:  # pragma: no cover
+                continue
 
-    def imported(self) -> Iterable[LowDetailRepr]:
-        raise NotImplementedError
+    def imported(self) -> Iterator[BackendName | PluginName]:
+        """Yield the names of all imported plugins."""
+        for plugin in self._iter_plugins():
+            if plugin.is_imported():
+                yield plugin.name
 
-    def known(self) -> Iterable[LowDetailRepr]:  # pragma: no cover
-        for ep in _entry_points():
-            yield ep.name
+    def known(self) -> Iterator[BackendName | PluginName | str]:
+        """Yield the names of all known plugins."""
+        yield from (ep.name for ep in _entry_points())
 
     def show_versions(self) -> None:
         raise NotImplementedError

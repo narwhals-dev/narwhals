@@ -85,6 +85,25 @@ def test_plugin_can_import(plugin: BuiltinAny) -> None:
     assert plugin.can_import()
 
 
+def test_plugin_manager_known() -> None:
+    assert sorted(PluginManager().known()) == ["polars", "pyarrow"]
+
+
+def test_plugin_manager_importable() -> None:
+    plug_man = PluginManager()
+    for name in plug_man.importable():
+        plug_man.import_modules(name)
+        assert plug_man.get(name).is_imported()
+
+
+def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
+    plug_man = PluginManager()
+    name = plugin.name
+    assert name not in set(plug_man.imported())
+    plug_man.import_modules(name)
+    assert name in set(plug_man.imported())
+
+
 # TODO @dangotbanned: Replace with something less experimental (when available)
 @pytest.mark.parametrize("version", Version)
 def test_lazyframe_collect(eager: EagerAllowed, version: Version) -> None:
