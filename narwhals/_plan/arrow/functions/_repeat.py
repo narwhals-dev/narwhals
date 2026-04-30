@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 
-__all__ = ["nulls_like", "repeat", "repeat_like", "repeat_unchecked", "zeros"]
+__all__ = ("nulls_like", "repeat", "repeat_like", "repeat_unchecked", "zeros")
 
 
 def nulls_like(n: int, /, native: ArrowAny) -> ArrayAny:

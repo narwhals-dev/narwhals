@@ -42,7 +42,7 @@ from narwhals._plan.selectors import Selector
 from narwhals._plan.series import Series
 from narwhals._plan.when_then import when
 
-__all__ = [
+__all__ = (
     "DataFrame",
     "Expr",
     "LazyFrame",
@@ -80,4 +80,4 @@ __all__ = [
     "sum",
     "sum_horizontal",
     "when",
-]
+)

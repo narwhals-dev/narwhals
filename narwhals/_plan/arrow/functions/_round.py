@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         UnaryNumeric,
     )
 
-__all__ = ["ceil", "clip", "clip_lower", "clip_upper", "floor", "round"]
+__all__ = ("ceil", "clip", "clip_lower", "clip_upper", "floor", "round")
 
 ceil = t.cast("UnaryNumeric", pc.ceil)
 """Rounds up to the nearest integer value."""

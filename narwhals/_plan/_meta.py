@@ -53,7 +53,7 @@ else:
         return decorator
 
 
-__all__ = ["ExprIRMeta", "ImmutableMeta", "SlottedMeta"]
+__all__ = ("ExprIRMeta", "ImmutableMeta", "SlottedMeta")
 
 Ns: TypeAlias = dict[str, Any]
 """The class `namespace`.

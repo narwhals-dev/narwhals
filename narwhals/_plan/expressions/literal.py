@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, NonNestedDType, PythonLiteral
 
-__all__ = ["Lit", "LitSeries", "lit", "lit_series"]
+__all__ = ("Lit", "LitSeries", "lit", "lit_series")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype

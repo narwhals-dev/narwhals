@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals.typing import IntoDType, IntoSchema
 
-__all__ = ["FromDict", "FromIterable", "can_from_dict", "can_from_iterable"]
+__all__ = ("FromDict", "FromIterable", "can_from_dict", "can_from_iterable")
 
 
 class FromDict(Protocol[NativeDataFrameT_co, NativeSeriesT_co]):

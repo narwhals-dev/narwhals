@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
 
 
-__all__ = [
+__all__ = (
     "array",
     "chunked_array",
     "concat_horizontal",
@@ -41,7 +41,7 @@ __all__ = [
     "concat_vertical",
     "lit",
     "to_table",
-]
+)
 
 Incomplete: TypeAlias = Any
 

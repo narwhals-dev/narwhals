@@ -39,7 +39,7 @@ from narwhals._plan.compliant.namespace import CompliantNamespace
 from narwhals._plan.compliant.scalar import CompliantScalar
 from narwhals._plan.compliant.series import CompliantSeries
 
-__all__ = [
+__all__ = (
     "CompliantDataFrame",
     "CompliantExpr",
     "CompliantGroupBy",
@@ -59,4 +59,4 @@ __all__ = [
     "ranges",
     "scalar",
     "series",
-]
+)

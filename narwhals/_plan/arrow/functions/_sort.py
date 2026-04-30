@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortMultipleOptions, SortOptions
 
 
-__all__ = ["random_indices", "reverse", "sort_indices", "unsort_indices"]
+__all__ = ("random_indices", "reverse", "sort_indices", "unsort_indices")
 
 
 @overload

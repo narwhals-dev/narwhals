@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import Arrow, ChunkedArrayAny, ScalarT
     from narwhals._utils import _StoresNative
 
-__all__ = ["is_arrow", "is_expression", "is_series"]
+__all__ = ("is_arrow", "is_expression", "is_series")
 
 
 def is_series(obj: Any) -> TypeIs[_StoresNative[ChunkedArrayAny]]:

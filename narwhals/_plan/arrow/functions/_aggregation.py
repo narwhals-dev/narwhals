@@ -27,7 +27,7 @@ if TYPE_CHECKING:
         ScalarAny,
     )
 
-__all__ = [
+__all__ = (
     "count",
     "first",
     "implode",
@@ -46,7 +46,7 @@ __all__ = [
     "std",
     "sum",
     "var",
-]
+)
 
 
 min = pc.min

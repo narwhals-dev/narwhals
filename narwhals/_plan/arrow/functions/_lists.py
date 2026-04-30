@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-__all__ = [
+__all__ = (
     "ExplodeBuilder",
     "contains",
     "get",
@@ -77,7 +77,7 @@ __all__ = [
     "sort",
     "sort_scalar",
     "unique",
-]
+)
 
 
 class ExplodeBuilder:

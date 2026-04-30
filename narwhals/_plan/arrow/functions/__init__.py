@@ -145,7 +145,7 @@ from narwhals._plan.arrow.functions._vector import (
     shift,
 )
 
-__all__ = [
+__all__ = (
     "BOOL",
     "DATE",
     "F64",
@@ -262,4 +262,4 @@ __all__ = [
     "when_then",
     "xor",
     "zeros",
-]
+)

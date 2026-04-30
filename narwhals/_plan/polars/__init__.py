@@ -24,7 +24,7 @@ if _t.TYPE_CHECKING:
 
 PlanResolver = None
 
-__all__ = [
+__all__ = (
     "DataFrame",
     "Expr",
     "LazyFrame",
@@ -37,7 +37,7 @@ __all__ = [
     "plugin",
     "v1",
     "v2",
-]
+)
 
 
 @_t.final

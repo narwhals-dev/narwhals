@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pyarrow.compute as pc
 
-__all__ = ["coalesce", "max_horizontal", "min_horizontal"]
+__all__ = ("coalesce", "max_horizontal", "min_horizontal")
 
 # TODO @dangotbanned: Wrap horizontal functions with correct typing
 # Should only return scalar if all elements are as well

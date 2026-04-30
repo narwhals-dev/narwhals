@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     )
 
 
-__all__ = [
+__all__ = (
     "concat_str",
     "contains",
     "ends_with",
@@ -72,7 +72,7 @@ __all__ = [
     "to_titlecase",
     "to_uppercase",
     "zfill",
-]
+)
 
 starts_with = t.cast("_StringFunction1", pc.starts_with)
 """Check if string values start with a substring."""

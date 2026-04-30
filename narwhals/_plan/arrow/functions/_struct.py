@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.typing import NonNestedLiteral
 
-__all__ = ["field", "field_names", "fields", "into_struct", "schema"]
+__all__ = ("field", "field_names", "fields", "into_struct", "schema")
 
 
 @overload

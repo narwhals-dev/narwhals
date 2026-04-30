@@ -7,7 +7,7 @@ from narwhals._plan.functions.col import col
 if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
 
-__all__ = ["max", "mean", "median", "min", "sum"]
+__all__ = ("max", "mean", "median", "min", "sum")
 
 
 def max(*columns: str) -> Expr:

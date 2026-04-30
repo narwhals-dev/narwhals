@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals.typing import Backend, ConcatMethod, FileSource, IntoBackend, PivotAgg
 
-__all__ = [
+__all__ = (
     "Collect",
     "Explode",
     "Filter",
@@ -88,7 +88,7 @@ __all__ = [
     "from_df",
     "scan_csv",
     "scan_parquet",
-]
+)
 
 Incomplete: TypeAlias = Any
 _Fwd: TypeAlias = "LogicalPlan"

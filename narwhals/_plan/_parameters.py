@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr as FExpr
     from narwhals._plan.typing import Seq
 
-__all__ = ["SCALAR", "Binary", "Parameters", "Ternary", "Unary", "Variadic"]
+__all__ = ("SCALAR", "Binary", "Parameters", "Ternary", "Unary", "Variadic")
 
 Arity: TypeAlias = Literal[1, 2, 3, "*"]
 """The number of expression arguments taken by a function.

@@ -20,7 +20,7 @@ if TYPE_CHECKING:
         UnaryNumeric,
     )
 
-__all__ = [
+__all__ = (
     "abs",
     "add",
     "exp",
@@ -32,7 +32,7 @@ __all__ = [
     "sqrt",
     "sub",
     "truediv",
-]
+)
 
 add = t.cast("BinaryNumericTemporal", pc.add)
 """Equivalent to `lhs + rhs`."""

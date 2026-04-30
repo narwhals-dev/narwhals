@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
     from narwhals.typing import TimeUnit
 
-__all__ = [
+__all__ = (
     "Selector",
     "all",
     "array",
@@ -47,7 +47,7 @@ __all__ = [
     "string",
     "struct",
     "temporal",
-]
+)
 
 _dtypes = Version.MAIN.dtypes
 _dtypes_v1 = Version.V1.dtypes

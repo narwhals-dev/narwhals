@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
 
 
-__all__ = ["date_range", "int_range", "linear_space"]
+__all__ = ("date_range", "int_range", "linear_space")
 
 Incomplete: TypeAlias = Any
 

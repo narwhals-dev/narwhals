@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame as LazyFrame
     from narwhals.schema import Schema
 
-__all__ = [
+__all__ = (
     "EagerInput",
     "EagerOutput",
     "LazyInput",
@@ -41,7 +41,7 @@ __all__ = [
     "can_sink_parquet",
     "can_write_csv",
     "can_write_parquet",
-]
+)
 
 
 # fmt: off

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-__all__ = [
+__all__ = (
     "Alias",
     "BinaryExpr",
     "Cast",
@@ -35,7 +35,7 @@ __all__ = [
     "TernaryExpr",
     "col",
     "ternary_expr",
-]
+)
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype

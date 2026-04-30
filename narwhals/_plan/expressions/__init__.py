@@ -52,7 +52,7 @@ from narwhals._plan.expressions.selectors import (
 )
 from narwhals._plan.expressions.window import over, over_ordered
 
-__all__ = [
+__all__ = (
     "AggExpr",
     "Alias",
     "AnonymousExpr",
@@ -100,4 +100,4 @@ __all__ = [
     "struct",
     "temporal",
     "ternary_expr",
-]
+)

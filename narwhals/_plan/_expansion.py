@@ -73,7 +73,7 @@ if TYPE_CHECKING:
     from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import Ignored, OneOrIterable, OutputNames, Seq
 
-__all__ = ["Expander", "expand_selectors", "parse_expand_selectors", "prepare_projection"]
+__all__ = ("Expander", "expand_selectors", "parse_expand_selectors", "prepare_projection")
 
 
 def prepare_projection(

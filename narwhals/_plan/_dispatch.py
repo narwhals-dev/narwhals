@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Accessor, ExprIRT, FunctionT
 
 
-__all__ = ["Dispatcher", "DispatcherOptions", "get_dispatch_name"]
+__all__ = ("Dispatcher", "DispatcherOptions", "get_dispatch_name")
 
 Incomplete: TypeAlias = Any
 

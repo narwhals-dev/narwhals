@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema as NwSchema
 
 
-__all__ = ["into_version"]
+__all__ = ("into_version",)
 
 
 def into_version(version: _NwVersion | _HasVersion | _HasVersionClass, /) -> _Version:

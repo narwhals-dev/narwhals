@@ -47,7 +47,7 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy, NonNestedLiteral
 
 
-__all__ = [
+__all__ = (
     "drop_nulls",
     "fill_nan",
     "fill_null",
@@ -57,7 +57,7 @@ __all__ = [
     "replace_strict_default",
     "replace_with_mask",
     "when_then",
-]
+)
 
 drop_nulls = t.cast("Callable[[ChunkedArray], ChunkedArray]", pc.drop_null)
 

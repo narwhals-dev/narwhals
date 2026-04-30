@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     Incomplete: TypeAlias = Any
 
 
-__all__ = ["encode", "get_categories"]
+__all__ = ("encode", "get_categories")
 
 
 def get_categories(native: ArrowAny, /) -> ChunkedArrayAny:

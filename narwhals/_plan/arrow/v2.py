@@ -87,7 +87,7 @@ Scalar = ArrowScalarV2
 Series = ArrowSeriesV2
 
 
-__all__ = [
+__all__ = (
     "DataFrame",
     "Expr",
     "LazyFrame",
@@ -96,4 +96,4 @@ __all__ = [
     "PlanResolver",
     "Scalar",
     "Series",
-]
+)

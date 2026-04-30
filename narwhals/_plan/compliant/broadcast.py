@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant import CompliantSeries as Series
 
-__all__ = ["BroadcastFrom", "BroadcastSeries"]
+__all__ = ("BroadcastFrom", "BroadcastSeries")
 
 
 class BroadcastSeries(Protocol[NativeSeriesT]):

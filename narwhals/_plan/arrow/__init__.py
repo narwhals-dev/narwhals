@@ -23,7 +23,7 @@ if _t.TYPE_CHECKING:
 PlanResolver = None
 PlanEvaluator = None
 
-__all__ = [
+__all__ = (
     "ArrowPlugin",
     "DataFrame",
     "Expr",
@@ -36,7 +36,7 @@ __all__ = [
     "plugin",
     "v1",
     "v2",
-]
+)
 
 
 @_t.final

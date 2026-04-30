@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     _ImportKnown: TypeAlias = Callable[[], type[T]]
 
 
-__all__ = ["from_native_dataframe", "from_native_lazyframe"]
+__all__ = ("from_native_dataframe", "from_native_lazyframe")
 
 
 @functools.singledispatch

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayT
 
 
-__all__ = ["cum_count", "cum_max", "cum_min", "cum_prod", "cum_sum", "cumulative"]
+__all__ = ("cum_count", "cum_max", "cum_min", "cum_prod", "cum_sum", "cumulative")
 
 
 def cum_sum(native: ChunkedOrArrayT) -> ChunkedOrArrayT:

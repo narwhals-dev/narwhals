@@ -49,7 +49,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Backend, IntoBackend
 
 
-__all__ = ["Resolver"]
+__all__ = ("Resolver",)
 
 Incomplete: TypeAlias = Any
 

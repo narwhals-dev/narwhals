@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expr import Expr
     from narwhals._plan.typing import IntoExpr, OneOrIterable
 
-__all__ = [
+__all__ = (
     "all_horizontal",
     "any_horizontal",
     "coalesce",
@@ -21,7 +21,7 @@ __all__ = [
     "mean_horizontal",
     "min_horizontal",
     "sum_horizontal",
-]
+)
 
 _string: Final = Version.MAIN.dtypes.String()
 

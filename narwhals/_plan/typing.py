@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals._typing import LazyOnly, PandasLike
     from narwhals.typing import NonNestedDType, NonNestedLiteral, PythonLiteral
 
-__all__ = [
+__all__ = (
     "AggExprT_co",
     "ColumnNameOrSelector",
     "DataFrameT",
@@ -56,7 +56,7 @@ __all__ = [
     "SelectorT",
     "Seq",
     "Udf",
-]
+)
 
 
 FunctionT = TypeVar("FunctionT", bound="Function", default="Function")

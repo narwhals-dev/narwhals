@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
 
 
-__all__ = ["call"]
+__all__ = ("call",)
 
 Incomplete: TypeAlias = t.Any
 

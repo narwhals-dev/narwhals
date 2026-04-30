@@ -23,7 +23,7 @@ from __future__ import annotations
 import enum
 from typing import Any, Final
 
-__all__ = ["FunctionFlags"]
+__all__ = ("FunctionFlags",)
 
 _V_AGGREGATION: Final = 1 << 0
 _V_LENGTH_PRESERVING: Final = 1 << 2

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
 
-__all__ = [
+__all__ = (
     "DateRange",
     "DateRangeEager",
     "EagerRangeGenerator",
@@ -32,7 +32,7 @@ __all__ = [
     "can_date_range_eager",
     "can_int_range_eager",
     "can_linear_space_eager",
-]
+)
 
 Int64 = Version.MAIN.dtypes.Int64()
 

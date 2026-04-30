@@ -43,7 +43,7 @@ if TYPE_CHECKING:
         from typing_extensions import LiteralString as LiteralString_
 
 
-__all__ = ["Builtin", "Implementation", "Plugin", "PluginName", "Unsupported"]
+__all__ = ("Builtin", "Implementation", "Plugin", "PluginName", "Unsupported")
 
 PluginName: TypeAlias = "LiteralString"
 """Name of a backend's [entry point].

@@ -53,7 +53,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
 
-__all__ = ["Function", "HorizontalFunction"]
+__all__ = ("Function", "HorizontalFunction")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 namespaced = DispatcherOptions.namespaced

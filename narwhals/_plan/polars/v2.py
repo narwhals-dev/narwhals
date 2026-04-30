@@ -88,7 +88,7 @@ Scalar = Expr
 Series = PolarsSeriesV2
 
 
-__all__ = [
+__all__ = (
     "DataFrame",
     "Expr",
     "LazyFrame",
@@ -97,4 +97,4 @@ __all__ = [
     "PlanResolver",
     "Scalar",
     "Series",
-]
+)

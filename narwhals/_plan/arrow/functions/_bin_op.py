@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         ChunkedOrScalarAny,
     )
 
-__all__ = ["and_", "binary", "eq", "gt", "gt_eq", "lt", "lt_eq", "not_eq", "or_", "xor"]
+__all__ = ("and_", "binary", "eq", "gt", "gt_eq", "lt", "lt_eq", "not_eq", "or_", "xor")
 
 and_ = t.cast("BinaryLogical", pc.and_kleene)
 """Equivalent to `lhs & rhs`."""

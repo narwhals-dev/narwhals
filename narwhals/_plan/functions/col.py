@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expr import Expr
 
-__all__ = ["col"]
+__all__ = ("col",)
 
 
 def col(name: str | Iterable[str], *more_names: str) -> Expr:

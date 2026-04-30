@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval, NonNestedLiteral, NumericLiteral
 
 
-__all__ = [
+__all__ = (
     "all",
     "any",
     "eq_missing",
@@ -48,7 +48,7 @@ __all__ = [
     "is_null",
     "is_only_nulls",
     "not_",
-]
+)
 
 
 def any(native: Arrow[BooleanScalar], *, ignore_nulls: bool = True) -> pa.BooleanScalar:
