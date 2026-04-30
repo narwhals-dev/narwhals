@@ -223,7 +223,7 @@ def lazyframe_collect(
         )
         raise TypeError(msg)
 
-    plugins = PlugMan()
+    plugins = PluginManager()
     lazy = plugins.get(current_backend, "can_import")
     evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy, version)
     eager = plugins.get(collect_backend, "can_import") if collect_backend else lazy
@@ -236,9 +236,8 @@ LowDetailRepr: TypeAlias = Any
 """E.g. `Plugin` or `Plugin.name`."""
 
 
-# TODO @dangotbanned: Probably rename to `PluginManager`
 @final
-class PlugMan:
+class PluginManager:
     """Singleton plugin manager.
 
     ## Notes
@@ -265,9 +264,9 @@ class PlugMan:
     _loaded: dict[str, PluginAny | BuiltinAny]
     __instance: ClassVar[Any | None] = None
 
-    def __new__(cls) -> PlugMan:
-        if not isinstance(cls.__instance, PlugMan):
-            self = object.__new__(PlugMan)
+    def __new__(cls) -> PluginManager:
+        if not isinstance(cls.__instance, PluginManager):
+            self = object.__new__(PluginManager)
             self._discovered = {ep.name: ep for ep in _entry_points()}
             self._loaded = {}
             cls.__instance = self

@@ -206,7 +206,7 @@ if TYPE_CHECKING:
         - Assertions are more detailed that usual
         - Need this here while I try to minimize the typing
         """
-        plugins = _plugins.PlugMan()
+        plugins = _plugins.PluginManager()
         lazy = plugins.get(current)
         assert_type(lazy, PluginAny | BuiltinAny)
         classes_1 = _plugins.import_classes(lazy, version)
