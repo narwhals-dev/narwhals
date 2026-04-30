@@ -112,7 +112,7 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
 
         For `native` to *possibly* be a `pl.DataFrame`, that import had to have happened:
         >>> # Narwhals
-        >>> from narwhals._plan._plugins import load_plugin
+        >>> from narwhals._plan.plugins import load_plugin
         >>> plugin = load_plugin("polars")
         >>> plugin.is_imported()
         True
@@ -143,7 +143,7 @@ class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):
 
         ## Examples
         We use this for operations that convert between backends:
-        >>> from narwhals._plan._plugins import load_plugin
+        >>> from narwhals._plan.plugins import load_plugin
         >>> import polars as pl
         >>> native = pl.Series([1, 2, 3])
         >>> load_plugin("pyarrow").can_import()

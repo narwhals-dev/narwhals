@@ -27,10 +27,9 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
     from importlib.metadata import EntryPoint, EntryPoints
 
-    from typing_extensions import Never, TypeAlias
+    from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame
-    from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant.classes import (
         ClassesT_co as C,
         ClassesV1T_co as C1,
@@ -48,9 +47,7 @@ if TYPE_CHECKING:
         SeriesT_co as S,
     )
     from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
-    from narwhals._plan.polars import PolarsPlugin
-    from narwhals._plan.typing import BackendTodo, NativeModuleType
-    from narwhals._typing import Arrow, BackendName, Polars
+    from narwhals._typing import BackendName
     from narwhals.typing import Backend, IntoBackend
 
 Incomplete: TypeAlias = Any
@@ -139,29 +136,6 @@ def _load_plugins() -> Iterator[tuple[str, PluginAny | BuiltinAny]]:
     """
     for ep in _entry_points():
         yield ep.name, _load_entry_point(ep)
-
-
-@overload
-def load_plugin(backend: Arrow, /) -> ArrowPlugin: ...
-@overload
-def load_plugin(backend: Polars, /) -> PolarsPlugin: ...
-@overload
-def load_plugin(backend: BackendTodo, /) -> Never: ...
-@overload
-def load_plugin(backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
-@overload
-def load_plugin(backend: PluginName, /) -> PluginAny: ...
-def load_plugin(backend: IntoBackend[Backend] | PluginName, /) -> PluginAny | BuiltinAny:
-    """Load the entry point to a backend.
-
-    The returned object can be used to query availability.
-    For built-ins, this is always safe and *does not* import the native package.
-    """
-    name = _backend_to_plugin_name(backend)
-    eps = _entry_points()
-    if found := eps.select(name=name):
-        return _load_entry_point(next(iter(found)))
-    raise _unsupported_error(backend, name, eps)
 
 
 # TODO @dangotbanned: Replace ASAP
@@ -296,7 +270,7 @@ class PlugMan:
             return plugin
         raise _unsupported_error(name, name, _entry_points())
 
-    def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:
+    def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:  # pragma: no cover
         plugin: PluginAny | BuiltinAny
         yield from self._loaded.values()
         while self._discovered:
@@ -306,14 +280,16 @@ class PlugMan:
 
     def get(
         self, backend: IntoBackendExt, /, require: RequireMethod | None = None
-    ) -> PluginAny:
+    ) -> PluginAny | BuiltinAny:
         """Return the plugin matching `backend`, raising if `require` returns False."""
         plugin = self._load(_backend_to_plugin_name(backend))
         if not require:
             return plugin
-        if plugin.is_imported() if require == "is_imported" else _can_import(plugin):
+        if (
+            plugin.is_imported() if require == "is_imported" else _can_import(plugin)
+        ):  # pragma: no cover
             return plugin
-        raise _unavailable_error(plugin, require)
+        raise _unavailable_error(plugin, require)  # pragma: no cover
 
     def get_eager(
         self, backend: IntoBackendExt
@@ -331,11 +307,11 @@ class PlugMan:
         raise NotImplementedError
 
     # TODO @dangotbanned: Plan this and the other singledispatch bits
-    def iter_native_dataframe(self) -> Iterator[type[NativeDataFrame]]:
+    def iter_native_dataframe(self) -> Iterator[type[NativeDataFrame]]: # pragma: no cover
         for plugin in self._iter_plugins():
             yield from plugin.native_dataframe_classes()
 
-    def import_modules(self, backend: IntoBackendExt, /) -> None:
+    def import_modules(self, backend: IntoBackendExt, /) -> None: # pragma: no cover
         """Import the requirements for `backend`."""
         plugin = self.get(backend, require="can_import")
         if not plugin.is_imported():
@@ -348,7 +324,7 @@ class PlugMan:
     def imported(self) -> Iterable[LowDetailRepr]:
         raise NotImplementedError
 
-    def known(self) -> Iterable[LowDetailRepr]:
+    def known(self) -> Iterable[LowDetailRepr]: # pragma: no cover
         for ep in _entry_points():
             yield ep.name
 
@@ -369,7 +345,7 @@ def _backend_to_plugin_name(
 
 
 @functools.cache
-def _can_import(plugin: PluginAny, /) -> bool:
+def _can_import(plugin: PluginAny, /) -> bool: # pragma: no cover
     """Cached `Plugin.can_import`, bounded by the total number of plugins."""
     return plugin.can_import()
 

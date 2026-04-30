@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
-from narwhals._plan._plugins import lazyframe_collect, load_plugin
+from narwhals._plan._plugins import lazyframe_collect
+from narwhals._plan.plugins import load_plugin
 from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
@@ -82,6 +83,7 @@ def test_plugin_can_import(plugin: BuiltinAny) -> None:
     assert plugin.can_import()
 
 
+# TODO @dangotbanned: Replace with something less experimental (when available)
 @pytest.mark.parametrize("version", Version)
 def test_lazyframe_collect(eager: EagerAllowed, version: Version) -> None:
     """WIP, not a real API!"""
