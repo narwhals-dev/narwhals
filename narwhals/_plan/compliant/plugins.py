@@ -12,6 +12,7 @@ This represents the **external-view** of the backend
 
 from __future__ import annotations
 
+import functools
 import sys
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
@@ -180,7 +181,7 @@ class Builtin(Plugin[CB, DF, LF, S], Protocol[CB, DF, LF, S]):
         return all(sys.modules.get(target) for target in self.requirements)
 
     def can_import(self) -> bool:
-        return all(find_spec(target) for target in self.requirements)
+        return _can_import(self)
 
     def native_classes(self) -> Iterator[type[DF | LF | S]]:  # pragma: no cover
         yield from self.native_dataframe_classes()
@@ -206,3 +207,9 @@ class Builtin(Plugin[CB, DF, LF, S], Protocol[CB, DF, LF, S]):
     def is_native_series(self, obj: Any) -> TypeIs[S]:  # pragma: no cover
         it = self.native_series_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
+
+
+@functools.cache
+def _can_import(plugin: Plugin[Any, Any, Any, Any], /) -> bool:
+    """Cached `Plugin.can_import`, bounded by the total number of plugins."""
+    return all(find_spec(target) for target in plugin.requirements)

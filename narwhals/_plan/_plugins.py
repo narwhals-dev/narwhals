@@ -312,7 +312,7 @@ class PluginManager:
         if not require:
             return plugin
         if (
-            plugin.is_imported() if require == "is_imported" else _can_import(plugin)
+            plugin.is_imported() if require == "is_imported" else plugin.can_import()
         ):  # pragma: no cover
             return plugin
         raise _unavailable_error(plugin, require)  # pragma: no cover
@@ -364,12 +364,6 @@ def _backend_to_plugin_name(
         raise NotImplementedError(msg)
     name: BackendName = impl.value
     return name
-
-
-@functools.cache
-def _can_import(plugin: PluginAny, /) -> bool:  # pragma: no cover
-    """Cached `Plugin.can_import`, bounded by the total number of plugins."""
-    return plugin.can_import()
 
 
 def _unsupported_error(backend: Any, name: str, /) -> Exception:
