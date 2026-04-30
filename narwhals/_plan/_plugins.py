@@ -327,7 +327,15 @@ class PluginManager:
         self,
     ) -> Iterator[type[NativeDataFrame]]:  # pragma: no cover
         for plugin in self._iter_plugins():
-            yield from plugin.native_dataframe_classes()
+            if plugin.is_imported():
+                yield from plugin.native_dataframe_classes()
+
+    def is_native_dataframe(
+        self, native: Any
+    ) -> TypeIs[NativeDataFrame]:  # pragma: no cover
+        return bool(types := tuple(self.iter_native_dataframe())) and isinstance(
+            native, types
+        )
 
     def import_modules(self, backend: IntoBackendExt, /) -> None:
         """Import the requirements for `backend`."""
