@@ -13,17 +13,13 @@ from narwhals._utils import (
 
 if TYPE_CHECKING:
     import polars as pl
-    from typing_extensions import TypeAlias
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.compliant.package import HasPlanEvaluator
     from narwhals._plan.plans.visitors import ResolvedToCompliant
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._plan.typing import KnownImpl
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals.typing import Backend, IntoBackend
-
-
-KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
-"""Equivalent to `Backend - BackendName`."""
 
 
 def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.NamespaceT_co:

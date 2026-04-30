@@ -27,11 +27,9 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from typing_extensions import LiteralString, TypeAlias, TypeIs
+    from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan._namespace import KnownImpl
-    from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.polars import PolarsPlugin
+    from narwhals._plan.typing import KnownImpl, PluginName
     from narwhals._typing import BackendName
 
     MYPY: Final = False
@@ -43,35 +41,13 @@ if TYPE_CHECKING:
         from typing_extensions import LiteralString as LiteralString_
 
 
-__all__ = ("Builtin", "Implementation", "Plugin", "PluginName", "Unsupported")
+__all__ = ("Builtin", "Implementation", "Plugin", "Unsupported")
 
-PluginName: TypeAlias = "LiteralString"
-"""Name of a backend's [entry point].
-
-This is ~~supported~~ planned to be supported wherever a `backend` parameter is requested.
-
-## See Also
-- [Using package metadata](https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata)
-- [Entry points specification](https://packaging.python.org/en/latest/specifications/entry-points/#data-model)
-
-[entry point]: https://docs.python.org/3/library/importlib.metadata.html#importlib.metadata.EntryPoint
-"""
 
 # NOTE: `Never` might be another option?
 # try that out if `Any` causes *any* issues
 Unsupported: TypeAlias = Any
 """Marker to use for types that are not planned to be implemented."""
-
-
-PluginAny: TypeAlias = "Plugin[Any, Any, Any, Any]"
-"""When used as a return type, this indicates an extension rather than a `Builtin`.
-
-Tip:
-    Try to limit usage of this, since it may negatively impact narrowing.
-"""
-
-BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
-"""Backends defined inside of narwhals."""
 
 
 class Plugin(HasClasses[ClassesT_co], Protocol[ClassesT_co, DF, LF, S]):

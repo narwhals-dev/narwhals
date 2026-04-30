@@ -35,7 +35,7 @@ if TYPE_CHECKING:
         ClassesV1T_co as C1,
         ClassesV2T_co as C2,
     )
-    from narwhals._plan.compliant.plugins import BuiltinAny, Plugin, PluginAny, PluginName
+    from narwhals._plan.compliant.plugins import Plugin
     from narwhals._plan.compliant.typing import (
         DataFrameAny,
         DataFrameT_co as DF,
@@ -47,15 +47,13 @@ if TYPE_CHECKING:
         SeriesT_co as S,
     )
     from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
+    from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
     from narwhals._typing import BackendName
-    from narwhals.typing import Backend, IntoBackend
 
 Incomplete: TypeAlias = Any
 
 TemporaryPluginsType: TypeAlias = "dict[str, BuiltinAny | PluginAny]"
 """Obviously don't want to keep this for long"""
-
-IntoBackendExt: TypeAlias = "IntoBackend[Backend] | PluginName | Implementation"
 
 RequireMethod: TypeAlias = Literal["is_imported", "can_import"]
 """Raise if calling this method on `Plugin` returns False."""
@@ -307,11 +305,13 @@ class PlugMan:
         raise NotImplementedError
 
     # TODO @dangotbanned: Plan this and the other singledispatch bits
-    def iter_native_dataframe(self) -> Iterator[type[NativeDataFrame]]: # pragma: no cover
+    def iter_native_dataframe(
+        self,
+    ) -> Iterator[type[NativeDataFrame]]:  # pragma: no cover
         for plugin in self._iter_plugins():
             yield from plugin.native_dataframe_classes()
 
-    def import_modules(self, backend: IntoBackendExt, /) -> None: # pragma: no cover
+    def import_modules(self, backend: IntoBackendExt, /) -> None:  # pragma: no cover
         """Import the requirements for `backend`."""
         plugin = self.get(backend, require="can_import")
         if not plugin.is_imported():
@@ -324,7 +324,7 @@ class PlugMan:
     def imported(self) -> Iterable[LowDetailRepr]:
         raise NotImplementedError
 
-    def known(self) -> Iterable[LowDetailRepr]: # pragma: no cover
+    def known(self) -> Iterable[LowDetailRepr]:  # pragma: no cover
         for ep in _entry_points():
             yield ep.name
 
@@ -345,7 +345,7 @@ def _backend_to_plugin_name(
 
 
 @functools.cache
-def _can_import(plugin: PluginAny, /) -> bool: # pragma: no cover
+def _can_import(plugin: PluginAny, /) -> bool:  # pragma: no cover
     """Cached `Plugin.can_import`, bounded by the total number of plugins."""
     return plugin.can_import()
 

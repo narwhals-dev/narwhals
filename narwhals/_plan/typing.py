@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Container, Iterable
     from types import MappingProxyType, ModuleType as _ModuleType
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import LiteralString, TypeAlias
 
     from narwhals import dtypes
     from narwhals._native import (
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     )
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function, HorizontalFunction
+    from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.compliant.plugins import Plugin
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import operators as ops
@@ -28,10 +30,18 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.ranges import RangeFunction
     from narwhals._plan.expressions.struct import StructFunction
     from narwhals._plan.lazyframe import LazyFrame
+    from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
-    from narwhals._typing import LazyOnly, PandasLike
-    from narwhals.typing import NonNestedDType, NonNestedLiteral, PythonLiteral
+    from narwhals._typing import LazyOnly, PandasLike, _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._utils import Implementation
+    from narwhals.typing import (
+        Backend,
+        IntoBackend,
+        NonNestedDType,
+        NonNestedLiteral,
+        PythonLiteral,
+    )
 
 __all__ = (
     "AggExprT_co",
@@ -230,6 +240,10 @@ Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
 [inferred]: https://typing.python.org/en/latest/spec/generics.html#variance
 """
 
+KnownImpl: TypeAlias = "_EagerAllowedImpl | _LazyAllowedImpl"
+"""Equivalent to `Backend - BackendName`."""
+
+
 BackendTodo: TypeAlias = "PandasLike | LazyOnly"
 """Backends that are not *yet* implemented in `narwhals._plan`."""
 
@@ -239,4 +253,37 @@ NativeModuleType: TypeAlias = "_ModuleType"
 The excluded modules are equivalent to the names excluded in `narwhals._plan.typing.BackendTodo`.
 
 This [isn't representable in the current type system](https://github.com/python/typing/issues/1039)
+"""
+
+PluginName: TypeAlias = "LiteralString"
+"""Name of a backend's [entry point].
+
+This is ~~supported~~ planned to be supported wherever a `backend` parameter is requested.
+
+## See Also
+- [Using package metadata](https://packaging.python.org/en/latest/guides/creating-and-discovering-plugins/#using-package-metadata)
+- [Entry points specification](https://packaging.python.org/en/latest/specifications/entry-points/#data-model)
+
+[entry point]: https://docs.python.org/3/library/importlib.metadata.html#importlib.metadata.EntryPoint
+"""
+
+IntoBackendExt: TypeAlias = "IntoBackend[Backend] | PluginName | Implementation"
+"""Anything that can be used to load a `Plugin`.
+
+This is a superset of [`IntoBackend`], adding support for external plugin names.
+
+[`IntoBackend`]: https://narwhals-dev.github.io/narwhals/api-reference/typing/#narwhals.typing.IntoBackend
+"""
+
+BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
+"""An internal plugin (`Builtin`)."""
+
+PluginAny: TypeAlias = "Plugin[t.Any, t.Any, t.Any, t.Any]"
+"""An external plugin.
+
+This type is assignable to any `Plugin`, but should be used *only* when we can't provide
+anything more meaningful statically.
+
+Tip:
+    Prefer `BuiltinAny` whenever possible.
 """

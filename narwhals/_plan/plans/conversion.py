@@ -41,10 +41,9 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
-    from narwhals._plan._namespace import KnownImpl
     from narwhals._plan.compliant.typing import Native
     from narwhals._plan.plans import logical as lp
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import KnownImpl, Seq
     from narwhals.dtypes import DType
     from narwhals.typing import Backend, IntoBackend
 

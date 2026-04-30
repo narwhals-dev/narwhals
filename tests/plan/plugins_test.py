@@ -19,8 +19,8 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, TypeAlias, assert_type
 
     from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.compliant.plugins import BuiltinAny, PluginAny
     from narwhals._plan.polars import PolarsPlugin
+    from narwhals._plan.typing import BuiltinAny, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 
