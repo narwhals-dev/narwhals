@@ -197,7 +197,6 @@ def test_concat() -> None:
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.DataFrame)
     if TYPE_CHECKING:
-        # pyrefly: `result` is `DataFrame[Table]`
         assert_type(result, nw_v2.DataFrame[Any])
 
 
