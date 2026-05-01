@@ -2160,6 +2160,8 @@ class _NoDefault(Enum):
 # the "no_default" sentinel should typically be used when one of the valid parameter
 # values is None, as otherwise we cannot determine if the caller has set that value.
 NO_DEFAULT = _NoDefault.no_default
+# keep this for tubular https://github.com/azukds/tubular/issues/725
+no_default = NO_DEFAULT
 
 # Can be imported from types in Python 3.10
 NoneType = type(None)
