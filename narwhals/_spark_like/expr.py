@@ -16,6 +16,7 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import Implementation, Version, extend_bool, no_default, zip_strict
+from narwhals.dependencies import get_pandas
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -397,6 +398,63 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
                 )
                 return [result.cast(spark_dtype) for result in results]
             return results
+
+        return self.__class__(
+            func,
+            None,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def map_batches(
+        self,
+        function: Callable[[Any], Any],
+        return_dtype: IntoDType | None,
+        *,
+        returns_scalar: bool,
+    ) -> Self:  # pragma: no cover
+        if self._implementation.is_sqlframe():
+            msg = "`Expr.map_batches` is not supported for the sqlframe backend."
+            raise NotImplementedError(msg)
+
+        if returns_scalar:
+            msg = "`returns_scalar=True` is not supported for the pyspark backend."
+            raise NotImplementedError(msg)
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            pd = get_pandas()
+            F = self._F
+
+            native_cols = self(df)
+            result_columns: list[Column] = []
+
+            for col_expr in native_cols:
+                if return_dtype is not None:
+                    spark_type = narwhals_to_native_dtype(
+                        return_dtype,
+                        self._version,
+                        self._native_dtypes,
+                        df.native.sparkSession,
+                    )
+                else:
+                    spark_type = "float"
+
+                @F.pandas_udf(spark_type)  # type: ignore[call-overload]
+                def udf_wrapper(s):  # noqa: ANN001, ANN202
+                    result = function(s)
+                    if isinstance(result, pd.Series):
+                        return result
+                    # if the function returns a scalar, broadcast it to the length of s
+                    series = pd.Series(result)
+                    if len(series) == 1:
+                        return pd.Series([result] * len(s))
+                    return series
+
+                result_columns.append(udf_wrapper(col_expr))
+
+            return result_columns
 
         return self.__class__(
             func,
