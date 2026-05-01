@@ -332,3 +332,7 @@ class SeriesStructNamespace(Generic[SeriesT]):
 
 class SeriesV1(Series[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.V1
+
+
+class SeriesV2(Series[NativeSeriesT_co]):
+    _version: ClassVar[Version] = Version.V2

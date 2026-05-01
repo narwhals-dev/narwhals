@@ -91,7 +91,8 @@ def _import_series(version: _NwVersion, /) -> type[NwSeries[Any]]:  # pragma: no
     if version is _NwVersion.V1:
         from narwhals._plan.series import SeriesV1 as NwSeriesV1
         return NwSeriesV1
-    raise _not_implemented(version)
+    from narwhals._plan.series import SeriesV2 as NwSeriesV2
+    return NwSeriesV2
 @cache
 def _import_schema(version: _NwVersion, /) -> type[NwSchema]:
     if version is _NwVersion.MAIN:

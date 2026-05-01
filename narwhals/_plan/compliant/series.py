@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
+from narwhals._plan._version import into_version
 from narwhals._plan.typing import (
     IncompleteCyclic,
     IncompleteVarianceLie,
@@ -73,9 +74,7 @@ class CompliantSeries(Protocol[NativeSeriesT_co]):
         return self.sample_n(n, with_replacement=with_replacement, seed=seed)
 
     def to_narwhals(self) -> Series[NativeSeriesT_co]:
-        from narwhals._plan.series import Series
-
-        return Series(self)
+        return into_version(self.version).series(self)
 
     @unstable
     def hist(
