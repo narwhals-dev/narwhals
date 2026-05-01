@@ -21,10 +21,10 @@ from narwhals._ibis.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import (
+    NO_DEFAULT,
     Implementation,
     Version,
     extend_bool,
-    no_default,
     not_implemented,
     zip_strict,
 )
@@ -331,7 +331,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        if default is no_default:
+        if default is NO_DEFAULT:
             msg = "`replace_strict` requires an explicit value for `default` for ibis backend."
             raise ValueError(msg)
         ns = self.__narwhals_namespace__()

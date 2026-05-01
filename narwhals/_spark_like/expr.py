@@ -15,7 +15,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, extend_bool, no_default, zip_strict
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -366,7 +366,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        if default is no_default:
+        if default is NO_DEFAULT:
             msg = "`replace_strict` requires an explicit value for `default` for any spark-like backend."
             raise ValueError(msg)
 

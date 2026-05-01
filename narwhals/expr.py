@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
+    NO_DEFAULT,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
-    no_default,
     unstable,
 )
 from narwhals.dtypes import _validate_dtype
@@ -841,7 +841,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        default: Any | NoDefault = no_default,
+        default: Any | NoDefault = NO_DEFAULT,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
@@ -913,7 +913,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        if default is no_default:
+        if default is NO_DEFAULT:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
