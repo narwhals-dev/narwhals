@@ -40,6 +40,7 @@ from narwhals._plan.compliant.typing import (
     ExprT_co as E,
     LazyFrameAny,
     LazyFrameT_co as LF,
+    PlanEvaluatorAny,
     PlanEvaluatorT_co as PE,
     ScalarAny,
     ScalarNoDefaultT_co as SC,
@@ -50,7 +51,6 @@ from narwhals._plan.compliant.typing import (
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
-    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._utils import Version
 
 

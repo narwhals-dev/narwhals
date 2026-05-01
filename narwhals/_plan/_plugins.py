@@ -39,11 +39,11 @@ if TYPE_CHECKING:
         EagerDataFrameT_co as EagerDF,
         ExprT_co as E,
         LazyFrameT_co as LF,
+        PlanEvaluatorAny,
         PlanEvaluatorT_co as PE,
         ScalarNoDefaultT_co as SC,
         SeriesT_co as S,
     )
-    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
     from narwhals._typing import BackendName
 

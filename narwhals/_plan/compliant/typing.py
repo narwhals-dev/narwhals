@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
+    from narwhals._plan.plans.visitors import ResolvedToCompliantAny
 
 
 Native = TypeVar("Native")
@@ -74,6 +74,7 @@ DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any]"
 LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any]"
 NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
 Namespace: TypeAlias = "CompliantNamespace[FrameT, ExprT_co, ScalarT_co]"
+PlanEvaluatorAny: TypeAlias = "ResolvedToCompliantAny"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any, Any, Any]"
 EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any, Any]"

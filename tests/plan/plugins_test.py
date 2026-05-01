@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import _plugins
     from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.compliant.typing import DataFrameAny
+    from narwhals._plan.compliant.typing import DataFrameAny, PlanEvaluatorAny
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
@@ -128,7 +128,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow import v1 as pa_v1, v2 as pa_v2
     from narwhals._plan.arrow.classes import ArrowClasses, ArrowClassesV1, ArrowClassesV2
     from narwhals._plan.compliant import classes as cc
-    from narwhals._plan.plans.visitors import ResolvedToCompliantAny as PlanEvaluatorAny
     from narwhals._plan.polars import v1 as pl_v1, v2 as pl_v2
     from narwhals._plan.polars.classes import (
         PolarsClasses,
