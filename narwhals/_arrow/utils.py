@@ -394,7 +394,7 @@ def parse_datetime_format(arr: ChunkedArrayAny) -> str:
         raise ValueError(msg)
 
     date_value = _parse_date_format(cast("pc.StringArray", matches.field("date")))
-    time_value = _parse_time_format(cast("pc.StringArray", matches.field("time")))
+    time_value = parse_time_format(cast("pc.StringArray", matches.field("time")))
 
     sep_value = separators[0].as_py()
     tz_value = "%z" if tz[0].as_py() else ""
@@ -422,7 +422,7 @@ def _parse_date_format(arr: pc.StringArray) -> str:
     raise ValueError(msg)
 
 
-def _parse_time_format(arr: pc.StringArray) -> str:
+def parse_time_format(arr: pc.StringArray) -> str:
     for time_rgx, time_fmt in TIME_FORMATS:
         matches = pc.extract_regex(arr, pattern=time_rgx)
         if pc.all(matches.is_valid()).as_py():
