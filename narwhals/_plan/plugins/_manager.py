@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         ScalarNoDefaultT_co as SC,
         SeriesT_co as S,
     )
+    from narwhals._plan.plugins._parse import PluginIR, RegEntry
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
     from narwhals._typing import BackendName
 
@@ -232,6 +233,8 @@ def lazyframe_collect(
     return evaluator, dataframe
 
 
+# TODO @dangotbanned: Integrate `_parsed`, `_registry`
+# TODO @dangotbanned: Add somewhere for unreachable plugins to live
 @final
 class PluginManager:
     """Singleton plugin manager.
@@ -254,17 +257,28 @@ class PluginManager:
             - Stop checking
     """
 
-    __slots__ = ("_discovered", "_loaded")
+    __slots__ = ("_discovered", "_loaded", "_parsed", "_registry")
+    __instance: ClassVar[Any | None] = None
 
     _discovered: dict[str, EntryPoint]
     _loaded: dict[str, PluginAny | BuiltinAny]
-    __instance: ClassVar[Any | None] = None
+
+    # TODO @dangotbanned: When moving `_discovered` -> `_loaded`, parse and add here
+    # TODO @dangotbanned: On the first request that requires access, `PluginIR.to_registry_item` -> `_registry`
+    _parsed: dict[PluginName, PluginIR]
+    """Details on what each plugin supports."""
+
+    # TODO @dangotbanned: Flesh out the order each dict get populated in
+    _registry: dict[PluginName, RegEntry]
+    """A rewrapped `Plugin`, with error handling on unsupported features."""
 
     def __new__(cls) -> PluginManager:
         if not isinstance(cls.__instance, PluginManager):
             self = object.__new__(PluginManager)
             self._discovered = {ep.name: ep for ep in _entry_points()}
             self._loaded = {}
+            self._parsed = {}
+            self._registry = {}
             cls.__instance = self
         return cls.__instance
 
