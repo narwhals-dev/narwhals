@@ -198,7 +198,7 @@ def test_concat() -> None:
     assert isinstance(result, nw_v2.DataFrame)
     if TYPE_CHECKING:
         # pyrefly: `result` is `DataFrame[Table]`
-        assert_type(result, nw_v2.DataFrame[Any])  # pyrefly: ignore[assert-type]
+        assert_type(result, nw_v2.DataFrame[Any])
 
 
 def test_to_dict_as_series() -> None:

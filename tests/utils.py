@@ -195,7 +195,7 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
     )
     return (
         # Don't remove pyrefly-ignore, needed in CI when pyspark is installed.
-        builder.config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
+        builder.config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
