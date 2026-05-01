@@ -240,12 +240,23 @@ class EagerImplClasses(
     __slots__ = ()
 
 
+# NOTE: Recipe for these is:
+# Overload 1: Narrowest
+# ...
+# Last overload: Add `Any`, which catches the negative case
+# Implementation: Union everything independently
 @overload
 def can_eager(
     obj: EagerClasses[EagerDF, S, EagerE, EagerSC],
 ) -> TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]: ...
 @overload
 def can_eager(obj: EagerClasses[DF, S, E, SC]) -> TypeIs[EagerClasses[DF, S, E, SC]]: ...
+@overload
+def can_eager(
+    obj: EagerClasses[DF, S, E, SC] | EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
+) -> (
+    TypeIs[EagerClasses[DF, S, E, SC]] | TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]
+): ...
 def can_eager(
     obj: EagerClasses[DF, S, E, SC] | EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
 ) -> (
@@ -258,11 +269,19 @@ def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE
     return hasattrs_static(obj, "_lazyframe", "_evaluator")
 
 
-def can_v1(obj: HasV1[C1] | Any) -> TypeIs[HasV1[C1]]:
+@overload
+def can_v1(obj: HasV1[CB1]) -> TypeIs[HasV1[CB1]]: ...
+@overload
+def can_v1(obj: HasV1[C1] | Any) -> TypeIs[HasV1[C1]]: ...
+def can_v1(obj: HasV1[C1] | HasV1[CB1] | Any) -> TypeIs[HasV1[C1]] | TypeIs[HasV1[CB1]]:
     return hasattrs_static(obj, "v1")
 
 
-def can_v2(obj: HasV2[C2] | Any) -> TypeIs[HasV2[C2]]:
+@overload
+def can_v2(obj: HasV2[CB2]) -> TypeIs[HasV2[CB2]]: ...
+@overload
+def can_v2(obj: HasV2[C2] | Any) -> TypeIs[HasV2[C2]]: ...
+def can_v2(obj: HasV2[C2] | HasV2[CB2] | Any) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]]:
     return hasattrs_static(obj, "v2")
 
 

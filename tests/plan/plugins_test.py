@@ -273,6 +273,7 @@ if TYPE_CHECKING:
             if MYPY:
                 assert_type(dataframe, type[Any])
             else:
+                # NOTE: This requires overload 3 in `can_eager`
                 assert_type(
                     dataframe,
                     type[
