@@ -17,6 +17,7 @@ import sys
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
 
+from narwhals._plan.common import hasattrs_static
 from narwhals._plan.compliant.classes import CB, C, HasClasses
 from narwhals._plan.compliant.typing import (
     Native as LF,
@@ -72,11 +73,8 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
 
     def __eq__(self, other: object) -> bool:
         # Loose guard to avoid `self == self.name`
-        return (
-            hasattr(other, "requirements")
-            and hasattr(other, "native_classes")
-            and hash(self) == hash(other)
-        )
+        names = "requirements", "native_classes"
+        return hasattrs_static(other, *names) and hash(self) == hash(other)
 
     def __repr__(self) -> str:
         return f"Plugin[{self.name}]"
