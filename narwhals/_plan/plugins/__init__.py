@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
-from narwhals._plan import _plugins
 from narwhals._plan.compliant.plugins import Builtin, Plugin
+from narwhals._plan.plugins import _manager
 
 if TYPE_CHECKING:
     from typing_extensions import Never
@@ -42,4 +42,4 @@ def load_plugin(backend: IntoBackendExt, /) -> PluginAny:
     The returned object can be used to query availability.
     For built-ins, this is always safe and *does not* import the native package.
     """
-    return _plugins.PluginManager().get(backend)
+    return _manager.PluginManager().get(backend)
