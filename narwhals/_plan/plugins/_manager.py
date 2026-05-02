@@ -265,6 +265,7 @@ class PluginManager:
     _loaded: dict[PluginName, PluginAny | BuiltinAny]
 
     # TODO @dangotbanned: On the first request that requires access, `PluginIR.to_registry_item` -> `_registry`
+    # TODO @dangotbanned: Start testing after exposing these details somewhere query-able
     _parsed: dict[PluginName, _parse.PluginIR]
     """Details on what each plugin supports."""
 
@@ -299,29 +300,31 @@ class PluginManager:
             s += f"\n{indent}discovered\n{indent_2}{s_eps}"
         return f"{type(self).__name__}[{n_discovered + n_loaded}]{s}"
 
-    def _load(self, name: PluginName, /) -> PluginAny | BuiltinAny:
-        plugin: PluginAny | BuiltinAny
+    def _load_plugin(self, name: PluginName, entry_point: EntryPoint, /) -> PluginAny:
+        # NOTE: Keeps `_plugin` and `_iter_plugins` in sync
+        plugin: PluginAny
+        self._loaded[name] = plugin = entry_point.load()
+        self._parsed[name] = _parse.PluginIR.from_plugin(plugin)
+        return plugin
+
+    def _plugin(self, name: PluginName, /) -> PluginAny | BuiltinAny:
         if loaded := self._loaded.get(name):
             return loaded
-        if discovered := self._discovered.pop(name, None):
-            self._loaded[name] = plugin = discovered.load()
-            self._parsed[name] = _parse.PluginIR.from_plugin(plugin)
-            return plugin
+        if entry_point := self._discovered.pop(name, None):
+            return self._load_plugin(name, entry_point)
         raise _unsupported_error(name, name)
 
-    def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:  # pragma: no cover
-        plugin: PluginAny | BuiltinAny
+    def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:
         yield from self._loaded.values()
         while self._discovered:
             name, ep = self._discovered.popitem()
-            self._loaded[name] = plugin = ep.load()
-            yield plugin
+            yield self._load_plugin(name, ep)
 
     def get(
         self, backend: IntoBackendExt, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny:
         """Return the plugin matching `backend`, raising if `require` returns False."""
-        plugin = self._load(_backend_to_plugin_name(backend))
+        plugin = self._plugin(_backend_to_plugin_name(backend))
         if not require:
             return plugin
         if (
