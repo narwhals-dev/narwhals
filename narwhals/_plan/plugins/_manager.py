@@ -29,23 +29,19 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from importlib.metadata import EntryPoint, EntryPoints
 
+    import polars as pl
+    import pyarrow as pa
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._native import NativeDataFrame
-    from narwhals._plan.compliant import typing as ct
+    from narwhals._plan.compliant import (
+        CompliantDataFrame,
+        CompliantLazyFrame,
+        CompliantSeries,
+        typing as ct,
+    )
     from narwhals._plan.compliant.classes import C1, C2, CB, C
     from narwhals._plan.compliant.plugins import Builtin, Plugin
-    from narwhals._plan.compliant.typing import (
-        DataFrameAny,
-        DataFrameT_co as DF,
-        EagerDataFrameT_co as EagerDF,
-        ExprT_co as E,
-        LazyFrameT_co as LF,
-        PlanEvaluatorAny,
-        PlanEvaluatorT_co as PE,
-        ScalarNoDefaultT_co as SC,
-        SeriesT_co as S,
-    )
     from narwhals._plan.typing import (
         BuiltinAny,
         IntoBackendExt,
@@ -53,7 +49,7 @@ if TYPE_CHECKING:
         PluginName,
         VersionName,
     )
-    from narwhals._typing import BackendName
+    from narwhals._typing import Arrow, BackendName, Polars
 
 MYPY: Final = False
 
@@ -121,28 +117,6 @@ def _entry_points() -> EntryPoints:
     raise NotImplementedError(msg)
 
 
-def import_evaluator(
-    plugin: Plugin[cc.LazyClasses[LF, PE, E, SC], Any, Any, Any] | PluginAny,
-    version: Version,
-) -> type[PE]:
-    # NOTE: Seemingly the only thing mypy is fine with
-    # But it forgets what this means as soon as you leave the function 😭
-    classes = import_classes(plugin, version)
-    if cc.can_lazy(classes):
-        return classes._evaluator
-    raise unsupported_error(plugin.name, "LazyFrame.collect")  # pragma: no cover
-
-
-def import_dataframe(
-    plugin: Plugin[cc.EagerClasses[DF | EagerDF, S, E, SC], Any, Any, Any] | PluginAny,
-    version: Version,
-) -> type[DF | EagerDF]:
-    classes = import_classes(plugin, version)
-    if cc.can_eager(classes):
-        return classes._dataframe
-    raise unsupported_error(plugin.name, "DataFrame")  # pragma: no cover
-
-
 if MYPY:
     # `Incomplete` avoids `mypy` from thinking overloads 1, 3, 5, 7 are bad
     _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | _Plugin[Incomplete]"
@@ -150,6 +124,7 @@ else:
     _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | Builtin[CB, Any, Any, Any] | Plugin[C, Any, Any, Any]"
 
 
+# TODO @dangotbanned: Fully remove + typing tests
 # MAIN
 @overload  # 1
 def import_classes(plugin: _Plugin[CB], version: MAIN, /) -> CB: ...
@@ -198,7 +173,7 @@ if MYPY:
 
 def import_classes(
     plugin: _ImportClasses[C, CB, C1, C2], version: Version, /
-) -> Incomplete:
+) -> Incomplete:  # pragma: no cover
     """Import the accessor to the compliant classes compatible with `version`."""
     classes = plugin.__narwhals_classes__
     if version is Version.MAIN:
@@ -214,40 +189,6 @@ def import_classes(
     assert_never(version)
 
 
-# TODO @dangotbanned: (low-priority) get the optional `Resolver` using this backend
-def lazyframe_collect(
-    current_backend: IntoBackendExt,
-    collect_backend: IntoBackendExt | None = None,
-    version: Version = Version.MAIN,
-) -> tuple[type[PlanEvaluatorAny], type[DataFrameAny]]:
-    """Mocking this call as it does some gymnastics I'd like to avoid.
-
-    ## Overview of current
-    - [`collect`] and [`sink_parquet`] both are acrobats
-    - `Resolver.from_backend` does a second call to `known_implementation` on `current_implementation` (lazy)
-        - Starting the plan would've validated at least once already
-    - `PolarsEvaluator.collect` does `(backend or "polars")` before ...
-        - `CompliantLazyFrame.collect_compliant` does a second validation on `collect_backend` (backend)
-
-    [`collect`]: https://github.com/narwhals-dev/narwhals/blob/be25d3fdd96a51aad08f513d5e45e41703960c49/narwhals/_plan/lazyframe.py#L312-L320
-    [`sink_parquet`]: https://github.com/narwhals-dev/narwhals/blob/be25d3fdd96a51aad08f513d5e45e41703960c49/narwhals/_plan/lazyframe.py#L322-L326
-    """
-    if current_backend is _UNKNOWN:  # pragma: no cover
-        msg = (
-            "Storing an unknown implementation on `LazyFrame` cannot work with plugins.\n"
-            "`LazyFrame` needs a connection back to the plugin that handles the native object (e.g. `plugin_name`)."
-        )
-        raise TypeError(msg)
-
-    plugins = PluginManager()
-    lazy = plugins.plugin(current_backend, "can_import")
-    evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy, version)
-    eager = plugins.plugin(collect_backend, "can_import") if collect_backend else lazy
-    # NOTE: Annotating this to please `mypy` prevents `pyright` from inferring ` type[PolarsDataFrame] | type[ArrowDataFrame]`
-    dataframe = import_dataframe(eager, version)  # type: ignore[var-annotated]
-    return evaluator, dataframe
-
-
 # TODO @dangotbanned: Integrate `_parsed`, `_registry`
 # TODO @dangotbanned: Add somewhere for unreachable plugins to live
 @final
@@ -255,7 +196,6 @@ class PluginManager:
     """Singleton plugin manager.
 
     ## Notes
-    - what does a `Plugin` manager look like?
     - if there is state, how can we avoid knowledge of that leaking everywhere?
         - it's okay for state to exist
         - but shouldn't be something the caller has to deal with
@@ -366,22 +306,63 @@ class PluginManager:
             return plugin
         raise _unavailable_error(plugin, require)  # pragma: no cover
 
-    # TODO @dangotbanned: Add overloads, written as `CompliantDataFrame[pl.DataFrame]`, etc
-    # - Use a different api for concrete types (if needed)
+    # NOTE: These overloads are *intentionally* less-precise than they could be
+    # Some early experiments handled unions & version matching (successfuly),
+    # but came at a very high cost to LSP performance.
+    # **Before adding more complexity here again - consider operating on the plugin directly.**
+    @overload
+    def dataframe(
+        self, backend: Polars, /, version: Version
+    ) -> type[CompliantDataFrame[pl.DataFrame, pl.Series]]: ...
+    @overload
+    def dataframe(
+        self, backend: Arrow, /, version: Version
+    ) -> type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]]: ...
+    @overload
+    def dataframe(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.DataFrameAny]: ...
     def dataframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.DataFrameAny]:
         return self._get_class("_dataframe", backend, version)
 
+    @overload
+    def series(
+        self, backend: Polars, /, version: Version
+    ) -> type[CompliantSeries[pl.Series]]: ...
+    @overload
+    def series(
+        self, backend: Arrow, /, version: Version
+    ) -> type[CompliantSeries[pa.ChunkedArray[Any]]]: ...
+    @overload
+    def series(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.SeriesAny]: ...
     def series(self, backend: IntoBackendExt, /, version: Version) -> type[ct.SeriesAny]:
         return self._get_class("_series", backend, version)
 
+    @overload
+    def lazyframe(
+        self, backend: Polars, /, version: Version
+    ) -> type[CompliantLazyFrame[pl.LazyFrame]]: ...
+    @overload
+    def lazyframe(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.LazyFrameAny]: ...
     def lazyframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.LazyFrameAny]:
         return self._get_class("_lazyframe", backend, version)
 
-    # TODO @dangotbanned: Replace `test_lazyframe_collect`, once there's more typing here
+    @overload
+    def evaluator(
+        self, backend: Polars, /, version: Version
+    ) -> type[ct.PlanEvaluator[pl.LazyFrame]]: ...
+    @overload
+    def evaluator(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.PlanEvaluatorAny]: ...
     def evaluator(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.PlanEvaluatorAny]:

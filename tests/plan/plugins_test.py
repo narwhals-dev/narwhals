@@ -9,7 +9,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.compliant.typing as ct
 from narwhals._plan.plugins import load_plugin
-from narwhals._plan.plugins._manager import PluginManager, lazyframe_collect
+from narwhals._plan.plugins._manager import PluginManager
 from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, TypeAlias, assert_type
 
     from narwhals._plan.arrow import ArrowPlugin
+    from narwhals._plan.compliant import CompliantDataFrame
     from narwhals._plan.plugins import _manager
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny
@@ -202,18 +203,6 @@ def test_plugin_manager_evaluator(lazy: LazyAllowed, version: Version) -> None:
 
     assert compliant_1.implementation is impl
     assert compliant_2.implementation is impl
-
-
-# TODO @dangotbanned: Replace with `PluginManager.evaluator`, once it has typing
-@pytest.mark.parametrize("version", Version)
-def test_lazyframe_collect(eager: EagerAllowed, version: Version) -> None:
-    """WIP, not a real API!"""
-    pytest.importorskip("polars")
-    current = "polars"
-    evaluator, dataframe = lazyframe_collect(current, eager, version)
-    assert evaluator.implementation.is_polars()
-    assert dataframe.implementation is Implementation.from_backend(eager)
-    assert dataframe.version is evaluator.version is version
 
 
 if TYPE_CHECKING:
@@ -460,3 +449,53 @@ if TYPE_CHECKING:
         assert_type(builtin_unknown_main, PolarsClasses | ArrowClasses | Any)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(builtin_unknown_v1, PolarsClassesV1 | ArrowClassesV1 | Any)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(builtin_unknown_v2, PolarsClassesV2 | ArrowClassesV2 | Any)  # pyright: ignore[reportAssertTypeFailure]
+
+    def typing_concrete_assignable_to_generic() -> None:
+        """A little inference workout to check the types from one api play nicely with the other."""
+        plug_man = PluginManager()
+        version = Version.MAIN
+
+        # Round 1: Start with `Compliant*[NativeT]`
+        dataframe = plug_man.dataframe("polars", version)
+        df_compliant = dataframe.from_dict({})
+        df_native = df_compliant.native
+        df_narwhals = df_compliant.to_narwhals()
+        df_narwhals = df_narwhals.from_native(df_native)
+        ser_narwhals = df_narwhals.to_series()
+        ser_native = ser_narwhals.to_native()
+        df_native = df_native.with_columns(ser_native)
+        evaluator = plug_man.evaluator("polars", version)
+
+        # Round 2: Now the concrete types `Polars*`
+        # Nothing before was annotated, and reassigning with a narrower (compatible) type should be okay
+        classes = load_plugin("polars").__narwhals_classes__
+        dataframe = classes._dataframe
+        df_compliant = dataframe.from_dict({})
+        df_native = df_compliant.native
+        df_narwhals = df_compliant.to_narwhals()
+        df_narwhals = df_narwhals.from_native(df_native)
+        ser_narwhals = df_narwhals.to_series()
+        ser_native = ser_narwhals.to_native()
+        df_native = df_native.with_columns(ser_native)
+        evaluator = classes._evaluator
+
+        # Round 3: Back to roughly the same as "Round 1", but using `Implementation`
+        # The types should again be compatible
+        dataframe = plug_man.dataframe(Implementation.POLARS, version)
+        df_compliant = dataframe.from_dict({})
+        df_native = df_compliant.native
+        df_narwhals = df_compliant.to_narwhals()
+        df_narwhals = df_narwhals.from_native(df_native)
+        ser_narwhals = df_narwhals.to_series()
+        ser_native = ser_narwhals.to_native()
+        df_native = df_native.with_columns(ser_native)
+        evaluator = plug_man.evaluator(Implementation.POLARS, version)
+
+        # aaaaaaaaaaand did we do it?
+        assert_type(df_native, pl.DataFrame)
+        assert_type(df_narwhals, nwp.DataFrame[pl.DataFrame, pl.Series])
+        assert_type(dataframe, type[CompliantDataFrame[pl.DataFrame, pl.Series]])
+        assert_type(df_compliant, CompliantDataFrame[pl.DataFrame, pl.Series])
+        assert_type(ser_native, pl.Series)
+        assert_type(ser_narwhals, nwp.Series[pl.Series])
+        assert_type(evaluator, type[ct.PlanEvaluator[pl.LazyFrame]])

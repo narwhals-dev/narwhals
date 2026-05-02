@@ -10,7 +10,6 @@ from narwhals._plan.typing import (
     IncompleteCyclic,
     IncompleteVarianceLie,
     IntoExpr,
-    NativeDataFrameT,
     NativeDataFrameT_co,
     NativeFrameT_co,
     NativeSeriesT_co,
@@ -203,7 +202,7 @@ class CompliantDataFrame(
             return {ser.name: ser for ser in it}  # pragma: no cover
         return {ser.name: ser.to_list() for ser in it}
 
-    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT_co]:
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT_co, NativeSeriesT_co]:
         return into_version(self.version).dataframe(self)
 
     def sample_frac(

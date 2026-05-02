@@ -130,40 +130,13 @@ class HasVAll(HasV1[C1], HasV2[C2], Protocol[C1, C2]):
     __slots__ = ()
 
 
-# NOTE: The type of `__narwhals_classes__`, which defines a `v1` or `v2` property
-# Eager
-EagerV1Any: TypeAlias = (
-    "EagerClassesV1[EagerAny, DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
-)
-EagerV2Any: TypeAlias = (
-    "EagerClassesV2[EagerAny, DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
-)
 EagerVAllAny: TypeAlias = "EagerClassesVAll[EagerAny, EagerAny, DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
-
-# EagerImpl
 EagerImplAny: TypeAlias = "EagerImplClasses[EagerDataFrameAny, SeriesAny, EagerExprAny, EagerExprAny | EagerScalarAny]"
 EagerImplVAllAny: TypeAlias = "EagerImplClassesVAll[EagerImplAny, EagerImplAny, EagerDataFrameAny, SeriesAny, EagerExprAny, EagerExprAny | EagerScalarAny]"
-
-# Lazy
-LazyV1Any: TypeAlias = (
-    "LazyClassesV1[LazyAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
-)
-LazyV2Any: TypeAlias = (
-    "LazyClassesV2[LazyAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
-)
 LazyVAllAny: TypeAlias = "LazyClassesVAll[LazyAny, LazyAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
-
-# Hybrid
-HybridV1Any: TypeAlias = "HybridClassesV1[HybridAny, DataFrameAny, SeriesAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
-HybridV2Any: TypeAlias = "HybridClassesV2[HybridAny, DataFrameAny, SeriesAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
 HybridVAllAny: TypeAlias = "HybridClassesVAll[HybridAny, HybridAny, DataFrameAny, SeriesAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
 
 # Throw them in a pot and stir
-ClassesVAny: TypeAlias = (
-    "EagerV1Any | LazyV1Any | HybridV1Any | EagerV2Any | LazyV2Any | HybridV2Any"
-)
-"""The type of `__narwhals_classes__` which defines at least one versioned property."""
-
 ClassesVAllAny: TypeAlias = (
     "EagerVAllAny | LazyVAllAny | HybridVAllAny | EagerImplVAllAny"
 )
@@ -327,28 +300,10 @@ def can_v2(obj: HasV2[C2] | HasV2[CB2] | Any) -> TypeIs[HasV2[C2]] | TypeIs[HasV
 
 
 # fmt: off
-class EagerClassesV1(EagerClasses[DF, S, E, SC], HasV1[C1], Protocol[C1, DF, S, E, SC]):
-    __slots__ = ()
-
-class EagerClassesV2(EagerClasses[DF, S, E, SC], HasV2[C2], Protocol[C2, DF, S, E, SC]):
-    __slots__ = ()
-
 class EagerClassesVAll(EagerClasses[DF, S, E, SC], HasVAll[C1, C2], Protocol[C1, C2, DF, S, E, SC]):
     __slots__ = ()
 
-class LazyClassesV1(LazyClasses[LF, PE, E, SC], HasV1[C1], Protocol[C1, LF, PE, E, SC]):
-    __slots__ = ()
-
-class LazyClassesV2(LazyClasses[LF, PE, E, SC], HasV2[C2], Protocol[C2, LF, PE, E, SC]):
-    __slots__ = ()
-
 class LazyClassesVAll(LazyClasses[LF, PE, E, SC], HasVAll[C1, C2], Protocol[C1, C2, LF, PE, E, SC]):
-    __slots__ = ()
-
-class HybridClassesV1(HybridClasses[DF, S, LF, PE, E, SC], HasV1[C1], Protocol[C1, DF, S, LF, PE, E, SC]):
-    __slots__ = ()
-
-class HybridClassesV2(HybridClasses[DF, S, LF, PE, E, SC], HasV2[C2], Protocol[C2, DF, S, LF, PE, E, SC]):
     __slots__ = ()
 
 class HybridClassesVAll(HybridClasses[DF, S, LF, PE, E, SC], HasVAll[C1, C2], Protocol[C1, C2, DF, S, LF, PE, E, SC]):
