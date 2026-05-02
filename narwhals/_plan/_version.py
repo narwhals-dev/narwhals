@@ -62,6 +62,11 @@ class _Version:
         return _import_expr(self._version)
 
 
+_MAIN = _NwVersion.MAIN
+_V1 = _NwVersion.V1
+_V2 = _NwVersion.V2
+
+
 # NOTE: Another choice here is to use string import paths, inside something like:
 #    `Mapping[Version, Mapping[Literal["DataFrame", "LazyFrame", ...],  Literal["narwhals._plan.dataframe.DataFrame", ...]]]`
 # Although it could save some lines, it would require manually syncing any time these symbols change location.
@@ -73,50 +78,42 @@ class _Version:
 # fmt: off
 @cache
 def _import_dataframe(version: _NwVersion, /) -> type[NwDataFrame[Any, Any]]:
-    if version is _NwVersion.MAIN:
-        from narwhals._plan.dataframe import DataFrame as NwDataFrame
-        return NwDataFrame
-    raise _not_implemented(version)  # pragma: no cover
+    from narwhals._plan import dataframe as df
+    return {_MAIN: df.DataFrame, _V1: df.DataFrameV1, _V2: df.DataFrameV2}[version]
 @cache
 def _import_lazyframe(version: _NwVersion, /) -> type[NwLazyFrame[Any]]:
-    if version is _NwVersion.MAIN:
+    if version is _MAIN:
         from narwhals._plan.lazyframe import LazyFrame as NwLazyFrame
         return NwLazyFrame
     raise _not_implemented(version)  # pragma: no cover
 @cache
-def _import_series(version: _NwVersion, /) -> type[NwSeries[Any]]:  # pragma: no cover
-    if version is _NwVersion.MAIN:
-        from narwhals._plan.series import Series as NwSeries
-        return NwSeries
-    if version is _NwVersion.V1:
-        from narwhals._plan.series import SeriesV1 as NwSeriesV1
-        return NwSeriesV1
-    from narwhals._plan.series import SeriesV2 as NwSeriesV2
-    return NwSeriesV2
+def _import_series(version: _NwVersion, /) -> type[NwSeries[Any]]:
+    from narwhals._plan import series as s
+    return {_MAIN: s.Series, _V1: s.SeriesV1, _V2: s.SeriesV2}[version]
 @cache
 def _import_schema(version: _NwVersion, /) -> type[NwSchema]:
-    if version is _NwVersion.MAIN:
+    if version is _MAIN:
         from narwhals.schema import Schema as NwSchema
         return NwSchema
-    if version is _NwVersion.V1:  # pragma: no cover
+    if version is _V1:
         from narwhals.stable.v1 import Schema as NwSchemaV1
         return NwSchemaV1
-    from narwhals.stable.v2 import Schema as NwSchemaV2  # pragma: no cover
-    return NwSchemaV2  # pragma: no cover
+    from narwhals.stable.v2 import Schema as NwSchemaV2
+    return NwSchemaV2
 @cache
 def _import_selector(version: _NwVersion, /) -> type[NwSelector]:
     from narwhals._plan.selectors import Selector, SelectorV1
-    if version is _NwVersion.MAIN:
+    if version is _MAIN:
         return Selector
-    if version is _NwVersion.V1:  # pragma: no cover
+    if version is _V1:  # pragma: no cover
         return SelectorV1
     raise _not_implemented(version)  # pragma: no cover
 @cache
 def _import_expr(version: _NwVersion, /) -> type[NwExpr]:
     from narwhals._plan.expr import Expr, ExprV1
-    if version is _NwVersion.MAIN:
+    if version is _MAIN:
         return Expr
-    if version is _NwVersion.V1:  # pragma: no cover
+    if version is _V1:  # pragma: no cover
         return ExprV1
     raise _not_implemented(version)  # pragma: no cover
 # fmt: on

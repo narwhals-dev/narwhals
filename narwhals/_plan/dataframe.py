@@ -762,6 +762,14 @@ class DataFrame(
         return LogicalPlan.from_df(self).to_narwhals(backend, self.version)
 
 
+class DataFrameV1(DataFrame[NativeDataFrameT_co, NativeSeriesT_co]):
+    _version: ClassVar[Version] = Version.V1
+
+
+class DataFrameV2(DataFrame[NativeDataFrameT_co, NativeSeriesT_co]):
+    _version: ClassVar[Version] = Version.V2
+
+
 def _is_sort_by_one(
     by: OneOrIterable[ColumnNameOrSelector], frame_columns: list[str]
 ) -> bool:

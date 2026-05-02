@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, TypeVar, cast
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant import classes as cc
 from narwhals._plan.typing import PluginAny, PluginName
-from narwhals._utils import Version, deep_attrgetter
+from narwhals._utils import deep_attrgetter
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -227,18 +227,3 @@ class PluginIR(Immutable):
         }
 
     __repr__ = Immutable.__str__
-
-
-# TODO @dangotbanned: This would be handled by `PluginManager`
-def _get_from_plugin(
-    name: PluginName, attr_name: _CompliantName, version: Version
-) -> Incomplete:  # pragma: no cover
-    """The context the query starts from.
-
-    The goal for `PluginIR` is to create something that is easy to use from this.
-    """
-    from narwhals._plan.plugins._manager import PluginManager
-
-    manager = PluginManager()
-    entry = manager._plugin_entry(name)
-    return entry[version.name][attr_name](manager.plugin(name).__narwhals_classes__)  # type: ignore[literal-required]

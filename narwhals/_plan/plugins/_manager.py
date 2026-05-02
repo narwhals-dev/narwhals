@@ -265,7 +265,6 @@ class PluginManager:
     _discovered: dict[PluginName, EntryPoint]
     _loaded: dict[PluginName, PluginAny | BuiltinAny]
 
-    # TODO @dangotbanned: Start testing after exposing these details somewhere query-able
     _parsed: dict[PluginName, _parse.PluginIR]
     """Details on what each plugin supports."""
 
@@ -305,6 +304,7 @@ class PluginManager:
         self._loaded[name] = plugin = entry_point.load()
         return plugin
 
+    # TODO @dangotbanned: Cover the `_parsed.get` branch using `is_native_*`
     def _plugin_parse(self, name: PluginName, /) -> _parse.PluginIR:
         """Discover features supported by a plugin, without invoking native imports."""
         if parsed := self._parsed.get(name):
@@ -355,12 +355,16 @@ class PluginManager:
     def get_hybrid(self, backend: IntoBackendExt) -> Plugin[cc.HybridAny, Any, Any, Any]:
         raise NotImplementedError
 
+    # TODO @dangotbanned: Add overloads, written as `CompliantDataFrame[pl.DataFrame]`, etc
+    # - Use a different api for concrete types (if needed)
     def dataframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.DataFrameAny]:
-        _entry = self._plugin_entry(_backend_to_plugin_name(backend))
-        msg = "TODO @dangotbanned: `PluginManager.dataframe`"
-        raise NotImplementedError(msg)
+        name = _backend_to_plugin_name(backend)
+        _entry = self._plugin_entry(name)
+        # NOTE: `mypy` doesn't recognise these as literals
+        v_name: Literal["V1", "V2", "MAIN"] = version.name  # type: ignore[assignment]
+        return _entry[v_name]["_dataframe"](self._plugin(name).__narwhals_classes__)
 
     # TODO @dangotbanned: Plan this and the other singledispatch bits
     def iter_native_dataframe(
@@ -406,9 +410,7 @@ class PluginManager:
         raise NotImplementedError
 
 
-def _backend_to_plugin_name(
-    backend: IntoBackendExt, /
-) -> BackendName | PluginName:  # pragma: no cover
+def _backend_to_plugin_name(backend: IntoBackendExt, /) -> BackendName | PluginName:
     if isinstance(backend, str):
         return backend
     if backend is _UNKNOWN or (impl := Implementation.from_backend(backend)) is _UNKNOWN:

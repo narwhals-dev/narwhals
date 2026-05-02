@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 
 import pytest
 
+import narwhals as nw
 from narwhals._plan.plugins import load_plugin
 from narwhals._plan.plugins._manager import PluginManager, lazyframe_collect
 from narwhals._typing import Arrow, Polars
@@ -104,13 +105,27 @@ def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
     assert name in set(plug_man.imported())
 
 
-@pytest.mark.xfail(
-    reason="TODO @dangotbanned: `PluginManager.dataframe`", raises=NotImplementedError
-)
 @pytest.mark.parametrize("version", Version)
 def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
-    dataframe = PluginManager().dataframe(eager, version)
-    assert dataframe.version is version  # pragma: no cover
+    data = {"a": [1, 2, 3, 4], "b": [1.3, 1.9, None, None]}
+    schema = {"a": nw.UInt32(), "b": nw.Float32()}
+    impl = Implementation.from_backend(eager)
+
+    plug_man = PluginManager()
+    dataframe = plug_man.dataframe(eager, version)
+    frame_compliant = dataframe.from_dict(data, schema=schema)
+    frame_nw = frame_compliant.to_narwhals()
+    frame_nw_2 = (
+        plug_man.dataframe(impl, version).from_dict(data, schema=schema).to_narwhals()
+    )
+
+    assert dataframe.implementation is impl
+    assert dataframe.version is version
+    assert frame_compliant.implementation is impl
+    assert frame_compliant.version is version
+    assert frame_nw.version is version
+    assert frame_nw_2.version is version
+    assert type(frame_nw_2) is type(frame_nw)
 
 
 @pytest.mark.xfail(
