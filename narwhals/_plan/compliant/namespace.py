@@ -32,8 +32,7 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
-# TODO @dangotbanned: Use `Compliant*` type params less upstream of here
-# TODO @dangotbanned: Resolve `FrameT` invariance
+# TODO @dangotbanned: Review what will replace following `*Classes`
 class CompliantNamespace(
     ranges.LazyRangeGenerator[FrameT, ExprT_co], Protocol[FrameT, ExprT_co, ScalarT_co]
 ):
@@ -42,8 +41,6 @@ class CompliantNamespace(
     ## Notes of `FrameT` variance
     - An issue for `LazyRangeGenerator` if that can be either eager or lazy
     - Having `CompliantFrameV*` and using `Self` is fragile
-    - Need to separate the types from the operations (e.g. `Package`)
-        - That should be able to use covariance for the compliant types
     """
 
     implementation: ClassVar[Implementation]

@@ -1,14 +1,15 @@
 """The class-accessing parts of `*Namespace`.
 
+Separating this from `*Namespace` has a few benefits:
+1. reducing/avoiding cyclic dependencies between types
+2. supporting covariance
+3. the protocols can be implemented by modules
+4. greater granularity for feature checks
+
 ## Notes
-- Separates the operations from navigation
 - Exposed in the `Plugin`-level as `__narwhals_classes__`
 - Intended to be used in a similar way for the implementation
     - But not by accessing through the plugin
-- A stepping stone to the `Package` idea.
-    - Everything is covariant already
-    - This object can be put anywhere
-    - Still uses the current names, so less noise to migrate
 - Versioning
     - `__narwhals_classes__` gives you access to every version of the classes available (e.g `.v1`)
     - Each version is represented with 1 unique type parameter
@@ -51,9 +52,13 @@ from narwhals._plan.compliant.typing import (
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
+    from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._utils import Version
 
 
+# TODO @dangotbanned: Generally improve LSP overhead
+# TODO @dangotbanned: Reduce how many types/protocols are defined
+# TODO @dangotbanned: Use `Any` in positions where the specialization is not solving a problem
 EagerAny: TypeAlias = (
     "EagerClasses[DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
 )
@@ -179,6 +184,10 @@ An external `Plugin` *can choose* to support versioning.
 CB1 = TypeVar("CB1", bound=ClassesImplAny, covariant=True)
 CB2 = TypeVar("CB2", bound=ClassesImplAny, covariant=True)
 
+
+# TODO @dangotbanned: (noisy refactor) Replace with one of these spellings:
+# 1. `dataframe`
+# 2. `DataFrame`
 PropertyName: TypeAlias = Literal[
     "_dataframe", "_evaluator", "_expr", "_lazyframe", "_scalar", "_series"
 ]
@@ -198,7 +207,22 @@ class CompliantClasses(Protocol[E, SC]):
     @property
     def _expr(self) -> type[E]: ...
     @property
-    def _scalar(self) -> type[SC]: ...
+    def _scalar(self) -> type[SC]:
+        """Extra glue to mimic polars' scalar expressions.
+
+        `CompliantScalar` implements many of the special cases, with guidance (docstrings) on the logic needed
+        to fill in the gaps.
+
+        Any expression not mentioned in `CompliantScalar` should behave identically to the `*Expr` version.
+
+        You can opt-out of implementing this by returning `*Expr` instead:
+
+            @property
+            def _scalar(self):
+                return self._expr
+        """
+        ...
+
     def __narwhals_expr_prepare__(self) -> E:  # pragma: no cover
         # NOTE: still needed for disambiguating `Expr`, `Scalar` and `Namespace`
         tp = self._expr
@@ -243,6 +267,18 @@ class EagerImplClasses(
     """This is what `pyarrow` (and `pandas`) would use, but isn't required (e.g. `polars`)."""
 
     __slots__ = ()
+
+
+# TODO @dangotbanned: (low-priority) Integrate with `LazyClasses`
+class HasPlanResolver(Protocol):
+    """Overrides the default `LogicalPlan` -> `ResolvedPlan` translation."""
+
+    __slots__ = ()
+
+    @property
+    def _resolver(self) -> type[LogicalToResolved] | None:
+        """Optional, can default to `_plan.plans.conversion.Resolver`."""
+        ...
 
 
 # NOTE: Recipe for these is:
@@ -290,8 +326,6 @@ def can_v2(obj: HasV2[C2] | HasV2[CB2] | Any) -> TypeIs[HasV2[C2]] | TypeIs[HasV
     return hasattrs_static(obj, "v2")
 
 
-# NOTE: As `ScalarT_co` has a default, it must be listed at the end of the type parameters
-# The important addition to this level is `HasV1[...]`, so  `...` is listed first
 # fmt: off
 class EagerClassesV1(EagerClasses[DF, S, E, SC], HasV1[C1], Protocol[C1, DF, S, E, SC]):
     __slots__ = ()

@@ -68,6 +68,7 @@ _GROUP: Final = "narwhals.plugins-plan"
 _R_co = TypeVar("_R_co", covariant=True)
 
 
+# TODO @dangotbanned: Start cleaning up this and all the overload experiments
 class _Plugin(Protocol[_R_co]):
     """Minimal interface for typing.
 
