@@ -196,6 +196,8 @@ class ClassesIR(Immutable):
         out: ClassesProxyTD = results
         return out
 
+    __repr__ = Immutable.__str__
+
 
 class PluginIR(Immutable):
     """Feature flags for a plugin, documenting class/version support."""
@@ -232,6 +234,8 @@ class PluginIR(Immutable):
             ),
         }
         return self.name, accessors
+
+    __repr__ = Immutable.__str__
 
 
 # TODO @dangotbanned: This would be handled by `PluginManager`
