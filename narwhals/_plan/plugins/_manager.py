@@ -22,6 +22,7 @@ from typing import (
 from narwhals._plan.compliant import classes as cc
 from narwhals._plan.compliant.classes import C1, C2
 from narwhals._plan.exceptions import unsupported_error
+from narwhals._plan.plugins import _parse
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
@@ -45,7 +46,6 @@ if TYPE_CHECKING:
         ScalarNoDefaultT_co as SC,
         SeriesT_co as S,
     )
-    from narwhals._plan.plugins import _parse
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
     from narwhals._typing import BackendName
 
@@ -264,7 +264,6 @@ class PluginManager:
     _discovered: dict[PluginName, EntryPoint]
     _loaded: dict[PluginName, PluginAny | BuiltinAny]
 
-    # TODO @dangotbanned: When moving `_discovered` -> `_loaded`, parse and add here
     # TODO @dangotbanned: On the first request that requires access, `PluginIR.to_registry_item` -> `_registry`
     _parsed: dict[PluginName, _parse.PluginIR]
     """Details on what each plugin supports."""
@@ -306,6 +305,7 @@ class PluginManager:
             return loaded
         if discovered := self._discovered.pop(name, None):
             self._loaded[name] = plugin = discovered.load()
+            self._parsed[name] = _parse.PluginIR.from_plugin(plugin)
             return plugin
         raise _unsupported_error(name, name)
 

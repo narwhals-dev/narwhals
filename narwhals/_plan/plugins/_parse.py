@@ -117,17 +117,19 @@ class Unsupported:
     _feature: UnsupportedName
     _plugin: PluginName
 
-    def __init__(self, feature: UnsupportedName, plugin: PluginName, /) -> None:
+    def __init__(
+        self, feature: UnsupportedName, plugin: PluginName, /
+    ) -> None:  # pragma: no cover
         self._feature = feature
         self._plugin = plugin
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self._feature!r})"
 
-    def __bool__(self) -> Literal[False]:
+    def __bool__(self) -> Literal[False]:  # pragma: no cover
         return False
 
-    def error(self) -> NotImplementedError:
+    def error(self) -> NotImplementedError:  # pragma: no cover
         feature = self._feature
         if feature in _VERSIONS:
             msg = f"Version {feature!r} is not yet supported for {self._plugin!r}"
@@ -135,11 +137,13 @@ class Unsupported:
             msg = f"`{feature}()` is not supported for {self._plugin!r}"
         return NotImplementedError(msg)
 
-    def __call__(self, obj: Any, /) -> Any:
+    def __call__(self, obj: Any, /) -> Any:  # pragma: no cover
         raise self.error()
 
     @staticmethod
-    def fill_version(version: _VersionName, plugin: PluginName, /) -> ClassesProxyTD:
+    def fill_version(
+        version: _VersionName, plugin: PluginName, /
+    ) -> ClassesProxyTD:  # pragma: no cover
         m: Any = dict.fromkeys(_COMPLIANT_NAMES, Unsupported(version, plugin))
         r: ClassesProxyTD = m
         return r
@@ -174,7 +178,7 @@ class ClassesIR(Immutable):
 
     def to_accessors(
         self, plugin: PluginName, version: _VersionName | None = None
-    ) -> ClassesProxyTD:
+    ) -> ClassesProxyTD:  # pragma: no cover
         """Convert this representation into a mapping of accessor functions."""
         props = _REMAP_PROPERTIES
         errors = _REMAP_ERRORS
@@ -212,7 +216,7 @@ class PluginIR(Immutable):
             v2=(ClassesIR.from_classes(classes.v2) if cc.can_v2(classes) else False),
         )
 
-    def to_registry_item(self) -> tuple[PluginName, RegEntry]:
+    def to_registry_item(self) -> tuple[PluginName, RegEntry]:  # pragma: no cover
         plugin = self.name
         accessors: RegEntry = {
             "MAIN": self.main.to_accessors(plugin),
@@ -230,14 +234,10 @@ class PluginIR(Immutable):
         return self.name, accessors
 
 
-# TODO @dangotbanned: Call this from `PluginManager`
-parse_plugin: Final = PluginIR.from_plugin
-
-
 # TODO @dangotbanned: This would be handled by `PluginManager`
 def _get_from_plugin(
     plugin_name: PluginName, attr_name: _CompliantName, version: Version
-) -> Incomplete:
+) -> Incomplete:  # pragma: no cover
     """The context the query starts from.
 
     The goal for `PluginIR` is to create something that is easy to use from this.
