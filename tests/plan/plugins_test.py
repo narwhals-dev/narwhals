@@ -8,7 +8,7 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.compliant.typing as ct
-from narwhals._plan.plugins import load_plugin
+from narwhals._plan.plugins import load_plugin, manager
 from narwhals._plan.plugins._manager import PluginManager
 from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
@@ -105,6 +105,20 @@ def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
     assert name not in set(plug_man.imported())
     plug_man.import_modules(name)
     assert name in set(plug_man.imported())
+
+
+def test_plugin_manager_is_native_dataframe(eager: BuiltinName) -> None:
+    plug_man = manager()
+    data = {"a": [1, 2, 3]}
+    assert not plug_man.is_native_dataframe(data)
+    plugin = plug_man.plugin(eager)
+    assert plugin.can_import()
+    compliant = plug_man.dataframe(plugin.name, Version.MAIN).from_dict(data)
+    assert not plug_man.is_native_dataframe(compliant)
+    native = compliant.native
+    assert plug_man.is_native_dataframe(native)
+    assert plugin.is_native_dataframe(native)
+    assert manager().is_native_dataframe(native)
 
 
 @pytest.mark.parametrize("version", Version)

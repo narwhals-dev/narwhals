@@ -257,11 +257,10 @@ class PluginManager:
         self._loaded[name] = plugin = entry_point.load()
         return plugin
 
-    # TODO @dangotbanned: Cover the `_parsed.get` branch using `is_native_*`
     def _plugin_parse(self, name: PluginName, /) -> _parse.PluginIR:
         """Discover features supported by a plugin, without invoking native imports."""
         if parsed := self._parsed.get(name):
-            return parsed  # pragma: no cover
+            return parsed
         self._parsed[name] = ir = _parse.PluginIR.from_plugin(self._plugin(name))
         return ir
 
@@ -368,18 +367,16 @@ class PluginManager:
     ) -> type[ct.PlanEvaluatorAny]:
         return self._get_class("_evaluator", backend, version)
 
-    # TODO @dangotbanned: Plan this and the other singledispatch bits
-    def iter_native_dataframe(
-        self,
-    ) -> Iterator[type[NativeDataFrame]]:  # pragma: no cover
+    # TODO @dangotbanned: Use in `@singledispatch` (see stash `expr-ir-from-native-series-dispatch`)
+    def native_dataframe_classes(self) -> Iterator[type[NativeDataFrame]]:
         for plugin in self._iter_plugins():
-            if plugin.is_imported():
+            if plugin.is_imported() and self._plugin_parse(plugin.name).main.dataframe:
                 yield from plugin.native_dataframe_classes()
+            else:  # pragma: no cover
+                ...
 
-    def is_native_dataframe(
-        self, native: Any
-    ) -> TypeIs[NativeDataFrame]:  # pragma: no cover
-        return bool(types := tuple(self.iter_native_dataframe())) and isinstance(
+    def is_native_dataframe(self, native: Any) -> TypeIs[NativeDataFrame]:
+        return bool(types := tuple(self.native_dataframe_classes())) and isinstance(
             native, types
         )
 
