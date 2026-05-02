@@ -93,7 +93,7 @@ def test_plugin_manager_importable() -> None:
     plug_man = PluginManager()
     for name in plug_man.importable():
         plug_man.import_modules(name)
-        assert plug_man.get(name).is_imported()
+        assert plug_man.plugin(name).is_imported()
 
 
 def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
@@ -102,6 +102,23 @@ def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
     assert name not in set(plug_man.imported())
     plug_man.import_modules(name)
     assert name in set(plug_man.imported())
+
+
+@pytest.mark.xfail(
+    reason="TODO @dangotbanned: `PluginManager.dataframe`", raises=NotImplementedError
+)
+@pytest.mark.parametrize("version", Version)
+def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
+    dataframe = PluginManager().dataframe(eager, version)
+    assert dataframe.version is version  # pragma: no cover
+
+
+@pytest.mark.xfail(
+    reason="TODO @dangotbanned: Missing version(s); missing requirements; duplicate name; failed entry point load, etc",
+    raises=NotImplementedError,
+)
+def test_mock_plugins() -> None:
+    raise NotImplementedError
 
 
 # TODO @dangotbanned: Replace with something less experimental (when available)
@@ -218,7 +235,7 @@ if TYPE_CHECKING:
         - Need this here while I try to minimize the typing
         """
         plugins = PluginManager()
-        lazy = plugins.get(current)
+        lazy = plugins.plugin(current)
         assert_type(lazy, PluginAny | BuiltinAny)
         classes_1 = _manager.import_classes(lazy, version)
 
@@ -250,7 +267,7 @@ if TYPE_CHECKING:
         else:
             raise NotImplementedError
 
-        eager = plugins.get(collect) if collect else lazy
+        eager = plugins.plugin(collect) if collect else lazy
         assert_type(eager, PluginAny | BuiltinAny)
 
         classes_2 = _manager.import_classes(eager, version)

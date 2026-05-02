@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._native import NativeDataFrame
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.compliant.classes import CB, C
     from narwhals._plan.compliant.plugins import Builtin, Plugin
     from narwhals._plan.compliant.typing import (
@@ -226,9 +227,9 @@ def lazyframe_collect(
         raise TypeError(msg)
 
     plugins = PluginManager()
-    lazy = plugins.get(current_backend, "can_import")
+    lazy = plugins.plugin(current_backend, "can_import")
     evaluator: type[PlanEvaluatorAny] = import_evaluator(lazy, version)
-    eager = plugins.get(collect_backend, "can_import") if collect_backend else lazy
+    eager = plugins.plugin(collect_backend, "can_import") if collect_backend else lazy
     # NOTE: Annotating this to please `mypy` prevents `pyright` from inferring ` type[PolarsDataFrame] | type[ArrowDataFrame]`
     dataframe = import_dataframe(eager, version)  # type: ignore[var-annotated]
     return evaluator, dataframe
@@ -264,12 +265,10 @@ class PluginManager:
     _discovered: dict[PluginName, EntryPoint]
     _loaded: dict[PluginName, PluginAny | BuiltinAny]
 
-    # TODO @dangotbanned: On the first request that requires access, `PluginIR.to_registry_item` -> `_registry`
     # TODO @dangotbanned: Start testing after exposing these details somewhere query-able
     _parsed: dict[PluginName, _parse.PluginIR]
     """Details on what each plugin supports."""
 
-    # TODO @dangotbanned: Flesh out the order each dict get populated in
     _registry: dict[PluginName, _parse.RegEntry]
     """A rewrapped `Plugin`, with error handling on unsupported features."""
 
@@ -300,27 +299,41 @@ class PluginManager:
             s += f"\n{indent}discovered\n{indent_2}{s_eps}"
         return f"{type(self).__name__}[{n_discovered + n_loaded}]{s}"
 
-    def _load_plugin(self, name: PluginName, entry_point: EntryPoint, /) -> PluginAny:
+    def _plugin_load(self, name: PluginName, entry_point: EntryPoint, /) -> PluginAny:
         # NOTE: Keeps `_plugin` and `_iter_plugins` in sync
         plugin: PluginAny
         self._loaded[name] = plugin = entry_point.load()
-        self._parsed[name] = _parse.PluginIR.from_plugin(plugin)
         return plugin
 
-    def _plugin(self, name: PluginName, /) -> PluginAny | BuiltinAny:
+    def _plugin_parse(self, name: PluginName, /) -> _parse.PluginIR:
+        """Discover features supported by a plugin, without invoking native imports."""
+        if parsed := self._parsed.get(name):
+            return parsed  # pragma: no cover
+        self._parsed[name] = ir = _parse.PluginIR.from_plugin(self._plugin(name))
+        return ir
+
+    def _plugin_entry(self, name: PluginName, /) -> _parse.RegEntry:
+        """Lower a plugin into a proxy, providing error wrapping for missing features."""
+        registry = self._registry
+        if entry := registry.get(name):
+            return entry
+        registry[name] = entry = self._plugin_parse(name).to_registry_entry()
+        return entry
+
+    def _plugin(self, name: PluginName, /) -> PluginAny:
         if loaded := self._loaded.get(name):
             return loaded
         if entry_point := self._discovered.pop(name, None):
-            return self._load_plugin(name, entry_point)
+            return self._plugin_load(name, entry_point)
         raise _unsupported_error(name, name)
 
     def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:
         yield from self._loaded.values()
-        while self._discovered:
+        while self._discovered:  # pragma: no cover
             name, ep = self._discovered.popitem()
-            yield self._load_plugin(name, ep)
+            yield self._plugin_load(name, ep)
 
-    def get(
+    def plugin(
         self, backend: IntoBackendExt, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny:
         """Return the plugin matching `backend`, raising if `require` returns False."""
@@ -342,6 +355,13 @@ class PluginManager:
     def get_hybrid(self, backend: IntoBackendExt) -> Plugin[cc.HybridAny, Any, Any, Any]:
         raise NotImplementedError
 
+    def dataframe(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.DataFrameAny]:
+        _entry = self._plugin_entry(_backend_to_plugin_name(backend))
+        msg = "TODO @dangotbanned: `PluginManager.dataframe`"
+        raise NotImplementedError(msg)
+
     # TODO @dangotbanned: Plan this and the other singledispatch bits
     def iter_native_dataframe(
         self,
@@ -359,7 +379,7 @@ class PluginManager:
 
     def import_modules(self, backend: IntoBackendExt, /) -> None:
         """Import the requirements for `backend`."""
-        plugin = self.get(backend, require="can_import")
+        plugin = self.plugin(backend, require="can_import")
         if not plugin.is_imported():
             for module in plugin.requirements:
                 import_module(module)

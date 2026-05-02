@@ -42,4 +42,4 @@ def load_plugin(backend: IntoBackendExt, /) -> PluginAny:
     The returned object can be used to query availability.
     For built-ins, this is always safe and *does not* import the native package.
     """
-    return _manager.PluginManager().get(backend)
+    return _manager.PluginManager().plugin(backend)

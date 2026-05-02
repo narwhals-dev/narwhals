@@ -107,9 +107,6 @@ class RegEntry(TypedDict):
     V2: ClassesProxyTD
 
 
-PluginReg: TypeAlias = dict[PluginName, RegEntry]
-
-
 class Unsupported:
     """Marker for functionality that should raise on use."""
 
@@ -117,17 +114,12 @@ class Unsupported:
     _feature: UnsupportedName
     _plugin: PluginName
 
-    def __init__(
-        self, feature: UnsupportedName, plugin: PluginName, /
-    ) -> None:  # pragma: no cover
+    def __init__(self, feature: UnsupportedName, plugin: PluginName, /) -> None:
         self._feature = feature
         self._plugin = plugin
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self._feature!r})"
-
-    def __bool__(self) -> Literal[False]:  # pragma: no cover
-        return False
 
     def error(self) -> NotImplementedError:  # pragma: no cover
         feature = self._feature
@@ -178,7 +170,7 @@ class ClassesIR(Immutable):
 
     def to_accessors(
         self, plugin: PluginName, version: _VersionName | None = None
-    ) -> ClassesProxyTD:  # pragma: no cover
+    ) -> ClassesProxyTD:
         """Convert this representation into a mapping of accessor functions."""
         props = _REMAP_PROPERTIES
         errors = _REMAP_ERRORS
@@ -218,9 +210,9 @@ class PluginIR(Immutable):
             v2=(ClassesIR.from_classes(classes.v2) if cc.can_v2(classes) else False),
         )
 
-    def to_registry_item(self) -> tuple[PluginName, RegEntry]:  # pragma: no cover
+    def to_registry_entry(self) -> RegEntry:
         plugin = self.name
-        accessors: RegEntry = {
+        return {
             "MAIN": self.main.to_accessors(plugin),
             "V1": (
                 v1.to_accessors(plugin, "v1")
@@ -233,14 +225,13 @@ class PluginIR(Immutable):
                 else Unsupported.fill_version("v2", plugin)
             ),
         }
-        return self.name, accessors
 
     __repr__ = Immutable.__str__
 
 
 # TODO @dangotbanned: This would be handled by `PluginManager`
 def _get_from_plugin(
-    plugin_name: PluginName, attr_name: _CompliantName, version: Version
+    name: PluginName, attr_name: _CompliantName, version: Version
 ) -> Incomplete:  # pragma: no cover
     """The context the query starts from.
 
@@ -249,6 +240,5 @@ def _get_from_plugin(
     from narwhals._plan.plugins._manager import PluginManager
 
     manager = PluginManager()
-    plugin = manager.get(plugin_name, require="is_imported")
-    registry = manager._registry
-    return registry[plugin_name][version.name][attr_name](plugin.__narwhals_classes__)  # type: ignore[literal-required]
+    entry = manager._plugin_entry(name)
+    return entry[version.name][attr_name](manager.plugin(name).__narwhals_classes__)  # type: ignore[literal-required]
