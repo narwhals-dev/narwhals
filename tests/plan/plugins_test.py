@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 import pytest
 
 import narwhals as nw
+import narwhals._plan as nwp
+import narwhals._plan.compliant.typing as ct
 from narwhals._plan.plugins import load_plugin
 from narwhals._plan.plugins._manager import PluginManager, lazyframe_collect
 from narwhals._typing import Arrow, Polars
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, TypeAlias, assert_type
 
     from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.compliant.typing import DataFrameAny, PlanEvaluatorAny
     from narwhals._plan.plugins import _manager
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny
@@ -110,22 +111,74 @@ def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
     data = {"a": [1, 2, 3, 4], "b": [1.3, 1.9, None, None]}
     schema = {"a": nw.UInt32(), "b": nw.Float32()}
     impl = Implementation.from_backend(eager)
-
     plug_man = PluginManager()
-    dataframe = plug_man.dataframe(eager, version)
-    frame_compliant = dataframe.from_dict(data, schema=schema)
-    frame_nw = frame_compliant.to_narwhals()
-    frame_nw_2 = (
-        plug_man.dataframe(impl, version).from_dict(data, schema=schema).to_narwhals()
-    )
 
-    assert dataframe.implementation is impl
-    assert dataframe.version is version
-    assert frame_compliant.implementation is impl
-    assert frame_compliant.version is version
-    assert frame_nw.version is version
-    assert frame_nw_2.version is version
-    assert type(frame_nw_2) is type(frame_nw)
+    compliant_type = plug_man.dataframe(eager, version)
+    compliant = compliant_type.from_dict(data, schema=schema)
+    nw_ = compliant.to_narwhals()
+    nw_2 = plug_man.dataframe(impl, version).from_dict(data, schema=schema).to_narwhals()
+    assert_context_preserved(compliant_type, compliant, nw_, nw_2, impl, version)
+
+
+@pytest.mark.parametrize("version", Version)
+def test_plugin_manager_series(eager: BuiltinName, version: Version) -> None:
+    data = [1, 2, 3, 4]
+    impl = Implementation.from_backend(eager)
+    plug_man = PluginManager()
+
+    compliant_type = plug_man.series(eager, version)
+    compliant = compliant_type.from_iterable(data, name="hello")
+    nw_ = compliant.to_narwhals()
+    nw_2 = plug_man.series(impl, version).from_iterable(data, name="hello").to_narwhals()
+    assert_context_preserved(compliant_type, compliant, nw_, nw_2, impl, version)
+
+
+@pytest.mark.parametrize("version", Version)
+def test_plugin_manager_lazyframe(lazy: LazyAllowed, version: Version) -> None:
+    _pa = pytest.importorskip("pyarrow")
+    data = {"a": [1, 2, 3, 4], "b": [1.3, 1.9, None, None]}
+    table: pa.Table = _pa.table(data)
+    impl = Implementation.from_backend(lazy)
+    plug_man = PluginManager()
+
+    compliant_type = plug_man.lazyframe(lazy, version)
+    compliant = compliant_type.from_arrow(table)
+    nw_ = compliant.collect_narwhals("pyarrow").lazy(lazy)
+    nw_2 = (
+        plug_man.lazyframe(impl, version)
+        .from_arrow(table)
+        .collect_narwhals("pyarrow")
+        .lazy(lazy)
+    )
+    assert_context_preserved(compliant_type, compliant, nw_, nw_2, impl, version)
+
+
+CompT = TypeVar("CompT", bound="ct.DataFrameAny | ct.SeriesAny | ct.LazyFrameAny")
+NwT = TypeVar(
+    "NwT", bound="nwp.DataFrame[Any, Any] | nwp.Series[Any] | nwp.LazyFrame[Any]"
+)
+
+
+def assert_context_preserved(
+    compliant_type: type[CompT],
+    compliant_instance: CompT,
+    narwhals_instance_1: NwT,
+    narwhals_instance_2: NwT,
+    implementation: Implementation,
+    version: Version,
+) -> None:
+    """Ensure all arguments share implementations & versions."""
+    assert compliant_type.version is version
+    assert compliant_instance.version is version
+    assert narwhals_instance_1.version is version
+    assert narwhals_instance_2.version is version
+
+    assert compliant_type.implementation is implementation
+    assert compliant_instance.implementation is implementation
+    assert narwhals_instance_1.implementation is implementation
+    assert narwhals_instance_2.implementation is implementation
+
+    assert type(narwhals_instance_1) is type(narwhals_instance_2)
 
 
 @pytest.mark.xfail(
@@ -133,6 +186,15 @@ def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
     raises=NotImplementedError,
 )
 def test_mock_plugins() -> None:
+    raise NotImplementedError
+
+
+@pytest.mark.xfail(
+    reason="TODO @dangotbanned: cover evaluator, replace `test_lazyframe_collect",
+    raises=NotImplementedError,
+)
+@pytest.mark.parametrize("version", Version)
+def test_plugin_manager_evaluator(lazy: LazyAllowed, version: Version) -> None:
     raise NotImplementedError
 
 
@@ -242,7 +304,7 @@ if TYPE_CHECKING:
 
     def typing_can_eager_lazy_integration(
         current: IntoBackendExt, collect: IntoBackendExt | None, version: Version
-    ) -> tuple[type[PlanEvaluatorAny], type[DataFrameAny]]:
+    ) -> tuple[type[ct.PlanEvaluatorAny], type[ct.DataFrameAny]]:
         """By far the most insane idea yet.
 
         - This took an incredibly long time to get (mostly) working

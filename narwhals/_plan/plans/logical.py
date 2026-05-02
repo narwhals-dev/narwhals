@@ -505,6 +505,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
         return resolver.scan_dataframe(self)
 
     # TODO @dangotbanned: Review backend/version entrypoint
+    # - 2x `version` is a major smell
     def to_narwhals(
         self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
     ) -> LazyFrame[Any]:
@@ -516,9 +517,15 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
         ):
             # (4-1) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
             # We can avoid storing the dataframe on the graph, by letting polars do it instead
-            from narwhals._plan.polars.lazyframe import PolarsLazyFrame
+            from narwhals._plan.plugins._manager import PluginManager
 
-            return PolarsLazyFrame.from_narwhals(self.frame).to_logical().to_narwhals()
+            return (
+                PluginManager()
+                .lazyframe("polars", version)
+                .from_narwhals(self.frame)
+                .to_logical()
+                .to_narwhals(version=version)
+            )
         if requested is current or requested is Implementation.UNKNOWN:
             # (1) Fake lazy (needs a reference to eager data)
             return into_version(version).lazyframe._from_lp_scan(self, current)

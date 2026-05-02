@@ -377,6 +377,26 @@ class PluginManager:
         classes = self._plugin(name).__narwhals_classes__
         return self._plugin_entry(name)[_VERSION_NAME[version]]["_dataframe"](classes)
 
+    def series(self, backend: IntoBackendExt, /, version: Version) -> type[ct.SeriesAny]:
+        name = _backend_to_plugin_name(backend)
+        classes = self._plugin(name).__narwhals_classes__
+        return self._plugin_entry(name)[_VERSION_NAME[version]]["_series"](classes)
+
+    def lazyframe(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.LazyFrameAny]:
+        name = _backend_to_plugin_name(backend)
+        classes = self._plugin(name).__narwhals_classes__
+        return self._plugin_entry(name)[_VERSION_NAME[version]]["_lazyframe"](classes)
+
+    # TODO @dangotbanned: Cover, replace `_namespace.evaluator`, `test_lazyframe_collect`
+    def evaluator(
+        self, backend: IntoBackendExt, /, version: Version
+    ) -> type[ct.PlanEvaluatorAny]:  # pragma: no cover
+        name = _backend_to_plugin_name(backend)
+        classes = self._plugin(name).__narwhals_classes__
+        return self._plugin_entry(name)[_VERSION_NAME[version]]["_evaluator"](classes)
+
     # TODO @dangotbanned: Plan this and the other singledispatch bits
     def iter_native_dataframe(
         self,

@@ -101,7 +101,7 @@ class LazyFrame(Generic[Native]):
     to_native = not_implemented()  # look into this *after* `collect`
 
     @property
-    def version(self) -> Version:  # pragma: no cover
+    def version(self) -> Version:
         return self._version
 
     @property
@@ -386,3 +386,11 @@ class LazyFrame(Generic[Native]):
     ) -> Self:  # pragma: no cover
         by = tuple(_parse.into_iter_selector_ir(order_by))
         return self._with_lp(self._plan.with_row_index_by(name, order_by=by))
+
+
+class LazyFrameV1(LazyFrame[Native]):
+    _version: ClassVar[Version] = Version.V1
+
+
+class LazyFrameV2(LazyFrame[Native]):
+    _version: ClassVar[Version] = Version.V2

@@ -1,15 +1,8 @@
-# TODO @dangotbanned: Review what to extract into plugin features
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, get_args
+from typing import TYPE_CHECKING, Any
 
-from narwhals._typing import _LazyFrameCollectImpl
-from narwhals._utils import (
-    Implementation,
-    Version,
-    can_lazyframe_collect,
-    is_eager_allowed,
-)
+from narwhals._utils import Implementation, Version, is_eager_allowed
 
 if TYPE_CHECKING:
     import polars as pl
@@ -27,6 +20,7 @@ def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.Name
     return obj.__narwhals_namespace__()
 
 
+# TODO @dangotbanned: (after everything else) Review how functions from namespace should work
 def namespace_from_backend(backend: IntoBackend[Backend] | Any) -> ct.NamespaceAny:
     """Instantiate a compliant namespace from `backend`, routing through `Implementation`."""
     impl = Implementation.from_backend(backend)
@@ -42,7 +36,7 @@ def namespace_from_backend(backend: IntoBackend[Backend] | Any) -> ct.NamespaceA
     raise NotImplementedError(msg)
 
 
-# TODO @dangotbanned: Need to be able to store a closure for getting namespaces
+# TODO @dangotbanned: Replace with `PluginManager.(builtin|builtin_name)`?
 def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
     """Reject the possibility of plugins via this path."""
     impl = Implementation.from_backend(backend)
@@ -52,6 +46,7 @@ def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
     return impl
 
 
+# TODO @dangotbanned: Replace with `PluginManager.(eager|eager_name)`?
 def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedImpl:
     impl = known_implementation(backend)
     if is_eager_allowed(impl):
@@ -60,18 +55,7 @@ def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedIm
     raise TypeError(msg)  # pragma: no cover
 
 
-def collect_implementation(backend: IntoBackend[Backend] | Any) -> _LazyFrameCollectImpl:
-    """Parse `backend` into an `Implementation`, ensuring it can be used in `LazyFrame.collect`."""
-    impl = Implementation.from_backend(backend)
-    if can_lazyframe_collect(impl):
-        return impl
-    msg = (  # pragma: no cover
-        f"Unsupported `backend` value.\n"
-        f"Expected one of {get_args(_LazyFrameCollectImpl)} or None, got: {impl}."
-    )
-    raise TypeError(msg)  # pragma: no cover
-
-
+# TODO @dangotbanned: Replace with `PluginManager.evaluator`
 def evaluator(backend: KnownImpl, version: Version) -> type[ResolvedToCompliant[Any]]:
     if backend is Implementation.POLARS:
         from narwhals._plan import polars as _polars

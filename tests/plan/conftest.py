@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import LiteralString
 
-    from narwhals.typing import EagerAllowed
+    from narwhals.typing import EagerAllowed, LazyAllowed
     from tests.plan.utils import (
         ConstructorFixtureName,
         DataFrame,
@@ -30,6 +30,8 @@ if TYPE_CHECKING:
     def eager() -> EagerAllowed: ...
     @pytest.fixture
     def eager_or_false() -> EagerAllowed | Literal[False]: ...
+    @pytest.fixture
+    def lazy() -> LazyAllowed: ...
 
 
 _MAIN_DEFAULT_CONSTRUCTORS = (
@@ -110,6 +112,15 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
                 metafunc.parametrize(
                     "eager_or_false", (*eager_values, False), ids=(*eager_ids, "False")
                 )
+    if "lazy" in metafunc.fixturenames and (
+        lazy_values_ids := [
+            (lazy, backend.identifier)
+            for backend in test_backends
+            if (lazy := getattr(backend, "backend_lazy", None))
+        ]
+    ):
+        lazy_values, lazy_ids = zip(*lazy_values_ids)
+        metafunc.parametrize("lazy", lazy_values, ids=lazy_ids)
 
 
 def _parametrize_constructor_fixture(

@@ -77,6 +77,8 @@ class Series(Generic[NativeSeriesT_co]):
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
     # TODO @dangotbanned: Review backend/version entrypoint
+    # TODO @dangotbanned: Replace with `PluginManager.series(backend,version).from_iterable`?
+    # (`can_from_iterable` is doing something here)
     @classmethod
     def from_iterable(
         cls: type[Series[Any]],
@@ -92,7 +94,7 @@ class Series(Generic[NativeSeriesT_co]):
         raise unsupported_error(backend, "Series.from_iterable")  # pragma: no cover
 
     # TODO @dangotbanned: Review backend/version entrypoint
-    # TODO @dangotbanned: Add a protocol in `translate`, rinse/repeat `from_{dict,iterable}`
+    # TODO @dangotbanned: Replace with `@singledispatch` sourced from `PluginManager`
     @classmethod
     def from_native(
         cls: type[Series[Any]], native: NativeSeriesT, name: str = "", /

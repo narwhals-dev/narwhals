@@ -4,31 +4,26 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
-from narwhals._plan._namespace import collect_implementation
 from narwhals._plan.compliant.typing import Native_co
-from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
     from typing_extensions import Self, TypeAlias
 
+    from narwhals._native import NativeDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._plan.plans import logical as lp
     from narwhals._plan.typing import IncompleteVarianceLie
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable
-    from narwhals._typing import _LazyFrameCollectImpl
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed, IntoBackend
 
-    CollectMap: TypeAlias = Mapping[
-        _LazyFrameCollectImpl, Callable[[], pa.Table | pd.DataFrame | pl.DataFrame]
-    ]
 
 Incomplete: TypeAlias = Any
 
@@ -140,18 +135,22 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native_co]):
     def collect_compliant(
         self, backend: IntoBackend[EagerAllowed], **kwds: Any
     ) -> CompliantDataFrame[Any, Any]:
-        impl = collect_implementation(backend)
-        if impl is Implementation.PYARROW:
-            from narwhals._plan import arrow
+        from narwhals._plan.plugins._manager import PluginManager
 
-            return arrow.DataFrame.from_native(self.collect_arrow(**kwds))
-        if impl is Implementation.POLARS:
-            from narwhals._plan import polars
+        impl = Implementation.from_backend(backend)
+        mapping: dict[Implementation, Callable[..., NativeDataFrame]] = {
+            Implementation.PYARROW: self.collect_arrow,
+            Implementation.POLARS: self.collect_polars,
+            Implementation.PANDAS: self.collect_pandas,
+        }
+        if collect := mapping.get(impl):
+            return (
+                PluginManager()
+                .dataframe(backend, self.version)
+                .from_native(collect(**kwds))
+            )
 
-            return polars.DataFrame.from_native(self.collect_polars(**kwds))
-        if impl is Implementation.PANDAS:
-            raise NotImplementedError(impl)
-        assert_never(impl)
+        raise NotImplementedError(impl)
 
     def collect_narwhals(
         self, backend: IntoBackend[EagerAllowed], **kwds: Any

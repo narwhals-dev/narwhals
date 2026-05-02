@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
 
+    import pandas as pd
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._plan.compliant.typing import DataFrameAny
@@ -23,9 +25,6 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed
-
-
-MAIN = Version.MAIN
 
 
 class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
@@ -66,8 +65,12 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
         return self._native
 
     collect_schema = todo()
-    collect_arrow = todo()
-    collect_pandas = todo()
+
+    def collect_arrow(self, **kwds: Any) -> pa.Table:
+        return self.collect_polars(**kwds).to_arrow()
+
+    def collect_pandas(self, **kwds: Any) -> pd.DataFrame:
+        return self.collect_polars(**kwds).to_pandas()
 
 
 class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):

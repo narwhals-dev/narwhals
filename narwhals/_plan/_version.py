@@ -45,7 +45,7 @@ class _Version:
         return _import_lazyframe(self._version)
 
     @property
-    def series(self) -> type[NwSeries[Any]]:  # pragma: no cover
+    def series(self) -> type[NwSeries[Any]]:
         return _import_series(self._version)
 
     @property
@@ -82,10 +82,8 @@ def _import_dataframe(version: _NwVersion, /) -> type[NwDataFrame[Any, Any]]:
     return {_MAIN: df.DataFrame, _V1: df.DataFrameV1, _V2: df.DataFrameV2}[version]
 @cache
 def _import_lazyframe(version: _NwVersion, /) -> type[NwLazyFrame[Any]]:
-    if version is _MAIN:
-        from narwhals._plan.lazyframe import LazyFrame as NwLazyFrame
-        return NwLazyFrame
-    raise _not_implemented(version)  # pragma: no cover
+    from narwhals._plan import lazyframe as lf
+    return {_MAIN: lf.LazyFrame, _V1: lf.LazyFrameV1, _V2: lf.LazyFrameV2}[version]
 @cache
 def _import_series(version: _NwVersion, /) -> type[NwSeries[Any]]:
     from narwhals._plan import series as s
