@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from narwhals._typing_compat import TypeVar
 
@@ -287,3 +287,5 @@ anything more meaningful statically.
 Tip:
     Prefer `BuiltinAny` whenever possible.
 """
+
+VersionName: TypeAlias = Literal["MAIN", "V1", "V2"]

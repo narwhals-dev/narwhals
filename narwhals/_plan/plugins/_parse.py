@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, TypeVar, cast
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant import classes as cc
-from narwhals._plan.typing import PluginAny, PluginName
-from narwhals._utils import deep_attrgetter
+from narwhals._plan.typing import PluginAny, PluginName, VersionName
+from narwhals._utils import Version, deep_attrgetter
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -28,8 +28,6 @@ Incomplete: TypeAlias = Any
 PluginUnknown: TypeAlias = PluginAny
 """May want to give this *some* more detail later."""
 
-_VersionName: TypeAlias = Literal["v1", "v2"]
-_VERSIONS: Final[tuple[_VersionName, ...]] = "v1", "v2"
 _ClassName: TypeAlias = Literal[
     "dataframe", "evaluator", "expr", "lazyframe", "scalar", "series"
 ]
@@ -46,7 +44,7 @@ _CompliantName: TypeAlias = Literal[
 ]
 
 UnsupportedName: TypeAlias = Literal[
-    "DataFrame", "Series", "LazyFrame", "Expr", "Scalar", _VersionName
+    "DataFrame", "Series", "LazyFrame", "Expr", "Scalar", VersionName
 ]
 """The name to display in an error message."""
 
@@ -123,7 +121,7 @@ class Unsupported:
 
     def error(self) -> NotImplementedError:  # pragma: no cover
         feature = self._feature
-        if feature in _VERSIONS:
+        if feature in Version._member_names_:
             msg = f"Version {feature!r} is not yet supported for {self._plugin!r}"
         else:
             msg = f"`{feature}()` is not supported for {self._plugin!r}"
@@ -134,7 +132,7 @@ class Unsupported:
 
     @staticmethod
     def fill_version(
-        version: _VersionName, plugin: PluginName, /
+        version: VersionName, plugin: PluginName, /
     ) -> ClassesProxyTD:  # pragma: no cover
         m: Any = dict.fromkeys(_COMPLIANT_NAMES, Unsupported(version, plugin))
         r: ClassesProxyTD = m
@@ -169,13 +167,13 @@ class ClassesIR(Immutable):
         )
 
     def to_accessors(
-        self, plugin: PluginName, version: _VersionName | None = None
+        self, plugin: PluginName, version: VersionName | None = None
     ) -> ClassesProxyTD:
         """Convert this representation into a mapping of accessor functions."""
         props = _REMAP_PROPERTIES
         errors = _REMAP_ERRORS
         it = cast("Iterator[tuple[_ClassName, bool]]", self.__immutable_items__)
-        prefix = () if version is None else (version,)
+        prefix = () if version is None else (version.lower(),)
         results: Incomplete = {
             out_name: (
                 deep_attrgetter(*prefix, out_name)
@@ -215,14 +213,14 @@ class PluginIR(Immutable):
         return {
             "MAIN": self.main.to_accessors(plugin),
             "V1": (
-                v1.to_accessors(plugin, "v1")
+                v1.to_accessors(plugin, "V1")
                 if (v1 := self.v1)
-                else Unsupported.fill_version("v1", plugin)
+                else Unsupported.fill_version("V1", plugin)
             ),
             "V2": (
-                v2.to_accessors(plugin, "v2")
+                v2.to_accessors(plugin, "V2")
                 if (v2 := self.v2)
-                else Unsupported.fill_version("v2", plugin)
+                else Unsupported.fill_version("V2", plugin)
             ),
         }
 

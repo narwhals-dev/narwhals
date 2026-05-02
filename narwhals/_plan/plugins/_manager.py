@@ -27,7 +27,7 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
     from importlib.metadata import EntryPoint, EntryPoints
 
     from typing_extensions import TypeAlias, TypeIs
@@ -47,7 +47,13 @@ if TYPE_CHECKING:
         ScalarNoDefaultT_co as SC,
         SeriesT_co as S,
     )
-    from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
+    from narwhals._plan.typing import (
+        BuiltinAny,
+        IntoBackendExt,
+        PluginAny,
+        PluginName,
+        VersionName,
+    )
     from narwhals._typing import BackendName
 
 MYPY: Final = False
@@ -84,6 +90,13 @@ _PluginVAll: TypeAlias = _Plugin[cc.HasVAll[C1, C2]]
 MAIN: TypeAlias = Literal[Version.MAIN]
 V1: TypeAlias = Literal[Version.V1]
 V2: TypeAlias = Literal[Version.V2]
+
+# NOTE: https://github.com/python/mypy/issues/18786
+_VERSION_NAME: Final[Mapping[Version, VersionName]] = {
+    Version.MAIN: "MAIN",
+    Version.V1: "V1",
+    Version.V2: "V2",
+}
 
 
 # TODO @dangotbanned: (low-priority) Remove 3.10 guard after https://github.com/narwhals-dev/narwhals/issues/3204
@@ -361,10 +374,8 @@ class PluginManager:
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.DataFrameAny]:
         name = _backend_to_plugin_name(backend)
-        _entry = self._plugin_entry(name)
-        # NOTE: `mypy` doesn't recognise these as literals
-        v_name: Literal["V1", "V2", "MAIN"] = version.name  # type: ignore[assignment]
-        return _entry[v_name]["_dataframe"](self._plugin(name).__narwhals_classes__)
+        classes = self._plugin(name).__narwhals_classes__
+        return self._plugin_entry(name)[_VERSION_NAME[version]]["_dataframe"](classes)
 
     # TODO @dangotbanned: Plan this and the other singledispatch bits
     def iter_native_dataframe(
