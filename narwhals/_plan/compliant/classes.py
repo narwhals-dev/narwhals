@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 # ruff: noqa: PLC0105
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, TypeVar, overload
 
 from narwhals._plan.common import hasattrs_static
 from narwhals._plan.compliant.typing import (
@@ -178,6 +178,11 @@ An external `Plugin` *can choose* to support versioning.
 
 CB1 = TypeVar("CB1", bound=ClassesImplAny, covariant=True)
 CB2 = TypeVar("CB2", bound=ClassesImplAny, covariant=True)
+
+PropertyName: TypeAlias = Literal[
+    "_dataframe", "_evaluator", "_expr", "_lazyframe", "_scalar", "_series"
+]
+"""The name of the accessor to a `Compliant*` class."""
 
 
 class CompliantClasses(Protocol[E, SC]):

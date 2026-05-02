@@ -163,6 +163,8 @@ def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
     return rp.WithColumns(input=plan, exprs=casts, output_schema=FrozenSchema(schema))
 
 
+# TODO @dangotbanned: Replace `Resolver.from_backend` with something integrated with `PluginManager`
+# - E.g. add another kind of accessor that retrieves `Resolver` as a default concrete impl
 # TODO @dangotbanned: (When sinking from LazyFrame) where should subclasses be retrieved from?
 # TODO @dangotbanned: Add a sugar-y `__init_subclass__` to configure rules
 class Resolver:

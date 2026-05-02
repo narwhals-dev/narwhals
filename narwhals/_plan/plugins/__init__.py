@@ -22,7 +22,9 @@ if TYPE_CHECKING:
     )
     from narwhals._typing import Arrow, Polars
 
-__all__ = ("Builtin", "Plugin", "load_plugin")
+__all__ = ("Builtin", "Plugin", "load_plugin", "manager")
+
+manager = _manager.PluginManager
 
 
 # TODO @dangotbanned: Think about renaming this after moving tests/docs to using it from here
@@ -42,4 +44,4 @@ def load_plugin(backend: IntoBackendExt, /) -> PluginAny:
     The returned object can be used to query availability.
     For built-ins, this is always safe and *does not* import the native package.
     """
-    return _manager.PluginManager().plugin(backend)
+    return manager().plugin(backend)

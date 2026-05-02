@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, TypeVar, cast, get_args
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant import classes as cc
@@ -30,17 +30,6 @@ PluginUnknown: TypeAlias = PluginAny
 
 _ClassName: TypeAlias = Literal[
     "dataframe", "evaluator", "expr", "lazyframe", "scalar", "series"
-]
-_COMPLIANT_NAMES: Final = (
-    "_dataframe",
-    "_evaluator",
-    "_expr",
-    "_lazyframe",
-    "_scalar",
-    "_series",
-)
-_CompliantName: TypeAlias = Literal[
-    "_dataframe", "_evaluator", "_expr", "_lazyframe", "_scalar", "_series"
 ]
 
 UnsupportedName: TypeAlias = Literal[
@@ -68,7 +57,7 @@ is a function that raises an exception:
 """
 
 
-_REMAP_PROPERTIES: Final[Mapping[_ClassName, _CompliantName]] = {
+_REMAP_PROPERTIES: Final[Mapping[_ClassName, cc.PropertyName]] = {
     "dataframe": "_dataframe",
     "evaluator": "_evaluator",
     "expr": "_expr",
@@ -134,7 +123,7 @@ class Unsupported:
     def fill_version(
         version: VersionName, plugin: PluginName, /
     ) -> ClassesProxyTD:  # pragma: no cover
-        m: Any = dict.fromkeys(_COMPLIANT_NAMES, Unsupported(version, plugin))
+        m: Any = dict.fromkeys(get_args(cc.PropertyName), Unsupported(version, plugin))
         r: ClassesProxyTD = m
         return r
 

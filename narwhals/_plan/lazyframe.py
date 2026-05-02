@@ -3,12 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._exceptions import issue_warning
-from narwhals._plan import _parse, translate
-from narwhals._plan._namespace import (
-    eager_implementation,
-    evaluator,
-    known_implementation,
-)
+from narwhals._plan import _parse, plugins, translate
+from narwhals._plan._namespace import eager_implementation
 from narwhals._plan.common import closed_kwds
 from narwhals._plan.compliant.typing import FromNative, Native
 from narwhals._plan.group_by import LazyGroupBy
@@ -313,17 +309,22 @@ class LazyFrame(Generic[Native]):
         self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwds: Any
     ) -> DataFrame[Any]:  # pragma: no cover
         """Materialize this LazyFrame into a DataFrame."""
-        lazy = known_implementation(self.implementation)
+        lazy = self.implementation
         eager = eager_implementation(backend) if backend else None
         logical = self._plan.collect(closed_kwds(**kwds))
         resolved = Resolver.from_backend(lazy).collect(logical)
-        return evaluator(lazy, self.version).collect(resolved, eager).to_narwhals()
+        return (
+            plugins.manager()
+            .evaluator(lazy, self.version)
+            .collect(resolved, eager)
+            .to_narwhals()
+        )
 
     def sink_parquet(self, file: FileSource | BytesIO) -> None:
-        lazy = known_implementation(self.implementation)
+        lazy = self.implementation
         logical = self._plan.sink_parquet(file)
         resolved = Resolver.from_backend(lazy).sink_parquet(logical)
-        evaluator(lazy, self.version).sink_parquet(resolved)
+        plugins.manager().evaluator(lazy, self.version).sink_parquet(resolved)
 
     def sort(
         self,

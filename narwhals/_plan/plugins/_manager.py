@@ -20,7 +20,6 @@ from typing import (
 )
 
 from narwhals._plan.compliant import classes as cc
-from narwhals._plan.compliant.classes import C1, C2
 from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.plugins import _parse
 from narwhals._typing_compat import assert_never
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeDataFrame
     from narwhals._plan.compliant import typing as ct
-    from narwhals._plan.compliant.classes import CB, C
+    from narwhals._plan.compliant.classes import C1, C2, CB, C
     from narwhals._plan.compliant.plugins import Builtin, Plugin
     from narwhals._plan.compliant.typing import (
         DataFrameAny,
@@ -83,9 +82,9 @@ class _Plugin(Protocol[_R_co]):
     def __narwhals_classes__(self) -> _R_co: ...
 
 
-_PluginV1: TypeAlias = _Plugin[cc.HasV1[C1]]
-_PluginV2: TypeAlias = _Plugin[cc.HasV2[C2]]
-_PluginVAll: TypeAlias = _Plugin[cc.HasVAll[C1, C2]]
+_PluginV1: TypeAlias = _Plugin["cc.HasV1[C1]"]
+_PluginV2: TypeAlias = _Plugin["cc.HasV2[C2]"]
+_PluginVAll: TypeAlias = _Plugin["cc.HasVAll[C1, C2]"]
 
 MAIN: TypeAlias = Literal[Version.MAIN]
 V1: TypeAlias = Literal[Version.V1]
@@ -346,6 +345,13 @@ class PluginManager:
             name, ep = self._discovered.popitem()
             yield self._plugin_load(name, ep)
 
+    def _get_class(
+        self, name: cc.PropertyName, backend: IntoBackendExt, version: Version, /
+    ) -> type[Any]:
+        plugin_name = _backend_to_plugin_name(backend)
+        classes = self._plugin(plugin_name).__narwhals_classes__
+        return self._plugin_entry(plugin_name)[_VERSION_NAME[version]][name](classes)
+
     def plugin(
         self, backend: IntoBackendExt, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny:
@@ -359,43 +365,26 @@ class PluginManager:
             return plugin
         raise _unavailable_error(plugin, require)  # pragma: no cover
 
-    def get_eager(self, backend: IntoBackendExt) -> Plugin[cc.EagerAny, Any, Any, Any]:
-        raise NotImplementedError
-
-    def get_lazy(self, backend: IntoBackendExt) -> Plugin[cc.LazyAny, Any, Any, Any]:
-        raise NotImplementedError
-
-    def get_hybrid(self, backend: IntoBackendExt) -> Plugin[cc.HybridAny, Any, Any, Any]:
-        raise NotImplementedError
-
     # TODO @dangotbanned: Add overloads, written as `CompliantDataFrame[pl.DataFrame]`, etc
     # - Use a different api for concrete types (if needed)
     def dataframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.DataFrameAny]:
-        name = _backend_to_plugin_name(backend)
-        classes = self._plugin(name).__narwhals_classes__
-        return self._plugin_entry(name)[_VERSION_NAME[version]]["_dataframe"](classes)
+        return self._get_class("_dataframe", backend, version)
 
     def series(self, backend: IntoBackendExt, /, version: Version) -> type[ct.SeriesAny]:
-        name = _backend_to_plugin_name(backend)
-        classes = self._plugin(name).__narwhals_classes__
-        return self._plugin_entry(name)[_VERSION_NAME[version]]["_series"](classes)
+        return self._get_class("_series", backend, version)
 
     def lazyframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.LazyFrameAny]:
-        name = _backend_to_plugin_name(backend)
-        classes = self._plugin(name).__narwhals_classes__
-        return self._plugin_entry(name)[_VERSION_NAME[version]]["_lazyframe"](classes)
+        return self._get_class("_lazyframe", backend, version)
 
-    # TODO @dangotbanned: Cover, replace `_namespace.evaluator`, `test_lazyframe_collect`
+    # TODO @dangotbanned: Replace `test_lazyframe_collect`, once there's more typing here
     def evaluator(
         self, backend: IntoBackendExt, /, version: Version
-    ) -> type[ct.PlanEvaluatorAny]:  # pragma: no cover
-        name = _backend_to_plugin_name(backend)
-        classes = self._plugin(name).__narwhals_classes__
-        return self._plugin_entry(name)[_VERSION_NAME[version]]["_evaluator"](classes)
+    ) -> type[ct.PlanEvaluatorAny]:
+        return self._get_class("_evaluator", backend, version)
 
     # TODO @dangotbanned: Plan this and the other singledispatch bits
     def iter_native_dataframe(

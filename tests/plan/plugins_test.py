@@ -189,16 +189,22 @@ def test_mock_plugins() -> None:
     raise NotImplementedError
 
 
-@pytest.mark.xfail(
-    reason="TODO @dangotbanned: cover evaluator, replace `test_lazyframe_collect",
-    raises=NotImplementedError,
-)
 @pytest.mark.parametrize("version", Version)
 def test_plugin_manager_evaluator(lazy: LazyAllowed, version: Version) -> None:
-    raise NotImplementedError
+    # NOTE: Covered more thoroughly inside `LazyFrame`
+    plug_man = PluginManager()
+    impl = Implementation.from_backend(lazy)
+    compliant_1 = plug_man.evaluator(lazy, version)
+    compliant_2 = plug_man.evaluator(impl.to_native_namespace(), version)
+
+    assert compliant_1.version is version
+    assert compliant_2.version is version
+
+    assert compliant_1.implementation is impl
+    assert compliant_2.implementation is impl
 
 
-# TODO @dangotbanned: Replace with something less experimental (when available)
+# TODO @dangotbanned: Replace with `PluginManager.evaluator`, once it has typing
 @pytest.mark.parametrize("version", Version)
 def test_lazyframe_collect(eager: EagerAllowed, version: Version) -> None:
     """WIP, not a real API!"""
