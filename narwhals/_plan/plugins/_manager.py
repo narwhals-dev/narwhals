@@ -14,6 +14,7 @@ from typing import (
     Literal,
     Protocol,
     TypeVar,
+    cast,
     final,
     overload,
 )
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
         ScalarNoDefaultT_co as SC,
         SeriesT_co as S,
     )
-    from narwhals._plan.plugins._parse import PluginIR, RegEntry
+    from narwhals._plan.plugins import _parse
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny, PluginName
     from narwhals._typing import BackendName
 
@@ -260,22 +261,24 @@ class PluginManager:
     __slots__ = ("_discovered", "_loaded", "_parsed", "_registry")
     __instance: ClassVar[Any | None] = None
 
-    _discovered: dict[str, EntryPoint]
-    _loaded: dict[str, PluginAny | BuiltinAny]
+    _discovered: dict[PluginName, EntryPoint]
+    _loaded: dict[PluginName, PluginAny | BuiltinAny]
 
     # TODO @dangotbanned: When moving `_discovered` -> `_loaded`, parse and add here
     # TODO @dangotbanned: On the first request that requires access, `PluginIR.to_registry_item` -> `_registry`
-    _parsed: dict[PluginName, PluginIR]
+    _parsed: dict[PluginName, _parse.PluginIR]
     """Details on what each plugin supports."""
 
     # TODO @dangotbanned: Flesh out the order each dict get populated in
-    _registry: dict[PluginName, RegEntry]
+    _registry: dict[PluginName, _parse.RegEntry]
     """A rewrapped `Plugin`, with error handling on unsupported features."""
 
     def __new__(cls) -> PluginManager:
         if not isinstance(cls.__instance, PluginManager):
             self = object.__new__(PluginManager)
-            self._discovered = {ep.name: ep for ep in _entry_points()}
+            # NOTE: Need to lie about `LiteralString` because `str` leaks to all other usage
+            _eps = {ep.name: ep for ep in _entry_points()}
+            self._discovered = cast("dict[PluginName, EntryPoint]", _eps)  # type: ignore[redundant-cast]
             self._loaded = {}
             self._parsed = {}
             self._registry = {}
@@ -297,7 +300,7 @@ class PluginManager:
             s += f"\n{indent}discovered\n{indent_2}{s_eps}"
         return f"{type(self).__name__}[{n_discovered + n_loaded}]{s}"
 
-    def _load(self, name: str, /) -> PluginAny | BuiltinAny:
+    def _load(self, name: PluginName, /) -> PluginAny | BuiltinAny:
         plugin: PluginAny | BuiltinAny
         if loaded := self._loaded.get(name):
             return loaded
