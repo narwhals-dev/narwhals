@@ -31,9 +31,10 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Never, TypeAlias, TypeIs
 
     from narwhals._native import NativeDataFrame
+    from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import (
         CompliantDataFrame,
         CompliantLazyFrame,
@@ -42,9 +43,12 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.compliant.classes import C1, C2, CB, C
     from narwhals._plan.compliant.plugins import Builtin, Plugin
+    from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import (
+        BackendTodo,
         BuiltinAny,
         IntoBackendExt,
+        NativeModuleType,
         PluginAny,
         PluginName,
         VersionName,
@@ -292,6 +296,33 @@ class PluginManager:
         classes = self._plugin(plugin_name).__narwhals_classes__
         return self._plugin_entry(plugin_name)[_VERSION_NAME[version]][name](classes)
 
+    @overload
+    def plugin(
+        self, backend: Arrow, /, require: RequireMethod | None = None
+    ) -> ArrowPlugin: ...
+    @overload
+    def plugin(
+        self, backend: Polars, /, require: RequireMethod | None = None
+    ) -> PolarsPlugin: ...
+    @overload
+    def plugin(
+        self, backend: BackendTodo, /, require: RequireMethod | None = None
+    ) -> Never: ...
+    @overload
+    def plugin(
+        self,
+        backend: NativeModuleType | Arrow | Polars,
+        /,
+        require: RequireMethod | None = None,
+    ) -> BuiltinAny: ...
+    @overload
+    def plugin(
+        self, backend: PluginName, /, require: RequireMethod | None = None
+    ) -> PluginAny: ...
+    @overload
+    def plugin(
+        self, backend: IntoBackendExt, /, require: RequireMethod | None = None
+    ) -> PluginAny | BuiltinAny: ...
     def plugin(
         self, backend: IntoBackendExt, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny:

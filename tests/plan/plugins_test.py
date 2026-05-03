@@ -9,7 +9,6 @@ import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.compliant.typing as ct
 from narwhals._plan.plugins import load_plugin, manager
-from narwhals._plan.plugins._manager import PluginManager
 from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
@@ -69,38 +68,38 @@ def test_load_plugin_invalid() -> None:
 
 def test_plugin_is_imported(plugin: BuiltinAny) -> None:
     assert not plugin.is_imported()
-    PluginManager().import_modules(plugin.name)
+    manager().import_modules(plugin.name)
 
     assert plugin.is_imported()
-    assert load_plugin(plugin.name).is_imported()
+    assert manager().plugin(plugin.name).is_imported()
 
 
 def test_plugin_can_import(plugin: BuiltinAny) -> None:
     assert not plugin.is_imported()
     assert plugin.can_import()
 
-    PluginManager().import_modules(plugin.name)
+    manager().import_modules(plugin.name)
     assert plugin.is_imported()
     assert plugin.can_import()
     assert load_plugin(plugin.name).can_import()
 
-    PluginManager().import_modules(plugin.name)
+    manager().import_modules(plugin.name)
     assert plugin.can_import()
 
 
 def test_plugin_manager_known() -> None:
-    assert sorted(PluginManager().known()) == ["polars", "pyarrow"]
+    assert sorted(manager().known()) == ["polars", "pyarrow"]
 
 
 def test_plugin_manager_importable() -> None:
-    plug_man = PluginManager()
+    plug_man = manager()
     for name in plug_man.importable():
         plug_man.import_modules(name)
         assert plug_man.plugin(name).is_imported()
 
 
 def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
-    plug_man = PluginManager()
+    plug_man = manager()
     name = plugin.name
     assert name not in set(plug_man.imported())
     plug_man.import_modules(name)
@@ -126,12 +125,11 @@ def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
     data = {"a": [1, 2, 3, 4], "b": [1.3, 1.9, None, None]}
     schema = {"a": nw.UInt32(), "b": nw.Float32()}
     impl = Implementation.from_backend(eager)
-    plug_man = PluginManager()
 
-    compliant_type = plug_man.dataframe(eager, version)
+    compliant_type = manager().dataframe(eager, version)
     compliant = compliant_type.from_dict(data, schema=schema)
     nw_ = compliant.to_narwhals()
-    nw_2 = plug_man.dataframe(impl, version).from_dict(data, schema=schema).to_narwhals()
+    nw_2 = manager().dataframe(impl, version).from_dict(data, schema=schema).to_narwhals()
     assert_context_preserved(compliant_type, compliant, nw_, nw_2, impl, version)
 
 
@@ -139,12 +137,11 @@ def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
 def test_plugin_manager_series(eager: BuiltinName, version: Version) -> None:
     data = [1, 2, 3, 4]
     impl = Implementation.from_backend(eager)
-    plug_man = PluginManager()
 
-    compliant_type = plug_man.series(eager, version)
+    compliant_type = manager().series(eager, version)
     compliant = compliant_type.from_iterable(data, name="hello")
     nw_ = compliant.to_narwhals()
-    nw_2 = plug_man.series(impl, version).from_iterable(data, name="hello").to_narwhals()
+    nw_2 = manager().series(impl, version).from_iterable(data, name="hello").to_narwhals()
     assert_context_preserved(compliant_type, compliant, nw_, nw_2, impl, version)
 
 
@@ -154,13 +151,13 @@ def test_plugin_manager_lazyframe(lazy: LazyAllowed, version: Version) -> None:
     data = {"a": [1, 2, 3, 4], "b": [1.3, 1.9, None, None]}
     table: pa.Table = _pa.table(data)
     impl = Implementation.from_backend(lazy)
-    plug_man = PluginManager()
 
-    compliant_type = plug_man.lazyframe(lazy, version)
+    compliant_type = manager().lazyframe(lazy, version)
     compliant = compliant_type.from_arrow(table)
     nw_ = compliant.collect_narwhals("pyarrow").lazy(lazy)
     nw_2 = (
-        plug_man.lazyframe(impl, version)
+        manager()
+        .lazyframe(impl, version)
         .from_arrow(table)
         .collect_narwhals("pyarrow")
         .lazy(lazy)
@@ -207,10 +204,9 @@ def test_mock_plugins() -> None:
 @pytest.mark.parametrize("version", Version)
 def test_plugin_manager_evaluator(lazy: LazyAllowed, version: Version) -> None:
     # NOTE: Covered more thoroughly inside `LazyFrame`
-    plug_man = PluginManager()
     impl = Implementation.from_backend(lazy)
-    compliant_1 = plug_man.evaluator(lazy, version)
-    compliant_2 = plug_man.evaluator(impl.to_native_namespace(), version)
+    compliant_1 = manager().evaluator(lazy, version)
+    compliant_2 = manager().evaluator(impl.to_native_namespace(), version)
 
     assert compliant_1.version is version
     assert compliant_2.version is version
@@ -250,18 +246,18 @@ if TYPE_CHECKING:
         not_yet_3: LazyAllowed,
     ) -> None:
         # NOTE: Purely checking the result of matching `@overload`s
-        assert_type(load_plugin(never_builtin), PluginAny)
-        assert_type(load_plugin(always_builtin_1), BuiltinAny)
-        assert_type(load_plugin(always_builtin_2), BuiltinAny)
-        assert_type(load_plugin(always_polars), PolarsPlugin)
-        assert_type(load_plugin(always_pyarrow), ArrowPlugin)
+        assert_type(manager().plugin(never_builtin), PluginAny)
+        assert_type(manager().plugin(always_builtin_1), BuiltinAny)
+        assert_type(manager().plugin(always_builtin_2), BuiltinAny)
+        assert_type(manager().plugin(always_polars), PolarsPlugin)
+        assert_type(manager().plugin(always_pyarrow), ArrowPlugin)
 
         # Until `mypy` supports PEP 675 it won't report anything
         # https://github.com/python/mypy/issues/12554
-        load_plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        load_plugin(not_yet_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        load_plugin(not_yet_2)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        load_plugin(not_yet_3)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        manager().plugin(not_yet_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        manager().plugin(not_yet_2)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        manager().plugin(not_yet_3)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
     def typing_plugin_guards(
         df_polars: pl.DataFrame, df_pyarrow: pa.Table, df_pandas: pd.DataFrame
@@ -275,7 +271,7 @@ if TYPE_CHECKING:
         pyarrow_or_pandas = df_pyarrow if non_static else df_pandas
         who_knows = pyarrow_or_pandas if non_static else polars_or_pyarrow
 
-        plugin = load_plugin("polars")
+        plugin = manager().plugin("polars")
 
         if plugin.is_native_dataframe(df_polars):
             ...
@@ -294,7 +290,11 @@ if TYPE_CHECKING:
             assert_type(polars_or_pandas, pd.DataFrame)
 
         if not plugin.is_native_dataframe(who_knows):
-            if not load_plugin(Implementation.PYARROW).is_native_dataframe(who_knows):
+            if (
+                not manager()
+                .plugin(Implementation.PYARROW)
+                .is_native_dataframe(who_knows)
+            ):
                 assert_type(who_knows, pd.DataFrame)
             else:
                 assert_type(who_knows, pa.Table)
@@ -303,12 +303,12 @@ if TYPE_CHECKING:
 
     # TODO @dangotbanned: Would be nice for this to preserve the implementation
     def typing_plugin_dogfood_implementation() -> None:
-        polars_1 = load_plugin("polars").implementation
-        polars_2 = load_plugin(polars_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        polars_1 = manager().plugin("polars").implementation
+        polars_2 = manager().plugin(polars_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
         assert_type(polars_2, Literal[Implementation.POLARS])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
 
-        pyarrow_1 = load_plugin("polars").implementation
-        pyarrow_2 = load_plugin(pyarrow_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        pyarrow_1 = manager().plugin("polars").implementation
+        pyarrow_2 = manager().plugin(pyarrow_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
         assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
 
     def typing_can_eager_lazy_integration(
@@ -320,8 +320,7 @@ if TYPE_CHECKING:
         - Assertions are more detailed that usual
         - Need this here while I try to minimize the typing
         """
-        plugins = PluginManager()
-        lazy = plugins.plugin(current)
+        lazy = manager().plugin(current)
         assert_type(lazy, PluginAny | BuiltinAny)
         classes_1 = _manager.import_classes(lazy, version)
 
@@ -353,7 +352,7 @@ if TYPE_CHECKING:
         else:
             raise NotImplementedError
 
-        eager = plugins.plugin(collect) if collect else lazy
+        eager = manager().plugin(collect) if collect else lazy
         assert_type(eager, PluginAny | BuiltinAny)
 
         classes_2 = _manager.import_classes(eager, version)
@@ -466,11 +465,10 @@ if TYPE_CHECKING:
 
     def typing_concrete_assignable_to_generic() -> None:
         """A little inference workout to check the types from one api play nicely with the other."""
-        plug_man = PluginManager()
         version = Version.MAIN
 
         # Round 1: Start with `Compliant*[NativeT]`
-        dataframe = plug_man.dataframe("polars", version)
+        dataframe = manager().dataframe("polars", version)
         df_compliant = dataframe.from_dict({})
         df_native = df_compliant.native
         df_narwhals = df_compliant.to_narwhals()
@@ -478,11 +476,11 @@ if TYPE_CHECKING:
         ser_narwhals = df_narwhals.to_series()
         ser_native = ser_narwhals.to_native()
         df_native = df_native.with_columns(ser_native)
-        evaluator = plug_man.evaluator("polars", version)
+        evaluator = manager().evaluator("polars", version)
 
         # Round 2: Now the concrete types `Polars*`
         # Nothing before was annotated, and reassigning with a narrower (compatible) type should be okay
-        classes = load_plugin("polars").__narwhals_classes__
+        classes = manager().plugin("polars").__narwhals_classes__
         dataframe = classes._dataframe
         df_compliant = dataframe.from_dict({})
         df_native = df_compliant.native
@@ -495,7 +493,7 @@ if TYPE_CHECKING:
 
         # Round 3: Back to roughly the same as "Round 1", but using `Implementation`
         # The types should again be compatible
-        dataframe = plug_man.dataframe(Implementation.POLARS, version)
+        dataframe = manager().dataframe(Implementation.POLARS, version)
         df_compliant = dataframe.from_dict({})
         df_native = df_compliant.native
         df_narwhals = df_compliant.to_narwhals()
@@ -503,7 +501,7 @@ if TYPE_CHECKING:
         ser_narwhals = df_narwhals.to_series()
         ser_native = ser_narwhals.to_native()
         df_native = df_native.with_columns(ser_native)
-        evaluator = plug_man.evaluator(Implementation.POLARS, version)
+        evaluator = manager().evaluator(Implementation.POLARS, version)
 
         # aaaaaaaaaaand did we do it?
         assert_type(df_native, pl.DataFrame)
