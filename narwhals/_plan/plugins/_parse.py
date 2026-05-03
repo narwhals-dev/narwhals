@@ -30,13 +30,15 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, TypeAlias
 
     from narwhals._plan.compliant import typing as ct
-    from narwhals._plan.typing import PluginAny, PluginName, VersionName
+    from narwhals._plan.typing import PluginAny, PluginName, Seq, VersionName
 
 
 Incomplete: TypeAlias = Any
 R_co = TypeVar("R_co", covariant=True)
 Accessor: TypeAlias = Callable[[cc.ClassesAny], R_co]
 """An inverted class accessor function."""
+
+TranslateName: TypeAlias = Literal["dataframe", "lazyframe", "series"]
 
 
 class ClassesProxyTD(TypedDict):
@@ -173,21 +175,29 @@ class ClassesIR(Immutable):
 class PluginIR(Immutable):
     """Feature flags for a plugin, documenting class/version support."""
 
-    __slots__ = ("name", "main", "v1", "v2")  # noqa: RUF023
+    __slots__ = ("name", "main", "v1", "v2", "translate")  # noqa: RUF023
     name: PluginName
     main: ClassesIR
     v1: ClassesIR | Literal[False]
     v2: ClassesIR | Literal[False]
+    translate: frozenset[TranslateName]
     __repr__ = Immutable.__str__
+
+    def has(self, native_name: TranslateName) -> bool:
+        """Return True if the plugin handles `native_name` in `from_native`."""
+        return native_name in self.translate
 
     @staticmethod
     def from_plugin(plugin: PluginAny, /) -> PluginIR:
         classes = plugin.__narwhals_classes__
+        main = ClassesIR.from_classes(classes)
+        _names: Seq[TranslateName] = ("dataframe", "lazyframe", "series")
         return PluginIR(
             name=plugin.name,
-            main=ClassesIR.from_classes(classes),
+            main=main,
             v1=(ClassesIR.from_classes(classes.v1) if cc.can_v1(classes) else False),
             v2=(ClassesIR.from_classes(classes.v2) if cc.can_v2(classes) else False),
+            translate=frozenset(name for name in _names if getattr(main, name)),
         )
 
     def to_registry_entry(self) -> RegEntry:
