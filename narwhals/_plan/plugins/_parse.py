@@ -9,111 +9,105 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict, TypeVar, cast, get_args
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    TypedDict,
+    TypeVar,
+    cast,
+    get_args,
+)
 
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant import classes as cc
-from narwhals._plan.typing import PluginAny, PluginName, VersionName
 from narwhals._utils import Version, deep_attrgetter
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
-    from typing_extensions import TypeAlias
+    from typing_extensions import LiteralString, TypeAlias
 
     from narwhals._plan.compliant import typing as ct
+    from narwhals._plan.typing import PluginAny, PluginName, VersionName
 
 
 Incomplete: TypeAlias = Any
-PluginUnknown: TypeAlias = PluginAny
-"""May want to give this *some* more detail later."""
-
-_ClassName: TypeAlias = Literal[
-    "dataframe", "evaluator", "expr", "lazyframe", "scalar", "series"
-]
-
-UnsupportedName: TypeAlias = Literal[
-    "DataFrame", "Series", "LazyFrame", "Expr", "Scalar", VersionName
-]
-"""The name to display in an error message."""
-
 R_co = TypeVar("R_co", covariant=True)
 Accessor: TypeAlias = Callable[[cc.ClassesAny], R_co]
-"""An inverted class accessor function.
-
-These *take* a `__narwhals_classes__` as input, and (along the happy path)
-return the requested class.
-
-The first unique bit is that this can represent **any** version of any class, e.g.:
-
-    __narwhals_classes__._dataframe
-    __narwhals_classes__.v1._lazyframe
-    __narwhals_classes__.v2._series
-
-Second, is that if the class is not implemented (eager-only, no versioning, etc) the *"accessor"*
-is a function that raises an exception:
-
-    NotImplementedError: `LazyFrame()` is not supported for 'pyarrow'
-"""
-
-
-_REMAP_PROPERTIES: Final[Mapping[_ClassName, cc.PropertyName]] = {
-    "dataframe": "_dataframe",
-    "evaluator": "_evaluator",
-    "expr": "_expr",
-    "lazyframe": "_lazyframe",
-    "scalar": "_scalar",
-    "series": "_series",
-}
-_REMAP_ERRORS: Final[Mapping[_ClassName, UnsupportedName]] = {
-    "dataframe": "DataFrame",
-    "evaluator": "LazyFrame",
-    "expr": "Expr",
-    "lazyframe": "LazyFrame",
-    "scalar": "Scalar",
-    "series": "Series",
-}
+"""An inverted class accessor function."""
 
 
 class ClassesProxyTD(TypedDict):
     """Each key mirrors a property on `*Classes`."""
 
-    _dataframe: Accessor[type[ct.DataFrameAny]]
-    _lazyframe: Accessor[type[ct.LazyFrameAny]]
-    _evaluator: Accessor[type[ct.PlanEvaluatorAny]]
-    _expr: Accessor[type[ct.ExprAny]]
-    _scalar: Accessor[type[ct.ExprAny | ct.ScalarAny]]
-    _series: Accessor[type[ct.SeriesAny]]
+    dataframe: Accessor[type[ct.DataFrameAny]]
+    lazyframe: Accessor[type[ct.LazyFrameAny]]
+    evaluator: Accessor[type[ct.PlanEvaluatorAny]]
+    expr: Accessor[type[ct.ExprAny]]
+    scalar: Accessor[type[ct.ExprAny | ct.ScalarAny]]
+    series: Accessor[type[ct.SeriesAny]]
 
 
 class RegEntry(TypedDict):
-    """Versioned accessor functions, with error handling."""
+    """A versioned mapping of class accessors.
+
+    Each `Accessor` is a function that can return a specific class:
+
+        expr: Accessor[type[ct.ExprAny]]
+        got = type[ct.ExprAny] = expr(plugin.__narwhals_classes__)
+
+    The structure of each entry provides a way to parametrize the version and class:
+
+        classes: cc.ClassesAny = plugin.__narwhals_classes__
+        entry: RegEntry                     # Equivalent to
+        entry["MAIN"]["dataframe"](classes) # -> classes.dataframe
+        entry["V1"]["lazyframe"](classes)   # -> classes.v1.lazyframe
+        entry["V2"]["series"](classes)      # -> classes.v2.series
+
+    If the class is not implemented the `Accessor` is a function that raises an exception:
+
+        NotImplementedError: `LazyFrame()` is not supported for 'pyarrow'.
+
+    All together this avoids requiring the caller to repeatedly check:
+    - *do we have a `v1`?*
+    - *do we have a `dataframe`?*
+
+    Because we asked that question *already* and prepared our response 😅
+    """
 
     MAIN: ClassesProxyTD
     V1: ClassesProxyTD
     V2: ClassesProxyTD
 
 
-class Unsupported:
+class Unsupported(Immutable):
     """Marker for functionality that should raise on use."""
 
-    __slots__ = ("_feature", "_plugin")
-    _feature: UnsupportedName
-    _plugin: PluginName
-
-    def __init__(self, feature: UnsupportedName, plugin: PluginName, /) -> None:
-        self._feature = feature
-        self._plugin = plugin
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self._feature!r})"
+    __slots__ = ("feature", "plugin")
+    feature: cc.PropertyName | VersionName
+    plugin: PluginName
+    __repr__ = Immutable.__str__
+    _REMAP_ERRORS: ClassVar[Mapping[cc.PropertyName | VersionName, LiteralString]] = {
+        "dataframe": "DataFrame",
+        "evaluator": "LazyFrame",
+        "expr": "Expr",
+        "lazyframe": "LazyFrame",
+        "scalar": "Scalar",
+        "series": "Series",
+        "MAIN": "MAIN",
+        "V1": "V1",
+        "V2": "V2",
+    }
+    """The name to display in an error message."""
 
     def error(self) -> NotImplementedError:  # pragma: no cover
-        feature = self._feature
+        feature = self._REMAP_ERRORS[self.feature]
         if feature in Version._member_names_:
-            msg = f"Version {feature!r} is not yet supported for {self._plugin!r}"
+            msg = f"Version {feature!r} is not yet supported for {self.plugin!r}"
         else:
-            msg = f"`{feature}()` is not supported for {self._plugin!r}"
+            msg = f"`{feature}()` is not supported for {self.plugin!r}"
         return NotImplementedError(msg)
 
     def __call__(self, obj: Any, /) -> Any:  # pragma: no cover
@@ -123,7 +117,8 @@ class Unsupported:
     def fill_version(
         version: VersionName, plugin: PluginName, /
     ) -> ClassesProxyTD:  # pragma: no cover
-        m: Any = dict.fromkeys(get_args(cc.PropertyName), Unsupported(version, plugin))
+        obj = Unsupported(feature=version, plugin=plugin)
+        m: Any = dict.fromkeys(get_args(cc.PropertyName), obj)
         r: ClassesProxyTD = m
         return r
 
@@ -141,6 +136,7 @@ class ClassesIR(Immutable):
     series: bool
     lazyframe: bool
     evaluator: bool
+    __repr__ = Immutable.__str__
 
     @staticmethod
     def from_classes(classes: cc.ClassesAny, /) -> ClassesIR:
@@ -159,23 +155,19 @@ class ClassesIR(Immutable):
         self, plugin: PluginName, version: VersionName | None = None
     ) -> ClassesProxyTD:
         """Convert this representation into a mapping of accessor functions."""
-        props = _REMAP_PROPERTIES
-        errors = _REMAP_ERRORS
-        it = cast("Iterator[tuple[_ClassName, bool]]", self.__immutable_items__)
+        it = cast("Iterator[tuple[cc.PropertyName, bool]]", self.__immutable_items__)
         prefix = () if version is None else (version.lower(),)
+        getter = deep_attrgetter
         results: Incomplete = {
-            out_name: (
-                deep_attrgetter(*prefix, out_name)
-                if value
-                else Unsupported(errors[name], plugin)
+            feature: (
+                getter(*prefix, feature)
+                if has
+                else Unsupported(feature=feature, plugin=plugin)
             )
-            for name, value in it
-            if (out_name := props[name])
+            for feature, has in it
         }
         out: ClassesProxyTD = results
         return out
-
-    __repr__ = Immutable.__str__
 
 
 class PluginIR(Immutable):
@@ -186,9 +178,10 @@ class PluginIR(Immutable):
     main: ClassesIR
     v1: ClassesIR | Literal[False]
     v2: ClassesIR | Literal[False]
+    __repr__ = Immutable.__str__
 
     @staticmethod
-    def from_plugin(plugin: PluginUnknown, /) -> PluginIR:
+    def from_plugin(plugin: PluginAny, /) -> PluginIR:
         classes = plugin.__narwhals_classes__
         return PluginIR(
             name=plugin.name,
@@ -212,5 +205,3 @@ class PluginIR(Immutable):
                 else Unsupported.fill_version("V2", plugin)
             ),
         }
-
-    __repr__ = Immutable.__str__

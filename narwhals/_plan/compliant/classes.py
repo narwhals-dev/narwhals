@@ -158,11 +158,8 @@ CB1 = TypeVar("CB1", bound=ClassesImplAny, covariant=True)
 CB2 = TypeVar("CB2", bound=ClassesImplAny, covariant=True)
 
 
-# TODO @dangotbanned: (noisy refactor) Replace with one of these spellings:
-# 1. `dataframe`
-# 2. `DataFrame`
 PropertyName: TypeAlias = Literal[
-    "_dataframe", "_evaluator", "_expr", "_lazyframe", "_scalar", "_series"
+    "dataframe", "evaluator", "expr", "lazyframe", "scalar", "series"
 ]
 """The name of the accessor to a `Compliant*` class."""
 
@@ -178,9 +175,9 @@ class CompliantClasses(Protocol[E, SC]):
     version: ClassVar[Version]
 
     @property
-    def _expr(self) -> type[E]: ...
+    def expr(self) -> type[E]: ...
     @property
-    def _scalar(self) -> type[SC]:
+    def scalar(self) -> type[SC]:
         """Extra glue to mimic polars' scalar expressions.
 
         `CompliantScalar` implements many of the special cases, with guidance (docstrings) on the logic needed
@@ -191,14 +188,14 @@ class CompliantClasses(Protocol[E, SC]):
         You can opt-out of implementing this by returning `*Expr` instead:
 
             @property
-            def _scalar(self):
-                return self._expr
+            def scalar(self):
+                return self.expr
         """
         ...
 
     def __narwhals_expr_prepare__(self) -> E:  # pragma: no cover
         # NOTE: still needed for disambiguating `Expr`, `Scalar` and `Namespace`
-        tp = self._expr
+        tp = self.expr
         return tp.__new__(tp)
 
 
@@ -208,9 +205,9 @@ class EagerClasses(CompliantClasses[E, SC], Protocol[DF, S, E, SC]):
     __slots__ = ()
 
     @property
-    def _dataframe(self) -> type[DF]: ...
+    def dataframe(self) -> type[DF]: ...
     @property
-    def _series(self) -> type[S]: ...
+    def series(self) -> type[S]: ...
 
 
 class LazyClasses(CompliantClasses[E, SC], Protocol[LF, PE, E, SC]):
@@ -219,9 +216,9 @@ class LazyClasses(CompliantClasses[E, SC], Protocol[LF, PE, E, SC]):
     __slots__ = ()
 
     @property
-    def _lazyframe(self) -> type[LF]: ...
+    def lazyframe(self) -> type[LF]: ...
     @property
-    def _evaluator(self) -> type[PE]:
+    def evaluator(self) -> type[PE]:
         """Translate a `ResolvedPlan` into `CompliantLazyFrame` operations."""
         ...
 
@@ -249,7 +246,7 @@ class HasPlanResolver(Protocol):
     __slots__ = ()
 
     @property
-    def _resolver(self) -> type[LogicalToResolved] | None:
+    def resolver(self) -> type[LogicalToResolved] | None:
         """Optional, can default to `_plan.plans.conversion.Resolver`."""
         ...
 
@@ -276,11 +273,11 @@ def can_eager(
 ) -> (
     TypeIs[EagerClasses[DF, S, E, SC]] | TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]
 ):
-    return hasattrs_static(obj, "_dataframe", "_series")
+    return hasattrs_static(obj, "dataframe", "series")
 
 
 def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE, E, SC]]:
-    return hasattrs_static(obj, "_lazyframe", "_evaluator")
+    return hasattrs_static(obj, "lazyframe", "evaluator")
 
 
 @overload

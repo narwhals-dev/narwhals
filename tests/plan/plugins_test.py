@@ -337,7 +337,7 @@ if TYPE_CHECKING:
             )
 
         if cc.can_lazy(classes_1):
-            evaluator = classes_1._evaluator
+            evaluator = classes_1.evaluator
             if MYPY:
                 assert_type(evaluator, type[Any])
             else:
@@ -369,7 +369,7 @@ if TYPE_CHECKING:
             )
 
         if cc.can_eager(classes_2):
-            dataframe = classes_2._dataframe
+            dataframe = classes_2.dataframe
             if MYPY:
                 assert_type(dataframe, type[Any])
             else:
@@ -479,7 +479,7 @@ if TYPE_CHECKING:
         # Round 2: Now the concrete types `Polars*`
         # Nothing before was annotated, and reassigning with a narrower (compatible) type should be okay
         classes = manager().plugin("polars").__narwhals_classes__
-        dataframe = classes._dataframe
+        dataframe = classes.dataframe
         df_compliant = dataframe.from_dict({})
         df_native = df_compliant.native
         df_narwhals = df_compliant.to_narwhals()
@@ -487,7 +487,7 @@ if TYPE_CHECKING:
         ser_narwhals = df_narwhals.to_series()
         ser_native = ser_narwhals.to_native()
         df_native = df_native.with_columns(ser_native)
-        evaluator = classes._evaluator
+        evaluator = classes.evaluator
 
         # Round 3: Back to roughly the same as "Round 1", but using `Implementation`
         # The types should again be compatible

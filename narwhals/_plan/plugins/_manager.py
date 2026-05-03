@@ -350,7 +350,7 @@ class PluginManager:
     def dataframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.DataFrameAny]:
-        return self._get_class("_dataframe", backend, version)
+        return self._get_class("dataframe", backend, version)
 
     @overload
     def series(
@@ -365,7 +365,7 @@ class PluginManager:
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.SeriesAny]: ...
     def series(self, backend: IntoBackendExt, /, version: Version) -> type[ct.SeriesAny]:
-        return self._get_class("_series", backend, version)
+        return self._get_class("series", backend, version)
 
     @overload
     def lazyframe(
@@ -378,7 +378,7 @@ class PluginManager:
     def lazyframe(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.LazyFrameAny]:
-        return self._get_class("_lazyframe", backend, version)
+        return self._get_class("lazyframe", backend, version)
 
     @overload
     def evaluator(
@@ -391,7 +391,7 @@ class PluginManager:
     def evaluator(
         self, backend: IntoBackendExt, /, version: Version
     ) -> type[ct.PlanEvaluatorAny]:
-        return self._get_class("_evaluator", backend, version)
+        return self._get_class("evaluator", backend, version)
 
     # TODO @dangotbanned: Use in `@singledispatch` (see stash `expr-ir-from-native-series-dispatch`)
     def native_dataframe_classes(self) -> Iterator[type[NativeDataFrame]]:
