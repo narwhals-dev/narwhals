@@ -92,6 +92,10 @@ class PandasLikeSeriesStringNamespace(
     def to_date(self, format: str | None) -> PandasLikeSeries:
         return self.to_datetime(format=format).dt.date()
 
+    def to_time(self, format: str | None) -> PandasLikeSeries:
+        time_dtype = self.version.dtypes.Time()
+        return self.with_native(self._to_datetime(format, utc=False)).cast(time_dtype)
+
     def to_uppercase(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.upper())
 

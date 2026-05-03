@@ -149,7 +149,7 @@ def test_dtypes() -> None:
         },
     )
     df_from_pl = nw.from_native(df_pl, eager_only=True)
-    expected = {
+    expected: dict[str, type[nw.dtypes.DType]] = {
         "a": nw.Int64,
         "b": nw.Int32,
         "c": nw.Int16,

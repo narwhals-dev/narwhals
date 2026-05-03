@@ -82,7 +82,8 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
   "mypy~=1.15.0",
-  "pyright",
+  "pyrefly",
+  "pyright==1.1.408",  # https://github.com/narwhals-dev/narwhals/issues/3584
   "pyarrow-stubs==19.2",
   "narwhals[dask]",
   "sqlframe",
@@ -394,4 +395,18 @@ ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
+]
+
+[tool.pyrefly]
+project-includes = ["tests"]
+ignore-missing-imports = [
+    "cudf.*",
+    "cupy.*",
+    "dask.*",
+    "dask_expr.*",
+    "joblib.*",
+    "modin.*",
+    "pyspark.*",
+    "sklearn.*",
+    "sqlparse.*",
 ]

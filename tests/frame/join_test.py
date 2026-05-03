@@ -812,11 +812,11 @@ def test_join_duplicate_column_names(
         exception = nw.exceptions.DuplicateError
 
     if constructor.is_lazy:
-        with pytest.raises(exception):
+        with pytest.raises(exception):  # pyrefly: ignore[unbound-name]
             lf.join(lf, on=["a"]).join(lf, on=["a"]).collect()
     else:
         df = lf.collect()
-        with pytest.raises(exception):
+        with pytest.raises(exception):  # pyrefly: ignore[unbound-name]
             df.join(df, on=["a"]).join(df, on=["a"])
 
 
