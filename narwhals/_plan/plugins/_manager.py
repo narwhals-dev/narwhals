@@ -19,10 +19,7 @@ from typing import (
     overload,
 )
 
-from narwhals._plan.compliant import classes as cc
-from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.plugins import _parse
-from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -39,10 +36,12 @@ if TYPE_CHECKING:
         CompliantDataFrame,
         CompliantLazyFrame,
         CompliantSeries,
+        classes as cc,
         typing as ct,
     )
     from narwhals._plan.compliant.classes import C1, C2, CB, C
     from narwhals._plan.compliant.plugins import Builtin, Plugin
+    from narwhals._plan.exceptions import unsupported_error
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import (
         BackendTodo,
@@ -54,8 +53,8 @@ if TYPE_CHECKING:
         VersionName,
     )
     from narwhals._typing import Arrow, BackendName, Polars
+    from narwhals._typing_compat import assert_never
 
-MYPY: Final = False
 
 Incomplete: TypeAlias = Any
 
@@ -65,31 +64,6 @@ RequireMethod: TypeAlias = Literal["is_imported", "can_import"]
 _UNKNOWN: Final = Implementation.UNKNOWN
 _GROUP: Final = "narwhals.plugins-plan"
 
-_R_co = TypeVar("_R_co", covariant=True)
-
-
-# TODO @dangotbanned: Start cleaning up this and all the overload experiments
-class _Plugin(Protocol[_R_co]):
-    """Minimal interface for typing.
-
-    Doesn't set a bound for `__narwhals_classes__`.
-    """
-
-    __slots__ = ()
-
-    @property
-    def name(self) -> PluginName: ...
-    @property
-    def __narwhals_classes__(self) -> _R_co: ...
-
-
-_PluginV1: TypeAlias = _Plugin["cc.HasV1[C1]"]
-_PluginV2: TypeAlias = _Plugin["cc.HasV2[C2]"]
-_PluginVAll: TypeAlias = _Plugin["cc.HasVAll[C1, C2]"]
-
-MAIN: TypeAlias = Literal[Version.MAIN]
-V1: TypeAlias = Literal[Version.V1]
-V2: TypeAlias = Literal[Version.V2]
 
 # NOTE: https://github.com/python/mypy/issues/18786
 _VERSION_NAME: Final[Mapping[Version, VersionName]] = {
@@ -121,76 +95,97 @@ def _entry_points() -> EntryPoints:
     raise NotImplementedError(msg)
 
 
-if MYPY:
-    # `Incomplete` avoids `mypy` from thinking overloads 1, 3, 5, 7 are bad
-    _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | _Plugin[Incomplete]"
-else:
-    _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | Builtin[CB, Any, Any, Any] | Plugin[C, Any, Any, Any]"
+# TODO @dangotbanned: Fully remove all the overload experiments & `import_classes` tests
+if TYPE_CHECKING:
+    from typing_extensions import deprecated
 
+    _R_co = TypeVar("_R_co", covariant=True)
 
-# TODO @dangotbanned: Fully remove + typing tests
-# MAIN
-@overload  # 1
-def import_classes(plugin: _Plugin[CB], version: MAIN, /) -> CB: ...
-@overload  # 2
-def import_classes(plugin: _Plugin[C], version: MAIN, /) -> C: ...
+    class _Plugin(Protocol[_R_co]):
+        """Minimal interface for typing.
 
+        Doesn't set a bound for `__narwhals_classes__`.
+        """
 
-# V1
-@overload  # 3
-def import_classes(plugin: _PluginVAll[C1, C2], version: V1, /) -> C1: ...
-@overload  # 4
-def import_classes(plugin: _PluginV1[C1], version: V1, /) -> C1: ...
+        __slots__ = ()
 
+        @property
+        def name(self) -> PluginName: ...
+        @property
+        def __narwhals_classes__(self) -> _R_co: ...
 
-# V2
-@overload  # 5
-def import_classes(plugin: _PluginVAll[C1, C2], version: V2, /) -> C2: ...
-@overload  # 6
-def import_classes(plugin: _PluginV2[C2], version: V2, /) -> C2: ...
+    _PluginV1: TypeAlias = _Plugin["cc.HasV1[C1]"]
+    _PluginV2: TypeAlias = _Plugin["cc.HasV2[C2]"]
+    _PluginVAll: TypeAlias = _Plugin["cc.HasVAll[C1, C2]"]
 
+    MAIN: TypeAlias = Literal[Version.MAIN]
+    V1: TypeAlias = Literal[Version.V1]
+    V2: TypeAlias = Literal[Version.V2]
+    MYPY: Final = False
+    if MYPY:
+        # `Incomplete` avoids `mypy` from thinking overloads 1, 3, 5, 7 are bad
+        _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | _Plugin[Incomplete]"
+    else:
+        _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | Builtin[CB, Any, Any, Any] | Plugin[C, Any, Any, Any]"
 
-# OPAQUE
-# NOTE: `_Plugin[C] | _Plugin[CB]` avoids `PluginAny` from reporting as a builtin
-# when we have `(PluginAny | BuiltinAny, Version)`
-@overload  # 7
-def import_classes(
-    plugin: _Plugin[C]
-    | _Plugin[CB]
-    | _Plugin[cc.EagerImplC]
-    | _PluginV1[C1]
-    | _PluginV2[C2]
-    | _PluginVAll[C1, C2]
-    | _PluginVAll[cc.CB1, cc.CB2],
-    version: Version,
-    /,
-) -> C | CB | C1 | C2 | cc.CB1 | cc.CB2 | cc.EagerImplC: ...
+    # MAIN
+    @overload  # 1
+    def import_classes(plugin: _Plugin[CB], version: MAIN, /) -> CB: ...
+    @overload  # 2
+    def import_classes(plugin: _Plugin[C], version: MAIN, /) -> C: ...
 
+    # V1
+    @overload  # 3
+    def import_classes(plugin: _PluginVAll[C1, C2], version: V1, /) -> C1: ...
+    @overload  # 4
+    def import_classes(plugin: _PluginV1[C1], version: V1, /) -> C1: ...
 
-if MYPY:
-    # avoids `mypy` deciding that every type parameter is `Never`
-    @overload  # 8
+    # V2
+    @overload  # 5
+    def import_classes(plugin: _PluginVAll[C1, C2], version: V2, /) -> C2: ...
+    @overload  # 6
+    def import_classes(plugin: _PluginV2[C2], version: V2, /) -> C2: ...
+
+    # OPAQUE
+    # NOTE: `_Plugin[C] | _Plugin[CB]` avoids `PluginAny` from reporting as a builtin
+    # when we have `(PluginAny | BuiltinAny, Version)`
+    @overload  # 7
     def import_classes(
-        plugin: _Plugin[Incomplete], version: Version, /
-    ) -> Incomplete: ...
+        plugin: _Plugin[C]
+        | _Plugin[CB]
+        | _Plugin[cc.EagerImplC]
+        | _PluginV1[C1]
+        | _PluginV2[C2]
+        | _PluginVAll[C1, C2]
+        | _PluginVAll[cc.CB1, cc.CB2],
+        version: Version,
+        /,
+    ) -> C | CB | C1 | C2 | cc.CB1 | cc.CB2 | cc.EagerImplC: ...
 
+    if MYPY:
+        # avoids `mypy` deciding that every type parameter is `Never`
+        @overload  # 8
+        def import_classes(
+            plugin: _Plugin[Incomplete], version: Version, /
+        ) -> Incomplete: ...
 
-def import_classes(
-    plugin: _ImportClasses[C, CB, C1, C2], version: Version, /
-) -> Incomplete:  # pragma: no cover
-    """Import the accessor to the compliant classes compatible with `version`."""
-    classes = plugin.__narwhals_classes__
-    if version is Version.MAIN:
-        return classes
-    if version is Version.V1:
-        if cc.can_v1(classes):
-            return classes.v1
-        raise unsupported_error(plugin.name, "v1")  # pragma: no cover
-    if version is Version.V2:
-        if cc.can_v2(classes):
-            return classes.v2
-        raise unsupported_error(plugin.name, "v2")  # pragma: no cover
-    assert_never(version)
+    @deprecated("overloads are too LSP heavy, need something simpler")
+    def import_classes(
+        plugin: _ImportClasses[C, CB, C1, C2], version: Version, /
+    ) -> Incomplete:
+        """Import the accessor to the compliant classes compatible with `version`."""
+        classes = plugin.__narwhals_classes__
+        if version is Version.MAIN:
+            return classes
+        if version is Version.V1:
+            if cc.can_v1(classes):
+                return classes.v1
+            raise unsupported_error(plugin.name, "v1")
+        if version is Version.V2:
+            if cc.can_v2(classes):
+                return classes.v2
+            raise unsupported_error(plugin.name, "v2")
+        assert_never(version)
 
 
 # TODO @dangotbanned: Integrate `_parsed`, `_registry`

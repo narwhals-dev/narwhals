@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import CompliantDataFrame
-    from narwhals._plan.plugins import _manager
+    from narwhals._plan.plugins._manager import import_classes
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
@@ -30,13 +30,6 @@ if TYPE_CHECKING:
 SupportedBackend: TypeAlias = Literal[Arrow, Polars]
 BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
 BUILTIN_NAMES = ("polars", "pyarrow")
-
-
-MYPY: Final = False
-"""Maybe one day mypy will understand better.
-
-Currently just aiming for not getting `Never` everywhere.
-"""
 
 
 @pytest.fixture
@@ -322,7 +315,12 @@ if TYPE_CHECKING:
         """
         lazy = manager().plugin(current)
         assert_type(lazy, PluginAny | BuiltinAny)
-        classes_1 = _manager.import_classes(lazy, version)
+        classes_1 = import_classes(lazy, version)
+        MYPY: Final = False  # noqa: N806
+        """Maybe one day mypy will understand better.
+
+        Currently just aiming for not getting `Never` everywhere.
+        """
 
         if MYPY:
             assert_type(classes_1, Any)
@@ -355,7 +353,7 @@ if TYPE_CHECKING:
         eager = manager().plugin(collect) if collect else lazy
         assert_type(eager, PluginAny | BuiltinAny)
 
-        classes_2 = _manager.import_classes(eager, version)
+        classes_2 = import_classes(eager, version)
         if MYPY:
             assert_type(classes_2, Any)
         else:
@@ -404,20 +402,20 @@ if TYPE_CHECKING:
         v2: Literal[Version.V2],
     ) -> None:
         # NOTE: Has nothing to match on
-        unknown_any_version = _manager.import_classes(unknown, version)  # type: ignore[var-annotated]
-        unknown_main = _manager.import_classes(unknown, main)
-        unknown_v1 = _manager.import_classes(unknown, v1)
-        unknown_v2 = _manager.import_classes(unknown, v2)
+        unknown_any_version = import_classes(unknown, version)  # type: ignore[var-annotated]
+        unknown_main = import_classes(unknown, main)
+        unknown_v1 = import_classes(unknown, v1)
+        unknown_v2 = import_classes(unknown, v2)
         assert_type(unknown_any_version, Any)
         assert_type(unknown_main, Any)
         assert_type(unknown_v1, Any)
         assert_type(unknown_v2, Any)
 
         # NOTE: We know all classes will be builtin, just need to narrow on version
-        builtin_any_version = _manager.import_classes(builtin, version)
-        builtin_main = _manager.import_classes(builtin, main)
-        builtin_v1 = _manager.import_classes(builtin, v1)
-        builtin_v2 = _manager.import_classes(builtin, v2)
+        builtin_any_version = import_classes(builtin, version)
+        builtin_main = import_classes(builtin, main)
+        builtin_v1 = import_classes(builtin, v1)
+        builtin_v2 = import_classes(builtin, v2)
         assert_type(
             builtin_any_version,
             PolarsClasses
@@ -432,9 +430,9 @@ if TYPE_CHECKING:
         assert_type(builtin_v2, PolarsClassesV2 | ArrowClassesV2)
 
         # NOTE: Mixing an unknown with all or a subset of builtins should simply add `Any`
-        builtin_unknown_any_version = _manager.import_classes(builtin_unknown, version)
-        pyarrow_unknown_any_version = _manager.import_classes(pyarrow_unknown, version)
-        polars_unknown_any_version = _manager.import_classes(polars_unknown, version)
+        builtin_unknown_any_version = import_classes(builtin_unknown, version)
+        pyarrow_unknown_any_version = import_classes(pyarrow_unknown, version)
+        polars_unknown_any_version = import_classes(polars_unknown, version)
         # NOTE: This first one is the most important, as it reflects `(PluginAny | BuiltinAny, Version)`
         assert_type(
             builtin_unknown_any_version,
@@ -456,9 +454,9 @@ if TYPE_CHECKING:
         )
 
         # TODO @dangotbanned: Preserve the `Any` for unknown
-        builtin_unknown_main = _manager.import_classes(builtin_unknown, main)
-        builtin_unknown_v1 = _manager.import_classes(builtin_unknown, v1)
-        builtin_unknown_v2 = _manager.import_classes(builtin_unknown, v2)
+        builtin_unknown_main = import_classes(builtin_unknown, main)
+        builtin_unknown_v1 = import_classes(builtin_unknown, v1)
+        builtin_unknown_v2 = import_classes(builtin_unknown, v2)
         assert_type(builtin_unknown_main, PolarsClasses | ArrowClasses | Any)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(builtin_unknown_v1, PolarsClassesV1 | ArrowClassesV1 | Any)  # pyright: ignore[reportAssertTypeFailure]
         assert_type(builtin_unknown_v2, PolarsClassesV2 | ArrowClassesV2 | Any)  # pyright: ignore[reportAssertTypeFailure]
