@@ -578,7 +578,7 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).to_native().dtypes.to_dict()
+    return constructor_pandas_like(data).to_native().dtypes.to_dict()  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -603,7 +603,7 @@ def origin_pandas_like_pyarrow(
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )
-    return df_nw.to_native().dtypes.to_dict()
+    return df_nw.to_native().dtypes.to_dict()  # type: ignore[no-any-return]
 
 
 def test_schema_from_polars(
