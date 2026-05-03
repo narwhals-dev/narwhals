@@ -49,6 +49,6 @@ def test_is_into_series() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_series(ListBackedSeries("a", [1, 4, 2]))
+    assert is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
     assert not is_into_series(np.array([1, 2, 3]))
     assert not is_into_series([1, 2, 3])

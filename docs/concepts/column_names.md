@@ -1,6 +1,7 @@
 # Column names
 
-Polars and PyArrow only allow for string column names. What about pandas?
+The majority of backends, as Polars, PyArrow, duckdb and PySpark for example,
+only allow for string column names. What about pandas-like and Dask backends?
 
 ```python exec="yes" source="above" result="python" session="col_names"
 import pandas as pd

@@ -297,7 +297,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     df = get_backend_constructor("sqlframe")(data, nw).to_native()
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)  # type: ignore[call-overload]
+        nw.from_native(df, series_only=True)  # type: ignore[call-overload]  # pyrefly: ignore[no-matching-overload]
 
 
 @pytest.mark.parametrize(

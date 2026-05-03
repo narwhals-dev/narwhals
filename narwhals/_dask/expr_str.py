@@ -73,6 +73,10 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
             lambda expr: dd.to_datetime(expr, format=format)
         )
 
+    def to_time(self, format: str | None) -> DaskExpr:
+        msg = "dask backend does not support the Time type"
+        raise ValueError(msg)
+
     def to_uppercase(self) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.upper())
 

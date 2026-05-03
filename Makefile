@@ -29,6 +29,7 @@ typing: ## Run typing checks
 	$(VENV_BIN)/uv pip install "pyarrow<24"
 	$(VENV_BIN)/uv run --no-sync pyright
 	$(VENV_BIN)/uv run --no-sync mypy
+	$(VENV_BIN)/uv run --no-sync pyrefly check
 
 .PHONY: docs-serve
 docs-serve:  # Build and serve the docs locally
