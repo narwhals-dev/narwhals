@@ -18,7 +18,7 @@ def test_assert_never() -> None:
     some: Literal["a"] = "a"
     if some != "a":
         assigned = "b"
-        assert_never(assigned)
+        assert_never(assigned)  # pyrefly: ignore[bad-argument-type] https://github.com/facebook/pyrefly/issues/3202
     else:
         assigned = some
     if not TYPE_CHECKING:

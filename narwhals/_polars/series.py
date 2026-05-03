@@ -20,7 +20,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import Implementation, no_default, requires
+from narwhals._utils import NO_DEFAULT, Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -321,7 +321,7 @@ class PolarsSeries:
         )
 
         extra_kwargs = (
-            {} if default is no_default else {"default": extract_native(default)}
+            {} if default is NO_DEFAULT else {"default": extract_native(default)}
         )
         return self._with_native(
             ser.replace_strict(old, new, return_dtype=dtype, **extra_kwargs)

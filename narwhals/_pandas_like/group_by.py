@@ -70,6 +70,10 @@ _REMAP_ORDERED_INDEX: Mapping[NarwhalsAggregation, Literal[0, -1]] = {
 def _native_agg(name: NativeAggregation, /, **kwds: Unpack[ScalarKwargs]) -> _NativeAgg:
     if name == "nunique":
         return methodcaller(name, dropna=False)
+    if name == "quantile":
+        assert "quantile" in kwds  # noqa: S101
+        assert "interpolation" in kwds  # noqa: S101
+        return methodcaller(name, q=kwds["quantile"], interpolation=kwds["interpolation"])
     if not kwds or kwds.get("ddof") == 1:
         return methodcaller(name)
     return methodcaller(name, **kwds)

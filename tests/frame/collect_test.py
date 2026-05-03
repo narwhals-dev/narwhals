@@ -149,7 +149,7 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
         if POLARS_VERSION > (1, 29, 0)
         else {"no_optimization": True}
     )
-    collect_kwargs = {
+    collect_kwargs: dict[nw.Implementation, Any] = {
         nw.Implementation.POLARS: pl_kwargs,
         nw.Implementation.DASK: {"optimize_graph": False},
         nw.Implementation.PYARROW: {},

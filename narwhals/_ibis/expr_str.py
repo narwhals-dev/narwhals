@@ -79,6 +79,14 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
 
         return self.compliant._with_callable(fn)
 
+    def to_time(self, format: str | None) -> IbisExpr:
+        time_dtype = self.compliant._version.dtypes.Time()
+        if format is None:
+            return self.compliant.cast(time_dtype)
+        return self.compliant._with_callable(self._to_datetime_naive(format)).cast(
+            time_dtype
+        )
+
     def pad_start(self, length: int, fill_char: str) -> IbisExpr:
         def _pad_start(expr: ir.StringColumn) -> ir.Value:
             padded = expr.lpad(length, fill_char)

@@ -15,13 +15,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import (
-    Implementation,
-    Version,
-    extend_bool,
-    no_default,
-    not_implemented,
-)
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -42,7 +36,12 @@ if TYPE_CHECKING:
     from narwhals._spark_like.namespace import SparkLikeNamespace
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import FillNullStrategy, IntoDType, RankMethod
+    from narwhals.typing import (
+        FillNullStrategy,
+        IntoDType,
+        RankMethod,
+        RollingInterpolationMethod,
+    )
 
     NativeRankMethod: TypeAlias = Literal["rank", "dense_rank", "row_number"]
     SparkWindowFunction = WindowFunction[SparkLikeLazyFrame, Column]
@@ -368,7 +367,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        if default is no_default:
+        if default is NO_DEFAULT:
             msg = "`replace_strict` requires an explicit value for `default` for any spark-like backend."
             raise ValueError(msg)
 
@@ -425,4 +424,14 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
     def struct(self) -> SparkLikeExprStructNamespace:
         return SparkLikeExprStructNamespace(self)
 
-    quantile = not_implemented()
+    def quantile(
+        self, quantile: float, interpolation: RollingInterpolationMethod
+    ) -> Self:
+        if interpolation != "linear":
+            msg = "Only linear interpolation methods are supported for PySpark-like quantile."
+            raise NotImplementedError(msg)
+
+        def _quantile(expr: Column) -> Column:
+            return self._F.percentile(expr, quantile)
+
+        return self._with_callable(_quantile)

@@ -46,7 +46,7 @@ def test_lit_error(constructor: Constructor) -> None:
     with pytest.raises(
         ValueError, match="numpy arrays are not supported as literal values"
     ):
-        _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]
+        _ = df.with_columns(nw.lit(np.array([1, 2])).alias("lit"))  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]
 
 
 def test_lit_out_name(constructor: Constructor) -> None:

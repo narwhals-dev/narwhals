@@ -21,6 +21,7 @@ for their dataframe interoperability needs:
 * [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
 * [pyreadstat](https://github.com/Roche/pyreadstat)
 * [py-shiny](https://github.com/posit-dev/py-shiny)
+- [pysummaries](https://github.com/Genentech/pysummaries)
 * [rio](https://github.com/rio-labs/rio)
 * [scikit-lego](https://github.com/koaning/scikit-lego)
 * [scikit-playtime](https://github.com/koaning/scikit-playtime)

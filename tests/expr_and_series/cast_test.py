@@ -217,9 +217,8 @@ def test_cast_datetime_tz_aware(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    request.applymarker(
-        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
-    )
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip()
 
     data = {
         "date": [
@@ -247,9 +246,8 @@ def test_cast_datetime_utc(
         or "sqlframe" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    request.applymarker(
-        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
-    )
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip()
 
     data = {
         "date": [

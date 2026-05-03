@@ -93,7 +93,8 @@ def test_namespace_from_backend_typing(backend: _EagerAllowed) -> None:
     if TYPE_CHECKING:
         assert_type(
             namespace,
-            "Namespace[PolarsNamespace] | Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace]",
+            # pyrefly: `PolarsNamespace` is not assignable to upper bound `CompliantNamespace` of type variable `CompliantNamespaceT_co`
+            "Namespace[PolarsNamespace] | Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace]",  # pyrefly: ignore[bad-specialization]
         )
     assert repr(namespace) in {
         "Namespace[PolarsNamespace]",
@@ -190,7 +191,9 @@ def test_namespace_is_native() -> None:
     native_2 = pl.DataFrame({"a": unrelated})
 
     maybe_native: list[pl.Series | list[int]] = [native_1, unrelated]
-    always_native = list["pl.DataFrame | pl.Series"]((native_2, native_1))
+    always_native = list["pl.DataFrame | pl.Series"](  # pyrefly: ignore[not-a-type] https://github.com/facebook/pyrefly/issues/3193
+        (native_2, native_1)
+    )
     never_native = [unrelated, 50]
 
     expected_maybe = [True, False]
@@ -212,7 +215,7 @@ def test_namespace_is_native() -> None:
             # NOTE: We can't spell intersections *yet* (https://github.com/python/typing/issues/213)
             # Would be:
             # `<subclass of list[int] and DataFrame> | <subclass of list[int] and LazyFrame> | <subclass of list[int] and Series>``
-            assert_type(unrelated, "Never")  # pyright: ignore[reportAssertTypeFailure]
+            assert_type(unrelated, "Never")  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         else:
             assert_type(unrelated, "list[int]")
 
@@ -229,14 +232,15 @@ def test_namespace_is_native() -> None:
             assert_type(native_2, "Never")
 
         always_item = always_native[1]
-        assert_type(always_item, "pl.DataFrame | pl.Series")
+        # pyrefly: `always_item` is `Unknown`
+        assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
         if ns.is_native(always_item):
-            assert_type(always_item, "pl.DataFrame | pl.Series")
+            assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
             if ns._dataframe._is_native(always_item):
                 assert_type(always_item, "pl.DataFrame")
             elif ns._series._is_native(always_item):
                 assert_type(always_item, "pl.Series")
             else:
-                assert_type(always_item, "Never")
+                assert_type(always_item, "Never")  # pyrefly: ignore[assert-type] (todo)
         else:
-            assert_type(always_item, "Never")
+            assert_type(always_item, "Never")  # pyrefly: ignore[assert-type] (todo)

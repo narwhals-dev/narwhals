@@ -7,6 +7,10 @@ on:
 env:
   PY_COLORS: 1
   UV_SYSTEM_PYTHON: 1
+
+permissions:
+  contents: read
+
 jobs:
   vegafusion:
      strategy:
@@ -16,12 +20,12 @@ jobs:
 
      runs-on: ${{ matrix.os }}
      steps:
-        - uses: actions/checkout@v6
-        - uses: actions/setup-python@v6
+        - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
           with:
             python-version: ${{ matrix.python-version }}
         - name: Install uv
-          uses: astral-sh/setup-uv@v7
+          uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
           with:
             enable-cache: "true"
             cache-suffix: ${{ matrix.python-version }}
@@ -32,11 +36,11 @@ jobs:
               cd vegafusion
               git log
         - name: Cache rust dependencies
-          uses: Swatinem/rust-cache@v2
+          uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
           with:
             workspaces: vegafusion
         - name: Build wheels
-          uses: PyO3/maturin-action@v1
+          uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
           with:
             command: build
             manylinux: 2014

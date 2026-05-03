@@ -16,7 +16,7 @@ from narwhals._polars.utils import (
     extract_native,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import Implementation, no_default, requires
+from narwhals._utils import NO_DEFAULT, Implementation, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -241,7 +241,7 @@ class PolarsExpr:
             else None
         )
         extra_kwargs = (
-            {} if default is no_default else {"default": extract_native(default)}
+            {} if default is NO_DEFAULT else {"default": extract_native(default)}
         )
         native = self.native.replace_strict(
             old, new, return_dtype=return_dtype_pl, **extra_kwargs

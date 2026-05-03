@@ -45,6 +45,13 @@ __all__ = ["Schema"]
 class Schema(OrderedDict[str, "DType"]):
     """Ordered mapping of column names to their data type.
 
+    Note:
+        The pandas-like and dask backends allow non-string column names
+        (e.g. integers or booleans). While discouraged, this is supported,
+        so we cannot guarantee that the keys are strictly strings.
+
+        See [concepts - column names](../concepts/column_names.md) for details.
+
     Arguments:
         schema: The schema definition given by column names and their associated
             *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
@@ -81,7 +88,15 @@ class Schema(OrderedDict[str, "DType"]):
         super().__init__(schema)
 
     def names(self) -> list[str]:
-        """Get the column names of the schema."""
+        """Get the column names of the schema.
+
+        Note:
+            The pandas-like and dask backends allow non-string column names
+            (e.g. integers or booleans). While discouraged, this is supported,
+            so the return type is not guaranteed to be `list[str]`.
+
+            See [concepts - column names](../concepts/column_names.md) for details.
+        """
         return list(self.keys())
 
     def dtypes(self) -> list[DType]:
