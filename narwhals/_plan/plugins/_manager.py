@@ -267,6 +267,7 @@ class PluginManager:
         registry[name] = entry = self._plugin_parse(name).to_registry_entry()
         return entry
 
+    # TODO @dangotbanned: Fix coverage sensitivity to test order
     def _plugin(self, name: PluginName, /) -> PluginAny:
         """Retrieve the plugin matching `name`.
 
@@ -276,7 +277,7 @@ class PluginManager:
         """
         if loaded := self._loaded.get(name):
             return loaded
-        if entry_point := self._discovered.pop(name, None):
+        if entry_point := self._discovered.pop(name, None):  # pragma: no cover
             return self._plugin_load(name, entry_point)
         raise _unsupported_error(name, name)
 
@@ -499,9 +500,7 @@ class PluginManager:
 
 # TODO @dangotbanned: Reconsider where these live after re-exporting to `translate`
 @from_native_dispatch
-def from_native_dataframe(
-    native: DF, /, *, version: Version
-) -> ct.DataFrame[DF, Any]:  # pragma: no cover
+def from_native_dataframe(native: DF, /, *, version: Version) -> ct.DataFrame[DF, Any]:
     return PluginManager()._find_from_native("dataframe", native, version=version)
 
 
@@ -523,13 +522,13 @@ TranslateDispatch: TypeAlias = "FromNativeDispatch[Incomplete]"
 
 
 # fmt: off
-def _is_native_dataframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:  # pragma: no cover
+def _is_native_dataframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
     return plugin.is_native_dataframe(native)
 def _is_native_lazyframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:  # pragma: no cover
     return plugin.is_native_lazyframe(native)
 def _is_native_series(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
     return plugin.is_native_series(native)
-def _native_dataframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:  # pragma: no cover
+def _native_dataframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
     yield from plugin.native_dataframe_classes()
 def _native_lazyframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:  # pragma: no cover
     yield from plugin.native_lazyframe_classes()

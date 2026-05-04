@@ -396,7 +396,7 @@ class DataFrame(
     def from_native(
         cls: type[DataFrame[Any, Any]], native: NativeDataFrameT, /
     ) -> DataFrame[Any, Any]:
-        return cls(translate.from_native_dataframe(native))
+        return cls(translate.from_native_dataframe(native, version=cls._version))
 
     @overload
     @classmethod
