@@ -111,7 +111,9 @@ class PluginManager:
     """Rewrapped plugins, with error handling on unsupported features."""
 
     def __new__(cls) -> PluginManager:
-        if not isinstance(cls.__instance, PluginManager):
+        # https://py-free-threading.github.io/porting/#copy-on-write
+        instance = cls.__instance
+        if not isinstance(instance, PluginManager):
             self = object.__new__(PluginManager)
             # NOTE: Need to lie about `LiteralString` because `str` leaks to all other usage
             _eps = {ep.name: ep for ep in _entry_points()}
@@ -120,7 +122,8 @@ class PluginManager:
             self._parsed = {}
             self._registry = {}
             cls.__instance = self
-        return cls.__instance
+            return self
+        return instance
 
     def _plugin_load(self, name: PluginName, entry_point: EntryPoint, /) -> PluginAny:
         # NOTE: Keeps `_plugin` and `_iter_plugins` in sync
