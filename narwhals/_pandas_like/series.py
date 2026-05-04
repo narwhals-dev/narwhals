@@ -565,7 +565,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if not self.dtype.is_numeric():
             msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
-        # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+        # TODO(Unassigned): If/when pandas exposes an API which distinguishes NaN vs null, use that.
         return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
 
     def fill_null(
