@@ -122,22 +122,6 @@ class PluginManager:
             cls.__instance = self
         return cls.__instance
 
-    # TODO @dangotbanned: Make this shorter (or at least move it out of the way)
-    def __repr__(self) -> str:
-        n_discovered = len(self._discovered)
-        n_loaded = len(self._loaded)
-        indent = " " * 4
-        indent_2 = indent * 2
-        join = f"\n{indent_2}".join
-        s = ""
-        if n_loaded:
-            s_plugins = join(map(repr, self._loaded.values()))
-            s += f"\n{indent}loaded\n{indent_2}{s_plugins}"
-        if n_discovered:
-            s_eps = join(f"EntryPoint[{name}]" for name in self._discovered)
-            s += f"\n{indent}discovered\n{indent_2}{s_eps}"
-        return f"{type(self).__name__}[{n_discovered + n_loaded}]{s}"
-
     def _plugin_load(self, name: PluginName, entry_point: EntryPoint, /) -> PluginAny:
         # NOTE: Keeps `_plugin` and `_iter_plugins` in sync
         plugin: PluginAny
@@ -397,6 +381,22 @@ class PluginManager:
 
     def show_versions(self) -> None:
         raise NotImplementedError
+
+    # TODO @dangotbanned: Make this shorter
+    def __repr__(self) -> str:
+        n_discovered = len(self._discovered)
+        n_loaded = len(self._loaded)
+        indent = " " * 4
+        indent_2 = indent * 2
+        join = f"\n{indent_2}".join
+        s = ""
+        if n_loaded:
+            s_plugins = join(map(repr, self._loaded.values()))
+            s += f"\n{indent}loaded\n{indent_2}{s_plugins}"
+        if n_discovered:
+            s_eps = join(f"EntryPoint[{name}]" for name in self._discovered)
+            s += f"\n{indent}discovered\n{indent_2}{s_eps}"
+        return f"{type(self).__name__}[{n_discovered + n_loaded}]{s}"
 
 
 # TODO @dangotbanned: Reconsider where these live (re-exporting through `translate.py` is a temp fix)
