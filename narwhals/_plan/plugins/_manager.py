@@ -191,26 +191,17 @@ if TYPE_CHECKING:
 
 
 # TODO @dangotbanned: Integrate `_parsed`, `_registry`
-# TODO @dangotbanned: Add somewhere for unreachable plugins to live
+# TODO @dangotbanned: Add somewhere for unreachable plugins to live (and exclude from collecting more info)
 @final
 class PluginManager:
     """Singleton plugin manager.
 
     ## Notes
     - if there is state, how can we avoid knowledge of that leaking everywhere?
-        - it's okay for state to exist
-        - but shouldn't be something the caller has to deal with
-            - parsing/error handling stays within it
-            - maybe allow providing an error message on fail
-    - 3 groups of plugins
-        - `is_imported()`
-        - `(not is_imported()) and can_import()`
-            - Allow access to the plugin when explicitly asked (`to_*`, `backend=*`)
-            - During inference, check here when all of `is_imported` is exhausted
-            - Promote to `is_imported` when found
-      - `not can_import()`
-            - Once here, the plugin is unreachable
-            - Stop checking
+    - it's okay for state to exist
+    - but shouldn't be something the caller has to deal with
+        - parsing/error handling stays within it
+        - maybe allow providing an error message on fail
     """
 
     __slots__ = ("_discovered", "_loaded", "_parsed", "_registry")
