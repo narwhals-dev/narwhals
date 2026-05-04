@@ -7,7 +7,7 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
-from narwhals._plan.compliant.translate import FromDict, FromIterable
+from narwhals._plan.compliant.translate import FromDict
 from narwhals._polars.utils import (
     narwhals_to_native_dtype as _dtype_native,
     native_to_narwhals_dtype as _dtype_from_native,
@@ -83,9 +83,7 @@ def explode_todo(
 
 
 class PolarsNamespace(
-    FromIterable[pl.Series],
-    FromDict[pl.DataFrame, pl.Series],
-    CompliantNamespace["DataFrame", "Expr", "Expr"],
+    FromDict[pl.DataFrame, pl.Series], CompliantNamespace["DataFrame", "Expr", "Expr"]
 ):
     __slots__ = ()
     version: ClassVar[Version] = MAIN
@@ -131,11 +129,6 @@ class PolarsNamespace(
         self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
     ) -> DataFrame:
         return self._dataframe.from_dict(data, schema=schema)
-
-    def from_iterable(
-        self, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
-    ) -> Series:
-        return self._series.from_iterable(data, name=name, dtype=dtype)
 
     def read_csv(self, source: str, /, **kwds: Any) -> DataFrame:
         return self._dataframe.from_native(pl.read_csv(source, **kwds))

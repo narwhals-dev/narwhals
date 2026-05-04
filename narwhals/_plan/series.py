@@ -3,11 +3,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
-from narwhals._plan import translate
+from narwhals._plan import plugins, translate
 from narwhals._plan._guards import is_series
-from narwhals._plan._namespace import namespace_from_backend
-from narwhals._plan.compliant.translate import can_from_iterable
-from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.typing import (
     IncompleteCyclic,
     NativeSeriesT,
@@ -76,9 +73,6 @@ class Series(Generic[NativeSeriesT_co]):
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
-    # TODO @dangotbanned: Review backend/version entrypoint
-    # TODO @dangotbanned: Replace with `PluginManager.series(backend,version).from_iterable`?
-    # (`can_from_iterable` is doing something here)
     @classmethod
     def from_iterable(
         cls: type[Series[Any]],
@@ -88,10 +82,11 @@ class Series(Generic[NativeSeriesT_co]):
         dtype: IntoDType | None = None,
         backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
-        ns = namespace_from_backend(backend)
-        if can_from_iterable(ns):
-            return cls(ns.from_iterable(values, name=name, dtype=dtype))
-        raise unsupported_error(backend, "Series.from_iterable")  # pragma: no cover
+        return cls(
+            plugins.manager()
+            .series(backend, cls._version)
+            .from_iterable(values, name=name, dtype=dtype)
+        )
 
     @classmethod
     def from_native(

@@ -39,15 +39,14 @@ from narwhals._plan.typing import NativeDataFrameT, NativeDataFrameT_co, NativeS
 from narwhals._utils import _hasattr_static
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Mapping
 
     from typing_extensions import TypeIs
 
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
-    from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals.typing import IntoDType, IntoSchema
+    from narwhals.typing import IntoSchema
 
-__all__ = ("FromDict", "FromIterable", "can_from_dict", "can_from_iterable")
+__all__ = ("FromDict", "can_from_dict")
 
 
 class FromDict(Protocol[NativeDataFrameT_co, NativeSeriesT_co]):
@@ -61,24 +60,7 @@ class FromDict(Protocol[NativeDataFrameT_co, NativeSeriesT_co]):
     ) -> CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]: ...
 
 
-class FromIterable(Protocol[NativeSeriesT_co]):
-    """Namespace-level instance method, for initializing a series.
-
-    `[NativeSeriesT_co]`.
-    """
-
-    def from_iterable(
-        self, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
-    ) -> CompliantSeries[NativeSeriesT_co]: ...
-
-
 def can_from_dict(
     obj: FromDict[NativeDataFrameT, NativeSeriesT_co] | Any,
 ) -> TypeIs[FromDict[NativeDataFrameT, NativeSeriesT_co]]:
     return _hasattr_static(obj, "from_dict")
-
-
-def can_from_iterable(
-    obj: FromIterable[NativeSeriesT_co] | Any,
-) -> TypeIs[FromIterable[NativeSeriesT_co]]:
-    return _hasattr_static(obj, "from_iterable")
