@@ -428,10 +428,6 @@ class Scan(LogicalPlan, has_inputs=False):
     def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield from ()
 
-    def to_narwhals(self) -> LazyFrame[Any]:
-        msg = f"TODO: `{type(self).__name__}.to_narwhals`"
-        raise NotImplementedError(msg)
-
 
 class ScanFile(Scan):
     # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L43-L52
@@ -446,10 +442,8 @@ class ScanFile(Scan):
     # TODO @dangotbanned: Review backend/version entrypoint
     # TODO @dangotbanned: Typing needs injecting here
     def to_narwhals(
-        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
+        self, backend: IntoBackend[Backend], version: Version
     ) -> LazyFrame[Any]:
-        if backend is None:
-            raise NotImplementedError
         return into_version(version).lazyframe._from_lp_scan(
             self, Implementation.from_backend(backend)
         )

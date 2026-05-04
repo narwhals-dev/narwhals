@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant import io as _io
 from narwhals._plan.exceptions import unsupported_error
-from narwhals._utils import normalize_path, unstable
+from narwhals._utils import Version, normalize_path, unstable
 
 if TYPE_CHECKING:
     import polars as pl
@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from narwhals._typing import Arrow, Polars
     from narwhals.schema import Schema
     from narwhals.typing import Backend, EagerAllowed, FileSource, IntoBackend
+
+_MAIN = Version.MAIN
 
 
 @overload
@@ -66,13 +68,13 @@ def read_parquet(
 def scan_csv(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
 ) -> LazyFrame[Any]:
-    return _scan_file(source, backend, kwds, "scan_csv")
+    return _scan_file(source, backend, kwds, "scan_csv", _MAIN)
 
 
 def scan_parquet(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
 ) -> LazyFrame[Any]:
-    return _scan_file(source, backend, kwds, "scan_parquet")
+    return _scan_file(source, backend, kwds, "scan_parquet", _MAIN)
 
 
 @unstable
@@ -112,6 +114,7 @@ def _scan_file(
     backend: IntoBackend[Backend],
     kwds: dict[str, Any],
     method: Literal["scan_csv", "scan_parquet"],
+    version: Version,
 ) -> LazyFrame[Any]:
     from narwhals._plan.plans import LogicalPlan
 
@@ -120,7 +123,7 @@ def _scan_file(
         raise NotImplementedError(msg)
     ns = namespace_from_backend(backend)
     if method == "scan_csv" and _io.can_scan_csv(ns):
-        return LogicalPlan.scan_csv(source).to_narwhals(backend)
+        return LogicalPlan.scan_csv(source).to_narwhals(backend, version)
     if method == "scan_parquet" and _io.can_scan_parquet(ns):
-        return LogicalPlan.scan_parquet(source).to_narwhals(backend)
+        return LogicalPlan.scan_parquet(source).to_narwhals(backend, version)
     raise unsupported_error(backend, method)  # pragma: no cover
