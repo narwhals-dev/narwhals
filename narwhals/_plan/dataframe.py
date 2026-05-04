@@ -759,7 +759,7 @@ class DataFrame(
     # - Last `LogicalPlan` import left in `dataframe.py`
     # - `ScanDataFrame.to_narwhals` is still pretty messy and closed for extension
     def lazy(self, backend: IntoBackend[LazyAllowed] | None = None) -> LazyFrame[Any]:
-        return LogicalPlan.from_df(self).to_narwhals(backend, self.version)
+        return LogicalPlan.from_df(self).to_narwhals(backend)
 
 
 class DataFrameV1(DataFrame[NativeDataFrameT_co, NativeSeriesT_co]):

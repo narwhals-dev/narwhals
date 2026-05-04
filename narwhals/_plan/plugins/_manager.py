@@ -306,6 +306,8 @@ class PluginManager:
         classes = self._plugin(plugin_name).__narwhals_classes__
         return self._plugin_entry(plugin_name)[_VERSION_NAME[version]][name](classes)
 
+    # TODO @dangotbanned: Docs need a lot of love!
+    # - Frankensteined w/ previous one from `translate.py`
     @overload
     def _find_from_native(
         self, name: Literal["dataframe"], native: DF, /, *, version: Version
@@ -327,6 +329,13 @@ class PluginManager:
         **kwds: Any,
     ) -> ct.DataFrame[DF, Any] | ct.LazyFrame[LF] | ct.Series[S]:
         """Self-registration dispatcher.
+
+        ## Super high-level
+        - `@singledispatch` starts with no registered implementations
+            - We search here through a metadata registry
+            - Registration of the new function happens after the first match
+        - Upon registration, we remove the match from the search space
+        - If we see the same type again, it will work the same way as if we did things eagerly
 
         ## Notes
         - This is called whenever `{DataFrame,LazyFrame,Series}.from_native` is passed a type they haven't seen before.
@@ -362,7 +371,7 @@ class PluginManager:
         for tp_native in native_classes(plugin):
             dispatcher.register(tp_native, constructor)
 
-        # 4 - Use that constructor, instead of calling back into `singledispatch` again
+        # 4 - Use that constructor, instead of calling back into `from_native_*` again
         return constructor(native, *args, version=version, **kwds)
 
     @overload
@@ -498,16 +507,16 @@ class PluginManager:
         raise NotImplementedError
 
 
-# TODO @dangotbanned: Reconsider where these live after re-exporting to `translate`
+# TODO @dangotbanned: Reconsider where these live (re-exporting through `translate.py` is a temp fix)
+# - Needs access to `PluginManager`
+# - `PluginManager._find_from_native` calls back here to finish registration
 @from_native_dispatch
 def from_native_dataframe(native: DF, /, *, version: Version) -> ct.DataFrame[DF, Any]:
     return PluginManager()._find_from_native("dataframe", native, version=version)
 
 
 @from_native_dispatch
-def from_native_lazyframe(
-    native: LF, /, *, version: Version
-) -> ct.LazyFrame[LF]:  # pragma: no cover
+def from_native_lazyframe(native: LF, /, *, version: Version) -> ct.LazyFrame[LF]:
     return PluginManager()._find_from_native("lazyframe", native, version=version)
 
 
@@ -524,13 +533,13 @@ TranslateDispatch: TypeAlias = "FromNativeDispatch[Incomplete]"
 # fmt: off
 def _is_native_dataframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
     return plugin.is_native_dataframe(native)
-def _is_native_lazyframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:  # pragma: no cover
+def _is_native_lazyframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
     return plugin.is_native_lazyframe(native)
 def _is_native_series(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
     return plugin.is_native_series(native)
 def _native_dataframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
     yield from plugin.native_dataframe_classes()
-def _native_lazyframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:  # pragma: no cover
+def _native_lazyframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
     yield from plugin.native_lazyframe_classes()
 def _native_series_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
     yield from plugin.native_series_classes()

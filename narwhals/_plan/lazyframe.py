@@ -50,9 +50,9 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
-# TODO @dangotbanned: Figure out `from_native` + remove `self._compliant`
+# TODO @dangotbanned: Remove `self._compliant`
 class LazyFrame(Generic[Native]):
-    """WIP: need to change a lot before something useful can happen.
+    """Representation of a lazy computation.
 
     ## Notes
     `CompliantLazyFrame` seems like the wrong abstraction,
@@ -128,9 +128,9 @@ class LazyFrame(Generic[Native]):
         cls: type[LazyFrame[Any]], native: FromNative, /
     ) -> LazyFrame[FromNative]:
         return (
-            translate.from_native_lazyframe(native)
+            translate.from_native_lazyframe(native, version=cls._version)
             .to_logical()
-            .to_narwhals(version=cls._version)
+            .to_narwhals()
         )
 
     def _unwrap_plan(self, other: Self | Any, /) -> LogicalPlan:  # pragma: no cover
@@ -307,7 +307,7 @@ class LazyFrame(Generic[Native]):
 
     def collect(
         self, backend: IntoBackend[Polars | Pandas | Arrow] | None = None, **kwds: Any
-    ) -> DataFrame[Any]:  # pragma: no cover
+    ) -> DataFrame[Any]:
         """Materialize this LazyFrame into a DataFrame."""
         lazy = self.implementation
         eager = eager_implementation(backend) if backend else None

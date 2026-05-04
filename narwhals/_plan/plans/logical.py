@@ -8,6 +8,7 @@ from __future__ import annotations
 from io import BytesIO
 from typing import TYPE_CHECKING, Any, Generic, Literal, get_args, overload
 
+from narwhals._plan import plugins
 from narwhals._plan._guards import is_seq_column
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._version import into_version
@@ -427,10 +428,7 @@ class Scan(LogicalPlan, has_inputs=False):
     def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
         yield from ()
 
-    # TODO @dangotbanned: Review backend/version entrypoint
-    def to_narwhals(
-        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
-    ) -> LazyFrame[Any]:
+    def to_narwhals(self) -> LazyFrame[Any]:
         msg = f"TODO: `{type(self).__name__}.to_narwhals`"
         raise NotImplementedError(msg)
 
@@ -482,6 +480,10 @@ class ScanFrame(Scan, Generic[FrameT_co]):
     def implementation(self) -> Implementation:
         return self.frame.implementation
 
+    @property
+    def version(self) -> Version:
+        return self.frame.version
+
 
 # NOTE: (low priority) Maybe use `CompliantDataFrame`?
 class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
@@ -504,27 +506,23 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_dataframe(self)
 
-    # TODO @dangotbanned: Review backend/version entrypoint
-    # - 2x `version` is a major smell
-    def to_narwhals(
-        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
-    ) -> LazyFrame[Any]:
+    # TODO @dangotbanned: Remove all of the polars special-casing and use `plugins.manager` everywhere
+    def to_narwhals(self, backend: IntoBackend[Backend] | None = None) -> LazyFrame[Any]:
         current = self.implementation
         backend_ = backend or "unknown"
         POLARS = Implementation.POLARS  # noqa: N806
+        version = self.version
         if ((requested := Implementation.from_backend(backend_)) is POLARS) or (
             current is POLARS and requested is Implementation.UNKNOWN
         ):
             # (4-1) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
             # We can avoid storing the dataframe on the graph, by letting polars do it instead
-            from narwhals._plan.plugins._manager import PluginManager
-
             return (
-                PluginManager()
+                plugins.manager()
                 .lazyframe("polars", version)
                 .from_narwhals(self.frame)
                 .to_logical()
-                .to_narwhals(version=version)
+                .to_narwhals()
             )
         if requested is current or requested is Implementation.UNKNOWN:
             # (1) Fake lazy (needs a reference to eager data)
@@ -556,11 +554,9 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native_co]"], Generic[Native_c
     def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
         return resolver.scan_lazyframe(self)
 
-    # TODO @dangotbanned: Review backend/version entrypoint
-    def to_narwhals(
-        self, backend: IntoBackend[Backend] | None = None, version: Version = Version.MAIN
-    ) -> LazyFrame[Native_co]:
-        return into_version(version).lazyframe._from_lp_scan(self, self.implementation)
+    def to_narwhals(self) -> LazyFrame[Native_co]:
+        impl = self.implementation
+        return into_version(self.version).lazyframe._from_lp_scan(self, impl)
 
 
 class SingleInput(LogicalPlan, has_inputs=True):

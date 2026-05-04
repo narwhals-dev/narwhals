@@ -131,7 +131,7 @@ class CompliantLazyFrame(NarwhalsHash, Protocol[Native_co]):
     def collect_pandas(self, **kwds: Any) -> pd.DataFrame: ...
     def collect_polars(self, **kwds: Any) -> pl.DataFrame: ...
 
-    # TODO @dangotbanned: Review version/implementation entrypoint
+    # TODO @dangotbanned: Review implementation entrypoint
     def collect_compliant(
         self, backend: IntoBackend[EagerAllowed], **kwds: Any
     ) -> CompliantDataFrame[Any, Any]:
