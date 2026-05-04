@@ -3,8 +3,12 @@ name: Check Docs Build
 on:
   pull_request:
 
+env:
+  PY_COLORS: 1
+  UV_SYSTEM_PYTHON: 1
+
 jobs:
-  mkdocs:
+  zensical-strict-build:
     strategy:
       matrix:
         python-version: ["3.12"]
