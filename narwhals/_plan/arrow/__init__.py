@@ -41,9 +41,7 @@ __all__ = (
 
 @_t.final
 class ArrowPlugin(
-    _plugins.Builtin[
-        "ArrowClasses", "pa.Table", _plugins.Unsupported, "pa.ChunkedArray[_t.Any]"
-    ]
+    _plugins.Builtin["ArrowClasses", "pa.Table", _t.Any, "pa.ChunkedArray[_t.Any]"]
 ):
     __slots__ = ()
     implementation = _plugins.Implementation.PYARROW
@@ -64,7 +62,7 @@ class ArrowPlugin(
 
         yield pa.ChunkedArray
 
-    def native_lazyframe_classes(self) -> Iterator[type[_plugins.Unsupported]]:
+    def native_lazyframe_classes(self) -> Iterator[type[_t.Any]]:
         yield from ()
 
     @property

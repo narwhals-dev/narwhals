@@ -43,16 +43,9 @@ if TYPE_CHECKING:
         from typing_extensions import LiteralString as LiteralString_
 
 
-__all__ = ("Builtin", "Implementation", "Plugin", "Unsupported")
+__all__ = ("Builtin", "Implementation", "Plugin")
 
 
-# NOTE: `Never` might be another option?
-# try that out if `Any` causes *any* issues
-Unsupported: TypeAlias = Any
-"""Marker to use for types that are not planned to be implemented."""
-
-
-# TODO @dangotbanned: Should this use something wider than `ClassesAny`?
 class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
     """An entrypoint for a backend that implements compliant-level operations.
 
@@ -79,7 +72,6 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
     def __repr__(self) -> str:
         return f"Plugin[{self.name}]"
 
-    # TODO @dangotbanned: Think about how the narwhals-level will use this for state
     def is_imported(self) -> bool:
         """Return True if all required dependencies *have already been* imported.
 
@@ -143,7 +135,6 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
         """
         ...
 
-    # TODO @dangotbanned: Do we still want to use these like in `narwhals._plan.translate.py`?
     def is_native(self, obj: Any, /) -> TypeIs[DF | LF | S]: ...
     def is_native_dataframe(self, obj: Any, /) -> TypeIs[DF]: ...
     def is_native_lazyframe(self, obj: Any, /) -> TypeIs[LF]: ...
@@ -181,7 +172,7 @@ class Builtin(Plugin[CB, DF, LF, S], Protocol[CB, DF, LF, S]):
     def can_import(self) -> bool:
         return _can_import(self)
 
-    def native_classes(self) -> Iterator[type[DF | LF | S]]:  # pragma: no cover
+    def native_classes(self) -> Iterator[type[DF | LF | S]]:
         yield from self.native_dataframe_classes()
         yield from self.native_lazyframe_classes()
         yield from self.native_series_classes()
@@ -198,11 +189,11 @@ class Builtin(Plugin[CB, DF, LF, S], Protocol[CB, DF, LF, S]):
         it = self.native_dataframe_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
-    def is_native_lazyframe(self, obj: Any) -> TypeIs[LF]:  # pragma: no cover
+    def is_native_lazyframe(self, obj: Any) -> TypeIs[LF]:
         it = self.native_lazyframe_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
-    def is_native_series(self, obj: Any) -> TypeIs[S]:  # pragma: no cover
+    def is_native_series(self, obj: Any) -> TypeIs[S]:
         it = self.native_series_classes()
         return bool(tps := tuple(it)) and isinstance(obj, tps)
 
