@@ -68,7 +68,7 @@ def test_pandas_str_types(left_dtype: Any, right_dtype: Any, result_dtype: Any) 
 
     df = pd.DataFrame({"fruit": ["apple", "banana"]}, dtype=left_dtype)
     df["new_str_col"] = "!"
-    df["new_str_col"] = df["new_str_col"].astype(right_dtype)
+    df["new_str_col"] = df["new_str_col"].astype(right_dtype)  # pyrefly: ignore[missing-attribute] https://github.com/facebook/pyrefly/issues/3299
     res = nw.from_native(df).with_columns(
         concat_col=nw.concat_str([nw.col("fruit"), nw.col("new_str_col")])
     )
