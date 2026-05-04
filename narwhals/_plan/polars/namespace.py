@@ -7,7 +7,6 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
-from narwhals._plan.compliant.translate import FromDict
 from narwhals._polars.utils import (
     narwhals_to_native_dtype as _dtype_native,
     native_to_narwhals_dtype as _dtype_from_native,
@@ -16,7 +15,7 @@ from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable
 
     from typing_extensions import TypeAlias
 
@@ -32,13 +31,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.typing import CompliantDataFrame
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import (
-        ClosedInterval,
-        ConcatMethod,
-        IntoDType,
-        IntoSchema,
-        PythonLiteral,
-    )
+    from narwhals.typing import ClosedInterval, ConcatMethod, IntoDType, PythonLiteral
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
@@ -82,9 +75,7 @@ def explode_todo(
     return True, True
 
 
-class PolarsNamespace(
-    FromDict[pl.DataFrame, pl.Series], CompliantNamespace["DataFrame", "Expr", "Expr"]
-):
+class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
     __slots__ = ()
     version: ClassVar[Version] = MAIN
     implementation: ClassVar = Implementation.POLARS
@@ -124,11 +115,6 @@ class PolarsNamespace(
         from narwhals._plan.polars.lazyframe import PolarsEvaluator
 
         return PolarsEvaluator
-
-    def from_dict(
-        self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
-    ) -> DataFrame:
-        return self._dataframe.from_dict(data, schema=schema)
 
     def read_csv(self, source: str, /, **kwds: Any) -> DataFrame:
         return self._dataframe.from_native(pl.read_csv(source, **kwds))

@@ -11,13 +11,12 @@ from narwhals._plan._version import into_version
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
-from narwhals._plan.compliant.translate import FromDict
 from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable
 
     from typing_extensions import TypeAlias
 
@@ -57,7 +56,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         ClosedInterval,
         FileSource,
-        IntoSchema,
         NonNestedLiteral,
         PythonLiteral,
     )
@@ -69,8 +67,7 @@ Int64 = Version.MAIN.dtypes.Int64()
 
 
 class ArrowNamespace(
-    FromDict["pa.Table", "ChunkedArrayAny"],
-    EagerNamespace["Frame", "Series", "Expr", "Scalar", "pa.Table", "ChunkedArrayAny"],
+    EagerNamespace["Frame", "Series", "Expr", "Scalar", "pa.Table", "ChunkedArrayAny"]
 ):
     implementation = Implementation.PYARROW
     version: ClassVar[Version] = Version.MAIN
@@ -104,11 +101,6 @@ class ArrowNamespace(
         from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
 
         return ArrowLazyFrame
-
-    def from_dict(
-        self, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
-    ) -> Frame:
-        return self._dataframe.from_dict(data, schema=schema)
 
     def col(self, node: ir.Column, frame: Frame, name: str) -> Expr:
         return self._expr.from_native(frame.native.column(node.name), name)

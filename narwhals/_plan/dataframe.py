@@ -3,18 +3,16 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
-from narwhals._plan import _parse, translate
+from narwhals._plan import _parse, plugins, translate
 from narwhals._plan._expansion import (
     expand_selectors,
     parse_expand_selectors,
     prepare_projection,
 )
 from narwhals._plan._guards import is_series
-from narwhals._plan._namespace import eager_implementation, namespace_from_backend
+from narwhals._plan._namespace import eager_implementation
 from narwhals._plan._version import into_version
 from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
-from narwhals._plan.compliant.translate import can_from_dict
-from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.plans import LogicalPlan
@@ -461,10 +459,12 @@ class DataFrame(
             data = unwrapped
         else:
             backend_ = backend
-        ns = namespace_from_backend(backend_)
-        if can_from_dict(ns):
-            return ns.from_dict(data, schema=schema).to_narwhals()
-        raise unsupported_error(backend_, "DataFrame.from_dict")  # pragma: no cover
+        return (
+            plugins.manager()
+            .dataframe(backend_, cls._version)
+            .from_dict(data, schema=schema)
+            .to_narwhals()
+        )
 
     @overload
     def to_dict(
