@@ -16,6 +16,7 @@ from typing import (
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
+    NO_DEFAULT,
     Implementation,
     Version,
     _Implementation,
@@ -25,7 +26,6 @@ from narwhals._utils import (
     is_compliant_series,
     is_eager_allowed,
     is_index_selector,
-    no_default,
     qualified_type_name,
     supports_arrow_c_stream,
     unstable,
@@ -1309,7 +1309,7 @@ class Series(Generic[IntoSeriesT]):
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        default: Any | NoDefault = no_default,
+        default: Any | NoDefault = NO_DEFAULT,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.

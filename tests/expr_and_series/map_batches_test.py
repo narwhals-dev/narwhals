@@ -82,7 +82,8 @@ def test_map_batches_exception(
     df = nw.from_native(constructor_eager(data))
     msg = (
         r"`map(?:_batches)?` with `returns_scalar=False` must return a Series; found "
-        "'numpy.int64'.\n\nIf `returns_scalar` is set to `True`, a returned value can be "
+        r"'numpy\.int(?:32|64)'\."
+        "\n\nIf `returns_scalar` is set to `True`, a returned value can be "
         "a scalar value."
     )
 
