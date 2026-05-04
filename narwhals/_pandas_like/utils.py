@@ -733,8 +733,9 @@ def binary_string_sum_fallback(left: pd.Series, right: Any, pdx: Any) -> pd.Seri
             left_arrow = left.values.__arrow_array__().type  # noqa: PD011  # type: ignore[attr-defined]
             right_arrow = right.values.__arrow_array__().type  # noqa: PD011  # type: ignore[attr-defined]
             if pa.types.is_string(left_arrow) and pa.types.is_large_string(right_arrow):
-                # LHS is smaller than RHS, so use the latter
-                return left.astype(right_dtype) + right
+                # https://github.com/pandas-dev/pandas/blob/b00d4f6710ff6c1c80319196657c31c2cf6c70ff/pandas/core/arrays/arrow/array.py#L1064-L1068
+                pd_pa_large_string = pd.ArrowDtype(pa.large_string())
+                return left.astype(pd_pa_large_string) + right.astype(pd_pa_large_string)
         else:  # pragma: no cover
             pass
         # Give precedence to the left-hand-side dtype.

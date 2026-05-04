@@ -29,8 +29,8 @@ STRING_DTYPE_NA = pd.StringDtype("pyarrow", na_value=pd.NA)  # type: ignore[call
         (STRING_DTYPE_NA, STRING_DTYPE_NA, STRING_DTYPE_NA),
         (STRING_DTYPE_NA, pd.ArrowDtype(pa.string()), STRING_DTYPE_NA),
         (STRING_DTYPE_NA, pd.ArrowDtype(pa.large_string()), STRING_DTYPE_NA),
-        (pd.ArrowDtype(pa.string()), STRING_DTYPE_NAN, STRING_DTYPE_NAN),
-        (pd.ArrowDtype(pa.string()), STRING_DTYPE_NA, STRING_DTYPE_NA),
+        (pd.ArrowDtype(pa.string()), STRING_DTYPE_NAN, pd.ArrowDtype(pa.large_string())),
+        (pd.ArrowDtype(pa.string()), STRING_DTYPE_NA, pd.ArrowDtype(pa.large_string())),
         (
             pd.ArrowDtype(pa.string()),
             pd.ArrowDtype(pa.string()),
