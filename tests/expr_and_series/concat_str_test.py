@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -8,7 +8,6 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
-from typing import TYPE_CHECKING
 
 import pyarrow as pa
 
