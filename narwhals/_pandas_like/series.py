@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, no_default
+from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.exceptions import InvalidOperationError
 
@@ -693,7 +693,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         native_result = new_series.iloc[array_funcs.where(was_matched, idxs, 0)]
         native_result.index = native.index
 
-        if default is no_default:
+        if default is NO_DEFAULT:
             # Check that all non-null input values were matched
             unmatched_mask = native.notna() & (~was_matched)
             if unmatched_mask.any():
