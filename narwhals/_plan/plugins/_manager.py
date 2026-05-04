@@ -61,12 +61,7 @@ else:
 
 
 Incomplete: TypeAlias = Any
-
-RequireMethod: TypeAlias = Literal["is_imported", "can_import"]
-"""Raise if calling this method on `Plugin` returns False."""
-
 TranslateName: TypeAlias = Literal["dataframe", "lazyframe", "series"]
-
 
 _UNKNOWN: Final = Implementation.UNKNOWN
 _GROUP: Final = "narwhals.plugins-plan"
@@ -358,46 +353,22 @@ class PluginManager:
         return constructor(native, *args, version=version, **kwds)
 
     @overload
-    def plugin(
-        self, backend: Arrow, /, require: RequireMethod | None = None
-    ) -> ArrowPlugin: ...
+    def plugin(self, backend: Arrow, /) -> ArrowPlugin: ...
     @overload
-    def plugin(
-        self, backend: Polars, /, require: RequireMethod | None = None
-    ) -> PolarsPlugin: ...
+    def plugin(self, backend: Polars, /) -> PolarsPlugin: ...
     @overload
-    def plugin(
-        self, backend: BackendTodo, /, require: RequireMethod | None = None
-    ) -> Never: ...
+    def plugin(self, backend: BackendTodo, /) -> Never: ...
     @overload
-    def plugin(
-        self,
-        backend: NativeModuleType | Arrow | Polars,
-        /,
-        require: RequireMethod | None = None,
-    ) -> BuiltinAny: ...
+    def plugin(self, backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
     @overload
-    def plugin(
-        self, backend: PluginName, /, require: RequireMethod | None = None
-    ) -> PluginAny: ...
+    def plugin(self, backend: PluginName, /) -> PluginAny: ...
     # NOTE: `IntoPlugin` is wider than what is implemented.
     # Narrowing the last overload causes conflicts with other callers that have their own overloads
     @overload
-    def plugin(
-        self, backend: IntoPlugin, /, require: RequireMethod | None = None
-    ) -> PluginAny | BuiltinAny: ...
-    def plugin(
-        self, backend: IntoPlugin, /, require: RequireMethod | None = None
-    ) -> PluginAny | BuiltinAny:
-        """Return the plugin matching `backend`, raising if `require` returns False."""
-        plugin = self._plugin(_plugin_name(backend))
-        if not require:
-            return plugin
-        if (
-            plugin.is_imported() if require == "is_imported" else plugin.can_import()
-        ):  # pragma: no cover
-            return plugin
-        raise _unavailable_error(plugin, require)  # pragma: no cover
+    def plugin(self, backend: IntoPlugin, /) -> PluginAny | BuiltinAny: ...
+    def plugin(self, backend: IntoPlugin, /) -> PluginAny | BuiltinAny:
+        """Return the plugin matching `backend`."""
+        return self._plugin(_plugin_name(backend))
 
     # NOTE: These overloads are *intentionally* less-precise than they could be
     # Some early experiments handled unions & version matching (successfuly),
@@ -473,8 +444,10 @@ class PluginManager:
 
     def import_modules(self, backend: IntoPlugin, /) -> None:
         """Import the requirements for `backend`."""
-        plugin = self.plugin(backend, require="can_import")
+        plugin = self.plugin(backend)
         if not plugin.is_imported():
+            if not plugin.can_import():
+                raise _unavailable_error(plugin)  # pragma: no cover
             for module in plugin.requirements:
                 import_module(module)
 
@@ -568,15 +541,8 @@ def _unsupported_error(backend: Any, name: str, /) -> Exception:
     return TypeError(msg)
 
 
-def _unavailable_error(
-    plugin: PluginAny, require: RequireMethod = "can_import"
-) -> Exception:  # pragma: no cover
-    msg = f"Plugin {plugin.name!r} was found but"
-    if require == "is_imported" and plugin.can_import():
-        missing = [name for name in plugin.requirements if sys.modules.get(name) is None]
-        reason = "the following available modules have not yet been imported"
-    else:
-        missing = [name for name in plugin.requirements if find_spec(name) is None]
-        reason = "could not import the following required modules"
-    msg = f"{msg} {reason}: {missing!r}"
+def _unavailable_error(plugin: PluginAny) -> Exception:  # pragma: no cover
+    reason = "could not import the following required modules"
+    missing = [name for name in plugin.requirements if find_spec(name) is None]
+    msg = f"Plugin {plugin.name!r} was found but {reason}: {missing!r}"
     return ModuleNotFoundError(msg)
