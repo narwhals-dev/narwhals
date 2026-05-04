@@ -207,6 +207,9 @@ class PluginManager:
     __slots__ = ("_discovered", "_loaded", "_parsed", "_registry")
     __instance: ClassVar[Any | None] = None
 
+    # TODO @dangotbanned: Explain that `_discovered` is used destructively
+    # NOTE: Maybe explain the flow/relationship between
+    #   - `_discovered` -> `_loaded` -> `_parsed` -> `_registry`
     _discovered: dict[PluginName, EntryPoint]
     _loaded: dict[PluginName, PluginAny | BuiltinAny]
 
@@ -214,7 +217,7 @@ class PluginManager:
     """Details on what each plugin supports."""
 
     _registry: dict[PluginName, _parse.RegEntry]
-    """A rewrapped `Plugin`, with error handling on unsupported features."""
+    """Rewrapped plugins, with error handling on unsupported features."""
 
     def __new__(cls) -> PluginManager:
         if not isinstance(cls.__instance, PluginManager):
@@ -228,6 +231,7 @@ class PluginManager:
             cls.__instance = self
         return cls.__instance
 
+    # TODO @dangotbanned: Make this shorter (or at least move it out of the way)
     def __repr__(self) -> str:
         n_discovered = len(self._discovered)
         n_loaded = len(self._loaded)
@@ -265,6 +269,12 @@ class PluginManager:
         return entry
 
     def _plugin(self, name: PluginName, /) -> PluginAny:
+        """Retrieve the plugin matching `name`.
+
+        Raises:
+            NotImplementedError: If `name` matched an implementation that is not yet supported in `narwhals._plan`.
+            TypeError: If `name` did not match an entry point.
+        """
         if loaded := self._loaded.get(name):
             return loaded
         if entry_point := self._discovered.pop(name, None):
@@ -277,9 +287,21 @@ class PluginManager:
             name, ep = self._discovered.popitem()
             yield self._plugin_load(name, ep)
 
-    def _get_class(
+    def _import_class(
         self, name: cc.PropertyName, backend: IntoPlugin, version: Version, /
     ) -> type[Any]:
+        """Import a compliant-level class from a plugin.
+
+        Arguments:
+            name: The name of the accessor on `*Classes`.
+            backend: Anything that can be used to load a `Plugin`.
+            version: The version of the class to use.
+
+        Raises:
+            NotImplementedError:
+                - If the plugin doesn't provide `name`.
+                - If the plugin doesn't support `name` at `version`.
+        """
         plugin_name = _plugin_name(backend)
         classes = self._plugin(plugin_name).__narwhals_classes__
         return self._plugin_entry(plugin_name)[_VERSION_NAME[version]][name](classes)
@@ -330,7 +352,7 @@ class PluginManager:
         def constructor(
             native: DF | LF | S, *args: Any, version: Version, **kwds: Any
         ) -> ct.DataFrame[DF, Any] | ct.LazyFrame[LF] | ct.Series[S]:
-            tp = self._get_class(name, plugin_name, version)
+            tp = self._import_class(name, plugin_name, version)
             compliant: ct.DataFrame[DF, Any] | ct.LazyFrame[LF] | ct.Series[S] = (
                 tp.from_native(native, *args, **kwds)
             )
@@ -358,7 +380,15 @@ class PluginManager:
     @overload
     def plugin(self, backend: IntoPlugin, /) -> PluginAny | BuiltinAny: ...
     def plugin(self, backend: IntoPlugin, /) -> PluginAny | BuiltinAny:
-        """Return the plugin matching `backend`."""
+        """Retrieve the plugin matching `backend`.
+
+        Arguments:
+            backend: Anything that can be used to load a `Plugin`.
+                See `IntoPlugin`, `IntoBackend`.
+
+        Raises:
+            NotImplementedError: If a `Implementation | ModuleType` produced `Implementation.UNKNOWN`.
+        """
         return self._plugin(_plugin_name(backend))
 
     # NOTE: These overloads are *intentionally* less-precise than they could be
@@ -380,7 +410,8 @@ class PluginManager:
     def dataframe(
         self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.DataFrameAny]:
-        return self._get_class("dataframe", backend, version)
+        """Import the `CompliantDataFrame` class from `backend` at `version`."""
+        return self._import_class("dataframe", backend, version)
 
     @overload
     def series(
@@ -393,7 +424,8 @@ class PluginManager:
     @overload
     def series(self, backend: IntoPlugin, /, version: Version) -> type[ct.SeriesAny]: ...
     def series(self, backend: IntoPlugin, /, version: Version) -> type[ct.SeriesAny]:
-        return self._get_class("series", backend, version)
+        """Import the `CompliantSeries` class from `backend` at `version`."""
+        return self._import_class("series", backend, version)
 
     @overload
     def lazyframe(
@@ -406,7 +438,8 @@ class PluginManager:
     def lazyframe(
         self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.LazyFrameAny]:
-        return self._get_class("lazyframe", backend, version)
+        """Import the `LazyFrame` class from `backend` at `version`."""
+        return self._import_class("lazyframe", backend, version)
 
     @overload
     def evaluator(
@@ -419,7 +452,8 @@ class PluginManager:
     def evaluator(
         self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.PlanEvaluatorAny]:
-        return self._get_class("evaluator", backend, version)
+        """Import the `PlanEvaluator` class from `backend` at `version`."""
+        return self._import_class("evaluator", backend, version)
 
     def native_dataframe_classes(self) -> Iterator[type[NativeDataFrame]]:
         for plugin in self._iter_plugins():
