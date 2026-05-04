@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, cast
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
 
 import polars as pl
 
+from narwhals._compliant import CompliantExpr
 from narwhals._polars.utils import (
     BACKEND_VERSION,
     PolarsAnyNamespace,
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, ModeKeepStrategy
 
 
-class PolarsExpr:
+class PolarsExpr(CompliantExpr[Any, Any]):
     # CompliantExpr
     _implementation: Implementation = Implementation.POLARS
     _version: Version
@@ -89,7 +90,7 @@ class PolarsExpr:
     @property
     def _metadata(self) -> ExprMetadata:
         assert self._opt_metadata is not None  # noqa: S101
-        return cast("ExprMetadata", self._opt_metadata)
+        return self._opt_metadata
 
     def __getattr__(self, attr: str) -> Any:
         def func(*args: Any, **kwargs: Any) -> Any:
@@ -347,6 +348,7 @@ class PolarsExpr:
     arg_min: Method[Self]
     arg_true: Method[Self]
     ceil: Method[Self]
+    clip: Method[Self]
     count: Method[Self]
     cos: Method[Self]
     cum_max: Method[Self]

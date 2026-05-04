@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
 
 import polars as pl
 
+from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
 from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
@@ -104,18 +105,7 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
 
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
-    drop_nulls: Method[Self]
-    explode: Method[Self]
-    filter: Method[Self]
-    gather_every: Method[Self]
-    head: Method[Self]
-    join_asof: Method[Self]
-    rename: Method[Self]
     select: Method[Self]
-    sort: Method[Self]
-    tail: Method[Self]
-    with_columns: Method[Self]
-
     _native_frame: NativePolarsFrame
     _implementation = Implementation.POLARS
     _version: Version
@@ -284,18 +274,33 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self._with_native(result)
 
 
-class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
+class PolarsDataFrame(
+    PolarsBaseFrame[pl.DataFrame],
+    CompliantDataFrame[
+        PolarsSeries, "PolarsExpr", pl.DataFrame, "DataFrame[pl.DataFrame]"
+    ],
+):
     clone: Method[Self]
     collect: Method[CompliantDataFrameAny]
+    drop_nulls: Method[Self]
     estimated_size: Method[int | float]
+    explode: Method[Self]
+    filter: Method[Self]
     gather_every: Method[Self]
-    iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
+    head: Method[Self]
     is_unique: Method[PolarsSeries]
+    iter_rows: Method[Iterator[tuple[Any, ...]] | Iterator[Mapping[str, Any]]]
+    join_asof: Method[Self]
+    rename: Method[Self]
     row: Method[tuple[Any, ...]]
     rows: Method[Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]]
     sample: Method[Self]
+    select: Method[Self]
+    sort: Method[Self]
+    tail: Method[Self]
     to_arrow: Method[pa.Table]
     to_pandas: Method[pd.DataFrame]
+    with_columns: Method[Self]
     # NOTE: `write_csv` requires an `@overload` for `str | None`
     # Can't do that here 😟
     write_csv: Method[Any]
@@ -673,8 +678,22 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         return self.native.item(row=row, column=column)
 
 
-class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
+class PolarsLazyFrame(
+    PolarsBaseFrame[pl.LazyFrame],
+    CompliantLazyFrame["PolarsExpr", pl.LazyFrame, "LazyFrame[pl.LazyFrame]"],
+):
+    drop_nulls: Method[Self]
+    explode: Method[Self]
+    filter: Method[Self]
+    gather_every: Method[Self]
+    head: Method[Self]
+    join_asof: Method[Self]
+    rename: Method[Self]
+    select: Method[Self]
     sink_parquet: Method[None]
+    sort: Method[Self]
+    tail: Method[Self]
+    with_columns: Method[Self]
 
     @staticmethod
     def _is_native(obj: pl.LazyFrame | Any) -> TypeIs[pl.LazyFrame]:

@@ -903,9 +903,9 @@ class LazyExpr(  # type: ignore[misc]
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
 
-    ewm_mean = not_implemented()  # type: ignore[misc]
-    map_batches = not_implemented()  # type: ignore[misc]
-    cat: not_implemented = not_implemented()  # type: ignore[assignment]
+    ewm_mean: Any = not_implemented()
+    map_batches: Any = not_implemented()
+    cat: Any = not_implemented()
 
 
 class _ExprNamespace(  # type: ignore[misc]
