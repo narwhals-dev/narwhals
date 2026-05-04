@@ -294,7 +294,7 @@ class PluginManager:
     def _get_class(
         self, name: cc.PropertyName, backend: IntoPlugin, version: Version, /
     ) -> type[Any]:
-        plugin_name = _backend_to_plugin_name(backend)
+        plugin_name = _plugin_name(backend)
         classes = self._plugin(plugin_name).__narwhals_classes__
         return self._plugin_entry(plugin_name)[_VERSION_NAME[version]][name](classes)
 
@@ -390,7 +390,7 @@ class PluginManager:
         self, backend: IntoPlugin, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny:
         """Return the plugin matching `backend`, raising if `require` returns False."""
-        plugin = self._plugin(_backend_to_plugin_name(backend))
+        plugin = self._plugin(_plugin_name(backend))
         if not require:
             return plugin
         if (
@@ -550,7 +550,7 @@ These are here to do things dynamically, while still keeping a static connection
 """
 
 
-def _backend_to_plugin_name(backend: IntoPlugin, /) -> BackendName | PluginName:
+def _plugin_name(backend: IntoPlugin, /) -> BackendName | PluginName:
     if isinstance(backend, str):
         return backend
     if backend is _UNKNOWN or (impl := Implementation.from_backend(backend)) is _UNKNOWN:
