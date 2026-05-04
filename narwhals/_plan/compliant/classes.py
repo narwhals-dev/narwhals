@@ -24,7 +24,16 @@ Separating this from `*Namespace` has a few benefits:
 from __future__ import annotations
 
 # ruff: noqa: PLC0105
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, TypeVar, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Final,
+    Literal,
+    Protocol,
+    TypeVar,
+    overload,
+)
 
 from narwhals._plan.common import hasattrs_static
 from narwhals._plan.compliant.typing import (
@@ -50,11 +59,13 @@ from narwhals._plan.compliant.typing import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import Never, TypeAlias, TypeIs
 
     from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._utils import Version
 
+
+MYPY: Final = False
 
 # TODO @dangotbanned: Generally improve LSP overhead
 # TODO @dangotbanned: Reduce how many types/protocols are defined
@@ -251,23 +262,17 @@ class HasPlanResolver(Protocol):
         ...
 
 
-# NOTE: Recipe for these is:
+# NOTE: Recipe for these is (complicated):
 # Overload 1: Narrowest
 # ...
 # Last overload: Add `Any`, which catches the negative case
 # Implementation: Union everything independently
 @overload
-def can_eager(
-    obj: EagerClasses[EagerDF, S, EagerE, EagerSC],
-) -> TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]: ...
-@overload
 def can_eager(obj: EagerClasses[DF, S, E, SC]) -> TypeIs[EagerClasses[DF, S, E, SC]]: ...
 @overload
 def can_eager(
-    obj: EagerClasses[DF, S, E, SC] | EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
-) -> (
-    TypeIs[EagerClasses[DF, S, E, SC]] | TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]
-): ...
+    obj: EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
+) -> TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]: ...
 def can_eager(
     obj: EagerClasses[DF, S, E, SC] | EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
 ) -> (
@@ -276,24 +281,74 @@ def can_eager(
     return hasattrs_static(obj, "dataframe", "series")
 
 
-def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE, E, SC]]:
+# NOTE: Both type checkers need these as they are
+@overload
+def can_lazy(
+    obj: LazyClassesVAll[C1, C2, LF, PE, E, SC],
+) -> TypeIs[LazyClassesVAll[C1, C2, LF, PE, E, SC]]: ...
+@overload
+def can_lazy(
+    obj: LazyClasses[LF, PE, E, SC] | Any,
+) -> TypeIs[LazyClasses[LF, PE, E, SC]]: ...
+def can_lazy(
+    obj: LazyClasses[LF, PE, E, SC] | LazyClassesVAll[C1, C2, LF, PE, E, SC] | Any,
+) -> TypeIs[LazyClasses[LF, PE, E, SC]] | TypeIs[LazyClassesVAll[C1, C2, LF, PE, E, SC]]:
     return hasattrs_static(obj, "lazyframe", "evaluator")
 
 
-@overload
-def can_v1(obj: HasV1[CB1]) -> TypeIs[HasV1[CB1]]: ...
-@overload
-def can_v1(obj: HasV1[C1] | Any) -> TypeIs[HasV1[C1]]: ...
-def can_v1(obj: HasV1[C1] | HasV1[CB1] | Any) -> TypeIs[HasV1[C1]] | TypeIs[HasV1[CB1]]:
-    return hasattrs_static(obj, "v1")
+if MYPY:
+    # `mypy` can't seem to narrow this case without `Never`
+    #   LazyClasses[Any, Any, Any, Any] | PolarsClassesV1` -> `PolarsClassesV1`
+    @overload
+    def can_v1(obj: HasV1[CB1]) -> TypeIs[HasV1[CB1]]: ...
+    # NOTE: Thinking this one is a bug, since the error shows with the order flipped
+    @overload
+    def can_v1(obj: HasV1[C1]) -> TypeIs[HasV1[C1]]: ...  # type: ignore[overload-cannot-match]
+    @overload
+    def can_v1(obj: Any) -> Never: ...
+    def can_v1(
+        obj: HasV1[C1] | HasV1[CB1] | Any,
+    ) -> TypeIs[HasV1[C1]] | TypeIs[HasV1[CB1]]:
+        return hasattrs_static(obj, "v1")
+else:
+
+    @overload
+    def can_v1(obj: HasV1[CB1]) -> TypeIs[HasV1[CB1]]: ...
+    @overload
+    def can_v1(obj: HasV1[C1]) -> TypeIs[HasV1[C1]]: ...
+    @overload
+    def can_v1(obj: HasV1[C1 | CB1] | Any) -> TypeIs[HasV1[C1 | CB1]]: ...
+    def can_v1(
+        obj: HasV1[C1] | HasV1[CB1] | Any,
+    ) -> TypeIs[HasV1[C1]] | TypeIs[HasV1[CB1]] | HasV1[C1 | CB1]:
+        return hasattrs_static(obj, "v1")
 
 
-@overload
-def can_v2(obj: HasV2[CB2]) -> TypeIs[HasV2[CB2]]: ...
-@overload
-def can_v2(obj: HasV2[C2] | Any) -> TypeIs[HasV2[C2]]: ...
-def can_v2(obj: HasV2[C2] | HasV2[CB2] | Any) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]]:
-    return hasattrs_static(obj, "v2")
+if MYPY:
+
+    @overload
+    def can_v2(obj: HasV2[CB2]) -> TypeIs[HasV2[CB2]]: ...
+    @overload
+    def can_v2(obj: HasV2[C2]) -> TypeIs[HasV2[C2]]: ...  # type: ignore[overload-cannot-match]
+    @overload
+    def can_v2(obj: Any) -> Never: ...
+    def can_v2(
+        obj: HasV2[C2] | HasV2[CB2] | Any,
+    ) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]]:
+        return hasattrs_static(obj, "v2")
+else:
+
+    @overload
+    def can_v2(obj: HasV2[CB2]) -> TypeIs[HasV2[CB2]]: ...
+
+    @overload
+    def can_v2(obj: HasV2[C2]) -> TypeIs[HasV2[C2]]: ...
+    @overload
+    def can_v2(obj: HasV2[C2 | CB2] | Any) -> TypeIs[HasV2[C2 | CB2]]: ...
+    def can_v2(
+        obj: HasV2[C2] | HasV2[CB2] | Any,
+    ) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]] | TypeIs[HasV2[C2 | CB2]]:
+        return hasattrs_static(obj, "v2")
 
 
 # fmt: off

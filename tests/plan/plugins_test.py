@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import BuiltinAny, IntoPlugin, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
+MYPY: Final = False
 
 SupportedBackend: TypeAlias = Literal[Arrow, Polars]
 BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
@@ -249,7 +250,6 @@ if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/12554
         manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
-        MYPY: Final = False  # noqa: N806
         if MYPY:
             ...
         else:
@@ -310,92 +310,49 @@ if TYPE_CHECKING:
         pyarrow_2 = manager().plugin(pyarrow_1)
         assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
 
-    def typing_can_eager_lazy_integration(
-        current: IntoPlugin, collect: IntoPlugin | None, version: Version
-    ) -> tuple[type[ct.PlanEvaluatorAny], type[ct.DataFrameAny]]:
-        """By far the most insane idea yet.
-
-        - This took an incredibly long time to get (mostly) working
-        - Assertions are more detailed that usual
-        - Need this here while I try to minimize the typing
-        """
-        lazy = manager().plugin(current)
+    def typing_versioned_classes_lazy(backend: IntoPlugin) -> None:
+        lazy = manager().plugin(backend)
         assert_type(lazy, PluginAny | BuiltinAny)
-        classes_1 = import_classes(lazy, version)
-        MYPY: Final = False  # noqa: N806
-        """Maybe one day mypy will understand better.
 
-        Currently just aiming for not getting `Never` everywhere.
-        """
+        classes = lazy.__narwhals_classes__
+        assert_type(classes, PolarsClasses | ArrowClasses | Any)
+        if cc.can_lazy(classes):
+            evaluator = classes.evaluator
 
-        if MYPY:
-            assert_type(classes_1, Any)
-        else:
-            assert_type(
-                classes_1,
-                PolarsClasses
-                | ArrowClasses
-                | PolarsClassesV1
-                | PolarsClassesV2
-                | ArrowClassesV1
-                | ArrowClassesV2
-                | Any,
-            )
-
-        if cc.can_lazy(classes_1):
-            evaluator = classes_1.evaluator
             if MYPY:
-                assert_type(evaluator, type[Any])
+                assert_type(evaluator, type[Any | pl_main.PlanEvaluator])
             else:
-                assert_type(
-                    evaluator,
-                    type[
-                        pl_main.PlanEvaluator | pl_v1.PlanEvaluator | pl_v2.PlanEvaluator
-                    ],
-                )
-        else:
-            raise NotImplementedError
+                assert_type(evaluator, type[pl_main.PlanEvaluator])
 
-        eager = manager().plugin(collect) if collect else lazy
+            _v1 = classes.v1  # type: ignore[union-attr]
+
+            if cc.can_v1(classes):
+                assert_type(classes.v1.lazyframe, type[pl_v1.LazyFrame])
+
+    def typing_versioned_classes_eager(backend: IntoPlugin) -> None:
+        eager = manager().plugin(backend)
         assert_type(eager, PluginAny | BuiltinAny)
 
-        classes_2 = import_classes(eager, version)
-        if MYPY:
-            assert_type(classes_2, Any)
-        else:
-            assert_type(
-                classes_2,
-                PolarsClasses
-                | ArrowClasses
-                | PolarsClassesV1
-                | PolarsClassesV2
-                | ArrowClassesV1
-                | ArrowClassesV2
-                | Any,
-            )
+        classes = eager.__narwhals_classes__
+        assert_type(classes, PolarsClasses | ArrowClasses | Any)
+        if cc.can_eager(classes):
+            _evaluator = classes.evaluator  # type: ignore[union-attr]
+            dataframe = classes.dataframe
 
-        if cc.can_eager(classes_2):
-            dataframe = classes_2.dataframe
             if MYPY:
-                assert_type(dataframe, type[Any])
+                assert_type(dataframe, type[Any | pl_main.DataFrame | pa_main.DataFrame])
             else:
-                # NOTE: This requires overload 3 in `can_eager`
-                assert_type(
-                    dataframe,
-                    type[
-                        pa_main.DataFrame
-                        | pa_v1.DataFrame
-                        | pa_v2.DataFrame
-                        | pl_main.DataFrame
-                        | pl_v1.DataFrame
-                        | pl_v2.DataFrame
-                    ],
-                )
+                assert_type(dataframe, type[pl_main.DataFrame | pa_main.DataFrame])
 
-        else:
-            raise NotImplementedError
-        return evaluator, dataframe
+            _v2 = classes.v2  # type: ignore[union-attr]
 
+            if cc.can_v2(classes):
+                assert_type(classes.v2.series, type[pl_v2.Series | pa_v2.Series])
+
+            if cc.can_v1(classes):
+                assert_type(classes.v1.series, type[pl_v1.Series | pa_v1.Series])
+
+    # TODO @dangotbanned: You're up next
     def typing_import_classes(
         builtin: BuiltinAny,
         unknown: PluginAny,

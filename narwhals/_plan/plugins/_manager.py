@@ -104,13 +104,6 @@ if TYPE_CHECKING:
     _R_co = TypeVar("_R_co", covariant=True)
 
     class _Plugin(Protocol[_R_co]):
-        """Minimal interface for typing.
-
-        Doesn't set a bound for `__narwhals_classes__`.
-        """
-
-        __slots__ = ()
-
         @property
         def name(self) -> PluginName: ...
         @property
