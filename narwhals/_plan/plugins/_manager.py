@@ -32,13 +32,7 @@ if TYPE_CHECKING:
 
     from narwhals._native import NativeDataFrame
     from narwhals._plan.arrow import ArrowPlugin
-    from narwhals._plan.compliant import (
-        CompliantDataFrame,
-        CompliantLazyFrame,
-        CompliantSeries,
-        classes as cc,
-        typing as ct,
-    )
+    from narwhals._plan.compliant import classes as cc, typing as ct
     from narwhals._plan.compliant.classes import C1, C2, CB, C
     from narwhals._plan.compliant.plugins import Builtin, Plugin
     from narwhals._plan.compliant.typing import (
@@ -410,11 +404,11 @@ class PluginManager:
     @overload
     def dataframe(
         self, backend: Polars, /, version: Version
-    ) -> type[CompliantDataFrame[pl.DataFrame, pl.Series]]: ...
+    ) -> type[ct.DataFrame[pl.DataFrame, pl.Series]]: ...
     @overload
     def dataframe(
         self, backend: Arrow, /, version: Version
-    ) -> type[CompliantDataFrame[pa.Table, pa.ChunkedArray[Any]]]: ...
+    ) -> type[ct.DataFrame[pa.Table, pa.ChunkedArray[Any]]]: ...
     @overload
     def dataframe(
         self, backend: IntoBackendExt, /, version: Version
@@ -427,11 +421,11 @@ class PluginManager:
     @overload
     def series(
         self, backend: Polars, /, version: Version
-    ) -> type[CompliantSeries[pl.Series]]: ...
+    ) -> type[ct.Series[pl.Series]]: ...
     @overload
     def series(
         self, backend: Arrow, /, version: Version
-    ) -> type[CompliantSeries[pa.ChunkedArray[Any]]]: ...
+    ) -> type[ct.Series[pa.ChunkedArray[Any]]]: ...
     @overload
     def series(
         self, backend: IntoBackendExt, /, version: Version
@@ -442,7 +436,7 @@ class PluginManager:
     @overload
     def lazyframe(
         self, backend: Polars, /, version: Version
-    ) -> type[CompliantLazyFrame[pl.LazyFrame]]: ...
+    ) -> type[ct.LazyFrame[pl.LazyFrame]]: ...
     @overload
     def lazyframe(
         self, backend: IntoBackendExt, /, version: Version
