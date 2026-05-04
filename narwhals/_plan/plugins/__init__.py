@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import (
         BackendTodo,
         BuiltinAny,
-        IntoBackendExt,
+        IntoPlugin,
         NativeModuleType,
         PluginAny,
         PluginName,
@@ -38,7 +38,7 @@ def load_plugin(backend: BackendTodo, /) -> Never: ...
 def load_plugin(backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
 @overload
 def load_plugin(backend: PluginName, /) -> PluginAny: ...
-def load_plugin(backend: IntoBackendExt, /) -> PluginAny:
+def load_plugin(backend: IntoPlugin, /) -> PluginAny:
     """Load the entry point to a backend.
 
     The returned object can be used to query availability.

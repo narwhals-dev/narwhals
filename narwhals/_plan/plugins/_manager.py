@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import (
         BackendTodo,
         BuiltinAny,
-        IntoBackendExt,
+        IntoPlugin,
         NativeModuleType,
         PluginAny,
         PluginName,
@@ -292,7 +292,7 @@ class PluginManager:
             yield self._plugin_load(name, ep)
 
     def _get_class(
-        self, name: cc.PropertyName, backend: IntoBackendExt, version: Version, /
+        self, name: cc.PropertyName, backend: IntoPlugin, version: Version, /
     ) -> type[Any]:
         plugin_name = _backend_to_plugin_name(backend)
         classes = self._plugin(plugin_name).__narwhals_classes__
@@ -380,12 +380,14 @@ class PluginManager:
     def plugin(
         self, backend: PluginName, /, require: RequireMethod | None = None
     ) -> PluginAny: ...
+    # NOTE: `IntoPlugin` is wider than what is implemented.
+    # Narrowing the last overload causes conflicts with other callers that have their own overloads
     @overload
     def plugin(
-        self, backend: IntoBackendExt, /, require: RequireMethod | None = None
+        self, backend: IntoPlugin, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny: ...
     def plugin(
-        self, backend: IntoBackendExt, /, require: RequireMethod | None = None
+        self, backend: IntoPlugin, /, require: RequireMethod | None = None
     ) -> PluginAny | BuiltinAny:
         """Return the plugin matching `backend`, raising if `require` returns False."""
         plugin = self._plugin(_backend_to_plugin_name(backend))
@@ -411,10 +413,10 @@ class PluginManager:
     ) -> type[ct.DataFrame[pa.Table, pa.ChunkedArray[Any]]]: ...
     @overload
     def dataframe(
-        self, backend: IntoBackendExt, /, version: Version
+        self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.DataFrameAny]: ...
     def dataframe(
-        self, backend: IntoBackendExt, /, version: Version
+        self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.DataFrameAny]:
         return self._get_class("dataframe", backend, version)
 
@@ -427,10 +429,8 @@ class PluginManager:
         self, backend: Arrow, /, version: Version
     ) -> type[ct.Series[pa.ChunkedArray[Any]]]: ...
     @overload
-    def series(
-        self, backend: IntoBackendExt, /, version: Version
-    ) -> type[ct.SeriesAny]: ...
-    def series(self, backend: IntoBackendExt, /, version: Version) -> type[ct.SeriesAny]:
+    def series(self, backend: IntoPlugin, /, version: Version) -> type[ct.SeriesAny]: ...
+    def series(self, backend: IntoPlugin, /, version: Version) -> type[ct.SeriesAny]:
         return self._get_class("series", backend, version)
 
     @overload
@@ -439,10 +439,10 @@ class PluginManager:
     ) -> type[ct.LazyFrame[pl.LazyFrame]]: ...
     @overload
     def lazyframe(
-        self, backend: IntoBackendExt, /, version: Version
+        self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.LazyFrameAny]: ...
     def lazyframe(
-        self, backend: IntoBackendExt, /, version: Version
+        self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.LazyFrameAny]:
         return self._get_class("lazyframe", backend, version)
 
@@ -452,10 +452,10 @@ class PluginManager:
     ) -> type[ct.PlanEvaluator[pl.LazyFrame]]: ...
     @overload
     def evaluator(
-        self, backend: IntoBackendExt, /, version: Version
+        self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.PlanEvaluatorAny]: ...
     def evaluator(
-        self, backend: IntoBackendExt, /, version: Version
+        self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.PlanEvaluatorAny]:
         return self._get_class("evaluator", backend, version)
 
@@ -471,7 +471,7 @@ class PluginManager:
             native, types
         )
 
-    def import_modules(self, backend: IntoBackendExt, /) -> None:
+    def import_modules(self, backend: IntoPlugin, /) -> None:
         """Import the requirements for `backend`."""
         plugin = self.plugin(backend, require="can_import")
         if not plugin.is_imported():
@@ -550,7 +550,7 @@ These are here to do things dynamically, while still keeping a static connection
 """
 
 
-def _backend_to_plugin_name(backend: IntoBackendExt, /) -> BackendName | PluginName:
+def _backend_to_plugin_name(backend: IntoPlugin, /) -> BackendName | PluginName:
     if isinstance(backend, str):
         return backend
     if backend is _UNKNOWN or (impl := Implementation.from_backend(backend)) is _UNKNOWN:

@@ -267,10 +267,14 @@ This is ~~supported~~ planned to be supported wherever a `backend` parameter is 
 [entry point]: https://docs.python.org/3/library/importlib.metadata.html#importlib.metadata.EntryPoint
 """
 
-IntoBackendExt: TypeAlias = "IntoBackend[Backend] | PluginName | Implementation"
+IntoPlugin: TypeAlias = "IntoBackend[Backend] | PluginName | Implementation"
 """Anything that can be used to load a `Plugin`.
 
 This is a superset of [`IntoBackend`], adding support for external plugin names.
+
+Important:
+    `Implementation.UNKNOWN` is not accepted at runtime and *eventually* the
+    *opaque* `Implementation` should be removed from this definition.
 
 [`IntoBackend`]: https://narwhals-dev.github.io/narwhals/api-reference/typing/#narwhals.typing.IntoBackend
 """

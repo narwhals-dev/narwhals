@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant import CompliantDataFrame
     from narwhals._plan.plugins._manager import import_classes
     from narwhals._plan.polars import PolarsPlugin
-    from narwhals._plan.typing import BuiltinAny, IntoBackendExt, PluginAny
+    from narwhals._plan.typing import BuiltinAny, IntoPlugin, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
 
@@ -248,9 +248,15 @@ if TYPE_CHECKING:
         # Until `mypy` supports PEP 675 it won't report anything
         # https://github.com/python/mypy/issues/12554
         manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        manager().plugin(not_yet_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        manager().plugin(not_yet_2)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        manager().plugin(not_yet_3)  # pyright: ignore[reportArgumentType, reportCallIssue]
+
+        MYPY: Final = False  # noqa: N806
+        if MYPY:
+            ...
+        else:
+            # These raise at runtime, but require a lot of extra typing to reject *everywhere*
+            assert_type(manager().plugin(not_yet_1), BuiltinAny | PluginAny)
+            assert_type(manager().plugin(not_yet_2), BuiltinAny | PluginAny)
+            assert_type(manager().plugin(not_yet_3), BuiltinAny | PluginAny)
 
     def typing_plugin_guards(
         df_polars: pl.DataFrame, df_pyarrow: pa.Table, df_pandas: pd.DataFrame
@@ -297,15 +303,15 @@ if TYPE_CHECKING:
     # TODO @dangotbanned: Would be nice for this to preserve the implementation
     def typing_plugin_dogfood_implementation() -> None:
         polars_1 = manager().plugin("polars").implementation
-        polars_2 = manager().plugin(polars_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        polars_2 = manager().plugin(polars_1)
         assert_type(polars_2, Literal[Implementation.POLARS])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
 
         pyarrow_1 = manager().plugin("polars").implementation
-        pyarrow_2 = manager().plugin(pyarrow_1)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        pyarrow_2 = manager().plugin(pyarrow_1)
         assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
 
     def typing_can_eager_lazy_integration(
-        current: IntoBackendExt, collect: IntoBackendExt | None, version: Version
+        current: IntoPlugin, collect: IntoPlugin | None, version: Version
     ) -> tuple[type[ct.PlanEvaluatorAny], type[ct.DataFrameAny]]:
         """By far the most insane idea yet.
 
