@@ -6,18 +6,7 @@ import functools
 import sys
 from importlib import import_module
 from importlib.util import find_spec
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Final,
-    Literal,
-    Protocol,
-    TypeVar,
-    cast,
-    final,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast, final, overload
 
 from narwhals._plan.plugins import _parse
 from narwhals._utils import Implementation, Version, qualified_type_name
@@ -33,14 +22,11 @@ if TYPE_CHECKING:
     from narwhals._native import NativeDataFrame
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import classes as cc, typing as ct
-    from narwhals._plan.compliant.classes import C1, C2, CB, C
-    from narwhals._plan.compliant.plugins import Builtin, Plugin
     from narwhals._plan.compliant.typing import (
         Native as LF,
         NativeDataFrameT as DF,
         NativeSeriesT as S,
     )
-    from narwhals._plan.exceptions import unsupported_error
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import (
         BackendTodo,
@@ -52,7 +38,6 @@ if TYPE_CHECKING:
         VersionName,
     )
     from narwhals._typing import Arrow, BackendName, Polars
-    from narwhals._typing_compat import assert_never
 
 if TYPE_CHECKING:
     from narwhals._plan.plugins._typing import FromNativeDispatch, from_native_dispatch
@@ -95,92 +80,6 @@ def _entry_points() -> EntryPoints:
         raise NotImplementedError(msg)
     msg = f"Multiple plugins found with the same `name`:\n{eps!r}"  # pragma: no cover
     raise NotImplementedError(msg)
-
-
-# TODO @dangotbanned: Fully remove all the overload experiments & `import_classes` tests
-if TYPE_CHECKING:
-    from typing_extensions import deprecated
-
-    _R_co = TypeVar("_R_co", covariant=True)
-
-    class _Plugin(Protocol[_R_co]):
-        @property
-        def name(self) -> PluginName: ...
-        @property
-        def __narwhals_classes__(self) -> _R_co: ...
-
-    _PluginV1: TypeAlias = _Plugin["cc.HasV1[C1]"]
-    _PluginV2: TypeAlias = _Plugin["cc.HasV2[C2]"]
-    _PluginVAll: TypeAlias = _Plugin["cc.HasVAll[C1, C2]"]
-
-    MAIN: TypeAlias = Literal[Version.MAIN]
-    V1: TypeAlias = Literal[Version.V1]
-    V2: TypeAlias = Literal[Version.V2]
-    MYPY: Final = False
-    if MYPY:
-        # `Incomplete` avoids `mypy` from thinking overloads 1, 3, 5, 7 are bad
-        _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | _Plugin[Incomplete]"
-    else:
-        _ImportClasses: TypeAlias = "_Plugin[C] | _Plugin[CB] | _PluginV1[C1] | _PluginV2[C2] | _PluginVAll[C1, C2] | Builtin[CB, Any, Any, Any] | Plugin[C, Any, Any, Any]"
-
-    # MAIN
-    @overload  # 1
-    def import_classes(plugin: _Plugin[CB], version: MAIN, /) -> CB: ...
-    @overload  # 2
-    def import_classes(plugin: _Plugin[C], version: MAIN, /) -> C: ...
-
-    # V1
-    @overload  # 3
-    def import_classes(plugin: _PluginVAll[C1, C2], version: V1, /) -> C1: ...
-    @overload  # 4
-    def import_classes(plugin: _PluginV1[C1], version: V1, /) -> C1: ...
-
-    # V2
-    @overload  # 5
-    def import_classes(plugin: _PluginVAll[C1, C2], version: V2, /) -> C2: ...
-    @overload  # 6
-    def import_classes(plugin: _PluginV2[C2], version: V2, /) -> C2: ...
-
-    # OPAQUE
-    # NOTE: `_Plugin[C] | _Plugin[CB]` avoids `PluginAny` from reporting as a builtin
-    # when we have `(PluginAny | BuiltinAny, Version)`
-    @overload  # 7
-    def import_classes(
-        plugin: _Plugin[C]
-        | _Plugin[CB]
-        | _Plugin[cc.EagerImplC]
-        | _PluginV1[C1]
-        | _PluginV2[C2]
-        | _PluginVAll[C1, C2]
-        | _PluginVAll[cc.CB1, cc.CB2],
-        version: Version,
-        /,
-    ) -> C | CB | C1 | C2 | cc.CB1 | cc.CB2 | cc.EagerImplC: ...
-
-    if MYPY:
-        # avoids `mypy` deciding that every type parameter is `Never`
-        @overload  # 8
-        def import_classes(
-            plugin: _Plugin[Incomplete], version: Version, /
-        ) -> Incomplete: ...
-
-    @deprecated("overloads are too LSP heavy, need something simpler")
-    def import_classes(
-        plugin: _ImportClasses[C, CB, C1, C2], version: Version, /
-    ) -> Incomplete:
-        """Import the accessor to the compliant classes compatible with `version`."""
-        classes = plugin.__narwhals_classes__
-        if version is Version.MAIN:
-            return classes
-        if version is Version.V1:
-            if cc.can_v1(classes):
-                return classes.v1
-            raise unsupported_error(plugin.name, "v1")
-        if version is Version.V2:
-            if cc.can_v2(classes):
-                return classes.v2
-            raise unsupported_error(plugin.name, "v2")
-        assert_never(version)
 
 
 # TODO @dangotbanned: Add somewhere for unreachable plugins to live (and exclude from collecting more info)

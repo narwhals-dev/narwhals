@@ -97,7 +97,6 @@ C1 = TypeVar("C1", bound=ClassesAny, covariant=True)
 C2 = TypeVar("C2", bound=ClassesAny, covariant=True)
 """Covariant TypeVar for the `__narwhals_classes__.v2` property."""
 
-EagerImplC = TypeVar("EagerImplC", bound="EagerImplVAllAny", covariant=True)
 EagerImplC1 = TypeVar("EagerImplC1", bound="EagerImplAny", covariant=True)
 EagerImplC2 = TypeVar("EagerImplC2", bound="EagerImplAny", covariant=True)
 
