@@ -190,7 +190,6 @@ if TYPE_CHECKING:
         assert_never(version)
 
 
-# TODO @dangotbanned: Integrate `_parsed`, `_registry`
 # TODO @dangotbanned: Add somewhere for unreachable plugins to live (and exclude from collecting more info)
 @final
 class PluginManager:
@@ -498,18 +497,23 @@ class PluginManager:
         raise NotImplementedError
 
 
+# TODO @dangotbanned: Reconsider where these live after re-exporting to `translate`
 @from_native_dispatch
-def from_native_dataframe(native: DF, /, *, version: Version) -> ct.DataFrame[DF, Any]:
+def from_native_dataframe(
+    native: DF, /, *, version: Version
+) -> ct.DataFrame[DF, Any]:  # pragma: no cover
     return PluginManager()._find_from_native("dataframe", native, version=version)
 
 
 @from_native_dispatch
-def from_native_lazyframe(native: LF, /, *, version: Version) -> ct.LazyFrame[LF]:
+def from_native_lazyframe(
+    native: LF, /, *, version: Version
+) -> ct.LazyFrame[LF]:  # pragma: no cover
     return PluginManager()._find_from_native("lazyframe", native, version=version)
 
 
 @from_native_dispatch
-def from_native_series(native: S, name: str = "", /, *, version: Version) -> ct.Series[S]:
+def from_native_series(native: S, name: str, /, *, version: Version) -> ct.Series[S]:
     return PluginManager()._find_from_native("series", native, name, version=version)
 
 
@@ -519,15 +523,15 @@ TranslateDispatch: TypeAlias = "FromNativeDispatch[Incomplete]"
 
 
 # fmt: off
-def _is_native_dataframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
+def _is_native_dataframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:  # pragma: no cover
     return plugin.is_native_dataframe(native)
-def _is_native_lazyframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
+def _is_native_lazyframe(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:  # pragma: no cover
     return plugin.is_native_lazyframe(native)
 def _is_native_series(native: Any, plugin: PluginAny, /) -> TypeIs[Incomplete]:
     return plugin.is_native_series(native)
-def _native_dataframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
+def _native_dataframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:  # pragma: no cover
     yield from plugin.native_dataframe_classes()
-def _native_lazyframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
+def _native_lazyframe_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:  # pragma: no cover
     yield from plugin.native_lazyframe_classes()
 def _native_series_classes(plugin: PluginAny, /) -> Iterator[type[Incomplete]]:
     yield from plugin.native_series_classes()

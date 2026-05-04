@@ -7,6 +7,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import narwhals.dependencies as deps
+from narwhals._plan.plugins._manager import from_native_series
 from narwhals._utils import qualified_type_name
 
 if TYPE_CHECKING:
@@ -32,9 +33,10 @@ if TYPE_CHECKING:
     _ImportKnown: TypeAlias = Callable[[], type[T]]
 
 
-__all__ = ("from_native_dataframe", "from_native_lazyframe")
+__all__ = ("from_native_dataframe", "from_native_lazyframe", "from_native_series")
 
 
+# TODO @dangotbanned: Replace with `PluginManager` version
 @functools.singledispatch
 def from_native_lazyframe(native: Lazy, /) -> CompliantLazyFrame[Lazy]:
     if (compliant := _try_known_lazyframes(native)) is not None:
@@ -42,6 +44,7 @@ def from_native_lazyframe(native: Lazy, /) -> CompliantLazyFrame[Lazy]:
     raise _from_native_error(native, "lazyframe")
 
 
+# TODO @dangotbanned: Replace with `PluginManager` version
 @functools.singledispatch
 def from_native_dataframe(native: Eager, /) -> CompliantDataFrame[Eager, Any]:
     if (compliant := _try_known_dataframes(native)) is not None:

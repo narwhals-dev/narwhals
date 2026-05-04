@@ -792,6 +792,20 @@ def test_dataframe_from_native(data_small: Data) -> None:
         nwp.DataFrame.from_native(lazy)  # type: ignore[call-overload]
 
 
+def test_series_from_native_invalid() -> None:
+    with pytest.raises(TypeError, match=re_compile(r"unsupported series.+got: 'str'")):
+        nwp.Series.from_native("bad", name="bad")  # type: ignore[type-var]
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    _constructor: Any = pa.array
+    arr: pa.Array[Any] = _constructor((1, 2, 3))
+    with pytest.raises(
+        TypeError, match=re_compile(r"unsupported series.+got: 'pyarrow.+Array'")
+    ):
+        nwp.Series.from_native(arr)  # type: ignore[type-var]
+
+
 def test_dataframe_to_struct(data_small_af: Data, dataframe: DataFrame) -> None:
     pytest.importorskip("pyarrow")
 

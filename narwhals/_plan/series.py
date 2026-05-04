@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
+from narwhals._plan import translate
 from narwhals._plan._guards import is_series
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant.translate import can_from_iterable
@@ -21,7 +22,6 @@ from narwhals._utils import (
     qualified_type_name,
     unstable,
 )
-from narwhals.dependencies import is_polars_series, is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -93,22 +93,11 @@ class Series(Generic[NativeSeriesT_co]):
             return cls(ns.from_iterable(values, name=name, dtype=dtype))
         raise unsupported_error(backend, "Series.from_iterable")  # pragma: no cover
 
-    # TODO @dangotbanned: Review backend/version entrypoint
-    # TODO @dangotbanned: Replace with `@singledispatch` sourced from `PluginManager`
     @classmethod
     def from_native(
-        cls: type[Series[Any]], native: NativeSeriesT, name: str = "", /
+        cls: type[Series[Any]], native: NativeSeriesT, /, *, name: str = ""
     ) -> Series[NativeSeriesT]:
-        if is_pyarrow_chunked_array(native):
-            from narwhals._plan import arrow as _arrow
-
-            return cls(_arrow.Series.from_native(native, name))
-        if is_polars_series(native):
-            from narwhals._plan import polars as _polars
-
-            return cls(_polars.Series.from_native(native, name))
-
-        raise NotImplementedError(type(native))
+        return cls(translate.from_native_series(native, name, version=cls._version))
 
     def to_frame(self) -> DataFrame[IncompleteCyclic, NativeSeriesT_co]:
         import narwhals._plan.dataframe as _df
