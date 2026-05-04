@@ -150,9 +150,7 @@ NativeSeriesAnyT = TypeVar("NativeSeriesAnyT", bound="NativeSeries", default="t.
 NativeSeriesT_co = TypeVar(
     "NativeSeriesT_co", bound="NativeSeries", covariant=True, default="NativeSeries"
 )
-NativeFrameT_co = TypeVar(
-    "NativeFrameT_co", bound="NativeFrame", covariant=True, default="NativeFrame"
-)
+NativeFrameT_co = TypeVar("NativeFrameT_co", bound="NativeFrame", covariant=True)
 NativeDataFrameT = TypeVar(
     "NativeDataFrameT", bound="NativeDataFrame", default="NativeDataFrame"
 )
