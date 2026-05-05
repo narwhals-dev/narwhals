@@ -329,5 +329,4 @@ class EagerExpr(
         EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
         EagerScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
         Incomplete,
-        Incomplete,
     ]: ...

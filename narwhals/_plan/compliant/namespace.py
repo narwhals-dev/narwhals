@@ -12,7 +12,7 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT_co,
 )
-from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
+from narwhals._plan.typing import NativeSeriesT_co
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -109,15 +109,10 @@ class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[
-        EagerDataFrameT,
-        SeriesT_co,
-        EagerExprT_co,
-        EagerScalarT_co,
-        NativeDataFrameT_co,
-        NativeSeriesT_co,
+        EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeSeriesT_co
     ],
 ):
-    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeDataFrameT_co, NativeSeriesT_co]`.
+    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeSeriesT_co]`.
 
     ## Important
     Trying to
