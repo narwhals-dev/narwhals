@@ -27,6 +27,7 @@ from narwhals._pandas_like.utils import (
 from narwhals._typing_compat import assert_never
 from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
+from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -406,7 +407,14 @@ class PandasLikeSeries(EagerSeries[Any]):
         try:
             res = op(ser, other_native)
         except Exception:
-            if op.__name__ == "add":
+            if (
+                op.__name__ == "add"
+                and self.dtype == String
+                and (
+                    isinstance(other, str)
+                    or (isinstance(other, self.__class__) and other.dtype == String)
+                )
+            ):
                 pdx = self.__native_namespace__()
                 res = binary_string_sum_fallback(ser, other_native, pdx)
             else:
