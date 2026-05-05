@@ -489,7 +489,7 @@ class ArrowExpr(
         else:
             it_names = temp.column_names(frame)
             by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
-            df = namespace(self).concat_series_horizontal(by)
+            df = frame.concat_series(by)
             keys = df.columns
         indices = fn.sort_indices(df.native, *keys, options=node.options)
         series = self._dispatch_expr(node.expr, frame, name)

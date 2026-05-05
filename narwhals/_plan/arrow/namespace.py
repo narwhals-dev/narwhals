@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Collection
 from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
@@ -16,7 +15,7 @@ from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from typing_extensions import TypeAlias
 
@@ -31,7 +30,6 @@ if TYPE_CHECKING:
         ChunkedArrayAny,
         ChunkedOrScalarAny,
         CompliantDataFrame,
-        CompliantSeries,
         IntegerScalar,
         IOSource,
         VariadicFunction,
@@ -315,23 +313,6 @@ class ArrowNamespace(
         return self._dataframe.from_native(
             fn.concat_tables_horizontal(df.native for df in dfs)
         )
-
-    def concat_series(self, series: Iterable[CompliantSeries]) -> Series:
-        series = series if isinstance(series, tuple) else tuple(series)
-        result = fn.concat_vertical(ser.native for ser in series)
-        return self._series.from_native(result, series[0].name)
-
-    def concat_series_horizontal(self, series: Iterable[CompliantSeries], /) -> Frame:
-        """Used for `ArrowExpr.sort_by`, seems like only pandas needs `stack_horizontal`?"""
-        if isinstance(series, Collection):
-            arrays, names = [s.native for s in series], [s.name for s in series]
-        else:
-            arrays, names = [], []
-            for s in series:
-                arrays.append(s.native)
-                names.append(s.name)
-        result = fn.concat_horizontal(arrays, names)
-        return self._dataframe.from_native(result)
 
     def read_csv(self, source: FileSource, /, **kwds: Any) -> Frame:
         native = io.read_csv(source, **kwds)

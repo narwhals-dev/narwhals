@@ -345,6 +345,12 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         ca = self.native
         return ca[height - 1].as_py() if (height := len(ca)) else None
 
+    @classmethod
+    def concat(cls, series: Iterable[Self]) -> Self:
+        series = series if isinstance(series, tuple) else tuple(series)
+        result = fn.concat_vertical(ser.native for ser in series)
+        return cls.from_native(result, series[0].name)
+
     @property
     def struct(self) -> SeriesStructNamespace:
         return SeriesStructNamespace(self)

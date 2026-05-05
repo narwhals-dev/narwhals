@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.polars.lazyframe import PolarsLazyFrame
     from narwhals._plan.polars.series import PolarsSeries as Series
+    from narwhals._plan.polars.typing import CompliantSeries
     from narwhals._plan.typing import Seq
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -164,6 +165,10 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
         explode_todo(empty_as_null=options.empty_as_null, keep_nulls=options.keep_nulls)
         return self.from_native(self.native.explode(columns))
+
+    @classmethod
+    def concat_series(cls, series: Iterable[CompliantSeries]) -> Self:
+        return cls.from_native(pl.DataFrame().hstack([ser.native for ser in series]))
 
     @classmethod
     def from_dict(

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.compliant import io, ranges
-from narwhals._plan.compliant.concat import ConcatDataFrame, ConcatSeriesHorizontal
+from narwhals._plan.compliant.concat import ConcatDataFrame
 from narwhals._plan.compliant.typing import (
     EagerDataFrameT,
     EagerExprT_co,
@@ -110,7 +110,6 @@ class EagerNamespace(
     io.LazyInput[Incomplete],
     io.EagerInput[NativeDataFrameT, NativeSeriesT_co],
     ConcatDataFrame[NativeDataFrameT, IncompleteVarianceLie],
-    ConcatSeriesHorizontal[NativeDataFrameT, IncompleteVarianceLie],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[
         EagerDataFrameT,

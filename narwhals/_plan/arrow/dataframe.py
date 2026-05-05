@@ -107,6 +107,18 @@ class ArrowDataFrame(
         return self.native.num_rows
 
     @classmethod
+    def concat_series(cls, series: Iterable[CompliantSeries]) -> Self:
+        """Used for `ArrowExpr.sort_by`, seems like only pandas needs `stack_horizontal`?"""
+        if isinstance(series, Collection):
+            arrays, names = [s.native for s in series], [s.name for s in series]
+        else:
+            arrays, names = [], []
+            for s in series:
+                arrays.append(s.native)
+                names.append(s.name)
+        return cls.from_native(fn.concat_horizontal(arrays, names))
+
+    @classmethod
     def from_arrow(cls, data: IntoArrowTable, /) -> Self:
         if isinstance(data, pa.Table):
             native = data
@@ -175,13 +187,11 @@ class ArrowDataFrame(
         from_named_ir = ns.from_named_ir
         yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
 
-    def select(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
-        return namespace(self).concat_series_horizontal(self._evaluate_irs(irs))
+    def select(self, irs: Seq[NamedIR]) -> Self:
+        return self.concat_series(self._evaluate_irs(irs))
 
-    def with_columns(self, irs: Seq[NamedIR]) -> ArrowDataFrame:
-        return namespace(self).concat_series_horizontal(
-            self._evaluate_irs(irs, length=len(self))
-        )
+    def with_columns(self, irs: Seq[NamedIR]) -> Self:
+        return self.concat_series(self._evaluate_irs(irs, length=len(self)))
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions | None = None) -> Self:
         return self.gather(fn.sort_indices(self.native, *by, options=options))
@@ -503,3 +513,6 @@ def insert_arrays_at(
     for idx, name, column in zip(range(index, index + len(names)), names, columns):
         table = table.add_column(idx, name, column)
     return table
+
+
+ArrowDataFrame()

@@ -393,6 +393,10 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def zip_with(self, mask: Self, other: Self) -> Self:
         return self._with_native(self.native.zip_with(mask.native, other.native))
 
+    @classmethod
+    def concat(cls, series: Iterable[Self]) -> Self:
+        return cls.from_native(pl.concat(ser.native for ser in series))
+
     @property
     def struct(self) -> SeriesStructNamespace:
         return SeriesStructNamespace(self)
