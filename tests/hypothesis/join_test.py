@@ -48,7 +48,7 @@ def test_join(  # pragma: no cover
     # See https://github.com/narwhals-dev/narwhals/issues/3554
     # for why we need to assume that all float values are finite
     assume(all(math.isfinite(f) for f in cast("list[float]", floats)))
-    data: dict[str, Any] = {"a": integers, "b": other_integers, "c": floats}
+    data: Mapping[str, Any] = {"a": integers, "b": other_integers, "c": floats}
     join_cols = cast("list[str]", cols)
 
     df_polars = pl.DataFrame(data)
