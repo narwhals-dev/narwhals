@@ -12,7 +12,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
-from narwhals._plan.arrow import acero, compat, functions as fn
+from narwhals._plan.arrow import acero, compat, functions as fn, io
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import (
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
         ChunkedArrayAny,
         ChunkedOrArrayAny,
         CompliantSeries,
+        IOSource,
         Predicate,
     )
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
@@ -53,7 +54,13 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
-    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        FileSource,
+        IntoSchema,
+        PivotAgg,
+        UniqueKeepStrategy,
+    )
 
 Incomplete: TypeAlias = Any
 
@@ -178,6 +185,14 @@ class ArrowDataFrame(
         )
         native = pa.Table.from_pydict(data, schema=pa_schema)
         return cls.from_native(native)
+
+    @classmethod
+    def read_csv(cls, source: FileSource, /, **kwds: Any) -> Self:
+        return cls.from_native(io.read_csv(source, **kwds))
+
+    @classmethod
+    def read_parquet(cls, source: IOSource, /, **kwds: Any) -> Self:
+        return cls.from_native(io.read_parquet(source, **kwds))
 
     def _iter_columns(self) -> Iterator[tuple[str, ChunkedArrayAny]]:
         return zip(self.native.column_names, self.native.itercolumns())

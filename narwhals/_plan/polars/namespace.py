@@ -114,15 +114,9 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
 
         return PolarsEvaluator
 
-    def read_csv(self, source: str, /, **kwds: Any) -> DataFrame:
-        return self._dataframe.from_native(pl.read_csv(source, **kwds))
-
     def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema:
         schema = pl.scan_csv(source, **kwds).collect_schema()
         return into_version(self.version).schema.from_polars(schema)
-
-    def read_parquet(self, source: str, /, **kwds: Any) -> DataFrame:
-        return self._dataframe.from_native(pl.read_parquet(source, **kwds))
 
     def read_parquet_schema(self, source: str, /, **kwds: Any) -> Schema:
         schema = pl.read_parquet_schema(source, **kwds)

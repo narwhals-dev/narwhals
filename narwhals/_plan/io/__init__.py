@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
+from narwhals._plan import plugins
 from narwhals._plan._namespace import namespace_from_backend
 from narwhals._plan.compliant import io as _io
 from narwhals._plan.exceptions import unsupported_error
@@ -13,7 +14,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.lazyframe import LazyFrame
-    from narwhals._plan.typing import NativeDataFrameT as DF, NativeSeriesT as S
     from narwhals._typing import Arrow, Polars
     from narwhals.schema import Schema
     from narwhals.typing import Backend, EagerAllowed, FileSource, IntoBackend
@@ -37,10 +37,8 @@ def read_csv(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
 ) -> DataFrame[Any, Any]:
     source = normalize_path(source)
-    ns = namespace_from_backend(backend)
-    if _io.can_read_csv(ns):
-        return _read_csv(source, kwds, ns)
-    raise unsupported_error(backend, "read_csv")  # pragma: no cover
+    manager = plugins.manager()
+    return manager.dataframe(backend, _MAIN).read_csv(source, **kwds).to_narwhals()
 
 
 @overload
@@ -59,10 +57,8 @@ def read_parquet(
     source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwds: Any
 ) -> DataFrame[Any, Any]:
     source = normalize_path(source)
-    ns = namespace_from_backend(backend)
-    if _io.can_read_parquet(ns):
-        return _read_parquet(source, kwds, ns)
-    raise unsupported_error(backend, "read_parquet")  # pragma: no cover
+    manager = plugins.manager()
+    return manager.dataframe(backend, _MAIN).read_parquet(source, **kwds).to_narwhals()
 
 
 def scan_csv(
@@ -94,18 +90,6 @@ def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) ->
     if _io.can_read_parquet_schema(ns):
         return ns.read_parquet_schema(normalize_path(source))
     raise unsupported_error(backend, "read_parquet_schema")  # pragma: no cover
-
-
-def _read_csv(
-    source: str, kwds: dict[str, Any], ns: _io.ReadCsv[DF, S], /
-) -> DataFrame[DF, S]:
-    return ns.read_csv(source, **kwds).to_narwhals()
-
-
-def _read_parquet(
-    source: str, kwds: dict[str, Any], ns: _io.ReadParquet[DF, S], /
-) -> DataFrame[DF, S]:
-    return ns.read_parquet(source, **kwds).to_narwhals()
 
 
 # TODO @dangotbanned: Coordinate overloads with `ScanFile.to_narwhals`?

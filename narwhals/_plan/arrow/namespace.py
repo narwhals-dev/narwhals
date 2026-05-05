@@ -288,14 +288,6 @@ class ArrowNamespace(
         native = fn.linear_space(start, end, num_samples, closed=closed)
         return self._series.from_native(native, name)
 
-    def read_csv(self, source: FileSource, /, **kwds: Any) -> Frame:
-        native = io.read_csv(source, **kwds)
-        return self._dataframe.from_native(native)
-
-    def read_parquet(self, source: IOSource, /, **kwds: Any) -> Frame:
-        native = io.read_parquet(source, **kwds)
-        return self._dataframe.from_native(native)
-
     def read_csv_schema(self, source: FileSource, /, **kwds: Any) -> Schema:
         return into_version(self).schema.from_arrow(io.read_csv_schema(source, **kwds))
 

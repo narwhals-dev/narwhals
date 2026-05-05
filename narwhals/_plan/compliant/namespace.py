@@ -103,7 +103,6 @@ class CompliantNamespace(
 class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
     io.LazyInput[Incomplete],
-    io.EagerInput[NativeDataFrameT_co, NativeSeriesT_co],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[
         EagerDataFrameT,

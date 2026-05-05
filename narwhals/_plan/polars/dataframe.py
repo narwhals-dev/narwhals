@@ -186,6 +186,14 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         }
         return cls.from_native(pl.from_dict(data, s))
 
+    @classmethod
+    def read_csv(cls, source: str, /, **kwds: Any) -> Self:
+        return cls.from_native(pl.read_csv(source, **kwds))
+
+    @classmethod
+    def read_parquet(cls, source: str, /, **kwds: Any) -> Self:
+        return cls.from_native(pl.read_parquet(source, **kwds))
+
     def gather_every(self, n: int, offset: int = 0) -> Self:
         return self.from_native(self.native.gather_every(n, offset))
 
