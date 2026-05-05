@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import DataFrameAny
     from narwhals._plan.plans import resolved as rp
     from narwhals._plan.typing import Seq
+    from narwhals._typing import IntoBackend
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed
 
@@ -104,7 +105,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
 
     @classmethod
     def collect(
-        cls, plan: rp.Collect, /, backend: EagerAllowed | None = None
+        cls, plan: rp.Collect, /, backend: IntoBackend[EagerAllowed] | None = None
     ) -> DataFrameAny:
         kwds = plan.kwds()
         return plan.input.evaluate(cls()).collect_compliant(backend or "polars", **kwds)

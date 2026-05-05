@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny
     from narwhals._plan.plans import logical as lp, resolved as rp
     from narwhals._plan.plans.resolved import ResolvedPlan
+    from narwhals._typing import IntoBackend
     from narwhals._utils import Implementation, Version
     from narwhals.typing import EagerAllowed
 
@@ -72,7 +73,7 @@ class ResolvedToCompliant(Protocol[Native]):
 
     @classmethod
     def collect(
-        cls, plan: rp.Collect, /, backend: EagerAllowed | None = None
+        cls, plan: rp.Collect, /, backend: IntoBackend[EagerAllowed] | None = None
     ) -> CompliantDataFrameAny: ...
     @classmethod
     def sink_parquet(cls, plan: rp.SinkParquet, /) -> None: ...

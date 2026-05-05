@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, get_args, overload
 
 from narwhals._plan import _parse, plugins, translate
@@ -10,9 +10,8 @@ from narwhals._plan._expansion import (
     prepare_projection,
 )
 from narwhals._plan._guards import is_series
-from narwhals._plan._namespace import eager_implementation
 from narwhals._plan._version import into_version
-from narwhals._plan.common import ensure_seq_str, normalize_target_file, temp
+from narwhals._plan.common import ensure_seq_str, normalize_target_file
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.plans import LogicalPlan
@@ -44,7 +43,6 @@ from narwhals.typing import (
     EagerAllowed,
     FileSource,
     IntoBackend,
-    IntoDType,
     IntoSchema,
     JoinStrategy,
     LazyAllowed,
@@ -67,7 +65,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.polars.typing import NativePolarsDataFrame
-    from narwhals._typing import Arrow, Polars, _EagerAllowedImpl
+    from narwhals._typing import Arrow, Polars
     from narwhals.schema import Schema
 
 
@@ -86,7 +84,7 @@ class BaseFrame(Generic[NativeFrameT_co]):
         return self._version
 
     @property
-    def implementation(self) -> Implementation:  # pragma: no cover
+    def implementation(self) -> Implementation:
         return self._compliant.implementation
 
     @property
@@ -323,11 +321,6 @@ class DataFrame(
 ):
     _compliant: CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]
 
-    # TODO @dangotbanned: Replace this usage of `implementation`/`eager_implementation` with plugins
-    @property
-    def implementation(self) -> _EagerAllowedImpl:
-        return eager_implementation(self._compliant.implementation)
-
     @property
     def shape(self) -> tuple[int, int]:
         return self._compliant.shape
@@ -339,36 +332,17 @@ class DataFrame(
     def _series(self) -> type[Series[NativeSeriesT_co]]:
         return Series[NativeSeriesT_co]
 
-    # TODO @dangotbanned: Replace this usage of `implementation`/`eager_implementation` with plugins
-    def _partial_series(
-        self, *, dtype: IntoDType | None = None
-    ) -> PartialSeries[NativeSeriesT_co]:
-        it_names = temp.column_names(self.columns)
-        backend = self.implementation
-        series = self._series.from_iterable
+    def _partial_series(self) -> PartialSeries[NativeSeriesT_co]:
+        backend, version = self.implementation, self.version
+        constructor: Callable[..., CompliantSeries[Any]] | None = None
 
-        def fn(values: Iterable[Any], /) -> Series[NativeSeriesT_co]:
-            return series(values, name=next(it_names), dtype=dtype, backend=backend)
+        def fn(values: Iterable[Any], /) -> Series[Any]:
+            nonlocal constructor
+            if constructor is None:
+                constructor = plugins.manager().series(backend, version).from_iterable
+            return constructor(values).to_narwhals()
 
         return fn
-
-    # TODO @dangotbanned: Replace this usage of `implementation`/`eager_implementation` with plugins
-    def _parse_into_compliant_series(
-        self, other: Series[Any] | Iterable[Any], /, name: str = ""
-    ) -> CompliantSeries[NativeSeriesT_co]:
-        if columns := self.columns:
-            compliant = self.get_column(columns[0])._parse_into_compliant(other)
-            return compliant if not name or compliant.name else compliant.alias(name)
-        else:  # pragma: no cover # noqa: RET505
-            backend = self.implementation
-            series = self._series.from_iterable
-            if not is_series(other):
-                return series(other, name=name, backend=backend)._compliant
-            s: CompliantSeries[Any] = other._compliant
-            if s.implementation is backend:
-                return s
-            msg = f"Expected {backend!r}, got {s.implementation!r}"
-            raise NotImplementedError(msg)
 
     @overload
     @classmethod
@@ -579,9 +553,7 @@ class DataFrame(
         self, *predicates: OneOrIterable[IntoExprColumn] | list[bool], **constraints: Any
     ) -> Self:
         e = _parse.df_filter_predicates_constraints_into_expr_ir(
-            *predicates,
-            _into_series=self._partial_series(dtype=self.version.dtypes.Boolean()),
-            **constraints,
+            *predicates, _into_series=self._partial_series(), **constraints
         )
         named_irs, _ = prepare_projection((e,), schema=self)
         if len(named_irs) != 1:  # pragma: no cover
@@ -625,8 +597,8 @@ class DataFrame(
         elif isinstance(on_columns, DataFrame):
             on_cols = on_columns._compliant
         else:
-            on_cols = self._parse_into_compliant_series(on_columns, on_[0]).to_frame()
-
+            ser = self.to_series(0)._parse_into_compliant(on_columns)
+            on_cols = (ser if ser.name else ser.alias(on_[0])).to_frame()
         if len(on_) != on_cols.width:
             msg = "`pivot` expected `on` and `on_columns` to have the same amount of columns."
             raise InvalidOperationError(msg)

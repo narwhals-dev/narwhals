@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 from narwhals._exceptions import issue_warning
 from narwhals._plan import _parse, plugins, translate
-from narwhals._plan._namespace import eager_implementation
 from narwhals._plan.common import closed_kwds
 from narwhals._plan.compliant.typing import FromNative, Native
 from narwhals._plan.group_by import LazyGroupBy
@@ -310,13 +309,12 @@ class LazyFrame(Generic[Native]):
     ) -> DataFrame[Any]:
         """Materialize this LazyFrame into a DataFrame."""
         lazy = self.implementation
-        eager = eager_implementation(backend) if backend else None
         logical = self._plan.collect(closed_kwds(**kwds))
         resolved = Resolver.from_backend(lazy).collect(logical)
         return (
             plugins.manager()
             .evaluator(lazy, self.version)
-            .collect(resolved, eager)
+            .collect(resolved, backend)
             .to_narwhals()
         )
 

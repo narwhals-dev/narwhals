@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._utils import Implementation, is_eager_allowed
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.typing import KnownImpl
-    from narwhals._typing import _EagerAllowedImpl
     from narwhals.typing import Backend, IntoBackend
 
 
@@ -40,12 +39,3 @@ def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
         msg = f"{impl!r} is not supported in this context, got: {backend!r}"
         raise NotImplementedError(msg)
     return impl
-
-
-# TODO @dangotbanned: Replace with `PluginManager.(eager|eager_name)`?
-def eager_implementation(backend: IntoBackend[Backend] | Any) -> _EagerAllowedImpl:
-    impl = known_implementation(backend)
-    if is_eager_allowed(impl):
-        return impl
-    msg = f"{impl} support in Narwhals is lazy-only"  # pragma: no cover
-    raise TypeError(msg)  # pragma: no cover
