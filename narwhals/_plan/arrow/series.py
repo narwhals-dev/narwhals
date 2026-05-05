@@ -64,6 +64,7 @@ def bin_op(
 
 
 class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
+    __slots__ = ("_name",)
     _name: str
 
     @property
@@ -360,6 +361,8 @@ ArrowSeries()
 
 
 class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
+    __slots__ = ("_compliant",)
+
     def __init__(self, compliant: ArrowSeries, /) -> None:
         self._compliant: ArrowSeries = compliant
 

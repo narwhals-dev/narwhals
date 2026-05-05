@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
+    __slots__ = ()
+
     def get_categories(
         self, node: FExpr[GetCategories], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
@@ -34,6 +36,8 @@ class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
 # TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
+
+    __slots__ = ()
 
     def date(self, node: FExpr[dt.Date], frame: FrameT, name: str, /) -> ExprT_co: ...
     def year(self, node: FExpr[dt.Year], frame: FrameT, name: str, /) -> ExprT_co: ...
@@ -96,6 +100,8 @@ class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
 class ExprListNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
+    __slots__ = ()
+
     def contains(
         self, node: FExpr[lists.Contains], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
@@ -127,6 +133,8 @@ class ExprListNamespace(Protocol[FrameT, ExprT_co]):
 # TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
+
+    __slots__ = ()
 
     def contains(
         self, node: FExpr[strings.Contains], frame: FrameT, name: str, /
@@ -179,6 +187,8 @@ class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
 class ExprStructNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
+    __slots__ = ()
+
     def field(
         self, node: FExpr[FieldByName], frame: FrameT, name: str, /
     ) -> ExprT_co: ...
@@ -186,6 +196,8 @@ class ExprStructNamespace(Protocol[FrameT, ExprT_co]):
 
 class SeriesStructNamespace(Protocol[DataFrameT_co, SeriesT_co]):
     """`[DataFrameT_co, SeriesT_co]`."""
+
+    __slots__ = ()
 
     def field(self, name: str) -> SeriesT_co: ...
     def unnest(self) -> DataFrameT_co: ...

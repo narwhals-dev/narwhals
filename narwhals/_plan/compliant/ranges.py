@@ -38,24 +38,32 @@ Int64 = Version.MAIN.dtypes.Int64()
 
 
 class DateRange(Protocol[FrameT_contra, ExprT_co]):
+    __slots__ = ()
+
     def date_range(
         self, node: ir.RangeExpr[ranges.DateRange], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 
 class IntRange(Protocol[FrameT_contra, ExprT_co]):
+    __slots__ = ()
+
     def int_range(
         self, node: ir.RangeExpr[ranges.IntRange], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 
 class LinearSpace(Protocol[FrameT_contra, ExprT_co]):
+    __slots__ = ()
+
     def linear_space(
         self, node: ir.RangeExpr[ranges.LinearSpace], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 
 class DateRangeEager(Protocol[NativeSeriesT_co]):
+    __slots__ = ()
+
     def date_range_eager(
         self,
         start: dt.date,
@@ -68,6 +76,8 @@ class DateRangeEager(Protocol[NativeSeriesT_co]):
 
 
 class IntRangeEager(Protocol[NativeSeriesT_co]):
+    __slots__ = ()
+
     def int_range_eager(
         self,
         start: int,
@@ -80,6 +90,8 @@ class IntRangeEager(Protocol[NativeSeriesT_co]):
 
 
 class LinearSpaceEager(Protocol[NativeSeriesT_co]):
+    __slots__ = ()
+
     def linear_space_eager(
         self,
         start: float,
@@ -102,6 +114,8 @@ class LazyRangeGenerator(
     `[FrameT_contra, ExprT_co]`.
     """
 
+    __slots__ = ()
+
 
 class EagerRangeGenerator(
     DateRangeEager[NativeSeriesT_co],
@@ -114,6 +128,8 @@ class EagerRangeGenerator(
     `[NativeSeriesT_co]`.
     """
 
+    __slots__ = ()
+
 
 class HybridRangeGenerator(
     LazyRangeGenerator[FrameT_contra, ExprT_co],
@@ -124,6 +140,8 @@ class HybridRangeGenerator(
 
     `[FrameT_contra, ExprT_co, NativeSeriesT_co]`.
     """
+
+    __slots__ = ()
 
 
 # fmt: off

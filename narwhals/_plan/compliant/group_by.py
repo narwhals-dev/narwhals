@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 class CompliantGroupBy(Protocol[FrameT_co]):
     """`[FrameT_co]`."""
 
+    __slots__ = ()
+
     def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
     @property
     def compliant(self) -> FrameT_co: ...
@@ -34,6 +36,8 @@ class CompliantGroupBy(Protocol[FrameT_co]):
 
 class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co]):
     """`[DataFrameT_co]`."""
+
+    __slots__ = ("_key_names", "_keys")
 
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
@@ -60,6 +64,8 @@ class EagerDataFrameGroupBy(
     DataFrameGroupBy[EagerDataFrameT_co], Protocol[EagerDataFrameT_co]
 ):
     """`[EagerDataFrameT_co]`."""
+
+    __slots__ = ("_column_names_original", "_df", "_key_names", "_key_names_original")
 
     _df: IncompleteVarianceLie
     _key_names: Seq[str]
@@ -121,6 +127,8 @@ class Grouper(Protocol[ResolverT_co]):
     - Resolver only needs schema (neither needs a frame, but can use one to get `schema`)
     """
 
+    __slots__ = ("_aggs", "_drop_null_keys", "_keys")
+
     _keys: Seq[ExprIR]
     _aggs: Seq[ExprIR]
     _drop_null_keys: bool
@@ -144,6 +152,15 @@ class Grouper(Protocol[ResolverT_co]):
 
 class GroupByResolver:
     """Narwhals-level `GroupBy` resolver."""
+
+    __slots__ = (
+        "_aggs",
+        "_drop_null_keys",
+        "_key_names",
+        "_keys",
+        "_schema",
+        "_schema_in",
+    )
 
     _schema_in: FrozenSchema
     _keys: Seq[NamedIR]
@@ -208,12 +225,14 @@ class GroupByResolver:
         return self._schema
 
 
+# TODO @dangotbanned: Fix `_drop_null_keys = False` preventing `__slots__`
 class Resolved(GroupByResolver):
     """Compliant-level `GroupBy` resolver."""
 
     _drop_null_keys: bool = False
 
 
+# TODO @dangotbanned: Fix `_drop_null_keys = False` preventing `__slots__`
 class Grouped(Grouper[Resolved]):
     """Compliant-level `GroupBy` helper."""
 

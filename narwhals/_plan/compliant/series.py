@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 class CompliantSeries(Protocol[NativeSeriesT_co]):
     """`[NativeSeriesT_co]`."""
 
+    __slots__ = ()
     implementation: ClassVar[Implementation]
     version: ClassVar[Version]
 

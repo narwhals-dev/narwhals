@@ -55,6 +55,8 @@ if TYPE_CHECKING:
 class CompliantFrame(Protocol[NativeFrameT_co]):
     """`[NativeFrameT_co]`."""
 
+    __slots__ = ()
+
     implementation: ClassVar[Implementation]
     version: ClassVar[Version]
 
@@ -128,6 +130,8 @@ class CompliantDataFrame(
     CompliantFrame[NativeDataFrameT_co], Protocol[NativeDataFrameT_co, NativeSeriesT_co]
 ):
     """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
+
+    __slots__ = ()
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
@@ -317,6 +321,8 @@ class EagerDataFrame(
     Protocol[NativeDataFrameT_co, NativeSeriesT_co],
 ):
     """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
+
+    __slots__ = ()
 
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...

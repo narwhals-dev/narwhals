@@ -68,6 +68,8 @@ Incomplete: TypeAlias = Any
 class ArrowDataFrame(
     FrameSeries["pa.Table"], EagerDataFrame["pa.Table", "ChunkedArrayAny"]
 ):
+    __slots__ = ()
+
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace()
 

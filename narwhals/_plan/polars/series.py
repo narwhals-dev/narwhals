@@ -111,6 +111,7 @@ class bin_op(Generic[SeriesT]):  # noqa: N801
 
 
 class PolarsSeries(CompliantSeries[pl.Series]):
+    __slots__ = ("_native",)
     implementation = Implementation.POLARS
     _native: pl.Series
     version: ClassVar[Version] = Version.MAIN
@@ -403,6 +404,8 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
 
 class SeriesStructNamespace(StructNamespace["DataFrame", PolarsSeries]):
+    __slots__ = ("_compliant",)
+
     def __init__(self, compliant: PolarsSeries, /) -> None:
         self._compliant: PolarsSeries = compliant
 

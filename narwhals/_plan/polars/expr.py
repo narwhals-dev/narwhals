@@ -21,6 +21,7 @@ Incomplete: TypeAlias = Any
 
 
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
+    __slots__ = ("_native",)
     _native: pl.Expr
     version: ClassVar = Version.MAIN
 

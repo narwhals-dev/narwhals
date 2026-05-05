@@ -41,6 +41,8 @@ class CompliantNamespace(
     - Having `CompliantFrameV*` and using `Self` is fragile
     """
 
+    __slots__ = ()
+
     implementation: ClassVar[Implementation]
     version: ClassVar[Version]
 
@@ -123,6 +125,8 @@ class EagerNamespace(
     - ensure most are covariant
     - rely on native types when possible
     """
+
+    __slots__ = ()
 
     @property
     def _dataframe(self) -> type[EagerDataFrameT]: ...

@@ -70,6 +70,8 @@ class remap_exceptions:  # noqa: N801
     [The `with` statement]: https://docs.python.org/3/reference/compound_stmts.html#the-with-statement
     """
 
+    __slots__ = ()
+
     _REMAP: Mapping[type[BaseException], type[NarwhalsError]] = {
         tp: getattr(narwhals.exceptions, tp.__name__, NarwhalsError)
         for tp in pl.exceptions.PolarsError.__subclasses__()
@@ -94,6 +96,7 @@ class remap_exceptions:  # noqa: N801
 
 # TODO @dangotbanned: Add slots after making sure every protocol has empty one's
 class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
+    __slots__ = ("_native",)
     _native: pl.DataFrame
 
     # NOTE: Aliases to integrate with `@requires.backend_version`

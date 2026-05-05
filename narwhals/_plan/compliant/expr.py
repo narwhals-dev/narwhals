@@ -54,6 +54,8 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     `[FrameT, NativeExpr_co, NativeScalar_co]`.
     """
 
+    __slots__ = ()
+
     version: ClassVar[Version]
 
     @property
@@ -288,6 +290,8 @@ class EagerExpr(
     Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
     """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
+
+    __slots__ = ()
 
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` (via `EagerBroadcast`) when truth-testing on dispatch

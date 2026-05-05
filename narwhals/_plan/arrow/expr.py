@@ -299,6 +299,8 @@ class _ArrowDispatch(
 
     version: ClassVar[Version] = Version.MAIN
 
+    __slots__ = ()
+
     @property
     def native(self) -> Native_co: ...  # type: ignore[override]
     @classmethod
@@ -411,6 +413,7 @@ class ArrowExpr(
     _ArrowDispatch["ChunkedArrayAny"],
     EagerExpr["Frame", "ChunkedArrayAny", NativeScalar, ChunkedArrayAny],
 ):
+    __slots__ = ("_evaluated",)
     _evaluated: Series
 
     def __narwhals_namespace__(self) -> Namespace:
@@ -805,6 +808,7 @@ class ArrowScalar(
     _ArrowDispatch[NativeScalar],
     EagerScalar["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny],
 ):
+    __slots__ = ()
     _evaluated: NativeScalar
     _name: str
 
@@ -934,6 +938,8 @@ ExprOrScalarT_co = TypeVar("ExprOrScalarT_co", "ArrowExpr", "ArrowScalar", covar
 
 
 class ArrowAccessor(Generic[ExprOrScalarT_co]):
+    __slots__ = ("_compliant",)
+
     def __init__(self, compliant: ExprOrScalarT_co, /) -> None:
         self._compliant: ExprOrScalarT_co = compliant
 
@@ -951,12 +957,15 @@ class ArrowAccessor(Generic[ExprOrScalarT_co]):
 class ArrowCatNamespace(
     ExprCatNamespace["Frame", "Expr"], ArrowAccessor[ExprOrScalarT_co]
 ):
+    __slots__ = ()
     get_categories = unary_accessor.no_args(fn.cat.get_categories)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 class ArrowListNamespace(
     ExprListNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT_co]
 ):
+    __slots__ = ()
+
     @unary_accessor.partial
     def get(self, f: lists.Get, previous: Native) -> Native:
         return fn.list.get(previous, f.index)
@@ -1011,6 +1020,8 @@ class ArrowListNamespace(
 class ArrowStringNamespace(
     ExprStringNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT_co]
 ):
+    __slots__ = ()
+
     @unary_accessor.partial
     def slice(self, f: strings.Slice, previous: Native) -> Native:
         return fn.str.slice(previous, f.offset, f.length)
@@ -1080,6 +1091,8 @@ class ArrowStringNamespace(
 class ArrowStructNamespace(
     ExprStructNamespace["Frame", "Expr | Scalar"], ArrowAccessor[ExprOrScalarT_co]
 ):
+    __slots__ = ()
+
     @unary_accessor.partial
     def field(self, f: FieldByName, previous: Native) -> Native:
         return fn.struct.field(previous, f.name)

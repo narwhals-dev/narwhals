@@ -289,6 +289,7 @@ def group_by_error(
 
 
 class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
+    __slots__ = ()
     _df: Frame
     _keys: Seq[NamedIR]
     _key_names: Seq[str]

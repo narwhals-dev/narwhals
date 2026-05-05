@@ -33,6 +33,8 @@ class CompliantScalar(
 ):
     """`[FrameT, NativeExpr_co, NativeScalar_co]`."""
 
+    __slots__ = ("_evaluated", "_name")
+
     _evaluated: Any
     """Compliant or native value.
 
@@ -172,6 +174,8 @@ class EagerScalar(
     Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
     """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
+
+    __slots__ = ()
 
     def __len__(self) -> int:
         return 1

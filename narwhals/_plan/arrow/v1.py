@@ -13,6 +13,7 @@ from narwhals._utils import Version
 # TODO @dangotbanned: Review reducing boilerplate
 @final
 class ArrowExprV1(ArrowExpr):
+    __slots__ = ()
     version: ClassVar = Version.V1
 
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
@@ -21,6 +22,7 @@ class ArrowExprV1(ArrowExpr):
 
 @final
 class ArrowScalarV1(ArrowScalar):
+    __slots__ = ()
     version: ClassVar = Version.V1
 
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
@@ -29,6 +31,7 @@ class ArrowScalarV1(ArrowScalar):
 
 @final
 class ArrowSeriesV1(ArrowSeries):
+    __slots__ = ()
     version: ClassVar = Version.V1
 
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
@@ -37,6 +40,7 @@ class ArrowSeriesV1(ArrowSeries):
 
 @final
 class ArrowDataFrameV1(ArrowDataFrame):
+    __slots__ = ()
     version: ClassVar = Version.V1
 
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
@@ -54,6 +58,7 @@ class ArrowLazyFrameV1(ArrowLazyFrame):
 
 @final
 class ArrowNamespaceV1(ArrowNamespace):
+    __slots__ = ()
     version: ClassVar = Version.V1
 
     @property

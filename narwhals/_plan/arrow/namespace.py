@@ -65,6 +65,7 @@ Int64 = Version.MAIN.dtypes.Int64()
 class ArrowNamespace(
     EagerNamespace["Frame", "Series", "Expr", "Scalar", "pa.Table", "ChunkedArrayAny"]
 ):
+    __slots__ = ()
     implementation = Implementation.PYARROW
     version: ClassVar[Version] = Version.MAIN
 

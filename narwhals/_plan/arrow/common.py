@@ -21,6 +21,7 @@ NativeT = TypeVar("NativeT", "pa.Table", "ChunkedArrayAny")
 
 
 class ArrowFrameSeries(Generic[NativeT]):
+    __slots__ = ("_native",)
     implementation: ClassVar = Implementation.PYARROW
     _native: NativeT
     version: ClassVar[Version] = Version.MAIN

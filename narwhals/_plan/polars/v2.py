@@ -12,6 +12,7 @@ from narwhals._utils import Version
 
 # TODO @dangotbanned: Review reducing boilerplate
 class PolarsExprV2(PolarsExpr):
+    __slots__ = ()
     version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
@@ -19,6 +20,7 @@ class PolarsExprV2(PolarsExpr):
 
 
 class PolarsSeriesV2(PolarsSeries):
+    __slots__ = ()
     version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
@@ -26,6 +28,7 @@ class PolarsSeriesV2(PolarsSeries):
 
 
 class PolarsDataFrameV2(PolarsDataFrame):
+    __slots__ = ()
     version: ClassVar = Version.V2
 
     def __narwhals_namespace__(self) -> PolarsNamespace:
