@@ -1353,6 +1353,13 @@ class DataFrame(BaseFrame[FrameT]):
     def columns(self) -> list[str]:
         """Get column names.
 
+        Note:
+            The pandas-like and dask backends allow non-string column names
+            (e.g. integers or booleans). While discouraged, this is supported,
+            so the return type is not guaranteed to be `list[str]`.
+
+            See [concepts - column names](../concepts/column_names.md) for details.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2637,6 +2644,13 @@ class LazyFrame(BaseFrame[FrameT]):
     @property
     def columns(self) -> list[str]:
         r"""Get column names.
+
+        Note:
+            The pandas-like and dask backends allow non-string column names
+            (e.g. integers or booleans). While discouraged, this is supported,
+            so the return type is not guaranteed to be `list[str]`.
+
+            See [concepts - column names](../concepts/column_names.md) for details.
 
         Examples:
             >>> import duckdb

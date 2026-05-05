@@ -27,10 +27,10 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
+    NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
     is_list_of,
-    no_default,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
@@ -761,7 +761,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 narwhals_to_native_dtype(return_dtype, self._version)
             )
         result = self._with_native(result_native)
-        if default is no_default:
+        if default is NO_DEFAULT:
             # Check that all non-null input values were matched
             # (result may have more nulls if mapping contains {value: None})
             unmatched_mask = pc.and_(pc.is_valid(self.native), pc.invert(was_matched))

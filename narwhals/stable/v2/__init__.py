@@ -905,33 +905,24 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
 class When(nw_f.When):
     @classmethod
     def from_when(cls, when: nw_f.When) -> When:
-        return cls(when._predicate)
+        return cls(when._predicate, chain=())
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
-        return Then.from_then(super().then(value))
+        new_chain = (*self._chain, (self._predicate, value))
+        return Then._from_chain(new_chain)
 
 
-class Then(nw_f.Then, Expr):
-    @classmethod
-    def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(*then._nodes)
-
-    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        return _stableify(super().otherwise(value))
+class Then(nw_f.Then, Expr): ...
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     """Start a `when-then-otherwise` expression.
 
     Expression similar to an `if-else` statement in Python. Always initiated by a
-    `pl.when(<condition>).then(<value if condition>)`, and optionally followed by a
-    `.otherwise(<value if condition is false>)` can be appended at the end. If not
-    appended, and the condition is not `True`, `None` will be returned.
-
-    Info:
-        Chaining multiple `.when(<condition>).then(<value>)` statements is currently
-        not supported.
-        See [Narwhals#668](https://github.com/narwhals-dev/narwhals/issues/668).
+    `nw.when(<condition>).then(<value if condition>)`, and optionally followed by
+    chained `.when(<condition>).then(<value>)` calls.
+    An `.otherwise(<value if condition is false>)` can be appended at the end.
+    If not appended, and the condition is not `True`, `None` will be returned.
 
     Arguments:
         predicates: Condition(s) that must be met in order to apply the subsequent
@@ -939,7 +930,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
             combined with `&`. String input is parsed as a column name.
 
     Returns:
-        A "when" object, which `.then` can be called on.
+        A "When" object, which `.then` can be called on.
     """
     return When.from_when(nw_f.when(*predicates))
 
@@ -1169,6 +1160,20 @@ def scan_parquet(
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
+def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Expr:
+    """Collect columns into a struct column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a struct column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+        **named_exprs: Additional columns to collect into the struct column,
+            specified as keyword arguments. The columns will be renamed to the
+            keyword used.
+    """
+    return _stableify(nw_f.struct(*exprs, **named_exprs))
+
+
 __all__ = [
     "Array",
     "Binary",
@@ -1250,6 +1255,7 @@ __all__ = [
     "selectors",
     "selectors",
     "show_versions",
+    "struct",
     "sum",
     "sum_horizontal",
     "to_native",

@@ -22,7 +22,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, is_nested_literal, zip_strict
+from narwhals._utils import Implementation, is_nested_literal, not_implemented, zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -338,3 +338,5 @@ class DaskNamespace(
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
         )
+
+    struct = not_implemented()

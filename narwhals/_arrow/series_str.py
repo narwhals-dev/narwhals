@@ -11,6 +11,7 @@ from narwhals._arrow.utils import (
     extract_native,
     lit,
     parse_datetime_format,
+    parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
 
@@ -79,6 +80,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
 
     def to_date(self, format: str | None) -> ArrowSeries:
         return self.to_datetime(format=format).dt.date()
+
+    def to_time(self, format: str | None) -> ArrowSeries:
+        format = parse_time_format(self.native) if format is None else format
+        timestamp_array = pc.strptime(self.native, format=format, unit="us")
+
+        nw_time_dtype = self.version.dtypes.Time()
+        return self.with_native(timestamp_array).cast(nw_time_dtype)
 
     def to_uppercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_upper(self.native))

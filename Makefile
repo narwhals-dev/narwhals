@@ -25,5 +25,19 @@ typing: ## Run typing checks
 		--editable test-plugin/. \
 		--editable . \
 		--group typing
+	# temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3560
+	$(VENV_BIN)/uv pip install "pyarrow<24"
 	$(VENV_BIN)/uv run --no-sync pyright
 	$(VENV_BIN)/uv run --no-sync mypy
+	$(VENV_BIN)/uv run --no-sync pyrefly check
+
+.PHONY: docs-serve
+docs-serve:  # Build and serve the docs locally
+	$(VENV_BIN)/uv pip install \
+		--upgrade \
+		--editable test-plugin/. \
+		--editable ".[dask, ibis]" \
+		--group docs
+	$(VENV_BIN)/uv run --no-sync utils/generate_backend_completeness.py
+	$(VENV_BIN)/uv run --no-sync utils/generate_zen_content.py
+	$(VENV_BIN)/uv run --no-sync zensical serve
