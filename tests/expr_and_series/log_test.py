@@ -24,7 +24,7 @@ def test_log_expr(constructor: Constructor, base: float) -> None:
     assert_equal_data(result, {"a": expected[base]})
 
 
-def test_log_default_base_polars_ibis() -> None:
+def test_log_default_base_polars_ibis() -> None:  # pragma: no cover
     pytest.importorskip("ibis")
     pytest.importorskip("polars")
     import ibis
