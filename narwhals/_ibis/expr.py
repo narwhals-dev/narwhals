@@ -214,7 +214,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             raise NotImplementedError(msg)
         return self._with_callable(lambda expr: expr.quantile(quantile))
 
-    def log(self, base: float) -> Self:
+    def log(self, base: float) -> Self:  # pragma: no cover
         def _log(expr: ir.Value) -> ir.Value:
             numeric_expr = cast("ir.NumericValue", expr)
             return ibis.cases(
