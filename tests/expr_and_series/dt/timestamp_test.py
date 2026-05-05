@@ -170,9 +170,6 @@ def test_timestamp_dates(
     )
     if any(x in str(constructor) for x in unsupported_backends):
         pytest.skip("Backend does not support date type")
-    if "bodo" in str(constructor):
-        # BODO fail
-        pytest.skip()
 
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     if "dask" in str(constructor):
