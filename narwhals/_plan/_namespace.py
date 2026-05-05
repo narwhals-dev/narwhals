@@ -6,7 +6,6 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from narwhals._plan.compliant import typing as ct
-    from narwhals._plan.typing import KnownImpl
     from narwhals.typing import Backend, IntoBackend
 
 
@@ -29,13 +28,3 @@ def namespace_from_backend(backend: IntoBackend[Backend] | Any) -> ct.NamespaceA
         return _arrow.Namespace()
     msg = f"Not yet supported in `narwhals._plan`, got: {impl!r}"
     raise NotImplementedError(msg)
-
-
-# TODO @dangotbanned: Replace with `PluginManager.(builtin|builtin_name)`?
-def known_implementation(backend: IntoBackend[Backend] | Any) -> KnownImpl:
-    """Reject the possibility of plugins via this path."""
-    impl = Implementation.from_backend(backend)
-    if impl is Implementation.UNKNOWN:
-        msg = f"{impl!r} is not supported in this context, got: {backend!r}"
-        raise NotImplementedError(msg)
-    return impl

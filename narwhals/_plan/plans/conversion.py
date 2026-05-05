@@ -15,9 +15,8 @@ from functools import lru_cache
 from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
-from narwhals._plan import expressions as ir
+from narwhals._plan import expressions as ir, plugins
 from narwhals._plan._expansion import Expander, expand_selectors, prepare_projection
-from narwhals._plan._namespace import known_implementation
 from narwhals._plan.common import temp, todo
 from narwhals._plan.dtypes_mapper import IDX_DTYPE
 from narwhals._plan.exceptions import (
@@ -196,7 +195,7 @@ class Resolver:
     @classmethod
     def from_backend(cls, backend: IntoBackend[Backend] | Incomplete, /) -> Self:
         obj = cls.__new__(cls)
-        obj.implementation = known_implementation(backend)
+        obj.implementation = plugins.manager().builtin(backend).implementation
         return obj
 
     def to_resolved(self, plan: lp.LogicalPlan, /) -> rp.ResolvedPlan:

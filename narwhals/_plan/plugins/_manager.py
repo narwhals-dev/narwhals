@@ -8,6 +8,7 @@ from importlib import import_module
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, cast, final, overload
 
+from narwhals._plan.common import hasattrs_static
 from narwhals._plan.plugins import _parse
 from narwhals._utils import Implementation, Version
 
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Never, TypeAlias
+    from typing_extensions import Never, TypeAlias, TypeIs
 
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import classes as cc, typing as ct
@@ -32,6 +33,7 @@ if TYPE_CHECKING:
         VersionName,
     )
     from narwhals._typing import Arrow, BackendName, Polars
+    from narwhals.typing import Backend, IntoBackend
 
 Incomplete: TypeAlias = Any
 
@@ -198,6 +200,14 @@ class PluginManager:
         """
         return self._plugin(_plugin_name(backend))
 
+    def builtin(self, backend: IntoBackend[Backend], /) -> BuiltinAny:
+        """Like `plugin`, but to guard apis that aren't extensible yet."""
+        plugin = self.plugin(backend)
+        if _is_builtin(plugin):
+            return plugin
+        msg = f"{plugin!r} is not supported in this context, got: {backend!r}"
+        raise NotImplementedError(msg)
+
     # NOTE: These overloads are *intentionally* less-precise than they could be
     # Some early experiments handled unions & version matching (successfuly),
     # but came at a very high cost to LSP performance.
@@ -332,3 +342,7 @@ def _unavailable_error(plugin: PluginAny) -> Exception:  # pragma: no cover
     missing = [name for name in plugin.requirements if find_spec(name) is None]
     msg = f"Plugin {plugin.name!r} was found but {reason}: {missing!r}"
     return ModuleNotFoundError(msg)
+
+
+def _is_builtin(obj: PluginAny) -> TypeIs[BuiltinAny]:
+    return hasattrs_static(obj, "implementation")
