@@ -16,6 +16,8 @@ import pyarrow as pa
 
 STRING_DTYPE_NAN = pd.StringDtype("pyarrow", na_value=np.nan)  # type: ignore[call-arg]
 STRING_DTYPE_NA = pd.StringDtype("pyarrow", na_value=pd.NA)  # type: ignore[call-arg]
+STRING_DTYPE_PYTHON_NAN = pd.StringDtype("python", na_value=np.nan)  # type: ignore[call-arg]
+STRING_DTYPE_PYTHON_NA = pd.StringDtype("python", na_value=pd.NA)  # type: ignore[call-arg]
 
 
 @pytest.mark.parametrize(
@@ -25,10 +27,14 @@ STRING_DTYPE_NA = pd.StringDtype("pyarrow", na_value=pd.NA)  # type: ignore[call
         (STRING_DTYPE_NAN, STRING_DTYPE_NA, STRING_DTYPE_NAN),
         (STRING_DTYPE_NAN, pd.ArrowDtype(pa.string()), STRING_DTYPE_NAN),
         (STRING_DTYPE_NAN, pd.ArrowDtype(pa.large_string()), STRING_DTYPE_NAN),
+        (STRING_DTYPE_NAN, STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_NAN),
+        (STRING_DTYPE_NAN, STRING_DTYPE_PYTHON_NA, STRING_DTYPE_NAN),
         (STRING_DTYPE_NA, STRING_DTYPE_NAN, STRING_DTYPE_NA),
         (STRING_DTYPE_NA, STRING_DTYPE_NA, STRING_DTYPE_NA),
         (STRING_DTYPE_NA, pd.ArrowDtype(pa.string()), STRING_DTYPE_NA),
         (STRING_DTYPE_NA, pd.ArrowDtype(pa.large_string()), STRING_DTYPE_NA),
+        (STRING_DTYPE_NA, STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_NA),
+        (STRING_DTYPE_NA, STRING_DTYPE_PYTHON_NA, STRING_DTYPE_NA),
         (pd.ArrowDtype(pa.string()), STRING_DTYPE_NAN, pd.ArrowDtype(pa.large_string())),
         (pd.ArrowDtype(pa.string()), STRING_DTYPE_NA, pd.ArrowDtype(pa.large_string())),
         (
@@ -59,6 +65,38 @@ STRING_DTYPE_NA = pd.StringDtype("pyarrow", na_value=pd.NA)  # type: ignore[call
         (
             pd.ArrowDtype(pa.large_string()),
             pd.ArrowDtype(pa.large_string()),
+            pd.ArrowDtype(pa.large_string()),
+        ),
+        (STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_PYTHON_NAN),
+        (STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_PYTHON_NA, STRING_DTYPE_PYTHON_NA),
+        (STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_NAN, STRING_DTYPE_NAN),
+        (STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_NA, STRING_DTYPE_NA),
+        (STRING_DTYPE_PYTHON_NAN, pd.ArrowDtype(pa.string()), pd.ArrowDtype(pa.string())),
+        (
+            STRING_DTYPE_PYTHON_NAN,
+            pd.ArrowDtype(pa.large_string()),
+            pd.ArrowDtype(pa.large_string()),
+        ),
+        (STRING_DTYPE_PYTHON_NA, STRING_DTYPE_PYTHON_NAN, STRING_DTYPE_PYTHON_NA),
+        (STRING_DTYPE_PYTHON_NA, STRING_DTYPE_PYTHON_NA, STRING_DTYPE_PYTHON_NA),
+        (STRING_DTYPE_PYTHON_NA, STRING_DTYPE_NAN, STRING_DTYPE_PYTHON_NA),
+        (STRING_DTYPE_PYTHON_NA, STRING_DTYPE_NA, STRING_DTYPE_NA),
+        (STRING_DTYPE_PYTHON_NA, pd.ArrowDtype(pa.string()), pd.ArrowDtype(pa.string())),
+        (
+            STRING_DTYPE_PYTHON_NA,
+            pd.ArrowDtype(pa.large_string()),
+            pd.ArrowDtype(pa.large_string()),
+        ),
+        (pd.ArrowDtype(pa.string()), STRING_DTYPE_PYTHON_NAN, pd.ArrowDtype(pa.string())),
+        (pd.ArrowDtype(pa.string()), STRING_DTYPE_PYTHON_NA, pd.ArrowDtype(pa.string())),
+        (
+            pd.ArrowDtype(pa.large_string()),
+            STRING_DTYPE_PYTHON_NAN,
+            pd.ArrowDtype(pa.large_string()),
+        ),
+        (
+            pd.ArrowDtype(pa.large_string()),
+            STRING_DTYPE_PYTHON_NA,
             pd.ArrowDtype(pa.large_string()),
         ),
     ],
