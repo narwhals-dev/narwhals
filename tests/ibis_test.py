@@ -10,5 +10,5 @@ def test_from_native() -> None:
     ibis_constructor = get_backend_constructor("ibis")
     if not ibis_constructor.is_available:
         pytest.skip()
-    df = nw.from_native(ibis_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    df = ibis_constructor({"a": [1, 2, 3], "b": [4, 5, 6]}, nw)
     assert df.columns == ["a", "b"]

@@ -72,7 +72,7 @@ def test_namespace_from_backend_name(backend: BackendName) -> None:
 
 def test_namespace_from_native_object(constructor: Constructor) -> None:
     data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-    frame = constructor(data)
+    frame = constructor(data, nw).to_native()
     namespace = Namespace.from_native_object(frame)
     nw_frame = nw.from_native(frame)
     assert namespace.implementation == nw_frame.implementation

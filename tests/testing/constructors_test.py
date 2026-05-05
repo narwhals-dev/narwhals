@@ -25,7 +25,7 @@ def test_eager_returns_eager_frame() -> None:
     if not c.is_available:
         pytest.skip()
 
-    df = nw.from_native(c({"x": [1, 2, 3]}))
+    df = c({"x": [1, 2, 3]}, nw)
     assert isinstance(df, nw.DataFrame)
 
 
@@ -34,7 +34,7 @@ def test_lazy_returns_lazy_frame() -> None:
     if not c.is_available:
         pytest.skip()
 
-    lf = nw.from_native(c({"x": [1, 2, 3]}))
+    lf = c({"x": [1, 2, 3]}, nw)
     assert isinstance(lf, nw.LazyFrame)
 
 

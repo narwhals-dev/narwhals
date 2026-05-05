@@ -18,7 +18,7 @@ def test_constructor_eager_fixture_runs_for_each_backend(
         from narwhals.testing.typing import DataFrameConstructor
 
         def test_shape(nw_dataframe: DataFrameConstructor) -> None:
-            df = nw.from_native(nw_dataframe({"x": [1, 2, 3]}), eager_only=True)
+            df = nw_dataframe({"x": [1, 2, 3]}, namespace=nw)
             assert df.shape == (3, 1)
     """)
     result = pytester.runpytest_subprocess(
@@ -45,7 +45,7 @@ def test_constructor_fixture_includes_lazy_backends(pytester: pytest.Pytester) -
         from narwhals.testing.typing import FrameConstructor
 
         def test_columns(nw_frame: FrameConstructor) -> None:
-            df = nw.from_native(nw_frame({"x": [1, 2, 3]}))
+            df = nw_frame({"x": [1, 2, 3]}, namespace=nw)
             assert df.collect_schema().names() == ["x"]
     """)
     result = pytester.runpytest_subprocess(

@@ -6,19 +6,21 @@ import sys
 import warnings
 from datetime import date, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version, zip_strict
 from narwhals.dependencies import get_pandas
-from narwhals.testing.typing import (
-    # TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
-    DataFrameConstructor as ConstructorEager,
-    FrameConstructor as Constructor,
-)
 from narwhals.translate import from_native
+
+# TODO(FBruzzesi): Replace these aliases once all the test suite migrates to *FrameConstructor's
+from tests.conftest import (
+    _PatchedDataFrameConstructor as ConstructorEager,
+    _PatchedDataFrameConstructor as ConstructorPandasLike,
+    _PatchedFrameConstructor as Constructor,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
 # TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
 # NOTE: Explicitly exported otherwise mypy will raise an [attr-defined] error for each file
 # importing them from `tests.utils` rather than `narwhals.testing.typing` directly.
-__all__ = ("Constructor", "ConstructorEager")
+__all__ = ("Constructor", "ConstructorEager", "ConstructorPandasLike")
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
@@ -50,8 +52,6 @@ DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
 PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
 PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
 CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
-
-ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
 """`DType`s which **cannot** be used as bare types."""
