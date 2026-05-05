@@ -72,5 +72,11 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
     collect_arrow = todo()
     collect_polars = todo()
     collect_pandas = todo()
+    scan_csv = todo()
+    scan_parquet = todo()
+    sink_parquet = todo()
 
     from_compliant = from_narwhals
+
+
+ArrowLazyFrame()

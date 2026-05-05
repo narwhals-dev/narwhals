@@ -105,9 +105,5 @@ def _scan_file(
     if kwds:
         msg = f"Passing arbitrary keywords arguments to `{method}()` is not yet implemented, got: {kwds!r}"
         raise NotImplementedError(msg)
-    ns = namespace_from_backend(backend)
-    if method == "scan_csv" and _io.can_scan_csv(ns):
-        return LogicalPlan.scan_csv(source).to_narwhals(backend, version)
-    if method == "scan_parquet" and _io.can_scan_parquet(ns):
-        return LogicalPlan.scan_parquet(source).to_narwhals(backend, version)
-    raise unsupported_error(backend, method)  # pragma: no cover
+    plan = LogicalPlan.scan_csv if method == "scan_csv" else LogicalPlan.scan_parquet
+    return plan(source).to_narwhals(backend, version)

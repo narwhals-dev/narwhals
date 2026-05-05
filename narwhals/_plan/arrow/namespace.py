@@ -8,7 +8,6 @@ import pyarrow as pa
 from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import functions as fn, io
-from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._utils import Implementation, Version
@@ -293,6 +292,3 @@ class ArrowNamespace(
 
     def read_parquet_schema(self, source: IOSource, /) -> Schema:
         return into_version(self).schema.from_arrow(io.read_parquet_schema(source))
-
-    scan_csv = todo()
-    scan_parquet = todo()

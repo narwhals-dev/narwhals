@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
+from narwhals._plan.compliant import io
 from narwhals._plan.compliant.typing import Native_co
 from narwhals._utils import Implementation, Version
 
@@ -81,7 +82,7 @@ class NarwhalsHash(Protocol):
         return hash(self) == hash(other)
 
 
-class CompliantLazyFrame(NarwhalsHash, Protocol[Native_co]):
+class CompliantLazyFrame(io.LazyIO, NarwhalsHash, Protocol[Native_co]):
     """Clean-slate rework of `CompliantFrame`-based design.
 
     `[Native_co]`.

@@ -122,12 +122,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
         schema = pl.read_parquet_schema(source, **kwds)
         return into_version(self.version).schema.from_polars(schema)
 
-    def scan_csv(self, source: str, /, **kwds: Any) -> LazyFrame:
-        return self._lazyframe.from_native(pl.scan_csv(source, **kwds))
-
-    def scan_parquet(self, source: str, /, **kwds: Any) -> LazyFrame:
-        return self._lazyframe.from_native(pl.scan_parquet(source, **kwds))
-
     def col(self, node: ir.Column, frame: Incomplete, name: str) -> Expr:
         return self._expr.from_native(pl.col(node.name), name)
 

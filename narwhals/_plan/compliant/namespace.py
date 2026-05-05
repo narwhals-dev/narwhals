@@ -29,7 +29,10 @@ Incomplete: TypeAlias = Any
 
 # TODO @dangotbanned: Review what will replace following `*Classes`
 class CompliantNamespace(
-    ranges.LazyRangeGenerator[FrameT, ExprT_co], Protocol[FrameT, ExprT_co, ScalarT_co]
+    io.ReadCsvSchema,
+    io.ReadParquetSchema,
+    ranges.LazyRangeGenerator[FrameT, ExprT_co],
+    Protocol[FrameT, ExprT_co, ScalarT_co],
 ):
     """`[FrameT, ExprT_co, ScalarT_co]`.
 
@@ -102,7 +105,6 @@ class CompliantNamespace(
 
 class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
-    io.LazyInput[Incomplete],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[
         EagerDataFrameT,

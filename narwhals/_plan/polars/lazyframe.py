@@ -43,6 +43,14 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
     def from_polars(cls, frame: pl.DataFrame, /) -> Self:
         return cls.from_native(frame.lazy())
 
+    @classmethod
+    def scan_csv(cls, source: str, /, **kwds: Any) -> Self:
+        return cls.from_native(pl.scan_csv(source, **kwds))
+
+    @classmethod
+    def scan_parquet(cls, source: str, /, **kwds: Any) -> Self:
+        return cls.from_native(pl.scan_parquet(source, **kwds))
+
     def collect_polars(self, **kwds: Any) -> pl.DataFrame:
         if "background" in kwds:
             msg = "TODO @dangotbanned: handle `LazyFrame.collect(background=True) -> InProcessQuery`"
@@ -71,6 +79,9 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
 
     def collect_pandas(self, **kwds: Any) -> pd.DataFrame:
         return self.collect_polars(**kwds).to_pandas()
+
+
+PolarsLazyFrame()
 
 
 class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
@@ -153,7 +164,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         )
 
     def scan_csv(self, plan: rp.ScanCsv) -> PolarsLazyFrame:
-        return self.__narwhals_namespace__().scan_csv(plan.source)
+        return self._lazyframe.scan_csv(plan.source)
 
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> PolarsLazyFrame:
         return self._lazyframe.from_narwhals(plan.frame)
@@ -166,7 +177,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         raise NotImplementedError(plan.frame.implementation, type(plan.frame))
 
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
-        return self.__narwhals_namespace__().scan_parquet(plan.source)
+        return self._lazyframe.scan_parquet(plan.source)
 
     def select_names(self, plan: rp.SelectNames) -> PolarsLazyFrame:
         return self._into_compliant(plan.input.evaluate(self).native.select(plan.names))

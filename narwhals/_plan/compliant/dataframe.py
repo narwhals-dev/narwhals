@@ -4,7 +4,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
 from narwhals._plan._version import into_version
-from narwhals._plan.compliant import io
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.typing import (
     IncompleteCyclic,
@@ -314,7 +313,6 @@ class CompliantDataFrame(
 
 
 class EagerDataFrame(
-    io.LazyOutput,
     CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co],
     Protocol[NativeDataFrameT_co, NativeSeriesT_co],
 ):
@@ -330,9 +328,6 @@ class EagerDataFrame(
         self, resolver: GroupByResolver, /
     ) -> EagerDataFrameGroupBy[Self]:  # pragma: no cover
         return self._group_by.from_resolver(self, resolver)  # type: ignore[return-value]
-
-    def sink_parquet(self, target: str | BytesIO, /) -> None:  # pragma: no cover
-        self.write_parquet(target)
 
     @classmethod
     def concat(cls, dfs: Iterable[Self], /, how: ConcatMethod) -> Self:
