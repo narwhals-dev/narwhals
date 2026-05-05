@@ -95,7 +95,7 @@ docs = [
   "mkdocs-autorefs",
   "mkdocstrings-python>=2.0.3",
   "narwhals[duckdb,pandas,pyarrow,polars,sql,sqlframe]",
-  "zensical>=0.0.28"
+  "zensical>=0.0.38"
 ]
 dev = [
   "pre-commit",
