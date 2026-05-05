@@ -4,10 +4,7 @@ import datetime as dt
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._duration import Interval
-from narwhals._plan import _parse, common
-from narwhals._plan._namespace import namespace_from_backend
-from narwhals._plan.compliant import ranges as _ranges
-from narwhals._plan.exceptions import unsupported_error
+from narwhals._plan import _parse, common, plugins
 from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
 from narwhals._utils import Version, ensure_type
 from narwhals.exceptions import ComputeError
@@ -22,6 +19,8 @@ if TYPE_CHECKING:
     from narwhals._typing import Arrow, Polars
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval, EagerAllowed, IntoBackend
+
+_MAIN = Version.MAIN
 
 
 @overload
@@ -74,10 +73,12 @@ def int_range(
     dtype = common.into_dtype(dtype)
     if eager:
         start, end = IntRange.ensure_py_scalars(start, end, eager)
-        ns_ = namespace_from_backend(eager)
-        if _ranges.can_int_range_eager(ns_):
-            return ns_.int_range_eager(start, end, step, dtype=dtype).to_narwhals()
-        raise unsupported_error(eager, "int_range")  # pragma: no cover
+        return (
+            plugins.manager()
+            .series(eager, _MAIN)
+            .int_range(start, end, step, dtype=dtype)
+            .to_narwhals()
+        )
     return (
         IntRange(step=step, dtype=dtype)
         .to_function_expr(*_parse.into_iter_expr_ir(start, end))
@@ -133,10 +134,12 @@ def date_range(
     closed = _ensure_closed_interval(closed)
     if eager:
         start, end = DateRange.ensure_py_scalars(start, end, eager)
-        ns_ = namespace_from_backend(eager)
-        if _ranges.can_date_range_eager(ns_):
-            return ns_.date_range_eager(start, end, days, closed=closed).to_narwhals()
-        raise unsupported_error(eager, "date_range")  # pragma: no cover
+        return (
+            plugins.manager()
+            .series(eager, _MAIN)
+            .date_range(start, end, days, closed=closed)
+            .to_narwhals()
+        )
     return (
         DateRange(interval=days, closed=closed)
         .to_function_expr(*_parse.into_iter_expr_ir(start, end))
@@ -233,12 +236,12 @@ def linear_space(
     closed = _ensure_closed_interval(closed)
     if eager:
         start, end = LinearSpace.ensure_py_scalars(start, end, eager)
-        ns_ = namespace_from_backend(eager)
-        if _ranges.can_linear_space_eager(ns_):
-            return ns_.linear_space_eager(
-                start, end, num_samples, closed=closed
-            ).to_narwhals()
-        raise unsupported_error(eager, "linear_space")  # pragma: no cover
+        return (
+            plugins.manager()
+            .series(eager, _MAIN)
+            .linear_space(start, end, num_samples, closed=closed)
+            .to_narwhals()
+        )
     return (
         LinearSpace(num_samples=num_samples, closed=closed)
         .to_function_expr(*_parse.into_iter_expr_ir(start, end))

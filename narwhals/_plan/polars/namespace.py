@@ -14,8 +14,6 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    import datetime as dt
-
     from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
@@ -29,11 +27,10 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.series import PolarsSeries as Series
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import ClosedInterval, IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, PythonLiteral
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
-Int64 = MAIN.dtypes.Int64()
 
 
 @overload
@@ -146,43 +143,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
             return self._expr.from_native(native, name)
         msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.input[0]!r}\n{node.input[1]!r}"
         raise NotImplementedError(msg)
-
-    def int_range_eager(
-        self,
-        start: int,
-        end: int,
-        step: int = 1,
-        *,
-        dtype: IntegerType = Int64,
-        name: str = "literal",
-    ) -> Series:
-        dtype_ = dtype_to_native_fast(dtype)
-        native = pl.int_range(start, end, step, dtype=dtype_, eager=True)
-        return self._series.from_native(native, name)
-
-    def date_range_eager(
-        self,
-        start: dt.date,
-        end: dt.date,
-        interval: int = 1,
-        *,
-        closed: ClosedInterval = "both",
-        name: str = "literal",
-    ) -> Series:
-        native = pl.date_range(start, end, f"{interval}d", closed=closed, eager=True)
-        return self._series.from_native(native, name)
-
-    def linear_space_eager(
-        self,
-        start: float,
-        end: float,
-        num_samples: int,
-        *,
-        closed: ClosedInterval = "both",
-        name: str = "literal",
-    ) -> Series:
-        native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
-        return self._series.from_native(native, name)
 
     all_horizontal = todo()
     any_horizontal = todo()

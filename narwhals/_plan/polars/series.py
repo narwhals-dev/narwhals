@@ -14,12 +14,14 @@ from narwhals._plan.polars.namespace import (
     PolarsNamespace as Namespace,
     dtype_from_native,
     dtype_to_native,
+    dtype_to_native_fast,
     explode_todo,
 )
 from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
+    import datetime as dt
     import decimal
     from collections.abc import Callable, Iterable
 
@@ -29,9 +31,10 @@ if TYPE_CHECKING:
         PolarsDataFrame,
         PolarsDataFrame as DataFrame,
     )
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         Into1DArray,
         IntoDType,
@@ -41,7 +44,7 @@ if TYPE_CHECKING:
     )
 
 Incomplete: TypeAlias = Any
-
+Int64 = Version.MAIN.dtypes.Int64()
 if compat.MIN_PERIODS_RENAMED_TO_MIN_SAMPLES:
     _MIN_SAMPLES = "min_samples"
 else:
@@ -397,6 +400,46 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     @classmethod
     def concat(cls, series: Iterable[Self]) -> Self:
         return cls.from_native(pl.concat(ser.native for ser in series))
+
+    @classmethod
+    def date_range(
+        cls,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self:
+        native = pl.date_range(start, end, f"{interval}d", closed=closed, eager=True)
+        return cls.from_native(native, name)
+
+    @classmethod
+    def int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> Self:
+        dtype_ = dtype_to_native_fast(dtype)
+        native = pl.int_range(start, end, step, dtype=dtype_, eager=True)
+        return cls.from_native(native, name)
+
+    @classmethod
+    def linear_space(
+        cls,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self:
+        native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
+        return cls.from_native(native, name)
 
     @property
     def struct(self) -> SeriesStructNamespace:

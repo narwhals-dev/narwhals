@@ -12,19 +12,16 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT_co,
 )
-from narwhals._plan.typing import NativeSeriesT_co
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._utils import Implementation, Version
     from narwhals.typing import PythonLiteral
-
-Incomplete: TypeAlias = Any
 
 
 # TODO @dangotbanned: Review what will replace following `*Classes`
@@ -106,13 +103,10 @@ class CompliantNamespace(
 
 
 class EagerNamespace(
-    ranges.EagerRangeGenerator[NativeSeriesT_co],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
-    Protocol[
-        EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeSeriesT_co
-    ],
+    Protocol[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co],
 ):
-    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeSeriesT_co]`.
+    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co]`.
 
     ## Important
     Trying to

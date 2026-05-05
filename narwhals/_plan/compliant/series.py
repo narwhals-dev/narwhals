@@ -11,6 +11,7 @@ from narwhals._plan.typing import (
 from narwhals._utils import Implementation, Version, unstable
 
 if TYPE_CHECKING:
+    import datetime as dt
     import decimal
     from collections.abc import Iterable, Sequence
 
@@ -21,8 +22,9 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.series import Series
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         Into1DArray,
         IntoDType,
@@ -32,6 +34,8 @@ if TYPE_CHECKING:
         TemporalLiteral,
         _1DArray,
     )
+
+Int64 = Version.MAIN.dtypes.Int64()
 
 
 class CompliantSeries(Protocol[NativeSeriesT_co]):
@@ -149,6 +153,36 @@ class CompliantSeries(Protocol[NativeSeriesT_co]):
     def from_native(cls, native: IncompleteVarianceLie, name: str = "", /) -> Self: ...
     @classmethod
     def from_numpy(cls, data: Into1DArray, name: str = "", /) -> Self: ...
+    @classmethod
+    def date_range(
+        cls,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self: ...
+    @classmethod
+    def int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> Self: ...
+    @classmethod
+    def linear_space(
+        cls,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self: ...
     @property
     def dtype(self) -> DType: ...
     @property

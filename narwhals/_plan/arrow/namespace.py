@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
 
 import pyarrow as pa
 
-from narwhals._arrow.utils import narwhals_to_native_dtype
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import functions as fn, io
 from narwhals._plan.compliant.namespace import EagerNamespace
@@ -13,7 +12,6 @@ from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    import datetime as dt
     from collections.abc import Callable
 
     from typing_extensions import TypeAlias
@@ -25,10 +23,8 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
-        ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrScalarAny,
-        IntegerScalar,
         IOSource,
         VariadicFunction,
     )
@@ -47,24 +43,13 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.typing import NonNestedLiteralT_co
-    from narwhals.dtypes import IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import (
-        ClosedInterval,
-        FileSource,
-        NonNestedLiteral,
-        PythonLiteral,
-    )
+    from narwhals.typing import FileSource, NonNestedLiteral, PythonLiteral
 
     HWrapper: TypeAlias = Callable[[HExpr[Any], Frame, str], Expr | Scalar]
 
 
-Int64 = Version.MAIN.dtypes.Int64()
-
-
-class ArrowNamespace(
-    EagerNamespace["Frame", "Series", "Expr", "Scalar", "ChunkedArrayAny"]
-):
+class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     __slots__ = ()
     implementation = Implementation.PYARROW
     version: ClassVar[Version] = Version.MAIN
@@ -225,68 +210,25 @@ class ArrowNamespace(
         bad = _start if isinstance(start, self._scalar) else _end
         raise function_arg_non_scalar_error(func, bad)
 
-    def _int_range(
-        self, start: int, end: int, step: int, dtype: IntegerType, /
-    ) -> ChunkedArray[IntegerScalar]:
-        if dtype is not Int64:
-            pa_dtype = narwhals_to_native_dtype(dtype, self.version)
-            if not pa.types.is_integer(pa_dtype):
-                raise TypeError(dtype)
-            return fn.int_range(start, end, step, dtype=pa_dtype)
-        return fn.int_range(start, end, step)
-
     def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
-        native = self._int_range(start, end, node.function.step, node.function.dtype)
-        return self._expr.from_native(native, name)
-
-    def int_range_eager(
-        self,
-        start: int,
-        end: int,
-        step: int = 1,
-        *,
-        dtype: IntegerType = Int64,
-        name: str = "literal",
-    ) -> Series:
-        native = self._int_range(start, end, step, dtype)
-        return self._series.from_native(native, name)
+        f = node.function
+        series = self._series.int_range(start, end, f.step, dtype=f.dtype, name=name)
+        return self._expr.from_series(series)
 
     def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
-        func = node.function
-        native = fn.date_range(start, end, func.interval, closed=func.closed)
-        return self._expr.from_native(native, name)
-
-    def date_range_eager(
-        self,
-        start: dt.date,
-        end: dt.date,
-        interval: int = 1,
-        *,
-        closed: ClosedInterval = "both",
-        name: str = "literal",
-    ) -> Series:
-        native = fn.date_range(start, end, interval, closed=closed)
-        return self._series.from_native(native, name)
+        f = node.function
+        date_range = self._series.date_range
+        series = date_range(start, end, f.interval, closed=f.closed, name=name)
+        return self._expr.from_series(series)
 
     def linear_space(self, node: RangeExpr[LinearSpace], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
-        func = node.function
-        native = fn.linear_space(start, end, func.num_samples, closed=func.closed)
-        return self._expr.from_native(native, name)
-
-    def linear_space_eager(
-        self,
-        start: float,
-        end: float,
-        num_samples: int,
-        *,
-        closed: ClosedInterval = "both",
-        name: str = "literal",
-    ) -> Series:
-        native = fn.linear_space(start, end, num_samples, closed=closed)
-        return self._series.from_native(native, name)
+        f = node.function
+        linear_space = self._series.linear_space
+        series = linear_space(start, end, f.num_samples, closed=f.closed, name=name)
+        return self._expr.from_series(series)
 
     def read_csv_schema(self, source: FileSource, /, **kwds: Any) -> Schema:
         return into_version(self).schema.from_arrow(io.read_csv_schema(source, **kwds))

@@ -14,10 +14,11 @@ from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.compliant.series import CompliantSeries
 from narwhals._plan.expressions import functions as F
-from narwhals._utils import generate_repr
+from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
+    import datetime as dt
     import decimal
     from collections.abc import Callable, Iterable
 
@@ -28,9 +29,10 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
     from narwhals._plan.arrow.typing import ArrowAny, ChunkedArrayAny
     from narwhals._plan.compliant.typing import SeriesT
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         Into1DArray,
         IntoDType,
@@ -40,6 +42,7 @@ if TYPE_CHECKING:
     )
 
 Incomplete: TypeAlias = Any
+Int64 = Version.MAIN.dtypes.Int64()
 
 
 def bin_op(
@@ -120,6 +123,49 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
     ) -> Self:
         dtype_pa = fn.dtype_native(dtype, cls.version)
         return cls.from_native(fn.chunked_array([data], dtype_pa), name)
+
+    @classmethod
+    def date_range(
+        cls,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self:
+        return cls.from_native(fn.date_range(start, end, interval, closed=closed), name)
+
+    @classmethod
+    def int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> Self:
+        if dtype is not Int64:
+            pa_dtype = fn.dtype_native(dtype, cls.version)
+            if not pa.types.is_integer(pa_dtype):
+                raise TypeError(dtype)
+            native = fn.int_range(start, end, step, dtype=pa_dtype)
+        native = fn.int_range(start, end, step)
+        return cls.from_native(native, name)
+
+    @classmethod
+    def linear_space(
+        cls,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self:
+        native = fn.linear_space(start, end, num_samples, closed=closed)
+        return cls.from_native(native, name)
 
     def cast(self, dtype: IntoDType) -> Self:
         dtype_pa = fn.dtype_native(dtype, self.version)
