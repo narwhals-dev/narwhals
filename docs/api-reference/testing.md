@@ -14,22 +14,23 @@
 ## `pytest` plugin
 
 Narwhals register a pytest plugin that exposes parametrized fixtures with callables
-to build native frames from a column-oriented python `dict`.
+to build Narwhals frames from a column-oriented python `dict`.
 
 ### Available fixtures
 
 | Fixture | Backends |
 |---|---|
-| `nw_frame_constructor` | every selected backend (eager + lazy) |
-| `nw_eager_constructor` | only eager backends |
-| `nw_pandas_like_constructor` | pandas-like backends |
+| `nw_frame` | every selected backend (eager + lazy) |
+| `nw_lazyframe` | only lazy backends |
+| `nw_dataframe` | only eager backends |
+| `nw_pandas_like_frame` | pandas-like backends |
 
 ### Pytest options
 
 The backend selection is controlled by the following CLI options:
 
 * `--nw-backends=pandas,polars[lazy],duckdb`: comma-separated list.
-    Defaults to [`DEFAULT_BACKENDS`][narwhals.testing.constructors.DEFAULT_BACKENDS]
+    Defaults to the following list: `pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis`
     intersected with the backends installed in the current environment.
 * `--nw-all-backends`: shortcut for "every **CPU** backend that is installed".
 * `--use-nw-external-constructor`: Skip narwhals.testing's parametrisation and let
@@ -46,15 +47,22 @@ The plugin auto-loads as soon as you `pip install narwhals`. Just write a test:
 from typing import TYPE_CHECKING
 
 import narwhals as nw
+import narwhals.stable.v2 as nw_v2
 
 if TYPE_CHECKING:
-    from narwhals.testing.typing import EagerFrameConstructor, Data
+    from narwhals.testing.typing import Data, DataFrameConstructor, LazyFrameConstructor
 
 
-def test_shape(nw_eager_constructor: EagerFrameConstructor) -> None:
+def test_shape(nw_dataframe: DataFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    df = nw.from_native(nw_eager_constructor(data), eager_only=True)
+    df = nw_dataframe(data, namespace=nw)
     assert df.shape == (3, 1)
+
+
+def test_laziness(nw_lazyframe: LazyFrameConstructor) -> None:
+    data: Data = {"x": [1, 2, 3]}
+    lf = nw_lazyframe(data, namespace=nw_v2)
+    assert isinstance(lf, nw_v2.LazyFrame)
 ```
 
 The fixtures are parametrised against every supported backend that is installed
@@ -75,5 +83,5 @@ pytest --all-nw-backends
       members:
         - Data
         - FrameConstructor
-        - EagerFrameConstructor
+        - DataFrameConstructor
         - LazyFrameConstructor
