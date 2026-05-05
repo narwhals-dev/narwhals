@@ -44,7 +44,13 @@ if TYPE_CHECKING:
     from narwhals._typing import _LazyAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        ConcatMethod,
+        IntoSchema,
+        PivotAgg,
+        UniqueKeepStrategy,
+    )
 
 
 class CompliantFrame(Protocol[NativeFrameT_co]):
@@ -224,6 +230,8 @@ class CompliantDataFrame(
         cls, series: Iterable[CompliantSeries[IncompleteVarianceLie]], /
     ) -> Self: ...
     @classmethod
+    def concat(cls, dfs: Iterable[Self], /, how: ConcatMethod) -> Self: ...
+    @classmethod
     def from_arrow(cls, frame: IntoArrowTable, /) -> Self: ...
     @classmethod
     def from_pandas(cls, frame: pd.DataFrame, /) -> Self: ...
@@ -317,3 +325,19 @@ class EagerDataFrame(
 
     def sink_parquet(self, target: str | BytesIO, /) -> None:  # pragma: no cover
         self.write_parquet(target)
+
+    @classmethod
+    def concat(cls, dfs: Iterable[Self], /, how: ConcatMethod) -> Self:
+        methods = {
+            "vertical": cls.concat_vertical,
+            "horizontal": cls.concat_horizontal,
+            "diagonal": cls.concat_diagonal,
+        }
+        return methods[how](dfs)
+
+    @classmethod
+    def concat_diagonal(cls, dfs: Iterable[Self], /) -> Self: ...
+    @classmethod
+    def concat_horizontal(cls, dfs: Iterable[Self], /) -> Self: ...
+    @classmethod
+    def concat_vertical(cls, dfs: Iterable[Self], /) -> Self: ...

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast, overload
@@ -105,6 +105,29 @@ class ArrowDataFrame(
 
     def __len__(self) -> int:
         return self.native.num_rows
+
+    @classmethod
+    def concat_diagonal(cls, dfs: Iterable[Self]) -> Self:
+        return cls.from_native(fn.concat_tables((df.native for df in dfs), "default"))
+
+    @classmethod
+    def concat_horizontal(cls, dfs: Iterable[Self]) -> Self:
+        return cls.from_native(fn.concat_tables_horizontal(df.native for df in dfs))
+
+    @classmethod
+    def concat_vertical(cls, dfs: Iterable[Self]) -> Self:
+        dfs = dfs if isinstance(dfs, tuple) else tuple(dfs)
+        cols_0 = dfs[0].columns
+        for i, df in enumerate(dfs[1:], start=1):
+            cols_current = df.columns
+            if cols_current != cols_0:
+                msg = (
+                    "unable to vstack, column names don't match:\n"
+                    f"   - dataframe 0: {cols_0}\n"
+                    f"   - dataframe {i}: {cols_current}\n"
+                )
+                raise TypeError(msg)
+        return cls.from_native(fn.concat_tables(df.native for df in dfs))
 
     @classmethod
     def concat_series(cls, series: Iterable[CompliantSeries]) -> Self:

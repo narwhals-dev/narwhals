@@ -3,9 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, get_args, overload
 
 from narwhals._plan import _guards, selectors as cs
-from narwhals._plan._namespace import namespace
-from narwhals._plan.compliant.concat import can_concat_dataframe
-from narwhals._plan.exceptions import unsupported_error
 from narwhals._plan.functions.aggregation import max, mean, median, min, sum
 from narwhals._plan.functions.col import col
 from narwhals._plan.functions.horizontal import (
@@ -115,8 +112,5 @@ def _concat_lazy(
     return frames[0]._with_lp(logical.concat(tuple(lf._plan for lf in frames), how=how))
 
 
-def _concat_eager(frames: Sequence[DataFrameT], how: ConcatMethod) -> DataFrameT:
-    ns = namespace(frames[0])
-    if not can_concat_dataframe(ns):  # pragma: no cover
-        raise unsupported_error(ns.implementation, "concat")
-    return frames[0]._with_compliant(ns.concat_df((df._compliant for df in frames), how))
+def _concat_eager(dfs: Sequence[DataFrameT], how: ConcatMethod, /) -> DataFrameT:
+    return type(dfs[0])(dfs[0]._compliant.concat((df._compliant for df in dfs), how))

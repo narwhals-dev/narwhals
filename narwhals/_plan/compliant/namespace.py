@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.compliant import io, ranges
-from narwhals._plan.compliant.concat import ConcatDataFrame
 from narwhals._plan.compliant.typing import (
     EagerDataFrameT,
     EagerExprT_co,
@@ -13,11 +12,7 @@ from narwhals._plan.compliant.typing import (
     ScalarT_co,
     SeriesT_co,
 )
-from narwhals._plan.typing import (
-    IncompleteVarianceLie,
-    NativeDataFrameT,
-    NativeSeriesT_co,
-)
+from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -108,19 +103,18 @@ class CompliantNamespace(
 class EagerNamespace(
     ranges.EagerRangeGenerator[NativeSeriesT_co],
     io.LazyInput[Incomplete],
-    io.EagerInput[NativeDataFrameT, NativeSeriesT_co],
-    ConcatDataFrame[NativeDataFrameT, IncompleteVarianceLie],
+    io.EagerInput[NativeDataFrameT_co, NativeSeriesT_co],
     CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
     Protocol[
         EagerDataFrameT,
         SeriesT_co,
         EagerExprT_co,
         EagerScalarT_co,
-        NativeDataFrameT,
+        NativeDataFrameT_co,
         NativeSeriesT_co,
     ],
 ):
-    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeDataFrameT, NativeSeriesT_co]`.
+    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co, NativeDataFrameT_co, NativeSeriesT_co]`.
 
     ## Important
     Trying to

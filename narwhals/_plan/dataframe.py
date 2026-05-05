@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
-    from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.polars.typing import NativePolarsDataFrame
@@ -324,13 +323,7 @@ class DataFrame(
 ):
     _compliant: CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]
 
-    def __narwhals_namespace__(
-        self,
-    ) -> CompliantNamespace[
-        CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co], Any, Any
-    ]:
-        return self._compliant.__narwhals_namespace__()
-
+    # TODO @dangotbanned: Replace this usage of `implementation`/`eager_implementation` with plugins
     @property
     def implementation(self) -> _EagerAllowedImpl:
         return eager_implementation(self._compliant.implementation)
@@ -346,6 +339,7 @@ class DataFrame(
     def _series(self) -> type[Series[NativeSeriesT_co]]:
         return Series[NativeSeriesT_co]
 
+    # TODO @dangotbanned: Replace this usage of `implementation`/`eager_implementation` with plugins
     def _partial_series(
         self, *, dtype: IntoDType | None = None
     ) -> PartialSeries[NativeSeriesT_co]:
@@ -358,6 +352,7 @@ class DataFrame(
 
         return fn
 
+    # TODO @dangotbanned: Replace this usage of `implementation`/`eager_implementation` with plugins
     def _parse_into_compliant_series(
         self, other: Series[Any] | Iterable[Any], /, name: str = ""
     ) -> CompliantSeries[NativeSeriesT_co]:

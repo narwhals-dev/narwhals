@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
@@ -39,6 +39,7 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
     from narwhals.typing import (
         AsofJoinStrategy,
+        ConcatMethod,
         IntoSchema,
         JoinStrategy,
         PivotAgg,
@@ -169,6 +170,10 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     @classmethod
     def concat_series(cls, series: Iterable[CompliantSeries]) -> Self:
         return cls.from_native(pl.DataFrame().hstack([ser.native for ser in series]))
+
+    @classmethod
+    def concat(cls, dfs: Iterable[Self], /, how: ConcatMethod = "vertical") -> Self:
+        return cls.from_native(pl.concat((df.native for df in dfs), how=how))
 
     @classmethod
     def from_dict(

@@ -15,7 +15,7 @@ from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     import datetime as dt
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable
 
     from typing_extensions import TypeAlias
 
@@ -29,7 +29,6 @@ if TYPE_CHECKING:
         ChunkedArray,
         ChunkedArrayAny,
         ChunkedOrScalarAny,
-        CompliantDataFrame,
         IntegerScalar,
         IOSource,
         VariadicFunction,
@@ -288,31 +287,6 @@ class ArrowNamespace(
     ) -> Series:
         native = fn.linear_space(start, end, num_samples, closed=closed)
         return self._series.from_native(native, name)
-
-    def concat_df_vertical(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
-        dfs = dfs if isinstance(dfs, tuple) else tuple(dfs)
-        cols_0 = dfs[0].columns
-        for i, df in enumerate(dfs[1:], start=1):
-            cols_current = df.columns
-            if cols_current != cols_0:
-                msg = (
-                    "unable to vstack, column names don't match:\n"
-                    f"   - dataframe 0: {cols_0}\n"
-                    f"   - dataframe {i}: {cols_current}\n"
-                )
-                raise TypeError(msg)
-        result = fn.concat_tables(df.native for df in dfs)
-        return self._dataframe.from_native(result)
-
-    def concat_df_diagonal(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
-        return self._dataframe.from_native(
-            fn.concat_tables((df.native for df in dfs), "default")
-        )
-
-    def concat_df_horizontal(self, dfs: Iterable[CompliantDataFrame]) -> Frame:
-        return self._dataframe.from_native(
-            fn.concat_tables_horizontal(df.native for df in dfs)
-        )
 
     def read_csv(self, source: FileSource, /, **kwds: Any) -> Frame:
         native = io.read_csv(source, **kwds)
