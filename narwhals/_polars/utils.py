@@ -138,17 +138,9 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if dtype == pl.Date:
         return dtypes.Date()
     if isinstance(dtype, pl.Datetime):
-        return (
-            dtypes.Datetime()
-            if dtype is pl.Datetime
-            else dtypes.Datetime(dtype.time_unit, dtype.time_zone)
-        )
+        return dtypes.Datetime(dtype.time_unit, dtype.time_zone)
     if isinstance(dtype, pl.Duration):
-        return (
-            dtypes.Duration()
-            if dtype is pl.Duration
-            else dtypes.Duration(dtype.time_unit)
-        )
+        return dtypes.Duration(dtype.time_unit)
     if isinstance(dtype, pl.Struct):
         fields = [
             dtypes.Field(name, native_to_narwhals_dtype(tp, version))
