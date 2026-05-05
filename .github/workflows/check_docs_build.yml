@@ -1,0 +1,32 @@
+name: Check Docs Build
+
+on:
+  pull_request:
+
+env:
+  PY_COLORS: 1
+  UV_SYSTEM_PYTHON: 1
+
+jobs:
+  zensical-strict-build:
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: uv pip install -e ".[dask,ibis]" --group docs
+      - name: Run hooks manually
+        run: |
+          python utils/generate_backend_completeness.py
+          python utils/generate_zen_content.py
+      - run: zensical build --strict

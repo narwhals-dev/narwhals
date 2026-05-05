@@ -5,7 +5,7 @@ import string
 import sys
 
 # ruff: noqa: N806
-from collections import OrderedDict, deque
+from collections import OrderedDict
 from inspect import isfunction, ismethoddescriptor
 from pathlib import Path
 from types import MethodType, ModuleType
@@ -57,16 +57,18 @@ def read_documented_members(source: str | Path) -> list[str]:
     MEMBERS_PREFIX = "        - "
     DUNDER_PREFIX = "__"
 
+    members: list[str] = []
+    in_members_section = False
     with Path(source).open(encoding="utf-8") as fd:
-        lines = deque(fd.readlines())
-    head = lines.popleft()
-    while not head.endswith(MEMBERS_START):
-        head = lines.popleft()
-    while not head.startswith(MEMBERS_PREFIX):
-        head = lines.pop()
-    lines.append(head)
-    all_members = (line.removeprefix(MEMBERS_PREFIX).strip() for line in lines)
-    return [m for m in all_members if not m.startswith(DUNDER_PREFIX)]
+        for line in fd:
+            if in_members_section:
+                if line.startswith(MEMBERS_PREFIX):
+                    members.append(line.removeprefix(MEMBERS_PREFIX).strip())
+                else:
+                    in_members_section = False
+            elif line.endswith(MEMBERS_START):
+                in_members_section = True
+    return [m for m in members if not m.startswith(DUNDER_PREFIX)]
 
 
 ret = 0
