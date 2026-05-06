@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
-    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._utils import Implementation, Version
 
 
@@ -46,9 +45,6 @@ class CompliantNamespace(
     ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def any_horizontal(
         self, node: HExpr[ir.boolean.AnyHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def concat_str(
-        self, node: HExpr[ConcatStr], frame: ct.FrameT, name: str, /
     ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def coalesce(
         self, node: HExpr[F.Coalesce], frame: ct.FrameT, name: str, /

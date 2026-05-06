@@ -97,6 +97,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     clip = todo()
     clip_lower = todo()
     clip_upper = todo()
+    concat_str = todo()
     count = todo()
     cum_count = todo()
     cum_max = todo()

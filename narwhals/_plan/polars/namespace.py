@@ -132,7 +132,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
 
     all_horizontal = todo()
     any_horizontal = todo()
-    concat_str = todo()
     coalesce = todo()
     date_range = todo()
     linear_space = todo()

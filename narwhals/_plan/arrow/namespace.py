@@ -39,7 +39,6 @@ if TYPE_CHECKING:
         LinearSpace,
         RangeFunction,
     )
-    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.typing import NonNestedLiteralT_co
     from narwhals.schema import Schema
     from narwhals.typing import FileSource, NonNestedLiteral
@@ -158,18 +157,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
             (fn.cast(fn.is_not_null(native), int64) for native in inputs),
         )
         result = fn.truediv(reduce(fn.add, filled), sum_not_null)
-        return self._into_expr(result, name)
-
-    def concat_str(
-        self, node: HExpr[ConcatStr], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        exprs = (self.from_ir(e, frame, name) for e in node.input)
-        aligned = (ser.native for ser in self._expr.align(exprs))
-        separator = node.function.separator
-        ignore_nulls = node.function.ignore_nulls
-        result = fn.str.concat_str(
-            *aligned, separator=separator, ignore_nulls=ignore_nulls
-        )
         return self._into_expr(result, name)
 
     def _into_expr(self, native: ChunkedOrScalarAny, name: str) -> Expr | Scalar:

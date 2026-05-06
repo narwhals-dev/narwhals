@@ -56,7 +56,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
-    from narwhals._plan.expressions import lists, strings
+    from narwhals._plan.expressions import HorizontalExpr as HExpr, lists, strings
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
         ArgMin,
@@ -356,6 +356,16 @@ class _ArrowDispatch(
         then = node.truthy.dispatch(self, frame, name)
         otherwise = node.falsy.dispatch(self, frame, name)
         result = pc.if_else(when.native, then.native, otherwise.native)
+        return self._with_native(result, name)
+
+    def concat_str(self, node: HExpr[strings.ConcatStr], frame: Frame, name: str) -> Self:
+        # https://arrow.apache.org/docs/dev/cpp/compute.html#string-joining
+        # > scalars are recycled in either case
+        natives = (e.dispatch(self, frame, name).native for e in node.input)
+        f = node.function
+        result = fn.str.concat_str(
+            *natives, separator=f.separator, ignore_nulls=f.ignore_nulls
+        )
         return self._with_native(result, name)
 
     @unary.partial

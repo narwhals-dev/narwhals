@@ -27,8 +27,10 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr as FExpr,
+        HorizontalExpr as HExpr,
         aggregation as agg,
         functions as F,
+        strings,
     )
     from narwhals._plan.expressions.boolean import (
         IsBetween,
@@ -65,7 +67,15 @@ Incomplete: TypeAlias = Any
 #   - [ ] `date_range`
 #   - [ ] `int_range`
 #   - [ ] `linear_space`
-# - [ ] Variadic (they can technically be either)
+# - [ ] Variadic
+#   - [ ] `all_horizontal`
+#   - [ ] `any_horizontal`
+#   - [x] `concat_str`
+#   - [ ] `coalesce`
+#   - [ ] `max_horizontal`
+#   - [ ] `mean_horizontal`
+#   - [ ] `min_horizontal`
+#   - [ ] `sum_horizontal`
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr` and `Scalar` literal values.
 
@@ -263,6 +273,13 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     def skew(
         self, node: FExpr[F.Skew], frame: FrameT, name: str, /
     ) -> Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+
+    # (Scalar, ...)              -> Scalar
+    # (Expr, ...)                -> Expr
+    # (Expr, Expr | Scalar, ...) -> Expr
+    def concat_str(
+        self, node: HExpr[strings.ConcatStr], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
 
     def __narwhals_namespace__(
         self,
