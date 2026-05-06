@@ -67,7 +67,9 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
 
 
 @final
-class Lit(LiteralExpr[PythonLiteralT_co], dispatch=namespaced()):
+class Lit(
+    LiteralExpr[PythonLiteralT_co], dispatch=DispatcherOptions.constructor("scalar")
+):
     """An expression representing a scalar literal value.
 
     >>> import narwhals._plan as nw

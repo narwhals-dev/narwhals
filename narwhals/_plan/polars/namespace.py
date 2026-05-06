@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.series import PolarsSeries as Series
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType
 
 Incomplete: TypeAlias = Any
 MAIN = Version.MAIN
@@ -121,9 +121,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
 
     def col(self, node: ir.Column, frame: Incomplete, name: str) -> Expr:
         return self._expr.from_native(pl.col(node.name), name)
-
-    def lit(self, node: ir.Lit[PythonLiteral], frame: Incomplete, name: str) -> Expr:
-        return self._expr.from_python(node.value, name, dtype=node.dtype)
 
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str

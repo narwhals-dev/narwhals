@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.typing import IncompleteCyclic
     from narwhals._utils import Version
+    from narwhals.typing import PythonLiteral
 
 Incomplete: TypeAlias = Any
 
@@ -54,14 +55,16 @@ Incomplete: TypeAlias = Any
 # TODO @dangotbanned: Namespace methods -> constructors
 # - [ ] `CompliantExpr`
 #   - [ ] `col`
-#   - [ ] `date_range`
-#   - [ ] `int_range`
-#   - [ ] `linear_space`
-# - [ ] `CompliantScalar` (preferred, but is optional so `CompliantExpr` needs it too)
-#   - [ ] `lit`
+# - [x] `CompliantScalar` (preferred, but is optional so `CompliantExpr` needs it too)
+#   - [x] `lit`
 #   - [x] `len_star`
 # - [x] `EagerExpr`
 #   - [x] `lit_series`
+# TODO @dangotbanned: Namespace methods -> Expr methods
+# - [ ] Binary
+#   - [ ] `date_range`
+#   - [ ] `int_range`
+#   - [ ] `linear_space`
 # - [ ] Variadic (they can technically be either)
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr` and `Scalar` literal values.
@@ -80,6 +83,11 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     @classmethod
     def len_star(
         cls, node: ir.Len, frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    # TODO @dangotbanned: Review return once `CompliantScalar` no longer inherits from `CompliantExpr`
+    @classmethod
+    def lit(
+        cls, node: ir.Lit[PythonLiteral], frame: FrameT, name: str, /
     ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
 
     # NOTE: May need to change returning `Self` to `CompliantExpr[FrameT]`

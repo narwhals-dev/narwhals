@@ -87,6 +87,10 @@ class CompliantScalar(
         return self._name
 
     @classmethod
+    def lit(cls, node: ir.Lit[PythonLiteral], _: Any, name: str, /) -> Self:
+        return cls.from_python(node.value, name, dtype=node.dtype)
+
+    @classmethod
     def from_python(
         cls, value: PythonLiteral, name: str = "literal", /, *, dtype: IntoDType | None
     ) -> Self: ...

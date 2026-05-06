@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import PythonLiteral
 
 
 # TODO @dangotbanned: Review what will replace following `*Classes`
@@ -55,9 +54,6 @@ class CompliantNamespace(
     def coalesce(
         self, node: HExpr[F.Coalesce], frame: ct.FrameT, name: str, /
     ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def lit(
-        self, node: ir.Lit[PythonLiteral], frame: ct.FrameT, name: str, /
-    ) -> ct.ScalarT_co: ...
     def max_horizontal(
         self, node: HExpr[F.MaxHorizontal], frame: ct.FrameT, name: str, /
     ) -> ct.ExprT_co | ct.ScalarT_co: ...

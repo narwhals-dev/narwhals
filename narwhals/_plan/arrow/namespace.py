@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.typing import NonNestedLiteralT_co
     from narwhals.schema import Schema
-    from narwhals.typing import FileSource, NonNestedLiteral, PythonLiteral
+    from narwhals.typing import FileSource, NonNestedLiteral
 
     HWrapper: TypeAlias = Callable[[HExpr[Any], Frame, str], Expr | Scalar]
 
@@ -85,9 +85,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
     def col(self, node: ir.Column, frame: Frame, name: str) -> Expr:
         return self._expr.from_native(frame.native.column(node.name), name)
-
-    def lit(self, node: ir.Lit[PythonLiteral], frame: Frame, name: str) -> Scalar:
-        return self._scalar.from_python(node.value, name, dtype=node.dtype)
 
     @overload
     def _horizontal(

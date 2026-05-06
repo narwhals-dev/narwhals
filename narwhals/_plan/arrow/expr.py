@@ -418,6 +418,7 @@ class ArrowExpr(
 
     # TODO @dangotbanned: Remove once `EagerScalar` no longer inherits from `EagerExpr`
     len_star = not_implemented()
+    lit = not_implemented()
 
     def __narwhals_namespace__(self) -> Namespace:
         return Namespace()
