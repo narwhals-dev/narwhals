@@ -9,7 +9,7 @@ from narwhals._plan._guards import is_function_expr
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, Self, TypeAlias
+    from typing_extensions import Never, Self, TypeAlias, deprecated
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
@@ -420,13 +420,17 @@ class DispatcherOptions:
         self.is_namespaced = is_namespaced
         self.override_name = override_name
 
-    @staticmethod
-    def namespaced(override_name: str = "", /) -> DispatcherOptions:
-        """Route expression dispatch through `__narwhals_namespace__`.
+    if TYPE_CHECKING:
 
-        Syntax sugar for `DispatcherOptions(is_namespaced=True, override_name=override_name)`.
-        """
-        return DispatcherOptions(is_namespaced=True, override_name=override_name)
+        @deprecated("this should be an `Expr` method now!")
+        @staticmethod
+        def namespaced() -> DispatcherOptions:
+            return DispatcherOptions(is_namespaced=True)
+    else:
+
+        @staticmethod
+        def namespaced() -> DispatcherOptions:
+            return DispatcherOptions(is_namespaced=True)
 
     # TODO @dangotbanned: Port more of `__narwhals_namespace__` stuff here
     @staticmethod
@@ -440,6 +444,10 @@ class DispatcherOptions:
 
         Syntax sugar for `DispatcherOptions(override_name=override_name)`.
         """
+        # NOTE: With `LenStar` & `Col` renamed - the remaining usage is:
+        # - `boolean.Not` -> `not_()`
+        # - `strings.ZFill` -> (str.) `zfill`
+        # - `struct.FieldByName` -> (struct.) `field`
         return DispatcherOptions(override_name=override_name)
 
     def __repr__(self) -> str:

@@ -168,7 +168,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
     To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
 
-        class Column(ExprIR, dispatch=DispatcherOptions.namespaced("col")):
+        class Col(ExprIR, dispatch=DispatcherOptions.constructor("expr")):
             __slots__ = ("name",)
             name: str
 

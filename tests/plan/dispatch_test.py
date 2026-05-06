@@ -80,6 +80,7 @@ def test_missing_compliant(
         UnaryFunction, dispatch=DispatcherOptions(accessor_name="str")
     ): ...
 
+    # TODO @dangotbanned: Replace error + test with `DispatcherOptions.constructor` variant
     class MissingNamespaced(ir.ExprIR, dispatch=DispatcherOptions.namespaced()):
         __slots__ = ("expr",)
         expr: ir.ExprIR = node()
