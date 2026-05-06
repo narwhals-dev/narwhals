@@ -1129,10 +1129,10 @@ class EagerExprStringNamespace(
             "str", "strip_chars", characters=characters
         )
 
-    def starts_with(self, prefix: str) -> EagerExprT:
+    def starts_with(self, prefix: EagerExprT) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "starts_with", prefix=prefix)
 
-    def ends_with(self, suffix: str) -> EagerExprT:
+    def ends_with(self, suffix: EagerExprT) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "ends_with", suffix=suffix)
 
     def contains(self, pattern: EagerExprT, *, literal: bool) -> EagerExprT:

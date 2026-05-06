@@ -39,9 +39,9 @@ class SQLExprStringNamespace(
         )
         return self.compliant._with_elementwise(func, pattern=compliant_pattern)
 
-    def ends_with(self, suffix: str) -> SQLExprT:
+    def ends_with(self, suffix: SQLExprT) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function("ends_with", expr, self._lit(suffix))
+            lambda expr, suffix: self._function("ends_with", expr, suffix), suffix=suffix
         )
 
     def len_chars(self) -> SQLExprT:
@@ -85,9 +85,10 @@ class SQLExprStringNamespace(
             lambda expr: self._function("str_split", expr, split_by)
         )
 
-    def starts_with(self, prefix: str) -> SQLExprT:
+    def starts_with(self, prefix: SQLExprT) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function("starts_with", expr, self._lit(prefix))
+            lambda expr, prefix: self._function("starts_with", expr, prefix),
+            prefix=prefix,
         )
 
     def strip_chars(self, characters: str | None) -> SQLExprT:

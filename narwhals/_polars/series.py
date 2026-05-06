@@ -830,6 +830,16 @@ class PolarsSeriesStringNamespace(
             self.native.str.contains(pattern_native, literal=literal)  # type: ignore[arg-type]
         )
 
+    def starts_with(self, prefix: PolarsSeries) -> PolarsSeries:
+        return self.compliant._with_native(
+            self.native.str.starts_with(extract_native(prefix))  # type: ignore[arg-type]
+        )
+
+    def ends_with(self, suffix: PolarsSeries) -> PolarsSeries:
+        return self.compliant._with_native(
+            self.native.str.ends_with(extract_native(suffix))  # type: ignore[arg-type]
+        )
+
 
 class PolarsSeriesCatNamespace(
     PolarsSeriesNamespace, PolarsCatNamespace[PolarsSeries, pl.Series]
