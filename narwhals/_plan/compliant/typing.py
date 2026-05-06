@@ -119,13 +119,7 @@ NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
 
 EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
 EagerScalarT_co = TypeVar(
-    "EagerScalarT_co",
-    bound="EagerExprAny | EagerScalarAny",
-    covariant=True,
-    default=EagerExprT_co,
-)
-EagerScalarNoDefaultT_co = TypeVar(
-    "EagerScalarNoDefaultT_co", bound="EagerExprAny | EagerScalarAny", covariant=True
+    "EagerScalarT_co", bound="EagerExprAny | EagerScalarAny", covariant=True
 )
 EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 EagerDataFrameT_co = TypeVar(

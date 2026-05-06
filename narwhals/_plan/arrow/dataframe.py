@@ -10,7 +10,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._arrow.utils import native_to_narwhals_dtype
-from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import acero, compat, functions as fn, io
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
@@ -25,6 +24,7 @@ from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
+from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._utils import generate_repr, requires, supports_arrow_c_stream
 
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
         IOSource,
         Predicate,
     )
-    from narwhals._plan.compliant.dataframe import CompliantDataFrame
+    from narwhals._plan.compliant import CompliantDataFrame
     from narwhals._plan.compliant.group_by import GroupByResolver
     from narwhals._plan.compliant.typing import LazyFrameAny
     from narwhals._plan.dataframe import DataFrame as NwDataFrame

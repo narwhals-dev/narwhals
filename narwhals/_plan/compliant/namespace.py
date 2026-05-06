@@ -2,16 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
-from narwhals._plan.compliant import io, ranges
-from narwhals._plan.compliant.typing import (
-    EagerDataFrameT,
-    EagerExprT_co,
-    EagerScalarT_co,
-    ExprT_co,
-    FrameT,
-    ScalarT_co,
-    SeriesT_co,
-)
+from narwhals._plan.compliant import io, ranges, typing as ct
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -28,8 +19,8 @@ if TYPE_CHECKING:
 class CompliantNamespace(
     io.ReadCsvSchema,
     io.ReadParquetSchema,
-    ranges.LazyRangeGenerator[FrameT, ExprT_co],
-    Protocol[FrameT, ExprT_co, ScalarT_co],
+    ranges.LazyRangeGenerator[ct.FrameT, ct.ExprT_co],
+    Protocol[ct.FrameT, ct.ExprT_co, ct.ScalarT_co],
 ):
     """`[FrameT, ExprT_co, ScalarT_co]`.
 
@@ -44,58 +35,58 @@ class CompliantNamespace(
     version: ClassVar[Version]
 
     @property
-    def _expr(self) -> type[ExprT_co]: ...
+    def _expr(self) -> type[ct.ExprT_co]: ...
     @property
-    def _frame(self) -> type[FrameT]:
+    def _frame(self) -> type[ct.FrameT]:
         """The invariance of `FrameT` is a big ol problemo."""
         ...
 
     @property
-    def _scalar(self) -> type[ScalarT_co]: ...
+    def _scalar(self) -> type[ct.ScalarT_co]: ...
     def all_horizontal(
-        self, node: HExpr[ir.boolean.AllHorizontal], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: HExpr[ir.boolean.AllHorizontal], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def any_horizontal(
-        self, node: HExpr[ir.boolean.AnyHorizontal], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
-    def col(self, node: ir.Column, frame: FrameT, name: str, /) -> ExprT_co: ...
+        self, node: HExpr[ir.boolean.AnyHorizontal], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
+    def col(self, node: ir.Column, frame: ct.FrameT, name: str, /) -> ct.ExprT_co: ...
     def concat_str(
-        self, node: HExpr[ConcatStr], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: HExpr[ConcatStr], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def coalesce(
-        self, node: HExpr[F.Coalesce], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
-    def len(self, node: ir.Len, frame: FrameT, name: str, /) -> ScalarT_co: ...
+        self, node: HExpr[F.Coalesce], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
+    def len(self, node: ir.Len, frame: ct.FrameT, name: str, /) -> ct.ScalarT_co: ...
     def lit(
-        self, node: ir.Lit[PythonLiteral], frame: FrameT, name: str, /
-    ) -> ScalarT_co: ...
+        self, node: ir.Lit[PythonLiteral], frame: ct.FrameT, name: str, /
+    ) -> ct.ScalarT_co: ...
     def max_horizontal(
-        self, node: HExpr[F.MaxHorizontal], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: HExpr[F.MaxHorizontal], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def mean_horizontal(
-        self, node: HExpr[F.MeanHorizontal], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: HExpr[F.MeanHorizontal], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def min_horizontal(
-        self, node: HExpr[F.MinHorizontal], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: HExpr[F.MinHorizontal], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def sum_horizontal(
-        self, node: HExpr[F.SumHorizontal], frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co: ...
+        self, node: HExpr[F.SumHorizontal], frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co: ...
 
     def __narwhals_namespace__(self) -> Self:
         return self
 
     def from_named_ir(
-        self, named_ir: ir.NamedIR, frame: FrameT, /
-    ) -> ExprT_co | ScalarT_co:
+        self, named_ir: ir.NamedIR, frame: ct.FrameT, /
+    ) -> ct.ExprT_co | ct.ScalarT_co:
         return named_ir.dispatch(self, frame)
 
     def from_ir(
-        self, node: ir.ExprIR, frame: FrameT, name: str, /
-    ) -> ExprT_co | ScalarT_co:
+        self, node: ir.ExprIR, frame: ct.FrameT, name: str, /
+    ) -> ct.ExprT_co | ct.ScalarT_co:
         return node.dispatch(self, frame, name)
 
-    def __narwhals_expr_prepare__(self) -> ExprT_co:
+    def __narwhals_expr_prepare__(self) -> ct.ExprT_co:
         return self._expr.__new__(self._expr)
 
     # NOTE: will reduce direct calls to `*Namespace._<compliant-type>`
@@ -103,8 +94,8 @@ class CompliantNamespace(
 
 
 class EagerNamespace(
-    CompliantNamespace[EagerDataFrameT, EagerExprT_co, EagerScalarT_co],
-    Protocol[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co],
+    CompliantNamespace[ct.EagerDataFrameT, ct.EagerExprT_co, ct.EagerScalarT_co],
+    Protocol[ct.EagerDataFrameT, ct.SeriesT_co, ct.EagerExprT_co, ct.EagerScalarT_co],
 ):
     """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co]`.
 
@@ -118,13 +109,18 @@ class EagerNamespace(
     __slots__ = ()
 
     @property
-    def _dataframe(self) -> type[EagerDataFrameT]: ...
+    def _dataframe(self) -> type[ct.EagerDataFrameT]: ...
     @property
-    def _frame(self) -> type[EagerDataFrameT]:  # pragma: no cover
+    def _frame(self) -> type[ct.EagerDataFrameT]:  # pragma: no cover
         return self._dataframe
 
     @property
-    def _series(self) -> type[SeriesT_co]: ...
+    def _series(self) -> type[ct.SeriesT_co]: ...
     def lit_series(
-        self, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str, /
-    ) -> EagerExprT_co: ...
+        self, node: ir.LitSeries[Any], frame: ct.EagerDataFrameT, name: str, /
+    ) -> ct.EagerExprT_co: ...
+
+
+def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.NamespaceT_co:
+    """Get the compliant namespace from `obj`."""
+    return obj.__narwhals_namespace__()

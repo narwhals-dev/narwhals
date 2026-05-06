@@ -9,11 +9,6 @@ if TYPE_CHECKING:
     from narwhals.typing import Backend, IntoBackend
 
 
-def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.NamespaceT_co:
-    """Get the compliant namespace from `obj`."""
-    return obj.__narwhals_namespace__()
-
-
 # TODO @dangotbanned: (after everything else) Review how functions from namespace should work
 def namespace_from_backend(backend: IntoBackend[Backend] | Any) -> ct.NamespaceAny:
     """Instantiate a compliant namespace from `backend`, routing through `Implementation`."""

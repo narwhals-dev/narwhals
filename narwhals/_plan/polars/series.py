@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Generic, overload
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 import polars as pl
 
-from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
+from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
-from narwhals._plan.compliant.series import CompliantSeries
-from narwhals._plan.compliant.typing import SeriesT
+from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.namespace import (
     PolarsNamespace as Namespace,
@@ -23,7 +23,7 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 if TYPE_CHECKING:
     import datetime as dt
     import decimal
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     from typing_extensions import Self, TypeAlias
 
@@ -55,14 +55,18 @@ def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
     return {_MIN_SAMPLES: min_samples, **kwds}
 
 
+_Inner: TypeAlias = Callable[[Any], ct.SeriesT]
+_Method: TypeAlias = Callable[[ct.SeriesT], _Inner[ct.SeriesT]]
+
+
 # TODO @dangotbanned: Remove the `getattr` indirection and just bind the normal way
 # Needing an inner function to get the original idea working loses the benefit of skipping
 # the creation of a new function
-def _make_bin_op(name: str, /) -> Callable[[SeriesT], Callable[[Any], SeriesT]]:
+def _make_bin_op(name: str, /) -> _Method[ct.SeriesT]:
     method_native = getattr(pl.Series, name)
 
-    def f(self: SeriesT, /) -> Callable[[Any], SeriesT]:
-        def inner(other: Any, /) -> SeriesT:
+    def f(self: ct.SeriesT, /) -> _Inner[ct.SeriesT]:
+        def inner(other: Any, /) -> ct.SeriesT:
             other = other.native if isinstance(other, type(self)) else other
             result = method_native(self.native, other)
             return self.from_native(result)
@@ -72,7 +76,7 @@ def _make_bin_op(name: str, /) -> Callable[[SeriesT], Callable[[Any], SeriesT]]:
     return f
 
 
-class bin_op(Generic[SeriesT]):  # noqa: N801
+class bin_op(Generic[ct.SeriesT]):  # noqa: N801
     """Descriptor adding a lazy proxy for binary Series operations.
 
     Note:
@@ -83,13 +87,13 @@ class bin_op(Generic[SeriesT]):  # noqa: N801
     __slots__ = ("__name__", "_method_native", "_name_owner")
 
     def __init__(self) -> None:
-        self._method_native: Callable[[SeriesT], Callable[[Any], SeriesT]] | None = None
+        self._method_native: _Method[ct.SeriesT] | None = None
         """Generated *iff* the method was ever used.
 
         After the first call, the same wrapper function is reused for all instances.
         """
 
-    def __set_name__(self, owner: type[SeriesT], name: str) -> None:
+    def __set_name__(self, owner: type[ct.SeriesT], name: str) -> None:
         self._name_owner: str = owner.__name__
         self.__name__: str = name
 
@@ -97,19 +101,19 @@ class bin_op(Generic[SeriesT]):  # noqa: N801
         return f"bin_op<{self._name_owner}.{self.__name__}>"
 
     @overload
-    def __get__(self, instance: SeriesT, owner: Any, /) -> Callable[[Any], SeriesT]: ...
+    def __get__(self, instance: ct.SeriesT, owner: Any, /) -> _Inner[ct.SeriesT]: ...
     @overload
-    def __get__(self, instance: None, owner: type[SeriesT], /) -> Self: ...
+    def __get__(self, instance: None, owner: type[ct.SeriesT], /) -> Self: ...
     def __get__(
-        self, instance: SeriesT | None, owner: type[SeriesT] | None, /
-    ) -> Self | Callable[[Any], SeriesT]:
+        self, instance: ct.SeriesT | None, owner: type[ct.SeriesT] | None, /
+    ) -> Self | _Inner[ct.SeriesT]:
         if instance is None:
             return self
         if self._method_native is None:
             self._method_native = _make_bin_op(self.__name__)
         return self._method_native(instance)
 
-    def __call__(self, instance: SeriesT, other: Any, /) -> SeriesT:
+    def __call__(self, instance: ct.SeriesT, other: Any, /) -> ct.SeriesT:
         raise NotImplementedError
 
 

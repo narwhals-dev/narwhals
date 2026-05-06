@@ -15,7 +15,6 @@ from narwhals._plan._guards import (
     is_python_literal,
     is_seq_column,
 )
-from narwhals._plan._namespace import namespace
 from narwhals._plan.arrow import functions as fn, group_by
 from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
 from narwhals._plan.arrow.series import ArrowSeries as Series
@@ -34,6 +33,7 @@ from narwhals._plan.compliant.accessors import (
     ExprStructNamespace,
 )
 from narwhals._plan.compliant.expr import EagerExpr
+from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F

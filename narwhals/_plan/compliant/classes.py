@@ -45,7 +45,7 @@ from narwhals._plan.compliant.typing import (
     EagerExprAny,
     EagerExprT_co as EagerE,
     EagerScalarAny,
-    EagerScalarNoDefaultT_co as EagerSC,
+    EagerScalarT_co as EagerSC,
     ExprAny,
     ExprT_co as E,
     LazyFrameAny,

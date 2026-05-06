@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import polars as pl
 
 import narwhals.exceptions
-from narwhals._plan._namespace import namespace
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
-from narwhals._plan.compliant.dataframe import CompliantDataFrame
+from narwhals._plan.compliant import CompliantDataFrame
+from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import (
