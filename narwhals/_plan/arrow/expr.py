@@ -440,6 +440,10 @@ class ArrowExpr(
         return cls.from_series(Series.from_native(native, name))
 
     @classmethod
+    def col(cls, node: ir.Column, frame: Frame, name: str, /) -> Self:
+        return cls.from_native(frame.native.column(node.name), name)
+
+    @classmethod
     def lit_series(
         cls, node: ir.LitSeries[ChunkedArrayAny], _: Frame, name: str, /
     ) -> Self:

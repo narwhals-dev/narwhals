@@ -65,6 +65,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
 
     @classmethod
+    def col(cls, node: ir.Column, _: Incomplete, name: str, /) -> Self:
+        return cls.from_native(pl.col(node.name), name)
+
+    @classmethod
     def lit(cls, node: ir.Lit[PythonLiteral], _: Incomplete, name: str, /) -> Self:
         return cls.from_python(node.value, name, dtype=node.dtype)
 

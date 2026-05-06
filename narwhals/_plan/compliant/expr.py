@@ -52,9 +52,9 @@ Incomplete: TypeAlias = Any
 # TODO @dangotbanned: Add a common base for `CompliantExpr`, `CompliantScalar`
 # - Will resolve some incompatible overrides
 # - And allow constructors to replace namespace expr methods
-# TODO @dangotbanned: Namespace methods -> constructors
-# - [ ] `CompliantExpr`
-#   - [ ] `col`
+# NOTE: Namespace methods -> constructors
+# - [x] `CompliantExpr`
+#   - [x] `col`
 # - [x] `CompliantScalar` (preferred, but is optional so `CompliantExpr` needs it too)
 #   - [x] `lit`
 #   - [x] `len_star`
@@ -78,7 +78,8 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
 
     @property
     def native(self) -> NativeExpr_co: ...
-
+    @classmethod
+    def col(cls, node: ir.Column, frame: FrameT, name: str, /) -> Self: ...
     # TODO @dangotbanned: Review return once `CompliantScalar` no longer inherits from `CompliantExpr`
     @classmethod
     def len_star(

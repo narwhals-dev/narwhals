@@ -40,7 +40,6 @@ __all__ = (
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
 same_dtype = ResolveDType.expr_ir.same_dtype
-namespaced = DispatcherOptions.namespaced
 
 
 def col(name: str, /) -> Column:
@@ -98,7 +97,7 @@ class Alias(ExprIR, dispatch="no_dispatch"):
         return self.expr.is_length_preserving()
 
 
-class Col(ExprIR, dispatch=namespaced()):
+class Col(ExprIR, dispatch=DispatcherOptions.constructor("expr")):
     """An expression that selects exactly one column.
 
     Arguments:

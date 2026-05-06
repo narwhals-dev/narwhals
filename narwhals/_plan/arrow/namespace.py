@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import TypeAlias
 
-    from narwhals._plan import expressions as ir
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.lazyframe import ArrowLazyFrame as LazyFrame
@@ -82,9 +81,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
 
         return ArrowLazyFrame
-
-    def col(self, node: ir.Column, frame: Frame, name: str) -> Expr:
-        return self._expr.from_native(frame.native.column(node.name), name)
 
     @overload
     def _horizontal(

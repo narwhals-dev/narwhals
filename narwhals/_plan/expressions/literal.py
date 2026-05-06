@@ -34,7 +34,6 @@ __all__ = ("Lit", "LitSeries", "lit", "lit_series")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
-namespaced = DispatcherOptions.namespaced
 
 
 # TODO @dangotbanned: (low-prio) Define `__str__` to use (`value`, `dtype`)-order instead

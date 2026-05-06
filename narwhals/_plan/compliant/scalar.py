@@ -161,14 +161,17 @@ class CompliantScalar(
     sum = _always_noop  # type: ignore[misc]
     mode = _always_noop  # type: ignore[misc]
     unique = _always_noop  # type: ignore[misc]
-    mode_all = not_implemented()  # type: ignore[misc]
     mode_any = _always_noop  # type: ignore[misc]
     kurtosis = _always_nan  # type: ignore[misc]
     skew = _always_nan  # type: ignore[misc]
+    len = _always_one  # type: ignore[misc]
+
+    # TODO @dangotbanned: Remove once `CompliantScalar` no longer inherits from `CompliantExpr`
+    mode_all = not_implemented()  # type: ignore[misc]
     fill_null_with_strategy = not_implemented()  # type: ignore[misc]
     hist_bins = not_implemented()  # type: ignore[misc]
     hist_bin_count = not_implemented()  # type: ignore[misc]
-    len = _always_one  # type: ignore[misc]
+    col = not_implemented()  # type: ignore[misc]
 
 
 # TODO @dangotbanned: (After fixing expr) avoid `EagerDataFrameT`

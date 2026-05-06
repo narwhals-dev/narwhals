@@ -119,9 +119,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
         schema = pl.read_parquet_schema(source, **kwds)
         return into_version(self.version).schema.from_polars(schema)
 
-    def col(self, node: ir.Column, frame: Incomplete, name: str) -> Expr:
-        return self._expr.from_native(pl.col(node.name), name)
-
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
     ) -> Expr:
