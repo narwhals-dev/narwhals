@@ -22,7 +22,7 @@ import sys
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from typing import Callable
+    from collections.abc import Callable
 
     if sys.version_info >= (3, 13):
         from typing import TypeVar

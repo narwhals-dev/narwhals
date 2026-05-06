@@ -6,20 +6,14 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 from duckdb import Expression
 
-from narwhals._utils import (
-    Implementation,
-    Version,
-    extend_bool,
-    isinstance_or_issubclass,
-    zip_strict,
-)
+from narwhals._utils import Implementation, Version, extend_bool, isinstance_or_issubclass
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import TypeAlias
 
     from duckdb import DuckDBPyRelation
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -112,7 +106,7 @@ def evaluate_exprs_and_aliases(
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.extend(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list, strict=False))
     return native_results
 
 
@@ -349,7 +343,9 @@ def generate_order_by_sql(
         return ""
     by_sql = ",".join(
         f"{parse_into_expression(x)} {DESCENDING_TO_ORDER[_descending]} {NULLS_LAST_TO_NULLS_POS[_nulls_last]}"
-        for x, _descending, _nulls_last in zip_strict(order_by, descending, nulls_last)
+        for x, _descending, _nulls_last in zip(
+            order_by, descending, nulls_last, strict=True
+        )
     )
     return f"order by {by_sql}"
 

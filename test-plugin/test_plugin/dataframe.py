@@ -11,7 +11,9 @@ from narwhals._utils import (
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import Self
 
     from narwhals import LazyFrame  # noqa: F401
 

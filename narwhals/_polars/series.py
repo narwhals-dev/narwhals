@@ -26,11 +26,11 @@ from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from types import ModuleType
-    from typing import Literal, TypeVar
+    from typing import Literal, TypeAlias, TypeVar
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace

@@ -36,8 +36,9 @@ from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
     from types import ModuleType
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._translate import IntoArrowTable

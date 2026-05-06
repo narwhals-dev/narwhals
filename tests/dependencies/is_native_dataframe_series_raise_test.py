@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -24,6 +24,9 @@ from narwhals.dependencies import (
     is_pyarrow_chunked_array,
     is_pyarrow_table,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @pytest.mark.parametrize(

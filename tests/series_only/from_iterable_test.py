@@ -20,8 +20,7 @@ if TYPE_CHECKING:
         Sequence,
         ValuesView,
     )
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._typing import EagerAllowed
     from narwhals.typing import IntoDType

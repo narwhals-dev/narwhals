@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
 
@@ -12,7 +12,9 @@ from narwhals._namespace import Namespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, TypeAlias, assert_type  # noqa: F401
+    from typing import TypeAlias
+
+    from typing_extensions import Never, assert_type  # noqa: F401
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._compliant import CompliantNamespace
@@ -189,7 +191,9 @@ def test_namespace_is_native() -> None:
     native_2 = pl.DataFrame({"a": unrelated})
 
     maybe_native: list[pl.Series | list[int]] = [native_1, unrelated]
-    always_native = list["pl.DataFrame | pl.Series"]((native_2, native_1))  # pyrefly: ignore[not-a-type] https://github.com/facebook/pyrefly/issues/3193
+    always_native = list["pl.DataFrame | pl.Series"](  # pyrefly: ignore[not-a-type] https://github.com/facebook/pyrefly/issues/3193
+        (native_2, native_1)
+    )
     never_native = [unrelated, 50]
 
     expected_maybe = [True, False]
