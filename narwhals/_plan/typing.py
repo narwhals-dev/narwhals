@@ -131,6 +131,7 @@ Accessor: TypeAlias = t.Literal[
     "arr", "cat", "dt", "list", "meta", "name", "str", "bin", "struct"
 ]
 """Namespace accessor property name."""
+RootConstructor: TypeAlias = t.Literal["expr", "scalar"]
 
 DTypeT = TypeVar("DTypeT", bound="dtypes.DType")
 NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound="NonNestedDType")

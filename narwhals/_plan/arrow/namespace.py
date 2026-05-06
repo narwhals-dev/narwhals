@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.arrow.typing import (
         BinaryFunction,
-        ChunkedArrayAny,
         ChunkedOrScalarAny,
         IOSource,
         VariadicFunction,
@@ -89,11 +88,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
 
     def lit(self, node: ir.Lit[PythonLiteral], frame: Frame, name: str) -> Scalar:
         return self._scalar.from_python(node.value, name, dtype=node.dtype)
-
-    def lit_series(
-        self, node: ir.LitSeries[ChunkedArrayAny], frame: Frame, name: str
-    ) -> Expr:
-        return self._expr.from_native(node.native, name or node.name)
 
     def len_star(self, node: ir.Len, frame: Frame, name: str) -> Scalar:
         return self._scalar.from_python(len(frame), name or node.name, dtype=None)

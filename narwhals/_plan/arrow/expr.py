@@ -429,10 +429,19 @@ class ArrowExpr(
         obj._evaluated = series
         return obj
 
+    # TODO @dangotbanned: Fix direct `ArrowSeries`
+    # (`ArrowClasses` needs to be available to `cls`)
     @classmethod
     def from_native(cls, native: ChunkedArrayAny, name: str = "", /) -> Self:
         return cls.from_series(Series.from_native(native, name))
 
+    @classmethod
+    def lit_series(
+        cls, node: ir.LitSeries[ChunkedArrayAny], _: Frame, name: str, /
+    ) -> Self:
+        return cls.from_native(node.native, name or node.name)
+
+    # TODO @dangotbanned: Fix direct `ArrowScalar`
     @overload
     def _with_native(self, result: ChunkedArrayAny, name: str, /) -> Self: ...
     @overload
@@ -644,8 +653,10 @@ class ArrowExpr(
         final_result = mask(index.native, aggregated.get_column(idx_name).native)
         return self.from_series(index._with_native(final_result))
 
+    # TODO @dangotbanned: Fix direct `ArrowSeries`, `ArrowScalar`
     # NOTE: Can't implement in `EagerExpr` (like on `main`)
     # The version here is missing `__narwhals_namespace__`
+    #   I think that's not true any more?
     def map_batches(
         self, node: ir.AnonymousExpr, frame: Frame, name: str, /
     ) -> Self | Scalar:
@@ -815,6 +826,9 @@ class ArrowScalar(
     def __narwhals_namespace__(self) -> Namespace:
         return Namespace()
 
+    # TODO @dangotbanned: Remove once `EagerScalar` no longer inherits from `EagerExpr`
+    lit_series = not_implemented()
+
     @classmethod
     def from_native(cls, scalar: NativeScalar, name: str = "literal", /) -> Self:
         obj = cls.__new__(cls)
@@ -873,6 +887,7 @@ class ArrowScalar(
         result: PythonLiteral = self.native.as_py()
         return result
 
+    # TODO @dangotbanned: Fix direct `ArrowSeries`
     def broadcast(self, length: int) -> Series:
         scalar = self.native
         if length == 1:
@@ -889,6 +904,7 @@ class ArrowScalar(
     def null_count(self, f: F.NullCount, previous: NativeScalar) -> NativeScalar:
         return pa.scalar(0 if previous.is_valid else 1)
 
+    # TODO @dangotbanned: Fix direct `ArrowExpr`
     def drop_nulls(  # type: ignore[override]
         self, node: FExpr[F.DropNulls], frame: Frame, name: str
     ) -> Scalar | Expr:

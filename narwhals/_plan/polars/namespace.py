@@ -128,11 +128,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
     def lit(self, node: ir.Lit[PythonLiteral], frame: Incomplete, name: str) -> Expr:
         return self._expr.from_python(node.value, name, dtype=node.dtype)
 
-    def lit_series(
-        self, node: ir.LitSeries[pl.Series], frame: Incomplete, name: str
-    ) -> Expr:
-        return self._expr.from_native(pl.lit(node.native), name)
-
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
     ) -> Expr:

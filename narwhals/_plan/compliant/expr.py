@@ -60,8 +60,8 @@ Incomplete: TypeAlias = Any
 # - [ ] `CompliantScalar` (preferred, but is optional so `CompliantExpr` needs it too)
 #   - [ ] `lit`
 #   - [ ] `len_star`
-# - [ ] `EagerExpr`
-#   - [ ] `lit_series`
+# - [x] `EagerExpr`
+#   - [x] `lit_series`
 # - [ ] Variadic (they can technically be either)
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr` and `Scalar` literal values.
@@ -261,8 +261,6 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
         """Return a partially initialized instance of this class.
 
         The only external (narwhals-level) requirement is that we have an instance to call methods on.
-
-        If there are any other bits of state you need in an implementation, add them here.
         """
         tp = type(self)
         return tp.__new__(tp)
@@ -307,6 +305,12 @@ class EagerExpr(
     """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
 
     __slots__ = ()
+
+    # TODO @dangotbanned: Change return to `Self` once `EagerScalar` no longer inherits from `EagerExpr`
+    @classmethod
+    def lit_series(
+        cls, node: ir.LitSeries[Any], frame: EagerDataFrameT, name: str, /
+    ) -> EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]: ...
 
     def __bool__(self) -> Literal[True]:
         # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch

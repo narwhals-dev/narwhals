@@ -64,6 +64,12 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def from_named_ir(cls, named_ir: ir.NamedIR, frame: Incomplete) -> PolarsExpr:
         return cls.from_ir(named_ir.expr, frame, named_ir.name)
 
+    @classmethod
+    def lit_series(
+        cls, node: ir.LitSeries[pl.Series], _: Incomplete, name: str, /
+    ) -> Self:
+        return cls.from_native(pl.lit(node.native), name)
+
     abs = todo()
     all = todo()
     any = todo()

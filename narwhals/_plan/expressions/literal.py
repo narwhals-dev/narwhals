@@ -106,7 +106,10 @@ class Lit(LiteralExpr[PythonLiteralT_co], dispatch=namespaced()):
 
 
 @final
-class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=namespaced()):
+class LitSeries(
+    LiteralExpr["Series[NativeSeriesT_co]"],
+    dispatch=DispatcherOptions.constructor("expr"),
+):
     """An expression representing a series literal.
 
     >>> import narwhals._plan as nw

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol
+from typing import TYPE_CHECKING, ClassVar, Protocol
 
 from narwhals._plan.compliant import io, ranges, typing as ct
 from narwhals._utils import not_implemented
@@ -115,9 +115,6 @@ class EagerNamespace(
 
     @property
     def _series(self) -> type[ct.SeriesT_co]: ...
-    def lit_series(
-        self, node: ir.LitSeries[Any], frame: ct.EagerDataFrameT, name: str, /
-    ) -> ct.EagerExprT_co: ...
 
 
 def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.NamespaceT_co:

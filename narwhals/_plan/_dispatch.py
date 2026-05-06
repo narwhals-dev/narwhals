@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
-    from narwhals._plan.typing import Accessor, ExprIRT, FunctionT
+    from narwhals._plan.typing import Accessor, ExprIRT, FunctionT, RootConstructor
 
 
 __all__ = ("Dispatcher", "DispatcherOptions", "get_dispatch_name")
@@ -184,8 +184,13 @@ class Dispatcher(Generic[Node]):
         name = options.override_name or _pascal_to_snake_case(tp.__name__)
         if ns := options.accessor_name:
             name = f"{ns}.{name}"
-        m_caller = _CALL_NAMESPACE if options.is_namespaced else _CALL_EXPR_PREPARE
-        bind = _binder(m_caller, _ATTR_GETTER(name))
+        if constructor := options.constructor_name:
+            get_type = _GET_EXPR if constructor == "expr" else _GET_SCALAR
+            get_class_method = _ATTR_GETTER(name)
+            bind = _temp_constructor(get_type, get_class_method)
+        else:
+            m_caller = _CALL_NAMESPACE if options.is_namespaced else _CALL_EXPR_PREPARE
+            bind = _binder(m_caller, _ATTR_GETTER(name))
         return Dispatcher(name, bind, options)
 
     def __get__(self, instance: Any, owner: Any) -> Self:
@@ -255,6 +260,29 @@ def _binder(
     return bind
 
 
+_GET_EXPR: Final = _attrgetter("_expr")
+_GET_SCALAR: Final = _attrgetter("_scalar")
+
+
+# TODO @dangotbanned: Adding typing for this is gonna be interesting
+def _temp_constructor(
+    get_type: Callable[[Incomplete], Incomplete],
+    get_class_method: Callable[[Incomplete], Incomplete],
+    /,
+) -> ct.Binder[Incomplete]:
+    """Need to chain these (temporarily) while `__narwhals_classes__` isn't integrated."""
+
+    def bind(
+        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co], /
+    ) -> ct.BoundMethod[Any, ct.Frame, ct.ET_co | ct.ST_co]:
+        ns = _CALL_NAMESPACE(ctx)
+        constructor_class = get_type(ns)
+        bound_classmethod = get_class_method(constructor_class)
+        return bound_classmethod  # type: ignore[no-any-return]  # noqa: RET504
+
+    return bind
+
+
 @final
 class DispatcherOptions:
     """Class-level configuration for how a `Dispatcher` should be built.
@@ -305,7 +333,13 @@ class DispatcherOptions:
     [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
-    __slots__ = ("accessor_name", "allow_dispatch", "is_namespaced", "override_name")
+    __slots__ = (
+        "accessor_name",
+        "allow_dispatch",
+        "constructor_name",
+        "is_namespaced",
+        "override_name",
+    )
     accessor_name: Accessor | None
     """Name of an (optional) expression namespace accessor.
 
@@ -328,6 +362,8 @@ class DispatcherOptions:
     Make sure to expand all expressions first, got:
     ncs.by_name('a', 'b', 'c')
     """
+
+    constructor_name: RootConstructor | None
 
     is_namespaced: bool
     """True if expression dispatch routes through `__narwhals_namespace__`.
@@ -374,11 +410,13 @@ class DispatcherOptions:
         *,
         accessor_name: Accessor | None = None,
         allow_dispatch: bool = True,
+        constructor_name: RootConstructor | None = None,
         is_namespaced: bool = False,
         override_name: str = "",
     ) -> None:
         self.accessor_name = accessor_name
         self.allow_dispatch = allow_dispatch
+        self.constructor_name = constructor_name
         self.is_namespaced = is_namespaced
         self.override_name = override_name
 
@@ -389,6 +427,11 @@ class DispatcherOptions:
         Syntax sugar for `DispatcherOptions(is_namespaced=True, override_name=override_name)`.
         """
         return DispatcherOptions(is_namespaced=True, override_name=override_name)
+
+    # TODO @dangotbanned: Port more of `__narwhals_namespace__` stuff here
+    @staticmethod
+    def constructor(name: RootConstructor, /) -> DispatcherOptions:
+        return DispatcherOptions(constructor_name=name)
 
     @staticmethod
     def renamed(override_name: str, /) -> DispatcherOptions:
@@ -404,6 +447,8 @@ class DispatcherOptions:
             parts.append(f"accessor_name={accessor!r}")
         if not self.allow_dispatch:
             parts.append(f"allow_dispatch={self.allow_dispatch}")
+        if constructor := self.constructor_name:
+            parts.append(f"constructor_name={constructor!r}")
         if namespaced := self.is_namespaced:
             parts.append(f"is_namespaced={namespaced}")
         if override := self.override_name:
