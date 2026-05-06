@@ -145,20 +145,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     ) -> Expr | Scalar:
         return self._horizontal(fn.max_horizontal, variadic=True)(node, frame, name)
 
-    def mean_horizontal(
-        self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        int64 = pa.int64()
-        inputs = [self.from_ir(e, frame, name).native for e in node.input]
-        filled = (fn.fill_null(native, 0) for native in inputs)
-        # NOTE: `mypy` doesn't like that `add` is overloaded
-        sum_not_null = reduce(
-            fn.add,  # type: ignore[arg-type]
-            (fn.cast(fn.is_not_null(native), int64) for native in inputs),
-        )
-        result = fn.truediv(reduce(fn.add, filled), sum_not_null)
-        return self._into_expr(result, name)
-
     def _into_expr(self, native: ChunkedOrScalarAny, name: str) -> Expr | Scalar:
         if isinstance(native, pa.Scalar):
             return self._scalar.from_native(native, name)

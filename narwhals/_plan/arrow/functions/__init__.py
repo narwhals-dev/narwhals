@@ -101,6 +101,8 @@ from narwhals._plan.arrow.functions._horizontal import (
     coalesce,
     max_horizontal,
     min_horizontal,
+    reduce,
+    sum_horizontal,
 )
 from narwhals._plan.arrow.functions._lists import ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
@@ -236,6 +238,7 @@ __all__ = (
     "quantile",
     "random_indices",
     "rank",
+    "reduce",
     "repeat",
     "repeat_like",
     "repeat_unchecked",
@@ -255,6 +258,7 @@ __all__ = (
     "struct",
     "sub",
     "sum",
+    "sum_horizontal",
     "to_table",
     "truediv",
     "unsort_indices",

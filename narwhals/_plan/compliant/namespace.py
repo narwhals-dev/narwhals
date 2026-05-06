@@ -52,9 +52,6 @@ class CompliantNamespace(
     def max_horizontal(
         self, node: HExpr[F.MaxHorizontal], frame: ct.FrameT, name: str, /
     ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def mean_horizontal(
-        self, node: HExpr[F.MeanHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
     def min_horizontal(
         self, node: HExpr[F.MinHorizontal], frame: ct.FrameT, name: str, /
     ) -> ct.ExprT_co | ct.ScalarT_co: ...

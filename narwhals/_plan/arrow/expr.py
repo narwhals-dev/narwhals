@@ -368,6 +368,16 @@ class _ArrowDispatch(
         )
         return self._with_native(result, name)
 
+    def mean_horizontal(
+        self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str
+    ) -> Self:
+        inputs = tuple(e.dispatch(self, frame, name).native for e in node.input)
+        sum_all = fn.sum_horizontal(inputs)
+        sum_not_null = fn.reduce(
+            fn.add, (fn.cast(fn.is_not_null(native), fn.I64) for native in inputs)
+        )
+        return self._with_native(fn.truediv(sum_all, sum_not_null), name)
+
     @unary.partial
     def log(self, f: F.Log, previous: ChunkedOrScalarT) -> ChunkedOrScalarT:
         return fn.log(previous, f.base)

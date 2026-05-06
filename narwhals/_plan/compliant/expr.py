@@ -73,7 +73,7 @@ Incomplete: TypeAlias = Any
 #   - [x] `concat_str`
 #   - [ ] `coalesce`
 #   - [ ] `max_horizontal`
-#   - [ ] `mean_horizontal`
+#   - [x] `mean_horizontal`
 #   - [ ] `min_horizontal`
 #   - [ ] `sum_horizontal`
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
@@ -279,6 +279,9 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     # (Expr, Expr | Scalar, ...) -> Expr
     def concat_str(
         self, node: HExpr[strings.ConcatStr], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def mean_horizontal(
+        self, node: HExpr[F.MeanHorizontal], frame: FrameT, name: str, /
     ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
 
     def __narwhals_namespace__(

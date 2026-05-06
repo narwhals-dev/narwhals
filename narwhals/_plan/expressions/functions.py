@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import (
@@ -96,7 +97,7 @@ class MinHorizontal(HorizontalFunction): ...
 class MaxHorizontal(HorizontalFunction): ...
 class Coalesce(HorizontalFunction): ...
 # fmt: on
-class MeanHorizontal(HorizontalFunction):
+class MeanHorizontal(HorizontalFunction, dispatch=DispatcherOptions()):
     # TODO @dangotbanned: `map_to_supertype`
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /

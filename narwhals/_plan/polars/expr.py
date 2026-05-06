@@ -139,6 +139,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     log = todo()
     max = todo()
     mean = todo()
+    mean_horizontal = todo()
     median = todo()
     min = todo()
     mode_all = todo()
