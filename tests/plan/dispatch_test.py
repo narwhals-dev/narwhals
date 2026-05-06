@@ -112,7 +112,8 @@ def test_missing_compliant(
     ("expr", "expected"),
     [
         (nwp.col("a"), "col"),
-        (nwp.len(), "len"),
+        (nwp.len(), "len_star"),
+        (nwp.col("a").len(), "len"),
         (nwp.col("a").min().over("b"), "over"),
         (nwp.col("a").first().over(order_by="b"), "over_ordered"),
         (nwp.all_horizontal("a", "b", nwp.nth(4, 5, 6)), "all_horizontal"),

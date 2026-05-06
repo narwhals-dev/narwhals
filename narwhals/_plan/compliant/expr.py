@@ -48,8 +48,23 @@ Incomplete: TypeAlias = Any
 
 
 # TODO @dangotbanned: Avoid `FrameT`?
+# TODO @dangotbanned: Add a common base for `CompliantExpr`, `CompliantScalar`
+# - Will resolve some incompatible overrides
+# - And allow constructors to replace namespace expr methods
+# TODO @dangotbanned: Namespace methods -> constructors
+# - [ ] `CompliantExpr`
+#   - [ ] `col`
+#   - [ ] `date_range`
+#   - [ ] `int_range`
+#   - [ ] `linear_space`
+# - [ ] `CompliantScalar` (preferred, but is optional so `CompliantExpr` needs it too)
+#   - [ ] `lit`
+#   - [ ] `len_star`
+# - [ ] `EagerExpr`
+#   - [ ] `lit_series`
+# - [ ] Variadic (they can technically be either)
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
-    """Everything common to `Expr`/`Series` and `Scalar` literal values.
+    """Everything common to `Expr` and `Scalar` literal values.
 
     `[FrameT, NativeExpr_co, NativeScalar_co]`.
     """
@@ -294,7 +309,7 @@ class EagerExpr(
     __slots__ = ()
 
     def __bool__(self) -> Literal[True]:
-        # NOTE: Avoids falling back to `__len__` (via `EagerBroadcast`) when truth-testing on dispatch
+        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
         return True
 
     def gather_every(

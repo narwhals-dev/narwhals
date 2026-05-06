@@ -47,7 +47,12 @@ def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class Len(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
+class Len(ExprIR, dispatch=namespaced("len_star"), dtype=dtm.IDX_DTYPE):
+    """Return the number of rows in the context.
+
+    This is similar to `COUNT(*)` in SQL.
+    """
+
     def is_scalar(self) -> bool:
         return True
 
