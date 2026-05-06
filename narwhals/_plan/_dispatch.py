@@ -186,8 +186,9 @@ class Dispatcher(Generic[Node]):
             name = f"{ns}.{name}"
         if constructor := options.constructor_name:
             get_type = _GET_EXPR if constructor == "expr" else _GET_SCALAR
-            get_class_method = _ATTR_GETTER(name)
-            bind = _temp_constructor(get_type, get_class_method)
+            bind = _constructor_binder(
+                _CALL_NAMESPACE, get_type, _CLASS_METHOD_GETTER(name)
+            )
         else:
             m_caller = _CALL_NAMESPACE if options.is_namespaced else _CALL_EXPR_PREPARE
             bind = _binder(m_caller, _ATTR_GETTER(name))
@@ -247,6 +248,7 @@ class Dispatcher(Generic[Node]):
 _CALL_NAMESPACE: Final[ct.CallNamespace] = _methodcaller("__narwhals_namespace__")
 _CALL_EXPR_PREPARE: Final[ct.CallExprPrepare] = _methodcaller("__narwhals_expr_prepare__")
 _ATTR_GETTER: Final[Callable[[str], ct.GetMethod]] = _attrgetter
+_CLASS_METHOD_GETTER: Final[Callable[[str], ct.GetClassMethod]] = _attrgetter
 
 
 def _binder(
@@ -260,25 +262,20 @@ def _binder(
     return bind
 
 
-_GET_EXPR: Final = _attrgetter("_expr")
-_GET_SCALAR: Final = _attrgetter("_scalar")
+# TODO @dangotbanned: Change from:
+# CURRENT: `methodcaller("__narwhals_namespace__"),  attrgetter("_expr"), attrgetter(<constructor>)`
+# WANT   : `deep_attrgetter("__narwhals_classes__", "expr", <constructor>)`
+_GET_EXPR: Final[ct.GetExpr] = _attrgetter("_expr")
+_GET_SCALAR: Final[ct.GetScalar] = _attrgetter("_scalar")
 
 
-# TODO @dangotbanned: Adding typing for this is gonna be interesting
-def _temp_constructor(
-    get_type: Callable[[Incomplete], Incomplete],
-    get_class_method: Callable[[Incomplete], Incomplete],
-    /,
+def _constructor_binder(
+    f1: ct.CallNamespace, f2: ct.GetExpr | ct.GetScalar, f3: ct.GetClassMethod, /
 ) -> ct.Binder[Incomplete]:
-    """Need to chain these (temporarily) while `__narwhals_classes__` isn't integrated."""
-
     def bind(
         ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co], /
     ) -> ct.BoundMethod[Any, ct.Frame, ct.ET_co | ct.ST_co]:
-        ns = _CALL_NAMESPACE(ctx)
-        constructor_class = get_type(ns)
-        bound_classmethod = get_class_method(constructor_class)
-        return bound_classmethod  # type: ignore[no-any-return]  # noqa: RET504
+        return f3(f2(f1(ctx)))
 
     return bind
 
@@ -432,7 +429,6 @@ class DispatcherOptions:
         def namespaced() -> DispatcherOptions:
             return DispatcherOptions(is_namespaced=True)
 
-    # TODO @dangotbanned: Port more of `__narwhals_namespace__` stuff here
     @staticmethod
     def constructor(name: RootConstructor, /) -> DispatcherOptions:
         """Mark an expression as providing a constructor for `name`."""

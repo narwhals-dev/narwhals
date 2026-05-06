@@ -253,6 +253,16 @@ class DispatchScope(Protocol[NamespaceT_co, ET_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
+class HasExpr(Protocol[ET_co]):
+    @property
+    def _expr(self) -> type[ET_co]: ...
+
+
+class HasScalar(Protocol[ST_co]):
+    @property
+    def _scalar(self) -> type[ST_co]: ...
+
+
 DispatchScopeAny: TypeAlias = (
     "DispatchScope[Namespace[Frame, ET_co, ST_co], ET_co | ST_co]"
 )
@@ -268,10 +278,24 @@ class CallExprPrepare(Protocol):
     def __call__(self, obj: DispatchScope[NamespaceT_co, ET_co], /) -> ET_co: ...
 
 
+class GetExpr(Protocol):
+    def __call__(self, obj: HasExpr[ET_co], /) -> type[ET_co]: ...
+
+
+class GetScalar(Protocol):
+    def __call__(self, obj: HasScalar[ST_co], /) -> type[ST_co]: ...
+
+
 class GetMethod(Protocol):
     def __call__(
         self, obj: ET_co | ST_co | Namespace[Frame, ET_co, ST_co], /
     ) -> BoundMethod[Any, Frame, ET_co | ST_co]: ...
+
+
+class GetClassMethod(Protocol):
+    def __call__(
+        self, tp: type[ET_co | ST_co], /
+    ) -> BoundMethod[Any, Any, ET_co | ST_co]: ...
 
 
 ExprIR_contra = TypeVar("ExprIR_contra", bound="ir.ExprIR", contravariant=True)
