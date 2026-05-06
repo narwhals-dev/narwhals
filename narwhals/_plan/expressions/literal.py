@@ -86,7 +86,7 @@ class Lit(
 
     # TODO @dangotbanned: Use quotes for `lit("string")`
     # TODO @dangotbanned: (Noisy repr change) `lit(int: 1)` -> `lit[int](1)`
-    # - Vaguely resembles C-style typing, but there's identifier (just a value)
+    # - Vaguely resembles C-style typing, but there's not an identifier (just a value)
     def __repr__(self) -> str:
         v: Any = self.value
         if v is None:
