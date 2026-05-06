@@ -3,6 +3,9 @@ name: Check Docs Build
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 env:
   PY_COLORS: 1
   UV_SYSTEM_PYTHON: 1
