@@ -3,10 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._plan import plugins
-from narwhals._plan._namespace import namespace_from_backend
-from narwhals._plan.compliant import io as _io
-from narwhals._plan.exceptions import unsupported_error
-from narwhals._utils import Version, normalize_path, unstable
+from narwhals._utils import Implementation, Version, normalize_path, unstable
 
 if TYPE_CHECKING:
     import polars as pl
@@ -78,18 +75,37 @@ def read_csv_schema(
     source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
 ) -> Schema:
     """Infer the schema of a Csv file."""
-    ns = namespace_from_backend(backend)
-    if _io.can_read_csv_schema(ns):
-        return ns.read_csv_schema(normalize_path(source), **kwds)
-    raise unsupported_error(backend, "read_csv_schema")  # pragma: no cover
+    return _read_schema(source, backend, kwds, "csv")
 
 
-def read_parquet_schema(source: FileSource, *, backend: IntoBackend[Backend]) -> Schema:
+def read_parquet_schema(
+    source: FileSource, *, backend: IntoBackend[Backend], **kwds: Any
+) -> Schema:
     """Get the schema of a Parquet file without reading data."""
-    ns = namespace_from_backend(backend)
-    if _io.can_read_parquet_schema(ns):
-        return ns.read_parquet_schema(normalize_path(source))
-    raise unsupported_error(backend, "read_parquet_schema")  # pragma: no cover
+    return _read_schema(source, backend, kwds, "parquet")
+
+
+# TODO @dangotbanned: Avoid `read_{csv,parquet}_schema` depending on `CompliantNamespace`
+def _read_schema(
+    source: FileSource,
+    backend: IntoBackend[Backend],
+    kwds: dict[str, Any],
+    extension: Literal["csv", "parquet"],
+) -> Schema:
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.POLARS:
+        from narwhals._plan import polars as _polars
+
+        ns = _polars.Namespace()
+    elif impl is Implementation.PYARROW:
+        from narwhals._plan import arrow as _arrow
+
+        ns = _arrow.Namespace()
+    else:
+        msg = f"Not yet supported in `narwhals._plan`, got: {impl!r}"
+        raise NotImplementedError(msg)
+    method = ns.read_parquet_schema if extension == "parquet" else ns.read_csv_schema
+    return method(normalize_path(source), **kwds)
 
 
 # TODO @dangotbanned: Coordinate overloads with `ScanFile.to_narwhals`?

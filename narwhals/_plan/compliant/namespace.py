@@ -17,8 +17,7 @@ if TYPE_CHECKING:
 
 # TODO @dangotbanned: Review what will replace following `*Classes`
 class CompliantNamespace(
-    io.ReadCsvSchema,
-    io.ReadParquetSchema,
+    io.ReadSchema,
     ranges.LazyRangeGenerator[ct.FrameT, ct.ExprT_co],
     Protocol[ct.FrameT, ct.ExprT_co, ct.ScalarT_co],
 ):

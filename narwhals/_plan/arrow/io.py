@@ -53,7 +53,7 @@ def read_csv_schema(source: FileSource, /, **kwds: Unpack[CSVReaderOptions]) -> 
     return ds.CsvFileFormat(**kwds).inspect(path, filesystem)
 
 
-def read_parquet_schema(source: IOSource, /) -> pa.Schema:
+def read_parquet_schema(source: IOSource, /, **kwds: Any) -> pa.Schema:
     """Get the schema of a Parquet file without reading data.
 
     This has a direct path to Cython, and a single call before C++.
@@ -62,7 +62,7 @@ def read_parquet_schema(source: IOSource, /) -> pa.Schema:
 
     reader = pq.ParquetReader()
     try:
-        reader.open(source)
+        reader.open(source, **kwds)
         schema = reader.schema_arrow
     finally:
         reader.close()

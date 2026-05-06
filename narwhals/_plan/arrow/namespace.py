@@ -233,5 +233,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     def read_csv_schema(self, source: FileSource, /, **kwds: Any) -> Schema:
         return into_version(self).schema.from_arrow(io.read_csv_schema(source, **kwds))
 
-    def read_parquet_schema(self, source: IOSource, /) -> Schema:
-        return into_version(self).schema.from_arrow(io.read_parquet_schema(source))
+    def read_parquet_schema(self, source: IOSource, /, **kwds: Any) -> Schema:
+        native = io.read_parquet_schema(source, **kwds)
+        return into_version(self).schema.from_arrow(native)

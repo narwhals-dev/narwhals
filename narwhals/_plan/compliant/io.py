@@ -1,25 +1,17 @@
-"""Minimal protocols for importing/exporting `*Frame`s from/to files and guards to test for them."""
+"""Minimal protocols for importing/exporting `*Frame`s from/to files."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._utils import _hasattr_static
-
 if TYPE_CHECKING:
     from io import BytesIO
 
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self
 
     from narwhals.schema import Schema
 
-__all__ = (
-    "LazyIO",
-    "LazyInput",
-    "LazyOutput",
-    "can_read_csv_schema",
-    "can_read_parquet_schema",
-)
+__all__ = ("LazyIO", "LazyInput", "LazyOutput", "ReadSchema")
 
 
 # fmt: off
@@ -37,15 +29,8 @@ class LazyOutput(Protocol):
 class LazyIO(LazyInput, LazyOutput, Protocol):
     """Supports all `scan_*`, `sink_*` methods."""
     __slots__ = ()
-class ReadCsvSchema(Protocol):
+class ReadSchema(Protocol):
     __slots__ = ()
     def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema: ...
-class ReadParquetSchema(Protocol):
-    __slots__ = ()
-    def read_parquet_schema(self, source: str, /) -> Schema: ...
-
-def can_read_csv_schema(obj: Any) -> TypeIs[ReadCsvSchema]:
-    return _hasattr_static(obj, "read_csv_schema")
-def can_read_parquet_schema(obj: Any) -> TypeIs[ReadParquetSchema]:
-    return _hasattr_static(obj, "read_parquet_schema")
+    def read_parquet_schema(self, source: str, /, **kwds: Any) -> Schema: ...
 # fmt: on
