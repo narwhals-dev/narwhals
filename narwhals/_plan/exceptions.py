@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections import Counter
 from itertools import groupby
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Literal
 
-from narwhals._utils import Implementation, qualified_type_name
+from narwhals._utils import qualified_type_name
 from narwhals.exceptions import (
     ColumnNotFoundError,
     ComputeError,
@@ -30,27 +30,11 @@ if TYPE_CHECKING:
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
     from narwhals.dtypes import DType
-    from narwhals.typing import Backend, IntoBackend, IntoDType, IntoSchema
+    from narwhals.typing import IntoDType, IntoSchema
 
 ExprFunction: TypeAlias = Literal["filter", "when", "sort_by"]
 SelectorValue: TypeAlias = Literal["index", "name"]
 
-Unsupported: TypeAlias = Literal[
-    "concat",
-    "date_range",
-    "int_range",
-    "linear_space",
-    "read_csv_schema",
-    "read_parquet_schema",
-    "scan_csv",
-    "scan_parquet",
-    "LazyFrame.collect",
-    "v1",
-    "v2",
-]
-"""A method/function/feature that is not supported for a backend."""
-
-OMIT_PARENS: Final = frozenset[Unsupported](("v1", "v2"))
 
 # NOTE: Using verbose names to start with
 # TODO @dangotbanned: Think about something better/more consistent once the new messages are finalized
@@ -342,17 +326,6 @@ def expand_multi_output_error(
         f"{format_expressions(*expanded)}"
     )
     return MultiOutputExpressionError(msg)
-
-
-def unsupported_error(
-    backend: IntoBackend[Backend] | Any, name: Unsupported, /
-) -> NotImplementedError:  # pragma: no cover
-    """Return an error for an unsupported operation in `backend`."""
-    if not isinstance(backend, str):
-        backend = Implementation.from_backend(backend).value
-    what = name if name in OMIT_PARENS else f"{name}()"
-    msg = f"`{what}` is not yet supported for {backend!r}"
-    return NotImplementedError(msg)
 
 
 def invalid_dtype_operation_error(
