@@ -136,7 +136,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
-    def starts_with(self, prefix: str) -> ExprT:
+    def starts_with(self, prefix: str | IntoExpr) -> ExprT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -158,10 +158,12 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────────────────┘
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "str.starts_with", prefix=prefix)
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.starts_with", exprs=(prefix,), str_as_lit=True
+            )
         )
 
-    def ends_with(self, suffix: str) -> ExprT:
+    def ends_with(self, suffix: str | IntoExpr) -> ExprT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -183,7 +185,9 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────────────────┘
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.ends_with", exprs=(suffix,), str_as_lit=True
+            )
         )
 
     def contains(self, pattern: str | IntoExpr, *, literal: bool = False) -> ExprT:

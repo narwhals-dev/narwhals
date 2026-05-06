@@ -477,6 +477,16 @@ class PolarsExprStringNamespace(
             self.native.str.contains(pattern_native, literal=literal)
         )
 
+    def starts_with(self, prefix: PolarsExpr) -> PolarsExpr:
+        return self.compliant._with_native(
+            self.native.str.starts_with(extract_native(prefix))
+        )
+
+    def ends_with(self, suffix: PolarsExpr) -> PolarsExpr:
+        return self.compliant._with_native(
+            self.native.str.ends_with(extract_native(suffix))
+        )
+
 
 class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
