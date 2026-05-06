@@ -416,6 +416,9 @@ class ArrowExpr(
     __slots__ = ("_evaluated",)
     _evaluated: Series
 
+    # TODO @dangotbanned: Remove once `EagerScalar` no longer inherits from `EagerExpr`
+    len_star = not_implemented()
+
     def __narwhals_namespace__(self) -> Namespace:
         return Namespace()
 
@@ -828,6 +831,10 @@ class ArrowScalar(
 
     # TODO @dangotbanned: Remove once `EagerScalar` no longer inherits from `EagerExpr`
     lit_series = not_implemented()
+
+    @classmethod
+    def len_star(cls, node: ir.Len, frame: Frame, name: str) -> Self:
+        return cls.from_python(len(frame), name or node.name, dtype=None)
 
     @classmethod
     def from_native(cls, scalar: NativeScalar, name: str = "literal", /) -> Self:

@@ -47,7 +47,9 @@ def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class LenStar(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
+class LenStar(
+    ExprIR, dispatch=DispatcherOptions.constructor("scalar"), dtype=dtm.IDX_DTYPE
+):
     """Return the number of rows in the context.
 
     This is similar to `COUNT(*)` in SQL.

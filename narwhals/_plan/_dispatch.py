@@ -431,6 +431,7 @@ class DispatcherOptions:
     # TODO @dangotbanned: Port more of `__narwhals_namespace__` stuff here
     @staticmethod
     def constructor(name: RootConstructor, /) -> DispatcherOptions:
+        """Mark an expression as providing a constructor for `name`."""
         return DispatcherOptions(constructor_name=name)
 
     @staticmethod

@@ -122,9 +122,6 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
     def col(self, node: ir.Column, frame: Incomplete, name: str) -> Expr:
         return self._expr.from_native(pl.col(node.name), name)
 
-    def len_star(self, node: ir.Len, frame: Incomplete, name: str) -> Expr:
-        return self._expr.from_native(pl.len(), name)
-
     def lit(self, node: ir.Lit[PythonLiteral], frame: Incomplete, name: str) -> Expr:
         return self._expr.from_python(node.value, name, dtype=node.dtype)
 

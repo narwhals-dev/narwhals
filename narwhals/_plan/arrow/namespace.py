@@ -89,9 +89,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
     def lit(self, node: ir.Lit[PythonLiteral], frame: Frame, name: str) -> Scalar:
         return self._scalar.from_python(node.value, name, dtype=node.dtype)
 
-    def len_star(self, node: ir.Len, frame: Frame, name: str) -> Scalar:
-        return self._scalar.from_python(len(frame), name or node.name, dtype=None)
-
     @overload
     def _horizontal(
         self, function: BinaryFunction, /, fill: NonNestedLiteral = None

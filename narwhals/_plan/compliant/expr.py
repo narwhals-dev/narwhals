@@ -59,7 +59,7 @@ Incomplete: TypeAlias = Any
 #   - [ ] `linear_space`
 # - [ ] `CompliantScalar` (preferred, but is optional so `CompliantExpr` needs it too)
 #   - [ ] `lit`
-#   - [ ] `len_star`
+#   - [x] `len_star`
 # - [x] `EagerExpr`
 #   - [x] `lit_series`
 # - [ ] Variadic (they can technically be either)
@@ -75,6 +75,12 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
 
     @property
     def native(self) -> NativeExpr_co: ...
+
+    # TODO @dangotbanned: Review return once `CompliantScalar` no longer inherits from `CompliantExpr`
+    @classmethod
+    def len_star(
+        cls, node: ir.Len, frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
 
     # NOTE: May need to change returning `Self` to `CompliantExpr[FrameT]`
     # Expr -> Expr

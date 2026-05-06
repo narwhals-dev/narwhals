@@ -70,6 +70,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         return cls.from_native(pl.lit(node.native), name)
 
+    @classmethod
+    def len_star(cls, _: ir.Len, __: Incomplete, name: str, /) -> Self:
+        return cls.from_native(pl.len(), name)
+
     abs = todo()
     all = todo()
     any = todo()
