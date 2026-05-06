@@ -80,7 +80,7 @@ class Function(Immutable):
 
     >>> print(f"Function(args) : {expr_ir.function}\nExprIR input(s): {expr_ir.input[0]}")
     Function(args) : Shift(n=2)
-    ExprIR input(s): Column(name='a')
+    ExprIR input(s): Col(name='a')
 
     Whereas **classes** encode most of the details, like...
 

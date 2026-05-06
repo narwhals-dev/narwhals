@@ -17,7 +17,7 @@ class KeepName(ExprIR, dispatch="no_dispatch"):
     """Keep the original root name of an expression.
 
     Arguments:
-        expr: An expression with at least one `Column`.
+        expr: An expression with at least one `Col`.
 
     Important:
         All expressions that change the output name are

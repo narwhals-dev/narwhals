@@ -47,7 +47,7 @@ def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class Len(ExprIR, dispatch=namespaced("len_star"), dtype=dtm.IDX_DTYPE):
+class LenStar(ExprIR, dispatch=namespaced(), dtype=dtm.IDX_DTYPE):
     """Return the number of rows in the context.
 
     This is similar to `COUNT(*)` in SQL.
@@ -64,11 +64,14 @@ class Len(ExprIR, dispatch=namespaced("len_star"), dtype=dtm.IDX_DTYPE):
         return "len()"
 
 
+Len = LenStar
+
+
 class Alias(ExprIR, dispatch="no_dispatch"):
     """Rename an expression.
 
     Arguments:
-        expr: An expression with a root of exactly one `Column`.
+        expr: An expression with a root of exactly one `Col`.
         name: The new name.
 
     Important:
@@ -93,7 +96,7 @@ class Alias(ExprIR, dispatch="no_dispatch"):
         return self.expr.is_length_preserving()
 
 
-class Column(ExprIR, dispatch=namespaced("col")):
+class Col(ExprIR, dispatch=namespaced()):
     """An expression that selects exactly one column.
 
     Arguments:
@@ -105,9 +108,9 @@ class Column(ExprIR, dispatch=namespaced("col")):
         >>> expr._ir
         col('one')
         >>> print(expr._ir)
-        Column(name='one')
+        Col(name='one')
 
-        A `Column` is not a selector, but can be converted into one:
+        A `Col` is not a selector, but can be converted into one:
         >>> expr.meta.as_selector()._ir
         ncs.by_name('one')
     """
@@ -123,6 +126,9 @@ class Column(ExprIR, dispatch=namespaced("col")):
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         return schema[self.name]
+
+
+Column = Col
 
 
 class Cast(ExprIR, dtype=get_dtype()):

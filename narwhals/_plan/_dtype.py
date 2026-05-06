@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-# NOTE: `Column` is the exception, which uses `schema[self.name]` and so it is manually defined
+# NOTE: `Col` is the exception, which uses `schema[self.name]` and so it is manually defined
 # rather than accepting 2 arguments here and ignoring in all other cases
 T = TypeVar("T")
 Visitor: TypeAlias = "Callable[[T], DType]"

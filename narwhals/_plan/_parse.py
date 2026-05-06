@@ -155,7 +155,7 @@ def into_iter_expr_ir(
 
         # IntoExpr: TypeAlias = Expr | str | Series | PythonLiteral
         Expr                   -> ExprIR
-        str                    -> Column
+        str                    -> Col
         Series                 -> LitSeries
         PythonLiteral          -> Lit
 

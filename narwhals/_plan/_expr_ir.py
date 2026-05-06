@@ -85,7 +85,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     >>> column._ir
     col('howdy')
     >>> print(column._ir)
-    Column(name='howdy')
+    Col(name='howdy')
 
     Or something more deeply nested:
     >>> bigger = (column + 10.5).alias("more")
@@ -99,7 +99,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
     Supporting iteration from both *root to leaf*:
     >>> show_order(bigger_ir.iter_left())
-    0: Column(name='howdy')
+    0: Col(name='howdy')
     1: Lit(dtype=Float64, value=10.5)
     2: BinaryExpr(left=..., op=Add(), right=...)
     3: Alias(expr=BinaryExpr(...), name='more')
@@ -109,7 +109,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     0: Alias(expr=BinaryExpr(...), name='more')
     1: BinaryExpr(left=..., op=Add(), right=...)
     2: Lit(dtype=Float64, value=10.5)
-    3: Column(name='howdy')
+    3: Col(name='howdy')
 
     That comes in handy for [`meta`] operations, which are available for both `Expr` and `ExprIR`:
     >>> bigger_ir.meta.root_names()
@@ -298,7 +298,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         >>> import narwhals._plan as nw
 
-        The only valid conversion is for a `Column`:
+        The only valid conversion is for a `Col`:
         >>> column = nw.col("a")._ir
         >>> column
         col('a')
@@ -529,7 +529,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
         A root node with a `name`:
 
-            Column
+            Col
             Lit
             LitSeries
             Len
@@ -585,8 +585,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             And transforming it into *zero or more* new expressions:
             >>> ctx_1 = Expander(schema_1)
             >>> show(cast_ab.iter_expand(ctx_1))
-            Cast(expr=Column(name='a'), dtype=String)
-            Cast(expr=Column(name='b'), dtype=String)
+            Cast(expr=Col(name='a'), dtype=String)
+            Cast(expr=Col(name='b'), dtype=String)
 
             Yep, zero is possible:
             >>> cast_datetime = ncs.datetime().cast(nw.String)._ir
@@ -596,8 +596,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             It's all contextual:
             >>> ctx_2 = Expander(schema_2)
             >>> show(cast_datetime.iter_expand(ctx_2))
-            Cast(expr=Column(name='a'), dtype=String)
-            Cast(expr=Column(name='c'), dtype=String)
+            Cast(expr=Col(name='a'), dtype=String)
+            Cast(expr=Col(name='c'), dtype=String)
 
             There are a few different kinds of expansion:
             >>> standard = ncs.all().sum()._ir
@@ -1060,7 +1060,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         return f"<b>{self.name}</b>={self.expr._repr_html_()}"
 
     def is_column(self, *, allow_aliasing: bool = False) -> bool:
-        """Return True if wrapping a single `Column` node.
+        """Return True if wrapping a single `Col` node.
 
         Arguments:
             allow_aliasing: If False (default), any aliasing is not considered to be column selection.

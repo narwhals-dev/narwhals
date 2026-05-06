@@ -100,8 +100,8 @@ class Dispatcher(Generic[Node]):
 
         Generated names can always be overridden at class definition time:
 
-            ir.Column.__expr_ir_dispatch__.name
-            'col'
+            ir.boolean.Not.__expr_ir_dispatch__.name
+            'not_'
         """
         return self._name
 
@@ -362,8 +362,7 @@ class DispatcherOptions:
 
     `override_name` provides an escape hatch for edge cases:
 
-        >>> show_dispatch_names(ir.Column, ir.boolean.Not)
-        Column -> col
+        >>> show_dispatch_names(ir.boolean.Not)
         Not    -> not_
 
     [snake_case]: https://en.wikipedia.org/wiki/Snake_case

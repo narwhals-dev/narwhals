@@ -505,8 +505,8 @@ class ExprTraverser:
             - `node()` expands into multiple independent expressions
                 - Which is permitted only at `self[0]`
             - `nodes()` expands within the container it describes
-            - Expressions without inputs (e.g. `Column`) have nothing to expand
-            - Selectors expand into `Column`(s), and then follow the above
+            - Expressions without inputs (e.g. `Col`) have nothing to expand
+            - Selectors expand into `Col`(s), and then follow the above
 
         See Also:
             `ExprNode.expand_as_first_child`
