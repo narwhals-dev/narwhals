@@ -22,7 +22,13 @@ from narwhals._expression_parsing import (
     check_expressions_preserve_length,
     is_scalar_like,
 )
-from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
+from narwhals._typing import (
+    Arrow,
+    Pandas,
+    _EagerAllowedImpl,
+    _LazyAllowedImpl,
+    _LazyFrameCollectImpl,
+)
 from narwhals._utils import (
     Implementation,
     Version,
@@ -908,6 +914,49 @@ class DataFrame(BaseFrame[DataFrameT]):
             2    3  8.0   c
         """
         return self._compliant_frame.to_pandas()
+
+    def with_backend(self, backend: IntoBackend[EagerAllowed]) -> DataFrame[Any]:
+        """Converts the underlying native dataframe to the target backend without leaving the Narwhals layer.
+
+        Arguments:
+            backend: The target eager backend. `backend` can be specified in various ways:
+
+                - As `Implementation.<BACKEND>` with `BACKEND` being `PANDAS`,
+                    `MODIN`, `CUDF`, `PYARROW` or `POLARS`.
+                - As a string: `"pandas"`, `"modin"`, `"cudf"`, `"pyarrow"` or `"polars"`.
+                - Directly as a module `pandas`, `modin.pandas`, `cudf`, `pyarrow` or `polars`.
+
+        Returns:
+            A Narwhals DataFrame backed by the requested library.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>> df_native = pd.DataFrame({"a": [1, 2], "b": [4, 6]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_backend("polars")
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 2)   |
+            |  ┌─────┬─────┐   |
+            |  │ a   ┆ b   │   |
+            |  │ --- ┆ --- │   |
+            |  │ i64 ┆ i64 │   |
+            |  ╞═════╪═════╡   |
+            |  │ 1   ┆ 4   │   |
+            |  │ 2   ┆ 6   │   |
+            |  └─────┴─────┘   |
+            └──────────────────┘
+        """
+        eager_backend = Implementation.from_backend(backend)
+        if not is_eager_allowed(eager_backend):
+            msg = (
+                f"Unsupported `backend` value.\nExpected one of "
+                f"{get_args(_EagerAllowedImpl)}, got: {eager_backend}."
+            )
+            raise ValueError(msg)
+        return self._with_compliant(self._compliant_frame.with_backend(eager_backend))
 
     def to_polars(self) -> pl.DataFrame:
         """Convert this DataFrame to a polars DataFrame.
