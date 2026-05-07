@@ -30,7 +30,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Version
-from tests.conftest import sqlframe_pyspark_lazy_constructor
+from narwhals.testing.constructors import get_backend_constructor
 from tests.utils import Constructor, maybe_get_modin_df
 
 if TYPE_CHECKING:
@@ -294,10 +294,10 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
 
 def test_series_only_sqlframe() -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    df = sqlframe_pyspark_lazy_constructor(data)
+    df = get_backend_constructor("sqlframe")(data, nw).to_native()
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]  # pyrefly: ignore[no-matching-overload]
+        nw.from_native(df, series_only=True)  # type: ignore[call-overload]  # pyrefly: ignore[no-matching-overload]
 
 
 @pytest.mark.parametrize(
@@ -315,7 +315,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
 )
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
     pytest.importorskip("sqlframe")
-    df = sqlframe_pyspark_lazy_constructor(data)
+    df = get_backend_constructor("sqlframe")(data, nw).to_native()
 
     with context:
         res = nw.from_native(df, eager_only=eager_only)
@@ -528,7 +528,7 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
     if not any(s in str(constructor) for s in ("pyspark", "dask", "ibis", "duckdb")):
         pytest.skip(reason="Non lazy or polars")
 
-    df = constructor(data)
+    df = constructor(data).to_native()
 
     r1 = nw.from_native(df, eager_only=False, pass_through=False)
     r2 = nw.from_native(df, eager_only=False, pass_through=True)
@@ -539,7 +539,7 @@ def test_eager_only_pass_through_main(constructor: Constructor) -> None:
     assert not isinstance(r3, nw.LazyFrame)
 
     with pytest.raises(TypeError, match=r"Cannot.+use.+eager_only"):
-        nw.from_native(df, eager_only=True, pass_through=False)  # type: ignore[type-var]
+        nw.from_native(df, eager_only=True, pass_through=False)
 
 
 def test_from_native_lazyframe_exhaustive() -> None:  # noqa: PLR0914, PLR0915

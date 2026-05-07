@@ -25,7 +25,7 @@ def test_corr_expr(
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
-    expected_corr: float,
+    expected_corr: float | None,
 ) -> None:
     if "pyspark" in str(constructor) and expected_corr is None:
         request.applymarker(
@@ -51,7 +51,7 @@ def test_corr_expr_spearman(
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
-    expected_corr: float,
+    expected_corr: float | None,
 ) -> None:
     context = (
         does_not_raise()
@@ -75,7 +75,7 @@ def test_corr_series(
     output_name: str,
     a: str,
     b: str,
-    expected_corr: float,
+    expected_corr: float | None,
 ) -> None:
     if "pyspark" in str(constructor_eager) and expected_corr is None:
         request.applymarker(
@@ -97,7 +97,7 @@ def test_corr_series_spearman(
     output_name: str,
     a: str,
     b: str,
-    expected_corr: float,
+    expected_corr: float | None,
 ) -> None:
     if "pyspark" in str(constructor_eager) and expected_corr is None:
         request.applymarker(

@@ -1,84 +1,53 @@
 from __future__ import annotations
 
-from typing import cast
-
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 
 def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     pytest.importorskip("pyarrow")
-    import pyarrow as pa
 
-    if any(backend in str(constructor) for backend in ("dask", "modin")):
+    if any(backend in str(constructor) for backend in ("dask",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 0):
+    if ("pandas" in str(constructor) and PANDAS_VERSION < (2, 2, 0)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3, 0)
+    ):
         pytest.skip()
-    data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
 
-    df_native = constructor(data)
-
-    if "pandas" in str(constructor):
-        import pandas as pd
-
-        df_native = cast("pd.DataFrame", df_native).assign(
-            user=pd.Series(
-                data["user"],
-                dtype=pd.ArrowDtype(
-                    pa.struct([("id", pa.string()), ("name", pa.string())])
-                ),
-            )
-        )
-
-    df = nw.from_native(df_native)
+    data = {"id": ["0", "1"], "name": ["john", "jane"]}
+    expected = data.copy()
+    df = constructor(data, nw).select(user=nw.struct("id", "name"))
 
     result = nw.from_native(df).select(
         nw.col("user").struct.field("id"), nw.col("user").struct.field("name")
     )
-    expected = {"id": ["0", "1"], "name": ["john", "jane"]}
     assert_equal_data(result, expected)
     result = nw.from_native(df).select(nw.col("user").struct.field("id").name.keep())
     expected = {"user": ["0", "1"]}
     assert_equal_data(result, expected)
 
 
-def test_get_field_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
-) -> None:
+def test_get_field_series(constructor_eager: ConstructorEager) -> None:
     pytest.importorskip("pyarrow")
-    import pyarrow as pa
 
-    if any(backend in str(constructor_eager) for backend in ("modin",)):
-        request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (2, 2, 0):
         pytest.skip()
-    data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
-    expected = {"id": ["0", "1"], "name": ["john", "jane"]}
-
-    _expected = expected.copy()
-    df_native = constructor_eager(data)
-
-    if "pandas" in str(constructor_eager):
-        import pandas as pd
-
-        df_native = cast("pd.DataFrame", df_native).assign(
-            user=pd.Series(
-                data["user"],
-                dtype=pd.ArrowDtype(
-                    pa.struct([("id", pa.string()), ("name", pa.string())])
-                ),
-            )
-        )
-
-    df = nw.from_native(df_native, eager_only=True)
+    data = {"id": ["0", "1"], "name": ["john", "jane"]}
+    expected = data.copy()
+    df = constructor_eager(data, nw).select(user=nw.struct("id", "name"))
 
     result = nw.from_native(df).select(
         df["user"].struct.field("id"), df["user"].struct.field("name")
     )
-    expected = {"id": ["0", "1"], "name": ["john", "jane"]}
-    assert_equal_data(result, _expected)
+    assert_equal_data(result, expected)
 
 
 def test_pandas_object_series() -> None:

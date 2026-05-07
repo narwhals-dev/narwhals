@@ -347,7 +347,7 @@ def test_narwhalify_method_invalid() -> None:
 
 
 def test_with_version(constructor: Constructor) -> None:
-    lf = nw_v2.from_native(constructor({"a": [1, 2]})).lazy()
+    lf = constructor({"a": [1, 2]}, nw_v2).lazy()
     assert isinstance(lf, nw_v2.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
 
@@ -503,7 +503,7 @@ def test_series_from_iterable(
 
 def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-    df = nw_v2.from_native(constructor_eager(data))
+    df = constructor_eager(data, nw_v2)
     result = df.select(nw_v2.col("a").mode()).sort("a")
     expected = {"a": [1, 2]}
     assert_equal_data(result, expected)
@@ -511,7 +511,7 @@ def test_mode_single_expr(constructor_eager: ConstructorEager) -> None:
 
 def test_mode_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-    series = nw_v2.from_native(constructor_eager(data), eager_only=True)["a"]
+    series = constructor_eager(data, nw_v2)["a"]
     result = series.mode().sort()
     expected = {"a": [1, 2]}
     assert_equal_data({"a": result}, expected)
@@ -520,7 +520,7 @@ def test_mode_series(constructor_eager: ConstructorEager) -> None:
 def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
         pytest.skip()
-    df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
+    df = constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}, nw_v2)
     with pytest.raises(ShapeError):
         df.select(nw_v2.col("a", "b").mode())
 
@@ -535,7 +535,7 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
         "b": [1, 2, 3, 4, 5, 6],
         "c": [None, None, 1, None, 2, None],
     }
-    df = nw_v2.from_native(constructor(data))
+    df = constructor(data, nw_v2)
 
     with pytest.warns(NarwhalsUnstableWarning):
         df.select(nw_v2.col("a", "b").any_value())
@@ -543,7 +543,7 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
 
 def test_any_value_series(constructor_eager: ConstructorEager) -> None:
     data = {"a": [1, 1, 1, 2, 2, 3]}
-    df = nw_v2.from_native(constructor_eager(data))
+    df = constructor_eager(data, nw_v2)
 
     with pytest.warns(NarwhalsUnstableWarning):
         df["a"].any_value()
