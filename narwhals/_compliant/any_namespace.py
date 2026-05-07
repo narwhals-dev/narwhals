@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 from narwhals._utils import CompliantT_co, _StoresCompliant
 
@@ -116,3 +116,4 @@ class StructNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     _accessor: ClassVar[Accessor] = "struct"
 
     def field(self, name: str) -> CompliantT_co: ...
+    def unnest(self) -> Any: ...

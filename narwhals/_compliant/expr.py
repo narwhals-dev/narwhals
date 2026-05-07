@@ -43,7 +43,13 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
+    from narwhals._compliant.typing import (
+        AliasNames,
+        EagerDataFrameAny,
+        EagerSeriesAny,
+        EvalNames,
+        EvalSeries,
+    )
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
@@ -1186,4 +1192,28 @@ class EagerExprStructNamespace(
     def field(self, name: str) -> EagerExprT:
         return self.compliant._reuse_series_namespace("struct", "field", name=name).alias(
             name
+        )
+
+    def unnest(self) -> EagerExprT:
+        compliant = self.compliant
+
+        def inner(df: EagerDataFrameAny) -> list[EagerSeriesAny]:
+            result: list[EagerSeriesAny] = []
+            for series in compliant(df):
+                unnested_df: EagerDataFrameAny = series.struct.unnest()
+                result.extend(
+                    unnested_df.get_column(col_name) for col_name in unnested_df.columns
+                )
+            return result
+
+        def evaluate_output_names(df: EagerDataFrameAny) -> Sequence[str]:
+            return [
+                field.name for series in compliant(df) for field in series.dtype.fields
+            ]
+
+        return self.compliant._from_callable(
+            inner,
+            evaluate_output_names=evaluate_output_names,
+            alias_output_names=None,
+            context=compliant,
         )
