@@ -6,13 +6,18 @@ import polars as pl
 
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.expr import CompliantExpr
-from narwhals._plan.polars.namespace import PolarsNamespace, dtype_to_native
+from narwhals._plan.polars.namespace import (
+    PolarsNamespace,
+    dtype_to_native,
+    dtype_to_native_fast,
+)
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -124,6 +129,18 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     floor = todo()
     hist_bin_count = todo()
     hist_bins = todo()
+
+    def int_range(
+        self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
+    ) -> Self:
+        func = node.function
+        if fastpath := func.try_unwrap_literals(node):
+            dtype = dtype_to_native_fast(func.dtype)
+            native = pl.int_range(*fastpath, func.step, dtype=dtype)
+            return self.from_native(native, name)
+        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.input[0]!r}\n{node.input[1]!r}"
+        raise NotImplementedError(msg)
+
     is_between = todo()
     is_duplicated = todo()
     is_finite = todo()

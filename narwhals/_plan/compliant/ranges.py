@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import ranges
 
-__all__ = ("DateRange", "IntRange", "LazyRangeGenerator", "LinearSpace")
+__all__ = ("DateRange", "LazyRangeGenerator", "LinearSpace")
 
 
 class DateRange(Protocol[FrameT_contra, ExprT_co]):
@@ -18,14 +18,6 @@ class DateRange(Protocol[FrameT_contra, ExprT_co]):
 
     def date_range(
         self, node: ir.RangeExpr[ranges.DateRange], frame: FrameT_contra, name: str
-    ) -> ExprT_co: ...
-
-
-class IntRange(Protocol[FrameT_contra, ExprT_co]):
-    __slots__ = ()
-
-    def int_range(
-        self, node: ir.RangeExpr[ranges.IntRange], frame: FrameT_contra, name: str
     ) -> ExprT_co: ...
 
 
@@ -39,7 +31,6 @@ class LinearSpace(Protocol[FrameT_contra, ExprT_co]):
 
 class LazyRangeGenerator(
     DateRange[FrameT_contra, ExprT_co],
-    IntRange[FrameT_contra, ExprT_co],
     LinearSpace[FrameT_contra, ExprT_co],
     Protocol[FrameT_contra, ExprT_co],
 ):

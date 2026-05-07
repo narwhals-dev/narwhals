@@ -15,12 +15,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.arrow.typing import IOSource
     from narwhals._plan.expressions import RangeExpr
-    from narwhals._plan.expressions.ranges import (
-        DateRange,
-        IntRange,
-        LinearSpace,
-        RangeFunction,
-    )
+    from narwhals._plan.expressions.ranges import DateRange, LinearSpace, RangeFunction
     from narwhals._plan.typing import NonNestedLiteralT_co
     from narwhals.schema import Schema
     from narwhals.typing import FileSource
@@ -77,12 +72,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         # This should be unreachable, but the typing doesn't know that
         bad = _start if isinstance(start, self._scalar) else _end
         raise function_arg_non_scalar_error(func, bad)
-
-    def int_range(self, node: RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
-        start, end = self._range_function_inputs(node, frame)
-        f = node.function
-        series = self._series.int_range(start, end, f.step, dtype=f.dtype, name=name)
-        return self._expr.from_series(series)
 
     def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)

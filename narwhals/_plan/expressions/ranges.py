@@ -68,7 +68,7 @@ class RangeFunction(BinaryFunction, Generic[T_co], dispatch=namespaced()):
         return None
 
 
-class IntRange(RangeFunction[int], dtype=get_dtype()):
+class IntRange(RangeFunction[int], dtype=get_dtype(), dispatch=DispatcherOptions()):
     __slots__ = ("step", "dtype")  # noqa: RUF023
     step: int
     dtype: IntegerType

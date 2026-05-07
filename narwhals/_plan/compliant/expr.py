@@ -22,7 +22,7 @@ if TYPE_CHECKING:
         ExprStringNamespace,
         ExprStructNamespace,
     )
-    from narwhals._plan.compliant.namespace import CompliantNamespace
+    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar as Scalar, EagerScalar
     from narwhals._plan.expressions import (
         BinaryExpr,
@@ -43,6 +43,7 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
+    from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.typing import IncompleteCyclic, IncompleteVarianceLie
     from narwhals._utils import Version
     from narwhals.typing import PythonLiteral
@@ -180,6 +181,11 @@ class CompliantColumn(Protocol[Frame, Native_co]):
         self, node: HExpr[F.SumHorizontal], frame: Frame, name: str, /
     ) -> Self | CompliantColumn[Frame, Incomplete]: ...
 
+    # Range (technically, only valid to call on `*Scalar` and then produces `*Expr`)
+    def int_range(
+        self, node: ir.RangeExpr[IntRange], frame: Frame, name: str, /
+    ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
+
     def __narwhals_namespace__(
         self,
     ) -> CompliantNamespace[
@@ -211,7 +217,7 @@ class CompliantColumn(Protocol[Frame, Native_co]):
 # TODO @dangotbanned: Avoid `FrameT`?
 # TODO @dangotbanned: Binary Namespace methods -> Expr methods
 # - [ ] `date_range`
-# - [ ] `int_range`
+# - [x] `int_range`
 # - [ ] `linear_space`
 class CompliantExpr(
     CompliantColumn[Frame, NativeExpr_co], Protocol[Frame, NativeExpr_co, NativeScalar_co]
@@ -363,6 +369,14 @@ class EagerColumn(
         name: str,
         /,
     ) -> Self: ...
+    def __narwhals_namespace__(
+        self,
+    ) -> EagerNamespace[
+        IncompleteVarianceLie,
+        IncompleteVarianceLie,
+        IncompleteDispatch,
+        IncompleteDispatch,
+    ]: ...
 
 
 class EagerExpr(

@@ -34,7 +34,7 @@ from narwhals._plan.compliant.accessors import (
 )
 from narwhals._plan.compliant.expr import EagerColumn, EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
-from narwhals._plan.exceptions import shape_error
+from narwhals._plan.exceptions import function_arg_non_scalar_error, shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
 from narwhals._plan.expressions.boolean import (
     AllHorizontal,
@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
+    from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.expressions import HorizontalExpr as HExpr, lists, strings
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
@@ -76,8 +77,9 @@ if TYPE_CHECKING:
         Var,
     )
     from narwhals._plan.expressions.boolean import IsBetween
+    from narwhals._plan.expressions.ranges import IntRange, RangeFunction
     from narwhals._plan.expressions.struct import FieldByName
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import NonNestedLiteralT_co, Seq
     from narwhals.typing import IntoDType, PythonLiteral
 
     Expr: TypeAlias = "ArrowExpr"
@@ -455,6 +457,29 @@ class _ArrowDispatch(
         dtype = fn.dtype_native(f.return_dtype, self.version)
         result = fn.replace_strict_default(native, f.old, f.new, default, dtype)
         return self._with_native(result, name)
+
+    # TODO @dangotbanned: Consider returning the supertype of inputs
+    def _range_function_inputs(
+        self, node: ir.RangeExpr[RangeFunction[NonNestedLiteralT_co]], frame: Frame
+    ) -> tuple[NonNestedLiteralT_co, NonNestedLiteralT_co]:
+        func = node.function
+        if fastpath := func.try_unwrap_literals(node):
+            return fastpath
+        start, end = node.dispatch_args(self, frame, "")
+        if isinstance(start, ArrowScalar) and isinstance(end, ArrowScalar):
+            return func.ensure_py_scalars(start.to_python(), end.to_python())
+        # TODO @dangotbanned: Add some variant of `dispatch_args` that ensures we got a `ArrowScalar`
+        # This should be unreachable, but the typing doesn't know that
+        bad = node.input[0] if isinstance(start, ArrowScalar) else node.input[1]
+        raise function_arg_non_scalar_error(func, bad)
+
+    # TODO @dangotbanned: Fix gap in typing that requires namespace
+    def int_range(self, node: ir.RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
+        start, end = self._range_function_inputs(node, frame)
+        f = node.function
+        ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
+        series = ns._series.int_range(start, end, f.step, dtype=f.dtype, name=name)
+        return ns._expr.from_series(series)
 
     not_: Callable[..., Self] = unary.no_args(fn.not_)
     is_finite: Callable[..., Self] = unary.no_args(fn.is_finite)
