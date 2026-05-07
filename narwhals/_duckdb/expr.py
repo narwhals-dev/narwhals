@@ -214,7 +214,20 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_callable(func)
 
     def len(self) -> Self:
-        return self._with_callable(lambda _expr: F("count"))
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            if not self._metadata.preserves_length:
+                msg = "`len` is not supported after a length-changing expression"
+                raise NotImplementedError(msg)
+
+            return [F("count") for _ in self(df)]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+            implementation=self._implementation,
+        )
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: F("sum", expr.isnull().cast("int")))

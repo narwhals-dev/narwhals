@@ -69,3 +69,35 @@ def test_filter_windows_over(
     df = nw.from_native(constructor(data))
     result = df.filter(nw.col("i") == nw.col("i").min().over("b")).sort("i")
     assert_equal_data(result, expected_over)
+
+
+def test_expr_filter(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        reason = "not implemented"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    mask_multi = (nw.col("i") > 0, nw.col("a") < 4)
+    df = nw.from_native(constructor(data)).with_columns(
+        d=nw.when(nw.col("i") > 2).then(nw.col("i")).otherwise(nw.lit(None))
+        # column d is [None, None, None, 3, 4]
+    )
+    result = df.select(
+        nw.col("a").filter(nw.col("i") < 3).mean(),
+        nw.col("b").filter(*mask_multi).sum(),
+        nw.col("b", "c").filter(*mask_multi).min().name.suffix("_min"),
+        count_c=nw.col("c").filter(*mask_multi).count(),
+        count_d=nw.col("d").filter(*mask_multi).count(),
+        # len=nw.col("d").filter(*mask_multi).len()  # noqa: ERA001
+        # !NOTE: Result should be {"len": [3]}, but we can get:
+        # 5: Without changing the current implementation for SQL backends
+        # 1: By accounting for the expression, (e.g. for spark F("count", expr)) but ignoring nulls
+    )
+    expected = {
+        "a": [1.0],
+        "b": [10],
+        "b_min": [2],
+        "c_min": [2],
+        "count_c": [3],
+        "count_d": [1],
+    }
+    assert_equal_data(result, expected)
