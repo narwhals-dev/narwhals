@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
@@ -57,7 +57,7 @@ def test_dispatch_not_yet(
     data: Data, dataframe: DataFrame, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     df = dataframe(data)
-    # NOTE: This will unconditionally trigger the exception
+    # NOTE: This will unconditionally trigger an `AttributeError`
     monkeypatch.setattr(
         ir.functions.EwmMean.__expr_ir_dispatch__,
         "bind",
@@ -69,7 +69,7 @@ def test_dispatch_not_yet(
         df.select(nwp.col("c").ewm_mean())
 
 
-def test_missing_compliant(
+def test_missing_compliant_method(
     data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
     # Covers a narwhals dev error path, by making the mistakes it is intended to catch
@@ -80,20 +80,7 @@ def test_missing_compliant(
         UnaryFunction, dispatch=DispatcherOptions(accessor_name="str")
     ): ...
 
-    # TODO @dangotbanned: Replace error + test with `DispatcherOptions.constructor` variant
-    class MissingNamespaced(ir.ExprIR, dispatch=DispatcherOptions.namespaced()):
-        __slots__ = ("expr",)
-        expr: ir.ExprIR = node()
-
     df = dataframe(data)
-    expr = MissingNamespaced(expr=ir.col("b")).to_narwhals()
-    pattern = re_compile(
-        r"missing_namespaced.+has not been implemented at.+compliant-level.+"
-        r"Hint.+try adding.+CompliantNamespace\.missing_namespaced\(\)"
-    )
-    with pytest.raises(NotImplementedError, match=pattern):
-        df.select(expr)
-
     dataframe.xfail(
         request,
         dataframe.is_polars(),
@@ -104,6 +91,26 @@ def test_missing_compliant(
     pattern = re_compile(
         r"str\.missing_method.+has not been implemented at.+compliant-level.+"
         r"Hint.+try adding.+CompliantExpr\.str\.missing_method\(\)"
+    )
+    with pytest.raises(NotImplementedError, match=pattern):
+        df.select(expr)
+
+
+@pytest.mark.parametrize("root_name", ["Expr", "Scalar"])
+def test_missing_compliant_constructor(
+    data: Data, dataframe: DataFrame, root_name: Literal["Expr", "Scalar"]
+) -> None:
+    constructor = DispatcherOptions.constructor(root_name)
+
+    class MissingConstructor(ir.ExprIR, dispatch=constructor):
+        __slots__ = ("expr",)
+        expr: ir.ExprIR = node()
+
+    df = dataframe(data)
+    expr = MissingConstructor(expr=ir.col("a")).to_narwhals()
+    pattern = re_compile(
+        r"missing_constructor.+has not been implemented at.+compliant-level.+"
+        rf"Hint.+try adding.+Compliant{root_name}\.missing_constructor\(\)"
     )
     with pytest.raises(NotImplementedError, match=pattern):
         df.select(expr)

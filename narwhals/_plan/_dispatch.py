@@ -9,7 +9,7 @@ from narwhals._plan._guards import is_function_expr
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, Self, TypeAlias, deprecated
+    from typing_extensions import Never, Self, TypeAlias
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
@@ -52,7 +52,7 @@ class Dispatcher(Generic[Node]):
 
     If something goes wrong though - we'd like to raise a more helpful error than this:
 
-        AttributeError: "<compliant-something> object has no attribute <method-or-namespace-or-accessor-name>"
+        AttributeError: "<compliant-something> object has no attribute <method-or-accessor-name>"
 
     Instead, for a user-facing error we would have:
 
@@ -60,21 +60,13 @@ class Dispatcher(Generic[Node]):
 
     And a developer-facing error might be:
 
-        NotImplementedError: "`all_horizontal` has not been implemented at the compliant-level."
-        "Hint: Try adding `CompliantNamespace.all_horizontal()`"
+        NotImplementedError: "`lit` has not been implemented at the compliant-level."
+        "Hint: Try adding `CompliantScalar.lit()`"
     """
 
     __slots__ = ("_name", "_options", "bind")
 
-    # TODO @dangotbanned: Improve or remove doc
     bind: ct.Binder[Node]
-    """Retrieve the implementation of this expression from `ctx`.
-
-    Binds an instance method, most commonly via:
-
-        expr: CompliantExpr
-        method = getattr(expr, "method_name")
-    """
     _options: DispatcherOptions
     _name: str
 
@@ -93,7 +85,7 @@ class Dispatcher(Generic[Node]):
             ir.OverOrdered.__expr_ir_dispatch__.name
             'over_ordered'
 
-        Namespaced-methods reflect the accessor in their name:
+        Accessor methods reflect the full dotted path:
 
             ir.lists.NUnique.__expr_ir_dispatch__.name
             'list.n_unique'
@@ -171,9 +163,7 @@ class Dispatcher(Generic[Node]):
         options = options or options_parent
         if accessor_name := (options_parent.accessor_name or options.accessor_name):
             options = DispatcherOptions(
-                is_namespaced=options.is_namespaced,
-                override_name=options.override_name,
-                accessor_name=accessor_name,
+                override_name=options.override_name, accessor_name=accessor_name
             )
         return Dispatcher._from_type(tp, options)
 
@@ -185,13 +175,12 @@ class Dispatcher(Generic[Node]):
         if ns := options.accessor_name:
             name = f"{ns}.{name}"
         if constructor := options.constructor_name:
-            get_type = _GET_EXPR if constructor == "expr" else _GET_SCALAR
+            get_type = _GET_EXPR if constructor == "Expr" else _GET_SCALAR
             bind = _constructor_binder(
                 _CALL_NAMESPACE, get_type, _CLASS_METHOD_GETTER(name)
             )
         else:
-            m_caller = _CALL_NAMESPACE if options.is_namespaced else _CALL_EXPR_PREPARE
-            bind = _binder(m_caller, _ATTR_GETTER(name))
+            bind = _binder(_CALL_EXPR_PREPARE, _ATTR_GETTER(name))
         return Dispatcher(name, bind, options)
 
     def __get__(self, instance: Any, owner: Any) -> Self:
@@ -232,15 +221,13 @@ class Dispatcher(Generic[Node]):
         /,
         missing: Literal["compliant", "context"],
     ) -> NotImplementedError:
-        is_namespaced = self.options.is_namespaced
         if missing == "context":
-            owner = ctx.__narwhals_namespace__() if is_namespaced else ctx
-            msg = f"`{self.name}` is not yet implemented for {type(owner).__name__!r}"
+            msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
         else:
-            base_name = "Namespace" if is_namespaced else "Expr"
+            name = self.options.constructor_name or "Expr"
             msg = (
                 f"`{self.name}` has not been implemented at the compliant-level.\n"
-                f"Hint: Try adding `Compliant{base_name}.{self.name}()`"
+                f"Hint: Try adding `Compliant{name}.{self.name}()`"
             )
         return NotImplementedError(msg)
 
@@ -330,13 +317,7 @@ class DispatcherOptions:
     [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
-    __slots__ = (
-        "accessor_name",
-        "allow_dispatch",
-        "constructor_name",
-        "is_namespaced",
-        "override_name",
-    )
+    __slots__ = ("accessor_name", "allow_dispatch", "constructor_name", "override_name")
     accessor_name: Accessor | None
     """Name of an (optional) expression namespace accessor.
 
@@ -361,7 +342,6 @@ class DispatcherOptions:
     """
 
     constructor_name: RootConstructor | None
-    is_namespaced: bool
     override_name: str
     """Manual override to the auto-generated expression dispatch method name.
 
@@ -394,26 +374,12 @@ class DispatcherOptions:
         accessor_name: Accessor | None = None,
         allow_dispatch: bool = True,
         constructor_name: RootConstructor | None = None,
-        is_namespaced: bool = False,
         override_name: str = "",
     ) -> None:
         self.accessor_name = accessor_name
         self.allow_dispatch = allow_dispatch
         self.constructor_name = constructor_name
-        self.is_namespaced = is_namespaced
         self.override_name = override_name
-
-    if TYPE_CHECKING:
-
-        @deprecated("this should be an `Expr` method now!")
-        @staticmethod
-        def namespaced() -> DispatcherOptions:
-            return DispatcherOptions(is_namespaced=True)
-    else:
-
-        @staticmethod
-        def namespaced() -> DispatcherOptions:
-            return DispatcherOptions(is_namespaced=True)
 
     @staticmethod
     def constructor(name: RootConstructor, /) -> DispatcherOptions:
@@ -440,8 +406,6 @@ class DispatcherOptions:
             parts.append(f"allow_dispatch={self.allow_dispatch}")
         if constructor := self.constructor_name:
             parts.append(f"constructor_name={constructor!r}")
-        if namespaced := self.is_namespaced:
-            parts.append(f"is_namespaced={namespaced}")
         if override := self.override_name:
             parts.append(f"override_name={override!r}")
         inner = (", ".join(parts)) if parts else "<default>"

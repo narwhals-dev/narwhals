@@ -139,7 +139,7 @@ class Function(Immutable):
 
     To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
 
-        class AllHorizontal(Function, dispatch=DispatcherOptions.namespaced()): ...
+        class CategoricalFunction(Function, dispatch=DispatcherOptions(accessor_name="cat")): ...
 
     Notes:
         Each class has their own `Dispatcher` instance, and inheritance is only on the `options` property.

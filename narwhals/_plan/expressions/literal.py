@@ -67,7 +67,7 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
 
 @final
 class Lit(
-    LiteralExpr[PythonLiteralT_co], dispatch=DispatcherOptions.constructor("scalar")
+    LiteralExpr[PythonLiteralT_co], dispatch=DispatcherOptions.constructor("Scalar")
 ):
     """An expression representing a scalar literal value.
 
@@ -109,7 +109,7 @@ class Lit(
 @final
 class LitSeries(
     LiteralExpr["Series[NativeSeriesT_co]"],
-    dispatch=DispatcherOptions.constructor("expr"),
+    dispatch=DispatcherOptions.constructor("Expr"),
 ):
     """An expression representing a series literal.
 

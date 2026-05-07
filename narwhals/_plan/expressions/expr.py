@@ -47,7 +47,7 @@ def col(name: str, /) -> Column:
 
 
 class LenStar(
-    ExprIR, dispatch=DispatcherOptions.constructor("scalar"), dtype=dtm.IDX_DTYPE
+    ExprIR, dispatch=DispatcherOptions.constructor("Scalar"), dtype=dtm.IDX_DTYPE
 ):
     """Return the number of rows in the context.
 
@@ -97,7 +97,7 @@ class Alias(ExprIR, dispatch="no_dispatch"):
         return self.expr.is_length_preserving()
 
 
-class Col(ExprIR, dispatch=DispatcherOptions.constructor("expr")):
+class Col(ExprIR, dispatch=DispatcherOptions.constructor("Expr")):
     """An expression that selects exactly one column.
 
     Arguments:
