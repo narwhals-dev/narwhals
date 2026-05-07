@@ -117,14 +117,5 @@ class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
         schema = pl.read_parquet_schema(source, **kwds)
         return into_version(self.version).schema.from_polars(schema)
 
-    all_horizontal = todo()
-    any_horizontal = todo()
-    coalesce = todo()
-    date_range = todo()
-    linear_space = todo()
-    max_horizontal = todo()
-    min_horizontal = todo()
-    sum_horizontal = todo()
-
 
 PolarsNamespace()

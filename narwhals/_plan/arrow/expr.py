@@ -77,7 +77,12 @@ if TYPE_CHECKING:
         Var,
     )
     from narwhals._plan.expressions.boolean import IsBetween
-    from narwhals._plan.expressions.ranges import IntRange, RangeFunction
+    from narwhals._plan.expressions.ranges import (
+        DateRange,
+        IntRange,
+        LinearSpace,
+        RangeFunction,
+    )
     from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.typing import NonNestedLiteralT_co, Seq
     from narwhals.typing import IntoDType, PythonLiteral
@@ -479,6 +484,24 @@ class _ArrowDispatch(
         f = node.function
         ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
         series = ns._series.int_range(start, end, f.step, dtype=f.dtype, name=name)
+        return ns._expr.from_series(series)
+
+    def date_range(self, node: ir.RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
+        start, end = self._range_function_inputs(node, frame)
+        f = node.function
+        ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
+        date_range = ns._series.date_range
+        series = date_range(start, end, f.interval, closed=f.closed, name=name)
+        return ns._expr.from_series(series)
+
+    def linear_space(
+        self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str
+    ) -> Expr:
+        start, end = self._range_function_inputs(node, frame)
+        f = node.function
+        ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
+        linear_space = ns._series.linear_space
+        series = linear_space(start, end, f.num_samples, closed=f.closed, name=name)
         return ns._expr.from_series(series)
 
     not_: Callable[..., Self] = unary.no_args(fn.not_)

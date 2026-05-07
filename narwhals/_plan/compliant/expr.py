@@ -43,7 +43,7 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
-    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.typing import IncompleteCyclic, IncompleteVarianceLie
     from narwhals._utils import Version
     from narwhals.typing import PythonLiteral
@@ -185,6 +185,12 @@ class CompliantColumn(Protocol[Frame, Native_co]):
     def int_range(
         self, node: ir.RangeExpr[IntRange], frame: Frame, name: str, /
     ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
+    def date_range(
+        self, node: ir.RangeExpr[DateRange], frame: Frame, name: str, /
+    ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
+    def linear_space(
+        self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str, /
+    ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
 
     def __narwhals_namespace__(
         self,
@@ -192,6 +198,7 @@ class CompliantColumn(Protocol[Frame, Native_co]):
         IncompleteVarianceLie, IncompleteDispatch, IncompleteDispatch
     ]: ...
 
+    # TODO @dangotbanned: Review if needed after `CompliantNamespace` is gone
     def __narwhals_expr_prepare__(self) -> Self:
         """Return a partially initialized instance of this class.
 
@@ -214,11 +221,6 @@ class CompliantColumn(Protocol[Frame, Native_co]):
     ) -> ExprStructNamespace[Frame, CompliantColumn[Frame, Incomplete]]: ...
 
 
-# TODO @dangotbanned: Avoid `FrameT`?
-# TODO @dangotbanned: Binary Namespace methods -> Expr methods
-# - [ ] `date_range`
-# - [x] `int_range`
-# - [ ] `linear_space`
 class CompliantExpr(
     CompliantColumn[Frame, NativeExpr_co], Protocol[Frame, NativeExpr_co, NativeScalar_co]
 ):

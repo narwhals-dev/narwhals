@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
-from narwhals._plan.compliant import io, ranges, typing as ct
+from narwhals._plan.compliant import io, typing as ct
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
@@ -12,18 +12,8 @@ if TYPE_CHECKING:
     from narwhals._utils import Implementation, Version
 
 
-# TODO @dangotbanned: `LazyRangeGenerator` -> `CompliantExpr`
-class CompliantNamespace(
-    io.ReadSchema,
-    ranges.LazyRangeGenerator[ct.FrameT, ct.ExprT_co],
-    Protocol[ct.FrameT, ct.ExprT_co, ct.ScalarT_co],
-):
-    """`[FrameT, ExprT_co, ScalarT_co]`.
-
-    ## Notes of `FrameT` variance
-    - An issue for `LazyRangeGenerator` if that can be either eager or lazy
-    - Having `CompliantFrameV*` and using `Self` is fragile
-    """
+class CompliantNamespace(io.ReadSchema, Protocol[ct.FrameT, ct.ExprT_co, ct.ScalarT_co]):
+    """`[FrameT, ExprT_co, ScalarT_co]`."""
 
     __slots__ = ()
 

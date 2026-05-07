@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import io
 from narwhals._plan.compliant.namespace import EagerNamespace
-from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -14,9 +13,6 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.lazyframe import ArrowLazyFrame as LazyFrame
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.arrow.typing import IOSource
-    from narwhals._plan.expressions import RangeExpr
-    from narwhals._plan.expressions.ranges import DateRange, LinearSpace, RangeFunction
-    from narwhals._plan.typing import NonNestedLiteralT_co
     from narwhals.schema import Schema
     from narwhals.typing import FileSource
 
@@ -55,37 +51,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
 
         return ArrowLazyFrame
-
-    # TODO @dangotbanned: Consider returning the supertype of inputs
-    def _range_function_inputs(
-        self, node: RangeExpr[RangeFunction[NonNestedLiteralT_co]], frame: Frame
-    ) -> tuple[NonNestedLiteralT_co, NonNestedLiteralT_co]:
-        func = node.function
-        if fastpath := func.try_unwrap_literals(node):
-            return fastpath
-        _start, _end = node.input
-        start = self.from_ir(_start, frame, "")
-        end = self.from_ir(_end, frame, "")
-        if isinstance(start, self._scalar) and isinstance(end, self._scalar):
-            return func.ensure_py_scalars(start.to_python(), end.to_python())
-        # TODO @dangotbanned: Add some variant of `self._expr.from_ir` that ensures we got a `ArrowScalar`
-        # This should be unreachable, but the typing doesn't know that
-        bad = _start if isinstance(start, self._scalar) else _end
-        raise function_arg_non_scalar_error(func, bad)
-
-    def date_range(self, node: RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
-        start, end = self._range_function_inputs(node, frame)
-        f = node.function
-        date_range = self._series.date_range
-        series = date_range(start, end, f.interval, closed=f.closed, name=name)
-        return self._expr.from_series(series)
-
-    def linear_space(self, node: RangeExpr[LinearSpace], frame: Frame, name: str) -> Expr:
-        start, end = self._range_function_inputs(node, frame)
-        f = node.function
-        linear_space = self._series.linear_space
-        series = linear_space(start, end, f.num_samples, closed=f.closed, name=name)
-        return self._expr.from_series(series)
 
     def read_csv_schema(self, source: FileSource, /, **kwds: Any) -> Schema:
         return into_version(self).schema.from_arrow(io.read_csv_schema(source, **kwds))

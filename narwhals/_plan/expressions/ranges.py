@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan import _parameters as params
-from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._function import BinaryFunction
 from narwhals._plan.typing import NonNestedLiteralT_co as T_co
@@ -22,10 +21,9 @@ if TYPE_CHECKING:
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
 map_all = ResolveDType.function.map_all
-namespaced = DispatcherOptions.namespaced
 
 
-class RangeFunction(BinaryFunction, Generic[T_co], dispatch=namespaced()):
+class RangeFunction(BinaryFunction, Generic[T_co]):
     __function_parameters__: ClassVar = params.Binary(params.SCALAR, params.SCALAR)
 
     @classmethod
@@ -68,7 +66,7 @@ class RangeFunction(BinaryFunction, Generic[T_co], dispatch=namespaced()):
         return None
 
 
-class IntRange(RangeFunction[int], dtype=get_dtype(), dispatch=DispatcherOptions()):
+class IntRange(RangeFunction[int], dtype=get_dtype()):
     __slots__ = ("step", "dtype")  # noqa: RUF023
     step: int
     dtype: IntegerType
