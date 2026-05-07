@@ -238,9 +238,7 @@ _ATTR_GETTER: Final[Callable[[str], ct.GetMethod]] = _attrgetter
 _CLASS_METHOD_GETTER: Final[Callable[[str], ct.GetClassMethod]] = _attrgetter
 
 
-def _binder(
-    f1: ct.CallNamespace | ct.CallExprPrepare, f2: ct.GetMethod, /
-) -> ct.Binder[Incomplete]:
+def _binder(f1: ct.CallExprPrepare, f2: ct.GetMethod, /) -> ct.Binder[Incomplete]:
     def bind(
         ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co], /
     ) -> ct.BoundMethod[Any, ct.Frame, ct.ET_co | ct.ST_co]:

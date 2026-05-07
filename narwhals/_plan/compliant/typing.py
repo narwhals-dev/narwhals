@@ -9,15 +9,17 @@
 # ruff: noqa: PLC0105
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
+    from _typeshed import Incomplete
     from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
+    from narwhals._plan.compliant import classes as cc
     from narwhals._plan.compliant.dataframe import (
         CompliantDataFrame,
         CompliantFrame,
@@ -144,13 +146,16 @@ class CanNamespace(Protocol[FrameT, ExprT_co, ScalarT_co]):
 
 
 # NOTE: Very important that these stay covariant!
-C = TypeVar("C", bound="ColumnAny", covariant=True)
+ColumnT_co = TypeVar("ColumnT_co", bound="ColumnAny", covariant=True)
 """Any column."""
 
+LF = TypeVar("LF", bound=LazyFrameAny, covariant=True)
+PE = TypeVar("PE", bound="PlanEvaluatorAny", covariant=True)
+DF = TypeVar("DF", bound=DataFrameAny, covariant=True)
+S = TypeVar("S", bound=SeriesAny, covariant=True)
 E = TypeVar("E", bound="ExprAny", covariant=True)
 """A column representing `.expr`."""
-
-S = TypeVar("S", bound="ColumnAny", covariant=True)
+SC = TypeVar("SC", bound="ExprAny | ScalarAny", covariant=True)
 """A column representing `.scalar`."""
 
 ET_co = TypeVar("ET_co", bound="ExprAny", covariant=True)
@@ -161,6 +166,12 @@ ST_co = TypeVar("ST_co", bound="ExprAny | ScalarAny", covariant=True)
 # - `Self_` needs to express how we get to `CompliantExpr` with it's bound
 Self_ = TypeVar("Self_", contravariant=True)
 Frame = TypeVar("Frame", bound=FrameAny, contravariant=True)
+Frame2 = TypeVar("Frame2", bound="DataFrameAny | LazyFrameAny", contravariant=True)
+"""`CompliantDataFrame | CompliantLazyFrame`.
+
+`Frame` was taken already :sad:
+"""
+
 IR = TypeVar("IR", bound="ir.ExprIR", contravariant=True)
 F_contra = TypeVar("F_contra", bound="ir.Function", contravariant=True)
 
@@ -210,13 +221,13 @@ BoundFunctionImplMethod = BoundExprMethod[ir.FunctionExpr[F_contra], Frame, R]
 
 
 # TODO @dangotbanned: Decide on a better name
-class DispatchScope(Protocol[NamespaceT_co, C]):
+class DispatchScope(Protocol[NamespaceT_co, ColumnT_co]):
     """Represents either `*Expr` or `*Namespace`.
 
     E.g. the widest possible type you can dispatch from.
     """
 
-    def __narwhals_expr_prepare__(self) -> C:
+    def __narwhals_expr_prepare__(self) -> ColumnT_co:
         """Return a partially initialized `CompliantExpr`.
 
         ## Notes
@@ -233,27 +244,151 @@ class DispatchScope(Protocol[NamespaceT_co, C]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
+C = TypeVar("C", bound="cc.ClassesAny", covariant=True)
+
+
+class DispatchScope2(Protocol[C, ColumnT_co]):
+    @property
+    def __narwhals_classes__(self) -> C: ...
+    def __narwhals_expr_prepare__(self) -> ColumnT_co: ...
+
+
 class HasExpr(Protocol[E]):
     @property
     def _expr(self) -> type[E]: ...
 
 
-class HasScalar(Protocol[S]):
+class HasScalar(Protocol[SC]):
     @property
-    def _scalar(self) -> type[S]: ...
+    def _scalar(self) -> type[SC]: ...
 
 
 DispatchScopeAny: TypeAlias = (
     "DispatchScope[Namespace[Frame, ET_co, ST_co], ET_co | ST_co]"
 )
 
+FrameUnknown: TypeAlias = (
+    "cc.EagerClasses[Any, Any, E, SC] | cc.LazyClasses[Any, Any, E, SC]"
+)
+
+DispatchEager: TypeAlias = "DispatchScope2[cc.EagerClasses[DF, Any, E, SC], E | SC]"
+DispatchLazy: TypeAlias = "DispatchScope2[cc.LazyClasses[LF, Any, E, SC], E | SC]"
+
+DispatchUnknown: TypeAlias = "DispatchScope2[FrameUnknown[E, SC], E | SC]"
+"""For whatever reason, an overload couldn't match `frame`.
+
+This *should* preserve the typing for `*Expr` & `*Scalar` as a fallback.
+"""
+
+DispatchAny: TypeAlias = (
+    "DispatchEager[DF, E, SC] | DispatchLazy[LF, E, SC] | DispatchUnknown[E, SC]"
+)
+
+BoundMethod2Any: TypeAlias = "BoundMethod2[IR, DF, E | SC] | BoundMethod2[IR, LF, E | SC] | BoundMethod2[IR, Any, E | SC]"
+
+
+def binder_actual(f1: CallExprPrepare2, f2: GetMethod2, /) -> BinderBind2:
+    """`_dispatch._binder`.
+
+    - Uses `__narwhals_classes__`
+    - Aiming to support eager and lazy via the same API
+    - From the dispatcher side, it's just about passing the frame to the new caller
+        - it doesn't matter really what we were given
+    """
+
+    @overload
+    def bind(ctx: DispatchEager[DF, E, SC], /) -> BoundMethod2[Any, DF, E | SC]: ...
+    @overload
+    def bind(ctx: DispatchLazy[LF, E, SC], /) -> BoundMethod2[Any, LF, E | SC]: ...
+    @overload
+    def bind(ctx: DispatchUnknown[E, SC], /) -> BoundMethod2[Any, Any, E | SC]: ...
+    def bind(ctx: DispatchScope2[Incomplete, Incomplete], /) -> Incomplete:
+        return f2(f1(ctx))
+
+    return bind
+
+
+class BinderBind2(Protocol):
+    """Overloaded now to accurately represent eager/lazy support."""
+
+    @overload
+    def __call__(
+        self, ctx: DispatchEager[DF, E, SC], /
+    ) -> BoundMethod2[Any, DF, E | SC]: ...
+    @overload
+    def __call__(
+        self, ctx: DispatchLazy[LF, E, SC], /
+    ) -> BoundMethod2[Any, LF, E | SC]: ...
+    @overload
+    def __call__(
+        self, ctx: DispatchUnknown[E, SC], /
+    ) -> BoundMethod2[Any, Any, E | SC]: ...
+    @overload
+    def __call__(
+        self, ctx: DispatchAny[DF, E, SC, LF], /
+    ) -> BoundMethod2Any[Any, DF, E, SC, LF]: ...
+    def __call__(
+        self, ctx: DispatchAny[Any, Any, Any, Any], /
+    ) -> BoundMethod2[Any, Any, Any]: ...
+
+
+class Binder2(Protocol[IR]):
+    """Gets the `IR` once back inside `Dispatcher`."""
+
+    @overload
+    def __call__(
+        self, ctx: DispatchEager[DF, E, SC], /
+    ) -> BoundMethod2[IR, DF, E | SC]: ...
+    @overload
+    def __call__(
+        self, ctx: DispatchLazy[LF, E, SC], /
+    ) -> BoundMethod2[IR, LF, E | SC]: ...
+    @overload
+    def __call__(
+        self, ctx: DispatchUnknown[E, SC], /
+    ) -> BoundMethod2[IR, Any, E | SC]: ...
+    @overload
+    def __call__(
+        self, ctx: DispatchAny[DF, E, SC, LF], /
+    ) -> BoundMethod2Any[IR, DF, E, SC, LF]: ...
+    def __call__(
+        self, ctx: DispatchAny[Any, Any, Any, Any], /
+    ) -> BoundMethod2[IR, Any, Any]: ...
+
 
 class CallNamespace(Protocol):
-    def __call__(self, obj: DispatchScope[NamespaceT_co, C], /) -> NamespaceT_co: ...
+    def __call__(
+        self, obj: DispatchScope[NamespaceT_co, ColumnT_co], /
+    ) -> NamespaceT_co: ...
 
 
 class CallExprPrepare(Protocol):
-    def __call__(self, obj: DispatchScope[NamespaceT_co, C], /) -> C: ...
+    def __call__(
+        self, obj: DispatchScope[NamespaceT_co, ColumnT_co], /
+    ) -> ColumnT_co: ...
+
+
+class CallExprPrepare2(Protocol):
+    """`_binder.f1`."""
+
+    def __call__(self, ctx: DispatchScope2[cc.C, ColumnT_co], /) -> ColumnT_co: ...
+
+
+class GetMethod(Protocol):
+    #  `mypy`: Cannot use a covariant type variable as a parameter
+    def __call__(self, obj: ColumnT_co, /) -> BoundMethod[Any, Any, ColumnT_co]: ...  # type: ignore[misc]
+
+
+class GetMethod2(Protocol):
+    def __call__(self, obj: ColumnT_co, /) -> BoundMethod2[Any, Any, ColumnT_co]: ...  # type: ignore[misc]
+
+
+class GetClassMethod(Protocol):
+    def __call__(self, tp: type[E | SC], /) -> BoundMethod[Any, Any, E | SC]: ...
+
+
+class GetClassMethod2(Protocol):
+    def __call__(self, tp: type[E | SC], /) -> BoundMethod2[Any, Any, E | SC]: ...
 
 
 class GetExpr(Protocol):
@@ -264,20 +399,7 @@ class GetScalar(Protocol):
     def __call__(self, obj: HasScalar[ST_co], /) -> type[ST_co]: ...
 
 
-class GetMethod(Protocol):
-    def __call__(
-        self, obj: C | Namespace[Frame, ET_co, ST_co], /
-    ) -> BoundMethod[Any, Frame, C]: ...
-
-
-class GetClassMethod(Protocol):
-    def __call__(self, tp: type[E | S], /) -> BoundMethod[Any, Any, E | S]: ...
-
-
-ExprIR_contra = TypeVar("ExprIR_contra", bound="ir.ExprIR", contravariant=True)
-
-
-class Binder(Protocol[ExprIR_contra]):
+class Binder(Protocol[IR]):
     """The type of `ExprIR.__expr_ir_dispatch__.bind`.
 
     - Takes a context that we try to access the method on.
@@ -286,13 +408,17 @@ class Binder(Protocol[ExprIR_contra]):
 
     def __call__(
         self, ctx: DispatchScopeAny[Frame, ET_co, ST_co], /
-    ) -> BoundMethod[ExprIR_contra, Frame, ET_co | ST_co]: ...
+    ) -> BoundMethod[IR, Frame, ET_co | ST_co]: ...
 
 
-class BoundMethod(Protocol[ExprIR_contra, Frame, C]):
+class BoundMethod(Protocol[IR, Frame, ColumnT_co]):
     """The return type of `ExprIR.__expr_ir_dispatch__.bind`.
 
     - `None` can be returned when subclassing `*Expr`, but not implementing the method
     """
 
-    def __call__(self, node: ExprIR_contra, frame: Frame, name: str, /) -> C | None: ...
+    def __call__(self, node: IR, frame: Frame, name: str, /) -> ColumnT_co | None: ...
+
+
+class BoundMethod2(Protocol[IR, Frame2, ColumnT_co]):
+    def __call__(self, node: IR, frame: Frame2, name: str, /) -> ColumnT_co | None: ...
