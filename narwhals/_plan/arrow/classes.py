@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class ArrowClasses:
+    """TODO @dangotbanned: Convert into a descriptor for classmethod access."""
+
     __slots__ = ()
     version: ClassVar[Version] = Version.MAIN
 

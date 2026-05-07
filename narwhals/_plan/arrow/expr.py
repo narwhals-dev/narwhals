@@ -32,7 +32,7 @@ from narwhals._plan.compliant.accessors import (
     ExprStringNamespace,
     ExprStructNamespace,
 )
-from narwhals._plan.compliant.expr import EagerExpr
+from narwhals._plan.compliant.expr import EagerColumn, EagerExpr
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
@@ -293,8 +293,7 @@ class unary_accessor(  # noqa: N801
 
 
 class _ArrowDispatch(
-    EagerExpr["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny],
-    Protocol[Native_co],
+    EagerColumn["Frame", Native_co, ChunkedArrayAny], Protocol[Native_co]
 ):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
@@ -302,8 +301,6 @@ class _ArrowDispatch(
 
     __slots__ = ()
 
-    @property
-    def native(self) -> Native_co: ...  # type: ignore[override]
     @classmethod
     def from_series(cls, series: Series, /) -> Self: ...
 
@@ -481,7 +478,7 @@ class ArrowExpr(
     __slots__ = ("_evaluated",)
     _evaluated: Series
 
-    # TODO @dangotbanned: Remove once `EagerScalar` no longer inherits from `EagerExpr`
+    # NOTE: (low-priority) rough edge from the optional `Scalar` impl
     len_star = not_implemented()
     lit = not_implemented()
 
@@ -887,8 +884,7 @@ class ArrowExpr(
 
 
 class ArrowScalar(
-    _ArrowDispatch[NativeScalar],
-    EagerScalar["Frame", ChunkedArrayAny, NativeScalar, ChunkedArrayAny],
+    _ArrowDispatch[NativeScalar], EagerScalar["Frame", ChunkedArrayAny, NativeScalar]
 ):
     __slots__ = ()
     _evaluated: NativeScalar
@@ -896,9 +892,6 @@ class ArrowScalar(
 
     def __narwhals_namespace__(self) -> Namespace:
         return Namespace()
-
-    # TODO @dangotbanned: Remove once `EagerScalar` no longer inherits from `EagerExpr`
-    lit_series = not_implemented()
 
     @classmethod
     def len_star(cls, node: ir.Len, frame: Frame, name: str) -> Self:
@@ -952,7 +945,7 @@ class ArrowScalar(
         return self.from_native(native, name or self.name)
 
     @property
-    def native(self) -> NativeScalar:  # type: ignore[override]
+    def native(self) -> NativeScalar:
         return self._evaluated
 
     def to_series(self) -> Series:
@@ -980,7 +973,7 @@ class ArrowScalar(
         return pa.scalar(0 if previous.is_valid else 1)
 
     # TODO @dangotbanned: Fix direct `ArrowExpr`
-    def drop_nulls(  # type: ignore[override]
+    def drop_nulls(
         self, node: FExpr[F.DropNulls], frame: Frame, name: str
     ) -> Scalar | Expr:
         previous = node.dispatch_arg(self, frame, name)
@@ -1007,23 +1000,6 @@ class ArrowScalar(
 
     dt = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
 
-    filter = not_implemented()
-    over = not_implemented()
-    over_ordered = not_implemented()
-    map_batches = not_implemented()
-    rank = not_implemented()
-    # length_preserving
-    rolling_sum = not_implemented()
-    rolling_mean = not_implemented()
-    rolling_std = not_implemented()
-    rolling_var = not_implemented()
-    diff = not_implemented()
-    cum_sum = not_implemented()  # TODO @dangotbanned: is this just self?
-    cum_count = not_implemented()
-    cum_min = not_implemented()
-    cum_max = not_implemented()
-    cum_prod = not_implemented()
-
 
 ExprOrScalarT_co = TypeVar("ExprOrScalarT_co", "ArrowExpr", "ArrowScalar", covariant=True)
 
@@ -1037,9 +1013,6 @@ class ArrowAccessor(Generic[ExprOrScalarT_co]):
     @property
     def compliant(self) -> ExprOrScalarT_co:
         return self._compliant
-
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
 
     def with_native(self, native: Native, name: str, /) -> Expr | Scalar:
         return self.compliant._with_native(native, name)

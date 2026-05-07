@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         CompliantFrame,
         EagerDataFrame,
     )
-    from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
+    from narwhals._plan.compliant.expr import CompliantColumn, CompliantExpr, EagerExpr
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
@@ -66,6 +66,7 @@ NativeDataFrameT_co = TypeVar(
 
 PlanEvaluator: TypeAlias = "ResolvedToCompliant[Native]"
 
+ColumnAny: TypeAlias = "CompliantColumn[Any, Any]"
 ExprAny: TypeAlias = "CompliantExpr[Any, Any, Any]"
 ScalarAny: TypeAlias = "CompliantScalar[Any, Any, Any]"
 Series: TypeAlias = "CompliantSeries[NativeSeriesT_co]"
@@ -80,7 +81,7 @@ Namespace: TypeAlias = "CompliantNamespace[FrameT, ExprT_co, ScalarT_co]"
 PlanEvaluatorAny: TypeAlias = "PlanEvaluator[Any]"
 
 EagerExprAny: TypeAlias = "EagerExpr[Any, Any, Any, Any]"
-EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any, Any]"
+EagerScalarAny: TypeAlias = "EagerScalar[Any, Any, Any]"
 EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any]"
 
 ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
@@ -139,6 +140,20 @@ class CanNamespace(Protocol[FrameT, ExprT_co, ScalarT_co]):
     def __narwhals_namespace__(self) -> Namespace[FrameT, ExprT_co, ScalarT_co]: ...
 
 
+# NOTE: Very important that these stay covariant!
+C = TypeVar("C", bound="ColumnAny", covariant=True)
+"""Any column."""
+
+E = TypeVar("E", bound="ExprAny", covariant=True)
+"""A column representing `.expr`."""
+
+S = TypeVar("S", bound="ColumnAny", covariant=True)
+"""A column representing `.scalar`."""
+
+ET_co = TypeVar("ET_co", bound="ExprAny", covariant=True)
+"""`CompliantExpr`"""
+ST_co = TypeVar("ST_co", bound="ExprAny | ScalarAny", covariant=True)
+"""`CompliantScalar`"""
 # - `Self_` and `Frame` need to share a `*Namespace`
 # - `Self_` needs to express how we get to `CompliantExpr` with it's bound
 Self_ = TypeVar("Self_", contravariant=True)
@@ -146,7 +161,7 @@ Frame = TypeVar("Frame", bound=FrameAny, contravariant=True)
 IR = TypeVar("IR", bound="ir.ExprIR", contravariant=True)
 F_contra = TypeVar("F_contra", bound="ir.Function", contravariant=True)
 
-R = TypeVar("R", bound=ExprAny, covariant=True)
+R = TypeVar("R", bound=ColumnAny, covariant=True)
 
 
 class ExprMethod(Protocol[Self_, IR, Frame, R]):
@@ -191,21 +206,14 @@ FunctionImplMethod = ExprMethod[Self_, ir.FunctionExpr[F_contra], Frame, R]
 BoundFunctionImplMethod = BoundExprMethod[ir.FunctionExpr[F_contra], Frame, R]
 
 
-# NOTE: Very important that these stay covariant!
-ET_co = TypeVar("ET_co", bound="ExprAny", covariant=True)
-"""`CompliantExpr`"""
-ST_co = TypeVar("ST_co", bound="ExprAny | ScalarAny", covariant=True)
-"""`CompliantScalar`"""
-
-
 # TODO @dangotbanned: Decide on a better name
-class DispatchScope(Protocol[NamespaceT_co, ET_co]):
+class DispatchScope(Protocol[NamespaceT_co, C]):
     """Represents either `*Expr` or `*Namespace`.
 
     E.g. the widest possible type you can dispatch from.
     """
 
-    def __narwhals_expr_prepare__(self) -> ET_co:
+    def __narwhals_expr_prepare__(self) -> C:
         """Return a partially initialized `CompliantExpr`.
 
         ## Notes
@@ -222,14 +230,14 @@ class DispatchScope(Protocol[NamespaceT_co, ET_co]):
     def __narwhals_namespace__(self) -> NamespaceT_co: ...
 
 
-class HasExpr(Protocol[ET_co]):
+class HasExpr(Protocol[E]):
     @property
-    def _expr(self) -> type[ET_co]: ...
+    def _expr(self) -> type[E]: ...
 
 
-class HasScalar(Protocol[ST_co]):
+class HasScalar(Protocol[S]):
     @property
-    def _scalar(self) -> type[ST_co]: ...
+    def _scalar(self) -> type[S]: ...
 
 
 DispatchScopeAny: TypeAlias = (
@@ -238,11 +246,11 @@ DispatchScopeAny: TypeAlias = (
 
 
 class CallNamespace(Protocol):
-    def __call__(self, obj: DispatchScope[NamespaceT_co, ET_co], /) -> NamespaceT_co: ...
+    def __call__(self, obj: DispatchScope[NamespaceT_co, C], /) -> NamespaceT_co: ...
 
 
 class CallExprPrepare(Protocol):
-    def __call__(self, obj: DispatchScope[NamespaceT_co, ET_co], /) -> ET_co: ...
+    def __call__(self, obj: DispatchScope[NamespaceT_co, C], /) -> C: ...
 
 
 class GetExpr(Protocol):
@@ -255,14 +263,12 @@ class GetScalar(Protocol):
 
 class GetMethod(Protocol):
     def __call__(
-        self, obj: ET_co | ST_co | Namespace[Frame, ET_co, ST_co], /
-    ) -> BoundMethod[Any, Frame, ET_co | ST_co]: ...
+        self, obj: C | Namespace[Frame, ET_co, ST_co], /
+    ) -> BoundMethod[Any, Frame, C]: ...
 
 
 class GetClassMethod(Protocol):
-    def __call__(
-        self, tp: type[ET_co | ST_co], /
-    ) -> BoundMethod[Any, Any, ET_co | ST_co]: ...
+    def __call__(self, tp: type[E | S], /) -> BoundMethod[Any, Any, E | S]: ...
 
 
 ExprIR_contra = TypeVar("ExprIR_contra", bound="ir.ExprIR", contravariant=True)
@@ -280,12 +286,10 @@ class Binder(Protocol[ExprIR_contra]):
     ) -> BoundMethod[ExprIR_contra, Frame, ET_co | ST_co]: ...
 
 
-class BoundMethod(Protocol[ExprIR_contra, Frame, ET_co]):
+class BoundMethod(Protocol[ExprIR_contra, Frame, C]):
     """The return type of `ExprIR.__expr_ir_dispatch__.bind`.
 
     - `None` can be returned when subclassing `*Expr`, but not implementing the method
     """
 
-    def __call__(
-        self, node: ExprIR_contra, frame: Frame, name: str, /
-    ) -> ET_co | None: ...
+    def __call__(self, node: ExprIR_contra, frame: Frame, name: str, /) -> C | None: ...

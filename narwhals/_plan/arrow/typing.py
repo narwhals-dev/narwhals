@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # ruff: noqa: PLC0414
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, overload
 
 from narwhals._typing_compat import TypeVar
@@ -273,8 +273,6 @@ IntoChunkedArray: TypeAlias = (
     "ArrowAny | list[Iterable[Any]] | OneOrIterable[ArrowStreamExportable | _NumpyArray]"
 )
 
-
-BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
 
 DataTypeRemap: TypeAlias = Mapping[DataType, DataType]
 NullPlacement: TypeAlias = Literal["at_start", "at_end"]

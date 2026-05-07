@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 from narwhals._plan.compliant.typing import (
+    # NOTE: `C as ExprT_co` *should* be temporary, while finishing up `CompliantColumn`
+    C as ExprT_co,  # noqa: N811
     DataFrameT_co,
-    ExprT_co,
     FrameT_contra as FrameT,
     SeriesT_co,
 )

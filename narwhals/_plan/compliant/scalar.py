@@ -1,18 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
-from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr
+from narwhals._plan.compliant.expr import CompliantColumn, CompliantExpr
 from narwhals._plan.compliant.typing import (
     EagerDataFrameT,
     FrameT,
     NativeExpr_co,
     NativeScalar_co,
-    NativeSeriesT,
 )
-from narwhals._utils import Version, not_implemented
+from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
@@ -26,9 +27,8 @@ if TYPE_CHECKING:
 _F64 = Version.MAIN.dtypes.Float64()
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class CompliantScalar(
-    CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co],
+    CompliantColumn[FrameT, NativeScalar_co],
     Protocol[FrameT, NativeExpr_co, NativeScalar_co],
 ):
     """`[FrameT, NativeExpr_co, NativeScalar_co]`."""
@@ -44,9 +44,6 @@ class CompliantScalar(
     """
     _name: str
 
-    @property
-    def native(self) -> NativeScalar_co: ...  # type: ignore[override]
-
     def _cast_float(self, node: ir.ExprIR, frame: FrameT, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
         return self.cast(node.cast(_F64), frame, name)
@@ -61,25 +58,25 @@ class CompliantScalar(
 
     # NOTE: Constant behaviors with scalars observed in `polars`
 
-    def _always_nan(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_nan(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(float("nan"), name, dtype=None)
 
-    def _always_noop(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_noop(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self._with_evaluated(self._evaluated, name)
 
-    def _always_true(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_true(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(True, name, dtype=None)
 
-    def _always_false(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_false(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(False, name, dtype=None)
 
-    def _always_null(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_null(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(None, name, dtype=None)
 
-    def _always_zero(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_zero(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(0, name, dtype=None)
 
-    def _always_one(self, node: ir.ExprIR, frame: Any, name: str) -> Self:
+    def _always_one(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(1, name, dtype=None)
 
     @property
@@ -134,7 +131,7 @@ class CompliantScalar(
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None)
 
-    def drop_nulls(  # type: ignore[override]
+    def drop_nulls(
         self, node: FExpr[F.DropNulls], frame: FrameT, name: str, /
     ) -> (
         CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]
@@ -143,58 +140,38 @@ class CompliantScalar(
         """Returns a 0-length Series if null, else noop."""
         ...
 
-    arg_max = _always_zero  # type: ignore[misc]
-    arg_min = _always_zero  # type: ignore[misc]
-    is_first_distinct = _always_true  # type: ignore[misc]
-    is_last_distinct = _always_true  # type: ignore[misc]
-    is_unique = _always_true  # type: ignore[misc]
-    is_duplicated = _always_false  # type: ignore[misc]
-    n_unique = _always_one  # type: ignore[misc]
-    std = _always_null  # type: ignore[misc]
-    var = _always_null  # type: ignore[misc]
-    first = _always_noop  # type: ignore[misc]
-    max = _always_noop  # type: ignore[misc]
-    min = _always_noop  # type: ignore[misc]
-    last = _always_noop  # type: ignore[misc]
-    sort = _always_noop  # type: ignore[misc]
-    sort_by = _always_noop  # type: ignore[misc]
-    sum = _always_noop  # type: ignore[misc]
-    mode = _always_noop  # type: ignore[misc]
-    unique = _always_noop  # type: ignore[misc]
-    mode_any = _always_noop  # type: ignore[misc]
-    kurtosis = _always_nan  # type: ignore[misc]
-    skew = _always_nan  # type: ignore[misc]
-    len = _always_one  # type: ignore[misc]
-
-    # TODO @dangotbanned: Remove once `CompliantScalar` no longer inherits from `CompliantExpr`
-    mode_all = not_implemented()  # type: ignore[misc]
-    fill_null_with_strategy = not_implemented()  # type: ignore[misc]
-    hist_bins = not_implemented()  # type: ignore[misc]
-    hist_bin_count = not_implemented()  # type: ignore[misc]
-    col = not_implemented()  # type: ignore[misc]
+    arg_max: Callable[..., Self] = _always_zero
+    arg_min: Callable[..., Self] = _always_zero
+    is_first_distinct: Callable[..., Self] = _always_true
+    is_last_distinct: Callable[..., Self] = _always_true
+    is_unique: Callable[..., Self] = _always_true
+    is_duplicated: Callable[..., Self] = _always_false
+    n_unique: Callable[..., Self] = _always_one
+    std: Callable[..., Self] = _always_null
+    var: Callable[..., Self] = _always_null
+    first: Callable[..., Self] = _always_noop
+    max: Callable[..., Self] = _always_noop
+    min: Callable[..., Self] = _always_noop
+    last: Callable[..., Self] = _always_noop
+    sort: Callable[..., Self] = _always_noop
+    sort_by: Callable[..., Self] = _always_noop
+    sum: Callable[..., Self] = _always_noop
+    mode: Callable[..., Self] = _always_noop
+    unique: Callable[..., Self] = _always_noop
+    mode_any: Callable[..., Self] = _always_noop
+    kurtosis: Callable[..., Self] = _always_nan
+    skew: Callable[..., Self] = _always_nan
+    len: Callable[..., Self] = _always_one
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `EagerDataFrameT`
 class EagerScalar(
     CompliantScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
-    EagerExpr[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
-    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT],
+    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
 ):
-    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
+    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co]`."""
 
     __slots__ = ()
 
+    def to_python(self) -> PythonLiteral: ...
     def __len__(self) -> int:
         return 1
-
-    def __bool__(self) -> Literal[True]:
-        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
-        return True
-
-    def to_python(self) -> PythonLiteral: ...
-
-    gather_every = not_implemented()  # type: ignore[misc]
-    # NOTE: `n=1` and `fraction=1.0` *could* be special-cased here
-    # but seems low-priority for a deprecated method
-    sample_n = not_implemented()  # type: ignore[misc]
-    sample_frac = not_implemented()  # type: ignore[misc]
