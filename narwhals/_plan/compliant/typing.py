@@ -124,6 +124,9 @@ EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
 EagerDataFrameT_co = TypeVar(
     "EagerDataFrameT_co", bound=EagerDataFrameAny, covariant=True
 )
+EagerDataFrameT_contra = TypeVar(
+    "EagerDataFrameT_contra", bound="EagerDataFrameAny", contravariant=True
+)
 
 PlanEvaluatorT_co = TypeVar("PlanEvaluatorT_co", bound="PlanEvaluatorAny", covariant=True)
 """Covariant TypeVar for `ResolvedToCompliant`.

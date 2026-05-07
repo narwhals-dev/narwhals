@@ -4,8 +4,8 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan.compliant.expr import CompliantColumn, CompliantExpr
 from narwhals._plan.compliant.typing import (
-    EagerDataFrameT,
-    FrameT,
+    EagerDataFrameT_contra as EagerFrame,
+    FrameT_contra as Frame,
     NativeExpr_co,
     NativeScalar_co,
 )
@@ -28,10 +28,10 @@ _F64 = Version.MAIN.dtypes.Float64()
 
 
 class CompliantScalar(
-    CompliantColumn[FrameT, NativeScalar_co],
-    Protocol[FrameT, NativeExpr_co, NativeScalar_co],
+    CompliantColumn[Frame, NativeScalar_co],
+    Protocol[Frame, NativeExpr_co, NativeScalar_co],
 ):
-    """`[FrameT, NativeExpr_co, NativeScalar_co]`."""
+    """`[FrameT_contra, NativeExpr_co, NativeScalar_co]`."""
 
     __slots__ = ("_evaluated", "_name")
 
@@ -44,7 +44,7 @@ class CompliantScalar(
     """
     _name: str
 
-    def _cast_float(self, node: ir.ExprIR, frame: FrameT, name: str) -> Self:
+    def _cast_float(self, node: ir.ExprIR, frame: Frame, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
         return self.cast(node.cast(_F64), frame, name)
 
@@ -93,49 +93,49 @@ class CompliantScalar(
     ) -> Self: ...
 
     def count(
-        self, node: agg.Count, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: agg.Count, frame: Frame, name: str, /
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         """Returns 0 if null, else 1."""
         ...
 
     def ewm_mean(
-        self, node: FExpr[F.EwmMean], frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: FExpr[F.EwmMean], frame: Frame, name: str, /
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.input[0], frame, name)
 
     def mean(
-        self, node: agg.Mean, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: agg.Mean, frame: Frame, name: str, /
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.expr, frame, name)
 
     def median(
-        self, node: agg.Median, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: agg.Median, frame: Frame, name: str, /
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.expr, frame, name)
 
     def null_count(
-        self, node: FExpr[F.NullCount], frame: FrameT, name: str
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: FExpr[F.NullCount], frame: Frame, name: str
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         """Returns 1 if null, else 0."""
         ...
 
     def quantile(
-        self, node: agg.Quantile, frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: agg.Quantile, frame: Frame, name: str, /
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         return self._cast_float(node.expr, frame, name)
 
     def shift(
-        self, node: FExpr[F.Shift], frame: FrameT, name: str, /
-    ) -> CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]:
+        self, node: FExpr[F.Shift], frame: Frame, name: str, /
+    ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
         if node.function.n == 0:
             return self._with_evaluated(self._evaluated, name)
         return self.from_python(None, name, dtype=None)
 
     def drop_nulls(
-        self, node: FExpr[F.DropNulls], frame: FrameT, name: str, /
+        self, node: FExpr[F.DropNulls], frame: Frame, name: str, /
     ) -> (
-        CompliantScalar[FrameT, NativeExpr_co, NativeScalar_co]
-        | CompliantExpr[FrameT, NativeExpr_co, NativeScalar_co]
+        CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]
+        | CompliantExpr[Frame, NativeExpr_co, NativeScalar_co]
     ):
         """Returns a 0-length Series if null, else noop."""
         ...
@@ -165,10 +165,10 @@ class CompliantScalar(
 
 
 class EagerScalar(
-    CompliantScalar[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
-    Protocol[EagerDataFrameT, NativeExpr_co, NativeScalar_co],
+    CompliantScalar[EagerFrame, NativeExpr_co, NativeScalar_co],
+    Protocol[EagerFrame, NativeExpr_co, NativeScalar_co],
 ):
-    """`[EagerDataFrameT, NativeExpr_co, NativeScalar_co]`."""
+    """`[EagerDataFrameT_contra, NativeExpr_co, NativeScalar_co]`."""
 
     __slots__ = ()
 
