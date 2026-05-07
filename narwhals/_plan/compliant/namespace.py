@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Implementation, Version
 
 
-# TODO @dangotbanned: Review what will replace following `*Classes`
+# TODO @dangotbanned: `LazyRangeGenerator` -> `CompliantExpr`
 class CompliantNamespace(
     io.ReadSchema,
     ranges.LazyRangeGenerator[ct.FrameT, ct.ExprT_co],
@@ -33,10 +33,7 @@ class CompliantNamespace(
     @property
     def _expr(self) -> type[ct.ExprT_co]: ...
     @property
-    def _frame(self) -> type[ct.FrameT]:
-        """The invariance of `FrameT` is a big ol problemo."""
-        ...
-
+    def _frame(self) -> type[ct.FrameT]: ...
     @property
     def _scalar(self) -> type[ct.ScalarT_co]: ...
     def __narwhals_namespace__(self) -> Self:
@@ -75,15 +72,9 @@ class EagerNamespace(
     __slots__ = ()
 
     @property
+    def _series(self) -> type[ct.SeriesT_co]: ...
+    @property
     def _dataframe(self) -> type[ct.EagerDataFrameT]: ...
     @property
     def _frame(self) -> type[ct.EagerDataFrameT]:  # pragma: no cover
         return self._dataframe
-
-    @property
-    def _series(self) -> type[ct.SeriesT_co]: ...
-
-
-def namespace(obj: ct.SupportsNarwhalsNamespace[ct.NamespaceT_co], /) -> ct.NamespaceT_co:
-    """Get the compliant namespace from `obj`."""
-    return obj.__narwhals_namespace__()

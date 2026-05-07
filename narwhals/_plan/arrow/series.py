@@ -12,7 +12,6 @@ from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.compliant import CompliantSeries
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
-from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.expressions import functions as F
 from narwhals._utils import Version, generate_repr
 from narwhals.dependencies import is_numpy_array_1d
@@ -26,7 +25,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as DataFrame
-    from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
     from narwhals._plan.arrow.typing import ArrowAny, ChunkedArrayAny
     from narwhals._plan.compliant.typing import SeriesT
     from narwhals.dtypes import DType, IntegerType
@@ -84,7 +82,8 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self.from_native(native, self.name)
 
     def to_frame(self) -> DataFrame:
-        return namespace(self)._dataframe.from_dict({self.name: self.native})
+        dataframe = self.__narwhals_namespace__()._dataframe
+        return dataframe.from_dict({self.name: self.native})
 
     def to_list(self) -> list[Any]:
         return self.native.to_pylist()
@@ -420,9 +419,6 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
     def native(self) -> ChunkedArrayAny:
         return self.compliant.native
 
-    def __narwhals_namespace__(self) -> Namespace:
-        return namespace(self.compliant)
-
     def with_native(self, native: ChunkedArrayAny, name: str, /) -> ArrowSeries:
         return self.compliant.from_native(native, name)
 
@@ -438,7 +434,8 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
             rec_batch: Incomplete = pa.RecordBatch.from_struct_array
             batches = (rec_batch(chunk) for chunk in native.chunks)
             table = pa.Table.from_batches(batches, fn.struct.schema(native))
-        return namespace(self)._dataframe.from_native(table)
+        dataframe = self.compliant.__narwhals_namespace__()._dataframe
+        return dataframe.from_native(table)
 
     # name overriding *may* be wrong
     def field(self, name: str) -> ArrowSeries:

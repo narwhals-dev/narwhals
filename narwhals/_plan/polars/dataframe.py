@@ -9,7 +9,6 @@ import narwhals.exceptions
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant import CompliantDataFrame
-from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import (
@@ -201,12 +200,12 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.from_native(self.native.gather_every(n, offset))
 
     def get_column(self, name: str) -> Series:
-        return namespace(self)._series.from_native(self.native.get_column(name))
+        series = self.__narwhals_namespace__()._series
+        return series.from_native(self.native.get_column(name))
 
     def iter_columns(self) -> Iterator[Series]:
-        series_ = namespace(self)._series
-        for series in self.native.iter_columns():
-            yield series_.from_native(series)
+        series = self.__narwhals_namespace__()._series
+        yield from (series.from_native(s) for s in self.native.iter_columns())
 
     def join(
         self,
@@ -277,7 +276,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.native.to_dict(as_series=False)
 
     def to_series(self, index: int = 0) -> Series:
-        return namespace(self)._series.from_native(self.native.to_series(index))
+        series = self.__narwhals_namespace__()._series
+        return series.from_native(self.native.to_series(index))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self.from_native(self.native.rename(mapping))
@@ -293,7 +293,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         )
 
     def to_struct(self, name: str = "") -> Any:
-        return namespace(self)._series.from_native(self.native.to_struct(name))
+        series = self.__narwhals_namespace__()._series
+        return series.from_native(self.native.to_struct(name))
 
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
         results = self.native.partition_by(by, include_key=include_key, as_dict=False)
@@ -406,8 +407,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     filter = not_implemented()
 
     def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
-        expr_ = namespace(self)._expr
-        yield from (expr_.from_named_ir(e, self) for e in nodes)
+        expr = self.__narwhals_namespace__()._expr
+        yield from (expr.from_named_ir(e, self) for e in nodes)
 
     def select(self, irs: Seq[ir.NamedIR]) -> Self:
         return self.from_native(

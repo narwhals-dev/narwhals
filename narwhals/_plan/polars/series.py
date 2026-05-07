@@ -8,7 +8,6 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
-from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.namespace import (
     PolarsNamespace as Namespace,
@@ -206,8 +205,8 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(self.native.is_not_null())
 
     def to_frame(self) -> DataFrame:
-        df = self.native.to_frame()
-        return namespace(self)._dataframe.from_native(df)
+        dataframe = self.__narwhals_namespace__()._dataframe
+        return dataframe.from_native(self.native.to_frame())
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)

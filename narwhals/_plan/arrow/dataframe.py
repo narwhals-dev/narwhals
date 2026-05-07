@@ -24,7 +24,6 @@ from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
-from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.exceptions import shape_error
 from narwhals._utils import generate_repr, requires, supports_arrow_c_stream
 
@@ -200,9 +199,8 @@ class ArrowDataFrame(
         return zip(self.native.column_names, self.native.itercolumns())
 
     def iter_columns(self) -> Iterator[Series]:
-        series_ = namespace(self)._series
-        for name, series in self._iter_columns():
-            yield series_.from_native(series, name)
+        series = self.__narwhals_namespace__()._series
+        yield from (series.from_native(s, name) for name, s in self._iter_columns())
 
     def to_series(self, index: int = 0) -> Series:
         return self.get_column(self.columns[index])
@@ -222,7 +220,7 @@ class ArrowDataFrame(
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR], /, *, length: int | None = None
     ) -> Iterator[CompliantSeries]:
-        ns = namespace(self)
+        ns = self.__narwhals_namespace__()
         expr = ns._expr
         from_named_ir = ns.from_named_ir
         yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
@@ -338,7 +336,8 @@ class ArrowDataFrame(
                 struct = fn.chunked_array([], pa.struct(native.schema))
         else:
             struct = fn.struct.into_struct(native.columns, native.column_names)
-        return namespace(self)._series.from_native(struct, name)
+        series = self.__narwhals_namespace__()._series
+        return series.from_native(struct, name)
 
     def unnest(self, columns: Sequence[str]) -> Self:
         if len(columns) == 1:
@@ -368,8 +367,8 @@ class ArrowDataFrame(
         return self._with_native(pa.Table.from_arrays(arrays, names))
 
     def get_column(self, name: str) -> Series:
-        chunked = self.native.column(name)
-        return namespace(self)._series.from_native(chunked, name)
+        series = self.__narwhals_namespace__()._series
+        return series.from_native(self.native.column(name), name)
 
     def drop(self, columns: Sequence[str]) -> Self:
         return self._with_native(self.native.drop(list(columns)))
@@ -477,7 +476,8 @@ class ArrowDataFrame(
     # NOTE: `Self` cannot be used here while  `ct.Frame` is invariant
     def filter(self, predicate: NamedIR) -> ArrowDataFrame:
         mask: pc.Expression | ChunkedArrayAny
-        resolved = predicate.dispatch(namespace(self), self)
+        ns = self.__narwhals_namespace__()
+        resolved = predicate.dispatch(ns, self)
         if isinstance(resolved, Expr):
             mask = resolved.broadcast(len(self)).native
         else:

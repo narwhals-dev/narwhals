@@ -361,21 +361,7 @@ class DispatcherOptions:
     """
 
     constructor_name: RootConstructor | None
-
     is_namespaced: bool
-    """True if expression dispatch routes through `__narwhals_namespace__`.
-
-    Required for expressions like:
-
-        nw.all_horizontal(...)
-        # ^
-
-    But not for methods *on* `Expr` like:
-
-        nw.col("a").max()
-        #          ^
-    """
-
     override_name: str
     """Manual override to the auto-generated expression dispatch method name.
 

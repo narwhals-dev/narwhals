@@ -133,10 +133,6 @@ Provides the conversion:
 """
 
 
-class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
-    def __narwhals_namespace__(self) -> NamespaceT_co: ...
-
-
 class CanNamespace(Protocol[FrameT, ExprT_co, ScalarT_co]):
     """Use this instead of `Namespace` or `*Frame`, when all that's needed is access to a namespace."""
 

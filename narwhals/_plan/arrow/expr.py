@@ -33,7 +33,6 @@ from narwhals._plan.compliant.accessors import (
     ExprStructNamespace,
 )
 from narwhals._plan.compliant.expr import EagerExpr
-from narwhals._plan.compliant.namespace import namespace
 from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
@@ -824,7 +823,7 @@ class ArrowExpr(
     # NOTE: Should not be returning a struct when all `include_*` are false
     # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/chunked_array/hist.rs#L223-L223
     def _hist_finish(self, data: Mapping[str, Any], name: str) -> Self:
-        ns = namespace(self)
+        ns = self.__narwhals_namespace__()
         if len(data) == 1:
             count = next(iter(data.values()))
             series = ns._series.from_iterable(count, name=name)
