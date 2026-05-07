@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
-    from narwhals.stable.v2.typing import IntoDataFrameT
+    from narwhals.stable.v2.typing import IntoDataFrameT, IntoFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
 
 
@@ -558,3 +558,46 @@ def test_first_last() -> None:
     result = df.select(b=nw_v2.col("a").first(), c=nw_v2.col("a").last())
     expected = {"b": [0], "c": [-1]}
     assert_equal_data(result, expected)
+
+
+def test_readme_example() -> None:
+    # check that readme example (as of March 2026) passes
+    def _agnostic_function(  # pragma: no cover
+        df_native: IntoFrameT, date_column: str, price_column: str
+    ) -> IntoFrameT:
+        return (
+            nw_v2.from_native(df_native)
+            .group_by(nw_v2.col(date_column).dt.truncate("1mo"))
+            .agg(nw_v2.col(price_column).mean())
+            .sort(date_column)
+            .to_native()
+        )
+
+
+def test_from_eager_or_lazy_polars() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    lf = pl.LazyFrame()
+    df = pl.DataFrame()
+    either = lf if df.height else df
+
+    r_lf = nw_v2.from_native(lf)
+    r_df = nw_v2.from_native(df)
+    r_either = nw_v2.from_native(either)
+
+    r2_lf = nw_v2.from_native(r_lf)
+    r2_df = nw_v2.from_native(r_df)
+    r2_either = nw_v2.from_native(r_either)
+
+    if TYPE_CHECKING:
+        assert_type(r_lf, nw_v2.LazyFrame[pl.LazyFrame])
+        assert_type(r_df, nw_v2.DataFrame[pl.DataFrame])
+        assert_type(
+            r_either, nw_v2.DataFrame[pl.DataFrame] | nw_v2.LazyFrame[pl.LazyFrame]
+        )
+        assert_type(r2_lf, nw_v2.LazyFrame[pl.LazyFrame])
+        assert_type(r2_df, nw_v2.DataFrame[pl.DataFrame])
+        assert_type(
+            r2_either, nw_v2.DataFrame[pl.DataFrame] | nw_v2.LazyFrame[pl.LazyFrame]
+        )

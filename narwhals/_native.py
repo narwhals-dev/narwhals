@@ -287,7 +287,7 @@ NativePySpark: TypeAlias = _PySparkDataFrame
 NativePySparkConnect: TypeAlias = _PySparkDataFrame
 NativeSparkLike: TypeAlias = "NativeSQLFrame | NativePySpark | NativePySparkConnect"
 NativeKnown: TypeAlias = "NativePolars | NativeArrow | NativePandasLike | NativeSparkLike | NativeDuckDB | NativeDask | NativeIbis"
-NativeUnknown: TypeAlias = "NativeDataFrame | NativeSeries | NativeLazyFrame"
+NativeUnknown: TypeAlias = "NativeFrame | NativeSeries"
 NativeAny: TypeAlias = "NativeKnown | NativeUnknown"
 
 IntoDataFrame: TypeAlias = NativeDataFrame
@@ -304,7 +304,7 @@ Examples:
 """
 
 IntoLazyFrame: TypeAlias = Union[NativeLazyFrame, NativeIbis]
-IntoFrame: TypeAlias = Union[IntoDataFrame, IntoLazyFrame]
+IntoFrame: TypeAlias = NativeFrame
 """Anything which can be converted to a Narwhals DataFrame or LazyFrame.
 
 Use this if your function can accept an object which can be converted to either
