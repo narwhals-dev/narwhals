@@ -67,15 +67,15 @@ Incomplete: TypeAlias = Any
 #   - [ ] `date_range`
 #   - [ ] `int_range`
 #   - [ ] `linear_space`
-# - [ ] Variadic
-#   - [ ] `all_horizontal`
-#   - [ ] `any_horizontal`
+# - [x] Variadic
+#   - [x] `all_horizontal`
+#   - [x] `any_horizontal`
 #   - [x] `concat_str`
-#   - [ ] `coalesce`
-#   - [ ] `max_horizontal`
+#   - [x] `coalesce`
+#   - [x] `max_horizontal`
 #   - [x] `mean_horizontal`
-#   - [ ] `min_horizontal`
-#   - [ ] `sum_horizontal`
+#   - [x] `min_horizontal`
+#   - [x] `sum_horizontal`
 class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     """Everything common to `Expr` and `Scalar` literal values.
 
@@ -277,11 +277,29 @@ class CompliantExpr(Protocol[FrameT, NativeExpr_co, NativeScalar_co]):
     # (Scalar, ...)              -> Scalar
     # (Expr, ...)                -> Expr
     # (Expr, Expr | Scalar, ...) -> Expr
+    def all_horizontal(
+        self, node: HExpr[ir.boolean.AllHorizontal], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def any_horizontal(
+        self, node: HExpr[ir.boolean.AnyHorizontal], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def coalesce(
+        self, node: HExpr[F.Coalesce], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def concat_str(
         self, node: HExpr[strings.ConcatStr], frame: FrameT, name: str, /
     ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def max_horizontal(
+        self, node: HExpr[F.MaxHorizontal], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
     def mean_horizontal(
         self, node: HExpr[F.MeanHorizontal], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def min_horizontal(
+        self, node: HExpr[F.MinHorizontal], frame: FrameT, name: str, /
+    ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
+    def sum_horizontal(
+        self, node: HExpr[F.SumHorizontal], frame: FrameT, name: str, /
     ) -> Self | Scalar[FrameT, NativeExpr_co, NativeScalar_co]: ...
 
     def __narwhals_namespace__(

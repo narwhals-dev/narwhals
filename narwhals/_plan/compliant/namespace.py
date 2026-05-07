@@ -9,7 +9,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import HorizontalExpr as HExpr, functions as F
     from narwhals._utils import Implementation, Version
 
 
@@ -40,25 +39,6 @@ class CompliantNamespace(
 
     @property
     def _scalar(self) -> type[ct.ScalarT_co]: ...
-    def all_horizontal(
-        self, node: HExpr[ir.boolean.AllHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def any_horizontal(
-        self, node: HExpr[ir.boolean.AnyHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def coalesce(
-        self, node: HExpr[F.Coalesce], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def max_horizontal(
-        self, node: HExpr[F.MaxHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def min_horizontal(
-        self, node: HExpr[F.MinHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-    def sum_horizontal(
-        self, node: HExpr[F.SumHorizontal], frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co: ...
-
     def __narwhals_namespace__(self) -> Self:
         return self
 

@@ -24,17 +24,8 @@ if TYPE_CHECKING:
 
     T = TypeVar("T")
 
-_NON_NESTED_LITERAL_TPS = (
-    int,
-    float,
-    str,
-    dt.date,
-    dt.time,
-    dt.timedelta,
-    bytes,
-    Decimal,
-)
-_PYTHON_LITERAL_TPS = (*_NON_NESTED_LITERAL_TPS, list, tuple, dict, type(None))
+NON_NESTED_LITERAL_TPS = (int, float, str, dt.date, dt.time, dt.timedelta, bytes, Decimal)
+_PYTHON_LITERAL_TPS = (*NON_NESTED_LITERAL_TPS, list, tuple, dict, type(None))
 
 
 def _ir(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
@@ -50,7 +41,7 @@ def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
 
 
 def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
-    return obj is None or isinstance(obj, _NON_NESTED_LITERAL_TPS)
+    return obj is None or isinstance(obj, NON_NESTED_LITERAL_TPS)
 
 
 def is_python_literal(obj: Any) -> TypeIs[PythonLiteral]:

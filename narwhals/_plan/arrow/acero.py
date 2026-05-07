@@ -323,6 +323,7 @@ def _join_asof_strategy_to_tolerance(
     lower = fn.min_horizontal(fn.min(left_on), fn.min(right_on))
     upper = fn.max_horizontal(fn.max(left_on), fn.max(right_on))
     scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
+    # NOTE: Extra annotation to reduce LSP overhead (it does match the overload *eventually*)
     tolerance: int = fn.cast(scalar, fn.I64).as_py()
     return tolerance
 

@@ -1,38 +1,20 @@
 from __future__ import annotations
 
-from functools import reduce
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
-
-import pyarrow as pa
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._plan._version import into_version
-from narwhals._plan.arrow import functions as fn, io
+from narwhals._plan.arrow import io
 from narwhals._plan.compliant.namespace import EagerNamespace
 from narwhals._plan.exceptions import function_arg_non_scalar_error
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from typing_extensions import TypeAlias
-
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
     from narwhals._plan.arrow.lazyframe import ArrowLazyFrame as LazyFrame
     from narwhals._plan.arrow.series import ArrowSeries as Series
-    from narwhals._plan.arrow.typing import (
-        BinaryFunction,
-        ChunkedOrScalarAny,
-        IOSource,
-        VariadicFunction,
-    )
-    from narwhals._plan.expressions import (
-        FunctionExpr as FExpr,
-        HorizontalExpr as HExpr,
-        RangeExpr,
-        functions as F,
-    )
-    from narwhals._plan.expressions.boolean import AllHorizontal, AnyHorizontal
+    from narwhals._plan.arrow.typing import IOSource
+    from narwhals._plan.expressions import RangeExpr
     from narwhals._plan.expressions.ranges import (
         DateRange,
         IntRange,
@@ -41,9 +23,7 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.typing import NonNestedLiteralT_co
     from narwhals.schema import Schema
-    from narwhals.typing import FileSource, NonNestedLiteral
-
-    HWrapper: TypeAlias = Callable[[HExpr[Any], Frame, str], Expr | Scalar]
+    from narwhals.typing import FileSource
 
 
 class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
@@ -80,75 +60,6 @@ class ArrowNamespace(EagerNamespace["Frame", "Series", "Expr", "Scalar"]):
         from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
 
         return ArrowLazyFrame
-
-    @overload
-    def _horizontal(
-        self, function: BinaryFunction, /, fill: NonNestedLiteral = None
-    ) -> HWrapper: ...
-    @overload
-    def _horizontal(
-        self, function: VariadicFunction, /, *, variadic: Literal[True]
-    ) -> HWrapper: ...
-    def _horizontal(
-        self,
-        function: BinaryFunction | VariadicFunction,
-        /,
-        fill: NonNestedLiteral = None,
-        *,
-        variadic: bool = False,
-    ) -> HWrapper:
-        """Generate a horizontal wrapper function.
-
-        Arguments:
-            function: Native binary or variadic function.
-            fill: Fill value to use when nulls should *not* be ignored.
-            variadic: If False (default), perform a binary reduction.
-                Otherwise, assume we can unpack directly into `function`.
-        """
-
-        def func(node: FExpr[Any], frame: Frame, name: str) -> Expr | Scalar:
-            it = (self.from_ir(e, frame, name).native for e in node.input)
-            if fill is not None:
-                it = (fn.fill_null(native, fill) for native in it)
-            result = function(*it) if variadic else reduce(function, it)
-            return self._into_expr(result, name)
-
-        return func
-
-    def coalesce(self, node: HExpr[F.Coalesce], frame: Frame, name: str) -> Expr | Scalar:
-        return self._horizontal(fn.coalesce, variadic=True)(node, frame, name)
-
-    def any_horizontal(
-        self, node: HExpr[AnyHorizontal], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        fill = False if node.function.ignore_nulls else None
-        return self._horizontal(fn.or_, fill)(node, frame, name)
-
-    def all_horizontal(
-        self, node: HExpr[AllHorizontal], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        fill = True if node.function.ignore_nulls else None
-        return self._horizontal(fn.and_, fill)(node, frame, name)
-
-    def sum_horizontal(
-        self, node: HExpr[F.SumHorizontal], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        return self._horizontal(fn.add, fill=0)(node, frame, name)
-
-    def min_horizontal(
-        self, node: HExpr[F.MinHorizontal], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        return self._horizontal(fn.min_horizontal, variadic=True)(node, frame, name)
-
-    def max_horizontal(
-        self, node: HExpr[F.MaxHorizontal], frame: Frame, name: str
-    ) -> Expr | Scalar:
-        return self._horizontal(fn.max_horizontal, variadic=True)(node, frame, name)
-
-    def _into_expr(self, native: ChunkedOrScalarAny, name: str) -> Expr | Scalar:
-        if isinstance(native, pa.Scalar):
-            return self._scalar.from_native(native, name)
-        return self._expr.from_native(native, name)
 
     # TODO @dangotbanned: Consider returning the supertype of inputs
     def _range_function_inputs(

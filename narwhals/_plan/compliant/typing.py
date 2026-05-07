@@ -15,8 +15,6 @@ from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
-
     from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
@@ -204,31 +202,6 @@ ST_co = TypeVar("ST_co", bound="ExprAny | ScalarAny", covariant=True)
 """`CompliantScalar`"""
 
 
-def dispatch_function_expr_from_namespace(
-    self: Namespace[Frame, ET_co, ST_co], node: ir.FunctionExpr, frame: Frame, name: str
-) -> Iterator[ET_co | ST_co]:
-    """`ArrowNamespace` horizontal and range functions use `_expr.from_ir` on their inputs.
-
-    basically what I had in `_parameters.Variadic.iter_dispatch_args`
-    """
-    ns = self.__narwhals_namespace__()
-    expr_irs = iter(node.input)
-    yield ns.from_ir(next(expr_irs), frame, name)
-    for expr_ir in expr_irs:
-        yield ns.from_ir(expr_ir, frame, "")
-
-
-def dispatch_from_scalar_ensure_scalar(
-    ctx: DispatchScopeScalar[Frame, ST_co], node: ir.ExprIR, frame: Frame, name: str
-) -> ST_co:
-    result = node.dispatch(ctx, frame, name)
-    ns = ctx.__narwhals_namespace__()
-    scalar = ns._scalar
-    if isinstance(result, scalar):
-        return result
-    raise NotImplementedError
-
-
 # TODO @dangotbanned: Decide on a better name
 class DispatchScope(Protocol[NamespaceT_co, ET_co]):
     """Represents either `*Expr` or `*Namespace`.
@@ -266,8 +239,6 @@ class HasScalar(Protocol[ST_co]):
 DispatchScopeAny: TypeAlias = (
     "DispatchScope[Namespace[Frame, ET_co, ST_co], ET_co | ST_co]"
 )
-DispatchScopeExpr: TypeAlias = "DispatchScope[Namespace[Frame, ET_co, Any], ET_co]"
-DispatchScopeScalar: TypeAlias = "DispatchScope[Namespace[Frame, Any, ST_co], ST_co]"
 
 
 class CallNamespace(Protocol):

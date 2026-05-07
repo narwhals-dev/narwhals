@@ -98,6 +98,8 @@ from narwhals._plan.arrow.functions._dtypes import (
     string_type,
 )
 from narwhals._plan.arrow.functions._horizontal import (
+    all_horizontal,
+    any_horizontal,
     coalesce,
     max_horizontal,
     min_horizontal,
@@ -158,8 +160,10 @@ __all__ = (
     "abs",
     "add",
     "all",
+    "all_horizontal",
     "and_",
     "any",
+    "any_horizontal",
     "array",
     "binary",
     "cast",

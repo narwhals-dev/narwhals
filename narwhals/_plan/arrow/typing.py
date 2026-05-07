@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals._translate import ArrowStreamExportable
     from narwhals.typing import (
         FileSource,
+        NonNestedLiteral,
         SizedMultiIndexSelector as _SizedMultiIndexSelector,
         _AnyDArray,
     )
@@ -179,18 +180,24 @@ class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     @overload
     def __call__(
         self,
-        lhs: ChunkedOrScalar[ScalarPT_contra],
-        rhs: ChunkedOrScalar[ScalarPT_contra],
+        lhs: ChunkedOrScalar[ScalarPT_contra] | NonNestedLiteral,
+        rhs: ChunkedOrScalar[ScalarPT_contra] | NonNestedLiteral,
         /,
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
 
     @overload
     def __call__(
-        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
+        self,
+        lhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        rhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        /,
     ) -> Arrow[ScalarRT_co]: ...
 
     def __call__(
-        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
+        self,
+        lhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        rhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        /,
     ) -> Arrow[ScalarRT_co]: ...
 
 
@@ -200,12 +207,6 @@ class BinaryComp(
 
 
 class BinaryLogical(BinaryFunction["BooleanScalar", "pa.BooleanScalar"], Protocol): ...
-
-
-# TODO @dangotbanned: Use stricter typing & revisit with
-# https://github.com/narwhals-dev/narwhals/blob/0d81b8b8cd1d24a68d360e6f8cf742b45cc2bdec/narwhals/_plan/arrow/functions/_horizontal.py#L7-L15
-class VariadicFunction(Protocol):
-    def __call__(self, *args: Arrow) -> Any: ...
 
 
 BinaryNumericTemporal: TypeAlias = BinaryFunction[
@@ -227,6 +228,12 @@ ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 Native: TypeAlias = ChunkedOrScalarAny
 """The type of `Arrow{Expr,Scalar}.native`."""
+
+IntoNative: TypeAlias = "Native | NonNestedLiteral"
+"""Extends `Native`, for functions that implictly wrap python values in `Scalar`.
+
+`pyarrow-stubs` rarely documents that this is possible.
+"""
 
 
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
@@ -253,6 +260,9 @@ Boolean, Null, Numeric, Temporal, Binary or String-typed, + Dictionary ([no-op])
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
+IntoArrowAny: TypeAlias = "IntoNative | ArrayAny"
+"""Extends `IntoNative` with `pa.Array[Any]`."""
+
 SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
 ArrowT = TypeVar("ArrowT", bound=ArrowAny)
 ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")

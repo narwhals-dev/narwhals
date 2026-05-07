@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, SupportsFloat, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -110,7 +110,11 @@ def date_range(
 
 
 def linear_space(
-    start: float, end: float, num_samples: int, *, closed: ClosedInterval = "both"
+    start: SupportsFloat,
+    end: SupportsFloat,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = "both",
 ) -> ChunkedArray[pc.NumericScalar]:
     """Generate a range of evenly-spaced floats.
 
@@ -123,16 +127,17 @@ def linear_space(
         raise ValueError(msg)
     if num_samples == 0:
         return chunked_array([], F64)
+    start, end = float(start), float(end)
     if num_samples == 1:
         if closed == "none":
             value = (end + start) * 0.5
         elif closed in {"left", "both"}:
-            value = float(start)
+            value = start
         else:
-            value = float(end)
+            value = end
         return chunked_array(lit(value, F64))
     n = num_samples
-    span = float(end - start)
+    span = end - start
     if closed == "none":
         d = span / (n + 1)
         start = start + d

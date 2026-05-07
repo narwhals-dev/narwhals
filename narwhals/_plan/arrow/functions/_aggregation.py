@@ -49,9 +49,9 @@ __all__ = (
 )
 
 
-min = pc.min
+min = t.cast("Callable[[ChunkedOrArray[ScalarAny]], ScalarAny]", pc.min)
 """Get the minimal value in this array."""
-max = pc.max
+max = t.cast("Callable[[ChunkedOrArray[ScalarAny]], ScalarAny]", pc.max)
 """Get the maximum value in this array."""
 mean = t.cast("Callable[[ChunkedOrArray[pc.NumericScalar]], pa.DoubleScalar]", pc.mean)
 """Reduce this array to the mean value."""

@@ -56,7 +56,6 @@ if TYPE_CHECKING:
 __all__ = ("Function", "HorizontalFunction")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-namespaced = DispatcherOptions.namespaced
 ELEMENTWISE = FunctionFlags.ELEMENTWISE
 
 
@@ -252,7 +251,7 @@ class Function(Immutable):
         return self.__expr_ir_dtype__(node, schema)
 
 
-class HorizontalFunction(Function, flags=ELEMENTWISE, dispatch=namespaced()):
+class HorizontalFunction(Function, flags=ELEMENTWISE):
     """Transformations *across* columns.
 
     Special cases of [fold] or [reduce].

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 from types import MethodType
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, final, overload
 
@@ -38,6 +38,8 @@ from narwhals._plan.compliant.scalar import EagerScalar
 from narwhals._plan.exceptions import shape_error
 from narwhals._plan.expressions import FunctionExpr as FExpr, functions as F
 from narwhals._plan.expressions.boolean import (
+    AllHorizontal,
+    AnyHorizontal,
     IsDuplicated,
     IsFirstDistinct,
     IsInExpr,
@@ -358,25 +360,69 @@ class _ArrowDispatch(
         result = pc.if_else(when.native, then.native, otherwise.native)
         return self._with_native(result, name)
 
+    def _dispatch_variadic_native(
+        self, node: HExpr, frame: Frame, name: str, /
+    ) -> Iterator[Native]:
+        exprs = iter(node.input)
+        yield next(exprs).dispatch(self, frame, name).native
+        for expr_ir in exprs:
+            yield expr_ir.dispatch(self, frame, "").native
+
     def concat_str(self, node: HExpr[strings.ConcatStr], frame: Frame, name: str) -> Self:
         # https://arrow.apache.org/docs/dev/cpp/compute.html#string-joining
         # > scalars are recycled in either case
-        natives = (e.dispatch(self, frame, name).native for e in node.input)
+        inputs = self._dispatch_variadic_native(node, frame, name)
         f = node.function
-        result = fn.str.concat_str(
-            *natives, separator=f.separator, ignore_nulls=f.ignore_nulls
-        )
+        concat = fn.str.concat_str
+        result = concat(*inputs, separator=f.separator, ignore_nulls=f.ignore_nulls)
         return self._with_native(result, name)
 
     def mean_horizontal(
         self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str
     ) -> Self:
-        inputs = tuple(e.dispatch(self, frame, name).native for e in node.input)
+        # NOTE: Don't bother making this a function, it won't be reused and is probably a perf footgun anyway
+        inputs = tuple(self._dispatch_variadic_native(node, frame, name))
         sum_all = fn.sum_horizontal(inputs)
         sum_not_null = fn.reduce(
             fn.add, (fn.cast(fn.is_not_null(native), fn.I64) for native in inputs)
         )
         return self._with_native(fn.truediv(sum_all, sum_not_null), name)
+
+    # TODO @dangotbanned: Deduplicate *these* horizontal impls
+    # `concat_str` + `mean_horizontal` are a bit different
+    def coalesce(self, node: HExpr[F.Coalesce], frame: Frame, name: str) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        return self._with_native(fn.coalesce(inputs), name)
+
+    def any_horizontal(self, node: HExpr[AnyHorizontal], frame: Frame, name: str) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        f = node.function
+        result = fn.any_horizontal(inputs, ignore_nulls=f.ignore_nulls)
+        return self._with_native(result, name)
+
+    def all_horizontal(self, node: HExpr[AllHorizontal], frame: Frame, name: str) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        f = node.function
+        result = fn.all_horizontal(inputs, ignore_nulls=f.ignore_nulls)
+        return self._with_native(result, name)
+
+    def sum_horizontal(
+        self, node: HExpr[F.SumHorizontal], frame: Frame, name: str
+    ) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        return self._with_native(fn.sum_horizontal(inputs), name)
+
+    def min_horizontal(
+        self, node: HExpr[F.MinHorizontal], frame: Frame, name: str
+    ) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        return self._with_native(fn.min_horizontal(inputs), name)
+
+    def max_horizontal(
+        self, node: HExpr[F.MaxHorizontal], frame: Frame, name: str
+    ) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        return self._with_native(fn.max_horizontal(inputs), name)
 
     @unary.partial
     def log(self, f: F.Log, previous: ChunkedOrScalarT) -> ChunkedOrScalarT:
@@ -564,7 +610,7 @@ class ArrowExpr(
 
     def arg_max(self, node: ArgMax, frame: Frame, name: str, /) -> Scalar:
         native = self._dispatch_expr(node.expr, frame, name).native
-        result: NativeScalar = pc.index(native, fn.max(native))
+        result = pc.index(native, fn.max(native))
         return self._with_native(result, name)
 
     def sum(self, node: Sum, frame: Frame, name: str, /) -> Scalar:
@@ -604,7 +650,7 @@ class ArrowExpr(
         return self._with_native(result, name)
 
     def max(self, node: Max, frame: Frame, name: str, /) -> Scalar:
-        result: NativeScalar = fn.max(self._dispatch_expr(node.expr, frame, name).native)
+        result = fn.max(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def mean(self, node: Mean, frame: Frame, name: str, /) -> Scalar:
@@ -616,7 +662,7 @@ class ArrowExpr(
         return self._with_native(result, name)
 
     def min(self, node: Min, frame: Frame, name: str, /) -> Scalar:
-        result: NativeScalar = fn.min(self._dispatch_expr(node.expr, frame, name).native)
+        result = fn.min(self._dispatch_expr(node.expr, frame, name).native)
         return self._with_native(result, name)
 
     def over(
@@ -811,10 +857,8 @@ class ArrowExpr(
         elif fn.is_only_nulls(native, nan_is_null=True):
             data = fn.hist_zeroed_data(bin_count, include_breakpoint=include)
         else:
-            # NOTE: `Decimal` is not supported, but excluding it from the typing is surprisingly complicated
-            # https://docs.rs/polars-core/0.52.0/polars_core/datatypes/enum.DataType.html#method.is_primitive_numeric
-            lower: NativeScalar = fn.min(native)
-            upper: NativeScalar = fn.max(native)
+            lower = fn.min(native)
+            upper = fn.max(native)
             if lower.equals(upper):
                 # All data points are identical - use unit interval
                 rhs = fn.lit(0.5)
