@@ -78,7 +78,7 @@ class DaskLazyFrame(
         return cls(data, version=context._version)
 
     def to_narwhals(self) -> LazyFrame[dd.DataFrame]:
-        return self._version.lazyframe(self, level="lazy")
+        return self._version.lazyframe(self)
 
     def __native_namespace__(self) -> ModuleType:
         if self._implementation is Implementation.DASK:

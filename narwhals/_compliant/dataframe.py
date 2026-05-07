@@ -330,7 +330,7 @@ class EagerDataFrame(
     ]: ...
 
     def to_narwhals(self) -> DataFrame[NativeDataFrameT]:
-        return self._version.dataframe(self, level="full")
+        return self._version.dataframe(self)
 
     def aggregate(self, *exprs: EagerExprT) -> Self:  # pyright: ignore[reportIncompatibleMethodOverride]
         # NOTE: Ignore intermittent [False Negative] (1)

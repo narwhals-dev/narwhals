@@ -416,6 +416,21 @@ def test_get_level() -> None:
     )
 
 
+def test_v1_explicit_level_kwarg() -> None:
+    # `_duckdb`/`_ibis` pass `level="interchange"` explicitly for a v1 DataFrame.
+    # We have no such _real_ cases for LazyFrame and Series
+    pytest.importorskip("polars")
+    import polars as pl
+
+    nw_lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
+    rewrapped_lf = nw_v1.LazyFrame[pl.LazyFrame](nw_lf._compliant_frame, level="lazy")
+    assert nw_v1.get_level(rewrapped_lf) == "lazy"
+
+    nw_s = nw_v1.from_native(pl.Series(name="a", values=[1]), series_only=True)
+    rewrapped_s = nw_v1.Series(nw_s._compliant_series, level="full")
+    assert nw_v1.get_level(rewrapped_s) == "full"
+
+
 def test_any_horizontal() -> None:
     # here, it defaults to Kleene logic.
     pytest.importorskip("polars")
@@ -614,14 +629,14 @@ def test_dataframe_recursive_v1() -> None:
     nw_frame = nw_v1.from_native(pl_frame)
     # NOTE: (#2629) combined with passing in `nw_v1.DataFrame` (w/ a `_version`) into itself changes the error
     with pytest.raises(AssertionError):
-        nw_v1.DataFrame(nw_frame, level="full")
+        nw_v1.DataFrame(nw_frame)
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
 
     if TYPE_CHECKING:
         assert_type(pl_frame, pl.DataFrame)
         assert_type(nw_frame, "nw_v1.DataFrame[pl.DataFrame]")
-        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame, level="full")  # type: ignore[var-annotated]
+        nw_frame_depth_2 = nw_v1.DataFrame(nw_frame)  # type: ignore[var-annotated]
         assert_type(nw_frame_depth_2, nw_v1.DataFrame[Any])
         # NOTE: Checking that the type is `DataFrame[Unknown]`
         assert_type(nw_frame_early_return, "nw_v1.DataFrame[pl.DataFrame]")
@@ -634,7 +649,7 @@ def test_lazyframe_recursive_v1() -> None:
     pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
     nw_frame = nw_v1.from_native(pl_frame)
     with pytest.raises(AssertionError):
-        nw_v1.LazyFrame(nw_frame, level="lazy")
+        nw_v1.LazyFrame(nw_frame)
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)
 
@@ -642,7 +657,7 @@ def test_lazyframe_recursive_v1() -> None:
         assert_type(pl_frame, pl.LazyFrame)
         assert_type(nw_frame, nw_v1.LazyFrame[pl.LazyFrame])
 
-        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame, level="lazy")  # type: ignore[var-annotated]
+        nw_frame_depth_2 = nw_v1.LazyFrame(nw_frame)  # type: ignore[var-annotated]
         # NOTE: Checking that the type is `LazyFrame[Unknown]`
         assert_type(nw_frame_depth_2, nw_v1.LazyFrame[Any])
         assert_type(nw_frame_early_return, nw_v1.LazyFrame[pl.LazyFrame])
@@ -657,7 +672,7 @@ def test_series_recursive_v1() -> None:
     nw_series = nw_v1.from_native(pl_series, series_only=True)
     # NOTE: (#2629) combined with passing in `nw_v1.Series` (w/ a `_version`) into itself changes the error
     with pytest.raises(AssertionError):
-        nw_v1.Series(nw_series, level="full")
+        nw_v1.Series(nw_series)
 
     nw_series_early_return = nw_v1.from_native(nw_series, series_only=True)
 
@@ -665,7 +680,7 @@ def test_series_recursive_v1() -> None:
         assert_type(pl_series, pl.Series)
         assert_type(nw_series, nw_v1.Series[pl.Series])
 
-        nw_series_depth_2 = nw_v1.Series(nw_series, level="full")
+        nw_series_depth_2 = nw_v1.Series(nw_series)
         # NOTE: `Unknown` isn't possible for `v1`, as it has a `TypeVar` default
         assert_type(nw_series_depth_2, nw_v1.Series[Any])
         assert_type(nw_series_early_return, nw_v1.Series[pl.Series])

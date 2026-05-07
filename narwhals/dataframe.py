@@ -88,6 +88,7 @@ if TYPE_CHECKING:
         SingleColSelector,
         SingleIndexSelector,
         SizeUnit,
+        SupportLevel,
         UniqueKeepStrategy,
         _2DArray,
     )
@@ -106,7 +107,10 @@ MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 
 class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
-    _level: Literal["full", "lazy", "interchange"]
+    # `_level` is stored on subclasses:
+    #   * For stable.v1 "interchange" is still supported.
+    #   * For main and stable.v2 only "full" and "lazy" are supported.
+    _level: SupportLevel
 
     implementation: _Implementation = _Implementation()
     """Return [`narwhals.Implementation`][] of native frame.
@@ -141,7 +145,7 @@ class BaseFrame(Generic[_FrameT]):
 
     def _with_compliant(self, df: Any) -> Self:
         # construct, preserving properties
-        return self.__class__(df, level=self._level)  # type: ignore[call-arg]
+        return self.__class__(df)  # type: ignore[call-arg]
 
     def _flatten_and_extract(
         self, *exprs: IntoExpr | Iterable[IntoExpr], **named_exprs: IntoExpr
@@ -473,6 +477,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
+    _level: SupportLevel = "full"
 
     @property
     def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
@@ -490,8 +495,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         # all is valid in eager case.
         pass
 
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
-        self._level: Literal["full", "lazy", "interchange"] = level
+    def __init__(self, df: Any) -> None:
         self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
@@ -544,7 +548,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
             compliant = ns._dataframe.from_arrow(native_frame, context=ns)
-            return cls(compliant, level="full")
+            return cls(compliant)
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_arrow` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
@@ -604,7 +608,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
             compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
-            return cls(compliant, level="full")
+            return cls(compliant)
         # NOTE: (#2786) needs resolving for extensions
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dict` is an eager-only function.\n\n"
@@ -676,7 +680,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
             compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
-            return cls(compliant, level="full")
+            return cls(compliant)
         # NOTE: (#2786) needs resolving for extensions
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_dicts` is an eager-only function.\n\n"
@@ -748,7 +752,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
-            return cls(ns.from_numpy(data, schema), level="full")
+            return cls(ns.from_numpy(data, schema))
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `DataFrame.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
@@ -864,10 +868,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         lazy = self._compliant_frame.lazy
         if backend is None:
-            return self._lazyframe(lazy(None, session=session), level="lazy")
+            return self._lazyframe(lazy(None, session=session))
         lazy_backend = Implementation.from_backend(backend)
         if is_lazy_allowed(lazy_backend):
-            return self._lazyframe(lazy(lazy_backend, session=session), level="lazy")
+            return self._lazyframe(lazy(lazy_backend, session=session))
         msg = f"Not-supported backend.\n\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {lazy_backend}"
         raise ValueError(msg)
 
@@ -1025,7 +1029,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             1    2
             Name: a, dtype: int64
         """
-        return self._series(self._compliant_frame.get_column(name), level=self._level)
+        return self._series(self._compliant_frame.get_column(name))
 
     def estimated_size(self, unit: SizeUnit = "b") -> int | float:
         """Return an estimation of the total (heap) allocated size of the `DataFrame`.
@@ -1211,7 +1215,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if as_series:
             return {
-                key: self._series(value, level=self._level)
+                key: self._series(value)
                 for key, value in self._compliant_frame.to_dict(
                     as_series=as_series
                 ).items()
@@ -1426,7 +1430,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             └─────────────────────────┘
         """
         for series in self._compliant_frame.iter_columns():
-            yield self._series(series, level=self._level)
+            yield self._series(series)
 
     @overload
     def iter_rows(
@@ -2062,7 +2066,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |  dtype: bool  |
             └───────────────┘
         """
-        return self._series(self._compliant_frame.is_unique(), level=self._level)
+        return self._series(self._compliant_frame.is_unique())
 
     def null_count(self) -> Self:
         r"""Create a new DataFrame that shows the null counts per column.
@@ -2369,6 +2373,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
+    _level: SupportLevel = "lazy"
 
     @property
     def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
@@ -2402,8 +2407,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             )
             raise InvalidOperationError(msg)
 
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
-        self._level = level
+    def __init__(self, df: Any) -> None:
         self._compliant_frame: CompliantLazyFrame[Any, LazyFrameT, Self]
         if is_compliant_lazyframe(df):
             self._compliant_frame = df.__narwhals_lazyframe__()
@@ -2480,10 +2484,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         """
         collect = self._compliant_frame.collect
         if backend is None:
-            return self._dataframe(collect(None, **kwargs), level="full")
+            return self._dataframe(collect(None, **kwargs))
         eager_backend = Implementation.from_backend(backend)
         if can_lazyframe_collect(eager_backend):
-            return self._dataframe(collect(eager_backend, **kwargs), level="full")
+            return self._dataframe(collect(eager_backend, **kwargs))
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {eager_backend}."
         raise ValueError(msg)
 

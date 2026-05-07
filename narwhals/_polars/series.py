@@ -216,7 +216,7 @@ class PolarsSeries:
         return cls.from_native(native, context=context)
 
     def to_narwhals(self) -> Series[pl.Series]:
-        return self._version.series(self, level="full")
+        return self._version.series(self)
 
     def _with_native(self, series: pl.Series) -> Self:
         return self.__class__(series, version=self._version)
