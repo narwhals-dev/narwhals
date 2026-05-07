@@ -604,4 +604,18 @@ class SparkLikeLazyFrame(
             validate_backend_version=True,
         )
 
+    def clear(self, n: int) -> Self:
+        if n == 0:
+            native_result = self.native.limit(0)
+        else:
+            session = self.native.sparkSession
+            native_schema = self.native.schema
+            native_result = session.range(n).select(
+                [
+                    self._F.lit(None).cast(field.dataType).alias(field.name)
+                    for field in native_schema.fields
+                ]
+            )
+        return self._with_native(native_result)
+
     join_asof = not_implemented()
