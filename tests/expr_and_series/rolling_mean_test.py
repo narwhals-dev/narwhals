@@ -193,3 +193,39 @@ def test_rolling_mean_expr_lazy_ungrouped(
     )
     expected = {"a": expected_a, "i": list(range(7))}
     assert_equal_data(result, expected)
+
+
+def test_scrambled_groups_over(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3600
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip()
+    if "modin" in str(constructor):
+        # unreliable
+        pytest.skip()
+    data = {
+        "group": [1, 1, 2, 1, 1, 2, 2, 1, 2, 2],
+        "time": [10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+        "value": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(
+        nw.col("value").rolling_mean(2).over("group", order_by="time").alias("sorted"),
+        nw.col("value")
+        .rolling_mean(2)
+        .over("group", order_by=["group", "time"])
+        .alias("resorted"),
+    ).sort("group", "time", descending=[False, True])
+    expected = {
+        "group": [1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+        "time": [10, 9, 7, 6, 3, 8, 5, 4, 2, 1],
+        "value": [1, 2, 4, 5, 8, 3, 6, 7, 9, 10],
+        "sorted": [1.5, 3.0, 4.5, 6.5, None, 4.5, 6.5, 8.0, 9.5, None],
+        "resorted": [1.5, 3.0, 4.5, 6.5, None, 4.5, 6.5, 8.0, 9.5, None],
+    }
+    assert_equal_data(result, expected)
