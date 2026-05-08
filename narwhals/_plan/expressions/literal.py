@@ -34,6 +34,7 @@ __all__ = ("Lit", "LitSeries", "lit", "lit_series")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
+constructor = DispatcherOptions.constructor
 
 
 # TODO @dangotbanned: (low-prio) Define `__str__` to use (`value`, `dtype`)-order instead
@@ -66,9 +67,7 @@ class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
 
 
 @final
-class Lit(
-    LiteralExpr[PythonLiteralT_co], dispatch=DispatcherOptions.constructor("Scalar")
-):
+class Lit(LiteralExpr[PythonLiteralT_co], dispatch=constructor("Scalar")):
     """An expression representing a scalar literal value.
 
     >>> import narwhals._plan as nw
@@ -107,10 +106,7 @@ class Lit(
 
 
 @final
-class LitSeries(
-    LiteralExpr["Series[NativeSeriesT_co]"],
-    dispatch=DispatcherOptions.constructor("Expr"),
-):
+class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=constructor("Expr")):
     """An expression representing a series literal.
 
     >>> import narwhals._plan as nw

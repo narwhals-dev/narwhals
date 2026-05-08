@@ -40,15 +40,14 @@ __all__ = (
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
 same_dtype = ResolveDType.expr_ir.same_dtype
+constructor = DispatcherOptions.constructor
 
 
 def col(name: str, /) -> Column:
     return Column(name=name)
 
 
-class LenStar(
-    ExprIR, dispatch=DispatcherOptions.constructor("Scalar"), dtype=dtm.IDX_DTYPE
-):
+class LenStar(ExprIR, dispatch=constructor("Scalar"), dtype=dtm.IDX_DTYPE):
     """Return the number of rows in the context.
 
     This is similar to `COUNT(*)` in SQL.
@@ -97,7 +96,7 @@ class Alias(ExprIR, dispatch="no_dispatch"):
         return self.expr.is_length_preserving()
 
 
-class Col(ExprIR, dispatch=DispatcherOptions.constructor("Expr")):
+class Col(ExprIR, dispatch=constructor("Expr")):
     """An expression that selects exactly one column.
 
     Arguments:
