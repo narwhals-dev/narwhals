@@ -191,9 +191,7 @@ def test_namespace_is_native() -> None:
     native_2 = pl.DataFrame({"a": unrelated})
 
     maybe_native: list[pl.Series | list[int]] = [native_1, unrelated]
-    always_native = list["pl.DataFrame | pl.Series"](  # pyrefly: ignore[not-a-type] https://github.com/facebook/pyrefly/issues/3193
-        (native_2, native_1)
-    )
+    always_native = list["pl.DataFrame | pl.Series"]((native_2, native_1))
     never_native = [unrelated, 50]
 
     expected_maybe = [True, False]
@@ -232,15 +230,14 @@ def test_namespace_is_native() -> None:
             assert_type(native_2, "Never")
 
         always_item = always_native[1]
-        # pyrefly: `always_item` is `Unknown`
-        assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
+        assert_type(always_item, "pl.DataFrame | pl.Series")
         if ns.is_native(always_item):
-            assert_type(always_item, "pl.DataFrame | pl.Series")  # pyrefly: ignore[assert-type] (todo)
+            assert_type(always_item, "pl.DataFrame | pl.Series")
             if ns._dataframe._is_native(always_item):
                 assert_type(always_item, "pl.DataFrame")
             elif ns._series._is_native(always_item):
                 assert_type(always_item, "pl.Series")
             else:
-                assert_type(always_item, "Never")  # pyrefly: ignore[assert-type] (todo)
+                assert_type(always_item, "Never")
         else:
-            assert_type(always_item, "Never")  # pyrefly: ignore[assert-type] (todo)
+            assert_type(always_item, "Never")
