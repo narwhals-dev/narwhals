@@ -130,37 +130,29 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Object()
     if dtype == pl.Categorical:
         return dtypes.Categorical()
-    if isinstance_or_issubclass(dtype, pl.Enum):
+    if isinstance(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
         categories = _DeferredIterable(dtype.categories.to_list)
         return dtypes.Enum(categories)
     if dtype == pl.Date:
         return dtypes.Date()
-    if isinstance_or_issubclass(dtype, pl.Datetime):
-        return (
-            dtypes.Datetime()
-            if dtype is pl.Datetime
-            else dtypes.Datetime(dtype.time_unit, dtype.time_zone)
-        )
-    if isinstance_or_issubclass(dtype, pl.Duration):
-        return (
-            dtypes.Duration()
-            if dtype is pl.Duration
-            else dtypes.Duration(dtype.time_unit)
-        )
-    if isinstance_or_issubclass(dtype, pl.Struct):
+    if isinstance(dtype, pl.Datetime):
+        return dtypes.Datetime(dtype.time_unit, dtype.time_zone)
+    if isinstance(dtype, pl.Duration):
+        return dtypes.Duration(dtype.time_unit)
+    if isinstance(dtype, pl.Struct):
         fields = [
             dtypes.Field(name, native_to_narwhals_dtype(tp, version))
             for name, tp in dtype
         ]
         return dtypes.Struct(fields)
-    if isinstance_or_issubclass(dtype, pl.List):
+    if isinstance(dtype, pl.List):
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
-    if isinstance_or_issubclass(dtype, pl.Array):
+    if isinstance(dtype, pl.Array):
         outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
         return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
-    if isinstance_or_issubclass(dtype, pl.Decimal):
+    if isinstance(dtype, pl.Decimal):
         return dtypes.Decimal(dtype.precision, dtype.scale)
     if dtype == pl.Time:
         return dtypes.Time()

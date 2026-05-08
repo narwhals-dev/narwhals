@@ -43,5 +43,7 @@
       show_root_heading: false
       show_source: false
       show_bases: true
-      filters: ["!^_", "^__eq__$"]
+      filters:
+        - "!^_"
+        - "^__eq__$"
       inherited_members: false
