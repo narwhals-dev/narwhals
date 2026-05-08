@@ -85,3 +85,4 @@ pytest --all-nw-backends
         - FrameConstructor
         - DataFrameConstructor
         - LazyFrameConstructor
+        - NarwhalsNamespace

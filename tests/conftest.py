@@ -15,12 +15,16 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from types import ModuleType
 
     from narwhals._typing import EagerAllowed
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.testing.constructors import frame_constructor
-    from narwhals.testing.typing import Data, DataFrameConstructor, FrameConstructor
+    from narwhals.testing.typing import (
+        Data,
+        DataFrameConstructor,
+        FrameConstructor,
+        NarwhalsNamespace,
+    )
     from narwhals.typing import IntoFrame, NonNestedDType
     from tests.utils import NestedOrEnumDType
 
@@ -142,7 +146,7 @@ class _PatchedFrameConstructor:
         self._inner = inner
 
     def __call__(
-        self, obj: Data, /, namespace: ModuleType = nw, **kwds: Any
+        self, obj: Data, /, namespace: NarwhalsNamespace = nw, **kwds: Any
     ) -> DataFrame[Any] | LazyFrame[Any]:
         return self._inner(obj, namespace=namespace, **kwds)
 
@@ -158,7 +162,7 @@ class _PatchedFrameConstructor:
 
 class _PatchedDataFrameConstructor(_PatchedFrameConstructor):
     def __call__(
-        self, obj: Data, /, namespace: ModuleType = nw, **kwds: Any
+        self, obj: Data, /, namespace: NarwhalsNamespace = nw, **kwds: Any
     ) -> DataFrame[Any]:
         return cast("DataFrame[Any]", self._inner(obj, namespace=namespace, **kwds))
 

@@ -49,7 +49,6 @@ from narwhals._utils import Implementation, generate_temporary_column_name
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from types import ModuleType
 
     import ibis
     import pandas as pd
@@ -62,7 +61,7 @@ if TYPE_CHECKING:
 
     from narwhals import DataFrame, LazyFrame
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
-    from narwhals.testing.typing import Data
+    from narwhals.testing.typing import Data, NarwhalsNamespace
     from narwhals.typing import (
         IntoDataFrame,
         IntoDataFrameT,
@@ -174,7 +173,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self: frame_constructor[IntoDataFrameT],
         obj: Data,
         /,
-        namespace: ModuleType,
+        namespace: NarwhalsNamespace,
         **kwds: Any,
     ) -> DataFrame[IntoDataFrameT]: ...
     @overload
@@ -182,7 +181,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self: frame_constructor[IntoLazyFrameT],
         obj: Data,
         /,
-        namespace: ModuleType,
+        namespace: NarwhalsNamespace,
         **kwds: Any,
     ) -> LazyFrame[IntoLazyFrameT]: ...
     @overload
@@ -190,12 +189,12 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self: frame_constructor[IntoFrame],
         obj: Data,
         /,
-        namespace: ModuleType,
+        namespace: NarwhalsNamespace,
         **kwds: Any,
     ) -> DataFrame[Any] | LazyFrame[Any]: ...
 
     def __call__(
-        self, obj: Data, /, namespace: ModuleType, **kwds: Any
+        self, obj: Data, /, namespace: NarwhalsNamespace, **kwds: Any
     ) -> DataFrame[Any] | LazyFrame[Any]:
         """Build a native frame and wrap it with `namespace.from_native`.
 

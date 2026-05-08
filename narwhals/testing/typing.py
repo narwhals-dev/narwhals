@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable, Protocol
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
@@ -22,3 +22,9 @@ LazyFrameConstructor: TypeAlias = "frame_constructor[IntoLazyFrame]"
 
 Data: TypeAlias = dict[str, Any]  # TODO(Unassined): This should have a better annotation
 """A column-oriented mapping used as input to a frame constructor."""
+
+
+class NarwhalsNamespace(Protocol):
+    """Minimal specs of a narwhals namespace (e.g. `narwhals`, `narwhals.stable.v1`)."""
+
+    from_native: Callable[..., Any]
