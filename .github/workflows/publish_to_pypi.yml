@@ -3,6 +3,13 @@
 # but with the following differences
 # - removed the TestPyPI part
 # - instead of `on: push`, we have `tags` in there too
+#
+# To gate the release on a new workflow:
+#   1. In the gating workflow, add `workflow_call:` to its `on:` triggers.
+#   2. Add `if: github.head_ref != 'bump-version'` to every job in that workflow.
+#      This skips it on the release PR opened from `bump-version`
+#      (otherwise jobs would run twice: once on the PR, once via the workflow_call below).
+#   3. Below, add a job that `uses: ./.github/workflows/<file>.yml` and append its name to `build.needs:`.
 
 name: Publish Python 🐍 distribution 📦 to PyPI
 
