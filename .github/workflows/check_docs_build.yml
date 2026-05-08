@@ -2,6 +2,7 @@ name: Check Docs Build
 
 on:
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -12,6 +13,7 @@ env:
 
 jobs:
   zensical-strict-build:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
