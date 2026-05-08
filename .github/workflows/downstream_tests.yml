@@ -2,6 +2,7 @@ name: Test Downstream Libraries - Fast
 
 on:
   pull_request:
+  workflow_call:
 
 env:
   PY_COLORS: 1
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   altair:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -59,6 +61,7 @@ jobs:
           mypy altair tests
 
   marimo:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -109,6 +112,7 @@ jobs:
         timeout-minutes: 15
 
   scikit-lego:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -148,6 +152,7 @@ jobs:
           pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -196,6 +201,7 @@ jobs:
           shiny-dir: py-shiny
 
   tea-tasting:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -241,6 +247,7 @@ jobs:
           uv run --no-sync pytest tests
 
   tubular:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -286,6 +293,7 @@ jobs:
           pytest tests --config-file=pyproject.toml
 
   plotly:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -331,6 +339,7 @@ jobs:
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -375,6 +384,7 @@ jobs:
 
 
   formulaic:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -420,6 +430,7 @@ jobs:
           hatch run tests --config-file=pyproject.toml
 
   pointblank:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -475,6 +486,7 @@ jobs:
           make test
 
   validoopsie:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.10", "3.13"] # these are enough to cover all the tests
@@ -525,6 +537,7 @@ jobs:
         timeout-minutes: 15
 
   darts:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -571,6 +584,7 @@ jobs:
           pytest darts/tests/test_timeseries_static_covariates.py
 
   gt-extras:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -612,6 +626,7 @@ jobs:
           uv run --no-sync pytest
 
   fairlearn:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:

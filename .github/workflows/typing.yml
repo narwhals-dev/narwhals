@@ -2,6 +2,7 @@ name: Type checking
 
 on:
   pull_request:
+  workflow_call:
 
 env:
   PY_COLORS: 1
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   typing:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
