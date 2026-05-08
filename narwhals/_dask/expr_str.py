@@ -39,11 +39,27 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def strip_chars(self, characters: str | None) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.strip(characters))
 
-    def starts_with(self, prefix: str) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.startswith(prefix))
+    def starts_with(self, prefix: DaskExpr) -> DaskExpr:
+        if not prefix._metadata.is_literal:
+            msg = "dask backed `Expr.str.starts_with` only supports str prefix values"
+            raise TypeError(msg)
 
-    def ends_with(self, suffix: str) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.endswith(suffix))
+        def _starts_with(expr: dx.Series, prefix: dx.Series) -> dx.Series:
+            # OK to call `compute` here as `value` is just a literal expression.
+            return expr.str.startswith(prefix.compute())  # pyright: ignore[reportAttributeAccessIssue]
+
+        return self.compliant._with_callable(_starts_with, prefix=prefix)
+
+    def ends_with(self, suffix: DaskExpr) -> DaskExpr:
+        if not suffix._metadata.is_literal:
+            msg = "dask backed `Expr.str.ends_with` only supports str suffix values"
+            raise TypeError(msg)
+
+        def _ends_with(expr: dx.Series, suffix: dx.Series) -> dx.Series:
+            # OK to call `compute` here as `value` is just a literal expression.
+            return expr.str.endswith(suffix.compute())  # pyright: ignore[reportAttributeAccessIssue]
+
+        return self.compliant._with_callable(_ends_with, suffix=suffix)
 
     def contains(self, pattern: DaskExpr, *, literal: bool) -> DaskExpr:
         if not pattern._metadata.is_literal:

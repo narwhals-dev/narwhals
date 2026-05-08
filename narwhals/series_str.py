@@ -110,7 +110,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
-    def starts_with(self, prefix: str) -> SeriesT:
+    def starts_with(self, prefix: str | SeriesT) -> SeriesT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -128,10 +128,12 @@ class SeriesStringNamespace(Generic[SeriesT]):
             dtype: bool
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.starts_with(prefix)
+            self._narwhals_series._compliant_series.str.starts_with(
+                self._extract_compliant(prefix)
+            )
         )
 
-    def ends_with(self, suffix: str) -> SeriesT:
+    def ends_with(self, suffix: str | SeriesT) -> SeriesT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -149,7 +151,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             dtype: bool
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.ends_with(suffix)
+            self._narwhals_series._compliant_series.str.ends_with(
+                self._extract_compliant(suffix)
+            )
         )
 
     def contains(self, pattern: str | SeriesT, *, literal: bool = False) -> SeriesT:
