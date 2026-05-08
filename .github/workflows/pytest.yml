@@ -2,6 +2,7 @@ name: PyTest
 
 on:
   pull_request:
+  workflow_call:
 
 env:
   PY_COLORS: 1
@@ -13,6 +14,7 @@ permissions:
 
 jobs:
   pytest-39:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.9"]
@@ -39,6 +41,7 @@ jobs:
         run: uv pip install -e test-plugin/.
 
   pytest-windows:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.10", "3.12"]
@@ -67,6 +70,7 @@ jobs:
           pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
 
   pytest-full-coverage:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.11", "3.13"]
@@ -103,6 +107,7 @@ jobs:
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.13"]
@@ -140,6 +145,7 @@ jobs:
         run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
 
   python-314:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.14"]
@@ -164,6 +170,7 @@ jobs:
         run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
 
   python-314t:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.14t"]

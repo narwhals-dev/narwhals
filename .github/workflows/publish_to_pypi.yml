@@ -14,8 +14,65 @@ on:
 permissions: {}
 
 jobs:
+  pytest:
+    name: PyTest
+    uses: ./.github/workflows/pytest.yml
+    permissions:
+      contents: read
+
+  pytest-pyspark:
+    name: PyTest PySpark
+    uses: ./.github/workflows/pytest-pyspark.yml
+    permissions:
+      contents: read
+
+  pytest-ibis:
+    name: PyTest Ibis
+    uses: ./.github/workflows/pytest-ibis.yml
+    permissions:
+      contents: read
+
+  pytest-modin:
+    name: PyTest Modin
+    uses: ./.github/workflows/pytest-modin.yml
+    permissions:
+      contents: read
+
+  typing:
+    name: Type checking
+    uses: ./.github/workflows/typing.yml
+    permissions:
+      contents: read
+
+  downstream-tests:
+    name: Downstream tests
+    uses: ./.github/workflows/downstream_tests.yml
+    permissions:
+      contents: read
+
+  downstream-tests-slow:
+    name: Downstream tests (slow)
+    uses: ./.github/workflows/downstream_tests_slow.yml
+    permissions:
+      contents: read
+
+  check-docs-build:
+    name: Check docs build
+    uses: ./.github/workflows/check_docs_build.yml
+    permissions:
+      contents: read
+
   build:
     name: Build distribution 📦
+    needs:
+      - pytest
+      - pytest-pyspark
+      - pytest-ibis
+      - pytest-modin
+      - typing
+      - downstream-tests
+      - downstream-tests-slow
+      - check-docs-build
     runs-on: ubuntu-latest
     permissions:
       contents: read
