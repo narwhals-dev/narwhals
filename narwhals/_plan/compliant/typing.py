@@ -387,10 +387,6 @@ class GetClassMethod(Protocol):
     def __call__(self, tp: type[E | SC], /) -> BoundMethod[Any, Any, E | SC]: ...
 
 
-class GetClassMethod2(Protocol):
-    def __call__(self, tp: type[E | SC], /) -> BoundMethod2[Any, Any, E | SC]: ...
-
-
 class GetExpr(Protocol):
     def __call__(self, obj: HasExpr[ET_co], /) -> type[ET_co]: ...
 
