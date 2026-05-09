@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
-    from narwhals._plan.typing import Accessor, ExprIRT, FunctionT, RootConstructor
+    from narwhals._plan.typing import Accessor, Constructs, ExprIRT, FunctionT
 
 
 __all__ = ("Dispatcher", "DispatcherOptions", "get_dispatch_name")
@@ -322,7 +322,7 @@ class DispatcherOptions:
     allow_dispatch: bool
     """Whether the expression is supported at the compliant-level."""
 
-    constructor_name: RootConstructor | None
+    constructor_name: Constructs | None
     override_name: str
     """Manual override to the auto-generated expression dispatch method name.
 
@@ -354,18 +354,13 @@ class DispatcherOptions:
         *,
         accessor_name: Accessor | None = None,
         allow_dispatch: bool = True,
-        constructor_name: RootConstructor | None = None,
+        constructor_name: Constructs | None = None,
         override_name: str = "",
     ) -> None:
         self.accessor_name = accessor_name
         self.allow_dispatch = allow_dispatch
         self.constructor_name = constructor_name
         self.override_name = override_name
-
-    @staticmethod
-    def constructor(name: RootConstructor, /) -> DispatcherOptions:
-        """Mark an expression as providing a constructor for `name`."""
-        return DispatcherOptions(constructor_name=name)
 
     @staticmethod
     def renamed(override_name: str, /) -> DispatcherOptions:

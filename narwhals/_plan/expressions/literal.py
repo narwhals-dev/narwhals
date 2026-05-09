@@ -8,9 +8,8 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Generic, final
 
 from narwhals._plan import common
-from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan._expr_ir import Constructor
 from narwhals._plan._guards import is_python_literal_type
 from narwhals._plan.exceptions import literal_type_error
 from narwhals._plan.typing import (
@@ -33,16 +32,13 @@ __all__ = ("Lit", "LitSeries", "lit", "lit_series")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
-constructor = DispatcherOptions.constructor
 
 
 # TODO @dangotbanned: (low-prio) Define `__str__` to use (`value`, `dtype`)-order instead
 # - Generated from alphabetical-ordered slots
 # - Will break some doctests on a change
 @final
-class Lit(
-    ExprIR, Generic[PythonLiteralT_co], dtype=get_dtype(), dispatch=constructor("Scalar")
-):
+class Lit(Constructor, Generic[PythonLiteralT_co], dtype=get_dtype(), dispatch="Scalar"):
     """An expression representing a scalar literal value.
 
     >>> import narwhals._plan as nw
@@ -110,7 +106,7 @@ class Lit(
 
 @final
 class LitSeries(
-    ExprIR, Generic[NativeSeriesT_co], dtype=get_dtype(), dispatch=constructor("Expr")
+    Constructor, Generic[NativeSeriesT_co], dtype=get_dtype(), dispatch="Expr"
 ):
     """An expression representing a series literal.
 

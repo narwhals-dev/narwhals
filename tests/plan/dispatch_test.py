@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import importlib
 import re
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import _dispatch, common, expressions as ir, selectors as ncs
+from narwhals._plan import (
+    _dispatch,
+    _expr_ir,
+    common,
+    expressions as ir,
+    selectors as ncs,
+)
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import UnaryFunction
@@ -19,6 +25,7 @@ if TYPE_CHECKING:
     from pytest import FixtureRequest  # noqa: PT013
     from typing_extensions import TypeAlias
 
+    from narwhals._plan.typing import Constructs
     from tests.conftest import Data
 
     DispatchRaises: TypeAlias = pytest.RaisesExc[NotImplementedError | AttributeError]
@@ -99,18 +106,12 @@ def test_missing_compliant_method(
 
 
 # TODO @dangotbanned: Maybe fix using `DispatcherOptions.constructor`?
-@pytest.mark.parametrize("root_name", ["Expr", "Scalar"])
+@pytest.mark.parametrize("name", ["Expr", "Scalar"])
 @pytest.mark.parametrize("enable_hints", [True, False])
 def test_missing_compliant_constructor(
-    data: Data,
-    dataframe: DataFrame,
-    root_name: Literal["Expr", "Scalar"],
-    *,
-    enable_hints: bool,
+    data: Data, dataframe: DataFrame, name: Constructs, *, enable_hints: bool
 ) -> None:
-    constructor = DispatcherOptions.constructor(root_name)
-
-    class MissingConstructor(ir.ExprIR, dispatch=constructor):
+    class MissingConstructor(_expr_ir.Constructor, dispatch=name):
         __slots__ = ("expr",)
         expr: ir.ExprIR = node()
 
@@ -118,7 +119,7 @@ def test_missing_compliant_constructor(
     expr = MissingConstructor(expr=ir.col("a"))
     truthy = (
         r"missing_constructor.+has not been implemented at.+compliant-level.+"
-        rf"Hint.+try adding.+Compliant{root_name}\.missing_constructor\(\)"
+        rf"Hint.+try adding.+Compliant{name}\.missing_constructor\(\)"
     )
     falsy = r"has no attribute.+missing_constructor"
     assert_dispatch_raises(df, expr, truthy, falsy, enable_hints=enable_hints)

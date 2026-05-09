@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, final
 
 import narwhals._plan.dtypes_mapper as dtm
-from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._expr_ir import ExprIR, NoDispatch, SelectorIR
+from narwhals._plan._expr_ir import Constructor, ExprIR, NoDispatch, SelectorIR
 from narwhals._plan._nodes import node, nodes
 from narwhals._plan.exceptions import over_order_by_names_error
 from narwhals._plan.expressions.selectors import ByName
@@ -40,7 +39,6 @@ __all__ = (
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
 same_dtype = ResolveDType.expr_ir.same_dtype
-constructor = DispatcherOptions.constructor
 
 
 def col(name: str, /) -> Column:
@@ -48,7 +46,7 @@ def col(name: str, /) -> Column:
 
 
 @final
-class LenStar(ExprIR, dispatch=constructor("Scalar"), dtype=dtm.IDX_DTYPE):
+class LenStar(Constructor, dispatch="Scalar", dtype=dtm.IDX_DTYPE):
     """Return the number of rows in the context.
 
     This is similar to `COUNT(*)` in SQL.
@@ -98,7 +96,7 @@ class Alias(NoDispatch):
 
 
 @final
-class Col(ExprIR, dispatch=constructor("Expr")):
+class Col(Constructor, dispatch="Expr"):
     """An expression that selects exactly one column.
 
     Arguments:

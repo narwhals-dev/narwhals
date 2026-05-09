@@ -51,7 +51,7 @@ from narwhals._plan._immutable import _OBJ_SETATTR, Immutable
 from narwhals._plan._meta import ExprIRMeta
 from narwhals._plan._nodes import ExprTraverser
 from narwhals._plan._version import into_version
-from narwhals._plan.typing import ExprIRT_co
+from narwhals._plan.typing import Constructs, ExprIRT_co
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
@@ -166,11 +166,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
 
     See `Dispatcher` and `DispatcherOptions` for examples.
 
-    To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
-
-        class Col(ExprIR, dispatch=DispatcherOptions.constructor("Expr")):
-            __slots__ = ("name",)
-            name: str
+    To customize the behavior, use the `dispatch` **parameter** [when subclassing].
 
     If nothing there *quite* scratches the itch, override the `dispatch` **method** instead:
 
@@ -707,6 +703,24 @@ class NoDispatch(ExprIR):
     """
 
     __expr_ir_dispatch__ = Dispatcher(options=DispatcherOptions(allow_dispatch=False))
+
+
+class Constructor(ExprIR):
+    """An expression that dispatches to a `@classmethod` at the compliant-level."""
+
+    def __init_subclass__(
+        cls: type[Self],
+        *,
+        dispatch: Constructs | None = None,
+        dtype: IntoResolveDType[Self] | None = None,
+        **_: Any,
+    ) -> None:
+
+        if dispatch is None:
+            raise NotImplementedError
+        super().__init_subclass__(
+            dispatch=DispatcherOptions(constructor_name=dispatch), dtype=dtype, **_
+        )
 
 
 class SelectorIR(NoDispatch):
