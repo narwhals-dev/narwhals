@@ -119,17 +119,15 @@ class Dispatcher(Generic[Node]):
         /,
     ) -> ct.ET_co | ct.ST_co:
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
-        if result := _dispatcher_call(self, node, ctx, frame, name):
+        if result := _DISPATCHER_CALL(self, node, ctx, frame, name):
             return result
         msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
         raise NotImplementedError(msg)
 
     @staticmethod
     def from_expr_ir(
-        tp: type[ExprIRT], options: DispatcherOptions | Literal["no_dispatch"] | None, /
+        tp: type[ExprIRT], options: DispatcherOptions | None, /
     ) -> Dispatcher[ExprIRT]:
-        if options == "no_dispatch":
-            options = DispatcherOptions(allow_dispatch=False)
         options = options or tp.__expr_ir_dispatch__.options
         if not options.allow_dispatch:
             return Dispatcher(tp.__name__, options=options)
@@ -246,9 +244,6 @@ def _binder(f1: ct.CallExprPrepare, f2: ct.GetMethod, /) -> ct.Binder[Incomplete
     return bind
 
 
-# TODO @dangotbanned: Change from:
-# CURRENT: `methodcaller("__narwhals_namespace__"),  attrgetter("_expr"), attrgetter(<constructor>)`
-# WANT   : `deep_attrgetter("__narwhals_classes__", "expr", <constructor>)`
 _GET_EXPR: Final[ct.GetExpr] = _attrgetter("_expr")
 _GET_SCALAR: Final[ct.GetScalar] = _attrgetter("_scalar")
 
