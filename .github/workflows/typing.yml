@@ -26,20 +26,20 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          activate-environment: true
           enable-cache: "true"
           cache-suffix: typing-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Create venv
-        run: uv venv .venv --clear
       - name: install-reqs
         # TODO: add more dependencies/backends incrementally
-        run: uv pip install -e ".[pyspark]" --group core --group typing
+        run: uv sync --group core --group typing --extra pyspark
       - name: show-deps
         run: uv pip freeze
       - name: Run mypy and pyright
-        run: make typing
+        run: |
+          uv run --no-sync pyright
+          uv run --no-sync mypy
+          uv run --no-sync pyrefly check
       - name: Run pyright type completeness
         run: |
           uv pip install -U pyright-cov
-          pyright-cov --verifytypes narwhals --ignoreexternal --fail-under 100
+          uv run --no-sync pyright-cov --verifytypes narwhals --ignoreexternal --fail-under 100

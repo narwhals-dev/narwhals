@@ -7,7 +7,6 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
 
 permissions:
   contents: read
@@ -31,14 +30,10 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
+        run: |
+          uv run --group tests --extra pandas --extra polars --extra pyarrow --with test-plugin/. \
+          pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
 
   pytest-windows:
     if: github.head_ref != 'bump-version'
@@ -58,15 +53,10 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e "." --group core-tests --group extra
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
         run: |
+          # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
+          uv run --group core-tests --group extra --with test-plugin/. \
           pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
 
   pytest-full-coverage:
@@ -92,18 +82,16 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e ".[dask]" --group core-tests --group extra
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+        run: |
+          uv run --group core-tests --group extra --extra dask --with test-plugin/.\
+          pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: pytest narwhals --doctest-modules
+        run: |
+          uv run --group core-tests --group extra --extra dask --with test-plugin/.\
+          pytest narwhals --doctest-modules
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
@@ -124,25 +112,24 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
+      - name: install-reqs (pandas)
         run: |
-          uv pip install -e ".[pandas]" --group tests
+          uv sync --group tests --extra pandas
           uv pip freeze
       - name: Run pytest (pandas and pandas[nullable])
-        run: pytest tests --runslow --constructors=pandas,pandas[nullable]
+        run: uv run --no-sync pytest tests --runslow --constructors=pandas,pandas[nullable]
       - name: install-more-reqs
         run: |
-          uv pip install -U pyarrow
+          uv sync --group tests --extra pandas --extra pyarrow
           uv pip freeze
       - name: Run pytest (pandas[pyarrow] and pyarrow)
-        run: pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
+        run: uv run --no-sync pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
       - name: install-polars
         run: |
-          uv pip uninstall pandas pyarrow
-          uv pip install polars
+          uv sync --group tests --extra polars
           uv pip freeze
       - name: Run pytest (polars)
-        run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
+        run: uv run --no-sync pytest tests --runslow --constructors=polars[eager],polars[lazy]
 
   python-314:
     if: github.head_ref != 'bump-version'
@@ -162,12 +149,10 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
+        run: |
+          uv run --group tests --extra pandas --extra polars --extra pyarrow --extra duckdb --extra sqlframe \
+          pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
 
   python-314t:
     if: github.head_ref != 'bump-version'
@@ -189,9 +174,7 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group tests --pre pandas pyarrow
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50
+        run: |
+          uv run --group tests --extra pandas --extra pyarrow --prerelease=allow \
+          pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50
