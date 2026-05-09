@@ -53,7 +53,6 @@ __all__ = (
     "IntoExprColumn",
     "LeftSelectorT",
     "LeftT",
-    "LiteralT_co",
     "MapIR",
     "NonNestedLiteralT_co",
     "OperatorFn",
@@ -169,9 +168,6 @@ NativeLazyFrameT_co = TypeVar(
     bound="NativeLazyFrame",
     default="NativeLazyFrame",
     covariant=True,
-)
-LiteralT_co = TypeVar(
-    "LiteralT_co", bound="PythonLiteral | Series[t.Any]", covariant=True, default=t.Any
 )
 MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""

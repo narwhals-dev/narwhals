@@ -1,5 +1,5 @@
 # mypy: disable-error-code="misc", warn-unused-configs=True
-# see `LiteralExpr.value`
+# # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
 from __future__ import annotations
 
 import datetime as dt
@@ -14,7 +14,6 @@ from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._guards import is_python_literal_type
 from narwhals._plan.exceptions import literal_type_error
 from narwhals._plan.typing import (
-    LiteralT_co,
     NativeSeriesT,
     NativeSeriesT_co,
     PythonLiteralT,
@@ -40,34 +39,10 @@ constructor = DispatcherOptions.constructor
 # TODO @dangotbanned: (low-prio) Define `__str__` to use (`value`, `dtype`)-order instead
 # - Generated from alphabetical-ordered slots
 # - Will break some doctests on a change
-# TODO @dangotbanned: Maybe skip this and keep the classes separate?
-# - Don't want dispatching for `LiteralExpr`
-# - All base class checks have been replaced now
-# - Only benefits will be:
-#   - a few lines saved
-#   - shared slots
-#   - sharing attribute docstrings
-class LiteralExpr(ExprIR, Generic[LiteralT_co], dtype=get_dtype()):
-    __slots__ = ("dtype", "value")
-    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
-    value: LiteralT_co
-    """The literal value."""
-    dtype: DType
-    """The data type inferred or explicitly given at construction time."""
-
-    @property
-    def name(self) -> str:
-        return "literal"
-
-    def is_length_preserving(self) -> bool:
-        return False
-
-    def changes_length(self) -> bool:
-        return False
-
-
 @final
-class Lit(LiteralExpr[PythonLiteralT_co], dispatch=constructor("Scalar")):
+class Lit(
+    ExprIR, Generic[PythonLiteralT_co], dtype=get_dtype(), dispatch=constructor("Scalar")
+):
     """An expression representing a scalar literal value.
 
     >>> import narwhals._plan as nw
@@ -80,8 +55,36 @@ class Lit(LiteralExpr[PythonLiteralT_co], dispatch=constructor("Scalar")):
     True
     """
 
+    __slots__ = ("dtype", "value")
+    value: PythonLiteralT_co
+    """The literal value."""
+    dtype: DType
+    """The data type inferred or explicitly given at construction time."""
+
+    @property
+    def name(self) -> str:
+        return "literal"
+
     def is_scalar(self) -> bool:
         return True
+
+    def changes_length(self) -> bool:
+        return False
+
+    is_length_preserving = changes_length
+
+    @staticmethod
+    def from_python(
+        value: PythonLiteralT,
+        dtype: IntoDType | None = None,
+        version: Version = Version.MAIN,
+    ) -> Lit[PythonLiteralT]:
+        dtype = (
+            _py_value_to_dtype(value, version, allow_null=True)
+            if dtype is None
+            else common.into_dtype(dtype)
+        )
+        return Lit(value=value, dtype=dtype)
 
     # TODO @dangotbanned: Use quotes for `lit("string")`
     # TODO @dangotbanned: (Noisy repr change) `lit(int: 1)` -> `lit[int](1)`
@@ -106,7 +109,9 @@ class Lit(LiteralExpr[PythonLiteralT_co], dispatch=constructor("Scalar")):
 
 
 @final
-class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=constructor("Expr")):
+class LitSeries(
+    ExprIR, Generic[NativeSeriesT_co], dtype=get_dtype(), dispatch=constructor("Expr")
+):
     """An expression representing a series literal.
 
     >>> import narwhals._plan as nw
@@ -122,8 +127,14 @@ class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=constructor("E
     False
     """
 
+    __slots__ = ("dtype", "value")
+    value: Series[NativeSeriesT_co]
+    dtype: DType
+
     def is_scalar(self) -> bool:
         return False
+
+    is_length_preserving = changes_length = is_scalar
 
     @staticmethod
     def from_series(series: Series[NativeSeriesT], /) -> LitSeries[NativeSeriesT]:
@@ -154,16 +165,8 @@ class LitSeries(LiteralExpr["Series[NativeSeriesT_co]"], dispatch=constructor("E
         yield from (self.name, self.dtype, id(self.value))
 
 
+lit = Lit.from_python
 lit_series = LitSeries.from_series
-
-
-def lit(value: PythonLiteralT, dtype: IntoDType | None = None) -> Lit[PythonLiteralT]:
-    dtype = (
-        _py_value_to_dtype(value, Version.MAIN, allow_null=True)
-        if dtype is None
-        else common.into_dtype(dtype)
-    )
-    return Lit(value=value, dtype=dtype)
 
 
 def _py_value_to_dtype(
