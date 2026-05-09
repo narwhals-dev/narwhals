@@ -82,7 +82,7 @@ def test_gather_every_dataframe(
 def test_gather_every_expr(
     data: Data, n: int, offset: int, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
-    dataframe.xfail_polars_select(request)
+    dataframe.xfail_polars_select(request, raises=(NotImplementedError, AttributeError))
     df = dataframe(data)
     indices = slice(offset, None, n)
     v_idx, v_name = data["idx"][indices], data["name"][indices]

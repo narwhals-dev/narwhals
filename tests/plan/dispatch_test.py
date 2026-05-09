@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import re
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -7,7 +8,7 @@ import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from narwhals._plan import expressions as ir, selectors as ncs
+from narwhals._plan import _dispatch, common, expressions as ir, selectors as ncs
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import UnaryFunction
@@ -15,7 +16,12 @@ from narwhals._plan._nodes import node
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest  # noqa: PT013
+    from typing_extensions import TypeAlias
+
     from tests.conftest import Data
+
+    DispatchRaises: TypeAlias = pytest.RaisesExc[NotImplementedError | AttributeError]
 
 
 @pytest.fixture
@@ -28,9 +34,7 @@ def data() -> dict[str, Any]:
     }
 
 
-def test_dispatch(
-    data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
+def test_dispatch(data: Data, dataframe: DataFrame, request: FixtureRequest) -> None:
     df = dataframe(data)
     implemented_full = nwp.col("a").is_null()
     forgot_to_expand = (ir.NamedIR("howdy", nwp.nth(3, 4).first()._ir),)
@@ -53,52 +57,56 @@ def test_dispatch(
         nwp.col("a").max().to_physical()  # type: ignore[attr-defined]
 
 
-def test_dispatch_not_yet(
-    data: Data, dataframe: DataFrame, monkeypatch: pytest.MonkeyPatch
-) -> None:
+# TODO @dangotbanned: Fix depending on `Function.__expr_ir_dispatch__.bind`
+def test_dispatch_not_yet(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     # NOTE: This will unconditionally trigger an `AttributeError`
-    monkeypatch.setattr(
-        ir.functions.EwmMean.__expr_ir_dispatch__,
-        "bind",
-        lambda _: lambda _node, _frame, _name: None,
-    )
-    with pytest.raises(
-        NotImplementedError, match=r"ewm_mean.+is not yet implemented for"
-    ):
-        df.select(nwp.col("c").ewm_mean())
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(
+            ir.functions.EwmMean.__expr_ir_dispatch__,
+            "bind",
+            lambda _: lambda _node, _frame, _name: None,
+        )
+        with pytest.raises(
+            NotImplementedError, match=r"ewm_mean.+is not yet implemented for"
+        ):
+            df.select(nwp.col("c").ewm_mean())
 
 
+@pytest.mark.parametrize("enable_hints", [True, False])
 def test_missing_compliant_method(
-    data: Data, dataframe: DataFrame, request: pytest.FixtureRequest
+    data: Data, dataframe: DataFrame, request: FixtureRequest, *, enable_hints: bool
 ) -> None:
-    # Covers a narwhals dev error path, by making the mistakes it is intended to catch
-    # If you add a new expression, but don't update the compliant-level this should 🙏
-    # nudge you in the right direction
-
     class MissingMethod(
         UnaryFunction, dispatch=DispatcherOptions(accessor_name="str")
     ): ...
 
-    df = dataframe(data)
     dataframe.xfail(
         request,
         dataframe.is_polars(),
         reason="'TODO: `PolarsExpr.str(...)`'",
-        raises=AssertionError,
+        raises=AssertionError if enable_hints else NotImplementedError,
     )
-    expr = MissingMethod().to_function_expr(ir.col("d")).to_narwhals()
-    pattern = re_compile(
+
+    df = dataframe(data)
+    expr = MissingMethod().to_function_expr(ir.col("d"))
+    truthy = (
         r"str\.missing_method.+has not been implemented at.+compliant-level.+"
         r"Hint.+try adding.+CompliantExpr\.str\.missing_method\(\)"
     )
-    with pytest.raises(NotImplementedError, match=pattern):
-        df.select(expr)
+    falsy = r"has no attribute.+missing_method"
+    assert_dispatch_raises(df, expr, truthy, falsy, enable_hints=enable_hints)
 
 
+# TODO @dangotbanned: Maybe fix using `DispatcherOptions.constructor`?
 @pytest.mark.parametrize("root_name", ["Expr", "Scalar"])
+@pytest.mark.parametrize("enable_hints", [True, False])
 def test_missing_compliant_constructor(
-    data: Data, dataframe: DataFrame, root_name: Literal["Expr", "Scalar"]
+    data: Data,
+    dataframe: DataFrame,
+    root_name: Literal["Expr", "Scalar"],
+    *,
+    enable_hints: bool,
 ) -> None:
     constructor = DispatcherOptions.constructor(root_name)
 
@@ -107,13 +115,35 @@ def test_missing_compliant_constructor(
         expr: ir.ExprIR = node()
 
     df = dataframe(data)
-    expr = MissingConstructor(expr=ir.col("a")).to_narwhals()
-    pattern = re_compile(
+    expr = MissingConstructor(expr=ir.col("a"))
+    truthy = (
         r"missing_constructor.+has not been implemented at.+compliant-level.+"
         rf"Hint.+try adding.+Compliant{root_name}\.missing_constructor\(\)"
     )
-    with pytest.raises(NotImplementedError, match=pattern):
-        df.select(expr)
+    falsy = r"has no attribute.+missing_constructor"
+    assert_dispatch_raises(df, expr, truthy, falsy, enable_hints=enable_hints)
+
+
+def _dispatch_raises(truthy: str, falsy: str, *, enable_hints: bool) -> DispatchRaises:
+    errors = NotImplementedError if enable_hints else AttributeError
+    return pytest.raises(errors, match=re_compile(truthy if enable_hints else falsy))
+
+
+def assert_dispatch_raises(
+    df: nwp.DataFrame, expr: ir.ExprIR, truthy: str, falsy: str, *, enable_hints: bool
+) -> None:
+    nw_expr = expr.to_narwhals()
+    raises = _dispatch_raises(truthy, falsy, enable_hints=enable_hints)
+    with pytest.MonkeyPatch.context() as mp:
+        if enable_hints:
+            mp.setenv(common.NW_DEV_ENV_NAME, "1")
+        else:
+            mp.delenv(common.NW_DEV_ENV_NAME, raising=False)
+        # NOTE: The implementation works like a compile-time flag, allowing the feature to be zero-cost.
+        # Updating the env var doesn't change the function, only a reload will.
+        importlib.reload(_dispatch)
+        with raises:
+            df.select(nw_expr)
 
 
 @pytest.mark.parametrize(

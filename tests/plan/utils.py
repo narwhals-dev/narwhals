@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 # mypy: disable-error-code="no-any-return"
+# ruff: noqa: FBT001
 import re
 import threading
 from collections import defaultdict
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
     import polars as pl
+    from pytest import FixtureRequest  # noqa: PT013
     from typing_extensions import LiteralString, ReadOnly, TypeAlias
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
@@ -61,6 +63,7 @@ if TYPE_CHECKING:
     T = TypeVar("T")
     SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
     TestBackendAny: TypeAlias = "TestBackend[Any, Any, Any]"
+    _Raises: TypeAlias = type[Exception] | tuple[type[Exception], ...]
 
 R_co = TypeVar("R_co", covariant=True)
 
@@ -516,23 +519,23 @@ class Constructor(Generic[R_co]):
 
     def xfail(
         self,
-        request: pytest.FixtureRequest,
+        request: FixtureRequest,
         /,
-        condition: bool,  # noqa: FBT001
+        condition: bool,
         *,
         reason: LiteralString,
-        raises: type[Exception] | tuple[type[Exception], ...],
+        raises: _Raises,
     ) -> None:
         request.applymarker(pytest.mark.xfail(condition, raises=raises, reason=reason))
 
     def xfail_not_implemented(
         self,
-        request: pytest.FixtureRequest,
+        request: FixtureRequest,
         /,
-        condition: bool,  # noqa: FBT001
+        condition: bool,
         method: LiteralString,
         *,
-        raises: type[Exception] | tuple[type[Exception], ...] = NotImplementedError,
+        raises: _Raises = NotImplementedError,
     ) -> None:
         self.xfail(
             request,
@@ -542,18 +545,18 @@ class Constructor(Generic[R_co]):
         )
 
     def xfail_polars_select(
-        self,
-        request: pytest.FixtureRequest,
-        /,
-        *,
-        raises: type[Exception] | tuple[type[Exception], ...] = NotImplementedError,
+        self, request: FixtureRequest, /, *, raises: _Raises = NotImplementedError
     ) -> None:
         self.xfail_not_implemented(request, self.is_polars(), "select", raises=raises)
 
-    def xfail_polars_with_columns(self, request: pytest.FixtureRequest, /) -> None:
-        self.xfail_not_implemented(request, self.is_polars(), "with_columns")
+    def xfail_polars_with_columns(
+        self, request: FixtureRequest, /, *, raises: _Raises = NotImplementedError
+    ) -> None:
+        self.xfail_not_implemented(
+            request, self.is_polars(), "with_columns", raises=raises
+        )
 
-    def xfail_pyarrow_pivot_too_old(self, request: pytest.FixtureRequest, /) -> None:
+    def xfail_pyarrow_pivot_too_old(self, request: FixtureRequest, /) -> None:
         self.xfail(
             request,
             (self.is_pyarrow() and PYARROW_VERSION < (20, 0, 0)),

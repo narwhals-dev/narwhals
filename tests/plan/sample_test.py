@@ -117,7 +117,7 @@ def test_sample_expr(
 ) -> None:
     with deprecated_call():
         expr = base.sample(**kwds)
-    dataframe.xfail_polars_select(request)
+    dataframe.xfail_polars_select(request, raises=(NotImplementedError, AttributeError))
     result = dataframe(data).select(expr).shape
     assert result == expected
 
@@ -141,6 +141,8 @@ def test_sample_invalid(
         df.sample(n=1_000)
     with pytest.raises(ShapeError, match=too_high_n):
         ser.sample(n=2_000)
-    dataframe.xfail_polars_with_columns(request)
+    dataframe.xfail_polars_with_columns(
+        request, raises=(NotImplementedError, AttributeError)
+    )
     with pytest.raises(ShapeError), deprecated_call():
         df.with_columns(nwp.col("b").sample(123, with_replacement=True))

@@ -52,6 +52,16 @@ else:  # pragma: no cover
 
 _SENTINEL: Final = object()
 
+NW_DEV_ENV_NAME: Final = "NARWHALS_DEV_HINTS"
+"""Name of an environment variable that controls conditionally defined paths.
+
+Important:
+    Use when there is an *opportunity* to provide help for a dev error,
+    but doing so may either:
+    1. Come at a performance cost.
+    2. Introduce false positives/negatives.
+"""
+
 
 def hasattrs_static(
     obj: object | type, *attrs: Unpack[tuple[str, Unpack[tuple[str, ...]]]]

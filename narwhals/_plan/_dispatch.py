@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Callable
 from operator import attrgetter as _attrgetter, methodcaller as _methodcaller
 from typing import TYPE_CHECKING, Any, Final, Generic, Literal, final
 
+from narwhals._plan import common
 from narwhals._plan._guards import is_function_expr
 from narwhals._typing_compat import TypeVar
 
@@ -57,11 +59,6 @@ class Dispatcher(Generic[Node]):
     Instead, for a user-facing error we would have:
 
         NotImplementedError: "`ewm_mean` is not yet implemented for 'ArrowExpr'"
-
-    And a developer-facing error might be:
-
-        NotImplementedError: "`lit` has not been implemented at the compliant-level."
-        "Hint: Try adding `CompliantScalar.lit()`"
     """
 
     __slots__ = ("_name", "_options", "bind")
@@ -122,13 +119,10 @@ class Dispatcher(Generic[Node]):
         /,
     ) -> ct.ET_co | ct.ST_co:
         """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
-        try:
-            method = self.bind(ctx)
-        except AttributeError as err:
-            raise self._not_implemented_error(ctx, "compliant") from err
-        if result := method(node, frame, name):
+        if result := _dispatcher_call(self, node, ctx, frame, name):
             return result
-        raise self._not_implemented_error(ctx, "context")
+        msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
+        raise NotImplementedError(msg)
 
     @staticmethod
     def from_expr_ir(
@@ -197,21 +191,44 @@ class Dispatcher(Generic[Node]):
 
         return getter
 
-    def _not_implemented_error(
-        self,
-        ctx: ct.CanNamespace[Any, Any, Any],
-        /,
-        missing: Literal["compliant", "context"],
-    ) -> NotImplementedError:
-        if missing == "context":
-            msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
-        else:
-            name = self.options.constructor_name or "Expr"
-            msg = (
-                f"`{self.name}` has not been implemented at the compliant-level.\n"
-                f"Hint: Try adding `Compliant{name}.{self.name}()`"
-            )
-        return NotImplementedError(msg)
+
+def _dispatch(
+    self: Dispatcher[Node],
+    node: Node,
+    ctx: ct.DispatchScopeAny[ct.Frame, ct.E, ct.SC],
+    frame: ct.Frame,
+    name: str,
+    /,
+) -> ct.E | ct.SC | None:
+    return self.bind(ctx)(node, frame, name)
+
+
+def _dispatch_debug(
+    self: Dispatcher[Node],
+    node: Node,
+    ctx: ct.DispatchScopeAny[ct.Frame, ct.E, ct.SC],
+    frame: ct.Frame,
+    name: str,
+    /,
+) -> ct.E | ct.SC | None:
+    # Provides an opt-in hint for a development-time-only error
+    try:
+        method = self.bind(ctx)
+    except AttributeError as err:
+        # This error *looks* like the problem is related to a single backend:
+        #   `AttributeError: type object 'ArrowExpr' has no attribute 'lit'`
+        name = self.options.constructor_name or "Expr"
+        msg = (
+            f"`{self.name}` has not been implemented at the compliant-level.\n"
+            f"Hint: Try adding `Compliant{name}.{self.name}()`"
+        )
+        raise NotImplementedError(msg) from err
+    return method(node, frame, name)
+
+
+_DISPATCHER_CALL: Final = (
+    _dispatch if not os.environ.get(common.NW_DEV_ENV_NAME) else _dispatch_debug
+)
 
 
 _CALL_NAMESPACE: Final[ct.CallNamespace] = _methodcaller("__narwhals_namespace__")
