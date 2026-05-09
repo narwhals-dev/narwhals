@@ -668,6 +668,9 @@ jobs:
           pytest test/unit -m "narwhals"
 
   scikit-learn:
+    if: github.head_ref != 'bump-version'
+    env:
+      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
