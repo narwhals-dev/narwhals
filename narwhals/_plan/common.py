@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 from collections.abc import Iterable
 from copy import deepcopy
@@ -466,3 +467,22 @@ def _closed_kwds_reusable_impl(mapping: dict[str, Any], /) -> ClosedKwds:
         return next(clones)
 
     return _
+
+
+def pascal_to_snake_case(s: str) -> str:
+    """Convert a PascalCase string to snake_case.
+
+    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
+    """
+    # Handle the sequence of uppercase letters followed by a lowercase letter
+    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
+    # Insert an underscore between a lowercase letter and an uppercase letter
+    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
+
+
+_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
+
+
+def _re_repl_snake(match: re.Match[str], /) -> str:
+    return f"{match.group(1)}_{match.group(2)}"

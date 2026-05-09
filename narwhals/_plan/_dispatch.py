@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import os
-import re
 from collections.abc import Callable
 from operator import attrgetter as _attrgetter, methodcaller as _methodcaller
 from typing import TYPE_CHECKING, Any, Final, Generic, Literal, final
 
 from narwhals._plan import common
 from narwhals._plan._guards import is_function_expr
+from narwhals._plan.common import pascal_to_snake_case
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -131,7 +131,7 @@ class Dispatcher(Generic[Node]):
         options = options or tp.__expr_ir_dispatch__.options
         if not options.allow_dispatch:
             return Dispatcher(tp.__name__, options=options)
-        name = _pascal_to_snake_case(tp.__name__)
+        name = pascal_to_snake_case(tp.__name__)
         if constructor := options.constructor_name:
             get_type = _GET_EXPR if constructor == "Expr" else _GET_SCALAR
             bind = _constructor_binder(
@@ -147,7 +147,7 @@ class Dispatcher(Generic[Node]):
     ) -> Dispatcher[FunctionExpr[FunctionT]]:
         """Create a new `Function` dispatcher."""
         options = tp.__expr_ir_dispatch__.options.merge_with(options)
-        name = options.override_name or _pascal_to_snake_case(tp.__name__)
+        name = options.override_name or pascal_to_snake_case(tp.__name__)
         if ns := options.accessor_name:
             name = f"{ns}.{name}"
         bind = _binder(_CALL_EXPR_PREPARE, _ATTR_GETTER(name))
@@ -399,25 +399,6 @@ class DispatcherOptions:
                 override_name=options.override_name, accessor_name=accessor_name
             )
         return options
-
-
-def _pascal_to_snake_case(s: str) -> str:
-    """Convert a PascalCase string to snake_case.
-
-    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
-    """
-    # Handle the sequence of uppercase letters followed by a lowercase letter
-    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
-    # Insert an underscore between a lowercase letter and an uppercase letter
-    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
-
-
-_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
-_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
-
-
-def _re_repl_snake(match: re.Match[str], /) -> str:
-    return f"{match.group(1)}_{match.group(2)}"
 
 
 def get_dispatch_name(expr: ExprIR | type[Function], /) -> str:

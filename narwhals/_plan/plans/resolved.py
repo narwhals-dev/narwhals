@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
-from narwhals._plan import expressions as ir
+from narwhals._plan import common, expressions as ir
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.compliant.typing import Native
 from narwhals._plan.plans._base import _BasePlan
@@ -141,11 +141,9 @@ class Sink(SingleInput):
     def evaluate(
         self, evaluator: ResolvedToCompliant[Any], /
     ) -> Incomplete:  # pragma: no cover
-        from narwhals._plan._dispatch import _pascal_to_snake_case
-
         evaluator_name = type(evaluator).__name__
         node_name = type(self).__name__
-        method = _pascal_to_snake_case(node_name)
+        method = common.pascal_to_snake_case(node_name)
         msg = (
             f"`Sink` nodes do not support `evaluate()`.\n"
             f"Instead of calling: `{node_name}.evaluate({evaluator_name})\n"
