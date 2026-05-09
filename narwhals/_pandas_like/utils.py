@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -30,13 +30,14 @@ from narwhals._utils import (
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
     from types import ModuleType
+    from typing import TypeAlias
 
     import pyarrow as pa
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -339,32 +340,15 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
-if Implementation.PANDAS._backend_version() >= (1, 2):
-
-    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
-        """Return `True` if `dtype` is `"numpy_nullable"`."""
-        # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
-        # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
-        sentinel = object()
-        return (
-            isinstance(dtype, pd.api.extensions.ExtensionDtype)
-            and getattr(dtype, "base", sentinel) is None
-        )
-else:  # pragma: no cover
-
-    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
-        # NOTE: `base` attribute was added between 1.1-1.2
-        # Checking by isinstance requires using an import path that is no longer valid
-        # `1.1`: https://github.com/pandas-dev/pandas/blob/b5958ee1999e9aead1938c0bba2b674378807b3d/pandas/core/arrays/masked.py#L37
-        # `1.2`: https://github.com/pandas-dev/pandas/blob/7c48ff4409c622c582c56a5702373f726de08e96/pandas/core/arrays/masked.py#L41
-        # `1.5`: https://github.com/pandas-dev/pandas/blob/35b0d1dcadf9d60722c055ee37442dc76a29e64c/pandas/core/dtypes/dtypes.py#L1609
-        if isinstance(dtype, pd.api.extensions.ExtensionDtype):
-            from pandas.core.arrays.masked import (  # type: ignore[attr-defined]
-                BaseMaskedDtype as OldBaseMaskedDtype,  # pyright: ignore[reportAttributeAccessIssue]
-            )
-
-            return isinstance(dtype, OldBaseMaskedDtype)
-        return False
+def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+    """Return `True` if `dtype` is `"numpy_nullable"`."""
+    # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
+    # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
+    sentinel = object()
+    return (
+        isinstance(dtype, pd.api.extensions.ExtensionDtype)
+        and getattr(dtype, "base", sentinel) is None
+    )
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:

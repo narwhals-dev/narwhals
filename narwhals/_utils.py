@@ -3,26 +3,31 @@ from __future__ import annotations
 import os
 import re
 import sys
-from collections.abc import Collection, Container, Iterable, Iterator, Mapping, Sequence
+from collections.abc import (
+    Callable,
+    Collection,
+    Container,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
 from datetime import timezone
 from enum import Enum, auto
-from functools import cache, lru_cache, partial, wraps
+from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
-from itertools import chain
 from operator import attrgetter
 from pathlib import Path
 from secrets import token_hex
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     Generic,
     Literal,
     Protocol,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -56,18 +61,12 @@ from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOper
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
+    from typing import Concatenate, TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import (
-        Concatenate,
-        LiteralString,
-        ParamSpec,
-        Self,
-        TypeAlias,
-        TypeIs,
-    )
+    from typing_extensions import LiteralString, ParamSpec, Self, TypeIs
 
     from narwhals._compliant import CompliantExprT, CompliantSeriesT, NativeSeriesT_co
     from narwhals._compliant.any_namespace import NamespaceAccessor
@@ -139,7 +138,7 @@ if TYPE_CHECKING:
     UnknownBackendName: TypeAlias = str
 
     FrameOrSeriesT = TypeVar(
-        "FrameOrSeriesT", bound=Union[LazyFrame[Any], DataFrame[Any], Series[Any]]
+        "FrameOrSeriesT", bound=LazyFrame[Any] | DataFrame[Any] | Series[Any]
     )
 
     _T1 = TypeVar("_T1")
@@ -602,8 +601,8 @@ def is_pyspark_pre_4(implementation: Implementation) -> bool:
 
 
 MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
-    Implementation.PANDAS: (1, 1, 3),
-    Implementation.MODIN: (0, 8, 2),
+    Implementation.PANDAS: (1, 3, 4),
+    Implementation.MODIN: (0, 22, 0),
     Implementation.CUDF: (24, 10),
     Implementation.PYARROW: (13,),
     Implementation.PYSPARK: (3, 5),
@@ -1033,46 +1032,6 @@ def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
             obj_any._compliant_series._with_native(native_obj.reset_index(drop=True))
         )
     return obj_any
-
-
-if TYPE_CHECKING:
-    zip_strict = partial(zip, strict=True)
-else:
-    import sys
-
-    if sys.version_info >= (3, 10):
-        zip_strict = partial(zip, strict=True)
-    else:  # pragma: no cover
-        # https://stackoverflow.com/questions/32954486/zip-iterators-asserting-for-equal-length-in-python/69485272#69485272
-
-        def zip_strict(*iterables: Iterable[Any]) -> Iterable[tuple[Any, ...]]:
-            # For trivial cases, use pure zip.
-            if len(iterables) < 2:
-                return zip(*iterables)
-            # Tail for the first iterable
-            first_stopped = False
-
-            def first_tail() -> Any:
-                nonlocal first_stopped
-                first_stopped = True
-                return
-                yield
-
-            # Tail for the zip
-            def zip_tail() -> Any:
-                if not first_stopped:  # pragma: no cover
-                    msg = "zip_strict: first iterable is longer"
-                    raise ValueError(msg)
-                for _ in chain.from_iterable(rest):  # pragma: no cover
-                    msg = "zip_strict: first iterable is shorter"
-                    raise ValueError(msg)
-                    yield
-
-            # Put the pieces together
-            iterables_it = iter(iterables)
-            first = chain(next(iterables_it), first_tail())
-            rest = list(map(iter, iterables_it))
-            return chain(zip(first, *rest), zip_tail())
 
 
 def _is_range_index(obj: Any, native_namespace: Any) -> TypeIs[pd.RangeIndex]:
@@ -1674,7 +1633,7 @@ def _remap_full_join_keys(
     right_keys_suffixed = (
         f"{key}{suffix}" if key in left_on else key for key in right_on
     )
-    return dict(zip(right_on, right_keys_suffixed))
+    return dict(zip(right_on, right_keys_suffixed, strict=False))
 
 
 def _into_arrow_table(data: IntoArrowTable, context: _LimitedContext, /) -> pa.Table:

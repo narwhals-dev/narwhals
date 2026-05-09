@@ -4,7 +4,7 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
 import hypothesis.strategies as st
 import pytest
@@ -26,7 +26,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal, assert_index_equal, assert_series_equal
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Callable, Iterable, Iterator
     from types import ModuleType
 
     from typing_extensions import Self

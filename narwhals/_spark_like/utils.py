@@ -13,11 +13,11 @@ from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import TypeAlias
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
     from sqlframe.base.session import _BaseSession as Session
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -215,7 +215,7 @@ def evaluate_exprs(
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.extend(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list, strict=False))
 
     return native_results
 

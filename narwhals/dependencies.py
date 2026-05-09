@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 from narwhals._exceptions import issue_warning
 
 if TYPE_CHECKING:
+    from typing import TypeGuard
+
     import cudf
     import dask.dataframe as dd
     import duckdb
@@ -19,7 +21,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     import pyspark.sql as pyspark_sql
     from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
-    from typing_extensions import TypeGuard, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._spark_like.dataframe import SQLFrameDataFrame
     from narwhals.dataframe import DataFrame, LazyFrame

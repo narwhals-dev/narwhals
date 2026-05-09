@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals._utils import Implementation, parse_version, zip_strict
+from narwhals._utils import Implementation, parse_version
 from narwhals.dependencies import get_pandas
 from narwhals.translate import from_native
 
@@ -24,9 +24,9 @@ from tests.conftest import (
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
-    from typing_extensions import TypeAlias
 
     from narwhals.typing import Frame, TimeUnit
 
@@ -116,7 +116,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
     if hasattr(result, "columns"):
         for idx, (col, key) in enumerate(
-            zip_strict(result.columns, list(expected.keys()))
+            zip(result.columns, list(expected.keys()), strict=True)
         ):
             assert col == key, f"Expected column name {key} at index {idx}, found {col}"
     result = {key: _to_comparable_list(result[key]) for key in expected}
@@ -126,7 +126,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
     for key, expected_value in expected.items():
         result_value = result[key]
-        for i, (lhs, rhs) in enumerate(zip_strict(result_value, expected_value)):
+        for i, (lhs, rhs) in enumerate(zip(result_value, expected_value, strict=True)):
             if isinstance(lhs, float) and not math.isnan(lhs):
                 are_equivalent_values = rhs is not None and math.isclose(
                     lhs, rhs, rel_tol=0, abs_tol=1e-6
@@ -139,7 +139,8 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = rhs is None
             elif isinstance(lhs, list) and isinstance(rhs, list):
                 are_equivalent_values = all(
-                    left_side == right_side for left_side, right_side in zip(lhs, rhs)
+                    left_side == right_side
+                    for left_side, right_side in zip(lhs, rhs, strict=False)
                 )
             elif is_pd_na(lhs):
                 are_equivalent_values = is_pd_na(rhs)

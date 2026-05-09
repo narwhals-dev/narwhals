@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator as op
-from typing import TYPE_CHECKING, Any, Callable, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._compliant.expr import LazyExpr
 from narwhals._compliant.typing import (
@@ -27,7 +27,7 @@ from narwhals._utils import (
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from typing_extensions import Self
 

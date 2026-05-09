@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, Union
 
-from narwhals._native import IntoSeries
+from narwhals._native import IntoSeries, NativeDuckDB
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._native import (
         NativeDataFrame,
