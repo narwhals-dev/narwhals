@@ -326,18 +326,7 @@ class DispatcherOptions:
     """
 
     allow_dispatch: bool
-    """Whether the expression is supported at the compliant-level.
-
-    When `False`, **any** attempts to dispatch will raise a `TypeError`:
-    >>> import narwhals._plan as nw
-    >>> selector = nw.col("a", "b", "c")._ir
-    >>> selector.dispatch(..., ..., ...)
-    Traceback (most recent call last):
-    TypeError: 'ByName' should not appear at the compliant-level.
-    <BLANKLINE>
-    Make sure to expand all expressions first, got:
-    ncs.by_name('a', 'b', 'c')
-    """
+    """Whether the expression is supported at the compliant-level."""
 
     constructor_name: RootConstructor | None
     override_name: str

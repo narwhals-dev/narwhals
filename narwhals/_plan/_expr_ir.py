@@ -43,7 +43,7 @@ import functools
 
 # ruff: noqa: N806
 from functools import reduce
-from typing import TYPE_CHECKING, Generic, Literal, final
+from typing import TYPE_CHECKING, Generic, final
 
 from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
@@ -225,7 +225,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     def __init_subclass__(
         cls: type[Self],
         *,
-        dispatch: DispatcherOptions | Literal["no_dispatch"] | None = None,
+        dispatch: DispatcherOptions | None = None,
         dtype: IntoResolveDType[Self] | None = None,
         **_: Any,
     ) -> None:
@@ -236,8 +236,6 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         Arguments:
             dispatch: Defines how to build a `Dispatcher`.
                 Stored in `__expr_ir_dispatch__.options`.
-
-                *"no_dispatch"* is syntax sugar for `DispatcherOptions(allow_dispatch=False)`.
 
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
@@ -251,7 +249,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         super().__init_subclass__(**_)
-        cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls, dispatch)
+        if "__expr_ir_dispatch__" not in cls.__dict__:
+            cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls, dispatch)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)
@@ -692,7 +691,25 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         return self.__repr__()
 
 
-class SelectorIR(ExprIR, dispatch="no_dispatch"):
+# TODO @dangotbanned: In the new dispatch, keep the base class but change the construction
+class NoDispatch(ExprIR):
+    """Ensure an expression cannot be used at the compliant-level.
+
+    **Any** attempts to dispatch will raise a `TypeError`:
+    >>> import narwhals._plan as nw
+    >>> selector = nw.col("a", "b", "c")._ir
+    >>> selector.dispatch(..., ..., ...)
+    Traceback (most recent call last):
+    TypeError: 'ByName' should not appear at the compliant-level.
+    ...
+    Make sure to expand all expressions first, got:
+    ncs.by_name('a', 'b', 'c')
+    """
+
+    __expr_ir_dispatch__ = Dispatcher(options=DispatcherOptions(allow_dispatch=False))
+
+
+class SelectorIR(NoDispatch):
     """An expression that selects zero or more columns.
 
     All functions that return a `Selector` are backed by a `SelectorIR`.

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan._expr_ir import ExprIR, NoDispatch
 from narwhals._plan._immutable import Immutable
 from narwhals._plan._nodes import node
 from narwhals._plan.expressions.namespace import IRNamespace
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import AliasName
 
 
-class KeepName(ExprIR, dispatch="no_dispatch"):
+class KeepName(NoDispatch):
     """Keep the original root name of an expression.
 
     Arguments:
@@ -42,7 +42,7 @@ class KeepName(ExprIR, dispatch="no_dispatch"):
 
 # TODO @dangotbanned: `RenameAlias` -> `MapAlias`?
 # TODO @dangotbanned: Give `RenameAlias`, `Alias`, `KeepName` a common parent
-class RenameAlias(ExprIR, dispatch="no_dispatch"):
+class RenameAlias(NoDispatch):
     """Rename an expression by mapping a function over the root name.
 
     Arguments:

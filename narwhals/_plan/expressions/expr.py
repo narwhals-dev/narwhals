@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Generic
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._expr_ir import ExprIR, SelectorIR
+from narwhals._plan._expr_ir import ExprIR, NoDispatch, SelectorIR
 from narwhals._plan._nodes import node, nodes
 from narwhals._plan.exceptions import over_order_by_names_error
 from narwhals._plan.expressions.selectors import ByName
@@ -67,7 +67,7 @@ class LenStar(ExprIR, dispatch=constructor("Scalar"), dtype=dtm.IDX_DTYPE):
 Len = LenStar
 
 
-class Alias(ExprIR, dispatch="no_dispatch"):
+class Alias(NoDispatch):
     """Rename an expression.
 
     Arguments:
