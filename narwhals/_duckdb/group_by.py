@@ -35,5 +35,5 @@ class DuckDBGroupBy(SQLGroupBy["DuckDBLazyFrame", "DuckDBExpr", "Expression"]):
         )
 
         return self.compliant._with_native(result).rename(
-            dict(zip(self._keys, self._output_key_names))
+            dict(zip(self._keys, self._output_key_names, strict=False))
         )

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
 from narwhals._spark_like.expr_list import SparkLikeExprListNamespace
@@ -15,14 +15,15 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool, zip_strict
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterator, Mapping, Sequence
+    from typing import TypeAlias
 
     from sqlframe.base.column import Column
     from sqlframe.base.window import Window, WindowSpec
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._compliant import WindowInputs
     from narwhals._compliant.typing import (
@@ -158,7 +159,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         }
         yield from (
             mapping[(_desc, _nulls_last)](col)
-            for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last)
+            for col, _desc, _nulls_last in zip(cols, descending, nulls_last, strict=True)
         )
 
     def partition_by(self, *cols: Column | str) -> WindowSpec:
@@ -378,7 +379,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         F = self._F
 
-        mapping = dict(zip(old, new))
+        mapping = dict(zip(old, new, strict=False))
         mapping_expr = F.create_map([F.lit(x) for x in chain(*mapping.items())])
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:

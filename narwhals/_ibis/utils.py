@@ -11,11 +11,12 @@ from narwhals._utils import Version, isinstance_or_issubclass
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from datetime import timedelta
+    from typing import TypeAlias
 
     import ibis.expr.types as ir
     from ibis.common.temporal import TimestampUnit
     from ibis.expr.datatypes import DataType as IbisDataType
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._ibis.dataframe import IbisLazyFrame
@@ -117,7 +118,7 @@ def evaluate_exprs(df: IbisLazyFrame, /, *exprs: IbisExpr) -> list[tuple[str, ir
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.extend(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list, strict=False))
     return native_results
 
 

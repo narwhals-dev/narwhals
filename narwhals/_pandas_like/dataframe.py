@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 
@@ -31,7 +31,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     parse_columns_to_drop,
     scale_bytes,
-    zip_strict,
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -41,10 +40,11 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -185,7 +185,7 @@ class PandasLikeDataFrame(
                     implementation=context._implementation,
                     version=context._version,
                 )
-                for ((key, dtype), backend) in zip(schema.items(), backends)
+                for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
             native = native.astype(native_schema)
@@ -220,7 +220,7 @@ class PandasLikeDataFrame(
                     implementation=context._implementation,
                     version=context._version,
                 )
-                for ((key, dtype), backend) in zip(schema.items(), backends)
+                for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
             native = native.astype(native_schema)
@@ -418,7 +418,7 @@ class PandasLikeDataFrame(
         else:
             col_names = self.native.columns
             for row in self.native.itertuples(index=False):
-                yield dict(zip(col_names, row))
+                yield dict(zip(col_names, row, strict=False))
 
     @property
     def schema(self) -> dict[str, DType]:
@@ -628,7 +628,7 @@ class PandasLikeDataFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip_strict(left_on, right_on)
+            for left_key, right_key in zip(left_on, right_on, strict=True)
             if right_key != left_key
         ]
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
@@ -696,7 +696,7 @@ class PandasLikeDataFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on)),
+            columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
         return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
@@ -722,7 +722,7 @@ class PandasLikeDataFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on)),
+            columns_mapping=dict(zip(right_on, left_on, strict=True)),
         )
         result_native = self.native.merge(
             other_native.dropna(subset=left_on, how="any"),

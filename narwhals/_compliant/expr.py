@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import partial
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, Callable, Generic, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol
 
 from narwhals._compliant.any_namespace import (
     CatNamespace,
@@ -27,17 +27,12 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import (
-    _StoresCompliant,
-    not_implemented,
-    qualified_type_name,
-    zip_strict,
-)
+from narwhals._utils import _StoresCompliant, not_implemented, qualified_type_name
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from typing_extensions import Self, TypeIs
 
@@ -294,13 +289,17 @@ class EagerExpr(
             if alias_output_names:
                 return [
                     series.alias(name)
-                    for series, name in zip_strict(
-                        self(df), alias_output_names(self._evaluate_output_names(df))
+                    for series, name in zip(
+                        self(df),
+                        alias_output_names(self._evaluate_output_names(df)),
+                        strict=True,
                     )
                 ]
             return [
                 series.alias(name)
-                for series, name in zip_strict(self(df), self._evaluate_output_names(df))
+                for series, name in zip(
+                    self(df), self._evaluate_output_names(df), strict=True
+                )
             ]
 
         return self.__class__(
@@ -374,7 +373,7 @@ class EagerExpr(
         ]
         aliases, names = self._evaluate_aliases(df), (s.name for s in out)
         if any(
-            alias != name for alias, name in zip_strict(aliases, names)
+            alias != name for alias, name in zip(aliases, names, strict=True)
         ):  # pragma: no cover
             msg = (
                 f"Safety assertion failed, please report a bug to https://github.com/narwhals-dev/narwhals/issues\n"
@@ -750,7 +749,7 @@ class EagerExpr(
             _first_in, _first_out = udf_series_in[0], udf_series_out[0]
 
             result: Sequence[EagerSeriesT]
-            it = zip_strict(udf_series_out, output_names)
+            it = zip(udf_series_out, output_names, strict=True)
             if is_numpy_array(_first_out) or is_numpy_scalar(_first_out):
                 from_numpy = partial(_first_in.from_numpy, context=self)
                 result = tuple(from_numpy(arr).alias(out_name) for arr, out_name in it)

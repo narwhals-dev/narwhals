@@ -1,18 +1,9 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Generic,
-    Literal,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
