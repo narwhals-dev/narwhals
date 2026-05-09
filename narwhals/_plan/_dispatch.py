@@ -145,26 +145,8 @@ class Dispatcher(Generic[Node]):
     def from_function(
         tp: type[FunctionT], options: DispatcherOptions | None, /
     ) -> Dispatcher[FunctionExpr[FunctionT]]:
-        """Create a new `Function` dispatcher.
-
-        When `options` is None, the options of the parent are inherited.
-
-        If a parent defines an `accessor_name`, it is **sticky** and will be merged
-        with options of a child:
-
-        >>> from narwhals._plan._function import Function
-        >>> options = DispatcherOptions
-        >>> class StringFunction(Function, dispatch=options(accessor_name="str")): ...
-        >>> class ZFill(StringFunction, dispatch=options.renamed("zfill")): ...
-        >>> get_dispatch_name(ZFill)
-        'str.zfill'
-        """
-        options_parent = tp.__expr_ir_dispatch__.options
-        options = options or options_parent
-        if accessor_name := (options_parent.accessor_name or options.accessor_name):
-            options = DispatcherOptions(
-                override_name=options.override_name, accessor_name=accessor_name
-            )
+        """Create a new `Function` dispatcher."""
+        options = tp.__expr_ir_dispatch__.options.merge_with(options)
         return Dispatcher._from_type(tp, options)
 
     @staticmethod
@@ -397,6 +379,28 @@ class DispatcherOptions:
             parts.append(f"override_name={override!r}")
         inner = (", ".join(parts)) if parts else "<default>"
         return f"{type(self).__name__}({inner})"
+
+    def merge_with(self, child: DispatcherOptions | None) -> DispatcherOptions:
+        """Propagate options to a subclassed `Function`.
+
+        When `child` is None, it inherits all the options of self.
+
+        If an `accessor_name` was defined, it is **sticky** and will be merged
+        with options of `child`:
+
+        >>> from narwhals._plan._function import Function
+        >>> options = DispatcherOptions
+        >>> class StringFunction(Function, dispatch=options(accessor_name="str")): ...
+        >>> class ZFill(StringFunction, dispatch=options.renamed("zfill")): ...
+        >>> get_dispatch_name(ZFill)
+        'str.zfill'
+        """
+        options = child or self
+        if accessor_name := (self.accessor_name or options.accessor_name):
+            options = DispatcherOptions(
+                override_name=options.override_name, accessor_name=accessor_name
+            )
+        return options
 
 
 def _pascal_to_snake_case(s: str) -> str:
