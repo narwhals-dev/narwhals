@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, final
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
@@ -47,6 +47,7 @@ def col(name: str, /) -> Column:
     return Column(name=name)
 
 
+@final
 class LenStar(ExprIR, dispatch=constructor("Scalar"), dtype=dtm.IDX_DTYPE):
     """Return the number of rows in the context.
 
@@ -96,6 +97,7 @@ class Alias(NoDispatch):
         return self.expr.is_length_preserving()
 
 
+@final
 class Col(ExprIR, dispatch=constructor("Expr")):
     """An expression that selects exactly one column.
 
