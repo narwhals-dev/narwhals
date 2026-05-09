@@ -2,15 +2,7 @@
 # https://github.com/pola-rs/polars/blob/main/py-polars/Makefile
 
 .DEFAULT_GOAL := help
-
-SHELL=bash
-VENV=./.venv
-
-ifeq ($(OS),Windows_NT)
-	VENV_BIN=$(VENV)/Scripts
-else
-	VENV_BIN=$(VENV)/bin
-endif
+sources = narwhals tests tpch utils
 
 
 .PHONY: help
@@ -18,26 +10,21 @@ help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m"
 	@grep -E '^[a-z.A-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-22s\033[0m %s\n", $$1, $$2}' | sort
 
+.PHONY: lint
+lint:
+	uvx ruff version
+	uvx ruff format $(sources)
+	uvx ruff check $(sources) --fix
+	uvx ruff clean
+
 .PHONY: typing
 typing: ## Run typing checks
-	$(VENV_BIN)/uv pip install \
-		--upgrade \
-		--editable test-plugin/. \
-		--editable . \
-		--group typing
-	# temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3560
-	$(VENV_BIN)/uv pip install "pyarrow<24"
-	$(VENV_BIN)/uv run --no-sync pyright
-	$(VENV_BIN)/uv run --no-sync mypy
-	$(VENV_BIN)/uv run --no-sync pyrefly check
+	uv run --group typing --upgrade pyright
+	uv run --group typing --upgrade mypy
+	uv run --group typing --upgrade pyrefly check
 
 .PHONY: docs-serve
 docs-serve:  # Build and serve the docs locally
-	$(VENV_BIN)/uv pip install \
-		--upgrade \
-		--editable test-plugin/. \
-		--editable ".[dask, ibis]" \
-		--group docs
-	$(VENV_BIN)/uv run --no-sync utils/generate_backend_completeness.py
-	$(VENV_BIN)/uv run --no-sync utils/generate_zen_content.py
-	$(VENV_BIN)/uv run --no-sync zensical serve
+	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
+	uv run --group docs utils/generate_zen_content.py
+	uv run --group docs zensical serve
