@@ -149,7 +149,7 @@ jobs:
       - name: Run pytest
         run: |
           cd scikit-lego
-          pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
+          pytest --numprocesses=logical --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
     if: github.head_ref != 'bump-version'
@@ -705,4 +705,4 @@ jobs:
       - name: Run tests
         run: |
           cd scikit-learn
-          pytest
+          pytest --numprocesses=logical
