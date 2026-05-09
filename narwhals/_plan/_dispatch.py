@@ -72,25 +72,25 @@ class Dispatcher(Generic[Node]):
         """Compliant-level method name.
 
         They're often the lowercase transform of the class name:
-
-            from narwhals._plan import expressions as ir
-            ir.Cast.__expr_ir_dispatch__.name
-            'cast'
+        >>> import narwhals as nw
+        >>> import narwhals._plan as nwp
+        >>> from narwhals._plan import expressions as ir
+        >>> expr = nwp.col("a").cast(nw.Int64())._ir
+        >>> type(expr).__name__, get_dispatch_name(expr)
+        ('Cast', 'cast')
 
         *PascalCase* becomes *snake_case*:
-
-            ir.OverOrdered.__expr_ir_dispatch__.name
-            'over_ordered'
+        >>> expr = nwp.col("a").over(order_by="b")._ir
+        >>> type(expr).__name__, get_dispatch_name(expr)
+        ('OverOrdered', 'over_ordered')
 
         Accessor methods reflect the full dotted path:
-
-            ir.lists.NUnique.__expr_ir_dispatch__.name
-            'list.n_unique'
+        >>> ir.lists.NUnique.__expr_ir_dispatch__.name
+        'list.n_unique'
 
         Generated names can always be overridden at class definition time:
-
-            ir.boolean.Not.__expr_ir_dispatch__.name
-            'not_'
+        >>> ir.boolean.Not.__expr_ir_dispatch__.name
+        'not_'
         """
         return self._name
 
@@ -131,23 +131,7 @@ class Dispatcher(Generic[Node]):
         options = options or tp.__expr_ir_dispatch__.options
         if not options.allow_dispatch:
             return Dispatcher(tp.__name__, options=options)
-        return Dispatcher._from_type(tp, options)
-
-    @staticmethod
-    def from_function(
-        tp: type[FunctionT], options: DispatcherOptions | None, /
-    ) -> Dispatcher[FunctionExpr[FunctionT]]:
-        """Create a new `Function` dispatcher."""
-        options = tp.__expr_ir_dispatch__.options.merge_with(options)
-        return Dispatcher._from_type(tp, options)
-
-    @staticmethod
-    def _from_type(
-        tp: type[Incomplete], options: DispatcherOptions, /
-    ) -> Dispatcher[Incomplete]:
-        name = options.override_name or _pascal_to_snake_case(tp.__name__)
-        if ns := options.accessor_name:
-            name = f"{ns}.{name}"
+        name = _pascal_to_snake_case(tp.__name__)
         if constructor := options.constructor_name:
             get_type = _GET_EXPR if constructor == "Expr" else _GET_SCALAR
             bind = _constructor_binder(
@@ -155,6 +139,18 @@ class Dispatcher(Generic[Node]):
             )
         else:
             bind = _binder(_CALL_EXPR_PREPARE, _ATTR_GETTER(name))
+        return Dispatcher(name, bind, options)
+
+    @staticmethod
+    def from_function(
+        tp: type[FunctionT], options: DispatcherOptions | None, /
+    ) -> Dispatcher[FunctionExpr[FunctionT]]:
+        """Create a new `Function` dispatcher."""
+        options = tp.__expr_ir_dispatch__.options.merge_with(options)
+        name = options.override_name or _pascal_to_snake_case(tp.__name__)
+        if ns := options.accessor_name:
+            name = f"{ns}.{name}"
+        bind = _binder(_CALL_EXPR_PREPARE, _ATTR_GETTER(name))
         return Dispatcher(name, bind, options)
 
     def __get__(self, instance: Any, owner: Any) -> Self:
@@ -265,16 +261,12 @@ class DispatcherOptions:
 
     Defined via the (optional) `dispatch` parameter at [subclass-definition time].
 
-    Many expressions simply use the default:
+    Many functions simply use the default:
     >>> from narwhals._plan import expressions as ir
     >>> from narwhals._plan._dispatch import DispatcherOptions
-    >>> from narwhals._plan._nodes import node
     >>> from narwhals._plan.options import ExplodeOptions
     >>>
-    >>> class Explode(ir.ExprIR):
-    ...     #                  ^ # default `dispatch`
-    ...     __slots__ = ("expr",)
-    ...     expr: ir.ExprIR = node()
+    >>> class Explode(ir.Function): ...
 
     >>> Explode.__expr_ir_dispatch__
     Dispatcher<explode>
@@ -285,7 +277,6 @@ class DispatcherOptions:
     `dispatch` provides a bit more flexibility when you want it:
 
     >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
-    >>> #                       ^^^^^^^^ custom `dispatch`
 
     >>> Explode2.__expr_ir_dispatch__
     Dispatcher<explodier>
