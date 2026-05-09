@@ -33,22 +33,13 @@ import warnings
 from copy import deepcopy
 from functools import lru_cache
 from importlib.util import find_spec
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    ClassVar,
-    Generic,
-    Literal,
-    TypeVar,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar, cast, overload
 
 from narwhals._utils import Implementation, generate_temporary_column_name
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
+    from typing import Concatenate, TypeAlias
 
     import ibis
     import pandas as pd
@@ -57,7 +48,6 @@ if TYPE_CHECKING:
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
-    from typing_extensions import Concatenate, TypeAlias
 
     from narwhals import DataFrame, LazyFrame
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
@@ -457,7 +447,9 @@ def _pyspark_build(obj: Data, /, **kwds: Any) -> NativePySpark:  # pragma: no co
     index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
     _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
     result = (
-        session.createDataFrame([*zip(*_obj.values())], schema=[*_obj.keys()], **kwds)
+        session.createDataFrame(
+            [*zip(*_obj.values(), strict=True)], schema=[*_obj.keys()], **kwds
+        )
         .repartition(2)
         .orderBy(index_col_name)
         .drop(index_col_name)
@@ -492,7 +484,9 @@ def pyspark_connect_lazy_constructor(
 )
 def sqlframe_pyspark_lazy_constructor(obj: Data, /, **kwds: Any) -> NativeSQLFrame:
     session = sqlframe_session()
-    return session.createDataFrame([*zip(*obj.values())], schema=[*obj.keys()], **kwds)
+    return session.createDataFrame(
+        [*zip(*obj.values(), strict=True)], schema=[*obj.keys()], **kwds
+    )
 
 
 @frame_constructor.register(

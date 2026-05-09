@@ -13,7 +13,7 @@ from narwhals.testing.constructors import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     PropertyName: TypeAlias = str
     TrueNames: TypeAlias = set[str]
