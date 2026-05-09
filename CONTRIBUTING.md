@@ -10,11 +10,10 @@ If you've got experience with open source contributions, the following instructi
 - `cd narwhals-dev/`
 - `git remote rename origin upstream`
 - `git remote add origin <your fork goes here>`
-- `uv venv -p 3.12`
-- `. .venv/bin/activate`
-- `uv pip install -U -e . --group local-dev -e test-plugin`
-- To run tests: `pytest`
-- To run all linting checks: `pre-commit run --all-files`
+- `uv sync --group local-dev` (creates `.venv` and installs project + dev deps)
+- `uv pip install -e test-plugin`
+- To run tests: `uv run pytest`
+- To run all linting checks: `uv run pre-commit run --all-files`
 - To run static typing checks: `make typing`
 
 For more detailed and beginner-friendly instructions, see below!
@@ -101,32 +100,27 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
 #### Option 1: Use UV (recommended)
 
-1. Make sure you have Python3.12 installed, create a virtual environment,
-   and activate it. If you're new to this, here's one way that we recommend:
-   1. Install uv (see [uv getting started](https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started))
-      or make sure it is up-to-date with:
+1. Install uv (see [uv getting started](https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started))
+   or make sure it is up-to-date with:
 
-      ```terminal
-      uv self update
-      ```
+   ```terminal
+   uv self update
+   ```
 
-   2. Install Python3.12:
+2. Set up the project. `uv sync` will create a `.venv` and install the project together with the `local-dev` dependency group (fast-ish core libraries and dev dependencies):
 
-      ```terminal
-      uv python install 3.12
-      ```
+   ```terminal
+   uv sync --group local-dev
+   uv pip install -e test-plugin
+   ```
 
-   3. Create a virtual environment:
+   If you also want to test other libraries like Dask, PySpark, and Modin, add their extras:
 
-      ```terminal
-      uv venv -p 3.12 --seed
-      ```
+   ```terminal
+   uv sync --group local-dev --extra dask --extra pyspark --extra modin
+   ```
 
-   4. Activate it. On Linux, this is `. .venv/bin/activate`, on Windows `.\.venv\Scripts\activate`.
-
-2. Install Narwhals: `uv pip install -e . --group local-dev -e test-plugin`. This will include fast-ish core libraries and dev dependencies.
-   If you also want to test other libraries like Dask , PySpark, and Modin, you can install them too with
-   `uv pip install -e ".[dask, pyspark, modin]" --group local-dev`.
+3. Either activate the venv (`. .venv/bin/activate` on Linux, `.\.venv\Scripts\activate` on Windows) so commands like `pytest` resolve from `.venv`, or prefix commands with `uv run` (e.g. `uv run pytest`).
 
 The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
@@ -155,8 +149,8 @@ If you add code that should be tested, please add tests.
   - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
   - To run tests for all CPU constructors, use `pytest --all-cpu-constructors`
   - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
-  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas python -m cudf.pandas -m pytest`
-  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 pytest --constructors=polars[lazy]`
+  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run python -m cudf.pandas -m pytest`
+  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors=polars[lazy]`
 
 ### General considerations
 
@@ -240,7 +234,7 @@ If you want to have less surprises when opening a PR, you can take advantage of 
 To do so, you will first need to install nox and then run the `nox` command in the root of the repository:
 
 ```bash
-python -m pip install nox  # python -m pip install "nox[uv]"
+uv tool install "nox[uv]"
 nox
 ```
 
@@ -255,10 +249,10 @@ run them by passing the `--runslow` flag to PyTest.
 #### Testing Dask and Modin
 
 To keep local development test times down, Dask and Modin are excluded from dev
-dependencies, and their tests only run in CI. If you install them with
+dependencies, and their tests only run in CI. If you re-sync with their extras:
 
 ```terminal
-uv pip install -U dask[dataframe] modin
+uv sync --group local-dev --extra dask --extra modin
 ```
 
 then their tests will run too.
@@ -323,7 +317,7 @@ and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
 
 ```terminal
-  zensical build --clean
+  uv run --group docs zensical build --clean
   make docs-serve
   ```
 
