@@ -190,6 +190,7 @@ def test_dispatch_name(expr: nwp.Expr, expected: str) -> None:
     assert get_dispatch_name(expr._ir) == expected
 
 
+# TODO @dangotbanned: Remove since `ExprIR` won't have `DispatchOptions`, and `Function` always dispatches
 def test_dispatcher__set_name__() -> None:
     # Did the special base class magic work?
     expr_ir = ir.ExprIR.__expr_ir_dispatch__
@@ -200,12 +201,15 @@ def test_dispatcher__set_name__() -> None:
     assert function.options.allow_dispatch is True
 
 
-def test_options_sharing() -> None:
+def test_sharing_expr_ir() -> None:
     expr_ir = ir.ExprIR.__expr_ir_dispatch__
     selector_ir = ir.SelectorIR.__expr_ir_dispatch__
     agg_expr = ir.AggExpr.__expr_ir_dispatch__
     root_selector = ir.RootSelector.__expr_ir_dispatch__
     first = ir.aggregation.First.__expr_ir_dispatch__
+
+    assert issubclass(ir.SelectorIR, _expr_ir.NoDispatch)
+    assert not issubclass(ir.AggExpr, _expr_ir.NoDispatch)
 
     # A `Dispatcher` is unique to each class
     assert expr_ir is not selector_ir
@@ -213,21 +217,14 @@ def test_options_sharing() -> None:
     assert agg_expr is not first
     assert selector_ir is not root_selector
 
-    # Since the same options produce different results
-    assert selector_ir.options is root_selector.options
+    # Since inheritance produces different results
     assert selector_ir.name == "SelectorIR"
     assert root_selector.name == "RootSelector"
-    assert agg_expr.options is first.options
     assert first.name == "first"
     assert first.name != agg_expr.name
 
-    # And different options should definitely be different
-    assert selector_ir.options.allow_dispatch is False
-    assert agg_expr.options.allow_dispatch is True
-    assert first.options is not root_selector.options
 
-
-def test_multiple_inheritance() -> None:
+def test_multiple_inheritance_function() -> None:
     ELEMENTWISE = FunctionFlags.ELEMENTWISE  # noqa: N806
     ACCESSOR_BIN = DispatcherOptions(accessor_name="bin")  # noqa: N806
 

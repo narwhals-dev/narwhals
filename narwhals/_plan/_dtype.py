@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeAlias, TypeIs
 
-    from narwhals._plan._dispatch import Dispatcher
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
 
@@ -71,7 +70,6 @@ _FunctionT = TypeVar("_FunctionT", bound="_Function", default=Any)
 _FunctionT_co = TypeVar("_FunctionT_co", bound="_Function", covariant=True, default=Any)
 
 class _ExprIR(Protocol):
-    __expr_ir_dispatch__: ClassVar[Dispatcher[Any]]
     def resolve_dtype(self, schema: FrozenSchema, /) -> DType: ...
 class _HasParentExprIR(_ExprIR, Protocol):
     @property
@@ -174,10 +172,12 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
     def __call__(
         self, node: _ExprIRT, schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
+        from narwhals._plan._expr_ir import NoDispatch
+
         node_name = type(node).__name__
         if is_function_expr(node):
             generic_name = f"{node_name}[{type(node.function).__name__}]"
-        elif not node.__expr_ir_dispatch__.options.allow_dispatch:
+        elif isinstance(node, NoDispatch):
             msg = f"`resolve_dtype` is not supported for {node_name!r}.\n"
             "This method should only be called as `NamedIR.resolve_dtype(...)`,\n"
             f"to ensure all expressions have been expanded, got:\n{node!r}"
