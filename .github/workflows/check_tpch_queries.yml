@@ -32,6 +32,6 @@ jobs:
       - name: local-install
         run: uv pip install -U -e ".[dask]" --group core-tests
       - name: generate-data
-        run: cd tpch && python generate_data.py --debug
+        run: uv run --extra dask --group core-tests python -m tpch.generate_data --debug
       - name: tpch-tests 
-        run: cd tpch && pytest tests
+        run: uv run --extra dask --group core-tests pytest tpch/tests
