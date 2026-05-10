@@ -32,13 +32,11 @@ jobs:
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests
+        run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests --group plugins
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
         run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
 
   pytest-windows:
     if: github.head_ref != 'bump-version'
@@ -60,9 +58,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e "." --group core-tests --group extra
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
+        run: uv pip install -e "." --group plugins --group core-tests --group extra
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
@@ -93,9 +89,7 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
-        run: uv pip install -e ".[dask]" --group core-tests --group extra
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
+        run: uv pip install -e ".[dask]" --group core-tests --group extra --group plugins
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
