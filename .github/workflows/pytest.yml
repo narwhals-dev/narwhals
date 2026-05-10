@@ -86,7 +86,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
         run: |
-          uv run --group core-tests --group plugins --group extra --extra dask \
+          uv run --upgrade --group core-tests --group plugins --group extra --extra dask \
           pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe" --durations=30
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python

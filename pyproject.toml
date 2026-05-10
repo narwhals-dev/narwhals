@@ -88,7 +88,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pandas-stubs==2.3.0.250703",
   "pyarrow-stubs==19.2",
   "typing-extensions==4.15.0",
-  "narwhals[pyspark,dask,ibis]",
+  "narwhals[dask,ibis]",
   {include-group = "core"},
   {include-group = "plugins"},
 ]
@@ -295,6 +295,7 @@ filterwarnings = [
 
   # raised internally by Dask
   "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
+  "ignore:.*Downcasting behavior in Series and DataFrame methods 'where', 'mask', and 'clip' is deprecated.*:FutureWarning:dask",
 
   # raise internally by polars
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
