@@ -6,6 +6,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  UV_SYSTEM_PYTHON: 1
 
 permissions:
   contents: read
@@ -30,9 +31,7 @@ jobs:
           cache-suffix: pytest-random-ci-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: generate-random-versions
-        run: uv run --no-project --no-sync python utils/generate_random_versions.py
-      - name: Create venv
-        run: uv venv
+        run: python utils/generate_random_versions.py
       - name: install-random-versions
         run: uv pip install -r random-requirements.txt
       - name: install-narwhals
@@ -41,5 +40,5 @@ jobs:
         run: uv pip freeze
       - name: Run pytest
         run: |
-            uv run --no-sync pytest tests --cov=src --cov=tests --cov-fail-under=75 \
-            --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
+            pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 \
+            --constructors=pandas,pyarrow,polars[eager],polars[lazy]
