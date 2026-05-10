@@ -42,4 +42,4 @@ jobs:
       - name: Run pytest
         run: |
             uv run --no-sync pytest tests --cov=src --cov=tests --cov-fail-under=75 \
-            --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+            --constructors="pandas,pyarrow,polars[eager],polars[lazy]"

@@ -41,7 +41,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run --group core-tests --extra pyspark \
-          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
+          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors="pyspark"
 
 
   pytest-pyspark-min-version-constructor:
@@ -65,7 +65,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run --group core-tests --with "pyspark==3.5.0" \
-          pytest tests --constructors pyspark
+          pytest tests --constructors="pyspark"
 
   pytest-pyspark-connect-constructor:
     if: github.head_ref != 'bump-version'
@@ -124,11 +124,11 @@ jobs:
           echo "Spark Connect server started"
 
       - name: Run pytest
-        run: |
-          # temporary pyarrow pin to get CI green
+        # temporary pyarrow pin to get CI green
+        run: |  
           uv run --group core-tests --group extra \
           --with "pyarrow<22.0" "pyspark[connect]==${SPARK_VERSION}" "setuptools<78" \
-          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors="pyspark[connect]"
 
       - name: Stop Spark Connect server
         if: always()

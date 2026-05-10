@@ -37,4 +37,4 @@ jobs:
           uv run \
           --group core-tests --extra ibis \
           --with "sqlglot<28.6" \
-          pytest tests --constructors ibis
+          pytest tests --constructors="ibis"
