@@ -11,7 +11,6 @@ If you've got experience with open source contributions, the following instructi
 - `git remote rename origin upstream`
 - `git remote add origin <your fork goes here>`
 - `uv sync --group local-dev` (creates `.venv` and installs project + dev deps)
-- `uv pip install -e test-plugin`
 - To run tests: `uv run pytest`
 - To run all linting checks: `uv run pre-commit run --all-files`
 - To run static typing checks: `make typing`
@@ -111,7 +110,6 @@ If you want to run PySpark-related tests, you'll need to have Java installed. Re
 
    ```terminal
    uv sync --group local-dev
-   uv pip install -e test-plugin
    ```
 
    If you also want to test other libraries like Dask, PySpark, and Modin, add their extras:

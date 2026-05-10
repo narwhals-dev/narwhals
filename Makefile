@@ -2,7 +2,7 @@
 # https://github.com/pola-rs/polars/blob/main/py-polars/Makefile
 
 .DEFAULT_GOAL := help
-sources = narwhals tests tpch utils
+sources = src tests tpch utils
 
 
 .PHONY: help

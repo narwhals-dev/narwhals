@@ -1,11 +1,11 @@
 from __future__ import annotations  # pragma: no cover
 
-from typing import TYPE_CHECKING  # pragma: no cover
+from typing import TYPE_CHECKING, Any  # pragma: no cover
 
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing import Any, TypeAlias
+    from typing import TypeAlias
 
     import pandas as pd
 
