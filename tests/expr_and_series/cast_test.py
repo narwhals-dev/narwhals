@@ -111,7 +111,7 @@ def test_cast(constructor: Constructor) -> None:
         *[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()]
     ).collect_schema()
 
-    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+    for (key, ltype), rtype in zip(result.items(), cast_map.values(), strict=False):
         if "modin_constructor" in str(constructor) and key in MODIN_XFAIL_COLUMNS:
             # TODO(unassigned): in modin we end up with `'<U0'` dtype
             # This block will act similarly to an xfail i.e. if we fix the issue, the
@@ -155,7 +155,7 @@ def test_cast_series(
     }
     result = df.select(df[col_].cast(dtype) for col_, dtype in cast_map.items()).schema
 
-    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+    for (key, ltype), rtype in zip(result.items(), cast_map.values(), strict=False):
         if "modin_constructor" in str(constructor_eager) and key in MODIN_XFAIL_COLUMNS:
             # TODO(unassigned): in modin we end up with `'<U0'` dtype
             # This block will act similarly to an xfail i.e. if we fix the issue, the
@@ -217,9 +217,8 @@ def test_cast_datetime_tz_aware(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    request.applymarker(
-        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
-    )
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip()
 
     data = {
         "date": [
@@ -247,9 +246,8 @@ def test_cast_datetime_utc(
         or "sqlframe" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    request.applymarker(
-        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
-    )
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip()
 
     data = {
         "date": [

@@ -20,6 +20,7 @@
         - to_date
         - to_datetime
         - to_lowercase
+        - to_time
         - to_titlecase
         - to_uppercase
         - zfill

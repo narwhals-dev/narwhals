@@ -35,6 +35,10 @@ class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
             lambda expr: F.to_date(expr, format=strptime_to_pyspark_format(format))
         )
 
+    def to_time(self, format: str | None) -> SparkLikeExpr:
+        msg = "spark-like backends do not support the Time type"
+        raise ValueError(msg)
+
     def to_titlecase(self) -> SparkLikeExpr:
         impl = self.compliant._implementation
         sqlframe_required_version = (3, 43, 1)

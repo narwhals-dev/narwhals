@@ -25,7 +25,7 @@ class CustomInt16Dtype(pd.api.extensions.ExtensionDtype):  # pragma: no cover
 
     @classmethod
     def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:  # type: ignore[valid-type]
-        return CustomInt16Array
+        return CustomInt16Array  # pyrefly: ignore[bad-return]
 
 
 class CustomInt16Array(pd.api.extensions.ExtensionArray):  # pragma: no cover
@@ -56,7 +56,7 @@ class CustomInt32Dtype(pd.api.extensions.ExtensionDtype):  # pragma: no cover
 
     @classmethod
     def construct_array_type(cls) -> type[pd.api.extensions.ExtensionArray]:  # type: ignore[valid-type]
-        return CustomInt32Array
+        return CustomInt32Array  # pyrefly: ignore[bad-return]
 
     def __hash__(self) -> int:
         return hash(self.name)

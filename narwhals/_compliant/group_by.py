@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 from narwhals._compliant.typing import (
     CompliantDataFrameT,
@@ -15,10 +15,10 @@ from narwhals._compliant.typing import (
     ImplExprT_contra,
     NarwhalsAggregation,
 )
-from narwhals._utils import is_sequence_of, zip_strict
+from narwhals._utils import is_sequence_of
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from narwhals._compliant.expr import ImplExpr
 
@@ -109,7 +109,7 @@ class ParseKeysGroupBy(
             if (metadata := key._metadata) and metadata.expansion_kind.is_multi_output()
             # otherwise it's single named and we can use Expr.alias
             else key.alias(_temporary_name(new_names[0]))
-            for key, new_names in zip_strict(keys, keys_aliases)
+            for key, new_names in zip(keys, keys_aliases, strict=True)
         ]
         return (
             compliant_frame.with_columns(*safe_keys),

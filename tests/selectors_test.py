@@ -85,14 +85,16 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         "pyspark" in str(constructor)
         or "duckdb" in str(constructor)
         or "dask" in str(constructor)
-        or ("pyarrow" in str(constructor) and is_windows())
-        or ("pandas" in str(constructor) and PANDAS_VERSION < (2,))
         or "ibis" in str(constructor)
         # https://github.com/pola-rs/polars/issues/23767
         # TODO(FBruzzesi): Manage polars version
         or ("polars" in str(constructor) and POLARS_VERSION >= (1, 32, 0))
     ):
         request.applymarker(pytest.mark.xfail)
+    if ("pyarrow" in str(constructor) and is_windows()) or (
+        "pandas" in str(constructor) and PANDAS_VERSION < (2,)
+    ):
+        pytest.skip()
     if "modin" in str(constructor):
         pytest.skip(reason="too slow")
 
@@ -268,7 +270,7 @@ def test_tz_aware(constructor: Constructor, request: pytest.FixtureRequest) -> N
 
     data = {"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)], "c": [4, 5]}
     df = nw.from_native(constructor(data)).with_columns(
-        b=nw.col("a").dt.replace_time_zone("Asia/Katmandu")
+        b=nw.col("a").dt.replace_time_zone("Asia/Kathmandu")
     )
     result = df.select(nw.selectors.by_dtype(nw.Datetime)).collect_schema().names()
     expected = ["a", "b"]

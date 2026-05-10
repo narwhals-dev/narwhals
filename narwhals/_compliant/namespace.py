@@ -25,8 +25,9 @@ from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, KeysView, Sequence
+    from typing import TypeAlias
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version
@@ -153,7 +154,10 @@ class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
             # Even if all fields are present, we always reorder the columns to match between frames.
             return df.simple_select(*union_names)
 
-        return [align(frame, schema.keys()) for frame, schema in zip(frames, schemas)]
+        return [
+            align(frame, schema.keys())
+            for frame, schema in zip(frames, schemas, strict=False)
+        ]
 
 
 class DepthTrackingNamespace(

@@ -3,7 +3,7 @@ ci:
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.15.9'
+  rev: 'v0.15.12'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -23,7 +23,7 @@ repos:
       exclude: ^docs/api-completeness.md$
 - repo: https://github.com/adhtruong/mirrors-typos
   # Use mirror to avoid autoupdate issue: https://github.com/crate-ci/typos/issues/390
-  rev: 'v1.45.0'
+  rev: 'v1.46.0'
   hooks:
     - id: typos
 -   repo: https://github.com/pycqa/flake8
@@ -52,7 +52,7 @@ repos:
         # TODO(unassigned): replace with ruff once https://github.com/astral-sh/ruff/issues/2302 is addressed.
         name: flake8-typing-imports
         alias: flake8-typing-imports
-        entry: flake8 --select TYP --min-python-version=3.9.0
+        entry: flake8 --select TYP --min-python-version=3.10.0
         # Keep in sync with `darglint` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
