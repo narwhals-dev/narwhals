@@ -41,7 +41,7 @@ jobs:
       - name: Run pytest
         run: |
           uv run --group core-tests --extra pyspark \
-          pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
+          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
 
 
   pytest-pyspark-min-version-constructor:
@@ -128,7 +128,7 @@ jobs:
           # temporary pyarrow pin to get CI green
           uv run --group core-tests --group extra \
           --with "pyarrow<22.0" "pyspark[connect]==${SPARK_VERSION}" "setuptools<78" \
-          pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
 
       - name: Stop Spark Connect server
         if: always()

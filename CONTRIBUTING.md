@@ -139,9 +139,9 @@ If you add code that should be tested, please add tests.
 
 ### 7. Running tests
 
-- To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`
+- To run tests, run `pytest`. To check coverage: `pytest --cov=src`
 - To run tests on the doctests, use `pytest narwhals --doctest-modules`
-- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=narwhals --doctest-modules`
+- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=src --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
 - To choose which backends to run tests with you, you can use the `--constructors` flag:
   - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
@@ -205,6 +205,7 @@ We aim to use three standard patterns for handling test failures:
 Note: While we're not currently totally consistent with these patterns, any efforts towards our aim are appreciated and welcome.
 
 1. `requests.applymarker(pytest.mark.xfail)`: Used for features that are planned but not yet supported. 
+   
    ```python
    def test_future_feature(request):
        request.applymarker(pytest.mark.xfail)
@@ -212,6 +213,7 @@ Note: While we're not currently totally consistent with these patterns, any effo
    ```
 
 2. `pytest.mark.skipif`: Used when there's a condition under which the test cannot run (e.g., unsupported pandas versions).
+   
    ```python
    @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires pandas 2.0+")
    def test_version_dependent():
@@ -219,6 +221,7 @@ Note: While we're not currently totally consistent with these patterns, any effo
    ```
 
 3. `pytest.raises`: Used for testing that code raises expected exceptions.
+   
    ```python
    def test_invalid_input():
        with pytest.raises(ValueError, match="expected error message"):
