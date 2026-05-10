@@ -58,35 +58,30 @@ repos:
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
   hooks:
+    # `language: python` runs in an isolated venv.
+    # The scripts that need `narwhals` add `src/` to `sys.path` themselves.
     - id: check-api-reference
       name: check-api-reference
       pass_filenames: false
-      entry: uv run -p 3.12 --extra polars utils/check_api_reference.py
+      entry: python -m utils.check_api_reference
       language: python
-      additional_dependencies:
-        - uv
+      additional_dependencies: [polars]
     - id: sort-api-reference
       name: sort-api-reference
       pass_filenames: false
-      entry: uv run -p 3.12 utils/sort_api_reference.py
+      entry: python -m utils.sort_api_reference
       language: python
-      additional_dependencies:
-        - uv
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false
-      entry: uv run -p 3.12 utils/check_slotted_classes.py
+      entry: python -m utils.check_slotted_classes
       language: python
-      additional_dependencies:
-        - uv
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
-      entry: uv run -p 3.12 utils/import_check.py
+      entry: python utils/import_check.py
       language: python
       files: ^src/narwhals/
       exclude: ^src/narwhals/dependencies\.py
-      additional_dependencies:
-        - uv
     - id: self-self
       name: don't annotate `self` argument using `Self`
       entry: "self: Self"

@@ -125,9 +125,9 @@ jobs:
 
       - name: Run pytest
         # temporary pyarrow pin to get CI green
-        run: |  
+        run: |
           uv run --group core-tests --group extra \
-          --with "pyarrow<22.0" "pyspark[connect]==${SPARK_VERSION}" "setuptools<78" \
+          --with "pyarrow<22.0" --with "pyspark[connect]==${SPARK_VERSION}" --with "setuptools<78" \
           pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors="pyspark[connect]"
 
       - name: Stop Spark Connect server

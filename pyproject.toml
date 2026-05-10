@@ -88,7 +88,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pandas-stubs==2.3.0.250703",
   "pyarrow-stubs==19.2",
   "typing-extensions==4.15.0",
-  "narwhals[pyspark]",
+  "narwhals[pyspark,dask,ibis]",
   {include-group = "core"},
   {include-group = "plugins"},
 ]
@@ -392,7 +392,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "test-plugin"]
+include = ["src", "tests", "packages/test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
