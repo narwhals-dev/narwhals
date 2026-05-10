@@ -110,7 +110,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
-    def starts_with(self, prefix: str) -> SeriesT:
+    def starts_with(self, prefix: str | SeriesT) -> SeriesT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -128,10 +128,12 @@ class SeriesStringNamespace(Generic[SeriesT]):
             dtype: bool
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.starts_with(prefix)
+            self._narwhals_series._compliant_series.str.starts_with(
+                self._extract_compliant(prefix)
+            )
         )
 
-    def ends_with(self, suffix: str) -> SeriesT:
+    def ends_with(self, suffix: str | SeriesT) -> SeriesT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -149,7 +151,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             dtype: bool
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.str.ends_with(suffix)
+            self._narwhals_series._compliant_series.str.ends_with(
+                self._extract_compliant(suffix)
+            )
         )
 
     def contains(self, pattern: str | SeriesT, *, literal: bool = False) -> SeriesT:
@@ -397,6 +401,36 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.to_date(format=format)
+        )
+
+    def to_time(self, format: str | None = None) -> SeriesT:
+        """Convert to [`narwhals.dtypes.Time`][] dtype.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series(["12:59:21", "18:42:12"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.to_time(
+            ...     format="%H:%M:%S"
+            ... ).to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [time]
+            [
+                12:59:21
+                18:42:12
+            ]
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.to_time(format=format)
         )
 
     def to_titlecase(self) -> SeriesT:

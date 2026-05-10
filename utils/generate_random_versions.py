@@ -4,8 +4,6 @@ import random
 from pathlib import Path
 
 PANDAS_AND_NUMPY_VERSION = [
-    ("1.1.5", "1.19.5"),
-    ("1.2.5", "1.20.3"),
     ("1.3.5", "1.21.6"),
     ("1.4.4", "1.22.4"),
     ("1.5.3", "1.23.5"),

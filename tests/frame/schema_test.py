@@ -13,9 +13,9 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from typing import TypeAlias
 
     import polars as pl
-    from typing_extensions import TypeAlias
 
     from narwhals.typing import (
         DTypeBackend,
@@ -149,7 +149,7 @@ def test_dtypes() -> None:
         },
     )
     df_from_pl = nw.from_native(df_pl, eager_only=True)
-    expected = {
+    expected: dict[str, type[nw.dtypes.DType]] = {
         "a": nw.Int64,
         "b": nw.Int32,
         "c": nw.Int16,

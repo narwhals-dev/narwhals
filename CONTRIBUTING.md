@@ -235,17 +235,6 @@ Note: While we're not currently totally consistent with these patterns, any effo
 
 Document clear reasons in test comments for any skip/xfail patterns to help maintain test clarity.
 
-If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
-
-To do so, you will first need to install nox and then run the `nox` command in the root of the repository:
-
-```bash
-python -m pip install nox  # python -m pip install "nox[uv]"
-nox
-```
-
-Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
-
 #### Hypothesis tests
 
 We use Hypothesis to generate some random tests, to check for robustness.

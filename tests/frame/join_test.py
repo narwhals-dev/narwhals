@@ -797,10 +797,10 @@ def test_join_duplicate_column_names(
     else:
         exception = nw.exceptions.DuplicateError
     if isinstance(df, nw.LazyFrame):
-        with pytest.raises(exception):
+        with pytest.raises(exception):  # pyrefly: ignore[unbound-name]
             df.join(df, on=["a"]).join(df, on=["a"]).collect()
     else:
-        with pytest.raises(exception):
+        with pytest.raises(exception):  # pyrefly: ignore[unbound-name]
             df.join(df, on=["a"]).join(df, on=["a"])
 
 
@@ -919,3 +919,36 @@ def test_full_join_with_overlapping_non_key_columns_and_nulls(
     }
 
     assert_equal_data(result, expected)
+
+
+def test_join_with_float_nan(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(x in str(constructor) for x in ("cudf", "dask", "modin", "pandas")):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [0, 0, 0], "b": [0, 0, 0], "c": [0.0, 0.0, float("nan")]}
+    join_cols = ["a", "c"]
+    frame = from_native_lazy(constructor(data))
+
+    result = (
+        frame.join(frame, on=join_cols, how="inner").sort("c", nulls_last=True).collect()
+    )
+
+    zero_cols = ("a", "b", "b_right")
+    for col in zero_cols:
+        assert (result.get_column(col) == 0).all()
+
+    assert (result.get_column("c").is_nan().sum()) == 1
+    """
+    NOTE: polars result is the following:
+    expected = {
+        "a": [0, 0, 0, 0, 0],
+        "b": [0, 0, 0, 0, 0],
+        "c": [0., 0., 0., 0., float("nan")],
+        "b_right": [0, 0, 0, 0, 0],
+    }
+
+    How can we sort the data to use:
+    assert_equal_data(result, expected)
+    """

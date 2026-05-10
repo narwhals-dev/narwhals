@@ -16,7 +16,6 @@ from narwhals._utils import (
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
-    zip_strict,
 )
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.typing import CompliantLazyFrame
@@ -26,9 +25,10 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import dask.dataframe.dask_expr as dx
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._dask.expr import DaskExpr
@@ -319,7 +319,7 @@ class DaskLazyFrame(
         )
         extra = [
             right_key if right_key not in self.columns else f"{right_key}{suffix}"
-            for left_key, right_key in zip_strict(left_on, right_on)
+            for left_key, right_key in zip(left_on, right_on, strict=True)
             if right_key != left_key
         ]
         return result_native.drop(columns=extra)
@@ -379,7 +379,7 @@ class DaskLazyFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on)),
+            columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
         return self.native.dropna(subset=left_on, how="any").merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
@@ -394,7 +394,7 @@ class DaskLazyFrame(
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
-            columns_mapping=dict(zip(right_on, left_on)),
+            columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
         df = self.native.merge(
             other_native.dropna(subset=left_on, how="any"),

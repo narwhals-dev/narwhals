@@ -24,13 +24,11 @@ def test_to_numpy(constructor_eager: ConstructorEager) -> None:
     assert result.dtype == "float64"
 
 
-def test_to_numpy_tz_aware(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_to_numpy_tz_aware(constructor_eager: ConstructorEager) -> None:
     if ("pandas_pyarrow" in str(constructor_eager) and PANDAS_VERSION < (2, 2)) or (
         "pyarrow" in str(constructor_eager) and is_windows()
     ):
-        request.applymarker(pytest.mark.xfail)
+        pytest.skip()
     df = nw.from_native(
         constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
         eager_only=True,

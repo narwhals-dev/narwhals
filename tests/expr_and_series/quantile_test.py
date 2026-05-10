@@ -28,9 +28,12 @@ def test_quantile_expr(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        any(x in str(constructor) for x in ("dask", "duckdb", "ibis"))
+        any(x in str(constructor) for x in ("dask", "duckdb", "ibis", "pyspark"))
         and interpolation != "linear"
-    ) or "pyspark" in str(constructor):
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if "sqlframe" in str(constructor):
+        # bug in sqlframes: https://github.com/eakmanrq/sqlframe/issues/625
         request.applymarker(pytest.mark.xfail)
 
     q = 0.3
@@ -50,6 +53,24 @@ def test_quantile_expr(
     with context:
         result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
         assert_equal_data(result, expected)
+
+
+def test_quantile_expr_group_by(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
+        request.applymarker(pytest.mark.xfail)
+
+    expected = {"a": [1, 2, 3], "b": [4.0, 6.0, 4.0]}
+    q = 0.3
+    data = {"a": [1, 2, 3], "b": [4, 6, 4]}
+    df_raw = constructor(data)
+    df = nw.from_native(df_raw)
+
+    result = df.group_by("a").agg(
+        nw.col("b").quantile(quantile=q, interpolation="linear")
+    )
+    assert_equal_data(result.sort("a"), expected)
 
 
 @pytest.mark.parametrize(

@@ -3,24 +3,29 @@ name: Bump version
 on:
   workflow_dispatch:
     inputs:
-      release_type:     
+      release_type:
         description: 'Type of version bump: patch, minor, or major'
         required: true
         default: 'patch'
         type: choice
-        options: 
+        options:
         - patch
         - minor
         - major
 
+permissions: {}
+
 jobs:
   bump-version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: "3.11"
 
@@ -33,7 +38,7 @@ jobs:
         python utils/bump_version.py ${{ github.event.inputs.release_type }}
 
     - name: Create pull request
-      uses: actions/github-script@v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       if: github.actor == 'MarcoGorelli' || github.actor == 'FBruzzesi'
       with:
         script: |
@@ -45,4 +50,3 @@ jobs:
             base: 'main',
             body: 'Bumping the version to reflect the latest release type.',
           })
-        

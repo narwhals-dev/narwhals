@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 
@@ -18,15 +18,15 @@ from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_a
 from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
 from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
 from narwhals._utils import (
+    NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
-    no_default,
     not_implemented,
 )
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     import dask.dataframe.dask_expr as dx
     from typing_extensions import Self
@@ -668,11 +668,11 @@ class DaskExpr(
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        if default is no_default:
+        if default is NO_DEFAULT:
             msg = "`replace_strict` requires an explicit value for `default` for dask backend."
             raise ValueError(msg)
 
-        mapping = dict(zip(old, new))
+        mapping = dict(zip(old, new, strict=False))
         old_ = list(old)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:

@@ -162,7 +162,7 @@ if TYPE_CHECKING:
         # [False Positive]
         any_df.lazy(ldf_impl)
         # [True Negative]
-        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]
         # [True Positive]
         any_ldf.collect(df_impl)
         any_ldf.collect(ldf_impl)
@@ -170,7 +170,7 @@ if TYPE_CHECKING:
 
         assert_type(df_impl, _PandasImpl)
         # NOTE: Would require adding overloads to `DataFrame.lazy`
-        assert_type(ldf_impl, _PandasImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(ldf_impl, _PandasImpl)  # pyright: ignore[reportAssertTypeFailure]  # pyrefly: ignore[assert-type]
         assert_type(ser_impl, _PandasImpl)
 
     def test_arrow_typing(native: pa.Table) -> None:
@@ -187,7 +187,7 @@ if TYPE_CHECKING:
         # [False Positive]
         any_df.lazy(ldf_impl)
         # [True Negative]
-        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
         # [True Positive]
         any_ldf.collect(df_impl)
         any_ldf.collect(ldf_impl)
@@ -195,7 +195,7 @@ if TYPE_CHECKING:
 
         assert_type(df_impl, _ArrowImpl)
         # NOTE: Would require adding overloads to `DataFrame.lazy`
-        assert_type(ldf_impl, _ArrowImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(ldf_impl, _ArrowImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         assert_type(ser_impl, _ArrowImpl)
 
     def test_duckdb_typing(native: duckdb.DuckDBPyRelation) -> None:
@@ -218,7 +218,7 @@ if TYPE_CHECKING:
         # [True Positive]
         any_df.lazy(ldf_impl)
         # [True Negative]
-        any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
+        any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
 
         assert_type(ldf.implementation, _SQLFrameImpl)
 
@@ -232,7 +232,7 @@ if TYPE_CHECKING:
         # [True Negative]
         any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
 
-        assert_type(ldf.implementation, _IbisImpl)
+        assert_type(ldf.implementation, _IbisImpl)  # pyrefly: ignore[assert-type] (todo)
 
     def test_dask_typing(native: dd.DataFrame) -> None:
         ldf = nw.from_native(native)
@@ -242,7 +242,7 @@ if TYPE_CHECKING:
         # [True Positive]
         any_df.lazy(ldf_impl)
         # [True Negative]
-        any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType]
+        any_ldf.collect(ldf_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
 
         assert_type(ldf.implementation, _DaskImpl)
 
@@ -255,10 +255,10 @@ if TYPE_CHECKING:
         ser_impl = ser.implementation
 
         # [True Negative]
-        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType]
-        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType]
-        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType]
-        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType]
+        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
 
         assert_type(df_impl, _ModinImpl)
         assert_type(ser_impl, _ModinImpl)
@@ -276,9 +276,9 @@ if TYPE_CHECKING:
         any_ldf.collect(ldf_impl)
         any_ldf.collect(ser_impl)
 
-        assert_type(df_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
-        assert_type(ldf_impl, _LazyAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
-        assert_type(ser_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure]
+        assert_type(df_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
+        assert_type(ldf_impl, _LazyAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
+        assert_type(ser_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         # Fallback, matches the first overload `_PolarsImpl`
         assert_type(df_impl, _PolarsImpl)
         assert_type(ldf_impl, _PolarsImpl)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -71,7 +71,7 @@ from narwhals.stable.v2.typing import (
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     from typing_extensions import ParamSpec, Self, Unpack
 

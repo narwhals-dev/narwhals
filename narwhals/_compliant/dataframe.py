@@ -45,11 +45,12 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
@@ -419,7 +420,11 @@ class EagerDataFrame(
                 return compliant.select()
             if is_boolean_selector(columns):
                 compliant = compliant.simple_select(
-                    *(col for col, select in zip(compliant.columns, columns) if select)
+                    *(
+                        col
+                        for col, select in zip(compliant.columns, columns, strict=False)
+                        if select
+                    )
                 )
             elif is_index_selector(columns):
                 if is_slice_index(columns) or is_range(columns):

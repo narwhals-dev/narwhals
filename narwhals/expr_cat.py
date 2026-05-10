@@ -18,23 +18,16 @@ class ExprCatNamespace(Generic[ExprT]):
         """Get unique categories from column.
 
         Examples:
-            >>> import polars as pl
+            >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"fruits": ["apple", "mango", "mango"]},
-            ...     schema={"fruits": pl.Categorical},
+            >>> df_native = pd.DataFrame(
+            ...     {"fruits": ["apple", "mango", "mango"]}, dtype="category"
             ... )
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("fruits").cat.get_categories()).to_native()
-            shape: (2, 1)
-            ┌────────┐
-            │ fruits │
-            │ ---    │
-            │ str    │
-            ╞════════╡
-            │ apple  │
-            │ mango  │
-            └────────┘
+              fruits
+            0  apple
+            1  mango
         """
         return self._expr._append_node(
             ExprNode(ExprKind.FILTRATION, "cat.get_categories")

@@ -5,9 +5,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.19.0"
+version = "2.21.0"
 dependencies = []
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
@@ -79,7 +79,8 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
   "mypy~=1.15.0",
-  "pyright",
+  "pyrefly==0.64.0",
+  "pyright==1.1.408",  # https://github.com/narwhals-dev/narwhals/issues/3584
   "pyarrow-stubs==19.2",
   "narwhals[dask]",
   "sqlframe",
@@ -90,16 +91,11 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
 docs = [
   "black",  # required by mkdocstrings_handlers
   "jinja2",
-  "duckdb",
-  "narwhals[sql]",
   "markdown-exec[ansi]",
   "mkdocs-autorefs",
   "mkdocstrings-python>=2.0.3",
-  "sqlframe",
-  "pandas",
-  "polars>=1.0.0",
-  "pyarrow",
-  "zensical>=0.0.28"
+  "narwhals[duckdb,pandas,pyarrow,polars,sql,sqlframe]",
+  "zensical>=0.0.38"
 ]
 dev = [
   "pre-commit",
@@ -135,7 +131,7 @@ include = [
 [tool.ruff]
 line-length = 90
 fix = true
-target-version = "py39"
+target-version = "py310"
 extend-exclude = ["**/this.py"]
 
 [tool.ruff.lint]
@@ -378,7 +374,7 @@ warn_return_any = false
 [tool.pyright]
 pythonPlatform = "All"
 # NOTE (`pyarrow-stubs` do unsafe `TypeAlias` and `TypeVar` imports)
-# pythonVersion = "3.9"
+# pythonVersion = "3.10"
 reportMissingTypeArgument = "error"
 reportIncompatibleMethodOverride = "error"
 reportMissingImports = "none"
@@ -391,4 +387,18 @@ ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
+]
+
+[tool.pyrefly]
+project-includes = ["tests"]
+ignore-missing-imports = [
+    "cudf.*",
+    "cupy.*",
+    "dask.*",
+    "dask_expr.*",
+    "joblib.*",
+    "modin.*",
+    "pyspark.*",
+    "sklearn.*",
+    "sqlparse.*",
 ]

@@ -39,11 +39,19 @@ class PandasLikeSeriesStringNamespace(
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self.with_native(self.native.str.strip(characters))
 
-    def starts_with(self, prefix: str) -> PandasLikeSeries:
-        return self.with_native(self.native.str.startswith(prefix))
+    def starts_with(self, prefix: PandasLikeSeries) -> PandasLikeSeries:
+        _, prefix_native = align_and_extract_native(self.compliant, prefix)
+        if not isinstance(prefix_native, str):
+            msg = f"`.str.starts_with` only supports prefix values for {self.compliant._implementation} backend"
+            raise TypeError(msg)
+        return self.with_native(self.native.str.startswith(prefix_native))
 
-    def ends_with(self, suffix: str) -> PandasLikeSeries:
-        return self.with_native(self.native.str.endswith(suffix))
+    def ends_with(self, suffix: PandasLikeSeries) -> PandasLikeSeries:
+        _, suffix_native = align_and_extract_native(self.compliant, suffix)
+        if not isinstance(suffix_native, str):
+            msg = f"`.str.ends_with` only supports suffix values for {self.compliant._implementation} backend"
+            raise TypeError(msg)
+        return self.with_native(self.native.str.endswith(suffix_native))
 
     def contains(self, pattern: PandasLikeSeries, *, literal: bool) -> PandasLikeSeries:
         _, pattern_native = align_and_extract_native(self.compliant, pattern)
@@ -91,6 +99,10 @@ class PandasLikeSeriesStringNamespace(
 
     def to_date(self, format: str | None) -> PandasLikeSeries:
         return self.to_datetime(format=format).dt.date()
+
+    def to_time(self, format: str | None) -> PandasLikeSeries:
+        time_dtype = self.version.dtypes.Time()
+        return self.with_native(self._to_datetime(format, utc=False)).cast(time_dtype)
 
     def to_uppercase(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.upper())

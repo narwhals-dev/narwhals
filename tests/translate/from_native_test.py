@@ -297,7 +297,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     df = sqlframe_pyspark_lazy_constructor(data)
 
     with pytest.raises(TypeError, match="Cannot only use `series_only`"):
-        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nw.from_native(df, series_only=True)  # pyright: ignore[reportArgumentType, reportCallIssue]  # pyrefly: ignore[no-matching-overload]
 
 
 @pytest.mark.parametrize(

@@ -196,7 +196,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
             group_keys: list[str] = []
             encoded_cols: list[ArrowExpr] = []
-            for col_name, has_null in zip(partition_tbl.columns, has_nulls):
+            for col_name, has_null in zip(partition_tbl.columns, has_nulls, strict=False):
                 if not has_null:
                     group_keys.append(col_name)
                 else:

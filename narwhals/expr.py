@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
+    NO_DEFAULT,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
-    no_default,
     unstable,
 )
 from narwhals.dtypes import _validate_dtype
@@ -23,9 +23,9 @@ from narwhals.expr_struct import ExprStructNamespace
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from typing import NoReturn, TypeVar
+    from typing import Concatenate, NoReturn, TypeVar
 
-    from typing_extensions import Concatenate, ParamSpec, Self
+    from typing_extensions import ParamSpec, Self
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._typing import NoDefault
@@ -841,7 +841,7 @@ class Expr:
         old: Sequence[Any] | Mapping[Any, Any],
         new: Sequence[Any] | None = None,
         *,
-        default: Any | NoDefault = no_default,
+        default: Any | NoDefault = NO_DEFAULT,
         return_dtype: IntoDType | None = None,
     ) -> Self:
         """Replace all values by different values.
@@ -913,7 +913,7 @@ class Expr:
             new = list(old.values())
             old = list(old.keys())
 
-        if default is no_default:
+        if default is NO_DEFAULT:
             node = ExprNode(
                 ExprKind.ELEMENTWISE,
                 "replace_strict",
@@ -1279,9 +1279,17 @@ class Expr:
             partition_by: Names of columns to compute window expression over.
                 Must be names of columns, as opposed to expressions -
                 so, this is a bit less flexible than Polars' `Expr.over`.
+                If not specified, the expression is computed over the entire frame
+                (i.e., no grouping is applied).
             order_by: Column(s) to order window functions by.
                 For lazy backends, this argument is required when `over` is applied
                 to order-dependent functions, see [order-dependence](../concepts/order_dependence.md).
+                When `order_by` is specified, the expression is evaluated on the frame
+                sorted by the given column(s), and, if applicable, the results are
+                returned with the original row order preserved.
+
+        Note:
+            At least one of `partition_by` or `order_by` must be provided.
 
         Examples:
             >>> import pandas as pd
@@ -1298,18 +1306,32 @@ class Expr:
             |2  4  y                4|
             └────────────────────────┘
 
-            Cumulative operations are also supported, but (currently) only for
-            pandas and Polars:
+            When `partition_by` is omitted, the expression is computed over the
+            entire frame. This is useful with `order_by` for order-dependent
+            operations without grouping:
 
-            >>> df.with_columns(a_cum_sum_per_group=nw.col("a").cum_sum().over("b"))
-            ┌────────────────────────────┐
-            |     Narwhals DataFrame     |
-            |----------------------------|
-            |   a  b  a_cum_sum_per_group|
-            |0  1  x                    1|
-            |1  2  x                    3|
-            |2  4  y                    4|
-            └────────────────────────────┘
+
+            >>> import duckdb
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> data = {"a": [3, 1, 2], "b": ["x", "y", "z"]}
+            >>> _table = pa.table(data)
+            >>> df = nw.from_native(duckdb.table("_table"))
+            >>> expr = nw.col("a").cum_sum().over(order_by="a")
+            >>> df.with_columns(a_cum_sum=expr).sort("a")
+            ┌───────────────────────────────┐
+            |      Narwhals LazyFrame       |
+            |-------------------------------|
+            |┌───────┬─────────┬───────────┐|
+            |│   a   │    b    │ a_cum_sum │|
+            |│ int64 │ varchar │  int128   │|
+            |├───────┼─────────┼───────────┤|
+            |│     1 │ y       │         1 │|
+            |│     2 │ z       │         3 │|
+            |│     3 │ x       │         6 │|
+            |└───────┴─────────┴───────────┘|
+            └───────────────────────────────┘
         """
         flat_partition_by = flatten(partition_by)
         flat_order_by = [order_by] if isinstance(order_by, str) else (order_by or [])
