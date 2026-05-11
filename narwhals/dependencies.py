@@ -128,22 +128,28 @@ def get_sqlframe() -> Any:
     return sys.modules.get("sqlframe", None)
 
 
-def _warn_if_narwhals_df_or_lf(df: Any) -> None:
-    if is_narwhals_dataframe(df) or is_narwhals_lazyframe(df):
+def _warn_if_narwhals_df_or_lf(frame: Any, /) -> None:
+    if is_narwhals_dataframe(frame) or is_narwhals_lazyframe(frame):
+        from narwhals._utils import qualified_type_name
+
+        caller = sys._getframe(1).f_code.co_name
         msg = (
-            f"You passed a `{type(df)}` to `is_pandas_dataframe`.\n\n"
-            "Hint: Instead of e.g. `is_pandas_dataframe(df)`, "
-            "did you mean `is_pandas_dataframe(df.to_native())`?"
+            f"You passed a `{qualified_type_name(frame)}` to `{caller}`.\n\n"
+            f"Hint: Instead of e.g. `{caller}(frame)`, "
+            f"did you mean `{caller}(frame.to_native())`?"
         )
         issue_warning(msg, UserWarning)
 
 
-def _warn_if_narwhals_series(ser: Any) -> None:
+def _warn_if_narwhals_series(ser: Any, /) -> None:
     if is_narwhals_series(ser):
+        from narwhals._utils import qualified_type_name
+
+        caller = sys._getframe(1).f_code.co_name
         msg = (
-            f"You passed a `{type(ser)}` to `is_pandas_series`.\n\n"
-            "Hint: Instead of e.g. `is_pandas_series(ser)`, "
-            "did you mean `is_pandas_series(ser.to_native())`?"
+            f"You passed a `{qualified_type_name(ser)}` to `{caller}`.\n\n"
+            f"Hint: Instead of e.g. `{caller}(ser)`, "
+            f"did you mean `{caller}(ser.to_native())`?"
         )
         issue_warning(msg, UserWarning)
 
