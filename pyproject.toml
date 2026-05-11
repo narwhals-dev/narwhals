@@ -134,6 +134,7 @@ wheel-include = [
 
 [tool.uv]
 compile-bytecode = true
+default-groups = []  # Otherwise "dev" group is silently installed. See https://docs.astral.sh/uv/reference/settings/#default-groups
 conflicts = [
   [
     { extra = "pandas" },
