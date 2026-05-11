@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.expr import CompliantExpr
+from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import (
     PolarsNamespace,
     dtype_to_native,
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions.ranges import IntRange
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
+    from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
     from narwhals.typing import IntoDType, PythonLiteral
 
 
@@ -60,14 +62,19 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def __narwhals_namespace__(self) -> PolarsNamespace:
         return PolarsNamespace()
 
-    @classmethod
-    def from_ir(cls, node: ir.ExprIR, frame: DataFrame, name: str) -> PolarsExpr:
-        obj = cls.__new__(cls)
-        return node.dispatch(obj, frame, name)
+    @property
+    def __narwhals_classes__(self) -> PolarsClasses:
+        return PolarsClasses()
 
-    @classmethod
-    def from_named_ir(cls, named_ir: ir.NamedIR, frame: Incomplete) -> PolarsExpr:
-        return cls.from_ir(named_ir.expr, frame, named_ir.name)
+    def dispatch(
+        self, node: ir.ExprIR, frame: DataFrame | LazyFrame, name: str
+    ) -> PolarsExpr:
+        """Trying to limit the API surface for now.
+
+        - polars only uses `PolarsDataFrame._evaluate_irs`
+        - pyarrow is more tangled up
+        """
+        return node.__expr_ir_dispatch__(node, self, frame, name)
 
     @classmethod
     def col(cls, node: ir.Column, _: Incomplete, name: str, /) -> Self:
@@ -98,7 +105,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
         dtype = dtype_to_native(node.dtype, self.version)
-        return self._with_native(node.expr.dispatch(self, frame, name).native.cast(dtype))
+        return self._with_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
 
     coalesce = todo()
     ceil = todo()
@@ -122,10 +129,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     fill_null_with_strategy = todo()
     filter = todo()
 
-    # TODO @dangotbanned: Make `CompliantScalar` more optional
-    # Return type here should be fine, but need a way to communicate that scalar-ness is handled elsewhere
-    def first(self, node: ir.aggregation.First, frame: Any, name: str) -> Self:  # type: ignore[override]
-        return self._with_native(node.expr.dispatch(self, frame, name).native.first())
+    def first(self, node: ir.aggregation.First, frame: Any, name: str) -> Self:
+        return self._with_native(self.dispatch(node.expr, frame, name).native.first())
 
     floor = todo()
     hist_bin_count = todo()

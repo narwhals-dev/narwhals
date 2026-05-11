@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
+from narwhals._plan.compliant import typing as ct
 from narwhals._plan.compliant.typing import (
     # NOTE: `ColumnT_co as ExprT_co` *should* be temporary, while finishing up `CompliantColumn`
     ColumnT_co as ExprT_co,
-    DataFrameT_co,
-    FrameT_contra as FrameT,
-    SeriesT_co,
+    DeprecatedFrameT_contra as FrameT,
 )
 
 if TYPE_CHECKING:
@@ -23,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals.schema import Schema
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
@@ -34,7 +32,6 @@ class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
@@ -97,7 +94,6 @@ class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprListNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
@@ -131,7 +127,6 @@ class ExprListNamespace(Protocol[FrameT, ExprT_co]):
     def sort(self, node: FExpr[lists.Sort], frame: FrameT, name: str, /) -> ExprT_co: ...
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
@@ -184,7 +179,6 @@ class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
-# TODO @dangotbanned: (After fixing expr) avoid `FrameT`
 class ExprStructNamespace(Protocol[FrameT, ExprT_co]):
     """`[FrameT, ExprT_co]`."""
 
@@ -195,17 +189,17 @@ class ExprStructNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
-class SeriesStructNamespace(Protocol[DataFrameT_co, SeriesT_co]):
+class SeriesStructNamespace(Protocol[ct.DF, ct.S]):
     """`[DataFrameT_co, SeriesT_co]`."""
 
     __slots__ = ()
 
-    def field(self, name: str) -> SeriesT_co: ...
-    def unnest(self) -> DataFrameT_co: ...
+    def field(self, name: str) -> ct.S: ...
+    def unnest(self) -> ct.DF: ...
     @property
     def schema(self) -> Schema: ...
     @property
-    def compliant(self) -> SeriesT_co: ...
+    def compliant(self) -> ct.S: ...
     @property
     def version(self) -> Version:
         return self.compliant.version

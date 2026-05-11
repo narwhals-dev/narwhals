@@ -12,6 +12,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import acero, compat, functions as fn, io
+from narwhals._plan.arrow.classes import ArrowClasses
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import (
@@ -71,6 +72,10 @@ class ArrowDataFrame(
 
     def __narwhals_namespace__(self) -> ArrowNamespace:
         return ArrowNamespace()
+
+    @property
+    def __narwhals_classes__(self) -> ArrowClasses:
+        return ArrowClasses()
 
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
@@ -220,10 +225,11 @@ class ArrowDataFrame(
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR], /, *, length: int | None = None
     ) -> Iterator[CompliantSeries]:
-        ns = self.__narwhals_namespace__()
-        expr = ns._expr
-        from_named_ir = ns.from_named_ir
-        yield from expr.align((from_named_ir(e, self) for e in nodes), default=length)
+        expr = self.__narwhals_namespace__()._expr
+        new = expr.__new__
+        yield from expr.align(
+            (new(expr).dispatch(e.expr, self, e.name) for e in nodes), default=length
+        )
 
     def select(self, irs: Seq[NamedIR]) -> Self:
         return self.concat_series(self._evaluate_irs(irs))
@@ -473,11 +479,10 @@ class ArrowDataFrame(
         mask: Incomplete = predicate
         return self._with_native(self.native.filter(mask))
 
-    # NOTE: `Self` cannot be used here while  `ct.Frame` is invariant
     def filter(self, predicate: NamedIR) -> ArrowDataFrame:
         mask: pc.Expression | ChunkedArrayAny
-        ns = self.__narwhals_namespace__()
-        resolved = predicate.dispatch(ns, self)
+        expr = self.__narwhals_namespace__()._expr
+        resolved = expr.__new__(expr).dispatch(predicate.expr, self, predicate.name)
         if isinstance(resolved, Expr):
             mask = resolved.broadcast(len(self)).native
         else:

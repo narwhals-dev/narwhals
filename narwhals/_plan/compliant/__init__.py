@@ -31,7 +31,7 @@ from narwhals._plan.compliant import (
 )
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._plan.compliant.expr import CompliantExpr
-from narwhals._plan.compliant.group_by import CompliantGroupBy
+from narwhals._plan.compliant.group_by import DataFrameGroupBy
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.compliant.namespace import CompliantNamespace
 from narwhals._plan.compliant.scalar import CompliantScalar
@@ -40,11 +40,11 @@ from narwhals._plan.compliant.series import CompliantSeries
 __all__ = (
     "CompliantDataFrame",
     "CompliantExpr",
-    "CompliantGroupBy",
     "CompliantLazyFrame",
     "CompliantNamespace",
     "CompliantScalar",
     "CompliantSeries",
+    "DataFrameGroupBy",
     "accessors",
     "broadcast",
     "dataframe",

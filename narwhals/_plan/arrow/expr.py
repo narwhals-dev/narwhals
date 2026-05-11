@@ -16,6 +16,7 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan.arrow import functions as fn, group_by
+from narwhals._plan.arrow.classes import ArrowClasses
 from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import (
@@ -57,7 +58,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
-    from narwhals._plan.compliant.namespace import EagerNamespace
     from narwhals._plan.expressions import HorizontalExpr as HExpr, lists, strings
     from narwhals._plan.expressions.aggregation import (
         ArgMax,
@@ -108,7 +108,7 @@ UnaryFn: TypeAlias = _UnaryFunction
 Nothing to fancy here, just a short way to say *subclasses of `UnaryFunction`*.
 """
 
-FunctionImplMethod = ct.FunctionImplMethod[ct.Self_, ct.F_contra, "Frame", ct.R]
+FunctionImplMethod = ct.FunctionImplMethod[ct.Self_, ct.F_contra, "Frame", ct.ColumnT_co]
 """The type of the wrapper method *produced by* any `unary` constructor."""
 
 BoundFunctionImplMethod = ct.BoundFunctionImplMethod[
@@ -300,7 +300,8 @@ class unary_accessor(  # noqa: N801
 
 
 class _ArrowDispatch(
-    EagerColumn["Frame", Native_co, ChunkedArrayAny], Protocol[Native_co]
+    EagerColumn["Frame", Native_co, "ChunkedArrayAny", NativeScalar, ChunkedArrayAny],
+    Protocol[Native_co],
 ):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
@@ -314,9 +315,17 @@ class _ArrowDispatch(
     def _with_native(self, native: Any, name: str, /) -> Self:
         raise NotImplementedError
 
+    @property
+    def __narwhals_classes__(self) -> ArrowClasses:
+        return ArrowClasses()
+
+    def __new__(cls) -> Expr | Scalar: ...  # type: ignore[misc]
+    def dispatch(self, node: ir.ExprIR, frame: Frame, name: str, /) -> Expr | Scalar:
+        return node.__expr_ir_dispatch__(node, self, frame, name)
+
     def cast(self, node: ir.Cast, frame: Frame, name: str, /) -> Self:
         data_type = fn.dtype_native(node.dtype, self.version)
-        native = node.expr.dispatch(self, frame, name).native
+        native = self.dispatch(node.expr, frame, name).native
         return self._with_native(fn.cast(native, data_type), name)
 
     def pow(self, node: FExpr[F.Pow], frame: Frame, name: str, /) -> Self:
@@ -350,26 +359,25 @@ class _ArrowDispatch(
 
     def binary_expr(self, node: ir.BinaryExpr, frame: Frame, name: str, /) -> Self:
         lhs, rhs = (
-            node.left.dispatch(self, frame, name),
-            node.right.dispatch(self, frame, name),
+            self.dispatch(node.left, frame, name).native,
+            self.dispatch(node.right, frame, name).native,
         )
-        result = fn.binary(lhs.native, node.op.__class__, rhs.native)
-        return self._with_native(result, name)
+        return self._with_native(fn.binary(lhs, node.op.__class__, rhs), name)
 
     def ternary_expr(self, node: ir.TernaryExpr, frame: Frame, name: str, /) -> Self:
-        when = node.predicate.dispatch(self, frame, name)
-        then = node.truthy.dispatch(self, frame, name)
-        otherwise = node.falsy.dispatch(self, frame, name)
-        result = pc.if_else(when.native, then.native, otherwise.native)
-        return self._with_native(result, name)
+        when, then, otherwise = (
+            self.dispatch(e, frame, name).native
+            for e in (node.predicate, node.truthy, node.falsy)
+        )
+        return self._with_native(pc.if_else(when, then, otherwise), name)
 
     def _dispatch_variadic_native(
         self, node: HExpr, frame: Frame, name: str, /
     ) -> Iterator[Native]:
         exprs = iter(node.input)
-        yield next(exprs).dispatch(self, frame, name).native
+        yield self.dispatch(next(exprs), frame, name).native
         for expr_ir in exprs:
-            yield expr_ir.dispatch(self, frame, "").native
+            yield self.dispatch(expr_ir, frame, "").native
 
     def concat_str(self, node: HExpr[strings.ConcatStr], frame: Frame, name: str) -> Self:
         # https://arrow.apache.org/docs/dev/cpp/compute.html#string-joining
@@ -478,31 +486,30 @@ class _ArrowDispatch(
         bad = node.input[0] if isinstance(start, ArrowScalar) else node.input[1]
         raise function_arg_non_scalar_error(func, bad)
 
-    # TODO @dangotbanned: Fix gap in typing that requires namespace
     def int_range(self, node: ir.RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         f = node.function
-        ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
-        series = ns._series.int_range(start, end, f.step, dtype=f.dtype, name=name)
-        return ns._expr.from_series(series)
+        ns = self.__narwhals_classes__
+        series = ns.series.int_range(start, end, f.step, dtype=f.dtype, name=name)
+        return ns.expr.from_series(series)
 
     def date_range(self, node: ir.RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         f = node.function
-        ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
-        date_range = ns._series.date_range
-        series = date_range(start, end, f.interval, closed=f.closed, name=name)
-        return ns._expr.from_series(series)
+        ns = self.__narwhals_classes__
+        series = ns.series.date_range(start, end, f.interval, closed=f.closed, name=name)
+        return ns.expr.from_series(series)
 
     def linear_space(
         self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str
     ) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         f = node.function
-        ns: EagerNamespace[Any, Series, Expr, Any] = self.__narwhals_namespace__()
-        linear_space = ns._series.linear_space
-        series = linear_space(start, end, f.num_samples, closed=f.closed, name=name)
-        return ns._expr.from_series(series)
+        ns = self.__narwhals_classes__
+        series = ns.series.linear_space(
+            start, end, f.num_samples, closed=f.closed, name=name
+        )
+        return ns.expr.from_series(series)
 
     not_: Callable[..., Self] = unary.no_args(fn.not_)
     is_finite: Callable[..., Self] = unary.no_args(fn.is_finite)
@@ -534,8 +541,15 @@ class ArrowExpr(
         return Namespace()
 
     @property
+    def __narwhals_classes__(self) -> ArrowClasses:
+        return ArrowClasses()
+
+    @property
     def name(self) -> str:
         return self._evaluated.name
+
+    def __new__(cls) -> Self:
+        return object.__new__(cls)
 
     @classmethod
     def from_series(cls, series: Series, /) -> Self:
@@ -572,14 +586,14 @@ class ArrowExpr(
         return self.from_native(result, name)
 
     def _dispatch_expr(self, node: ir.ExprIR, frame: Frame, name: str) -> Series:
-        """Use instead of `_dispatch` *iff* an operation is only supported on `ChunkedArray`.
+        """Use *iff* an operation is only supported on `ChunkedArray`.
 
         There is no need to broadcast, as they may have a cheaper impl elsewhere (`CompliantScalar` or `ArrowScalar`).
 
         Mainly for the benefit of a type checker, but the equivalent `ArrowScalar._dispatch_expr` will raise if
         the assumption fails.
         """
-        return node.dispatch(self, frame, name).to_series()
+        return self.dispatch(node, frame, name).to_series()
 
     @property
     def native(self) -> ChunkedArrayAny:
@@ -736,7 +750,7 @@ class ArrowExpr(
         indices = fn.sort_indices(frame.native, *by, options=node.sort_options)
         if node.partition_by:
             return self.over(node, frame, name, sort_indices=indices)
-        evaluated = node.expr.dispatch(self, frame.gather(indices), name)
+        evaluated = self.dispatch(node.expr, frame.gather(indices), name)
         if isinstance(evaluated, ArrowScalar):
             return evaluated
         return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
@@ -868,12 +882,12 @@ class ArrowExpr(
     # NOTE: Should not be returning a struct when all `include_*` are false
     # https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-ops/src/chunked_array/hist.rs#L223-L223
     def _hist_finish(self, data: Mapping[str, Any], name: str) -> Self:
-        ns = self.__narwhals_namespace__()
+        ns = self.__narwhals_classes__
         if len(data) == 1:
             count = next(iter(data.values()))
-            series = ns._series.from_iterable(count, name=name)
+            series = ns.series.from_iterable(count, name=name)
         else:
-            series = ns._dataframe.from_dict(data).to_struct(name)
+            series = ns.dataframe.from_dict(data).to_struct(name)
         return self.from_series(series)
 
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str, /) -> Self:
@@ -941,9 +955,16 @@ class ArrowScalar(
     def __narwhals_namespace__(self) -> Namespace:
         return Namespace()
 
+    @property
+    def __narwhals_classes__(self) -> ArrowClasses:
+        return ArrowClasses()
+
     @classmethod
     def len_star(cls, node: ir.Len, frame: Frame, name: str) -> Self:
         return cls.from_python(len(frame), name or node.name, dtype=None)
+
+    def __new__(cls) -> Self:
+        return object.__new__(cls)
 
     @classmethod
     def from_native(cls, scalar: NativeScalar, name: str = "literal", /) -> Self:
@@ -1013,7 +1034,10 @@ class ArrowScalar(
         return Series.from_native(chunked, self.name)
 
     def count(self, node: Count, frame: Frame, name: str, /) -> Scalar:
-        native = node.expr.dispatch(self, frame, name).native
+        native = self.dispatch(node.expr, frame, name).native
+        if isinstance(native, pa.ChunkedArray):
+            msg = f"Expected unreachable, but hit at: {node!r}"
+            raise InvalidOperationError(msg)
         return self._with_native(pa.scalar(1 if native.is_valid else 0), name)
 
     @unary.partial
@@ -1091,20 +1115,18 @@ class ArrowListNamespace(
     def contains(
         self, node: FExpr[lists.Contains], frame: Frame, name: str, /
     ) -> Expr | Scalar:
-        expr, other = node.input
-        prev = expr.dispatch(self.compliant, frame, name)
-        item = other.dispatch(self.compliant, frame, name)
-        if isinstance(item, ArrowExpr):
-            # Maybe one day, not now
+        dispatch = self.compliant.dispatch
+        prev, item = (dispatch(e, frame, name).native for e in node.input)
+        if isinstance(item, pa.ChunkedArray):
             raise NotImplementedError
-        return self.with_native(fn.list.contains(prev.native, item.native), name)
+        return self.with_native(fn.list.contains(prev, item), name)
 
     def aggregate(
         self, node: FExpr[lists.Aggregation], frame: Frame, name: str, /
     ) -> Expr | Scalar:
-        previous = node.input[0].dispatch(self.compliant, frame, name)
+        previous = self.compliant.dispatch(node.input[0], frame, name).native
         agg = group_by.AggSpec._from_list_agg(node.function, "values")
-        return self.with_native(agg.agg_list(previous.native), name)
+        return self.with_native(agg.agg_list(previous), name)
 
     @unary_accessor.partial
     def sort(self, f: lists.Sort, previous: Native) -> Native:
@@ -1155,17 +1177,12 @@ class ArrowStringNamespace(
     ) -> Expr | Scalar:
         func = node.function
         pattern, literal, n = (func.pattern, func.literal, func.n)
-        expr, other = node.input
-        prev = expr.dispatch(self.compliant, frame, name)
-        value = other.dispatch(self.compliant, frame, name)
-        if isinstance(value, ArrowScalar):
-            result = fn.str.replace(
-                prev.native, pattern, value.native.as_py(), literal=literal, n=n
-            )
-        elif isinstance(prev, ArrowExpr):
-            result = fn.str.replace_vector(
-                prev.native, pattern, value.native, literal=literal, n=n
-            )
+        dispatch = self.compliant.dispatch
+        prev, value = (dispatch(e, frame, name).native for e in node.input)
+        if isinstance(value, pa.Scalar):
+            result = fn.str.replace(prev, pattern, value.as_py(), literal=literal, n=n)
+        elif isinstance(prev, pa.ChunkedArray):
+            result = fn.str.replace_vector(prev, pattern, value, literal=literal, n=n)
         else:
             # not sure this even makes sense
             msg = "TODO: `ArrowScalar.str.replace(value: ArrowExpr)`"

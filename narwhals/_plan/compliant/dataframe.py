@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.group_by import (
-        CompliantGroupBy,
         DataFrameGroupBy,
         EagerDataFrameGroupBy,
         GroupByResolver,
@@ -61,8 +60,6 @@ class CompliantFrame(Protocol[NativeFrameT_co]):
     version: ClassVar[Version]
 
     def __narwhals_namespace__(self) -> IncompleteCyclic: ...
-    @property
-    def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
     @classmethod
     def from_native(cls, native: IncompleteVarianceLie, /) -> Self: ...
     @property
@@ -136,9 +133,7 @@ class CompliantDataFrame(
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 
-    def __narwhals_namespace__(
-        self,
-    ) -> CompliantNamespace[IncompleteVarianceLie, Any, Any]: ...
+    def __narwhals_namespace__(self) -> CompliantNamespace[Any, Any]: ...
 
     @property
     def _grouper(self) -> type[Grouped]:

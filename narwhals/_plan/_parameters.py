@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr as FExpr
-    from narwhals._plan.typing import Seq
+    from narwhals._plan.typing import Seq, Seq1, Seq2, Seq3
 
 __all__ = ("SCALAR", "Binary", "Parameters", "Ternary", "Unary", "Variadic")
 
@@ -27,8 +27,6 @@ Arity: TypeAlias = Literal[1, 2, 3, "*"]
 ## See Also
 [Arity](https://en.wikipedia.org/wiki/Arity)
 """
-
-Incomplete: TypeAlias = Any
 
 
 class Constraint(enum.Enum):
@@ -45,7 +43,6 @@ _ANY: Final = Constraint.ANY
 _DEFAULT: Final = Constraint.DEFAULT
 
 
-# TODO @dangotbanned: Port dispatch helpers from `arrow.{namespace,expr}` into something that uses this
 # TODO @dangotbanned: Specifying names?
 # - the first (and only in `Unary`) is never needed
 # - `__function_parameters__ = Binary(start=SCALAR, end=SCALAR)`
@@ -88,7 +85,7 @@ class Parameters(metaclass=SlottedMeta):
     """
 
     __slots__ = ("_constraints",)
-    _constraints: tuple[Constraint, ...]
+    _constraints: Seq[Constraint]
     _arity: ClassVar[Arity]
 
     @property
@@ -114,13 +111,9 @@ class Parameters(metaclass=SlottedMeta):
         return exprs
 
     def dispatch_args(
-        self,
-        node: FExpr,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> Seq[ct.ET_co | ct.ST_co]:
-        """Call `ExprIR.dispatch` on **all inputs** to `node`.
+        self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
+    ) -> Seq[ct.E | ct.SC]:
+        """Call `ExprIR.__expr_ir_dispatch__` on **all inputs** to `node`.
 
         `name` is used for the first input.
         """
@@ -156,23 +149,20 @@ class Unary(Parameters, arity=1):
     The expression is whatever we had when the `Expr` *method* was called:
     >>> import narwhals._plan as nw
     >>> expr = nw.col("a").abs()
-    >>> expr._ir.parameters
+    >>> expr._ir.function.__function_parameters__
     Unary(DEFAULT)
     >>> expr._ir.input[0]
     col('a')
     """
 
     def __init__(self, arg: Constraint = _DEFAULT, /) -> None:
-        self._constraints: tuple[Constraint] = (arg,)
+        self._constraints: Seq1[Constraint] = (arg,)
 
     def dispatch_args(
-        self,
-        node: FExpr,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co]:  # pragma: no cover
-        return (node.input[0].dispatch(ctx, frame, name),)
+        self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
+    ) -> Seq1[ct.E | ct.SC]:  # pragma: no cover
+        arg = node.input[0]
+        return (arg.__expr_ir_dispatch__(arg, ctx, frame, name),)
 
 
 @final
@@ -182,27 +172,26 @@ class Binary(Parameters, arity=2):
     In many cases, this is like `Unary` but the `Expr` *method* accepts an expression:
     >>> import narwhals._plan as nw
     >>> expr = nw.col("a").fill_null(nw.col("a").min())
-    >>> print(f"{expr._ir.parameters} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
     Binary(DEFAULT, ANY) | (col('a'), col('a').min())
 
     We also use this to represent range *functions*:
     >>> expr = nw.int_range(0, 10)
-    >>> print(f"{expr._ir.parameters} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
     Binary(SCALAR, SCALAR) | (lit(int: 0), lit(int: 10))
     """
 
     def __init__(self, left: Constraint = _DEFAULT, right: Constraint = _ANY) -> None:
-        self._constraints: tuple[Constraint, Constraint] = left, right
+        self._constraints: Seq2[Constraint] = left, right
 
     def dispatch_args(
-        self,
-        node: FExpr,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]:
+        self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
+    ) -> Seq2[ct.E | ct.SC]:
         left, right = node.input
-        return (left.dispatch(ctx, frame, name), right.dispatch(ctx, frame, ""))
+        return (
+            left.__expr_ir_dispatch__(left, ctx, frame, name),
+            right.__expr_ir_dispatch__(right, ctx, frame, ""),
+        )
 
 
 @final
@@ -212,7 +201,7 @@ class Ternary(Parameters, arity=3):
     This is like `Unary` but the `Expr` *method* accepts two expressions:
     >>> import narwhals._plan as nw
     >>> expr = nw.col("a").alias("clip").clip(nw.col("b"), nw.col("c"))
-    >>> print(f"{expr._ir.parameters} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
     Ternary(DEFAULT, ANY, ANY) | (col('a').alias('clip'), col('b'), col('c'))
     """
 
@@ -222,20 +211,16 @@ class Ternary(Parameters, arity=3):
         arg_2: Constraint = _ANY,
         arg_3: Constraint = _ANY,
     ) -> None:
-        self._constraints: tuple[Constraint, Constraint, Constraint] = arg_1, arg_2, arg_3
+        self._constraints: Seq3[Constraint] = arg_1, arg_2, arg_3
 
     def dispatch_args(
-        self,
-        node: FExpr,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]:
+        self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
+    ) -> Seq3[ct.E | ct.SC]:
         arg_1, arg_2, arg_3 = node.input
         return (
-            arg_1.dispatch(ctx, frame, name),
-            arg_2.dispatch(ctx, frame, ""),
-            arg_3.dispatch(ctx, frame, ""),
+            arg_1.__expr_ir_dispatch__(arg_1, ctx, frame, name),
+            arg_2.__expr_ir_dispatch__(arg_2, ctx, frame, ""),
+            arg_3.__expr_ir_dispatch__(arg_3, ctx, frame, ""),
         )
 
 
@@ -247,12 +232,12 @@ class Variadic(Parameters, arity="*"):
     Describes the parameters of horizontal functions:
     >>> import narwhals._plan as nw
     >>> expr = nw.all_horizontal("a", "b", "c", "d")
-    >>> print(f"{expr._ir.parameters} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
     Variadic(*) | (col('a'), col('b'), col('c'), col('d'))
 
     Yep, this too:
     >>> expr = nw.concat_str(nw.col("c"), nw.nth(-1))
-    >>> print(f"{expr._ir.parameters} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
     Variadic(*) | (col('c'), ncs.last())
     """
 
@@ -260,16 +245,12 @@ class Variadic(Parameters, arity="*"):
         self._constraints = ()
 
     # TODO @dangotbanned: Revisit later for coverage
-    # `ArrowNamespace._horizontal` is handling the `ArrowExpr.from_ir` part, so this is more complicated
     def dispatch_args(
-        self,
-        node: FExpr,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co, ...]:  # pragma: no cover
+        self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
+    ) -> Seq[ct.E | ct.SC]:  # pragma: no cover
         it = iter(node.input)
+        first = next(it)
         return (
-            next(it).dispatch(ctx, frame, name),
-            *(e.dispatch(ctx, frame, "") for e in it),
+            first.__expr_ir_dispatch__(first, ctx, frame, name),
+            *(e.__expr_ir_dispatch__(e, ctx, frame, "") for e in it),
         )

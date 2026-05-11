@@ -45,7 +45,8 @@ import functools
 from functools import reduce
 from typing import TYPE_CHECKING, Generic, final
 
-from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
+from narwhals._plan import _dispatch
+from narwhals._plan._dispatch import ConstructorDispatch, Dispatch, ExprIRDispatch
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._immutable import _OBJ_SETATTR, Immutable
 from narwhals._plan._meta import ExprIRMeta
@@ -63,7 +64,6 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan._expansion import Expander
-    from narwhals._plan.compliant import CompliantNamespace, typing as ct
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions.expr import Alias, BinaryExpr, Cast, Column
     from narwhals._plan.expressions.operators import Eq
@@ -161,31 +161,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     - `map_ir`
     """
 
-    __expr_ir_dispatch__: ClassVar[Dispatcher[Self]] = Dispatcher()
-    """Callable that dispatches to the appropriate compliant-level method.
-
-    See `Dispatcher` and `DispatcherOptions` for examples.
-
-    To customize the behavior, use the `dispatch` **parameter** [when subclassing].
-
-    If nothing there *quite* scratches the itch, override the `dispatch` **method** instead:
-
-        from narwhals._plan._function import Function
-        from narwhals._plan._nodes import nodes
-
-        class FunctionExpr(ExprIR):
-            __slots__ = ("input", "function")
-            input: tuple[ExprIR, ...] = nodes()
-            function: Function
-
-            def dispatch(self, ctx, frame, name):
-                return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
-
-    Notes:
-        Each class has their own `Dispatcher` instance, and inheritance is only on the `options` property.
-
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-    """
+    __expr_ir_dispatch__: ClassVar[Dispatch[Self]] = ExprIRDispatch.root("ExprIR")
+    """Callable that dispatches to the appropriate compliant-level method."""
 
     __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
     """Callable defining how a `DType` is derived when `resolve_dtype` is called.
@@ -219,20 +196,11 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     """
 
     def __init_subclass__(
-        cls: type[Self],
-        *,
-        dispatch: DispatcherOptions | None = None,
-        dtype: IntoResolveDType[Self] | None = None,
-        **_: Any,
+        cls: type[Self], *, dtype: IntoResolveDType[Self] | None = None, **_: Any
     ) -> None:
         """Hook to [customize a new subclass] of `ExprIR`.
 
-        All parameters are optional and will be inherited when not provided to `__init_subclass__`.
-
         Arguments:
-            dispatch: Defines how to build a `Dispatcher`.
-                Stored in `__expr_ir_dispatch__.options`.
-
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 
@@ -246,31 +214,13 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         """
         super().__init_subclass__(**_)
         if "__expr_ir_dispatch__" not in cls.__dict__:
-            cls.__expr_ir_dispatch__ = Dispatcher.from_expr_ir(cls, dispatch)
+            cls.__expr_ir_dispatch__ = cls.__expr_ir_dispatch__.from_type(cls)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)
             elif not isinstance(dtype, ResolveDType):
                 dtype = ResolveDType.expr_ir.visitor(dtype)  # pragma: no cover
             cls.__expr_ir_dtype__ = dtype
-
-    # TODO @dangotbanned: Come back to this doc after slimming down `Compliant{Expr,Scalar}`
-    def dispatch(
-        self: Self,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-        /,
-    ) -> ct.ET_co | ct.ST_co:
-        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`.
-
-        Arguments:
-            ctx: Anything that can return a `CompliantExpr`.
-            frame: A`*Frame` that shares a namespace with `ctx`.
-            name: Output column name, usually `NamedIR.name`.
-
-        """
-        return self.__expr_ir_dispatch__(self, ctx, frame, name)
 
     def resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
         """Get the data type of an expanded expression.
@@ -687,14 +637,13 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         return self.__repr__()
 
 
-# TODO @dangotbanned: In the new dispatch, keep the base class but change the construction
 class NoDispatch(ExprIR):
     """Ensure an expression cannot be used at the compliant-level.
 
     **Any** attempts to dispatch will raise a `TypeError`:
     >>> import narwhals._plan as nw
     >>> selector = nw.col("a", "b", "c")._ir
-    >>> selector.dispatch(..., ..., ...)
+    >>> selector.__expr_ir_dispatch__(selector, ..., ..., ...)
     Traceback (most recent call last):
     TypeError: 'ByName' should not appear at the compliant-level.
     ...
@@ -702,25 +651,27 @@ class NoDispatch(ExprIR):
     ncs.by_name('a', 'b', 'c')
     """
 
-    __expr_ir_dispatch__ = Dispatcher(options=DispatcherOptions(allow_dispatch=False))
+    __expr_ir_dispatch__: ClassVar[_dispatch.NoDispatch[Self]] = (
+        _dispatch.NoDispatch.root("NoDispatch")
+    )
 
 
 class Constructor(ExprIR):
     """An expression that dispatches to a `@classmethod` at the compliant-level."""
 
+    __expr_ir_dispatch__: ClassVar[ConstructorDispatch[Self]] = ConstructorDispatch.root(
+        "Constructor"
+    )
+
     def __init_subclass__(
         cls: type[Self],
         *,
-        dispatch: Constructs | None = None,
+        dispatch: Constructs = "Expr",
         dtype: IntoResolveDType[Self] | None = None,
         **_: Any,
     ) -> None:
-
-        if dispatch is None:
-            raise NotImplementedError
-        super().__init_subclass__(
-            dispatch=DispatcherOptions(constructor_name=dispatch), dtype=dtype, **_
-        )
+        cls.__expr_ir_dispatch__ = cls.__expr_ir_dispatch__.from_type(cls, dispatch)
+        super().__init_subclass__(dtype=dtype, **_)
 
 
 class SelectorIR(NoDispatch):
@@ -1114,12 +1065,6 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         """
         return self.expr.resolve_dtype(schema)
-
-    def dispatch(
-        self, ctx: CompliantNamespace[ct.Frame, ct.ET_co, ct.ST_co], frame: ct.Frame, /
-    ) -> ct.ET_co | ct.ST_co:
-        # NOTE: Has an intentionally narrower type, to hint that it's top-level
-        return self.expr.dispatch(ctx, frame, self.name)
 
 
 @functools.lru_cache(maxsize=128)

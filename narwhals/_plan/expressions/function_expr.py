@@ -5,12 +5,22 @@ from __future__ import annotations
 # mypy: disable-error-code="misc"
 # NOTE: Needs to be disabled as `mypy` reports the diagnostic twice, with one not attributed to a line number
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
-from typing import TYPE_CHECKING, Generic, overload
+from typing import TYPE_CHECKING, ClassVar, Generic, overload
 
+from narwhals._plan._dispatch import FunctionExprDispatch
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import nodes
-from narwhals._plan.typing import FunctionT_co, HorizontalT_co, RangeT_co, Seq, StructT_co
+from narwhals._plan.typing import (
+    FunctionT_co,
+    HorizontalT_co,
+    RangeT_co,
+    Seq,
+    Seq1,
+    Seq2,
+    Seq3,
+    StructT_co,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -24,7 +34,6 @@ if TYPE_CHECKING:
         TernaryFunction,
         UnaryFunction,
     )
-    from narwhals._plan._parameters import Parameters
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
@@ -58,6 +67,10 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     input: Seq[ExprIR] = nodes()
     function: FunctionT_co
 
+    __expr_ir_dispatch__: ClassVar[FunctionExprDispatch[Self]] = (
+        FunctionExprDispatch.root("FunctionExpr")
+    )
+
     # TODO @dangotbanned: (Docs) Maybe just duplicate `Function.__function_flags__`
     @property
     def flags(self) -> FunctionFlags:
@@ -84,14 +97,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
 
-    def dispatch(
-        self: Self,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> ct.ET_co | ct.ST_co:
-        return self.function.__expr_ir_dispatch__(self, ctx, frame, name)
-
     # TODO @dangotbanned: Convert docs into a comment
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         """NOTE: Supported on many functions, but there are important gaps.
@@ -116,61 +121,52 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         for root in input_root.iter_expand(ctx):
             yield self.__replace__(input=(root, *children))
 
-    # TODO @dangotbanned: Either document this or remove it and update the `Parameters` doctests
-    @property
-    def parameters(self) -> Parameters:
-        return self.function.__function_parameters__
-
-    # TODO @dangotbanned: (Docs) see `ExprIR.dispatch`
     def dispatch_arg(
         self: FunctionExpr[UnaryFunction],
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
+        ctx: ct.Caller[ct.E, ct.SC],
+        frame: ct.FrameAny,
         name: str,
-    ) -> ct.ET_co | ct.ST_co:
-        """Call `ExprIR.dispatch` on the **only** expression argument to this function.
+    ) -> ct.E | ct.SC:
+        """Dispatch the **only** expression argument to this function.
 
         Important:
             Exclusive to `Unary`
         """
-        return self.input[0].dispatch(ctx, frame, name)
+        node = self.input[0]
+        return node.__expr_ir_dispatch__(node, ctx, frame, name)
 
-    # TODO @dangotbanned: (Docs) see `ExprIR.dispatch`
     @overload
     def dispatch_args(
         self: FunctionExpr[UnaryFunction],
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
+        ctx: ct.Caller[ct.E, ct.SC],
+        frame: ct.FrameAny,
         name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co]: ...
+    ) -> Seq1[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
         self: FunctionExpr[BinaryFunction],
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
+        ctx: ct.Caller[ct.E, ct.SC],
+        frame: ct.FrameAny,
         name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]: ...
+    ) -> Seq2[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
         self: FunctionExpr[TernaryFunction],
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
+        ctx: ct.Caller[ct.E, ct.SC],
+        frame: ct.FrameAny,
         name: str,
-    ) -> tuple[ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co, ct.ET_co | ct.ST_co]: ...
+    ) -> Seq3[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
         self: FunctionExpr[Function],
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
+        ctx: ct.Caller[ct.E, ct.SC],
+        frame: ct.FrameAny,
         name: str,
-    ) -> Seq[ct.ET_co | ct.ST_co]: ...
+    ) -> Seq[ct.E | ct.SC]: ...
     def dispatch_args(
-        self,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
-    ) -> Seq[ct.ET_co | ct.ST_co]:
-        """Call `ExprIR.dispatch` on **all** expression arguments to this function."""
+        self, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
+    ) -> Seq[ct.E | ct.SC]:
+        """Dispatch **all** expression arguments to this function."""
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
 
 

@@ -6,14 +6,11 @@ from narwhals._plan.compliant import io, typing as ct
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from narwhals._plan import expressions as ir
     from narwhals._utils import Implementation, Version
 
 
-class CompliantNamespace(io.ReadSchema, Protocol[ct.FrameT, ct.ExprT_co, ct.ScalarT_co]):
-    """`[FrameT, ExprT_co, ScalarT_co]`."""
+class CompliantNamespace(io.ReadSchema, Protocol[ct.E, ct.SC]):
+    """`[ExprT_co, ScalarT_co]`."""
 
     __slots__ = ()
 
@@ -21,50 +18,20 @@ class CompliantNamespace(io.ReadSchema, Protocol[ct.FrameT, ct.ExprT_co, ct.Scal
     version: ClassVar[Version]
 
     @property
-    def _expr(self) -> type[ct.ExprT_co]: ...
+    def _expr(self) -> type[ct.E]: ...
     @property
-    def _frame(self) -> type[ct.FrameT]: ...
-    @property
-    def _scalar(self) -> type[ct.ScalarT_co]: ...
-    def __narwhals_namespace__(self) -> Self:
-        return self
-
-    def from_named_ir(
-        self, named_ir: ir.NamedIR, frame: ct.FrameT, /
-    ) -> ct.ExprT_co | ct.ScalarT_co:
-        return named_ir.dispatch(self, frame)
-
-    def from_ir(
-        self, node: ir.ExprIR, frame: ct.FrameT, name: str, /
-    ) -> ct.ExprT_co | ct.ScalarT_co:
-        return node.dispatch(self, frame, name)
-
-    def __narwhals_expr_prepare__(self) -> ct.ExprT_co:
-        return self._expr.__new__(self._expr)
+    def _scalar(self) -> type[ct.SC]: ...
 
     # NOTE: will reduce direct calls to `*Namespace._<compliant-type>`
     from_native: not_implemented = not_implemented()
 
 
-class EagerNamespace(
-    CompliantNamespace[ct.EagerDataFrameT, ct.EagerExprT_co, ct.EagerScalarT_co],
-    Protocol[ct.EagerDataFrameT, ct.SeriesT_co, ct.EagerExprT_co, ct.EagerScalarT_co],
-):
-    """`[EagerDataFrameT, SeriesT_co, EagerExprT_co, EagerScalarT_co]`.
-
-    ## Important
-    Trying to
-    - reduce the number of type params
-    - ensure most are covariant
-    - rely on native types when possible
-    """
+class EagerNamespace(CompliantNamespace[ct.E, ct.SC], Protocol[ct.DF, ct.S, ct.E, ct.SC]):
+    """`[DataFrameT_co, SeriesT_co, ExprT_co, ScalarT_co]`."""
 
     __slots__ = ()
 
     @property
-    def _series(self) -> type[ct.SeriesT_co]: ...
+    def _series(self) -> type[ct.S]: ...
     @property
-    def _dataframe(self) -> type[ct.EagerDataFrameT]: ...
-    @property
-    def _frame(self) -> type[ct.EagerDataFrameT]:  # pragma: no cover
-        return self._dataframe
+    def _dataframe(self) -> type[ct.DF]: ...

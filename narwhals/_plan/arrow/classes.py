@@ -8,6 +8,11 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow import DataFrame, Expr, LazyFrame, Scalar, Series, v1, v2
 
 
+# TODO @dangotbanned: Convert into a descriptor for classmethod access
+# - Should also navigate *down* a level at subclass-time
+# - Overhead : `ArrowExprV1.__narwhals_classes__.v1.series` -> `ArrowSeriesV1`
+# - Incorrect: `ArrowExprV1.__narwhals_classes__.series`    -> `ArrowSeries`
+# - Ideal    : `ArrowExprV1.__narwhals_classes__.series`    -> `ArrowSeriesV1`
 class ArrowClasses:
     """TODO @dangotbanned: Convert into a descriptor for classmethod access."""
 
@@ -43,10 +48,6 @@ class ArrowClasses:
         from narwhals._plan.arrow.series import ArrowSeries
 
         return ArrowSeries
-
-    def __narwhals_expr_prepare__(self) -> Expr:
-        tp = self.expr
-        return tp.__new__(tp)
 
     @property
     def v1(self) -> ArrowClassesV1:
@@ -91,10 +92,6 @@ class ArrowClassesV1:
 
         return Series
 
-    def __narwhals_expr_prepare__(self) -> v1.Expr:
-        tp = self.expr
-        return tp.__new__(tp)
-
 
 class ArrowClassesV2:
     __slots__ = ()
@@ -129,7 +126,3 @@ class ArrowClassesV2:
         from narwhals._plan.arrow.v2 import Series
 
         return Series
-
-    def __narwhals_expr_prepare__(self) -> v2.Expr:
-        tp = self.expr
-        return tp.__new__(tp)

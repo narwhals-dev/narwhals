@@ -1,39 +1,73 @@
+"""Making the connection between `CompliantColumn` and `ExprIR`.
+
+## Implementation Notes
+An earlier version implemented `Dispatch.__call__` using the descriptor protocol,
+to make the signature more convenient for the caller:
+
+    # Current
+    node.__expr_ir_dispatch__(node, ctx, frame, name)
+    # Descriptor
+    node.__expr_ir_dispatch__(ctx, frame, name)
+
+However, it required creating an additional function per-call - which was
+considered a bad tradeoff (performance & complexity) for syntax sugar.
+"""
+
 from __future__ import annotations
 
 import os
-from collections.abc import Callable
-from operator import attrgetter as _attrgetter, methodcaller as _methodcaller
-from typing import TYPE_CHECKING, Any, Final, Generic, Literal, final
+from typing import TYPE_CHECKING, Any, Final, Generic, Protocol, TypeVar, final
 
 from narwhals._plan import common
 from narwhals._plan._guards import is_function_expr
 from narwhals._plan.common import pascal_to_snake_case
-from narwhals._typing_compat import TypeVar
+from narwhals._utils import deep_attrgetter
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typing_extensions import Never, Self, TypeAlias
 
+    from narwhals._plan import _expr_ir, expressions as ir
     from narwhals._plan.compliant import typing as ct
-    from narwhals._plan.expressions import ExprIR, Function, FunctionExpr
-    from narwhals._plan.typing import Accessor, Constructs, ExprIRT, FunctionT
+    from narwhals._plan.typing import Accessor, Constructs
 
 
-__all__ = ("Dispatcher", "DispatcherOptions", "get_dispatch_name")
+__all__ = (
+    "ConstructorDispatch",
+    "Dispatch",
+    "DispatcherOptions",
+    "ExprIRDispatch",
+    "FunctionDispatch",
+    "FunctionExprDispatch",
+    "get_dispatch_name",
+)
 
-Incomplete: TypeAlias = Any
 
-Node = TypeVar("Node", bound="ExprIR | FunctionExpr[Any]")
-Raiser: TypeAlias = Callable[..., "Never"]
+Expr = TypeVar("Expr", bound="ir.ExprIR")
+Expr_contra = TypeVar("Expr_contra", bound="ir.ExprIR", contravariant=True)
+FExpr = TypeVar("FExpr", bound="ir.FunctionExpr[Any]")
+ConExpr = TypeVar("ConExpr", bound="_expr_ir.Constructor")
+
+_FromExpr = TypeVar("_FromExpr", bound="ir.ExprIR")
+_FromConExpr = TypeVar("_FromConExpr", bound="_expr_ir.Constructor")
+_FromFunction = TypeVar("_FromFunction", bound="ir.Function")
+
+
+class Bind(Protocol[Expr_contra]):
+    def __call__(
+        self, ctx: ct.Caller[ct.E, ct.SC], /
+    ) -> Bound[Expr_contra, ct.E, ct.SC]: ...
+
+
+Bound: TypeAlias = "Callable[[Expr, ct.FrameAny, str], ct.E | ct.SC]"
 
 
 # TODO @dangotbanned: Pick a focus for the docstring and start again
-@final
-class Dispatcher(Generic[Node]):
+class Dispatch(Generic[Expr]):
     """Dispatch an expression to the compliant-level.
 
-    Translates class definitions into error-wrapped method calls.
-
-    All `ExprIR` and `Function` nodes store one of these guys in `__expr_ir_dispatch__`.
+    Translates `ExprIR` and `Function` defintions into error-wrapped method calls, and stores in ``__expr_ir_dispatch__`.
 
     By default, we dispatch to the compliant-level by calling a method that is the
     **snake_case**-equivalent of the class name:
@@ -61,11 +95,9 @@ class Dispatcher(Generic[Node]):
         NotImplementedError: "`ewm_mean` is not yet implemented for 'ArrowExpr'"
     """
 
-    __slots__ = ("_name", "_options", "bind")
-
-    bind: ct.Binder[Node]
-    _options: DispatcherOptions
+    __slots__ = ("_bind", "_name")
     _name: str
+    _bind: Bind[Expr]
 
     @property
     def name(self) -> str:
@@ -88,133 +120,222 @@ class Dispatcher(Generic[Node]):
         >>> ir.lists.NUnique.__expr_ir_dispatch__.name
         'list.n_unique'
 
-        Generated names can always be overridden at class definition time:
+        For functions, generated names can be overridden at class definition time:
         >>> ir.boolean.Not.__expr_ir_dispatch__.name
         'not_'
         """
         return self._name
 
-    # TODO @dangotbanned: Maybe explain in terms of descriptor language?
-    # e.g. "when the owner is subclassed ..."
+    @property
+    def name_full(self) -> str:
+        return f"CompliantExpr.{self.name}"
+
+    def __repr__(self) -> str:
+        return f"Dispatch<{self.name}>"
+
+    def __call__(
+        self, node: Expr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str, /
+    ) -> ct.E | ct.SC:
+        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
+        # NOTE: A `None` check is required for two related reasons.
+        # 1. An un-implemented `Protocol` method body `...` returns `None`
+        #    if you inherit but don't override it.
+        #    So it won't raise an `AttributeError` *here*, but would as soon as you try to do anything with the result.
+        # 2. Truth-testing `if (result := <call>): ...` can give a false-negative in the eager case,
+        #    where `__len__() >= 0` produces `False`.
+        #    https://docs.python.org/3/reference/datamodel.html#object.__len__
+        if (result := _DISPATCHER_CALL(self, node, ctx, frame, name)) is not None:
+            return result
+        msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
+        raise NotImplementedError(msg)
+
+    def bind(self, ctx: ct.Caller[ct.E, ct.SC], /) -> Bound[Expr, ct.E, ct.SC]:
+        return self._bind(ctx)
+
+    @classmethod
+    def root(cls, name: str, /) -> Self:
+        self = cls.__new__(cls)
+        self._name = name
+        self._bind = _make_no_dispatch_error()
+        return self
+
+    @classmethod
+    def from_type(cls: type[Dispatch[Any]], tp: type[Any], /) -> Dispatch[Any]:
+        raise NotImplementedError
+
+
+class _CompliantNew(Dispatch[Expr]):
+    """Create a new compliant object (of the same kind) for each call."""
+
+    def bind(self, ctx: ct.Caller[ct.E, ct.SC], /) -> Bound[Expr, ct.E, ct.SC]:
+        tp = type(ctx)
+        return super().bind(tp.__new__(tp))
+
+
+@final
+class FunctionDispatch(_CompliantNew[FExpr]):
+    __slots__ = ("_options",)
+    _options: DispatcherOptions
+
     @property
     def options(self) -> DispatcherOptions:
         """Configuration describing how this instance was built.
 
-        When a dispatchable (...) class is subclassed, this property is inherited
-        while each class gets its own instance of `Dispatcher`.
+        When a `Function` is subclassed, this property is inherited and reused in a new
+        `FunctionDispatch` instance.
 
         See `DispatcherOptions` for examples.
         """
         return self._options
 
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}<{self.name}>"
+    @classmethod
+    def root(cls: type[FunctionDispatch[Any]], name: str, /) -> FunctionDispatch[Any]:
+        self = super().root(name)
+        self._options = DispatcherOptions()
+        return self
 
-    def __call__(
-        self,
-        node: Node,
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co],
-        frame: ct.Frame,
-        name: str,
+    @classmethod
+    def from_type(
+        cls: type[FunctionDispatch[Any]],
+        tp: type[_FromFunction],
+        options: DispatcherOptions | None = None,
         /,
-    ) -> ct.ET_co | ct.ST_co:
-        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
-        if result := _DISPATCHER_CALL(self, node, ctx, frame, name):
-            return result
-        msg = f"`{self.name}` is not yet implemented for {type(ctx).__name__!r}"
-        raise NotImplementedError(msg)
-
-    @staticmethod
-    def from_expr_ir(
-        tp: type[ExprIRT], options: DispatcherOptions | None, /
-    ) -> Dispatcher[ExprIRT]:
-        options = options or tp.__expr_ir_dispatch__.options
-        if not options.allow_dispatch:
-            return Dispatcher(tp.__name__, options=options)
-        name = pascal_to_snake_case(tp.__name__)
-        if constructor := options.constructor_name:
-            get_type = _GET_EXPR if constructor == "Expr" else _GET_SCALAR
-            bind = _constructor_binder(
-                _CALL_NAMESPACE, get_type, _CLASS_METHOD_GETTER(name)
-            )
-        else:
-            bind = _binder(_CALL_EXPR_PREPARE, _ATTR_GETTER(name))
-        return Dispatcher(name, bind, options)
-
-    @staticmethod
-    def from_function(
-        tp: type[FunctionT], options: DispatcherOptions | None, /
-    ) -> Dispatcher[FunctionExpr[FunctionT]]:
-        """Create a new `Function` dispatcher."""
+    ) -> FunctionDispatch[ir.FunctionExpr[_FromFunction]]:
         options = tp.__expr_ir_dispatch__.options.merge_with(options)
+        self = cls.__new__(cls)
         name = options.override_name or pascal_to_snake_case(tp.__name__)
         if ns := options.accessor_name:
             name = f"{ns}.{name}"
-        bind = _binder(_CALL_EXPR_PREPARE, _ATTR_GETTER(name))
-        return Dispatcher(name, bind, options)
-
-    def __get__(self, instance: Any, owner: Any) -> Self:
+        self._name = name
+        self._bind = deep_attrgetter(self.name)
+        self._options = options
         return self
 
-    # TODO @dangotbanned: Clean up explanation
-    def __set_name__(self, owner: type[Any], name: str) -> None:
-        # `Function` and `ExprIR` invoke this by using `Dispatcher()` in the class body
-        # This allows special-casing for base class raising an error, but not propagating the behavior (via options)
-        self._name = owner.__name__
 
-    def __init__(
+_NARWHALS_CLASSES: Final = "__narwhals_classes__"
+
+
+@final
+class ConstructorDispatch(Dispatch[ConExpr]):
+    __slots__ = ("_constructs",)
+    _constructs: Constructs
+
+    @property
+    def name_full(self) -> str:
+        return f"Compliant{self._constructs}.{self.name}"
+
+    @classmethod
+    def from_type(
+        cls: type[ConstructorDispatch[Any]],
+        tp: type[_FromConExpr],
+        constructs: Constructs = "Expr",
+        /,
+    ) -> ConstructorDispatch[_FromConExpr]:
+        self = cls.__new__(cls)
+        self._name = pascal_to_snake_case(tp.__name__)
+        self._bind = deep_attrgetter(_NARWHALS_CLASSES, constructs.lower(), self.name)
+        self._constructs = constructs
+        return self
+
+
+class ExprIRDispatch(_CompliantNew[Expr]):
+    """`(ExprIR - FunctionExpr)`."""
+
+    @classmethod
+    def from_type(
+        cls: type[ExprIRDispatch[Any]], tp: type[_FromExpr], /
+    ) -> ExprIRDispatch[_FromExpr]:
+        self = cls.__new__(cls)
+        self._name = pascal_to_snake_case(tp.__name__)
+        self._bind = deep_attrgetter(self.name)
+        return self
+
+
+@final
+class FunctionExprDispatch(ExprIRDispatch[FExpr]):
+    __slots__ = ()
+
+    @classmethod
+    def root(
+        cls: type[FunctionExprDispatch[Any]], name: str, /
+    ) -> FunctionExprDispatch[Any]:
+        self = cls.__new__(cls)
+        self._name = pascal_to_snake_case(name)
+        self._bind = deep_attrgetter(self.name)
+        return self
+
+    def __call__(
         self,
-        name: str = "",
-        bind: ct.Binder[Node] | None = None,
-        options: DispatcherOptions | None = None,
-    ) -> None:
-        self._name = name
-        self.bind = bind or self._make_no_dispatch_error()
-        self._options = options or DispatcherOptions()
+        node: FExpr | ir.FunctionExpr,
+        ctx: ct.Caller[ct.E, ct.SC],
+        frame: ct.FrameAny,
+        name: str,
+        /,
+    ) -> ct.E | ct.SC:
+        # NOTE: `node: FExpr | ir.FunctionExpr` is a trick to get the default of `FunctionT_co`.
+        # This is a more useful type than `Any`:
+        # `_: Any | FunctionDispatch[FunctionExpr[Function]] = node.function.__expr_ir_dispatch__`
+        return node.function.__expr_ir_dispatch__(node, ctx, frame, name)
 
-    def _make_no_dispatch_error(self) -> Callable[[Any], Raiser]:
-        def _no_dispatch_error(node: Node, *_: Any) -> Never:
-            msg = (
-                f"{type(node).__name__!r} should not appear at the compliant-level.\n\n"
-                f"Make sure to expand all expressions first, got:\n{node!r}"
-            )
-            raise TypeError(msg)
 
-        def getter(_: Any, /) -> Raiser:
-            return _no_dispatch_error
+@final
+class NoDispatch(Dispatch[Expr]):
+    """`Alias`, `KeepName`, `RenameAlias`, `SelectorIR`."""
 
-        return getter
+    __slots__ = ()
+
+    @classmethod
+    def from_type(
+        cls: type[NoDispatch[Any]], tp: type[_FromExpr], /
+    ) -> NoDispatch[_FromExpr]:
+        self: NoDispatch[_FromExpr] = cls.__new__(cls)
+        self._name = tp.__name__
+        self._bind = _make_no_dispatch_error()
+        return self
+
+
+def _make_no_dispatch_error() -> Callable[[Any], Callable[..., Never]]:
+    def _no_dispatch_error(node: ir.ExprIR, *_: Any) -> Never:
+        msg = (
+            f"{type(node).__name__!r} should not appear at the compliant-level.\n\n"
+            f"Make sure to expand all expressions first, got:\n{node!r}"
+        )
+        raise TypeError(msg)
+
+    def getter(_: Any, /) -> Callable[..., Never]:
+        return _no_dispatch_error
+
+    return getter
 
 
 def _dispatch(
-    self: Dispatcher[Node],
-    node: Node,
-    ctx: ct.DispatchScopeAny[ct.Frame, ct.E, ct.SC],
-    frame: ct.Frame,
+    self: Dispatch[Expr],
+    node: Expr,
+    ctx: ct.Caller[ct.E, ct.SC],
+    frame: ct.FrameAny,
     name: str,
     /,
-) -> ct.E | ct.SC | None:
+) -> ct.E | ct.SC:
     return self.bind(ctx)(node, frame, name)
 
 
 def _dispatch_debug(
-    self: Dispatcher[Node],
-    node: Node,
-    ctx: ct.DispatchScopeAny[ct.Frame, ct.E, ct.SC],
-    frame: ct.Frame,
+    self: Dispatch[Expr],
+    node: Expr,
+    ctx: ct.Caller[ct.E, ct.SC],
+    frame: ct.FrameAny,
     name: str,
     /,
-) -> ct.E | ct.SC | None:
+) -> ct.E | ct.SC:
     # Provides an opt-in hint for a development-time-only error
+    # The original error *looks* like the problem is related to a single backend:
+    #   `AttributeError: type object 'ArrowExpr' has no attribute 'lit'`
     try:
         method = self.bind(ctx)
     except AttributeError as err:
-        # This error *looks* like the problem is related to a single backend:
-        #   `AttributeError: type object 'ArrowExpr' has no attribute 'lit'`
-        name = self.options.constructor_name or "Expr"
         msg = (
             f"`{self.name}` has not been implemented at the compliant-level.\n"
-            f"Hint: Try adding `Compliant{name}.{self.name}()`"
+            f"Hint: Try adding `{self.name_full}()`"
         )
         raise NotImplementedError(msg) from err
     return method(node, frame, name)
@@ -225,39 +346,9 @@ _DISPATCHER_CALL: Final = (
 )
 
 
-_CALL_NAMESPACE: Final[ct.CallNamespace] = _methodcaller("__narwhals_namespace__")
-_CALL_EXPR_PREPARE: Final[ct.CallExprPrepare] = _methodcaller("__narwhals_expr_prepare__")
-_ATTR_GETTER: Final[Callable[[str], ct.GetMethod]] = _attrgetter
-_CLASS_METHOD_GETTER: Final[Callable[[str], ct.GetClassMethod]] = _attrgetter
-
-
-def _binder(f1: ct.CallExprPrepare, f2: ct.GetMethod, /) -> ct.Binder[Incomplete]:
-    def bind(
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co], /
-    ) -> ct.BoundMethod[Any, ct.Frame, ct.ET_co | ct.ST_co]:
-        return f2(f1(ctx))
-
-    return bind
-
-
-_GET_EXPR: Final[ct.GetExpr] = _attrgetter("_expr")
-_GET_SCALAR: Final[ct.GetScalar] = _attrgetter("_scalar")
-
-
-def _constructor_binder(
-    f1: ct.CallNamespace, f2: ct.GetExpr | ct.GetScalar, f3: ct.GetClassMethod, /
-) -> ct.Binder[Incomplete]:
-    def bind(
-        ctx: ct.DispatchScopeAny[ct.Frame, ct.ET_co, ct.ST_co], /
-    ) -> ct.BoundMethod[Any, ct.Frame, ct.ET_co | ct.ST_co]:
-        return f3(f2(f1(ctx)))
-
-    return bind
-
-
 @final
 class DispatcherOptions:
-    """Class-level configuration for how a `Dispatcher` should be built.
+    """Class-level configuration for how `FunctionDispatch` should be built.
 
     Defined via the (optional) `dispatch` parameter at [subclass-definition time].
 
@@ -269,7 +360,7 @@ class DispatcherOptions:
     >>> class Explode(ir.Function): ...
 
     >>> Explode.__expr_ir_dispatch__
-    Dispatcher<explode>
+    Dispatch<explode>
 
     >>> Explode.__expr_ir_dispatch__.options
     DispatcherOptions(<default>)
@@ -279,7 +370,7 @@ class DispatcherOptions:
     >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
 
     >>> Explode2.__expr_ir_dispatch__
-    Dispatcher<explodier>
+    Dispatch<explodier>
 
     >>> Explode2.__expr_ir_dispatch__.options
     DispatcherOptions(override_name='explodier')
@@ -287,7 +378,7 @@ class DispatcherOptions:
     Keep in mind that `options` are inherited:
     >>> class Explode21(Explode2): ...
     >>> Explode21.__expr_ir_dispatch__
-    Dispatcher<explodier>
+    Dispatch<explodier>
 
     So we'd need another override to get the default back:
     >>> class ExplodeWithOptions(Explode2, dispatch=DispatcherOptions()):
@@ -295,12 +386,12 @@ class DispatcherOptions:
     ...     options: ExplodeOptions
 
     >>> ExplodeWithOptions.__expr_ir_dispatch__
-    Dispatcher<explode_with_options>
+    Dispatch<explode_with_options>
 
     [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
-    __slots__ = ("accessor_name", "allow_dispatch", "constructor_name", "override_name")
+    __slots__ = ("accessor_name", "override_name")
     accessor_name: Accessor | None
     """Name of an (optional) expression namespace accessor.
 
@@ -310,10 +401,6 @@ class DispatcherOptions:
         #           ^^^
     """
 
-    allow_dispatch: bool
-    """Whether the expression is supported at the compliant-level."""
-
-    constructor_name: Constructs | None
     override_name: str
     """Manual override to the auto-generated expression dispatch method name.
 
@@ -341,16 +428,9 @@ class DispatcherOptions:
     """
 
     def __init__(
-        self,
-        *,
-        accessor_name: Accessor | None = None,
-        allow_dispatch: bool = True,
-        constructor_name: Constructs | None = None,
-        override_name: str = "",
+        self, *, accessor_name: Accessor | None = None, override_name: str = ""
     ) -> None:
         self.accessor_name = accessor_name
-        self.allow_dispatch = allow_dispatch
-        self.constructor_name = constructor_name
         self.override_name = override_name
 
     @staticmethod
@@ -369,10 +449,6 @@ class DispatcherOptions:
         parts = []
         if accessor := self.accessor_name:
             parts.append(f"accessor_name={accessor!r}")
-        if not self.allow_dispatch:
-            parts.append(f"allow_dispatch={self.allow_dispatch}")
-        if constructor := self.constructor_name:
-            parts.append(f"constructor_name={constructor!r}")
         if override := self.override_name:
             parts.append(f"override_name={override!r}")
         inner = (", ".join(parts)) if parts else "<default>"
@@ -401,7 +477,7 @@ class DispatcherOptions:
         return options
 
 
-def get_dispatch_name(expr: ExprIR | type[Function], /) -> str:
+def get_dispatch_name(expr: ir.ExprIR | type[ir.Function], /) -> str:
     """Return the synthesized method name for `expr`.
 
     Note:

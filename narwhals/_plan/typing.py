@@ -180,6 +180,10 @@ Seq: TypeAlias = tuple[T, ...]
 Using instead of `Sequence`, as a `list` can be passed there (can't break immutability promise).
 """
 
+Seq1: TypeAlias = tuple[T]
+Seq2: TypeAlias = tuple[T, T]
+Seq3: TypeAlias = tuple[T, T, T]
+
 Udf: TypeAlias = "Callable[[t.Any], t.Any]"
 """Placeholder for `map_batches(function=...)`."""
 

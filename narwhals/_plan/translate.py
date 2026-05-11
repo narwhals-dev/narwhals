@@ -50,9 +50,7 @@ else:  # pragma: no cover
 __all__ = ("from_native_dataframe", "from_native_lazyframe", "from_native_series")
 
 Incomplete: TypeAlias = Any
-R_co = TypeVar(
-    "R_co", bound="ct.DataFrameAny | ct.LazyFrameAny | ct.SeriesAny", covariant=True
-)
+R_co = TypeVar("R_co", bound="ct.FrameAny | ct.SeriesAny", covariant=True)
 TranslateName: TypeAlias = Literal["dataframe", "lazyframe", "series"]
 
 

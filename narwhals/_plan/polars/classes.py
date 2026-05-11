@@ -54,10 +54,6 @@ class PolarsClasses:
 
         return PolarsSeries
 
-    def __narwhals_expr_prepare__(self) -> Expr:
-        tp = self.expr
-        return tp.__new__(tp)
-
     @property
     def v1(self) -> PolarsClassesV1:
         return PolarsClassesV1()
@@ -107,10 +103,6 @@ class PolarsClassesV1:
 
         return Series
 
-    def __narwhals_expr_prepare__(self) -> v1.Expr:
-        tp = self.expr
-        return tp.__new__(tp)
-
 
 class PolarsClassesV2:
     __slots__ = ()
@@ -151,10 +143,6 @@ class PolarsClassesV2:
         from narwhals._plan.polars.v2 import Series
 
         return Series
-
-    def __narwhals_expr_prepare__(self) -> v2.Expr:
-        tp = self.expr
-        return tp.__new__(tp)
 
 
 __narwhals_classes__: Final[PolarsClasses] = PolarsClasses()

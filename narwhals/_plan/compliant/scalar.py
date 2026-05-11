@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._plan.compliant.expr import CompliantColumn, CompliantExpr
 from narwhals._plan.compliant.typing import (
-    EagerDataFrameT_contra as EagerFrame,
-    FrameT_contra as Frame,
+    DeprecatedFrameT_contra as Frame,
     NativeExpr_co,
     NativeScalar_co,
 )
@@ -28,7 +27,7 @@ _F64 = Version.MAIN.dtypes.Float64()
 
 
 class CompliantScalar(
-    CompliantColumn[Frame, NativeScalar_co],
+    CompliantColumn[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co],
     Protocol[Frame, NativeExpr_co, NativeScalar_co],
 ):
     """`[FrameT_contra, NativeExpr_co, NativeScalar_co]`."""
@@ -43,6 +42,10 @@ class CompliantScalar(
     - `PolarsExpr` uses `pl.Expr`
     """
     _name: str
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def _cast_float(self, node: ir.ExprIR, frame: Frame, name: str) -> Self:
         """`polars` interpolates a single scalar as a float."""
@@ -78,10 +81,6 @@ class CompliantScalar(
 
     def _always_one(self, node: ir.ExprIR, frame: Any, name: str, /) -> Self:
         return self.from_python(1, name, dtype=None)
-
-    @property
-    def name(self) -> str:
-        return self._name
 
     @classmethod
     def lit(cls, node: ir.Lit[PythonLiteral], _: Any, name: str, /) -> Self:
@@ -165,10 +164,10 @@ class CompliantScalar(
 
 
 class EagerScalar(
-    CompliantScalar[EagerFrame, NativeExpr_co, NativeScalar_co],
-    Protocol[EagerFrame, NativeExpr_co, NativeScalar_co],
+    CompliantScalar[Frame, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeExpr_co, NativeScalar_co],
 ):
-    """`[EagerDataFrameT_contra, NativeExpr_co, NativeScalar_co]`."""
+    """`[FrameT_contra, NativeExpr_co, NativeScalar_co]`."""
 
     __slots__ = ()
 

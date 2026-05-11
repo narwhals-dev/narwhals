@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, TypeVar
+import sys
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.compliant.broadcast import BroadcastSeries
 from narwhals._plan.compliant.typing import (
-    EagerDataFrameT_contra as EagerFrame,
-    FrameT_contra as Frame,
+    DeprecatedFrameT_contra as Frame,
+    NativeColumn_co,
     NativeExpr_co,
     NativeScalar_co,
     NativeSeriesT,
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant import classes as cc, typing as ct
     from narwhals._plan.compliant.accessors import (
         ExprCatNamespace,
         ExprDateTimeNamespace,
@@ -22,8 +24,7 @@ if TYPE_CHECKING:
         ExprStringNamespace,
         ExprStructNamespace,
     )
-    from narwhals._plan.compliant.namespace import CompliantNamespace, EagerNamespace
-    from narwhals._plan.compliant.scalar import CompliantScalar as Scalar, EagerScalar
+    from narwhals._plan.compliant.scalar import EagerScalar
     from narwhals._plan.expressions import (
         BinaryExpr,
         FunctionExpr as FExpr,
@@ -51,43 +52,57 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 
-IncompleteDispatch: TypeAlias = Incomplete
-"""Placeholder for `DispatchScope`/namespace matching types.
+if TYPE_CHECKING:
+    from typing_extensions import TypeAliasType
 
-*Previously* this was working around a cycle for:
-- `CompliantExpr`
-- `CompliantScalar`
-- `CompliantNamespace`
+    # NOTE: `TypeAliasType` allows specifying the order of `type_params`.
+    # This is useful because it means we can spell the following types:
+    #   `CompliantExpr   = ct.Column[Frame, NativeExpr_co,   NativeExpr_co, NativeScalar_co]`
+    #   `CompliantScalar = ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]`
+    # ... with less dancing around which position each parameters goes into:
+    #   `Scalar[Frame, NativeExpr_co, NativeScalar_co]`
+    Scalar = TypeAliasType(
+        "Scalar",
+        "ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]",
+        type_params=(Frame, NativeExpr_co, NativeScalar_co),
+    )
 
-The next iteration needs to use `__narwhals_classes__` and
-be more careful with where *that* enters the protocols.
+elif sys.version_info >= (3, 12):
+    from typing import TypeAliasType
 
-Note:
-    This ends up being the return type for `FunctionExpr.dispatch_arg(s)`
-"""
+    Scalar = TypeAliasType(
+        "Scalar",
+        "ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]",
+        type_params=(Frame, NativeExpr_co, NativeScalar_co),
+    )
+else:  # pragma: no cover
+    Scalar: TypeAlias = (
+        "ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]"
+    )
 
 
-Native_co = TypeVar("Native_co", covariant=True)
+class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScalar_co]):
+    """Everything common to `Expr` and `Scalar` literal values.
 
+    `[FrameT_contra, NativeColumn_co, NativeExpr_co, NativeScalar_co]`.
+    """
 
-class CompliantColumn(Protocol[Frame, Native_co]):
     __slots__ = ()
     version: ClassVar[Version]
 
     @property
-    def native(self) -> Native_co: ...
+    def native(self) -> NativeColumn_co: ...
 
     # Constructors (Scalar)  # noqa: ERA001
     @classmethod
     def len_star(
         cls, node: ir.Len, frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     @classmethod
     def lit(
         cls, node: ir.Lit[PythonLiteral], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
 
-    # NOTE: May need to change returning `Self` to `CompliantColumn[FrameT]`
     # Expr -> Expr
     # Scalar -> Scalar
     def abs(self, node: FExpr[F.Abs], frame: Frame, name: str, /) -> Self: ...
@@ -132,7 +147,7 @@ class CompliantColumn(Protocol[Frame, Native_co]):
     # `Scalar` has defined-behavior
     def drop_nulls(
         self, node: FExpr[F.DropNulls], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def ewm_mean(self, node: FExpr[F.EwmMean], frame: Frame, name: str, /) -> Self: ...
     def shift(self, node: FExpr[F.Shift], frame: Frame, name: str, /) -> Self: ...
     def is_duplicated(
@@ -158,28 +173,28 @@ class CompliantColumn(Protocol[Frame, Native_co]):
     # (Expr, Expr | Scalar, ...) -> Expr
     def all_horizontal(
         self, node: HExpr[ir.boolean.AllHorizontal], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def any_horizontal(
         self, node: HExpr[ir.boolean.AnyHorizontal], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def coalesce(
         self, node: HExpr[F.Coalesce], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def concat_str(
         self, node: HExpr[strings.ConcatStr], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def max_horizontal(
         self, node: HExpr[F.MaxHorizontal], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def mean_horizontal(
         self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def min_horizontal(
         self, node: HExpr[F.MinHorizontal], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def sum_horizontal(
         self, node: HExpr[F.SumHorizontal], frame: Frame, name: str, /
-    ) -> Self | CompliantColumn[Frame, Incomplete]: ...
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
 
     # Range (technically, only valid to call on `*Scalar` and then produces `*Expr`)
     def int_range(
@@ -192,42 +207,79 @@ class CompliantColumn(Protocol[Frame, Native_co]):
         self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str, /
     ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
 
-    def __narwhals_namespace__(
+    @property
+    def __narwhals_classes__(
         self,
-    ) -> CompliantNamespace[
-        IncompleteVarianceLie, IncompleteDispatch, IncompleteDispatch
-    ]: ...
+    ) -> cc.CompliantClasses[IncompleteCyclic, IncompleteCyclic]: ...
 
-    # TODO @dangotbanned: Review if needed after `CompliantNamespace` is gone
-    def __narwhals_expr_prepare__(self) -> Self:
-        """Return a partially initialized instance of this class.
+    def dispatch(
+        self, node: ir.ExprIR, frame: IncompleteVarianceLie, name: str, /
+    ) -> ct.Column[Any, Any, NativeExpr_co, NativeScalar_co]:
+        """_summary_.
 
-        The only external (narwhals-level) requirement is that we have an instance to call methods on.
+        Arguments:
+            node: The expression to dispatch.
+            frame: A`Compliant*Frame` that shares the same backend as `self`.
+
+                Many methods will not need to use this *directly*, and simply pass the `frame`
+                they *received* down recursively, for those that do need it.
+
+                If a method needs to mutate `frame` (e.g. adding temporary columns), the mutated
+                version **must not** be passed down.
+
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+                When a method handles a unary expression, `name` is just passed down.
+
+                Otherwise, pass it down for the left-most expression and use `""` for all others.
+
+        ## Tip
+        Implementing this is easy, but providing accurate typing *inside* the protocol is not (*cries, recursively*).
+
+        It should look something like this:
+
+            def dispatch(self, node: ExprIR, frame: Frame, name: str, /) -> Expr | Scalar:
+                return node.__expr_ir_dispatch__(node, self, frame, name)
         """
-        tp = type(self)
-        return tp.__new__(tp)
+        ...
 
     @property
-    def cat(self) -> ExprCatNamespace[Frame, CompliantColumn[Frame, Incomplete]]: ...
+    def cat(
+        self,
+    ) -> ExprCatNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def dt(self) -> ExprDateTimeNamespace[Frame, CompliantColumn[Frame, Incomplete]]: ...
+    def dt(
+        self,
+    ) -> ExprDateTimeNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def list(self) -> ExprListNamespace[Frame, CompliantColumn[Frame, Incomplete]]: ...
+    def list(
+        self,
+    ) -> ExprListNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
-    def str(self) -> ExprStringNamespace[Frame, CompliantColumn[Frame, Incomplete]]: ...
+    def str(
+        self,
+    ) -> ExprStringNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
     def struct(
         self,
-    ) -> ExprStructNamespace[Frame, CompliantColumn[Frame, Incomplete]]: ...
+    ) -> ExprStructNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
 
 
 class CompliantExpr(
-    CompliantColumn[Frame, NativeExpr_co], Protocol[Frame, NativeExpr_co, NativeScalar_co]
+    CompliantColumn[Frame, NativeExpr_co, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeExpr_co, NativeScalar_co],
 ):
-    """Everything common to `Expr` and `Scalar` literal values.
-
-    `[FrameT, NativeExpr_co, NativeScalar_co]`.
-    """
+    """`[FrameT_contra, NativeExpr_co, NativeScalar_co]`."""
 
     __slots__ = ()
 
@@ -352,57 +404,40 @@ class CompliantExpr(
 
 class EagerColumn(
     BroadcastSeries[NativeSeriesT],
-    CompliantColumn[EagerFrame, Native_co],
-    Protocol[EagerFrame, Native_co, NativeSeriesT],
+    CompliantColumn[Frame, NativeColumn_co, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
-    """`[EagerDataFrameT_contra, Native_co, NativeSeriesT]`."""
+    """`[FrameT_contra, NativeColumn_co, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
 
     __slots__ = ()
-
-    # TODO @dangotbanned: Weed out the source of
-    #   "Avoids falling back to `__len__` when truth-testing on dispatch"
-    def __bool__(self) -> Literal[True]:
-        return True
 
     def is_in_series(
         self,
         node: FExpr[ir.boolean.IsInSeries[IncompleteCyclic]],
-        frame: EagerFrame,
+        frame: Frame,
         name: str,
         /,
     ) -> Self: ...
-    def __narwhals_namespace__(
-        self,
-    ) -> EagerNamespace[
-        IncompleteVarianceLie,
-        IncompleteVarianceLie,
-        IncompleteDispatch,
-        IncompleteDispatch,
-    ]: ...
 
 
 class EagerExpr(
     BroadcastSeries[NativeSeriesT],
-    CompliantExpr[EagerFrame, NativeExpr_co, NativeScalar_co],
-    Protocol[EagerFrame, NativeExpr_co, NativeScalar_co, NativeSeriesT],
+    CompliantExpr[Frame, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
-    """`[EagerDataFrameT_contra, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
+    """`[FrameT_contra, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
 
     __slots__ = ()
 
     @classmethod
-    def lit_series(
-        cls, node: ir.LitSeries[Any], frame: EagerFrame, name: str, /
-    ) -> Self: ...
+    def lit_series(cls, node: ir.LitSeries[Any], frame: Frame, name: str, /) -> Self: ...
     def gather_every(
-        self, node: FExpr[F.GatherEvery], frame: EagerFrame, name: str, /
+        self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
     ) -> Self: ...
     def map_batches(
-        self, node: ir.AnonymousExpr, frame: EagerFrame, name: str, /
-    ) -> Self | EagerScalar[EagerFrame, NativeExpr_co, NativeScalar_co]: ...
+        self, node: ir.AnonymousExpr, frame: Frame, name: str, /
+    ) -> Self | EagerScalar[Frame, NativeExpr_co, NativeScalar_co]: ...
     def sample_frac(
-        self, node: FExpr[F.SampleFrac], frame: EagerFrame, name: str, /
+        self, node: FExpr[F.SampleFrac], frame: Frame, name: str, /
     ) -> Self: ...
-    def sample_n(
-        self, node: FExpr[F.SampleN], frame: EagerFrame, name: str, /
-    ) -> Self: ...
+    def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str, /) -> Self: ...

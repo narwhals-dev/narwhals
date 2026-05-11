@@ -37,25 +37,18 @@ from typing import (
 
 from narwhals._plan.common import hasattrs_static
 from narwhals._plan.compliant.typing import (
-    # NOTE: The names are simply too long!
+    DF,
+    LF,
+    PE,
+    SC,
     DataFrameAny,
-    DataFrameT_co as DF,
-    EagerDataFrameAny,
-    EagerDataFrameT_co as EagerDF,
-    EagerExprAny,
-    EagerExprT_co as EagerE,
-    EagerScalarAny,
-    EagerScalarT_co as EagerSC,
+    E,
     ExprAny,
-    ExprT_co as E,
     LazyFrameAny,
-    LazyFrameT_co as LF,
     PlanEvaluatorAny,
-    PlanEvaluatorT_co as PE,
+    S,
     ScalarAny,
-    ScalarNoDefaultT_co as SC,
     SeriesAny,
-    SeriesT_co as S,
 )
 
 if TYPE_CHECKING:
@@ -67,8 +60,12 @@ if TYPE_CHECKING:
 
 MYPY: Final = False
 
+PropertyName: TypeAlias = Literal[
+    "dataframe", "evaluator", "expr", "lazyframe", "scalar", "series"
+]
+"""The name of the accessor to a `Compliant*` class."""
+
 # TODO @dangotbanned: Generally improve LSP overhead
-# TODO @dangotbanned: Reduce how many types/protocols are defined
 # TODO @dangotbanned: Use `Any` in positions where the specialization is not solving a problem
 EagerAny: TypeAlias = (
     "EagerClasses[DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
@@ -84,9 +81,13 @@ ClassesAny: TypeAlias = "EagerAny | LazyAny | HybridAny"
 Can provide eager, lazy or a combination of the two.
 """
 
-ClassesImplAny: TypeAlias = "ClassesAny | EagerImplAny"
-"""Keep this separated from `Plugin`."""
+EagerVAllAny: TypeAlias = "EagerClassesVAll[EagerAny, EagerAny, DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
+LazyVAllAny: TypeAlias = "LazyClassesVAll[LazyAny, LazyAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
+HybridVAllAny: TypeAlias = "HybridClassesVAll[HybridAny, HybridAny, DataFrameAny, SeriesAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
 
+# Throw them in a pot and stir
+ClassesVAllAny: TypeAlias = "EagerVAllAny | LazyVAllAny | HybridVAllAny"
+"""The type of `__narwhals_classes__` which defines all versioned properties."""
 
 C = TypeVar("C", bound=ClassesAny, covariant=True)
 """Covariant TypeVar for the `__narwhals_classes__` property."""
@@ -97,8 +98,19 @@ C1 = TypeVar("C1", bound=ClassesAny, covariant=True)
 C2 = TypeVar("C2", bound=ClassesAny, covariant=True)
 """Covariant TypeVar for the `__narwhals_classes__.v2` property."""
 
-EagerImplC1 = TypeVar("EagerImplC1", bound="EagerImplAny", covariant=True)
-EagerImplC2 = TypeVar("EagerImplC2", bound="EagerImplAny", covariant=True)
+CB = TypeVar("CB", bound=ClassesVAllAny, covariant=True)
+"""Covariant TypeVar for the `__narwhals_classes__` property on a `Builtin`.
+
+To ensure we maintain [backwards compatibility], every `Builtin` is **required** to implement
+support for every stable version (in addition to main).
+
+An external `Plugin` *can choose* to support versioning.
+
+[backwards compatibility]: https://narwhals-dev.github.io/narwhals/backcompat/
+"""
+
+CB1 = TypeVar("CB1", bound=ClassesAny, covariant=True)
+CB2 = TypeVar("CB2", bound=ClassesAny, covariant=True)
 
 
 class HasClasses(Protocol[C]):
@@ -140,38 +152,16 @@ class HasVAll(HasV1[C1], HasV2[C2], Protocol[C1, C2]):
     __slots__ = ()
 
 
-EagerVAllAny: TypeAlias = "EagerClassesVAll[EagerAny, EagerAny, DataFrameAny, SeriesAny, ExprAny, ExprAny | ScalarAny]"
-EagerImplAny: TypeAlias = "EagerImplClasses[EagerDataFrameAny, SeriesAny, EagerExprAny, EagerExprAny | EagerScalarAny]"
-EagerImplVAllAny: TypeAlias = "EagerImplClassesVAll[EagerImplAny, EagerImplAny, EagerDataFrameAny, SeriesAny, EagerExprAny, EagerExprAny | EagerScalarAny]"
-LazyVAllAny: TypeAlias = "LazyClassesVAll[LazyAny, LazyAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
-HybridVAllAny: TypeAlias = "HybridClassesVAll[HybridAny, HybridAny, DataFrameAny, SeriesAny, LazyFrameAny, PlanEvaluatorAny, ExprAny, ExprAny | ScalarAny]"
+# TODO @dangotbanned: (low-priority) Integrate with `LazyClasses`
+class HasPlanResolver(Protocol):
+    """Overrides the default `LogicalPlan` -> `ResolvedPlan` translation."""
 
-# Throw them in a pot and stir
-ClassesVAllAny: TypeAlias = (
-    "EagerVAllAny | LazyVAllAny | HybridVAllAny | EagerImplVAllAny"
-)
-"""The type of `__narwhals_classes__` which defines all versioned properties."""
+    __slots__ = ()
 
-
-CB = TypeVar("CB", bound=ClassesVAllAny, covariant=True)
-"""Covariant TypeVar for the `__narwhals_classes__` property on a `Builtin`.
-
-To ensure we maintain [backwards compatibility], every `Builtin` is **required** to implement
-support for every stable version (in addition to main).
-
-An external `Plugin` *can choose* to support versioning.
-
-[backwards compatibility]: https://narwhals-dev.github.io/narwhals/backcompat/
-"""
-
-CB1 = TypeVar("CB1", bound=ClassesImplAny, covariant=True)
-CB2 = TypeVar("CB2", bound=ClassesImplAny, covariant=True)
-
-
-PropertyName: TypeAlias = Literal[
-    "dataframe", "evaluator", "expr", "lazyframe", "scalar", "series"
-]
-"""The name of the accessor to a `Compliant*` class."""
+    @property
+    def resolver(self) -> type[LogicalToResolved] | None:
+        """Optional, can default to `_plan.plans.conversion.Resolver`."""
+        ...
 
 
 class CompliantClasses(Protocol[E, SC]):
@@ -202,11 +192,6 @@ class CompliantClasses(Protocol[E, SC]):
                 return self.expr
         """
         ...
-
-    def __narwhals_expr_prepare__(self) -> E:  # pragma: no cover
-        # NOTE: still needed for disambiguating `Expr`, `Scalar` and `Namespace`
-        tp = self.expr
-        return tp.__new__(tp)
 
 
 class EagerClasses(CompliantClasses[E, SC], Protocol[DF, S, E, SC]):
@@ -241,24 +226,16 @@ class HybridClasses(
     __slots__ = ()
 
 
-class EagerImplClasses(
-    EagerClasses[EagerDF, S, EagerE, EagerSC], Protocol[EagerDF, S, EagerE, EagerSC]
-):
-    """This is what `pyarrow` (and `pandas`) would use, but isn't required (e.g. `polars`)."""
-
+# fmt: off
+class EagerClassesVAll(EagerClasses[DF, S, E, SC], HasVAll[C1, C2], Protocol[C1, C2, DF, S, E, SC]):
     __slots__ = ()
 
-
-# TODO @dangotbanned: (low-priority) Integrate with `LazyClasses`
-class HasPlanResolver(Protocol):
-    """Overrides the default `LogicalPlan` -> `ResolvedPlan` translation."""
-
+class LazyClassesVAll(LazyClasses[LF, PE, E, SC], HasVAll[C1, C2], Protocol[C1, C2, LF, PE, E, SC]):
     __slots__ = ()
 
-    @property
-    def resolver(self) -> type[LogicalToResolved] | None:
-        """Optional, can default to `_plan.plans.conversion.Resolver`."""
-        ...
+class HybridClassesVAll(HybridClasses[DF, S, LF, PE, E, SC], HasVAll[C1, C2], Protocol[C1, C2, DF, S, LF, PE, E, SC]):
+    __slots__ = ()
+# fmt: on
 
 
 # NOTE: Recipe for these is (complicated):
@@ -266,29 +243,24 @@ class HasPlanResolver(Protocol):
 # ...
 # Last overload: Add `Any`, which catches the negative case
 # Implementation: Union everything independently
+# fmt: off
 @overload
-def can_eager(obj: EagerClasses[DF, S, E, SC]) -> TypeIs[EagerClasses[DF, S, E, SC]]: ...
+def can_eager(obj: EagerClassesVAll[C1, C2, DF, S, E, SC]) -> TypeIs[EagerClassesVAll[C1, C2, DF, S, E, SC]]: ...
 @overload
+def can_eager(obj: EagerClasses[DF, S, E, SC] | Any) -> TypeIs[EagerClasses[DF, S, E, SC]]: ...
+# fmt: on
 def can_eager(
-    obj: EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
-) -> TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]: ...
-def can_eager(
-    obj: EagerClasses[DF, S, E, SC] | EagerClasses[EagerDF, S, EagerE, EagerSC] | Any,
-) -> (
-    TypeIs[EagerClasses[DF, S, E, SC]] | TypeIs[EagerClasses[EagerDF, S, EagerE, EagerSC]]
-):
+    obj: EagerClasses[DF, S, E, SC] | EagerClassesVAll[C1, C2, DF, S, E, SC] | Any,
+) -> TypeIs[EagerClasses[DF, S, E, SC]] | TypeIs[EagerClassesVAll[C1, C2, DF, S, E, SC]]:
     return hasattrs_static(obj, "dataframe", "series")
 
 
-# NOTE: Both type checkers need these as they are
+# fmt: off
 @overload
-def can_lazy(
-    obj: LazyClassesVAll[C1, C2, LF, PE, E, SC],
-) -> TypeIs[LazyClassesVAll[C1, C2, LF, PE, E, SC]]: ...
+def can_lazy(obj: LazyClassesVAll[C1, C2, LF, PE, E, SC]) -> TypeIs[LazyClassesVAll[C1, C2, LF, PE, E, SC]]: ...
 @overload
-def can_lazy(
-    obj: LazyClasses[LF, PE, E, SC] | Any,
-) -> TypeIs[LazyClasses[LF, PE, E, SC]]: ...
+def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE, E, SC]]: ...
+# fmt: on
 def can_lazy(
     obj: LazyClasses[LF, PE, E, SC] | LazyClassesVAll[C1, C2, LF, PE, E, SC] | Any,
 ) -> TypeIs[LazyClasses[LF, PE, E, SC]] | TypeIs[LazyClassesVAll[C1, C2, LF, PE, E, SC]]:
@@ -339,7 +311,6 @@ else:
 
     @overload
     def can_v2(obj: HasV2[CB2]) -> TypeIs[HasV2[CB2]]: ...
-
     @overload
     def can_v2(obj: HasV2[C2]) -> TypeIs[HasV2[C2]]: ...
     @overload
@@ -348,18 +319,3 @@ else:
         obj: HasV2[C2] | HasV2[CB2] | Any,
     ) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]] | TypeIs[HasV2[C2 | CB2]]:
         return hasattrs_static(obj, "v2")
-
-
-# fmt: off
-class EagerClassesVAll(EagerClasses[DF, S, E, SC], HasVAll[C1, C2], Protocol[C1, C2, DF, S, E, SC]):
-    __slots__ = ()
-
-class LazyClassesVAll(LazyClasses[LF, PE, E, SC], HasVAll[C1, C2], Protocol[C1, C2, LF, PE, E, SC]):
-    __slots__ = ()
-
-class HybridClassesVAll(HybridClasses[DF, S, LF, PE, E, SC], HasVAll[C1, C2], Protocol[C1, C2, DF, S, LF, PE, E, SC]):
-    __slots__ = ()
-
-class EagerImplClassesVAll(EagerImplClasses[EagerDF, S, EagerE, EagerSC], HasVAll[EagerImplC1, EagerImplC2], Protocol[EagerImplC1, EagerImplC2, EagerDF, S, EagerE, EagerSC]):
-    __slots__ = ()
-# fmt: on

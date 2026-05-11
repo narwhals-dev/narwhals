@@ -39,7 +39,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Literal
 
 from narwhals._plan import _parameters as params
-from narwhals._plan._dispatch import Dispatcher, DispatcherOptions
+from narwhals._plan._dispatch import FunctionDispatch
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._immutable import Immutable
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._plan._dispatch import DispatcherOptions
     from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
 
@@ -93,7 +94,7 @@ class Function(Immutable):
 
     Which `CompliantExpr` method to call?
     >>> F.Shift.__expr_ir_dispatch__
-    Dispatcher<shift>
+    Dispatch<shift>
 
     Does it transform the datatype?
     >>> F.Shift.__expr_ir_dtype__
@@ -132,17 +133,19 @@ class Function(Immutable):
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
 
-    __expr_ir_dispatch__: ClassVar[Dispatcher[FunctionExpr[Self]]] = Dispatcher()
+    __expr_ir_dispatch__: ClassVar[FunctionDispatch[FunctionExpr[Self]]] = (
+        FunctionDispatch.root("Function")
+    )
     """Callable that dispatches to the appropriate compliant-level method.
 
-    See `Dispatcher` and `DispatcherOptions` for examples.
+    See `DispatcherOptions` for examples.
 
     To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
 
         class CategoricalFunction(Function, dispatch=DispatcherOptions(accessor_name="cat")): ...
 
     Notes:
-        Each class has their own `Dispatcher` instance, and inheritance is only on the `options` property.
+        Each class has their own `FunctionDispatch` instance, and inheritance is only on the `options` property.
 
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
@@ -206,7 +209,7 @@ class Function(Immutable):
         All parameters are optional and will be inherited when not provided to `__init_subclass__`.
 
         Arguments:
-            dispatch: Defines how to build a `Dispatcher`.
+            dispatch: Defines how to build a `FunctionDispatch.
                 Stored in `__expr_ir_dispatch__.options`.
 
                 *"skip"* can be used for mixins that add anything unrelated to `dispatch`.
@@ -229,7 +232,7 @@ class Function(Immutable):
         if flags is not None:
             cls.__function_flags__ = flags
         if dispatch != "skip":
-            cls.__expr_ir_dispatch__ = Dispatcher.from_function(cls, dispatch)
+            cls.__expr_ir_dispatch__ = FunctionDispatch.from_type(cls, dispatch)
         if dtype is not None:
             if isinstance(dtype, DType):
                 dtype = ResolveDType.just_dtype(dtype)

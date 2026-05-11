@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import ClassVar, final
+from typing import TYPE_CHECKING, ClassVar, final
 
+from narwhals._plan.arrow import classes
 from narwhals._plan.arrow.dataframe import ArrowDataFrame
 from narwhals._plan.arrow.expr import ArrowExpr, ArrowScalar
 from narwhals._plan.arrow.lazyframe import ArrowLazyFrame
@@ -19,6 +20,13 @@ class ArrowExprV1(ArrowExpr):
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
+    # TODO @dangotbanned: Fix this *properly* (likely by adding a generic base for each to inherit from)
+    if not TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> classes.ArrowClassesV1:
+            return classes.ArrowClassesV1()
+
 
 @final
 class ArrowScalarV1(ArrowScalar):
@@ -27,6 +35,13 @@ class ArrowScalarV1(ArrowScalar):
 
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
+
+    # TODO @dangotbanned: Fix this properly
+    if not TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> classes.ArrowClassesV1:
+            return classes.ArrowClassesV1()
 
 
 @final
@@ -37,6 +52,13 @@ class ArrowSeriesV1(ArrowSeries):
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
+    # TODO @dangotbanned: Fix this properly
+    if not TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> classes.ArrowClassesV1:
+            return classes.ArrowClassesV1()
+
 
 @final
 class ArrowDataFrameV1(ArrowDataFrame):
@@ -46,6 +68,13 @@ class ArrowDataFrameV1(ArrowDataFrame):
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
 
+    # TODO @dangotbanned: Fix this properly
+    if not TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> classes.ArrowClassesV1:
+            return classes.ArrowClassesV1()
+
 
 @final
 class ArrowLazyFrameV1(ArrowLazyFrame):
@@ -54,6 +83,13 @@ class ArrowLazyFrameV1(ArrowLazyFrame):
 
     def __narwhals_namespace__(self) -> ArrowNamespaceV1:
         return ArrowNamespaceV1()
+
+    # TODO @dangotbanned: Fix this properly
+    if not TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> classes.ArrowClassesV1:
+            return classes.ArrowClassesV1()
 
 
 @final

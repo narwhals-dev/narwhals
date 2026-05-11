@@ -68,7 +68,7 @@ def explode_todo(
     return True, True
 
 
-class PolarsNamespace(CompliantNamespace["DataFrame", "Expr", "Expr"]):
+class PolarsNamespace(CompliantNamespace["Expr", "Expr"]):
     __slots__ = ()
     version: ClassVar[Version] = MAIN
     implementation: ClassVar = Implementation.POLARS

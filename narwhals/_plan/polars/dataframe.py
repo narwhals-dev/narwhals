@@ -408,7 +408,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
 
     def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
         expr = self.__narwhals_namespace__()._expr
-        yield from (expr.from_named_ir(e, self) for e in nodes)
+        new = expr.__new__
+        yield from (new(expr).dispatch(e.expr, self, e.name) for e in nodes)
 
     def select(self, irs: Seq[ir.NamedIR]) -> Self:
         return self.from_native(

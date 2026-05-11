@@ -6,12 +6,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan.common import replace, temp
-from narwhals._plan.compliant.typing import (
-    DataFrameT,
-    DataFrameT_co,
-    EagerDataFrameT_co,
-    FrameT_co,
-)
+from narwhals._plan.compliant import typing as ct
 from narwhals._plan.exceptions import group_by_no_keys_error
 
 if TYPE_CHECKING:
@@ -24,17 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import IncompleteVarianceLie, IntoExpr, OneOrIterable, Seq
 
 
-class CompliantGroupBy(Protocol[FrameT_co]):
-    """`[FrameT_co]`."""
-
-    __slots__ = ()
-
-    def agg(self, irs: Seq[NamedIR]) -> FrameT_co: ...
-    @property
-    def compliant(self) -> FrameT_co: ...
-
-
-class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co]):
+class DataFrameGroupBy(Protocol[ct.DF]):
     """`[DataFrameT_co]`."""
 
     __slots__ = ("_key_names", "_keys")
@@ -42,7 +27,10 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co])
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrameT_co]]: ...
+    @property
+    def compliant(self) -> ct.DF: ...
+    def __iter__(self) -> Iterator[tuple[Any, ct.DF]]: ...
+    def agg(self, irs: Seq[NamedIR]) -> ct.DF: ...
     @classmethod
     def by_names(cls, df: IncompleteVarianceLie, names: Seq[str], /) -> Self: ...
     @classmethod
@@ -60,10 +48,8 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT_co], Protocol[DataFrameT_co])
         raise group_by_no_keys_error()
 
 
-class EagerDataFrameGroupBy(
-    DataFrameGroupBy[EagerDataFrameT_co], Protocol[EagerDataFrameT_co]
-):
-    """`[EagerDataFrameT_co]`."""
+class EagerDataFrameGroupBy(DataFrameGroupBy[ct.DF], Protocol[ct.DF]):
+    """`[DataFrameT_co]`."""
 
     __slots__ = ("_column_names_original", "_df", "_key_names", "_key_names_original")
 
@@ -72,12 +58,7 @@ class EagerDataFrameGroupBy(
     _key_names_original: Seq[str]
     _column_names_original: Seq[str]
 
-    @property
-    def compliant(self) -> EagerDataFrameT_co:
-        r: EagerDataFrameT_co = self._df
-        return r
-
-    def agg_over(self, irs: Seq[NamedIR]) -> EagerDataFrameT_co:
+    def agg_over(self, irs: Seq[NamedIR]) -> ct.DF:
         """Perform a windowed aggregation.
 
         Returns the re-joined aggregation results.
@@ -188,7 +169,7 @@ class GroupByResolver:
     def aggs(self) -> Seq[NamedIR]:
         return self._aggs
 
-    def evaluate(self, frame: DataFrameT) -> DataFrameT:
+    def evaluate(self, frame: ct.DataFrameT) -> ct.DataFrameT:
         """Perform the `group_by` on `frame`."""
         return frame.group_by_resolver(self).agg(self.aggs)
 

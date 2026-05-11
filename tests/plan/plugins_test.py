@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import BuiltinAny, IntoPlugin, PluginAny
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
-MYPY: Final = False
 
 SupportedBackend: TypeAlias = Literal[Arrow, Polars]
 BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
@@ -231,6 +230,8 @@ if TYPE_CHECKING:
         # https://github.com/python/mypy/issues/12554
         manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
+        MYPY: Final = False  # noqa: N806
+
         if MYPY:
             ...
         else:
@@ -292,46 +293,38 @@ if TYPE_CHECKING:
         assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
 
     def typing_versioned_classes_lazy(backend: IntoPlugin) -> None:
+        """`mypy` can only handle `assert_type` correctly on this one.
+
+        - It falls over when the first guard narrows to multiple (incompatible) `__narwhals_classes__`.
+        - The initial fix for this improved the situation from `Never` to `<correct-types> | Any` or `<correct-types> | type[Any]`.
+        - Every other test uses an assignability check, because `Any` is gradual.
+        """
         lazy = manager().plugin(backend)
         assert_type(lazy, PluginAny | BuiltinAny)
-
         classes = lazy.__narwhals_classes__
         assert_type(classes, PolarsClasses | ArrowClasses | Any)
         if cc.can_lazy(classes):
             evaluator = classes.evaluator
-
-            if MYPY:
-                assert_type(evaluator, type[Any | pl_main.PlanEvaluator])
-            else:
-                assert_type(evaluator, type[pl_main.PlanEvaluator])
-
-            _v1 = classes.v1  # type: ignore[union-attr]
-
+            _assign_evaluator: type[pl_main.PlanEvaluator] = evaluator
+            if cc.can_v2(classes):
+                assert_type(classes.v2.lazyframe, type[pl_v2.LazyFrame])
             if cc.can_v1(classes):
                 assert_type(classes.v1.lazyframe, type[pl_v1.LazyFrame])
 
     def typing_versioned_classes_eager(backend: IntoPlugin) -> None:
         eager = manager().plugin(backend)
         assert_type(eager, PluginAny | BuiltinAny)
-
         classes = eager.__narwhals_classes__
         assert_type(classes, PolarsClasses | ArrowClasses | Any)
         if cc.can_eager(classes):
             _evaluator = classes.evaluator  # type: ignore[union-attr]
-            dataframe = classes.dataframe
-
-            if MYPY:
-                assert_type(dataframe, type[Any | pl_main.DataFrame | pa_main.DataFrame])
-            else:
-                assert_type(dataframe, type[pl_main.DataFrame | pa_main.DataFrame])
-
-            _v2 = classes.v2  # type: ignore[union-attr]
-
+            _assign_dataframe: type[pl_main.DataFrame | pa_main.DataFrame] = (
+                classes.dataframe
+            )
             if cc.can_v2(classes):
-                assert_type(classes.v2.series, type[pl_v2.Series | pa_v2.Series])
-
+                _assign_series_v2: type[pl_v2.Series | pa_v2.Series] = classes.v2.series
             if cc.can_v1(classes):
-                assert_type(classes.v1.series, type[pl_v1.Series | pa_v1.Series])
+                _assign_series_v1: type[pl_v1.Series | pa_v1.Series] = classes.v1.series
 
     def typing_concrete_assignable_to_generic() -> None:
         """A little inference workout to check the types from one api play nicely with the other."""

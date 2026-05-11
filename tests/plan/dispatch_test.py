@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import pytest
 
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
     DispatchRaises: TypeAlias = pytest.RaisesExc[NotImplementedError | AttributeError]
+
+DISPATCH_MODULE: Final = _dispatch
 
 
 @pytest.fixture
@@ -105,7 +107,6 @@ def test_missing_compliant_method(
     assert_dispatch_raises(df, expr, truthy, falsy, enable_hints=enable_hints)
 
 
-# TODO @dangotbanned: Maybe fix using `DispatcherOptions.constructor`?
 @pytest.mark.parametrize("name", ["Expr", "Scalar"])
 @pytest.mark.parametrize("enable_hints", [True, False])
 def test_missing_compliant_constructor(
@@ -142,7 +143,7 @@ def assert_dispatch_raises(
             mp.delenv(common.NW_DEV_ENV_NAME, raising=False)
         # NOTE: The implementation works like a compile-time flag, allowing the feature to be zero-cost.
         # Updating the env var doesn't change the function, only a reload will.
-        importlib.reload(_dispatch)
+        importlib.reload(DISPATCH_MODULE)
         with raises:
             df.select(nw_expr)
 
@@ -190,17 +191,6 @@ def test_dispatch_name(expr: nwp.Expr, expected: str) -> None:
     assert get_dispatch_name(expr._ir) == expected
 
 
-# TODO @dangotbanned: Remove since `ExprIR` won't have `DispatchOptions`, and `Function` always dispatches
-def test_dispatcher__set_name__() -> None:
-    # Did the special base class magic work?
-    expr_ir = ir.ExprIR.__expr_ir_dispatch__
-    function = ir.Function.__expr_ir_dispatch__
-    assert expr_ir.name == "ExprIR"
-    assert function.name == "Function"
-    assert expr_ir.options.allow_dispatch is True
-    assert function.options.allow_dispatch is True
-
-
 def test_sharing_expr_ir() -> None:
     expr_ir = ir.ExprIR.__expr_ir_dispatch__
     selector_ir = ir.SelectorIR.__expr_ir_dispatch__
@@ -211,7 +201,7 @@ def test_sharing_expr_ir() -> None:
     assert issubclass(ir.SelectorIR, _expr_ir.NoDispatch)
     assert not issubclass(ir.AggExpr, _expr_ir.NoDispatch)
 
-    # A `Dispatcher` is unique to each class
+    # Each class has a unique instance
     assert expr_ir is not selector_ir
     assert agg_expr is not expr_ir
     assert agg_expr is not first

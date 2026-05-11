@@ -295,6 +295,10 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
     _key_names: Seq[str]
     _key_names_original: Seq[str]
 
+    @property
+    def compliant(self) -> Frame:
+        return self._df
+
     def __iter__(self) -> Iterator[tuple[Any, Frame]]:
         by = self.key_names
         from_native = self.compliant._with_native
