@@ -1,4 +1,9 @@
-"""Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
+# TODO @dangotbanned: (medium-priority) Module doc is a bit dated
+# - Does this still reflect current narwhals?
+# - Is this content useful to see here?
+"""Expanding expressions/selectors.
+
+Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
 
 ## Notes
 - Goal is to expand every selection into a named column.
@@ -38,13 +43,16 @@ Their dependencies are **quite** complex, with the main ones being:
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, Any, Union
+from collections.abc import Iterator
+from itertools import chain
+from typing import TYPE_CHECKING
 
-from narwhals._plan import common, expressions as ir, meta
+from narwhals._plan import expressions as ir, meta
+from narwhals._plan._parse import into_iter_selector_ir
 from narwhals._plan.exceptions import (
-    binary_expr_multi_output_error,
     column_not_found_error,
     duplicate_error,
+    duplicate_names_error,
     expand_multi_output_error,
     selectors_not_found_error,
 )
@@ -56,301 +64,205 @@ from narwhals._plan.expressions import (
     RenameAlias,
     SelectorIR,
 )
-from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema, freeze_schema
-from narwhals._typing_compat import assert_never
-from narwhals._utils import check_column_names_are_unique, zip_strict
+from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Iterator, Sequence
+    from collections.abc import Collection, Iterable
 
-    from typing_extensions import TypeAlias
+    from narwhals._plan.selectors import Selector
+    from narwhals._plan.typing import Ignored, OneOrIterable, OutputNames, Seq
 
-    from narwhals._plan.typing import Ignored, Seq
-
-
-OutputNames: TypeAlias = "Seq[str]"
-"""Fully expanded, validated output column names, for `NamedIR`s."""
-
-
-Combination: TypeAlias = Union[
-    ir.SortBy, ir.BinaryExpr, ir.TernaryExpr, ir.Filter, ir.OverOrdered, ir.Over
-]
+__all__ = ("Expander", "expand_selectors", "parse_expand_selectors", "prepare_projection")
 
 
 def prepare_projection(
-    exprs: Sequence[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
+    exprs: Collection[ExprIR], /, ignored: Ignored = (), *, schema: IntoFrozenSchema
 ) -> tuple[Seq[NamedIR], FrozenSchema]:
-    """Expand IRs into named column projections.
+    """Expand expressions into named column projections.
 
-    **Primary entry-point**, for `select`, `with_columns`,
-    and any other context that requires resolving expression names.
+    Entry-point for a [projection context], which will execute the resolved expressions.
 
     Arguments:
-        exprs: IRs that *may* contain arbitrarily nested expressions.
-        ignored: Names of `group_by` columns.
-        schema: Scope to expand selectors in.
+        exprs: Expressions to project.
+        ignored: Names of `group_by` key columns.
+            Required for projecting aggregations in `group_by`.
+        schema: Scope to expand selectors, validate selections and resolve renaming operations.
+
+    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
     """
     expander = Expander(schema, ignored)
-    return expander.prepare_projection(exprs), expander.schema
+    projected, _ = expander.prepare_projection(exprs)
+    return projected, expander.schema
 
 
-def expand_selector_irs_names(
-    selectors: Sequence[SelectorIR],
+def expand_selectors(
+    selectors: Iterable[SelectorIR],
     /,
-    ignored: Ignored = (),
     *,
     schema: IntoFrozenSchema,
-    require_any: bool = False,
+    require_any: bool = True,
 ) -> OutputNames:
-    """Expand selector-only input into the column names that match.
+    """Expand selectors into the column names that match.
 
-    Similar to `prepare_projection`, but intended for allowing a subset of `Expr` and all `Selector`s
-    to be used in more places like `DataFrame.{drop,sort,partition_by}`.
+    Provides selector-support (widely) across frame-level APIs, where the full scope of
+    `prepare_projection` is not required.
 
     Arguments:
-        selectors: IRs that **only** contain subclasses of `SelectorIR`.
-        ignored: Names of `group_by` columns.
+        selectors: Exclusively selector-only input.
         schema: Scope to expand selectors in.
-        require_any: Raise if the entire expansion selected zero columns.
+        require_any: If True (default) raise if the entire expansion selected zero columns.
+            If False, we can always defer iterator collection until finishing expansion.
     """
-    expander = Expander(schema, ignored)
-    if names := tuple(expander.iter_expand_selector_names(selectors)):
-        if len(names) != len(set(names)):
-            # NOTE: Can't easily reuse `duplicate_error`, falling back to main for now
-            check_column_names_are_unique(names)
-    elif require_any:
-        raise selectors_not_found_error(selectors, expander.schema)
-    return names
+    return Expander(schema).expand_selectors(selectors, require_any=require_any)
 
 
-def remove_alias(origin: ExprIR, /) -> ExprIR:
+def parse_expand_selectors(
+    first_input: OneOrIterable[str | Selector],
+    more_inputs: tuple[str | Selector, ...] = (),
+    /,
+    *,
+    schema: IntoFrozenSchema,
+    require_any: bool = True,
+) -> OutputNames:
+    """Convert input(s) into selector(s), expanding them into the column names that match.
+
+    Equivalent to these independent steps, ensuring things stay lazy as long as possible:
+
+        irs: Iterator[SelectorIR] = _parse.into_iter_selector_ir(first_input, more_inputs)
+        output_names: tuple[str, ...] = expand_selectors(irs, schema=..., require_any=...)
+
+    Arguments:
+        first_input: One or more column names or selectors.
+        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+        schema: Scope to expand selectors in.
+        require_any: If True (default) raise if the entire expansion selected zero columns.
+            If False, we can always defer iterator collection until finishing expansion.
+    """
+    parsed = into_iter_selector_ir(first_input, more_inputs)
+    return expand_selectors(parsed, schema=schema, require_any=require_any)
+
+
+def _is_duplicated(names: Collection[str]) -> bool:
+    return len(names) != len(set(names))
+
+
+def _remove_alias(origin: ExprIR, /) -> ExprIR:
     def fn(child: ExprIR, /) -> ExprIR:
         return child.expr if isinstance(child, (Alias, RenameAlias)) else child
 
     return origin.map_ir(fn)
 
 
-def replace_keep_name(origin: ExprIR, /) -> ExprIR:
-    root_name = meta.root_name_first(origin)
+def _replace_keep_name(origin: ExprIR, /) -> ExprIR:
+    if (name := next(meta.iter_root_names(origin), None)) is None:
+        msg = f"`name.keep` expected at least one column name, got `{origin!r}`"
+        raise InvalidOperationError(msg)
 
     def fn(child: ExprIR, /) -> ExprIR:
-        return child.expr.alias(root_name) if isinstance(child, KeepName) else child
+        return child.expr.alias(name) if isinstance(child, KeepName) else child
 
     return origin.map_ir(fn)
 
 
 class Expander:
+    """Expand multiple expressions against a target schema.
+
+    Provides a context for resolving and validating these transformations:
+
+        Iterable[SelectorIR] -> tuple[str, ...]
+        Collection[ExprIR]   -> tuple[NamedIR[ExprIR], ...]
+
+    Arguments:
+        schema: Target scope for expansion/validation.
+        ignored: Names of `group_by` key columns.
+
+    Important:
+        Adapted from [upstream].
+
+    [upstream]: https://github.com/pola-rs/polars/blob/3291151b5a0e6fa82658cbad5f9b9c6aec3905a6/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs
+    """
+
     __slots__ = ("ignored", "schema")
     schema: FrozenSchema
     ignored: Ignored
 
-    def __init__(self, scope: IntoFrozenSchema, ignored: Ignored = ()) -> None:
-        self.schema = freeze_schema(scope)
+    def __init__(self, schema: IntoFrozenSchema, ignored: Ignored = ()) -> None:
+        self.schema = FrozenSchema(schema)
         self.ignored = ignored
 
-    def iter_expand_exprs(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
-        # Iteratively expand all of exprs
+    def _iter_expand_expressions(self, exprs: Iterable[ExprIR], /) -> Iterator[ExprIR]:
         for expr in exprs:
-            yield from self._expand(expr)
+            if any(e.needs_expansion() for e in expr.iter_left()):
+                yield from expr.iter_expand(self)
+            else:
+                yield expr
 
-    def iter_expand_selector_names(
-        self, selectors: Iterable[SelectorIR], /
-    ) -> Iterator[str]:
+    def _iter_expand_selectors(self, selectors: Iterable[SelectorIR], /) -> Iterator[str]:
         for s in selectors:
-            yield from s.iter_expand_names(self.schema, self.ignored)
+            yield from s.iter_expand_selector(self.schema)
 
-    def prepare_projection(self, exprs: Collection[ExprIR], /) -> Seq[NamedIR]:
+    def expand_selectors(
+        self,
+        selectors: Iterable[SelectorIR],
+        /,
+        *,
+        check_unique: bool = True,
+        require_any: bool = True,
+    ) -> OutputNames:
+        """Expand selectors into the column names that match."""
+        if require_any and isinstance(selectors, Iterator):
+            # Ensure we can show the original selectors in `ColumnNotFoundError`
+            selectors = tuple(selectors)
+        names = tuple(self._iter_expand_selectors(selectors))
+        if require_any and not names:
+            raise selectors_not_found_error(selectors, self.schema)
+        if check_unique and _is_duplicated(names):
+            raise duplicate_names_error(names)
+        return names
+
+    def prepare_projection(
+        self, exprs: Collection[ExprIR], /
+    ) -> tuple[Seq[NamedIR], deque[str]]:
+        """Expand expressions into named column projections.
+
+        Provides full validation (duplicates, missing columns) and resolving renaming operations.
+        """
+        # NOTE: Returning a deque was a hack to expose `output_names`,
+        # without changing the signature of `_expansion.prepare_projection`
+        # https://github.com/narwhals-dev/narwhals/commit/cef6c4673b2955d311ee5ecc091777b84ba9b73e
         output_names = deque[str]()
         named_irs = deque[NamedIR]()
-        root_names = set[str]()
-
-        # NOTE: Collecting here isn't ideal (perf-wise), but the expanded `ExprIR`s
-        # have more useful information to add in an error message
-        # Another option could be keeping things lazy, but repeating the work for the error case?
-        # that way, there isn't a cost paid on the happy path - and it doesn't matter when we're raising
-        # if we take our time displaying the message
-        expanded = tuple(self.iter_expand_exprs(exprs))
-        for e in expanded:
-            # NOTE: Empty string is allowed as a name, but is falsy
+        root_names = deque[Iterator[str]]()
+        expand = self._iter_expand_expressions
+        for e in expand(exprs):
+            # NOTE: "" is allowed as a name, but falsy
             if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:
-                target = e
-            elif meta.has_expr_ir(e, KeepName):
-                replaced = replace_keep_name(e)
-                name = replaced.meta.output_name()
-                target = replaced
+                target = _remove_alias(e)
             else:
-                msg = f"Unable to determine output name for expression, got: `{e!r}`"
-                raise NotImplementedError(msg)
+                replaced = _replace_keep_name(e)
+                name = replaced.meta.output_name()
+                target = _remove_alias(replaced)
             output_names.append(name)
-            named_irs.append(ir.named_ir(name, remove_alias(target)))
-            root_names.update(meta.iter_root_names(e))
-        if len(output_names) != len(set(output_names)):
-            raise duplicate_error(expanded)
-        if not (set(self.schema).issuperset(root_names)):
-            raise column_not_found_error(root_names, self.schema)
-        return tuple(named_irs)
+            named_irs.append(ir.NamedIR(name, target))
+            root_names.append(meta.iter_root_names(e))
 
-    def _expand(self, expr: ExprIR, /) -> Iterator[ExprIR]:
-        # For a single expr, fully expand all parts of it
-        if all(not e.needs_expansion() for e in expr.iter_left()):
-            yield expr
-        else:
-            yield from self._expand_recursive(expr)
+        # NOTE: On failure, we repeat the expansion so the happy path doesn't need to collect as much
+        if _is_duplicated(output_names):
+            raise duplicate_error(tuple(expand(exprs)))
+        if not self.schema.contains_all(root_names):
+            roots = chain.from_iterable(meta.iter_root_names(e) for e in expand(exprs))
+            raise column_not_found_error(roots, self.schema)
+        return tuple(named_irs), output_names
 
-    def _expand_recursive(self, origin: ExprIR, /) -> Iterator[ExprIR]:
-        # Dispatch the kind of expansion, based on the type of expr
-        # Every other method will call back here
-        # Based on https://github.com/pola-rs/polars/blob/5b90db75911c70010d0c0a6941046e6144af88d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L253-L850
-        if isinstance(origin, _EXPAND_NONE):
-            yield origin
-        elif isinstance(origin, ir.SelectorIR):
-            names = origin.iter_expand_names(self.schema, self.ignored)
-            yield from (ir.Column(name=name) for name in names)
-        elif isinstance(origin, _EXPAND_SINGLE):
-            for expr in self._expand_recursive(origin.expr):
-                yield origin.__replace__(expr=expr)
-        elif isinstance(origin, _EXPAND_COMBINATION):
-            yield from self._expand_combination(origin)
-        elif isinstance(origin, ir.FunctionExpr):
-            yield from self._expand_function_expr(origin)
-        else:
-            msg = f"Didn't expect to see {type(origin).__name__}"
-            raise NotImplementedError(msg)
+    # TODO @dangotbanned: Does it still make sense for this to live here?
+    def only(self, origin: ExprIR, child: ExprIR, /) -> ExprIR:
+        """Expand a node, ensuring it produces a single output.
 
-    def _expand_inner(self, children: Seq[ExprIR], /) -> Iterator[ExprIR]:
-        """Use when we want to expand non-root nodes, *without* duplicating the root.
-
-        If we wrote:
-
-            col("a").over(col("c", "d", "e"))
-
-        Then the expanded version should be:
-
-            col("a").over(col("c"), col("d"), col("e"))
-
-        An **incorrect** output would cause an error without aliasing:
-
-            col("a").over(col("c"))
-            col("a").over(col("d"))
-            col("a").over(col("e"))
-
-        And cause an error if we needed to expand both sides:
-
-            col("a", "b").over(col("c", "d", "e"))
-
-        Since that would become:
-
-            col("a").over(col("c"))
-            col("b").over(col("d"))
-            col(<MISSING>).over(col("e"))  # InvalidOperationError: cannot combine selectors that produce a different number of columns (3 != 2)
+        Allows us to support any selector in more places, with the restriction being schema-dependent.
         """
-        # used by
-        # - `_expand_combination` (tuple fields)
-        # - `_expand_function_expr` (horizontal)
-        for child in children:
-            yield from self._expand_recursive(child)
-
-    def _expand_only(self, origin: ExprIR, child: ExprIR, /) -> ExprIR:
-        # used by
-        # - `_expand_combination` (ExprIR fields)
-        # - `_expand_function_expr` (all others that have len(inputs)>=2, call on non-root)
-        iterable = self._expand_recursive(child)
+        iterable = child.iter_expand(self)
         first = next(iterable)
         if second := next(iterable, None):
             raise expand_multi_output_error(origin, child, first, second, *iterable)
         return first
-
-    # TODO @dangotbanned: It works, but all this class-specific branching belongs in the classes themselves
-    def _expand_combination(self, origin: Combination, /) -> Iterator[Combination]:
-        changes: dict[str, Any] = {}
-        if isinstance(origin, (ir.Over, ir.Filter, ir.SortBy)):
-            if isinstance(origin, ir.Over):
-                if partition_by := origin.partition_by:
-                    changes["partition_by"] = tuple(self._expand_inner(partition_by))
-                if isinstance(origin, ir.OverOrdered):
-                    changes["order_by"] = tuple(self._expand_inner(origin.order_by))
-            elif isinstance(origin, ir.SortBy):
-                changes["by"] = tuple(self._expand_inner(origin.by))
-            else:
-                changes["by"] = self._expand_only(origin, origin.by)
-            replaced = common.replace(origin, **changes)
-            for root in self._expand_recursive(replaced.expr):
-                yield common.replace(replaced, expr=root)
-        elif isinstance(origin, ir.BinaryExpr):
-            yield from self._expand_binary_expr(origin)
-        elif isinstance(origin, ir.TernaryExpr):
-            changes["truthy"] = self._expand_only(origin, origin.truthy)
-            changes["predicate"] = self._expand_only(origin, origin.predicate)
-            changes["falsy"] = self._expand_only(origin, origin.falsy)
-            yield origin.__replace__(**changes)
-        else:
-            assert_never(origin)
-
-    def _expand_binary_expr(self, origin: ir.BinaryExpr, /) -> Iterator[ir.BinaryExpr]:
-        it_lefts = self._expand_recursive(origin.left)
-        it_rights = self._expand_recursive(origin.right)
-        # NOTE: Fast-path that doesn't require collection
-        # - Will miss selectors that expand to 1 column
-        if not origin.meta.has_multiple_outputs():
-            for left, right in zip_strict(it_lefts, it_rights):
-                yield origin.__replace__(left=left, right=right)
-            return
-        # NOTE: Covers 1:1 (where either is a selector), N:N
-        lefts, rights = tuple(it_lefts), tuple(it_rights)
-        len_left, len_right = len(lefts), len(rights)
-        if len_left == len_right:
-            for left, right in zip_strict(lefts, rights):
-                yield origin.__replace__(left=left, right=right)
-        # NOTE: 1:M
-        elif len_left == 1:
-            binary = origin.__replace__(left=lefts[0])
-            yield from (binary.__replace__(right=right) for right in rights)
-        # NOTE: M:1
-        elif len_right == 1:
-            binary = origin.__replace__(right=rights[0])
-            yield from (binary.__replace__(left=left) for left in lefts)
-        else:
-            raise binary_expr_multi_output_error(origin, lefts, rights)
-
-    def _expand_function_expr(
-        self, origin: ir.FunctionExpr, /
-    ) -> Iterator[ir.FunctionExpr]:
-        if origin.options.is_input_wildcard_expansion():
-            reduced = tuple(self._expand_inner(origin.input))
-            yield origin.__replace__(input=reduced)
-        else:
-            if non_root := origin.input[1:]:
-                children = tuple(self._expand_only(origin, child) for child in non_root)
-            else:
-                children = ()
-            for root in self._expand_recursive(origin.input[0]):
-                yield origin.__replace__(input=(root, *children))
-
-
-_EXPAND_NONE = (ir.Column, ir.Literal, ir.Len)
-"""we're at the root, nothing left to expand."""
-_EXPAND_SINGLE = (ir.Alias, ir.Cast, ir.AggExpr, ir.Sort, ir.KeepName, ir.RenameAlias)
-"""one (direct) child, always stored in `self.expr`.
-
-An expansion will always just be cloning *everything but* `self.expr`,
-we only need to be concerned with a **single** attribute.
-
-Say we had:
-
-    origin = Cast(expr=ByName(names=("one", "two"), require_all=True), dtype=String)
-
-This would expand to:
-
-    cast_one = Cast(expr=Column(name="one"), dtype=String)
-    cast_two = Cast(expr=Column(name="two"), dtype=String)
-
-"""
-_EXPAND_COMBINATION = (
-    ir.SortBy,
-    ir.BinaryExpr,
-    ir.TernaryExpr,
-    ir.Filter,
-    ir.OverOrdered,
-    ir.Over,
-)
-"""more than one (direct) child and those can be nested."""

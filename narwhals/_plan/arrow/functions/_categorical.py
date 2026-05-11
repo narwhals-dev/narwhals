@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal, overload
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 
 from narwhals._plan.arrow.functions._construction import array
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     Incomplete: TypeAlias = Any
 
 
-__all__ = ["encode", "get_categories"]
+__all__ = ("encode", "get_categories")
 
 
 def get_categories(native: ArrowAny, /) -> ChunkedArrayAny:

@@ -4,7 +4,6 @@ from narwhals._plan._expr_ir import (  # prob should move into package?
     ExprIR,
     NamedIR,
     SelectorIR,
-    named_ir,
 )
 from narwhals._plan._function import Function
 from narwhals._plan.expressions import (
@@ -14,40 +13,46 @@ from narwhals._plan.expressions import (
     functions,
     lists,
     operators,
+    ranges,
     selectors,
     strings,
     struct,
     temporal,
 )
-from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr, max, min
+from narwhals._plan.expressions.aggregation import AggExpr, OrderableAggExpr
+from narwhals._plan.expressions.boolean import all_horizontal
 from narwhals._plan.expressions.expr import (
     Alias,
-    AnonymousExpr,
     BinaryExpr,
-    BinarySelector,
     Cast,
     Column,
     Filter,
-    FunctionExpr,
-    InvertSelector,
     Len,
-    Literal,
     Over,
     OverOrdered,
-    RangeExpr,
-    RollingExpr,
-    RootSelector,
     Sort,
     SortBy,
-    StructExpr,
     TernaryExpr,
     col,
     ternary_expr,
 )
+from narwhals._plan.expressions.function_expr import (
+    AnonymousExpr,
+    FunctionExpr,
+    HorizontalExpr,
+    RangeExpr,
+    StructExpr,
+)
+from narwhals._plan.expressions.literal import Lit, LitSeries, lit, lit_series
 from narwhals._plan.expressions.name import KeepName, RenameAlias
+from narwhals._plan.expressions.selectors import (
+    BinarySelector,
+    InvertSelector,
+    RootSelector,
+)
 from narwhals._plan.expressions.window import over, over_ordered
 
-__all__ = [
+__all__ = (
     "AggExpr",
     "Alias",
     "AnonymousExpr",
@@ -59,17 +64,18 @@ __all__ = [
     "Filter",
     "Function",
     "FunctionExpr",
+    "HorizontalExpr",
     "InvertSelector",
     "KeepName",
     "Len",
-    "Literal",
+    "Lit",
+    "LitSeries",
     "NamedIR",
     "OrderableAggExpr",
     "Over",
     "OverOrdered",
     "RangeExpr",
     "RenameAlias",
-    "RollingExpr",
     "RootSelector",
     "SelectorIR",
     "Sort",
@@ -77,20 +83,21 @@ __all__ = [
     "StructExpr",
     "TernaryExpr",
     "aggregation",
+    "all_horizontal",
     "boolean",
     "categorical",
     "col",
     "functions",
     "lists",
-    "max",
-    "min",
-    "named_ir",
+    "lit",
+    "lit_series",
     "operators",
     "over",
     "over_ordered",
+    "ranges",
     "selectors",
     "strings",
     "struct",
     "temporal",
     "ternary_expr",
-]
+)

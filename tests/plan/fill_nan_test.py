@@ -25,7 +25,7 @@ def data() -> Data:
     ("exprs", "expected"),
     [
         (
-            [nwp.col("no_nan").fill_nan(None), nwp.col("float_nan").fill_nan(None)],
+            [nwp.col("no_nan").fill_nan(None), ncs.last().fill_nan(None)],
             [None, 1.0, None],
         ),
         (
@@ -33,11 +33,8 @@ def data() -> Data:
             [3.0, 1.0, None],
         ),
         (nwp.all().fill_nan(None), [None, 1.0, None]),
-        (nwp.all().fill_nan(3.0), [3.0, 1.0, None]),
-        (
-            ncs.numeric().as_expr().fill_nan(nwp.lit(series([55.5, -100, -200]))),
-            [55.5, 1.0, None],
-        ),
+        (ncs.all().fill_nan(3.0), [3.0, 1.0, None]),
+        (ncs.numeric().fill_nan(nwp.lit(series([55.5, -100, -200]))), [55.5, 1.0, None]),
         (
             [
                 nwp.col("no_nan"),

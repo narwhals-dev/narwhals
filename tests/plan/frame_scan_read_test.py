@@ -4,21 +4,23 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
+import narwhals as nw
 import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data
 from tests.utils import PANDAS_VERSION
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
+from pathlib import Path
+
 import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-    from pathlib import Path
 
     from typing_extensions import TypeAlias
 
-    from narwhals._typing import EagerAllowed, _LazyOnly
+    from narwhals._typing import BackendName, EagerAllowed, _LazyOnly
     from narwhals.typing import FileSource
     from tests.conftest import Data
 
@@ -32,7 +34,20 @@ def data() -> Data:
     return {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
-lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
+XFAIL_NOT_IMPL = pytest.mark.xfail(
+    reason="Not implemented yet", raises=NotImplementedError
+)
+
+lazy_core_backend = pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param("duckdb", marks=XFAIL_NOT_IMPL),
+        pytest.param("ibis", marks=XFAIL_NOT_IMPL),
+        pytest.param("sqlframe", marks=XFAIL_NOT_IMPL),
+    ],
+)
+
+
 param_pandas_import = pytest.param(
     "pandas",
     {"engine": "pyarrow"},
@@ -41,6 +56,7 @@ param_pandas_import = pytest.param(
         pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow"),
     ],
 )
+scan_backend = pytest.mark.parametrize("backend", ["pyarrow", "polars"])
 
 
 def pyarrow_read_csv_kwds() -> dict[str, Any]:
@@ -141,3 +157,59 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
         nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[call-overload]
+
+
+# TODO @dangotbanned: Transform steps, change the schema
+# TODO @dangotbanned: Collect
+@scan_backend
+def test_scan_parquet(parquet_path: FileSource, backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    lf = nwp.scan_parquet(parquet_path, backend=backend)
+    schema = lf.collect_schema()
+    expected = nw.Schema({"a": nw.Int64(), "b": nw.Float64(), "z": nw.String()})
+    assert len(schema) == 3
+    assert schema == expected
+    assert expected == nwp.read_parquet_schema(parquet_path, backend=backend)
+
+
+@scan_backend
+def test_scan_csv(csv_path: FileSource, backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    lf = nwp.scan_csv(csv_path, backend=backend)
+    schema = lf.collect_schema()
+    expected = nw.Schema({"a": nw.Int64(), "b": nw.Float64(), "z": nw.String()})
+    assert len(schema) == 3
+    assert schema == expected
+    assert expected == nwp.read_csv_schema(csv_path, backend=backend)
+
+
+@scan_backend
+def test_read_parquet_schema(parquet_path: FileSource, backend: BackendName) -> None:
+    schema = nwp.read_parquet_schema(parquet_path, backend=backend)
+    expected = pl.scan_parquet(Path(parquet_path)).collect_schema()
+    result = schema.to_polars()
+    assert result == expected
+
+
+@scan_backend
+def test_read_csv_schema(csv_path: FileSource, backend: BackendName) -> None:
+    schema = nwp.read_csv_schema(csv_path, backend=backend)
+    expected = pl.scan_csv(Path(csv_path)).collect_schema()
+    result = schema.to_polars()
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "include_columns", [["b", "z"], ["a", "b"], ["z", "a"], ["z"]], ids=str
+)
+@pytest.mark.parametrize("csv_path", ["str"], indirect=True)
+def test_read_csv_schema_kwargs_pyarrow(
+    csv_path: str, include_columns: list[str]
+) -> None:
+    from pyarrow import csv
+
+    convert = csv.ConvertOptions(include_columns=include_columns)
+    schema = nwp.read_csv_schema(csv_path, backend="pyarrow", convert_options=convert)
+    expected = pl.scan_csv(csv_path).select(include_columns).collect_schema()
+    result = schema.to_polars()
+    assert result == expected

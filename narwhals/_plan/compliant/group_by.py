@@ -1,17 +1,12 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
+from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import replace, temp
-from narwhals._plan.compliant.typing import (
-    DataFrameT,
-    EagerDataFrameT,
-    FrameT_co,
-    ResolverT_co,
-)
+from narwhals._plan.compliant import typing as ct
 from narwhals._plan.exceptions import group_by_no_keys_error
 
 if TYPE_CHECKING:
@@ -21,28 +16,27 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
-    from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
+    from narwhals._plan.typing import IncompleteVarianceLie, IntoExpr, OneOrIterable, Seq
 
 
-class CompliantGroupBy(Protocol[FrameT_co]):
-    def agg(self, irs: Seq[NamedIR[Any]]) -> FrameT_co: ...
-    @property
-    def compliant(self) -> FrameT_co: ...
+class DataFrameGroupBy(Protocol[ct.DF]):
+    """`[DataFrameT_co]`."""
 
+    __slots__ = ("_key_names", "_keys")
 
-class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
     _keys: Seq[NamedIR]
     _key_names: Seq[str]
 
-    def __iter__(self) -> Iterator[tuple[Any, DataFrameT]]: ...
+    @property
+    def compliant(self) -> ct.DF: ...
+    def __iter__(self) -> Iterator[tuple[Any, ct.DF]]: ...
+    def agg(self, irs: Seq[NamedIR]) -> ct.DF: ...
     @classmethod
-    def by_names(
-        cls, df: DataFrameT, names: Seq[str], /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
+    def by_names(cls, df: IncompleteVarianceLie, names: Seq[str], /) -> Self: ...
     @classmethod
     def from_resolver(
-        cls, df: DataFrameT, resolver: GroupByResolver, /
-    ) -> DataFrameGroupBy[DataFrameT]: ...
+        cls, df: IncompleteVarianceLie, resolver: GroupByResolver, /
+    ) -> Self: ...
     @property
     def keys(self) -> Seq[NamedIR]:
         return self._keys
@@ -54,17 +48,17 @@ class DataFrameGroupBy(CompliantGroupBy[DataFrameT], Protocol[DataFrameT]):
         raise group_by_no_keys_error()
 
 
-class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDataFrameT]):
-    _df: EagerDataFrameT
+class EagerDataFrameGroupBy(DataFrameGroupBy[ct.DF], Protocol[ct.DF]):
+    """`[DataFrameT_co]`."""
+
+    __slots__ = ("_column_names_original", "_df", "_key_names", "_key_names_original")
+
+    _df: IncompleteVarianceLie
     _key_names: Seq[str]
     _key_names_original: Seq[str]
     _column_names_original: Seq[str]
 
-    @property
-    def compliant(self) -> EagerDataFrameT:
-        return self._df
-
-    def agg_over(self, irs: Seq[NamedIR[Any]]) -> EagerDataFrameT:
+    def agg_over(self, irs: Seq[NamedIR]) -> ct.DF:
         """Perform a windowed aggregation.
 
         Returns the re-joined aggregation results.
@@ -72,7 +66,7 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         ...
 
     @classmethod
-    def by_names(cls, df: EagerDataFrameT, names: Seq[str], /) -> Self:
+    def by_names(cls, df: IncompleteVarianceLie, names: Seq[str], /) -> Self:
         obj = cls.__new__(cls)
         obj._df = df
         obj._keys = ()
@@ -82,7 +76,9 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         return obj
 
     @classmethod
-    def from_resolver(cls, df: EagerDataFrameT, resolver: GroupByResolver, /) -> Self:
+    def from_resolver(
+        cls, df: IncompleteVarianceLie, resolver: GroupByResolver, /
+    ) -> Self:
         key_names = resolver.key_names
         if not resolver.requires_projection():
             df = df.drop_nulls(key_names) if resolver._drop_null_keys else df
@@ -100,12 +96,19 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[EagerDataFrameT], Protocol[EagerDat
         return obj
 
 
+ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
+
+
 class Grouper(Protocol[ResolverT_co]):
     """`GroupBy` helper for collecting and forwarding `Expr`s for projection.
+
+    `[ResolverT_co]`.
 
     - Uses `Expr` everywhere (no need to duplicate layers)
     - Resolver only needs schema (neither needs a frame, but can use one to get `schema`)
     """
+
+    __slots__ = ("_aggs", "_drop_null_keys", "_keys")
 
     _keys: Seq[ExprIR]
     _aggs: Seq[ExprIR]
@@ -114,13 +117,13 @@ class Grouper(Protocol[ResolverT_co]):
     @property
     def _resolver(self) -> type[ResolverT_co]: ...
     def agg(self, *aggs: OneOrIterable[IntoExpr]) -> Self:
-        self._aggs = parse_into_seq_of_expr_ir(*aggs)
+        self._aggs = tuple(_parse.into_iter_expr_ir(*aggs))
         return self
 
     @classmethod
     def by(cls, *by: OneOrIterable[IntoExpr]) -> Self:
         obj = cls.__new__(cls)
-        obj._keys = parse_into_seq_of_expr_ir(*by)
+        obj._keys = tuple(_parse.into_iter_expr_ir(*by))
         return obj
 
     def resolve(self, context: IntoFrozenSchema, /) -> ResolverT_co:
@@ -130,6 +133,15 @@ class Grouper(Protocol[ResolverT_co]):
 
 class GroupByResolver:
     """Narwhals-level `GroupBy` resolver."""
+
+    __slots__ = (
+        "_aggs",
+        "_drop_null_keys",
+        "_key_names",
+        "_keys",
+        "_schema",
+        "_schema_in",
+    )
 
     _schema_in: FrozenSchema
     _keys: Seq[NamedIR]
@@ -157,7 +169,7 @@ class GroupByResolver:
     def aggs(self) -> Seq[NamedIR]:
         return self._aggs
 
-    def evaluate(self, frame: DataFrameT) -> DataFrameT:
+    def evaluate(self, frame: ct.DataFrameT) -> ct.DataFrameT:
         """Perform the `group_by` on `frame`."""
         return frame.group_by_resolver(self).agg(self.aggs)
 
@@ -169,9 +181,9 @@ class GroupByResolver:
     def key_names(self) -> Seq[str]:
         if names := self._key_names:
             return names
-        if keys := self.keys:
+        if keys := self.keys:  # pragma: no cover
             return tuple(e.name for e in keys)
-        raise group_by_no_keys_error()
+        raise group_by_no_keys_error()  # pragma: no cover
 
     def requires_projection(self, *, allow_aliasing: bool = False) -> bool:
         """Return True is group keys contain anything that is not a column selection.
@@ -190,16 +202,18 @@ class GroupByResolver:
         return False
 
     @property
-    def schema(self) -> FrozenSchema:
+    def schema(self) -> FrozenSchema:  # pragma: no cover
         return self._schema
 
 
+# TODO @dangotbanned: Fix `_drop_null_keys = False` preventing `__slots__`
 class Resolved(GroupByResolver):
     """Compliant-level `GroupBy` resolver."""
 
     _drop_null_keys: bool = False
 
 
+# TODO @dangotbanned: Fix `_drop_null_keys = False` preventing `__slots__`
 class Grouped(Grouper[Resolved]):
     """Compliant-level `GroupBy` helper."""
 

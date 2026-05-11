@@ -3,8 +3,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, Literal
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _categorical as cat
@@ -27,11 +27,11 @@ if TYPE_CHECKING:
         ScalarAny,
     )
 
-__all__ = [
+__all__ = (
     "count",
     "first",
     "implode",
-    "kurtosis_skew",
+    "kurtosis",
     "last",
     "max",
     "mean",
@@ -42,15 +42,16 @@ __all__ = [
     "n_unique",
     "null_count",
     "quantile",
+    "skew",
     "std",
     "sum",
     "var",
-]
+)
 
 
-min = pc.min
+min = t.cast("Callable[[ChunkedOrArray[ScalarAny]], ScalarAny]", pc.min)
 """Get the minimal value in this array."""
-max = pc.max
+max = t.cast("Callable[[ChunkedOrArray[ScalarAny]], ScalarAny]", pc.max)
 """Get the maximum value in this array."""
 mean = t.cast("Callable[[ChunkedOrArray[pc.NumericScalar]], pa.DoubleScalar]", pc.mean)
 """Reduce this array to the mean value."""
@@ -95,10 +96,19 @@ def implode(native: Arrow[Scalar[DataTypeT]]) -> pa.ListScalar[DataTypeT]:
     return pa.ListArray.from_arrays([0, len(arr)], arr)[0]
 
 
-def kurtosis_skew(
+def kurtosis(native: ChunkedArray[pc.NumericScalar], /) -> ScalarAny:
+    """Compute the kurtosis of this array."""
+    return _kurtosis_skew(native, "kurtosis")
+
+
+def skew(native: ChunkedArray[pc.NumericScalar], /) -> ScalarAny:
+    """Compute the sample skewness of this array."""
+    return _kurtosis_skew(native, "skew")
+
+
+def _kurtosis_skew(
     native: ChunkedArray[pc.NumericScalar], function: Literal["kurtosis", "skew"], /
 ) -> ScalarAny:
-    """Compute the kurtosis or sample skewness of this array."""
     result: ScalarAny
     if compat.HAS_KURTOSIS_SKEW:
         if pa.types.is_null(native.type):

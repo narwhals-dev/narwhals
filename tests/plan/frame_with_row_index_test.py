@@ -7,13 +7,13 @@ import pytest
 
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError
-from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
 
 
-def test_with_row_index_eager() -> None:
+def test_with_row_index_eager(dataframe: DataFrame) -> None:
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
     result = dataframe(data).with_row_index()
     expected = {"index": [0, 1], **data}
@@ -38,7 +38,9 @@ def test_with_row_index_eager() -> None:
     ],
 )
 def test_with_row_index_by(
-    order_by: OneOrIterable[ColumnNameOrSelector], expected_index: list[int]
+    dataframe: DataFrame,
+    order_by: OneOrIterable[ColumnNameOrSelector],
+    expected_index: list[int],
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3289
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
@@ -47,7 +49,7 @@ def test_with_row_index_by(
     assert_equal_data(result, expected)
 
 
-def test_with_row_index_by_invalid() -> None:
+def test_with_row_index_by_invalid(dataframe: DataFrame) -> None:
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
     df = dataframe(data)
 
@@ -61,7 +63,7 @@ def test_with_row_index_by_invalid() -> None:
         df.with_row_index(order_by=ncs.by_index(5))
 
 
-def test_with_row_index_by_empty_selection() -> None:
+def test_with_row_index_by_empty_selection(dataframe: DataFrame) -> None:
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
     df = dataframe(data)
     with pytest.raises(ColumnNotFoundError, match=re.escape("ncs.datetime(")):

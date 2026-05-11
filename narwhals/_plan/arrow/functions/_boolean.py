@@ -3,8 +3,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._bin_op import and_, gt, gt_eq, lt, lt_eq
 from narwhals._plan.arrow.functions._construction import array, lit
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         ChunkedOrArrayAny,
         ChunkedOrScalar,
         ChunkedOrScalarAny,
+        ChunkedOrScalarT,
         ScalarAny,
         ScalarT,
         UnaryFunction,
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval, NonNestedLiteral, NumericLiteral
 
 
-__all__ = [
+__all__ = (
     "all",
     "any",
     "eq_missing",
@@ -47,7 +48,7 @@ __all__ = [
     "is_null",
     "is_only_nulls",
     "not_",
-]
+)
 
 
 def any(native: Arrow[BooleanScalar], *, ignore_nulls: bool = True) -> pa.BooleanScalar:
@@ -148,9 +149,9 @@ def is_in(
     values: ChunkedArrayAny, /, other: ChunkedOrArrayAny
 ) -> ChunkedArray[pa.BooleanScalar]: ...
 @overload
-def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
+def is_in(values: ChunkedOrScalarT, /, other: ChunkedOrArrayAny) -> ChunkedOrScalarT: ...
 @overload
-def is_in(values: ScalarAny, /, other: ChunkedOrArrayAny) -> pa.BooleanScalar: ...
+def is_in(values: ArrayAny, /, other: ChunkedOrArrayAny) -> Array[pa.BooleanScalar]: ...
 @overload
 def is_in(
     values: ChunkedOrScalarAny, /, other: ChunkedOrArrayAny

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
 
+from narwhals._plan import plugins, translate
 from narwhals._plan._guards import is_series
 from narwhals._plan.typing import (
     IncompleteCyclic,
@@ -15,14 +16,13 @@ from narwhals._utils import (
     Implementation,
     Version,
     generate_repr,
-    is_eager_allowed,
     qualified_type_name,
     unstable,
 )
-from narwhals.dependencies import is_pyarrow_chunked_array
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
+    import decimal
     from collections.abc import Iterator
 
     import polars as pl
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._typing import EagerAllowed, IntoBackend, _EagerAllowedImpl
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -48,7 +48,7 @@ class Series(Generic[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.MAIN
 
     @property
-    def version(self) -> Version:
+    def version(self) -> Version:  # pragma: no cover
         return self._version
 
     @property
@@ -60,7 +60,7 @@ class Series(Generic[NativeSeriesT_co]):
         return self._compliant.name
 
     @property
-    def implementation(self) -> _EagerAllowedImpl:
+    def implementation(self) -> Implementation:
         return self._compliant.implementation
 
     @property
@@ -82,31 +82,17 @@ class Series(Generic[NativeSeriesT_co]):
         dtype: IntoDType | None = None,
         backend: IntoBackend[EagerAllowed],
     ) -> Series[Any]:
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            if implementation is Implementation.PYARROW:
-                from narwhals._plan import arrow as _arrow
-
-                return cls(
-                    _arrow.Series.from_iterable(
-                        values, name=name, version=cls._version, dtype=dtype
-                    )
-                )
-            raise NotImplementedError(implementation)
-        else:  # pragma: no cover  # noqa: RET506
-            msg = f"{implementation} support in Narwhals is lazy-only"
-            raise ValueError(msg)
+        return cls(
+            plugins.manager()
+            .series(backend, cls._version)
+            .from_iterable(values, name=name, dtype=dtype)
+        )
 
     @classmethod
     def from_native(
-        cls: type[Series[Any]], native: NativeSeriesT, name: str = "", /
+        cls: type[Series[Any]], native: NativeSeriesT, /, *, name: str = ""
     ) -> Series[NativeSeriesT]:
-        if is_pyarrow_chunked_array(native):
-            from narwhals._plan import arrow as _arrow
-
-            return cls(_arrow.Series.from_native(native, name, version=cls._version))
-
-        raise NotImplementedError(type(native))
+        return cls(translate.from_native_series(native, name, version=cls._version))
 
     def to_frame(self) -> DataFrame[IncompleteCyclic, NativeSeriesT_co]:
         import narwhals._plan.dataframe as _df
@@ -173,7 +159,7 @@ class Series(Generic[NativeSeriesT_co]):
     ) -> CompliantSeries[NativeSeriesT_co]:
         if is_series(other):
             return self._unwrap_compliant(other)
-        return self._compliant.from_iterable(other, version=self.version)
+        return self._compliant.from_iterable(other)
 
     def scatter(
         self,
@@ -262,7 +248,7 @@ class Series(Generic[NativeSeriesT_co]):
     def any(self) -> bool:
         return self._compliant.any()
 
-    def sum(self) -> float:
+    def sum(self) -> float | decimal.Decimal:
         return self._compliant.sum()
 
     def count(self) -> int:
@@ -332,3 +318,7 @@ class SeriesStructNamespace(Generic[SeriesT]):
 
 class SeriesV1(Series[NativeSeriesT_co]):
     _version: ClassVar[Version] = Version.V1
+
+
+class SeriesV2(Series[NativeSeriesT_co]):
+    _version: ClassVar[Version] = Version.V2

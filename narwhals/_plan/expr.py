@@ -4,19 +4,20 @@ import math
 from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
-from narwhals._plan import common, expressions as ir
-from narwhals._plan._guards import is_expr, is_series
-from narwhals._plan._parse import (
-    parse_into_expr_ir,
-    parse_into_seq_of_expr_ir,
-    parse_predicates_constraints_into_expr_ir,
-    parse_sort_by_into_seq_of_expr_ir,
-)
+from narwhals._plan import _parse, common, expressions as ir
+from narwhals._plan._guards import is_series
 from narwhals._plan.expressions import (
     aggregation as agg,
     functions as F,
     operators as ops,
 )
+from narwhals._plan.functions.categorical import ExprCatNamespace
+from narwhals._plan.functions.lists import ExprListNamespace
+from narwhals._plan.functions.name import ExprNameNamespace
+from narwhals._plan.functions.strings import ExprStringNamespace
+from narwhals._plan.functions.struct import ExprStructNamespace
+from narwhals._plan.functions.temporal import ExprDateTimeNamespace
+from narwhals._plan.meta import MetaNamespace
 from narwhals._plan.options import (
     EWMOptions,
     RankOptions,
@@ -32,16 +33,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import TypeVar
 
-    from typing_extensions import Concatenate, ParamSpec, Self
+    from typing_extensions import Concatenate, LiteralString, ParamSpec, Self
 
-    from narwhals._plan._function import Function
-    from narwhals._plan.expressions.categorical import ExprCatNamespace
-    from narwhals._plan.expressions.lists import ExprListNamespace
-    from narwhals._plan.expressions.name import ExprNameNamespace
-    from narwhals._plan.expressions.strings import ExprStringNamespace
-    from narwhals._plan.expressions.struct import ExprStructNamespace
-    from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
-    from narwhals._plan.meta import MetaNamespace
+    from narwhals._plan._function import UnaryFunction
+    from narwhals._plan.selectors import Selector
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
     from narwhals._typing import NoDefault
     from narwhals.typing import (
@@ -59,25 +54,60 @@ if TYPE_CHECKING:
     R = TypeVar("R")
 
 
+# TODO @dangotbanned: (low-prio) Make the repr header opt-in
+# Using `Expr._ir` a lot in doctests to work around the fact I don't like it
 class Expr:
     _ir: ir.ExprIR
     _version: ClassVar[Version] = Version.MAIN
 
     def __repr__(self) -> str:
-        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!r}"
+        return self._repr_temporary(fmt=repr)
 
     def __str__(self) -> str:
         """Use `print(self)` for formatting."""
-        return f"nw._plan.Expr({self.version.name.lower()}):\n{self._ir!s}"
+        return self._repr_temporary(fmt=str)
 
     def _repr_html_(self) -> str:
         return self._ir._repr_html_()
+
+    def _repr_temporary(
+        self,
+        *,
+        package: LiteralString = "nw._plan",
+        tp_name: LiteralString = "Expr",
+        fmt: Callable[[Any], str] = repr,
+        include_header: bool = True,
+    ) -> str:
+        """Needs replacing with registering to a repr/format module's dispatch table.
+
+        Want to make the header:
+        - available by configuration
+        - off by default
+        - usable by any class, instead of just `Expr`
+
+        https://github.com/narwhals-dev/narwhals/pull/3213#discussion_r2437352419
+        """
+        formatted = fmt(self._ir)
+        if not include_header:  # pragma: no cover
+            return formatted
+        v = self.version
+        return f"{package}.{tp_name}{'' if v is Version.MAIN else f'[{v.name.lower()}]'}:\n{formatted}"
 
     @classmethod
     def _from_ir(cls, expr_ir: ir.ExprIR, /) -> Self:
         obj = cls.__new__(cls)
         obj._ir = expr_ir
         return obj
+
+    def _as_expr(self) -> Expr:
+        # NOTE: (slight) hack for a cheap [`pl.Expr.meta.as_expression`]
+        # 1. Here, `MetaNamespace` wraps `ExprIR`
+        # 2. Don't want to expose `Version` on public API
+        # 3. Can avoid unwrapping `Expr` in the first place - when it already is one
+        # 4. `Selector.as_expr` is part of polars, `Expr.as_expr` is not
+        #    (next best is this boi)
+        # [`pl.Expr.meta.as_expression`]: https://github.com/pola-rs/polars/blob/py-1.39.3/py-polars/src/polars/expr/meta.py#L284-L286
+        return self
 
     @property
     def version(self) -> Version:
@@ -153,13 +183,12 @@ class Expr:
         if not (partition_by) and order_by is None:
             msg = "At least one of `partition_by` or `order_by` must be specified."
             raise TypeError(msg)
-        parse = parse_into_seq_of_expr_ir
         fn = self._ir
-        group = parse(*partition_by) if partition_by else ()
+        group = tuple(_parse.into_iter_expr_ir(*partition_by)) if partition_by else ()
         if order_by is None:
             return self._from_ir(ir.over(fn, group))
         over = ir.over_ordered
-        order = parse(order_by)
+        order = tuple(_parse.into_iter_expr_ir(order_by))
         desc, nulls = descending, nulls_last
         return self._from_ir(over(fn, group, order, descending=desc, nulls_last=nulls))
 
@@ -169,22 +198,22 @@ class Expr:
 
     def sort_by(
         self,
-        by: OneOrIterable[IntoExprColumn],
-        *more_by: IntoExprColumn,
+        by: OneOrIterable[Expr | Selector | str],
+        *more_by: Expr | Selector | str,
         descending: OneOrIterable[bool] = False,
         nulls_last: OneOrIterable[bool] = False,
     ) -> Self:
-        keys = parse_sort_by_into_seq_of_expr_ir(by, *more_by)
+        keys = _parse.sort_by_into_iter_expr_ir(by, more_by)
         opts = SortMultipleOptions.parse(descending=descending, nulls_last=nulls_last)
-        return self._from_ir(ir.SortBy(expr=self._ir, by=keys, options=opts))
+        return self._from_ir(ir.SortBy(expr=self._ir, by=tuple(keys), options=opts))
 
     def filter(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> Self:
-        by = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        by = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return self._from_ir(ir.Filter(expr=self._ir, by=by))
 
-    def _with_unary(self, function: Function, /) -> Self:
+    def _with_unary(self, function: UnaryFunction, /) -> Self:
         return self._from_ir(function.to_function_expr(self._ir))
 
     def abs(self) -> Self:
@@ -228,14 +257,12 @@ class Expr:
     def null_count(self) -> Self:
         return self._with_unary(F.NullCount())
 
-    def fill_nan(self, value: float | Self | None) -> Self:
-        fill_value = parse_into_expr_ir(value, str_as_lit=True)
-        root = self._ir
-        if any(e.meta.has_multiple_outputs() for e in (root, fill_value)):
-            return self._from_ir(F.FillNan().to_function_expr(root, fill_value))
+    def fill_nan(self, value: float | Expr | None) -> Expr:
         # https://github.com/pola-rs/polars/blob/e1d6f294218a36497255e2d872c223e19a47e2ec/crates/polars-plan/src/dsl/mod.rs#L894-L902
-        predicate = self.is_not_nan() | self.is_null()
-        return self._from_ir(ir.ternary_expr(predicate._ir, root, fill_value))
+        fill_value = _parse.into_expr_ir(value, str_as_lit=True)
+        expr = self._as_expr()
+        predicate = expr.is_not_nan() | expr.is_null()
+        return expr._from_ir(ir.ternary_expr(predicate._ir, self._ir, fill_value))
 
     def fill_null(
         self,
@@ -244,7 +271,7 @@ class Expr:
         limit: int | None = None,
     ) -> Self:
         if strategy is None:
-            e = parse_into_expr_ir(value, str_as_lit=True)
+            e = _parse.into_expr_ir(value, str_as_lit=True)
             return self._from_ir(F.FillNull().to_function_expr(self._ir, e))
         return self._with_unary(F.FillNullWithStrategy(strategy=strategy, limit=limit))
 
@@ -274,24 +301,24 @@ class Expr:
     ) -> Self:
         f: ir.FunctionExpr
         if upper_bound is None:
-            f = F.ClipLower().to_function_expr(self._ir, parse_into_expr_ir(lower_bound))
+            f = F.ClipLower().to_function_expr(self._ir, _parse.into_expr_ir(lower_bound))
         elif lower_bound is None:
-            f = F.ClipUpper().to_function_expr(self._ir, parse_into_expr_ir(upper_bound))
+            f = F.ClipUpper().to_function_expr(self._ir, _parse.into_expr_ir(upper_bound))
         else:
-            it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+            it = _parse.into_iter_expr_ir(lower_bound, upper_bound)
             f = F.Clip().to_function_expr(self._ir, *it)
         return self._from_ir(f)
 
-    def cum_count(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_count(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumCount(reverse=reverse))
 
-    def cum_min(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_min(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumMin(reverse=reverse))
 
-    def cum_max(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_max(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumMax(reverse=reverse))
 
-    def cum_prod(self, *, reverse: bool = False) -> Self:  # pragma: no cover
+    def cum_prod(self, *, reverse: bool = False) -> Self:
         return self._with_unary(F.CumProd(reverse=reverse))
 
     def cum_sum(self, *, reverse: bool = False) -> Self:
@@ -399,7 +426,7 @@ class Expr:
         function = F.ReplaceStrictDefault(
             old=before, new=after, return_dtype=return_dtype
         )
-        default_ir = parse_into_expr_ir(default, str_as_lit=True)
+        default_ir = _parse.into_expr_ir(default, str_as_lit=True)
         return self._from_ir(function.to_function_expr(self._ir, default_ir))
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -416,9 +443,9 @@ class Expr:
         if return_dtype is not None:
             return_dtype = common.into_dtype(return_dtype)
         return self._with_unary(
-            F.MapBatches(
-                function=function,
-                return_dtype=return_dtype,
+            F.MapBatches.from_udf(
+                function,
+                return_dtype,
                 is_elementwise=is_elementwise,
                 returns_scalar=returns_scalar,
             )
@@ -476,7 +503,7 @@ class Expr:
         upper_bound: IntoExpr,
         closed: ClosedInterval = "both",
     ) -> Self:
-        it = parse_into_seq_of_expr_ir(lower_bound, upper_bound)
+        it = _parse.into_iter_expr_ir(lower_bound, upper_bound)
         return self._from_ir(
             ir.boolean.IsBetween(closed=closed).to_function_expr(self._ir, *it)
         )
@@ -486,7 +513,7 @@ class Expr:
             return self._with_unary(ir.boolean.IsInSeries.from_series(other))
         if isinstance(other, Iterable):
             return self._with_unary(ir.boolean.IsInSeq.from_iterable(other))
-        if is_expr(other):
+        if isinstance(other, Expr):
             return self._from_ir(
                 ir.boolean.IsInExpr().to_function_expr(self._ir, other._ir)
             )
@@ -506,7 +533,7 @@ class Expr:
         str_as_lit: bool = False,
         reflect: bool = False,
     ) -> Self:
-        other_ir = parse_into_expr_ir(other, str_as_lit=str_as_lit)
+        other_ir = _parse.into_expr_ir(other, str_as_lit=str_as_lit)
         args = (self._ir, other_ir) if not reflect else (other_ir, self._ir)
         return self._from_ir(op().to_binary_expr(*args))
 
@@ -583,64 +610,50 @@ class Expr:
         return self._with_binary(ops.ExclusiveOr, other, reflect=True)
 
     def __pow__(self, exponent: IntoExprColumn | float) -> Self:
-        exp = parse_into_expr_ir(exponent)
+        exp = _parse.into_expr_ir(exponent)
         return self._from_ir(F.Pow().to_function_expr(self._ir, exp))
 
     def __rpow__(self, base: IntoExprColumn | float) -> Self:
-        return self._from_ir(F.Pow().to_function_expr(parse_into_expr_ir(base), self._ir))
+        return self._from_ir(
+            F.Pow().to_function_expr(_parse.into_expr_ir(base), self._ir)
+        )
 
     def __invert__(self) -> Self:
         return self._with_unary(ir.boolean.Not())
 
     @property
     def meta(self) -> MetaNamespace:
-        from narwhals._plan.meta import MetaNamespace
-
+        """Methods to traverse and introspect existing expressions."""
         return MetaNamespace.from_expr(self)
 
     @property
     def name(self) -> ExprNameNamespace:
         """Specialized expressions for modifying the name of existing expressions.
 
-        Examples:
-            >>> from narwhals import _plan as nw
-            >>>
-            >>> renamed = nw.col("a", "b").name.suffix("_changed")
-            >>> str(renamed._ir)
-            "RenameAlias(expr=RootSelector(selector=ByName(names=['a', 'b'], require_all=True)), function=Suffix(suffix='_changed'))"
+        >>> import narwhals._plan as nw
+        >>> nw.col("a", "b").name.suffix("_changed")._ir
+        ncs.by_name('a', 'b').name.suffix('_changed')
         """
-        from narwhals._plan.expressions.name import ExprNameNamespace
-
         return ExprNameNamespace(_expr=self)
 
     @property
     def cat(self) -> ExprCatNamespace:
-        from narwhals._plan.expressions.categorical import ExprCatNamespace
-
         return ExprCatNamespace(_expr=self)
 
     @property
     def struct(self) -> ExprStructNamespace:
-        from narwhals._plan.expressions.struct import ExprStructNamespace
-
         return ExprStructNamespace(_expr=self)
 
     @property
     def dt(self) -> ExprDateTimeNamespace:
-        from narwhals._plan.expressions.temporal import ExprDateTimeNamespace
-
         return ExprDateTimeNamespace(_expr=self)
 
     @property
     def list(self) -> ExprListNamespace:
-        from narwhals._plan.expressions.lists import ExprListNamespace
-
         return ExprListNamespace(_expr=self)
 
     @property
     def str(self) -> ExprStringNamespace:
-        from narwhals._plan.expressions.strings import ExprStringNamespace
-
         return ExprStringNamespace(_expr=self)
 
     is_close = not_implemented()

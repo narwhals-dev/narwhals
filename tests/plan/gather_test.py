@@ -8,9 +8,11 @@ import pytest
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ShapeError
-from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe, series
+from tests.plan.utils import DataFrame, Series, assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from tests.conftest import Data
 
 
@@ -25,7 +27,9 @@ def data() -> Data:
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])
 @pytest.mark.parametrize("column", ["idx", "name"])
-def test_gather_every_series(data: Data, n: int, offset: int, column: str) -> None:
+def test_gather_every_series(
+    data: Data, n: int, offset: int, column: str, series: Series
+) -> None:
     ser = series(data[column]).alias(column)
     result = ser.gather_every(n, offset)
     expected = data[column][offset::n]
@@ -39,28 +43,34 @@ def test_gather_every_series(data: Data, n: int, offset: int, column: str) -> No
         ("name", [], []),
         ("idx", [0, 4, 2], [0, 4, 2]),
         ("name", [1, 5, 5], ["b", "f", "f"]),
-        pytest.param(
-            "idx",
-            [-1],
-            [9],
-            marks=pytest.mark.xfail(
-                reason="TODO: Handle negative indices", raises=IndexError
-            ),
-        ),
+        ("idx", [-1], [9]),
         ("name", range(5, 7), ["f", "g"]),
     ],
 )
 def test_gather_series(
-    data: Data, column: str, indices: Any, expected: list[Any]
+    data: Data,
+    column: str,
+    indices: Sequence[int],
+    expected: list[Any],
+    series: Series,
+    request: pytest.FixtureRequest,
 ) -> None:
-    ser = series(data[column]).alias(column)
-    result = ser.gather(indices)
+    request.applymarker(
+        pytest.mark.xfail(
+            series.is_pyarrow() and any(idx < 0 for idx in indices),
+            reason="TODO @dangotbanned: Handle negative indices for `ArrowSeries.gather`",
+            raises=IndexError,
+        )
+    )
+    result = series(data[column]).alias(column).gather(indices)
     assert_equal_series(result, expected, column)
 
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])
-def test_gather_every_dataframe(data: Data, n: int, offset: int) -> None:
+def test_gather_every_dataframe(
+    data: Data, n: int, offset: int, dataframe: DataFrame
+) -> None:
     result = dataframe(data).gather_every(n, offset)
     indices = slice(offset, None, n)
     expected = {"idx": data["idx"][indices], "name": data["name"][indices]}
@@ -69,7 +79,10 @@ def test_gather_every_dataframe(data: Data, n: int, offset: int) -> None:
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])
-def test_gather_every_expr(data: Data, n: int, offset: int) -> None:
+def test_gather_every_expr(
+    data: Data, n: int, offset: int, dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
+    dataframe.xfail_polars_select(request, raises=(NotImplementedError, AttributeError))
     df = dataframe(data)
     indices = slice(offset, None, n)
     v_idx, v_name = data["idx"][indices], data["name"][indices]

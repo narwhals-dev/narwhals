@@ -7,7 +7,8 @@ import pytest
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import assert_equal_data, dataframe
+from narwhals.exceptions import ColumnNotFoundError
+from tests.plan.utils import DataFrame, LazyFrame, assert_equal_data
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -59,6 +60,7 @@ def test_unpivot(
     on: OneOrIterable[ColumnNameOrSelector] | None,
     index: OneOrIterable[ColumnNameOrSelector] | None,
     expected: Data,
+    dataframe: DataFrame,
 ) -> None:
     sort_columns = [VAR] if index is None else [VAR, "a"]
     result = dataframe(data).unpivot(on, index=index).sort(sort_columns)
@@ -73,20 +75,39 @@ def test_unpivot(
         ("custom_variable_name", "custom_value_name"),
     ],
 )
-def test_unpivot_var_value_names(data: Data, variable_name: str, value_name: str) -> None:
+def test_unpivot_var_value_names(
+    data: Data, variable_name: str, value_name: str, dataframe: DataFrame
+) -> None:
     result = dataframe(data).unpivot(
         ~ncs.first(), index=["a"], variable_name=variable_name, value_name=value_name
     )
     assert result.collect_schema().names()[-2:] == [variable_name, value_name]
 
 
-def test_unpivot_default_var_value_names(data: Data) -> None:
+def test_unpivot_default_var_value_names(data: Data, dataframe: DataFrame) -> None:
     result = dataframe(data).unpivot(nwp.nth(1, 2).meta.as_selector(), index=ncs.first())
     assert result.collect_schema().names()[-2:] == [VAR, VALUE]
 
 
-@pytest.mark.xfail(PYARROW_VERSION < (14, 0, 0), reason="pyarrow<14")
-def test_unpivot_mixed_types() -> None:
-    df = dataframe({"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]})
-    result = df.unpivot(["a", "b"], index="idx")
+def test_unpivot_mixed_types(
+    dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            dataframe.is_pyarrow() and PYARROW_VERSION < (14, 0, 0),
+            reason="`unpivot_mixed_types` requires `pyarrow>=14`",
+        )
+    )
+    data = {"idx": [0, 1], "a": [1, 2], "b": [1.5, 2.5]}
+    result = dataframe(data).unpivot(["a", "b"], index="idx")
     assert result.collect_schema().dtypes() == [nw.Int64(), nw.String(), nw.Float64()]
+
+
+def test_unpivot_empty(data: Data, dataframe: DataFrame) -> None:
+    with pytest.raises(ColumnNotFoundError, match=r"ncs\.boolean"):
+        dataframe(data).unpivot(ncs.boolean())
+
+
+def test_unpivot_empty_lazy(data: Data, lazyframe: LazyFrame) -> None:
+    with pytest.raises(ColumnNotFoundError, match=r"ncs\.boolean"):
+        lazyframe(data).unpivot(ncs.boolean()).collect()

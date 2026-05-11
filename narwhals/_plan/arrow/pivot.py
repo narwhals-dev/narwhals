@@ -4,7 +4,9 @@ import re
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
+import pyarrow as pa
 import pyarrow.compute as pc
+from pyarrow.types import is_large_string
 
 from narwhals._plan.arrow import (
     acero,
@@ -19,8 +21,6 @@ from narwhals._plan.expressions import aggregation as agg
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
-
-    import pyarrow as pa
 
     from narwhals._plan.arrow.typing import ChunkedArray, ChunkedOrScalarAny, StringScalar
     from narwhals.typing import PivotAgg
@@ -52,8 +52,10 @@ def pivot_table(
 
     Supports  multiple-`on` and aggregations.
     """
+    on_column: ChunkedArray[StringScalar]
     if len(on) == 1:
-        on_column = on_columns.column(0)
+        col = on_columns.column(0)
+        on_column = col if is_large_string(col.type) else col.cast(pa.string())
         on_one = on[0]
         target = native
     else:
@@ -112,7 +114,7 @@ def _replace_flatten_names(
 def _pivot(
     native: pa.Table,
     on: str,
-    on_columns: Sequence[Any],
+    on_columns: Sequence[str | Any],
     /,
     index: Sequence[str],
     values: Sequence[str],

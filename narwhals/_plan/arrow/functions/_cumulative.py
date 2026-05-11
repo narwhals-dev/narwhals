@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._boolean import is_not_null
 from narwhals._plan.arrow.functions._dtypes import U32
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import ChunkedArrayAny, ChunkedOrArrayT
 
 
-__all__ = ["cum_count", "cum_max", "cum_min", "cum_prod", "cum_sum", "cumulative"]
+__all__ = ("cum_count", "cum_max", "cum_min", "cum_prod", "cum_sum", "cumulative")
 
 
 def cum_sum(native: ChunkedOrArrayT) -> ChunkedOrArrayT:

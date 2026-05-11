@@ -1,3 +1,4 @@
+# TODO @dangotbanned: Convert into a stub + simple runtime
 """Round underlying floating point data.
 
 This group is derived from the (rust) polars [feature] [`round_series`].
@@ -11,7 +12,7 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, overload
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._horizontal import max_horizontal, min_horizontal
 
@@ -19,11 +20,12 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow.typing import (
         ArrowAny,
         ChunkedOrArrayT,
-        ChunkedOrScalarAny,
+        ChunkedOrScalarT,
+        Native,
         UnaryNumeric,
     )
 
-__all__ = ["ceil", "clip", "clip_lower", "clip_upper", "floor", "round"]
+__all__ = ("ceil", "clip", "clip_lower", "clip_upper", "floor", "round")
 
 ceil = t.cast("UnaryNumeric", pc.ceil)
 """Rounds up to the nearest integer value."""
@@ -32,7 +34,9 @@ floor = t.cast("UnaryNumeric", pc.floor)
 
 
 @overload
-def round(native: ChunkedOrScalarAny, decimals: int = 0) -> ChunkedOrScalarAny: ...
+def round(native: ChunkedOrScalarT, decimals: int = 0) -> ChunkedOrScalarT: ...
+@overload
+def round(native: Native, decimals: int = 0) -> Native: ...
 @overload
 def round(native: ChunkedOrArrayT, decimals: int = 0) -> ChunkedOrArrayT: ...
 def round(native: ArrowAny, decimals: int = 0) -> ArrowAny:
@@ -40,22 +44,16 @@ def round(native: ArrowAny, decimals: int = 0) -> ArrowAny:
     return pc.round(native, decimals, round_mode="half_towards_infinity")
 
 
-def clip_lower(
-    native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
+def clip_lower(native: Native, lower: Native) -> Native:
     """Limit values to at-least `lower`."""
     return max_horizontal(native, lower)
 
 
-def clip_upper(
-    native: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
+def clip_upper(native: Native, upper: Native) -> Native:
     """Limit values to at-most `upper`."""
     return min_horizontal(native, upper)
 
 
-def clip(
-    native: ChunkedOrScalarAny, lower: ChunkedOrScalarAny, upper: ChunkedOrScalarAny
-) -> ChunkedOrScalarAny:
+def clip(native: Native, lower: Native, upper: Native) -> Native:
     """Set values outside the given boundaries to the boundary value."""
     return clip_lower(clip_upper(native, upper), lower)

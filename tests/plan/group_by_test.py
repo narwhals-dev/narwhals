@@ -764,27 +764,28 @@ IGNORE_KEYS: Data = {"a": [1, 2], "b_sum": [9, 6]}
 EXPAND_KEYS: Data = {"a": [1, 2], "a_sum": [2, 2], "b_sum": [9, 6]}
 
 
+def sum_suffix(expr: nwp.Expr, /) -> nwp.Expr:
+    return expr.sum().name.suffix("_sum")
+
+
 @pytest.mark.parametrize(
     ("aggs", "expected"),
     [
-        (nwp.all().sum().name.suffix("_sum"), IGNORE_KEYS),
-        (ncs.all().sum().name.suffix("_sum"), IGNORE_KEYS),
-        (ncs.matches(r"a|b").sum().name.suffix("_sum"), IGNORE_KEYS),
-        (ncs.integer().sum().name.suffix("_sum"), IGNORE_KEYS),
-        (nwp.col("a", "b").sum().name.suffix("_sum"), EXPAND_KEYS),
-        (nwp.nth(0, 1).sum().name.suffix("_sum"), EXPAND_KEYS),
-        (
-            [nwp.nth(0).sum().alias("a_sum"), ncs.last().sum().name.suffix("_sum")],
-            EXPAND_KEYS,
-        ),
-        (
-            [nwp.col("a").sum().name.suffix("_sum"), nwp.col("b").sum().alias("b_sum")],
-            EXPAND_KEYS,
-        ),
+        (nwp.all().pipe(sum_suffix), IGNORE_KEYS),
+        (ncs.all().pipe(sum_suffix), IGNORE_KEYS),
+        # NOTE: `empty` is the odd one out, never has an effect
+        (ncs.empty().pipe(sum_suffix), {"a": [1, 2]}),
+        (ncs.matches(r"a|b").pipe(sum_suffix), IGNORE_KEYS),
+        (ncs.integer().pipe(sum_suffix), IGNORE_KEYS),
+        (nwp.col("a", "b").pipe(sum_suffix), EXPAND_KEYS),
+        (nwp.nth(0, 1).pipe(sum_suffix), EXPAND_KEYS),
+        ([nwp.nth(0).sum().alias("a_sum"), ncs.last().pipe(sum_suffix)], EXPAND_KEYS),
+        ([nwp.col("a").pipe(sum_suffix), nwp.col("b").sum().alias("b_sum")], EXPAND_KEYS),
     ],
     ids=[
         "nw.All",
         "cs.All",
+        "Empty",
         "Matches",
         "Integer",
         "ByName",

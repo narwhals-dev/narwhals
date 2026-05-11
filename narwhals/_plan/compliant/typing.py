@@ -1,91 +1,190 @@
+"""Useful types for `narwhals._plan.compliant`.
+
+## Notes
+- This module has 0 runtime dependencies on the rest of `compliant.*`
+- `Native*` type vars defined here *do not* have defaults
+    - If you need those, use `narwhals._plan.typing` instead
+"""
+
+# ruff: noqa: PLC0105
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol
 
+from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing_extensions import TypeAlias
 
-    from narwhals._plan.compliant.column import ExprDispatch
-    from narwhals._plan.compliant.dataframe import (
-        CompliantDataFrame,
-        CompliantFrame,
-        CompliantLazyFrame,
-        EagerDataFrame,
-    )
-    from narwhals._plan.compliant.expr import CompliantExpr, EagerExpr, LazyExpr
-    from narwhals._plan.compliant.group_by import GroupByResolver
-    from narwhals._plan.compliant.namespace import CompliantNamespace
-    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar, LazyScalar
+    from narwhals._native import NativeDataFrame, NativeSeries
+    from narwhals._plan.compliant import classes as cc
+    from narwhals._plan.compliant.dataframe import CompliantDataFrame, CompliantFrame
+    from narwhals._plan.compliant.expr import CompliantColumn, CompliantExpr
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
+    from narwhals._plan.compliant.scalar import CompliantScalar
     from narwhals._plan.compliant.series import CompliantSeries
-    from narwhals._utils import Version
+    from narwhals._plan.plans.visitors import ResolvedToCompliant
 
-R_co = TypeVar("R_co", covariant=True)
-LengthT = TypeVar("LengthT")
-ConcatT1 = TypeVar("ConcatT1")
-ConcatT2 = TypeVar("ConcatT2", default=ConcatT1)
-ColumnT_co = TypeVar("ColumnT_co", covariant=True)
-ResolverT_co = TypeVar("ResolverT_co", bound="GroupByResolver", covariant=True)
 
-ExprAny: TypeAlias = "CompliantExpr[Any, Any]"
-ScalarAny: TypeAlias = "CompliantScalar[Any, Any]"
-SeriesAny: TypeAlias = "CompliantSeries[Any]"
-FrameAny: TypeAlias = "CompliantFrame[Any, Any]"
-DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any, Any]"
-LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any, Any]"
-NamespaceAny: TypeAlias = "CompliantNamespace[Any, Any, Any]"
+Native = TypeVar("Native")
+"""Unbounded type variable, representing *any* native object.
 
-EagerExprAny: TypeAlias = "EagerExpr[Any, Any]"
-EagerScalarAny: TypeAlias = "EagerScalar[Any, Any]"
-EagerDataFrameAny: TypeAlias = "EagerDataFrame[Any, Any, Any]"
+Assume nothing, permit anything; rely on well-defined protocols to do the talking.
+"""
+FromNative = TypeVar("FromNative")
+"""Same as `Native`, but should be scoped to constructor method(s) and not the class."""
 
-LazyExprAny: TypeAlias = "LazyExpr[Any, Any, Any]"
-LazyScalarAny: TypeAlias = "LazyScalar[Any, Any, Any]"
+Native_co = TypeVar("Native_co", covariant=True)
+NativeColumn_co = TypeVar("NativeColumn_co", covariant=True)
+"""The type of `CompliantColumn.native`.
 
-ExprT_co = TypeVar("ExprT_co", bound=ExprAny, covariant=True)
-ScalarT_co = TypeVar("ScalarT_co", bound=ScalarAny, covariant=True)
-SeriesT = TypeVar("SeriesT", bound=SeriesAny)
-SeriesT_co = TypeVar("SeriesT_co", bound=SeriesAny, covariant=True)
-FrameT = TypeVar("FrameT", bound=FrameAny)
-FrameT_co = TypeVar("FrameT_co", bound=FrameAny, covariant=True)
-FrameT_contra = TypeVar("FrameT_contra", bound=FrameAny, contravariant=True)
-DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
-DataFrameT_co = TypeVar("DataFrameT_co", bound=DataFrameAny, covariant=True)
-LazyFrameT = TypeVar("LazyFrameT", bound=LazyFrameAny)
-LazyFrameT_co = TypeVar("LazyFrameT_co", bound=LazyFrameAny, covariant=True)
-LazyFrameT_contra = TypeVar("LazyFrameT_contra", bound=LazyFrameAny, contravariant=True)
-NamespaceT_co = TypeVar("NamespaceT_co", bound="NamespaceAny", covariant=True)
+Where `*Expr` and `*Scalar` fill this slot with *their* respective type parameter.
 
-EagerExprT_co = TypeVar("EagerExprT_co", bound=EagerExprAny, covariant=True)
-EagerScalarT_co = TypeVar("EagerScalarT_co", bound=EagerScalarAny, covariant=True)
-EagerDataFrameT = TypeVar("EagerDataFrameT", bound=EagerDataFrameAny)
-
-LazyExprT_co = TypeVar("LazyExprT_co", bound=LazyExprAny, covariant=True)
-LazyScalarT_co = TypeVar("LazyScalarT_co", bound=LazyScalarAny, covariant=True)
-
-Ctx: TypeAlias = "ExprDispatch[FrameT_contra, R_co, NamespaceAny]"
-"""Type of an unknown expression dispatch context.
-
-- `FrameT_contra`: Compliant data/lazyframe
-- `R_co`: Upper bound return type of the context
+This avoids the (expected) issue of using incompatible types for each, while allowing
+all 3 native types to be the same if desired.
 """
 
 
-class SupportsNarwhalsNamespace(Protocol[NamespaceT_co]):
-    def __narwhals_namespace__(self) -> NamespaceT_co: ...
+NativeExpr_co = TypeVar("NativeExpr_co", covariant=True)
+"""The type of `CompliantExpr.native`.
+
+This can be literally anything, but some typical candidates would be:
+- A native expression representation
+- A native series or array
+- A native scalar
+"""
+
+NativeScalar_co = TypeVar("NativeScalar_co", covariant=True)
+"""The type of `CompliantScalar.native`."""
+
+NativeSeriesT = TypeVar("NativeSeriesT", bound="NativeSeries")
+"""Be careful using this type var!
+
+- For broadcasting, it seems to be unavoidable to have *some* invariance
+- Try to keep `NativeSeriesT_co` in as many places as possible
+"""
+
+NativeSeriesT_co = TypeVar("NativeSeriesT_co", bound="NativeSeries", covariant=True)
+NativeDataFrameT = TypeVar("NativeDataFrameT", bound="NativeDataFrame")
+NativeDataFrameT_co = TypeVar(
+    "NativeDataFrameT_co", bound="NativeDataFrame", covariant=True
+)
 
 
-def namespace(obj: SupportsNarwhalsNamespace[NamespaceT_co], /) -> NamespaceT_co:
-    """Return the compliant namespace."""
-    return obj.__narwhals_namespace__()
+Column: TypeAlias = "CompliantColumn[DeprecatedFrameT_contra, NativeColumn_co, NativeExpr_co, NativeScalar_co]"
+Series: TypeAlias = "CompliantSeries[NativeSeriesT_co]"
+DataFrame: TypeAlias = "CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]"
+LazyFrame: TypeAlias = "CompliantLazyFrame[Native_co]"
+PlanEvaluator: TypeAlias = "ResolvedToCompliant[Native]"
+
+ColumnAny: TypeAlias = "CompliantColumn[Any, Any, Any, Any]"
+ExprAny: TypeAlias = "CompliantExpr[Any, Any, Any]"
+ScalarAny: TypeAlias = "CompliantScalar[Any, Any, Any]"
+SeriesAny: TypeAlias = "CompliantSeries[Any]"
+DataFrameAny: TypeAlias = "CompliantDataFrame[Any, Any]"
+LazyFrameAny: TypeAlias = "CompliantLazyFrame[Any]"
+FrameAny: TypeAlias = "DataFrameAny | LazyFrameAny"
+PlanEvaluatorAny: TypeAlias = "PlanEvaluator[Any]"
+
+SeriesT = TypeVar("SeriesT", bound=SeriesAny)
+DataFrameT = TypeVar("DataFrameT", bound=DataFrameAny)
+FrameT = TypeVar("FrameT", bound="FrameAny")
+FrameT_contra = TypeVar("FrameT_contra", bound="FrameAny", contravariant=True)
+"""Contravariant TypeVar for `CompliantDataFrame | CompliantLazyFrame`."""
+
+# NOTE: Very important that these stay covariant!
+FrameT_co = TypeVar("FrameT_co", bound="FrameAny", covariant=True)
+"""Covariant TypeVar for `CompliantDataFrame | CompliantLazyFrame`."""
+ColumnT_co = TypeVar("ColumnT_co", bound="ColumnAny", covariant=True)
+"""Any column."""
+LF = TypeVar("LF", bound=LazyFrameAny, covariant=True)
+"""Covariant TypeVar for `CompliantLazyFrame`."""
+PE = TypeVar("PE", bound="PlanEvaluatorAny", covariant=True)
+"""Covariant TypeVar for `ResolvedToCompliant`.
+
+Provides the conversion:
+
+    ResolvedPlan -> CompliantLazyFrame[Native]
+"""
+DF = TypeVar("DF", bound=DataFrameAny, covariant=True)
+"""Covariant TypeVar for `CompliantDataFrame`."""
+S = TypeVar("S", bound=SeriesAny, covariant=True)
+"""Covariant TypeVar for `CompliantSeries`."""
+E = TypeVar("E", bound="ExprAny", covariant=True)
+"""Covariant TypeVar for `CompliantExpr`."""
+SC = TypeVar("SC", bound="ExprAny | ScalarAny", covariant=True)
+"""Covariant TypeVar for `CompliantScalar`."""
+
+Classes = TypeVar("Classes", bound="cc.CompliantClasses[Any, Any]", covariant=True)
 
 
-# NOTE: Unlike `nw._utils._StoresVersion`, here the property is public
-class HasVersion(Protocol):
-    _version: Version
-
+class _Dispatchee(Protocol[Classes, ColumnT_co]):
     @property
-    def version(self) -> Version:
-        """Narwhals API version (V1 or MAIN)."""
-        return self._version
+    def __narwhals_classes__(self) -> Classes: ...
+    # https://github.com/python/mypy/issues/15182
+    def __new__(cls) -> ColumnT_co: ...  # type: ignore[misc]
+
+
+Caller: TypeAlias = "_Dispatchee[cc.CompliantClasses[E, SC], E | SC]"
+"""The type of `ctx` (the caller of `CompliantColumn.dispatch`)."""
+
+
+# TODO @dangotbanned: Finish migrating to post `CompliantFrame`/`CompliantNamespace`-typing
+DeprecatedFrameT_contra = TypeVar(
+    "DeprecatedFrameT_contra", bound="CompliantFrame[Any]", contravariant=True
+)
+"""**URGENT**: Needs changing to DataFrame and LazyFrame support."""
+Self_ = TypeVar("Self_", contravariant=True)
+IR = TypeVar("IR", bound="ir.ExprIR", contravariant=True)
+F_contra = TypeVar("F_contra", bound="ir.Function", contravariant=True)
+
+
+class ExprMethod(Protocol[Self_, IR, DeprecatedFrameT_contra, ColumnT_co]):
+    """A (unbound) `CompliantExpr` or namespace accessor method.
+
+    That is, this describes the method *without* an instance.
+    """
+
+    def __call__(
+        _self, self: Self_, node: IR, frame: DeprecatedFrameT_contra, name: str, /
+    ) -> ColumnT_co:
+        """Bind and evaluate an expression.
+
+        Arguments:
+            self: An object providing a route to a `CompliantExpr` instance.
+            node: The expression to evaluate.
+            frame: The `CompliantFrame` context for the expression.
+            name: The output column name (see `NamedIR.name`).
+
+        Note:
+            Ignore `_self`, see https://github.com/python/mypy/issues/16200
+        """
+        ...
+
+
+class BoundExprMethod(Protocol[IR, DeprecatedFrameT_contra, ColumnT_co]):
+    """A `CompliantExpr` or namespace accessor method, after binding `self`.
+
+    ## Notes
+    - Current version binds to the namespace accessor
+        - That makes sense in the context of this being a "method"
+    - The accessor is only being kept around for typing
+        - which isn't working great anyway
+    - The wrapper functions would be identical if `unary_accessor.__get__` did
+        - `return MethodType(self._wrapper_method, instance.compliant)`
+    """
+
+    def __call__(
+        self, node: IR, frame: DeprecatedFrameT_contra, name: str, /
+    ) -> ColumnT_co: ...
+
+
+# NOTE: Equivalent to writing a sub-protocol
+# runtime requires that `FunctionExpr` is not a ForwardRef
+FunctionImplMethod = ExprMethod[
+    Self_, ir.FunctionExpr[F_contra], DeprecatedFrameT_contra, ColumnT_co
+]
+BoundFunctionImplMethod = BoundExprMethod[
+    ir.FunctionExpr[F_contra], DeprecatedFrameT_contra, ColumnT_co
+]

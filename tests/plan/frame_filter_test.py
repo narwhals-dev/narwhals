@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections import deque
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -12,6 +13,8 @@ from narwhals.exceptions import ColumnNotFoundError, ShapeError
 from tests.plan.utils import assert_equal_data, dataframe, series
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
     from tests.conftest import Data
 
 
@@ -133,7 +136,7 @@ def test_filter_multiple_predicates(data_2: Data) -> None:
     )
 
 
-def test_filter_string_predicate() -> None:
+def test_filter_string_constraints() -> None:
     """https://github.com/pola-rs/polars/blob/a4522d719de940be3ef99d494ccd1cd6067475c6/py-polars/tests/unit/lazyframe/test_lazyframe.py#L204-L210."""
     data = {"description": ["eq", "gt", "ge"], "predicate": ["==", ">", ">="]}
     expected = {"description": ["eq"], "predicate": ["=="]}
@@ -174,3 +177,24 @@ def test_filter_seq_iterable_all_false(predicate: Any, data: Data) -> None:
     df = dataframe(data)
     expected: Data = {"a": [], "b": [], "z": []}
     assert_equal_data(df.filter(predicate), expected)
+
+
+@pytest.mark.parametrize("nest_as", [None, list, tuple, deque, iter])
+def test_filter_multiple_predicates_string(
+    nest_as: Callable[[Iterable[str]], Iterable[str]] | None, data_2: Data
+) -> None:
+    """Polars supports *some* of these spellings.
+
+    Matching the [exact behavior] is too complicated and doesn't add any features (just errors).
+
+    [exact behavior]: https://github.com/pola-rs/polars/blob/7335a6c8f66d4560acd0e40c3a91ee4507169e69/py-polars/src/polars/lazyframe/frame.py#L4571-L4602
+    """
+    predicates = "b", "c"
+    expected = {
+        "a": [False, True, True],
+        "b": [True, True, True],
+        "c": [True, True, True],
+    }
+    df = dataframe(data_2).with_columns(nwp.all() != 1)
+    result = df.filter(*predicates) if nest_as is None else df.filter(nest_as(predicates))
+    assert_equal_data(result, expected)

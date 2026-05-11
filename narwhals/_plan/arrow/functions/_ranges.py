@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import typing as t
-from typing import TYPE_CHECKING, Any, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, SupportsFloat, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions._arithmetic import add, multiply
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from narwhals.typing import ClosedInterval
 
 
-__all__ = ["date_range", "int_range", "linear_space"]
+__all__ = ("date_range", "int_range", "linear_space")
 
 Incomplete: TypeAlias = Any
 
@@ -110,7 +110,11 @@ def date_range(
 
 
 def linear_space(
-    start: float, end: float, num_samples: int, *, closed: ClosedInterval = "both"
+    start: SupportsFloat,
+    end: SupportsFloat,
+    num_samples: int,
+    *,
+    closed: ClosedInterval = "both",
 ) -> ChunkedArray[pc.NumericScalar]:
     """Generate a range of evenly-spaced floats.
 
@@ -123,16 +127,17 @@ def linear_space(
         raise ValueError(msg)
     if num_samples == 0:
         return chunked_array([], F64)
+    start, end = float(start), float(end)
     if num_samples == 1:
         if closed == "none":
             value = (end + start) * 0.5
         elif closed in {"left", "both"}:
-            value = float(start)
+            value = start
         else:
-            value = float(end)
+            value = end
         return chunked_array(lit(value, F64))
     n = num_samples
-    span = float(end - start)
+    span = end - start
     if closed == "none":
         d = span / (n + 1)
         start = start + d
@@ -143,6 +148,6 @@ def linear_space(
         d = span / n
     else:
         d = span / (n - 1)
-    ca = multiply(int_range(0, n).cast(F64), lit(d))
+    ca: ChunkedArray[pc.NumericScalar] = multiply(int_range(0, n).cast(F64), lit(d))
     ca = add(ca, lit(start, F64))
     return ca  # noqa: RET504

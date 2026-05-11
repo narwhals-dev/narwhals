@@ -12,7 +12,7 @@ from narwhals._plan.arrow.functions import (
 from narwhals._plan.arrow.functions._aggregation import (
     count,
     first,
-    kurtosis_skew,
+    kurtosis,
     last,
     max,
     mean,
@@ -23,6 +23,7 @@ from narwhals._plan.arrow.functions._aggregation import (
     n_unique,
     null_count,
     quantile,
+    skew,
     std,
     sum,
     var,
@@ -71,6 +72,7 @@ from narwhals._plan.arrow.functions._construction import (
     chunked_array,
     concat_horizontal,
     concat_tables,
+    concat_tables_horizontal,
     concat_vertical,
     lit,
     to_table,
@@ -96,12 +98,17 @@ from narwhals._plan.arrow.functions._dtypes import (
     string_type,
 )
 from narwhals._plan.arrow.functions._horizontal import (
+    all_horizontal,
+    any_horizontal,
     coalesce,
     max_horizontal,
     min_horizontal,
+    reduce,
+    sum_horizontal,
 )
 from narwhals._plan.arrow.functions._lists import ExplodeBuilder
 from narwhals._plan.arrow.functions._multiplex import (
+    drop_nulls,
     fill_nan,
     fill_null,
     fill_null_with_strategy,
@@ -142,7 +149,7 @@ from narwhals._plan.arrow.functions._vector import (
     shift,
 )
 
-__all__ = [
+__all__ = (
     "BOOL",
     "DATE",
     "F64",
@@ -153,8 +160,10 @@ __all__ = [
     "abs",
     "add",
     "all",
+    "all_horizontal",
     "and_",
     "any",
+    "any_horizontal",
     "array",
     "binary",
     "cast",
@@ -168,6 +177,7 @@ __all__ = [
     "coalesce",
     "concat_horizontal",
     "concat_tables",
+    "concat_tables_horizontal",
     "concat_vertical",
     "count",
     "cum_count",
@@ -178,6 +188,7 @@ __all__ = [
     "cumulative",
     "date_range",
     "diff",
+    "drop_nulls",
     "dtype_native",
     "eq",
     "eq_missing",
@@ -201,7 +212,7 @@ __all__ = [
     "is_not_null",
     "is_null",
     "is_only_nulls",
-    "kurtosis_skew",
+    "kurtosis",
     "last",
     "linear_space",
     "list",
@@ -231,6 +242,7 @@ __all__ = [
     "quantile",
     "random_indices",
     "rank",
+    "reduce",
     "repeat",
     "repeat_like",
     "repeat_unchecked",
@@ -241,6 +253,7 @@ __all__ = [
     "round",
     "search_sorted",
     "shift",
+    "skew",
     "sort_indices",
     "sqrt",
     "std",
@@ -249,6 +262,7 @@ __all__ = [
     "struct",
     "sub",
     "sum",
+    "sum_horizontal",
     "to_table",
     "truediv",
     "unsort_indices",
@@ -256,4 +270,4 @@ __all__ = [
     "when_then",
     "xor",
     "zeros",
-]
+)

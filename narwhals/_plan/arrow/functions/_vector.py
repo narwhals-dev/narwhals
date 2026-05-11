@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _struct as struct
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import RankOptions
     from narwhals.typing import NonNestedLiteral
 
-__all__ = ["diff", "hist_bins", "hist_zeroed_data", "rank", "search_sorted", "shift"]
+__all__ = ("diff", "hist_bins", "hist_zeroed_data", "rank", "search_sorted", "shift")
 
 
 def diff(native: ChunkedOrArrayT, n: int = 1) -> ChunkedOrArrayT:

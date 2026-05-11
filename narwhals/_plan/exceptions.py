@@ -4,23 +4,24 @@ from __future__ import annotations
 
 from collections import Counter
 from itertools import groupby
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
-from narwhals._utils import Implementation, qualified_type_name
+from narwhals._utils import qualified_type_name
 from narwhals.exceptions import (
     ColumnNotFoundError,
     ComputeError,
     DuplicateError,
     InvalidIntoExprError,
     InvalidOperationError,
-    InvalidOperationError as LengthChangingExprError,
     MultiOutputExpressionError,
     ShapeError,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Collection, Iterable, Sequence
     from typing import Any
+
+    from typing_extensions import TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan._function import Function
@@ -28,7 +29,11 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortOptions
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import IntoExpr, Seq
-    from narwhals.typing import Backend, IntoBackend, IntoSchema
+    from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType, IntoSchema
+
+ExprFunction: TypeAlias = Literal["filter", "when", "sort_by"]
+SelectorValue: TypeAlias = Literal["index", "name"]
 
 
 # NOTE: Using verbose names to start with
@@ -48,15 +53,23 @@ def function_expr_invalid_operation_error(
     return InvalidOperationError(msg)
 
 
-def function_arg_non_scalar_error(
-    function: Function, arg_name: str, arg_value: Any
-) -> InvalidOperationError:
-    msg = f"`{function!r}({arg_name}=...)` does not support non-scalar expression `{arg_value!r}`."
-    return InvalidOperationError(msg)
+def function_arg_non_scalar_error(function: Function, value: Any) -> ShapeError:
+    msg = f"`{function!r}()` does not support non-scalar expressions, got: `{value!r}`."
+    return ShapeError(msg)
 
 
-def list_literal_error(value: Any) -> TypeError:
-    msg = f"{type(value).__name__!r} is not supported in `nw.lit`, got: {value!r}."
+def function_arity_error(
+    function: Function, arity: Literal[1, 2, 3, "*"], inputs: Collection[ir.ExprIR]
+) -> TypeError:
+    exprs = "" if not inputs else f":\n{format_expressions(*inputs)}"
+    msg = f"Expected {arity} {'input' if arity == 1 else 'inputs'} for `{function!r}()`, got {len(inputs)}{exprs}"
+    return TypeError(msg)
+
+
+def literal_type_error(value: Any) -> TypeError:
+    msg = f"{qualified_type_name(value)!r} is not supported in `nw.lit`"
+    if not isinstance(value, type):
+        msg = f"{msg}, got: {value!r}."
     return TypeError(msg)
 
 
@@ -77,52 +90,63 @@ def _binary_underline(
     right: ir.ExprIR,
     /,
     *,
+    underline_left: bool = False,
     underline_right: bool = True,
 ) -> str:
     lhs, op, rhs = repr(left), repr(operator), repr(right)
-    if underline_right:
+    if underline_right and not underline_left:
         indent = (len(lhs) + len(op) + 2) * " "
         underline = len(rhs) * "^"
+    elif underline_right:
+        indent = ""
+        pad_middle = (2 + len(op)) * " "
+        underline = (len(lhs) * "^") + pad_middle + (len(rhs) * "^")
     else:
         indent = ""
         underline = len(lhs) * "^"
     return f"{lhs} {op} {rhs}\n{indent}{underline}"
 
 
-def binary_expr_shape_error(
-    left: ir.ExprIR, op: Operator, right: ir.ExprIR
-) -> ShapeError:
-    expr = _binary_underline(left, op, right, underline_right=True)
-    msg = (
-        f"Cannot combine length-changing expressions with length-preserving ones.\n{expr}"
-    )
-    return ShapeError(msg)
-
-
-def binary_expr_multi_output_error(
-    origin: ir.BinaryExpr, left_expand: Seq[ir.ExprIR], right_expand: Seq[ir.ExprIR]
+# TODO @dangobanned: Make fancier error for `when`
+# - *maybe* underline things?
+def combination_mixed_multi_output_error(
+    origin: ir.BinaryExpr | ir.TernaryExpr | ir.ExprIR, lengths: Sequence[int]
 ) -> MultiOutputExpressionError:
-    len_left, len_right = len(left_expand), len(right_expand)
-    lhs, op, rhs = origin.left, origin.op, origin.right
-    expr = _binary_underline(lhs, op, rhs, underline_right=len_left < len_right)
-    msg = f"Cannot combine selectors that produce a different number of columns ({len_left} != {len_right}).\n{expr}"
-    return MultiOutputExpressionError(msg)
+    from narwhals._plan import expressions as ir
+
+    if isinstance(origin, ir.TernaryExpr):
+        # Flip the order from "root first" -> "as written"
+        truthy, predicate, falsy = lengths
+        lengths = (predicate, truthy, falsy)
+        extra = repr(origin)
+    elif isinstance(origin, ir.BinaryExpr):
+        lhs, op, rhs = origin.left, origin.op, origin.right
+        extra = _binary_underline(lhs, op, rhs, underline_right=lengths[0] < lengths[1])
+    else:  # pragma: no cover
+        extra = repr(origin)
+    why = f"({' != '.join(map(repr, lengths))})"
+    what = "Cannot combine selectors that produce a different number of columns"
+    return MultiOutputExpressionError(f"{what} {why}.\n{extra}")
 
 
 def binary_expr_length_changing_error(
-    left: ir.ExprIR, op: Operator, right: ir.ExprIR
-) -> LengthChangingExprError:
-    lhs, rhs = repr(left), repr(right)
-    op_s = f" {op!r} "
-    underline_left = len(lhs) * "^"
-    underline_right = len(rhs) * "^"
-    pad_middle = len(op_s) * " "
-    msg = (
-        "Length-changing expressions can only be used in isolation, "
-        "or followed by an aggregation.\n"
-        f"{lhs}{op_s}{rhs}\n{underline_left}{pad_middle}{underline_right}"
-    )
-    return LengthChangingExprError(msg)
+    left: ir.ExprIR, op: Operator, right: ir.ExprIR, kind: Literal["mixed", "multi"]
+) -> InvalidOperationError:
+    expr = _binary_underline(left, op, right, underline_left=(kind == "multi"))
+    if kind == "mixed":
+        msg = "Cannot combine length-changing expressions with length-preserving ones."
+    else:
+        msg = "Length-changing expressions can only be used in isolation, or followed by an aggregation."
+    msg = f"{msg}\n{expr}"
+    return InvalidOperationError(msg)
+
+
+# TODO @dangotbanned: (low-priority) Underline which part is not length-preserving (outer/inner)
+# `col('a').first()` (first)
+# `nwp.int_range(2).sort()` (int_range)
+def sort_by_key_length_changing_error(expr: ir.ExprIR) -> InvalidOperationError:
+    msg = f"All `sort_by` expression keys must be length-preserving, got:\n`{expr!r}`"
+    return InvalidOperationError(msg)
 
 
 # TODO @dangotbanned: Use arguments in error message
@@ -191,6 +215,13 @@ def invalid_into_expr_error(
     return InvalidIntoExprError(msg)
 
 
+def at_least_one_error(method: ExprFunction, /) -> TypeError:
+    predicate = "predicate or constraint"
+    kind = {"filter": predicate, "when": predicate, "sort_by": "sort key"}[method]
+    msg = f"at least one {kind} must be provided"
+    return TypeError(msg)
+
+
 def is_iterable_error(obj: object, /) -> TypeError:
     msg = (
         f"Expected Narwhals class or scalar, got: {qualified_type_name(obj)!r}.\n\n"
@@ -213,6 +244,12 @@ def duplicate_error(exprs: Collection[ir.ExprIR]) -> DuplicateError:
         if k in duplicates
     }
     msg = "\n".join(f"[{name!r}]{INDENT}{e}" for name, e in name_exprs.items())
+    msg = f"Expected unique column names, but found duplicates:\n\n{msg}"
+    return DuplicateError(msg)
+
+
+def duplicate_names_error(names: Collection[str]) -> DuplicateError:
+    msg = "\n".join(f"- {k!r} {v} times" for k, v in Counter(names).items() if v > 1)
     msg = f"Expected unique column names, but found duplicates:\n\n{msg}"
     return DuplicateError(msg)
 
@@ -244,6 +281,14 @@ def column_index_error(
     return ColumnNotFoundError(msg)
 
 
+def one_or_iterable_type_error(
+    kind: SelectorValue, inner: object, outer: Iterable[object] | None = None, /
+) -> TypeError:
+    msg = f"invalid {kind}: {inner!r}"
+    msg = msg if outer is None else f"{msg} in {outer!r}"
+    return TypeError(msg)
+
+
 # TODO @dangotbanned: Remove or get coverage for failing:
 # - `GroupByResolver.key_names`
 # - `DataFrameGroupBy.key_names`
@@ -259,8 +304,9 @@ def format_expressions(*exprs: ir.ExprIR, indent: int = 2) -> str:
 
 
 def selectors_not_found_error(
-    selectors: Collection[ir.SelectorIR], schema: IntoSchema | FrozenSchema
+    selectors: Iterable[ir.SelectorIR], schema: IntoSchema | FrozenSchema
 ) -> ColumnNotFoundError:
+    selectors = tuple(selectors)
     msg = "Found no columns when expanding:"
     if len(selectors) == 1:
         msg = f"{msg} {next(iter(selectors))!r}"
@@ -282,14 +328,14 @@ def expand_multi_output_error(
     return MultiOutputExpressionError(msg)
 
 
-def unsupported_backend_operation_error(
-    backend: IntoBackend[Backend], method_name: str, /
-) -> NotImplementedError:  # pragma: no cover
-    """Currently only needed for typing purposes.
-
-    For `{read,scan}_*` we have to get from `IntoBackend[Backend]` to
-    a method that returns a `{Data,Lazy}Frame`.
-    """
-    backend_name = Implementation.from_backend(backend).value
-    msg = f"`{method_name}`() is not yet supported for {backend_name!r}"
-    return NotImplementedError(msg)
+def invalid_dtype_operation_error(
+    dtype: IntoDType, method_name: str, *expected: DType | type[DType]
+) -> InvalidOperationError:  # pragma: no cover
+    msg = f"`{method_name}` operation is not supported for dtype `{dtype}`"
+    if expected:
+        if len(expected) == 1:
+            allow = f"{expected[0]}"
+        else:
+            allow = " or ".join(str(tp) for tp in expected)
+        msg = f"{msg}, expected {allow} type"
+    return InvalidOperationError(msg)

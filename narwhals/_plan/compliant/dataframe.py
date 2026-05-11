@@ -3,22 +3,14 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 
-from narwhals._plan.compliant import io
+from narwhals._plan._version import into_version
 from narwhals._plan.compliant.group_by import Grouped
-from narwhals._plan.compliant.typing import (
-    ColumnT_co,
-    DataFrameAny,
-    HasVersion,
-    LazyFrameAny,
-    SeriesT,
-)
 from narwhals._plan.typing import (
-    IncompleteCyclic,
+    IncompleteVarianceLie,
     IntoExpr,
-    NativeDataFrameT,
+    NativeDataFrameT_co,
     NativeFrameT_co,
-    NativeLazyFrameT,
-    NativeSeriesT,
+    NativeSeriesT_co,
     NonCrossJoinStrategy,
     OneOrIterable,
 )
@@ -27,51 +19,55 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
     from io import BytesIO
 
+    import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias
+    import pyarrow as pa
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant.group_by import (
-        CompliantGroupBy,
         DataFrameGroupBy,
         EagerDataFrameGroupBy,
         GroupByResolver,
     )
-    from narwhals._plan.compliant.namespace import EagerNamespace
-    from narwhals._plan.dataframe import BaseFrame, DataFrame
+    from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.compliant.typing import LazyFrameAny
+    from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.expressions import NamedIR
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
-    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+    from narwhals._translate import ArrowStreamExportable, IntoArrowTable
+    from narwhals._typing import _LazyAllowedImpl
     from narwhals._utils import Implementation, Version
     from narwhals.dtypes import DType
-    from narwhals.typing import AsofJoinStrategy, IntoSchema, PivotAgg, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        ConcatMethod,
+        IntoSchema,
+        PivotAgg,
+        UniqueKeepStrategy,
+    )
 
-Incomplete: TypeAlias = Any
 
+class CompliantFrame(Protocol[NativeFrameT_co]):
+    """`[NativeFrameT_co]`."""
 
-class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
+    __slots__ = ()
+
     implementation: ClassVar[Implementation]
+    version: ClassVar[Version]
 
-    def __narwhals_namespace__(self) -> IncompleteCyclic: ...
-    def _evaluate_irs(
-        self, nodes: Iterable[NamedIR[ir.ExprIR]], /
-    ) -> Iterator[ColumnT_co]: ...
-    @property
-    def _group_by(self) -> type[CompliantGroupBy[Self]]: ...
-    def _with_native(self, native: Incomplete) -> Self: ...
     @classmethod
-    def from_native(cls, native: Incomplete, /, version: Version) -> Self: ...
+    def from_native(cls, native: IncompleteVarianceLie, /) -> Self: ...
     @property
     def native(self) -> NativeFrameT_co: ...
-    def to_narwhals(self) -> BaseFrame[NativeFrameT_co]: ...
     @property
     def columns(self) -> list[str]: ...
     def drop(self, columns: Sequence[str]) -> Self: ...
     def drop_nulls(self, subset: Sequence[str] | None) -> Self: ...
     def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self: ...
     # Shouldn't *need* to be `NamedIR`, but current impl depends on a name being passed around
-    def filter(self, predicate: NamedIR, /) -> Self: ...
+    def filter(self, predicate: NamedIR, /) -> CompliantFrame[NativeFrameT_co]: ...
     def join(
         self,
         other: Self,
@@ -124,91 +120,40 @@ class CompliantFrame(HasVersion, Protocol[ColumnT_co, NativeFrameT_co]):
     ) -> Self: ...
 
 
-class CompliantLazyFrame(
-    io.LazyOutput,
-    CompliantFrame[ColumnT_co, NativeLazyFrameT],
-    Protocol[ColumnT_co, NativeLazyFrameT],
-):
-    """Very incomplete!
-
-    Using mostly as a placeholder for typing lazy I/O.
-    """
-
-    _native: NativeLazyFrameT
-
-    def __narwhals_lazyframe__(self) -> Self:
-        return self
-
-    def _with_native(self, native: NativeLazyFrameT) -> Self:
-        return self.from_native(native, self.version)
-
-    @classmethod
-    def from_native(cls, native: NativeLazyFrameT, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._version = version
-        return obj
-
-    def to_narwhals(self) -> Incomplete:
-        msg = f"{type(self).__name__}.to_narwhals"
-        raise NotImplementedError(msg)
-
-    @property
-    def native(self) -> NativeLazyFrameT:
-        return self._native
-
-    def collect(self, backend: _EagerAllowedImpl | None, **kwds: Any) -> DataFrameAny: ...
-
-
 class CompliantDataFrame(
-    io.EagerOutput,
-    CompliantFrame[SeriesT, NativeDataFrameT],
-    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
+    CompliantFrame[NativeDataFrameT_co], Protocol[NativeDataFrameT_co, NativeSeriesT_co]
 ):
-    implementation: ClassVar[_EagerAllowedImpl]
-    _native: NativeDataFrameT
+    """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
 
-    def __narwhals_dataframe__(self) -> Self:
+    __slots__ = ()
+
+    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 
-    def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny: ...
-    @property
-    def shape(self) -> tuple[int, int]: ...
-    @property
-    def width(self) -> int:
-        return self.shape[-1]
-
-    def __len__(self) -> int: ...
-    @property
-    def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
     @property
     def _grouper(self) -> type[Grouped]:
         return Grouped
 
-    def _with_native(self, native: NativeDataFrameT) -> Self:
-        return self.from_native(native, self.version)
-
-    @classmethod
-    def from_native(cls, native: NativeDataFrameT, /, version: Version) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._version = version
-        return obj
-
     @property
-    def native(self) -> NativeDataFrameT:
-        return self._native
+    def width(self) -> int:
+        return self.shape[-1]
 
-    def clone(self) -> Self: ...
     @classmethod
-    def from_dict(
-        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
-    ) -> Self: ...
-    def gather_every(self, n: int, offset: int = 0) -> Self: ...
-    def get_column(self, name: str) -> SeriesT: ...
+    def from_arrow_c_stream(
+        cls,
+        exportable: ArrowStreamExportable,
+        /,
+        *,
+        requested_schema: object | None = None,
+    ) -> Self:  # pragma: no cover
+        if requested_schema is not None:
+            msg = f"{cls.__name__}.from_arrow_c_stream"
+            raise NotImplementedError(msg)
+        return cls.from_arrow(exportable)
+
     def group_by_agg(
         self, by: OneOrIterable[IntoExpr], aggs: OneOrIterable[IntoExpr], /
-    ) -> Self:
+    ) -> Self:  # pragma: no cover
         """Compliant-level `group_by(by).agg(agg)`, allows `Expr`."""
         return self._grouper.by(by).agg(aggs).resolve(self).evaluate(self)
 
@@ -225,17 +170,81 @@ class CompliantDataFrame(
 
     def group_by_names(self, names: Seq[str], /) -> DataFrameGroupBy[Self]:
         """Compliant-level `group_by`, allowing only `str` keys."""
-        return self._group_by.by_names(self, names)
+        return self._group_by.by_names(self, names)  # type: ignore[return-value]
 
-    def group_by_resolver(self, resolver: GroupByResolver, /) -> DataFrameGroupBy[Self]:
+    def group_by_resolver(
+        self, resolver: GroupByResolver, /
+    ) -> DataFrameGroupBy[Self]:  # pragma: no cover
         """Narwhals-level resolved `group_by`.
 
         `keys`, `aggs` are already parsed and projections planned.
         """
-        return self._group_by.from_resolver(self, resolver)
+        return self._group_by.from_resolver(self, resolver)  # type: ignore[return-value]
 
+    @overload
+    def to_dict(
+        self, *, as_series: Literal[True]
+    ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]]: ...
+    @overload
+    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
+    @overload
+    def to_dict(
+        self, *, as_series: bool
+    ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]] | dict[str, list[Any]]: ...
+    def to_dict(
+        self, *, as_series: bool
+    ) -> Mapping[str, CompliantSeries[NativeSeriesT_co]] | dict[str, list[Any]]:
+        it = self.iter_columns()
+        if as_series:
+            return {ser.name: ser for ser in it}  # pragma: no cover
+        return {ser.name: ser.to_list() for ser in it}
+
+    def to_narwhals(self) -> DataFrame[NativeDataFrameT_co, NativeSeriesT_co]:
+        return into_version(self.version).dataframe(self)
+
+    def sample_frac(
+        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        n = int(len(self) * fraction)
+        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
+
+    def lazy(self, backend: _LazyAllowedImpl | None, **kwds: Any) -> LazyFrameAny: ...
+    @property
+    def shape(self) -> tuple[int, int]: ...
+    def __len__(self) -> int: ...
+
+    # NOTE: `pyright` includes `Self` in `_group_by` to calculate variance (`mypy` doesn't)
+    @property
+    def _group_by(self) -> type[DataFrameGroupBy[Self]]: ...
+    @classmethod
+    def concat_series(
+        cls, series: Iterable[CompliantSeries[IncompleteVarianceLie]], /
+    ) -> Self: ...
+    @classmethod
+    def concat(cls, dfs: Iterable[Self], /, how: ConcatMethod) -> Self: ...
+    @classmethod
+    def from_arrow(cls, frame: IntoArrowTable, /) -> Self: ...
+    @classmethod
+    def from_pandas(cls, frame: pd.DataFrame, /) -> Self: ...
+    @classmethod
+    def from_polars(cls, frame: pl.DataFrame, /) -> Self: ...
+    @classmethod
+    def from_narwhals(cls, frame: DataFrame[Any, Any], /) -> Self: ...
+    @classmethod
+    def from_compliant(cls, frame: CompliantDataFrame[Any, Any], /) -> Self: ...
+    @classmethod
+    def from_dict(
+        cls, data: Mapping[str, Any], /, *, schema: IntoSchema | None = None
+    ) -> Self: ...
+    @classmethod
+    def read_csv(cls, source: str, /, **kwds: Any) -> Self: ...
+    @classmethod
+    def read_parquet(cls, source: str, /, **kwds: Any) -> Self: ...
+    def clone(self) -> Self: ...
+    def gather_every(self, n: int, offset: int = 0) -> Self: ...
+    def get_column(self, name: str) -> CompliantSeries[NativeSeriesT_co]: ...
     def filter(self, predicate: NamedIR, /) -> Self: ...
-    def iter_columns(self) -> Iterator[SeriesT]: ...
+    def iter_columns(self) -> Iterator[CompliantSeries[NativeSeriesT_co]]: ...
     def partition_by(
         self, by: Sequence[str], *, include_key: bool = True
     ) -> list[Self]: ...
@@ -248,26 +257,26 @@ class CompliantDataFrame(
         values: Sequence[str],
         aggregate_function: PivotAgg | None = None,
         separator: str = "_",
-    ) -> Self: ...
+        sort_columns: bool = False,
+    ) -> Self:
+        """Create a spreadsheet-style pivot table as a DataFrame.
+
+        Note:
+            `sort_columns` is passed down for backwards compatibility with [`polars<1.36.0`],
+            where [`sort_columns` moved] from being handled in rust to python.
+            All other backends **should ignore `sort_columns`**, as the narwhals-level
+            sorts *into* `on_columns` when needed.
+
+        [`polars<1.36.0`]: https://github.com/pola-rs/polars/pull/25016
+        [`sort_columns` moved]: https://github.com/pola-rs/polars/pull/25016/changes#diff-d2e79c12d0d5ed35f2015c678f5be62199581d902d25069b9635817c673ca6ebR9450-R9459
+        """
+        ...
+
     def row(self, index: int) -> tuple[Any, ...]: ...
-    @overload
-    def to_dict(self, *, as_series: Literal[True]) -> dict[str, SeriesT]: ...
-    @overload
-    def to_dict(self, *, as_series: Literal[False]) -> dict[str, list[Any]]: ...
-    @overload
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-    def to_dict(
-        self, *, as_series: bool
-    ) -> dict[str, SeriesT] | dict[str, list[Any]]: ...
-    def to_narwhals(self) -> DataFrame[NativeDataFrameT, NativeSeriesT]:
-        from narwhals._plan.dataframe import DataFrame
-
-        return DataFrame[NativeDataFrameT, NativeSeriesT](self)
-
-    def to_series(self, index: int = 0) -> SeriesT: ...
-    def to_struct(self, name: str = "") -> SeriesT: ...
+    def to_series(self, index: int = 0) -> CompliantSeries[NativeSeriesT_co]: ...
+    def to_struct(self, name: str = "") -> CompliantSeries[NativeSeriesT_co]: ...
+    def to_arrow(self) -> pa.Table: ...
+    def to_pandas(self) -> pd.DataFrame: ...
     def to_polars(self) -> pl.DataFrame: ...
     def unique(
         self,
@@ -286,44 +295,48 @@ class CompliantDataFrame(
     ) -> Self: ...
     def with_row_index(self, name: str) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
-    def sample_frac(
-        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
-    ) -> Self:
-        n = int(len(self) * fraction)
-        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
-
     def sample_n(
         self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
     ) -> Self: ...
+    @overload
+    def write_csv(self, target: None, /) -> str: ...
+    @overload
+    def write_csv(self, target: str | BytesIO, /) -> None: ...
+    def write_csv(self, target: str | BytesIO | None, /) -> str | None: ...
+    def write_parquet(self, target: str | BytesIO, /) -> None: ...
 
 
 class EagerDataFrame(
-    io.LazyOutput,
-    CompliantDataFrame[SeriesT, NativeDataFrameT, NativeSeriesT],
-    Protocol[SeriesT, NativeDataFrameT, NativeSeriesT],
+    CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co],
+    Protocol[NativeDataFrameT_co, NativeSeriesT_co],
 ):
-    def __narwhals_namespace__(self) -> EagerNamespace[Self, SeriesT, Any, Any]: ...
+    """`[NativeDataFrameT_co, NativeSeriesT_co]`."""
+
+    __slots__ = ()
+
     @property
     def _group_by(self) -> type[EagerDataFrameGroupBy[Self]]: ...
     def _evaluate_irs(
-        self, nodes: Iterable[NamedIR[ir.ExprIR]], /, *, length: int | None = None
-    ) -> Iterator[SeriesT]: ...
+        self, nodes: Iterable[NamedIR], /, *, length: int | None = None
+    ) -> Iterator[CompliantSeries[NativeSeriesT_co]]: ...
 
     def group_by_resolver(
         self, resolver: GroupByResolver, /
-    ) -> EagerDataFrameGroupBy[Self]:
-        return self._group_by.from_resolver(self, resolver)
+    ) -> EagerDataFrameGroupBy[Self]:  # pragma: no cover
+        return self._group_by.from_resolver(self, resolver)  # type: ignore[return-value]
 
-    def select(self, irs: Seq[NamedIR]) -> Self:
-        return self.__narwhals_namespace__()._concat_horizontal(self._evaluate_irs(irs))
+    @classmethod
+    def concat(cls, dfs: Iterable[Self], /, how: ConcatMethod) -> Self:
+        methods = {
+            "vertical": cls.concat_vertical,
+            "horizontal": cls.concat_horizontal,
+            "diagonal": cls.concat_diagonal,
+        }
+        return methods[how](dfs)
 
-    def with_columns(self, irs: Seq[NamedIR]) -> Self:
-        return self.__narwhals_namespace__()._concat_horizontal(
-            self._evaluate_irs(irs, length=len(self))
-        )
-
-    def to_series(self, index: int = 0) -> SeriesT:
-        return self.get_column(self.columns[index])
-
-    def sink_parquet(self, target: str | BytesIO, /) -> None:
-        self.write_parquet(target)
+    @classmethod
+    def concat_diagonal(cls, dfs: Iterable[Self], /) -> Self: ...
+    @classmethod
+    def concat_horizontal(cls, dfs: Iterable[Self], /) -> Self: ...
+    @classmethod
+    def concat_vertical(cls, dfs: Iterable[Self], /) -> Self: ...

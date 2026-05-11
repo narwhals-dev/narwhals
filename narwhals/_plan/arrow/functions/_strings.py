@@ -5,8 +5,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, Any, Final, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions import _lists as list_
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
         ChunkedOrScalarAny,
         IntegerScalar,
         ListScalar,
+        Native,
         ScalarAny,
         StringScalar,
     )
@@ -51,7 +52,7 @@ if TYPE_CHECKING:
     )
 
 
-__all__ = [
+__all__ = (
     "concat_str",
     "contains",
     "ends_with",
@@ -71,7 +72,7 @@ __all__ = [
     "to_titlecase",
     "to_uppercase",
     "zfill",
-]
+)
 
 starts_with = t.cast("_StringFunction1", pc.starts_with)
 """Check if string values start with a substring."""
@@ -101,6 +102,10 @@ def concat_str(
 def concat_str(
     *arrays: ScalarAny, separator: str = ..., ignore_nulls: bool = ...
 ) -> StringScalar: ...
+@overload
+def concat_str(
+    *arrays: ChunkedOrScalarAny, separator: str = ..., ignore_nulls: bool = ...
+) -> ChunkedOrScalar[StringScalar]: ...
 def concat_str(
     *arrays: ArrowAny, separator: str = "", ignore_nulls: bool = False
 ) -> Arrow[StringScalar]:
@@ -125,23 +130,21 @@ def join(
     return list_.join_scalar(implode(native), separator, ignore_nulls=False)
 
 
-def len_chars(native: ChunkedOrScalarAny) -> ChunkedOrScalarAny:
+def len_chars(native: Native) -> Native:
     """Return the length of each string as the number of characters."""
-    result: ChunkedOrScalarAny = call("utf8_length", native)
+    result: Native = call("utf8_length", native)
     return result
 
 
-def slice(
-    native: ChunkedOrScalarAny, offset: int, length: int | None = None
-) -> ChunkedOrScalarAny:
+def slice(native: Native, offset: int, length: int | None = None) -> Native:
     """Extract a substring from each string value."""
     stop = length if length is None else offset + length
     return pc.utf8_slice_codeunits(native, offset, stop=stop)
 
 
 def pad_start(
-    native: ChunkedOrScalarAny, length: int, fill_char: str = " "
-) -> ChunkedOrScalarAny:  # pragma: no cover
+    native: Native, length: int, fill_char: str = " "
+) -> Native:  # pragma: no cover
     """Pad the start of the string until it reaches the given length."""
     return pc.utf8_lpad(native, length, fill_char)
 
@@ -275,11 +278,14 @@ def contains(
     return result
 
 
-def strip_chars(native: Incomplete, characters: str | None) -> Incomplete:
+def strip_chars(native: Native, characters: str | None) -> ChunkedOrScalar[StringScalar]:
     """Remove leading and trailing characters."""
-    if characters:
-        return pc.utf8_trim(native, characters)
-    return pc.utf8_trim_whitespace(native)
+    result: ChunkedOrScalar[StringScalar] = (
+        call("utf8_trim_whitespace", native)
+        if not characters
+        else call("utf8_trim", native, options=pc.TrimOptions(characters))
+    )
+    return result
 
 
 def replace(

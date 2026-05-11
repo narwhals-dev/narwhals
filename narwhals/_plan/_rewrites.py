@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._plan import _parse
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._guards import (
     is_aggregation,
@@ -11,7 +12,6 @@ from narwhals._plan._guards import (
     is_function_expr,
     is_over,
 )
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
 from narwhals._plan.common import replace
 
 if TYPE_CHECKING:
@@ -19,11 +19,14 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import IntoFrozenSchema
-    from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, Seq
+    from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, OneOrIterable, Seq
 
 
 def rewrite_all(
-    *exprs: IntoExpr, schema: IntoFrozenSchema, rewrites: Sequence[MapIR]
+    exprs: OneOrIterable[IntoExpr],
+    *more_exprs: IntoExpr,
+    schema: IntoFrozenSchema,
+    rewrites: Sequence[MapIR],
 ) -> Seq[NamedIR]:
     """Very naive approach, but should work for a demo.
 
@@ -31,7 +34,8 @@ def rewrite_all(
       - Currently we do a full traversal of each tree per-rewrite function
     - There's no caching *after* `prepare_projection` yet
     """
-    named_irs, _ = prepare_projection(parse_into_seq_of_expr_ir(*exprs), schema=schema)
+    it = _parse.into_iter_expr_ir(exprs, *more_exprs)
+    named_irs, _ = prepare_projection(tuple(it), schema=schema)
     return tuple(map_ir(ir, *rewrites) for ir in named_irs)
 
 
@@ -51,7 +55,7 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
     if (
         is_over(window)
         and is_function_expr(window.expr)
-        and window.expr.options.is_elementwise()
+        and window.expr.flags.is_elementwise()
     ):
         func = window.expr
         parent, *args = func.input

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 
 from narwhals._plan.arrow.functions._construction import lit
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 
-__all__ = ["nulls_like", "repeat", "repeat_like", "repeat_unchecked", "zeros"]
+__all__ = ("nulls_like", "repeat", "repeat_like", "repeat_unchecked", "zeros")
 
 
 def nulls_like(n: int, /, native: ArrowAny) -> ArrayAny:

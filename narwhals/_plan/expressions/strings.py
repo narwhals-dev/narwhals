@@ -1,107 +1,79 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
-from narwhals._plan._function import Function, HorizontalFunction
-from narwhals._plan._parse import parse_into_expr_ir
-from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FEOptions, FunctionOptions
+import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan._dispatch import DispatcherOptions
+from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._flags import FunctionFlags
+from narwhals._plan._function import (
+    BinaryFunction,
+    Function,
+    HorizontalFunction,
+    UnaryFunction,
+)
+from narwhals._plan.expressions.namespace import IRNamespace
 
-if TYPE_CHECKING:
-    from typing_extensions import Self
-
-    from narwhals._plan.expr import Expr
-    from narwhals._plan.expressions import ExprIR, FunctionExpr as FExpr
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+ELEMENTWISE = FunctionFlags.ELEMENTWISE
+same_dtype = ResolveDType.function.same_dtype
+renamed = DispatcherOptions.renamed
 
 
 # fmt: off
-class StringFunction(Function, accessor="str", options=FunctionOptions.elementwise): ...
-class LenChars(StringFunction): ...
-class ToLowercase(StringFunction): ...
-class ToUppercase(StringFunction): ...
-class ToTitlecase(StringFunction): ...
-# fmt: on
-class ConcatStr(HorizontalFunction, StringFunction):
+class StringFunction(Function, dispatch=DispatcherOptions(accessor_name="str"), flags=ELEMENTWISE): ...
+class _StringUnary(UnaryFunction, StringFunction): ...
+class LenChars(_StringUnary, dtype=dtm.U32): ...
+class ToLowercase(_StringUnary, dtype=same_dtype()): ...
+class ToUppercase(_StringUnary, dtype=same_dtype()): ...
+class ToTitlecase(_StringUnary, dtype=same_dtype()): ...
+class ConcatStr(HorizontalFunction, StringFunction, dispatch=DispatcherOptions(), dtype=dtm.STR):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-
-
-class Contains(StringFunction):
+class Contains(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool
-
-
-class EndsWith(StringFunction):
+class EndsWith(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("suffix",)
     suffix: str
-
-
-class Replace(StringFunction):
-    """N-ary (expr, value)."""
-
-    def unwrap_input(self, node: FExpr[Self], /) -> tuple[ExprIR, ExprIR]:
-        expr, value = node.input
-        return expr, value
-
+class Replace(BinaryFunction, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "n", "pattern")
     pattern: str
     literal: bool
     n: int
-
-
-class ReplaceAll(StringFunction):
-    """N-ary (expr, value)."""
-
-    def unwrap_input(
-        self, node: FExpr[Self], /
-    ) -> tuple[ExprIR, ExprIR]:  # pragma: no cover
-        expr, value = node.input
-        return expr, value
-
-    def to_replace_n(self, n: int) -> Replace:
-        return Replace(pattern=self.pattern, literal=self.literal, n=n)
-
+class ReplaceAll(BinaryFunction, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool
-
-
-class Slice(StringFunction):
+    def to_replace_n(self, n: int) -> Replace:
+        return Replace(pattern=self.pattern, literal=self.literal, n=n)
+class Slice(_StringUnary, dtype=same_dtype()):
     __slots__ = ("length", "offset")
     offset: int
     length: int | None
-
-
-class Split(StringFunction):
+class Split(_StringUnary, dtype=dtm.dtypes.List(dtm.STR)):
     __slots__ = ("by",)
     by: str
-
-
-class StartsWith(StringFunction):
+class StartsWith(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("prefix",)
     prefix: str
-
-
-class StripChars(StringFunction):
+class StripChars(_StringUnary, dtype=same_dtype()):
     __slots__ = ("characters",)
     characters: str | None
-
-
-class ToDate(StringFunction):
+class ToDate(_StringUnary, dtype=dtm.DATE):
     __slots__ = ("format",)
     format: str | None
-
-
-class ToDatetime(StringFunction):
-    __slots__ = ("format",)
-    format: str | None
-
-
-class ZFill(StringFunction, config=FEOptions.renamed("zfill")):
+class ZFill(_StringUnary, dispatch=renamed("zfill"), dtype=same_dtype()):
     __slots__ = ("length",)
     length: int
+# TODO @dangotbanned: Get @MarcoGorelli's opinion on `str.to_datetime` resolve_dtype.
+# Can we work with (one of) `format: str | None`?
+class ToDatetime(_StringUnary):
+    __slots__ = ("format",)
+    format: str | None
+# fmt: on
 
 
 class IRStringNamespace(IRNamespace):
@@ -140,68 +112,3 @@ class IRStringNamespace(IRNamespace):
 
     def to_datetime(self, format: str | None = None) -> ToDatetime:  # pragma: no cover
         return ToDatetime(format=format)
-
-
-class ExprStringNamespace(ExprNamespace[IRStringNamespace]):
-    @property
-    def _ir_namespace(self) -> type[IRStringNamespace]:
-        return IRStringNamespace
-
-    def len_chars(self) -> Expr:
-        return self._with_unary(self._ir.len_chars())
-
-    def replace(
-        self, pattern: str, value: str | Expr, *, literal: bool = False, n: int = 1
-    ) -> Expr:
-        other = parse_into_expr_ir(value, str_as_lit=True)
-        replace = self._ir.replace(pattern, literal=literal, n=n)
-        return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
-
-    def replace_all(
-        self, pattern: str, value: str | Expr, *, literal: bool = False
-    ) -> Expr:
-        other = parse_into_expr_ir(value, str_as_lit=True)
-        replace = self._ir.replace_all(pattern, literal=literal)
-        return self._expr._from_ir(replace.to_function_expr(self._expr._ir, other))
-
-    def strip_chars(self, characters: str | None = None) -> Expr:
-        return self._with_unary(self._ir.strip_chars(characters))
-
-    def starts_with(self, prefix: str) -> Expr:
-        return self._with_unary(self._ir.starts_with(prefix=prefix))
-
-    def ends_with(self, suffix: str) -> Expr:
-        return self._with_unary(self._ir.ends_with(suffix=suffix))
-
-    def contains(self, pattern: str, *, literal: bool = False) -> Expr:
-        return self._with_unary(self._ir.contains(pattern, literal=literal))
-
-    def slice(self, offset: int, length: int | None = None) -> Expr:
-        return self._with_unary(self._ir.slice(offset, length))
-
-    def head(self, n: int = 5) -> Expr:
-        return self._with_unary(self._ir.head(n))
-
-    def tail(self, n: int = 5) -> Expr:
-        return self._with_unary(self._ir.tail(n))
-
-    def split(self, by: str) -> Expr:
-        return self._with_unary(self._ir.split(by=by))
-
-    def to_date(self, format: str | None = None) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.to_date(format))
-
-    def to_datetime(self, format: str | None = None) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.to_datetime(format))
-
-    def to_lowercase(self) -> Expr:
-        return self._with_unary(self._ir.to_lowercase())
-
-    def to_uppercase(self) -> Expr:
-        return self._with_unary(self._ir.to_uppercase())
-
-    def to_titlecase(self) -> Expr:
-        return self._with_unary(self._ir.to_titlecase())
-
-    def zfill(self, length: int) -> Expr:
-        return self._with_unary(self._ir.zfill(length=length))

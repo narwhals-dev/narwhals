@@ -8,13 +8,12 @@ from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions import random_indices
 from narwhals._plan.arrow.guards import is_series
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Implementation, Version, _StoresNative
+from narwhals._utils import Implementation, _StoresNative
 
 if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._plan.arrow.namespace import ArrowNamespace
     from narwhals._plan.arrow.typing import ChunkedArrayAny, Indices
 
 
@@ -22,9 +21,9 @@ NativeT = TypeVar("NativeT", "pa.Table", "ChunkedArrayAny")
 
 
 class ArrowFrameSeries(Generic[NativeT]):
+    __slots__ = ("_native",)
     implementation: ClassVar = Implementation.PYARROW
     _native: NativeT
-    _version: Version
 
     # NOTE: Aliases to integrate with `@requires.backend_version`
     _backend_version = compat.BACKEND_VERSION
@@ -33,11 +32,6 @@ class ArrowFrameSeries(Generic[NativeT]):
     @property
     def native(self) -> NativeT:
         return self._native
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        from narwhals._plan.arrow.namespace import ArrowNamespace
-
-        return ArrowNamespace(self._version)
 
     def _with_native(self, native: NativeT) -> Self:
         msg = f"{type(self).__name__}._with_native"

@@ -7,8 +7,8 @@ import typing as t
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow.functions._aggregation import implode
 from narwhals._plan.arrow.functions._bin_op import eq, gt, not_eq, or_
@@ -67,7 +67,7 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-__all__ = [
+__all__ = (
     "ExplodeBuilder",
     "contains",
     "get",
@@ -77,7 +77,7 @@ __all__ = [
     "sort",
     "sort_scalar",
     "unique",
-]
+)
 
 
 class ExplodeBuilder:
@@ -126,14 +126,16 @@ class ExplodeBuilder:
     def explode_with_indices(self, native: ChunkedList | ListArray) -> pa.Table:
         """Explode list elements, expanding one-level into a table indexing the origin.
 
-        Returns a 2-column table, with names `"idx"` and `"values"`:
+        Returns a 2-column table:
 
-            >>> from narwhals._plan.arrow import functions as fn
-            >>>
-            >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
-            >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
-            {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
-            # ^ Which sublist values come from ^ The exploded values themselves
+        >>> from narwhals._plan.arrow import functions as fn
+        >>> arr = fn.array([[1, 2, 3], None, [4, 5, 6], []])
+        >>> fn.ExplodeBuilder().explode_with_indices(arr).to_pydict()
+        {'idx': [0, 0, 0, 1, 2, 2, 2, 3], 'values': [1, 2, 3, None, 4, 5, 6, None]}
+
+        Where the names mean:
+        - *"idx"*: Which sublist values come from
+        - *"values"*: The exploded values themselves
         """
         safe = self._fill_with_null(native) if self.options.any() else native
         arrays = [_list_parent_indices(safe), _explode(safe)]

@@ -9,8 +9,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING, Any, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan._guards import is_non_nested_literal
 from narwhals._plan.arrow.functions._arithmetic import sub
@@ -23,7 +23,7 @@ from narwhals._plan.arrow.functions._sort import reverse
 from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (
@@ -47,7 +47,8 @@ if TYPE_CHECKING:
     from narwhals.typing import FillNullStrategy, NonNestedLiteral
 
 
-__all__ = [
+__all__ = (
+    "drop_nulls",
     "fill_nan",
     "fill_null",
     "fill_null_with_strategy",
@@ -56,7 +57,9 @@ __all__ = [
     "replace_strict_default",
     "replace_with_mask",
     "when_then",
-]
+)
+
+drop_nulls = t.cast("Callable[[ChunkedArray], ChunkedArray]", pc.drop_null)
 
 
 @overload
@@ -118,21 +121,25 @@ def replace_with_mask(
 
 
 def replace_strict(
-    native: ChunkedOrScalarAny,
+    native: ChunkedOrScalarT,
     old: Seq[Any],
     new: Seq[Any],
     dtype: pa.DataType | None = None,
-) -> ChunkedOrScalarAny:
+) -> ChunkedOrScalarT:
     """Replace all values (`old`) by different values (`new`).
 
     Raises if any values in `native` were not replaced.
     """
     if isinstance(native, pa.Scalar):
         idxs: ArrayAny = array(pc.index_in(native, pa.array(old)))
-        result: ChunkedOrScalarAny = pa.array(new).take(idxs)[0]
-    else:
-        idxs = pc.index_in(native, pa.array(old))
-        result = chunked_array(pa.array(new).take(idxs))
+        s_result: ScalarAny = pa.array(new).take(idxs)[0]
+        if err := _ensure_all_replaced(native, and_(is_not_null(native), is_null(idxs))):
+            raise err
+        if dtype:
+            return s_result.cast(dtype)
+        return s_result
+    idxs = pc.index_in(native, pa.array(old))
+    result = chunked_array(pa.array(new).take(idxs))
     if err := _ensure_all_replaced(native, and_(is_not_null(native), is_null(idxs))):
         raise err
     return result.cast(dtype) if dtype else result

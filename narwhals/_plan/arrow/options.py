@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Order, Seq
 
 
-__all__ = [
+__all__ = (
     "AGG",
     "FUNCTION",
     "LIST_AGG",
@@ -42,7 +42,7 @@ __all__ = [
     "sort",
     "split_pattern",
     "variance",
-]
+)
 
 
 _T = TypeVar("_T", bound="type[ir.ExprIR | ir.Function]")

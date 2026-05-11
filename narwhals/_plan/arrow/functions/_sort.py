@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._plan.arrow import compat, options as pa_options
 from narwhals._plan.arrow.functions._arithmetic import multiply
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals._plan.options import SortMultipleOptions, SortOptions
 
 
-__all__ = ["random_indices", "reverse", "sort_indices", "unsort_indices"]
+__all__ = ("random_indices", "reverse", "sort_indices", "unsort_indices")
 
 
 @overload

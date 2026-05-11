@@ -8,7 +8,7 @@ from __future__ import annotations
 import operator
 import re
 from datetime import timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -16,7 +16,6 @@ import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
 from narwhals._plan import Selector, selectors as ncs
-from narwhals._plan._guards import is_expr, is_selector
 from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 from tests.plan.utils import (
@@ -29,7 +28,7 @@ from tests.plan.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from narwhals._plan.typing import IntoExpr, OperatorFn
     from narwhals.dtypes import DType
@@ -42,7 +41,7 @@ def schema_nested_1() -> nw.Schema:
             "a": nw.Int32(),
             "b": nw.List(nw.Int32()),
             "c": nw.List(nw.UInt32),
-            "d": nw.Array(nw.Int32(), 3),
+            "d": nw.Array(nw.Int32, 3),
             "e": nw.List(nw.String),
             "f": nw.Struct({"x": nw.Int32()}),
         }
@@ -105,7 +104,7 @@ def schema_mixed() -> nw.Schema:
             "p": nw.Categorical(),
             "q": nw.Duration(),
             "r": nw.Enum(["A", "B", "C"]),
-            "s": nw.List(nw.String()),
+            "s": nw.List(nw.String),
             "u": nw.Struct({"a": nw.Int64(), "k": nw.String}),
         }
     )
@@ -180,6 +179,14 @@ def test_selector_by_dtype_empty(schema_non_nested: nw.Schema) -> None:
     # empty selection selects nothing
     df.assert_selects(ncs.by_dtype())
     df.assert_selects(ncs.by_dtype([]))
+
+
+def test_selector_empty(schema_non_nested: nw.Schema) -> None:
+    df = Frame(schema_non_nested)
+    df.assert_selects(ncs.empty())
+    df.assert_selects(ncs.empty() | ncs.empty())
+    df.assert_selects(~ncs.empty(), *df.columns)
+    df.assert_selects(ncs.empty() | ncs.duration(), "Lmn")
 
 
 @pytest.mark.parametrize(
@@ -257,6 +264,9 @@ def test_selector_by_index_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_index(["two", "three"])  # type: ignore[list-item]
 
+    with pytest.raises(TypeError):
+        ncs.by_index(ncs.by_index(1))  # type: ignore[arg-type]
+
 
 def test_selector_by_index_not_found(schema_non_nested: nw.Schema) -> None:
     df = Frame(schema_non_nested)
@@ -323,6 +333,8 @@ def test_selector_by_name_not_found(schema_non_nested: nw.Schema) -> None:
 def test_selector_by_name_invalid_input() -> None:
     with pytest.raises(TypeError):
         ncs.by_name(999)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        ncs.by_name(("a", "b", 55))  # type: ignore[arg-type]
 
 
 def test_selector_first_last(schema_non_nested: nw.Schema) -> None:
@@ -540,10 +552,13 @@ def test_selector_set_ops(schema_non_nested: nw.Schema, schema_mixed: nw.Schema)
         nwp.col("colx") - ncs.matches("[yz]$")
 
     # complement
-    selector = ~ncs.by_dtype([nw.Duration, nw.Time])
+    base = ncs.by_dtype([nw.Duration, nw.Time])
+    invert = ~base
+    invert_x2 = ~invert
     df.assert_selects(
-        selector, "abc", "bbb", "cde", "def", "eee", "fgg", "JJK", "opp", "qqR"
+        invert, "abc", "bbb", "cde", "def", "eee", "fgg", "JJK", "opp", "qqR"
     )
+    df.assert_selects(invert_x2, "ghi", "Lmn")
 
     # exclusive or
     expected = "abc", "bbb", "eee", "fgg", "ghi"
@@ -563,6 +578,10 @@ def _is_selector_operator(function: OperatorFn) -> bool:
     return function in {operator.and_, operator.or_, operator.xor, operator.sub}
 
 
+def is_selector(obj: Any) -> bool:
+    return isinstance(obj, Selector)
+
+
 @pytest.mark.parametrize(
     "arg_2",
     [1, nwp.col("a"), nwp.col("a").max(), ncs.numeric()],
@@ -580,7 +599,7 @@ def test_selector_arith_binary_ops(
     result_1 = function(arg_1, arg_2)
     if (
         _is_binary_operator(function)
-        and is_expr(arg_2)
+        and isinstance(arg_2, nwp.Expr)
         and is_expr_ir_equal(arg_2, nwp.col("a"))
     ) or (_is_selector_operator(function) and is_selector(arg_2)):
         assert is_selector(result_1)
@@ -623,8 +642,9 @@ def test_selector_list(schema_nested_1: nw.Schema) -> None:
 
     # inner None
     df.assert_selects(ncs.list(), "b", "c", "e")
-    # Inner All (as a DTypeSelector)
+    # inner converted to DTypeSelector
     df.assert_selects(ncs.list(ncs.all()), "b", "c", "e")
+    df.assert_selects(ncs.list(ncs.empty()))
     # inner DTypeSelector
     df.assert_selects(ncs.list(ncs.integer()), "b", "c")
     df.assert_selects(ncs.list(inner=ncs.string()), "e")
@@ -635,6 +655,13 @@ def test_selector_list(schema_nested_1: nw.Schema) -> None:
     # inner InvertSelector
     df.assert_selects(ncs.list(~ncs.all()))
 
+    # mixed bag
+    df.assert_selects(ncs.list(~(ncs.all() - ncs.string())), "e")
+    oh_boy = (
+        ~((ncs.empty() ^ ncs.list(ncs.empty())) ^ ~ncs.list(~ncs.empty()))
+    ) - ncs.list(ncs.by_dtype(nw.UInt32))
+    df.assert_selects(oh_boy, "b", "e")
+
 
 def test_selector_array(schema_nested_2: nw.Schema) -> None:
     df = Frame(schema_nested_2)
@@ -642,21 +669,27 @@ def test_selector_array(schema_nested_2: nw.Schema) -> None:
     df.assert_selects(ncs.array(ncs.all()), "b", "c", "d", "f")
     df.assert_selects(ncs.array(size=4), "b", "c", "f")
     df.assert_selects(ncs.array(inner=ncs.integer()), "b", "c", "d")
-    df.assert_selects(ncs.array(inner=ncs.string()), "f")
+    df.assert_selects(ncs.array(inner=ncs.string() | ncs.boolean()), "f")
+    df.assert_selects(ncs.array(~ncs.integer()), "f")
+    df.assert_selects(ncs.array(ncs.all() | ncs.array(ncs.all())), "b", "c", "d", "f")
 
 
-def test_selector_non_dtype_inside_dtype(schema_nested_2: nw.Schema) -> None:
-    df = Frame(schema_nested_2)
-
-    with pytest.raises(
-        TypeError, match=r"expected datatype based expression got.+by_name\("
-    ):
-        df.project(ncs.list(inner=ncs.by_name("???")))
-
-    with pytest.raises(
-        TypeError, match=r"expected datatype based expression got.+by_name\("
-    ):
-        df.project(ncs.array(inner=ncs.by_name("???")))
+@pytest.mark.parametrize("outer", [ncs.list, ncs.array], ids=["list", "array"])
+@pytest.mark.parametrize(
+    "inner",
+    [
+        ncs.by_name("???"),
+        ~ncs.by_index(1),
+        ncs.matches(r"any") | ncs.by_index(0, 1),
+        ncs.boolean() & ncs.last(),
+    ],
+    ids=["root", "invert", "binary", "binary-mixed"],
+)
+def test_selector_non_dtype_inside_dtype(
+    outer: Callable[[Selector | None], Selector], inner: Selector
+) -> None:
+    with pytest.raises(TypeError, match=r"expected data type based selector"):
+        outer(inner)
 
 
 def test_selector_enum() -> None:

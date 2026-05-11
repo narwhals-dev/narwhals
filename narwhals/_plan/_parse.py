@@ -1,348 +1,373 @@
-from __future__ import annotations
+"""Parsing for narwhals-level expressions.
 
-import operator
-from collections import deque
-from collections.abc import Collection, Iterable, Sequence
+## Important
+The **only** inline dependencies this module should have are for:
+-  `Expr`
+- `Series`
+- `lit`
+
+It should not be used in `_plan.expressions.*` at all.
+
+These constraints allow top-level modules and the `functions` & `compliant` packages
+to freely import from here.
+"""
 
 # ruff: noqa: A002
-from functools import reduce
-from itertools import chain
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
-from narwhals._native import is_native_pandas
-from narwhals._plan._guards import (
-    is_column_name_or_selector,
-    is_expr,
-    is_into_expr_column,
-    is_iterable_reject,
-)
-from narwhals._plan.common import flatten_hash_safe
+from collections import deque
+from collections.abc import Callable, Iterable
+from functools import cache, lru_cache
+from itertools import chain
+from typing import TYPE_CHECKING, Any, TypeVar
+
+import narwhals._plan.expressions as ir
+import narwhals._plan.expressions.selectors as s_ir
 from narwhals._plan.exceptions import (
+    at_least_one_error,
     invalid_into_expr_error,
     is_iterable_error,
-    list_literal_error,
+    sort_by_key_length_changing_error,
 )
 from narwhals._utils import qualified_type_name
-from narwhals.dependencies import get_polars
-from narwhals.exceptions import InvalidOperationError
+from narwhals.dependencies import get_pandas, get_polars
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import Any, TypeVar
 
     from typing_extensions import TypeAlias, TypeIs
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, SelectorIR
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import (
-        ColumnNameOrSelector,
-        IntoExpr,
-        IntoExprColumn,
-        OneOrIterable,
-        PartialSeries,
-        Seq,
-    )
-    from narwhals.typing import IntoDType
+    from narwhals._plan.series import Series
+    from narwhals._plan.typing import IntoExpr, OneOrIterable, PartialSeries, Seq
 
-    T = TypeVar("T")
 
-_RaisesInvalidIntoExprError: TypeAlias = "Any"
-"""
-Placeholder for multiple `Iterable[IntoExpr]`.
+__all__ = [
+    "into_expr_ir",
+    "into_iter_expr_ir",  # stable
+    "into_iter_selector_ir",  # stable
+    "into_selector_ir",  # stable
+    "predicates_constraints_into_expr_ir",  # functionality stable, name? eh
+    "sort_by_into_iter_expr_ir",  # stable
+]
 
-We only support cases `a`, `b`, but the typing for most contexts is more permissive:
+T = TypeVar("T")
+Incomplete: TypeAlias = "Any"
+"""Marks unsound `*exprs: OneOrIterable[IntoExpr]` unpacking.
 
->>> import polars as pl
->>> df = pl.DataFrame({"one": ["A", "B", "A"], "two": [1, 2, 3], "three": [4, 5, 6]})
->>> a = ("one", "two")
->>> b = (["one", "two"],)
->>>
->>> c = ("one", ["two"])
->>> d = (["one"], "two")
->>> [df.select(*into) for into in (a, b, c, d)]
-[shape: (3, 2)
- ┌─────┬─────┐
- │ one ┆ two │
- │ --- ┆ --- │
- │ str ┆ i64 │
- ╞═════╪═════╡
- │ A   ┆ 1   │
- │ B   ┆ 2   │
- │ A   ┆ 3   │
- └─────┴─────┘,
- shape: (3, 2)
- ┌─────┬─────┐
- │ one ┆ two │
- │ --- ┆ --- │
- │ str ┆ i64 │
- ╞═════╪═════╡
- │ A   ┆ 1   │
- │ B   ┆ 2   │
- │ A   ┆ 3   │
- └─────┴─────┘,
- shape: (3, 2)
- ┌─────┬───────────┐
- │ one ┆ literal   │
- │ --- ┆ ---       │
- │ str ┆ list[str] │
- ╞═════╪═══════════╡
- │ A   ┆ ["two"]   │
- │ B   ┆ ["two"]   │
- │ A   ┆ ["two"]   │
- └─────┴───────────┘,
- shape: (3, 2)
- ┌───────────┬─────┐
- │ literal   ┆ two │
- │ ---       ┆ --- │
- │ list[str] ┆ i64 │
- ╞═══════════╪═════╡
- │ ["one"]   ┆ 1   │
- │ ["one"]   ┆ 2   │
- │ ["one"]   ┆ 3   │
- └───────────┴─────┘]
+Some functions use the `expr: OneOrIterable[IntoExpr], *more: IntoExpr` pattern, but not all.
 """
 
 
-def parse_into_expr_ir(
-    input: IntoExpr | list[Any],
-    *,
-    str_as_lit: bool = False,
-    list_as_series: PartialSeries | None = None,
-    dtype: IntoDType | None = None,
-) -> ExprIR:
-    """Parse a single input into an `ExprIR` node.
+# TODO @dangotbanned: `str_as_lit` maybe stays, but could do some inheritance instead?
+def into_expr_ir(input: IntoExpr | dict[Any, Any], *, str_as_lit: bool = False) -> ExprIR:
+    """Parse a single input into an expression.
 
     Arguments:
         input: The input to be parsed as an expression.
         str_as_lit: Interpret string input as a string literal. If set to `False` (default),
             strings are parsed as column names.
-        list_as_series: Interpret list input as a Series literal, using the provided constructor.
-            If set to `None` (default), lists will raise when passed to `lit`.
-        dtype: If the input is expected to resolve to a literal with a known dtype, pass
-            this to the `lit` constructor.
     """
-    from narwhals._plan import col, lit
-
-    if is_expr(input):
-        expr = input
-    elif isinstance(input, str) and not str_as_lit:
-        expr = col(input)
-    elif isinstance(input, list):
-        if list_as_series is None:
-            raise list_literal_error(input)
-        expr = lit(list_as_series(input))
-    else:
-        expr = lit(input, dtype=dtype)
-    return expr._ir
+    if isinstance(input, _import_expr()):
+        return input._ir
+    if not str_as_lit and isinstance(input, str):
+        return ir.col(input)
+    return _import_lit()(input)._ir
 
 
-def parse_into_selector_ir(
-    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
-) -> SelectorIR:
-    return _parse_into_selector(input, require_all=require_all)._ir
-
-
-def _parse_into_selector(
-    input: ColumnNameOrSelector | Expr, /, *, require_all: bool = True
-) -> Selector:
-    if is_expr(input):
-        selector = input.meta.as_selector()
-    elif isinstance(input, str):
-        import narwhals._plan.selectors as cs
-
-        selector = cs.by_name(input, require_all=require_all)
-    else:
-        msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
-        raise TypeError(msg)
-    return selector
-
-
-def parse_into_combined_selector_ir(
-    *inputs: OneOrIterable[ColumnNameOrSelector], require_all: bool = True
-) -> SelectorIR:
-    import narwhals._plan.selectors as cs
-
-    flat = tuple(flatten_hash_safe(inputs))
-    selectors = deque["Selector"]()
-    if names := tuple(el for el in flat if isinstance(el, str)):
-        selector = cs.by_name(names, require_all=require_all)
-        if len(names) == len(flat):
-            return selector._ir
-        selectors.append(selector)
-    selectors.extend(_parse_into_selector(el) for el in flat if not isinstance(el, str))
-    return _any_of(selectors)._ir
-
-
-def _any_of(selectors: Collection[Selector], /) -> Selector:
-    import narwhals._plan.selectors as cs
-
-    if not selectors:
-        s: Selector = cs.empty()
-    elif len(selectors) == 1:
-        s = next(iter(selectors))
-    else:
-        s = reduce(operator.or_, selectors)
-    return s
-
-
-def parse_into_seq_of_expr_ir(
-    first_input: OneOrIterable[IntoExpr] = (),
-    *more_inputs: IntoExpr | _RaisesInvalidIntoExprError,
-    **named_inputs: IntoExpr,
-) -> Seq[ExprIR]:
-    """Parse variadic inputs into a flat sequence of `ExprIR` nodes."""
-    return tuple(
-        _parse_into_iter_expr_ir(
-            first_input, *more_inputs, _list_as_series=None, **named_inputs
-        )
-    )
-
-
-def parse_predicates_constraints_into_expr_ir(
-    first_predicate: OneOrIterable[IntoExprColumn] | list[bool] = (),
-    *more_predicates: IntoExprColumn | list[bool] | _RaisesInvalidIntoExprError,
-    _list_as_series: PartialSeries | None = None,
+def predicates_constraints_into_expr_ir(
+    first_predicate: OneOrIterable[IntoExpr] = (),
+    *more_predicates: IntoExpr | Incomplete,
     **constraints: IntoExpr,
 ) -> ExprIR:
-    """Parse variadic predicates and constraints into an `ExprIR` node.
+    """Parse variadic predicates and constraints into an expression.
 
     The result is an AND-reduction of all inputs.
     """
-    all_predicates = _parse_into_iter_expr_ir(
-        first_predicate, *more_predicates, _list_as_series=_list_as_series
+    predicates = into_iter_expr_ir(first_predicate, *more_predicates)
+    return _predicates_constraints_into_expr_ir(predicates, constraints)
+
+
+def df_filter_predicates_constraints_into_expr_ir(
+    first_predicate: OneOrIterable[IntoExpr] = (),
+    *more_predicates: IntoExpr | Incomplete,
+    _into_series: PartialSeries,
+    **constraints: IntoExpr,
+) -> ExprIR:
+    """Special-casing for `DataFrame.filter` boolean masks.
+
+    **Eager-only**, since this requires creating new `Series`:
+
+        [False, True, True] -> lit(Series([False, True, True]))
+    """
+    predicates = _df_filter_into_iter_expr_ir(
+        first_predicate, more_predicates, into_series=_into_series
     )
+    return _predicates_constraints_into_expr_ir(predicates, constraints)
+
+
+def _predicates_constraints_into_expr_ir(
+    predicates: Iterator[ExprIR], constraints: dict[str, IntoExpr], /
+) -> ExprIR:
     if constraints:
-        chained = chain(all_predicates, _parse_constraints(constraints))
-        return _combine_predicates(chained)
-    return _combine_predicates(all_predicates)
+        items = constraints.items()
+        it = (ir.col(nm).eq(into_expr_ir(v, str_as_lit=True)) for nm, v in items)
+        predicates = chain(predicates, it)
+
+    if (first := next(predicates, None)) is None:
+        raise at_least_one_error("filter")
+    if second := next(predicates, None):
+        return ir.all_horizontal(first, second, *predicates)
+    return first
 
 
-def parse_sort_by_into_seq_of_expr_ir(
-    by: OneOrIterable[IntoExprColumn] = (), *more_by: IntoExprColumn
-) -> Seq[ExprIR]:
-    """Parse `DataFrame.sort` and `Expr.sort_by` keys into a flat sequence of `ExprIR` nodes."""
-    return tuple(_parse_sort_by_into_iter_expr_ir(by, more_by))
-
-
-# TODO @dangotbanned: Review the rejection predicate
-# It doesn't cover all length-changing expressions, only aggregations/literals
-def _parse_sort_by_into_iter_expr_ir(
-    by: OneOrIterable[IntoExprColumn], more_by: Iterable[IntoExprColumn]
+def sort_by_into_iter_expr_ir(
+    by: OneOrIterable[Expr | str], more_by: Seq[Expr | str] = (), /
 ) -> Iterator[ExprIR]:
-    for e in _parse_into_iter_expr_ir(by, *more_by):
-        if e.is_scalar:
-            msg = f"All expressions sort keys must preserve length, but got:\n{e!r}"  # pragma: no cover
-            raise InvalidOperationError(msg)  # pragma: no cover
+    it = into_iter_expr_ir(by, *more_by)
+    if (first := next(it, None)) is None:
+        raise at_least_one_error("sort_by")
+    if not first.is_length_preserving():
+        raise sort_by_key_length_changing_error(first)
+    yield first
+    for e in it:
+        if not e.is_length_preserving():
+            raise sort_by_key_length_changing_error(e)
         yield e
 
 
-def parse_into_seq_of_selector_ir(
-    first_input: OneOrIterable[ColumnNameOrSelector], *more_inputs: ColumnNameOrSelector
-) -> Seq[SelectorIR]:
-    return tuple(_parse_into_iter_selector_ir(first_input, more_inputs))
-
-
-def _parse_into_iter_selector_ir(
-    first_input: OneOrIterable[ColumnNameOrSelector],
-    more_inputs: tuple[ColumnNameOrSelector, ...],
-    /,
-) -> Iterator[SelectorIR]:
-    if is_column_name_or_selector(first_input) and not more_inputs:
-        yield parse_into_selector_ir(first_input)
-        return
-
-    if not _is_empty_sequence(first_input):
-        if _is_iterable(first_input) and not isinstance(first_input, str):
-            if more_inputs:
-                raise invalid_into_expr_error(first_input, more_inputs, {})
-            else:
-                for into in first_input:  # type: ignore[var-annotated]
-                    yield parse_into_selector_ir(into)
-        else:
-            yield parse_into_selector_ir(first_input)
-    for into in more_inputs:
-        yield parse_into_selector_ir(into)
-
-
-def _parse_into_iter_expr_ir(
-    first_input: OneOrIterable[IntoExpr],
-    *more_inputs: IntoExpr | list[Any],
-    _list_as_series: PartialSeries | None = None,
+def into_iter_expr_ir(
+    first_input: OneOrIterable[IntoExpr] = (),
+    *more_inputs: IntoExpr | Incomplete,
     **named_inputs: IntoExpr,
 ) -> Iterator[ExprIR]:
-    if not _is_empty_sequence(first_input):
-        # NOTE: These need to be separated to introduce an intersection type
-        # Otherwise, `str | bytes` always passes through typing
-        if _is_iterable(first_input) and not is_iterable_reject(first_input):
-            if more_inputs and (
-                _list_as_series is None or not isinstance(first_input, list)
-            ):
-                raise invalid_into_expr_error(first_input, more_inputs, named_inputs)
-            # NOTE: Ensures `first_input = [False, True, True] -> lit(Series([False, True, True]))`
-            elif (
-                _list_as_series is not None
-                and isinstance(first_input, list)
-                and not is_into_expr_column(first_input[0])
-            ):
-                yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
-            else:
-                yield from _parse_positional_inputs(first_input, _list_as_series)
-        else:
-            yield parse_into_expr_ir(first_input, list_as_series=_list_as_series)
-    else:
-        # NOTE: Passthrough case for no inputs - but gets skipped when calling next
-        yield from ()
-    if more_inputs:
-        yield from _parse_positional_inputs(more_inputs, _list_as_series)
-    if named_inputs:
-        yield from _parse_named_inputs(named_inputs)
+    """Yield variadic inputs parsed into expressions.
 
+    Arguments:
+        first_input: Input(s) to be parsed as expressions.
+        *more_inputs: Additional inputs to parse.
+        **named_inputs: Keyword-arguments from one of `select`, `with_columns`, `group_by`.
+            The columns will be renamed to the keyword used.
 
-def _parse_positional_inputs(
-    inputs: Iterable[IntoExpr | list[Any]], /, list_as_series: PartialSeries | None = None
-) -> Iterator[ExprIR]:
-    for into in inputs:
-        yield parse_into_expr_ir(into, list_as_series=list_as_series)
+    *Most* cases are covered by these rules, see examples for special-cases:
 
+        # IntoExpr: TypeAlias = Expr | str | Series | PythonLiteral
+        Expr                   -> ExprIR
+        str                    -> Col
+        Series                 -> LitSeries
+        PythonLiteral          -> Lit
 
-def _parse_named_inputs(named_inputs: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    for name, input in named_inputs.items():
-        yield parse_into_expr_ir(input).alias(name)
+    Examples:
+        `first_input` is separate as how it is parsed *depends on* `more_inputs`.
 
+        >>> def parse(*args, **kwds):
+        ...     return list(into_iter_expr_ir(*args, **kwds))
 
-def _parse_constraints(constraints: dict[str, IntoExpr], /) -> Iterator[ExprIR]:
-    from narwhals._plan import col
+        The general case is that we support these as all meaning, *select those two columns*:
+        >>> parse("one", "two")
+        [col('one'), col('two')]
+        >>> parse(["one", "two"])
+        [col('one'), col('two')]
+        >>> parse("one", "two")
+        [col('one'), col('two')]
+        >>> parse(iter(("one", "two")))
+        [col('one'), col('two')]
 
-    for name, value in constraints.items():
-        yield (col(name) == value)._ir
+        Whereas `list | tuple` will otherwise be considered literals:
+        >>> parse("one", ["two"])
+        [col('one'), lit(list: ['two'])]
+        >>> parse(["one"], "two")
+        [lit(list: ['one']), col('two')]
+        >>> parse(["one"], ("two",))
+        [lit(list: ['one']), lit(list: ['two'])]
 
-
-def _combine_predicates(predicates: Iterator[ExprIR], /) -> ExprIR:
-    from narwhals._plan.expressions.boolean import all_horizontal
-
-    first = next(predicates, None)
-    if not first:
-        msg = "at least one predicate or constraint must be provided"
-        raise TypeError(msg)
-    if second := next(predicates, None):
-        inputs = first, second, *predicates
-    elif first.meta.has_multiple_outputs():
-        # NOTE: Safeguarding against https://github.com/pola-rs/polars/issues/25022
-        inputs = (first,)
-    else:
-        return first
-    return all_horizontal(*inputs)
-
-
-def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
-    if is_native_pandas(obj) or (
-        (pl := get_polars())
-        and isinstance(obj, (pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame))
+        *This behavior matches `polars`*
+    """
+    first = first_input
+    always_expr_or_lit = (_import_series(), _import_expr(), str, bytes, dict)
+    if (isinstance(first, always_expr_or_lit) or not _is_iterable(first)) or (
+        more_inputs and isinstance(first, (list, tuple))
     ):
+        yield into_expr_ir(first)  # type: ignore[arg-type]
+    else:
+        for into in first:
+            yield into_expr_ir(into)
+    for into in more_inputs:
+        yield into_expr_ir(into)
+    for name, input in named_inputs.items():
+        yield into_expr_ir(input).alias(name)
+
+
+def _df_filter_into_iter_expr_ir(
+    first_predicate: OneOrIterable[IntoExpr],
+    more_predicates: Iterable[IntoExpr | list[Any]],
+    into_series: PartialSeries,
+) -> Iterator[ExprIR]:
+    first = first_predicate
+    expr, lit = _import_expr(), _import_lit()
+    non_mask_fast = (_import_series(), expr, str, bytes)
+    if isinstance(first, non_mask_fast) or not _is_iterable(first):
+        yield into_expr_ir(first)  # type: ignore[arg-type]
+    elif isinstance(first, list) and first and not isinstance(first[0], non_mask_fast):
+        more_predicates = chain([first], more_predicates)
+    else:
+        more_predicates = chain(first, more_predicates)
+    for p in more_predicates:
+        if isinstance(p, expr):
+            yield p._ir
+        elif isinstance(p, str):
+            yield ir.col(p)
+        else:
+            yield lit(into_series(p) if isinstance(p, list) else p)._ir
+
+
+# TODO @dangotbanned: Would be cool to have something like:
+# `into_selector_ir(...).expand_names(schema, **kwds)`
+def into_selector_ir(
+    first_input: OneOrIterable[str | Selector],
+    more_inputs: Seq[OneOrIterable[str | Selector]] = (),
+    /,
+    *,
+    require_all: bool = True,
+) -> SelectorIR:
+    """Parse and reduce input(s) into a **single** selector.
+
+    Tip:
+        Prefer `into_iter_selector_ir` if there isn't a requirement for just one.
+
+    Arguments:
+        first_input: One or more column names or selectors.
+        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+        require_all: Whether to match *all* names (the default) or *any* of the names.
+
+    Examples:
+        The goal is for the final selector to be as simple as possible:
+        >>> into_selector_ir("a")
+        ncs.by_name('a')
+        >>> into_selector_ir("a", ("b",))
+        ncs.by_name('a', 'b')
+        >>> into_selector_ir(["a"], ("b", "c", ["d", "e"]), require_all=False)
+        ncs.by_name('a', 'b', 'c', 'd', 'e', require_all=False)
+        >>> into_selector_ir(())
+        ncs.empty()
+        >>> into_selector_ir((), ((),))
+        ncs.empty()
+
+        And saving `__or__` for just the bits we can't (cheaply) reduce:
+        >>> import narwhals._plan.selectors as ncs
+        >>> into_selector_ir(("a", "b"), (ncs.integer(), ncs.float(), "c"))
+        [[ncs.by_name('a', 'b', 'c') | ncs.integer()] | ncs.float()]
+    """
+    if not more_inputs and (
+        isinstance(first_input, str) or not isinstance(first_input, Iterable)
+    ):
+        return _into_selector_ir(first_input, require_all=require_all)
+    flat = _flatten_column_names_or_selectors((first_input, *more_inputs))
+    if (first := next(flat, None)) is None:
+        return s_ir.Empty()
+    if (second := next(flat, None)) is None:
+        return _into_selector_ir(first, require_all=require_all)
+
+    names = deque[str]()
+    irs = deque[ir.SelectorIR]()
+    for into in chain((first, second), flat):
+        if isinstance(into, str):
+            names.append(into)
+        else:
+            irs.append(_into_selector_ir(into, require_all=require_all))
+    if not names:
+        s = irs.popleft()
+    else:
+        s = s_ir.ByName(names=tuple(names), require_all=require_all)
+    return s.or_(*irs)
+
+
+def into_iter_selector_ir(
+    first_input: OneOrIterable[str | Selector], more_inputs: Seq[str | Selector] = (), /
+) -> Iterator[SelectorIR]:
+    """Yield input(s) parsed into selector(s).
+
+    Arguments:
+        first_input: One or more column names or selectors.
+        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+    """
+    if isinstance(first_input, str):
+        yield s_ir.ByName.from_name(first_input)
+    elif not isinstance(first_input, Iterable):
+        yield _into_selector_ir(first_input)
+    elif more_inputs:
+        raise invalid_into_expr_error(first_input, more_inputs, {})
+    else:
+        for into in first_input:
+            yield _into_selector_ir(into)
+    for into in more_inputs:
+        yield _into_selector_ir(into)
+
+
+def _into_selector_ir(
+    input: str | Selector | Expr, /, *, require_all: bool = True
+) -> SelectorIR:
+    if isinstance(input, _import_expr()):
+        return input._ir.to_selector_ir()
+    if isinstance(input, str):
+        return s_ir.ByName.from_name(input, require_all=require_all)
+    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
+    raise TypeError(msg)
+
+
+def _flatten_column_names_or_selectors(
+    iterable: Iterable[OneOrIterable[str | Selector]], /
+) -> Iterator[str | Selector]:
+    # A more restrictive & cheaper version of `common.flatten_hash_safe`
+    for element in iterable:
+        if isinstance(element, str) or not isinstance(element, Iterable):
+            yield element
+        else:
+            yield from _flatten_column_names_or_selectors(element)
+
+
+# TODO @dangotbanned: make this `_is_iterable_raise_native` (or something)
+# TODO @dangotbanned: Use just the `_is_iterable` part for selectors
+# - The base case in `_into_selector_ir` *could* do this extra error before raising the more general thing
+# - `into_expr_ir` should probably handle this differently too
+def _is_iterable(obj: Iterable[T] | Any) -> TypeIs[Iterable[T]]:
+    """Equivalent to `isinstance(obj, Iterable)` but raises on native types.
+
+    Used on a very hot path, so subclass checks are cached.
+    """
+    tp = type(obj)
+    if _type_cached_is_iterable_is_native(tp):  # type: ignore[arg-type]
         raise is_iterable_error(obj)
-    return isinstance(obj, Iterable)
+    return _type_cached_is_iterable(tp)  # type: ignore[arg-type]
 
 
-def _is_empty_sequence(obj: Any) -> bool:
-    return isinstance(obj, Sequence) and not obj
+@lru_cache(maxsize=128)
+def _type_cached_is_iterable_is_native(tp: type[Any], /) -> bool:
+    tps: tuple[type[Any], ...] = (pd.DataFrame, pd.Series) if (pd := get_pandas()) else ()
+    tps = (
+        (*tps, pl.Series, pl.Expr, pl.DataFrame, pl.LazyFrame)
+        if (pl := get_polars())
+        else tps
+    )
+    return bool(tps and issubclass(tp, tps))
+
+
+# fmt: off
+@lru_cache(maxsize=128)
+def _type_cached_is_iterable(tp: type[Any], /) -> bool:
+    return issubclass(tp, Iterable)
+@cache
+def _import_expr() -> type[Expr]:
+    from narwhals._plan.expr import Expr
+    return Expr
+@cache
+def _import_series() -> type[Series]:
+    from narwhals._plan.series import Series
+    return Series
+@cache
+def _import_lit() -> Callable[[Any], Expr]:
+    from narwhals._plan.functions.literal import lit
+    return lit
+# fmt: on

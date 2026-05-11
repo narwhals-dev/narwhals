@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final, overload
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 from narwhals._arrow.utils import narwhals_to_native_dtype as _dtype_native
 
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version
     from narwhals.typing import IntoArrowSchema, IntoDType
 
-__all__ = [  # noqa: RUF022
+__all__ = (  # noqa: RUF022
     "BOOL",
     "DATE",
     "F64",
@@ -40,7 +40,7 @@ __all__ = [  # noqa: RUF022
     # Not to be exported to `functions.__all__`
     "is_integer",
     "is_large_string",
-]
+)
 
 # NOTE: Common data type instances to share.
 # Names use an uppercase equivalent to [short repr codes]

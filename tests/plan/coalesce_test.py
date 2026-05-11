@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -76,9 +75,7 @@ def test_coalesce_series(data_str: Data) -> None:
 def test_coalesce_raises_non_expr() -> None:
     class NotAnExpr: ...
 
-    with pytest.raises(
-        TypeError, match=re.escape("'NotAnExpr' is not supported in `nw.lit`")
-    ):
+    with pytest.raises(TypeError, match=r"NotAnExpr.+ is not supported in `nw.lit`"):
         nwp.coalesce("a", "b", "c", NotAnExpr())  # type: ignore[arg-type]
 
 

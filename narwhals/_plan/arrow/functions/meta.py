@@ -5,8 +5,8 @@ from __future__ import annotations
 import typing as t
 from typing import TYPE_CHECKING
 
-import pyarrow as pa  # ignore-banned-import
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow as pa
+import pyarrow.compute as pc
 
 if TYPE_CHECKING:
     from typing_extensions import LiteralString, TypeAlias
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from narwhals.typing import PythonLiteral
 
 
-__all__ = ["call"]
+__all__ = ("call",)
 
 Incomplete: TypeAlias = t.Any
 

@@ -7,7 +7,7 @@ import pytest
 
 import narwhals._plan as nwp
 from narwhals.typing import ConcatMethod
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, LazyFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -25,7 +25,7 @@ def right() -> Data:
     return {"c": [6, 12, -1], "d": [0, -4, 2]}
 
 
-def test_concat_horizontal(left: Data, right: Data) -> None:
+def test_concat_horizontal(left: Data, right: Data, dataframe: DataFrame) -> None:
     result = nwp.concat((dataframe(left), dataframe(right)), how="horizontal")
     expected = {
         "a": [1, 3, 2],
@@ -37,7 +37,7 @@ def test_concat_horizontal(left: Data, right: Data) -> None:
     assert_equal_data(result, expected)
 
 
-def test_concat_vertical(left: Data, right: Data) -> None:
+def test_concat_vertical(left: Data, right: Data, dataframe: DataFrame) -> None:
     df_left = dataframe(left).rename({"a": "c", "b": "d"}).drop("z")
     df_right = dataframe(right)
     result = nwp.concat([df_left, df_right], how="vertical")
@@ -55,7 +55,7 @@ def test_concat_vertical(left: Data, right: Data) -> None:
         nwp.concat([df_left, df_left.select("d")], how="vertical")
 
 
-def test_concat_diagonal() -> None:
+def test_concat_diagonal(dataframe: DataFrame) -> None:
     data_1 = {"a": [1, 3], "b": [4, 6]}
     data_2 = {"a": [100, 200], "z": ["x", "y"]}
     expected = {
@@ -76,3 +76,12 @@ def test_concat_empty_invalid(
 ) -> None:
     with pytest.raises(ValueError, match="Cannot concatenate an empty iterable"):
         nwp.concat(into_iterable(), how=how)
+
+
+@pytest.mark.parametrize("how", get_args(ConcatMethod))
+def test_concat_mixed_laziness(lazyframe: LazyFrame, how: ConcatMethod) -> None:
+    pytest.importorskip("polars")
+    lf = lazyframe({"a": [1, 2, 3], "b": [4, 5, 6]})
+    df = lf.collect("polars")
+    with pytest.raises(TypeError, match=re_compile(r"all.+eager.+or.+all.+lazy")):
+        nwp.concat((lf, df), how=how)  # type: ignore[type-var]

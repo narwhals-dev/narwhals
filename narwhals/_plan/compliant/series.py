@@ -2,11 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol
 
-from narwhals._plan.compliant.typing import HasVersion
-from narwhals._plan.typing import IncompleteCyclic, NativeSeriesT
-from narwhals._utils import Version, _StoresNative, unstable
+from narwhals._plan._version import into_version
+from narwhals._plan.typing import (
+    IncompleteCyclic,
+    IncompleteVarianceLie,
+    NativeSeriesT_co,
+)
+from narwhals._utils import Implementation, Version, unstable
 
 if TYPE_CHECKING:
+    import datetime as dt
+    import decimal
     from collections.abc import Iterable, Sequence
 
     import polars as pl
@@ -16,28 +22,96 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.dataframe import CompliantDataFrame
     from narwhals._plan.dataframe import DataFrame
     from narwhals._plan.series import Series
-    from narwhals._typing import _EagerAllowedImpl
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, IntegerType
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
         NumericLiteral,
         PythonLiteral,
-        SizedMultiIndexSelector,
         TemporalLiteral,
         _1DArray,
     )
 
+Int64 = Version.MAIN.dtypes.Int64()
 
-class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
-    implementation: ClassVar[_EagerAllowedImpl]
-    _native: NativeSeriesT
-    _name: str
+
+class CompliantSeries(Protocol[NativeSeriesT_co]):
+    """`[NativeSeriesT_co]`."""
+
+    __slots__ = ()
+    implementation: ClassVar[Implementation]
+    version: ClassVar[Version]
+
+    def __narwhals_series__(self) -> Self:
+        return self
 
     def __len__(self) -> int:
         return len(self.native)
+
+    def alias(self, name: str) -> Self:
+        return self.from_native(self.native, name)
+
+    def len(self) -> int:
+        return len(self.native)
+
+    def not_(self) -> Self:
+        return self.__invert__()
+
+    def pow(self, exponent: float | Self) -> Self:
+        return self.__pow__(exponent)
+
+    def is_empty(self) -> bool:
+        return len(self) == 0
+
+    def is_not_nan(self) -> Self:
+        return self.is_nan().__invert__()
+
+    def is_not_null(self) -> Self:
+        return self.is_null().__invert__()
+
+    def sample_frac(
+        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
+    ) -> Self:
+        n = int(len(self) * fraction)
+        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
+
+    def to_narwhals(self) -> Series[NativeSeriesT_co]:
+        return into_version(self.version).series(self)
+
+    @unstable
+    def hist(
+        self,
+        bins: Sequence[float] | None = None,
+        *,
+        bin_count: int | None = None,
+        include_breakpoint: bool = True,
+        include_category: bool = False,
+        _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
+    ) -> CompliantDataFrame[IncompleteCyclic, NativeSeriesT_co]:
+        from narwhals._plan.expressions import col as ir_col
+
+        expr = (
+            ir_col(self.name)
+            .to_narwhals(self.version)
+            .hist(
+                bins,
+                bin_count=bin_count,
+                include_breakpoint=include_breakpoint,
+                include_category=include_category,
+            )
+        )
+        df: DataFrame[IncompleteCyclic, NativeSeriesT_co] = (
+            self.to_narwhals().to_frame().select(expr)
+        )
+        if not include_breakpoint and not include_category:
+            if _compatibility_behavior == "narwhals":
+                df = df.rename({self.name: "count"})
+        else:
+            df = df.to_series().struct.unnest()
+        return df._compliant
 
     def __add__(self, other: NumericLiteral | TemporalLiteral | Self, /) -> Self: ...
     def __and__(self, other: bool | Self, /) -> Self: ...
@@ -68,63 +142,56 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def __sub__(self, other: NumericLiteral | TemporalLiteral | Self, /) -> Self: ...
     def __truediv__(self, other: NumericLiteral | TemporalLiteral | Self, /) -> Self: ...
     def __xor__(self, other: bool | Self, /) -> Self: ...
-
-    def len(self) -> int:
-        return len(self.native)
-
-    def not_(self) -> Self:
-        return self.__invert__()
-
-    def pow(self, exponent: float | Self) -> Self:
-        return self.__pow__(exponent)
-
-    def __narwhals_namespace__(self) -> IncompleteCyclic: ...
-    def __narwhals_series__(self) -> Self:
-        return self
-
-    def _with_native(self, native: NativeSeriesT) -> Self:
-        return self.from_native(native, self.name, version=self.version)
-
+    @classmethod
+    def concat(cls, series: Iterable[Self], /) -> Self: ...
     @classmethod
     def from_iterable(
-        cls,
-        data: Iterable[Any],
-        *,
-        version: Version,
-        name: str = "",
-        dtype: IntoDType | None = None,
+        cls, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Self: ...
     @classmethod
-    def from_native(
-        cls, native: NativeSeriesT, name: str = "", /, *, version: Version = Version.MAIN
-    ) -> Self:
-        obj = cls.__new__(cls)
-        obj._native = native
-        obj._name = name
-        obj._version = version
-        return obj
-
+    def from_native(cls, native: IncompleteVarianceLie, name: str = "", /) -> Self: ...
     @classmethod
-    def from_numpy(
-        cls, data: Into1DArray, name: str = "", /, *, version: Version = Version.MAIN
+    def from_numpy(cls, data: Into1DArray, name: str = "", /) -> Self: ...
+    @classmethod
+    def date_range(
+        cls,
+        start: dt.date,
+        end: dt.date,
+        interval: int = 1,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
+    ) -> Self: ...
+    @classmethod
+    def int_range(
+        cls,
+        start: int,
+        end: int,
+        step: int = 1,
+        *,
+        dtype: IntegerType = Int64,
+        name: str = "literal",
+    ) -> Self: ...
+    @classmethod
+    def linear_space(
+        cls,
+        start: float,
+        end: float,
+        num_samples: int,
+        *,
+        closed: ClosedInterval = "both",
+        name: str = "literal",
     ) -> Self: ...
     @property
     def dtype(self) -> DType: ...
     @property
-    def name(self) -> str:
-        return self._name
-
+    def name(self) -> str: ...
     @property
-    def native(self) -> NativeSeriesT:
-        return self._native
-
+    def native(self) -> NativeSeriesT_co: ...
     def all(self) -> bool: ...
     def any(self) -> bool: ...
-    def sum(self) -> float: ...
+    def sum(self) -> float | decimal.Decimal: ...
     def count(self) -> int: ...
-    def alias(self, name: str) -> Self:
-        return self.from_native(self.native, name, version=self.version)
-
     def cast(self, dtype: IntoDType) -> Self: ...
     def cum_count(self, *, reverse: bool = False) -> Self: ...
     def cum_max(self, *, reverse: bool = False) -> Self: ...
@@ -142,25 +209,13 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     ) -> Self: ...
     def first(self) -> PythonLiteral: ...
     def shift(self, n: int, *, fill_value: NonNestedLiteral = None) -> Self: ...
-    def gather(
-        self,
-        indices: SizedMultiIndexSelector[NativeSeriesT] | _StoresNative[NativeSeriesT],
-    ) -> Self: ...
+    def gather(self, indices: Self) -> Self: ...
     def gather_every(self, n: int, offset: int = 0) -> Self: ...
     def has_nulls(self) -> bool: ...
     def null_count(self) -> int: ...
-    def is_empty(self) -> bool:
-        return len(self) == 0
-
     def is_in(self, other: Self) -> Self: ...
     def is_nan(self) -> Self: ...
     def is_null(self) -> Self: ...
-    def is_not_nan(self) -> Self:
-        return self.is_nan().__invert__()
-
-    def is_not_null(self) -> Self:
-        return self.is_null().__invert__()
-
     def last(self) -> PythonLiteral: ...
     def rolling_mean(
         self, window_size: int, *, min_samples: int, center: bool = False
@@ -174,60 +229,17 @@ class CompliantSeries(HasVersion, Protocol[NativeSeriesT]):
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool = False, ddof: int = 1
     ) -> Self: ...
-    def sample_frac(
-        self, fraction: float, *, with_replacement: bool = False, seed: int | None = None
-    ) -> Self:
-        n = int(len(self) * fraction)
-        return self.sample_n(n, with_replacement=with_replacement, seed=seed)
-
     def sample_n(
         self, n: int = 1, *, with_replacement: bool = False, seed: int | None = None
     ) -> Self: ...
     def scatter(self, indices: Self, values: Self) -> Self: ...
     def slice(self, offset: int, length: int | None = None) -> Self: ...
     def sort(self, *, descending: bool = False, nulls_last: bool = False) -> Self: ...
-    def to_frame(self) -> IncompleteCyclic: ...
+    def to_frame(self) -> CompliantDataFrame[IncompleteCyclic, NativeSeriesT_co]: ...
     def to_list(self) -> list[Any]: ...
-    def to_narwhals(self) -> Series[NativeSeriesT]:
-        from narwhals._plan.series import Series
-
-        return Series[NativeSeriesT](self)
-
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray: ...
     def to_polars(self) -> pl.Series: ...
     def unique(self, *, maintain_order: bool = False) -> Self: ...
     def zip_with(self, mask: Self, other: Self) -> Self: ...
-    @unstable
-    def hist(
-        self,
-        bins: Sequence[float] | None = None,
-        *,
-        bin_count: int | None = None,
-        include_breakpoint: bool = True,
-        include_category: bool = False,
-        _compatibility_behavior: Literal["narwhals", "polars"] = "narwhals",
-    ) -> CompliantDataFrame[Self, IncompleteCyclic, NativeSeriesT]:
-        from narwhals._plan.expressions import col as ir_col
-
-        expr = (
-            ir_col(self.name)
-            .to_narwhals(self.version)
-            .hist(
-                bins,
-                bin_count=bin_count,
-                include_breakpoint=include_breakpoint,
-                include_category=include_category,
-            )
-        )
-        df: DataFrame[IncompleteCyclic, NativeSeriesT] = (
-            self.to_narwhals().to_frame().select(expr)
-        )
-        if not include_breakpoint and not include_category:
-            if _compatibility_behavior == "narwhals":
-                df = df.rename({self.name: "count"})
-        else:
-            df = df.to_series().struct.unnest()
-        return df._compliant
-
     @property
     def struct(self) -> SeriesStructNamespace[IncompleteCyclic, Self]: ...

@@ -1,35 +1,37 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+import sys
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
-from narwhals._plan.compliant.column import EagerBroadcast, SupportsBroadcast
+from narwhals._plan.compliant.broadcast import BroadcastSeries
 from narwhals._plan.compliant.typing import (
-    FrameT_contra,
-    HasVersion,
-    LazyFrameT_contra,
-    LengthT,
-    SeriesT,
-    SeriesT_co,
+    DeprecatedFrameT_contra as Frame,
+    NativeColumn_co,
+    NativeExpr_co,
+    NativeScalar_co,
+    NativeSeriesT,
 )
-from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant import classes as cc, typing as ct
     from narwhals._plan.compliant.accessors import (
         ExprCatNamespace,
+        ExprDateTimeNamespace,
         ExprListNamespace,
         ExprStringNamespace,
         ExprStructNamespace,
     )
-    from narwhals._plan.compliant.scalar import CompliantScalar, EagerScalar
+    from narwhals._plan.compliant.scalar import EagerScalar
     from narwhals._plan.expressions import (
         BinaryExpr,
-        FunctionExpr,
+        FunctionExpr as FExpr,
+        HorizontalExpr as HExpr,
         aggregation as agg,
-        boolean,
         functions as F,
+        strings,
     )
     from narwhals._plan.expressions.boolean import (
         IsBetween,
@@ -42,286 +44,400 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
-    from narwhals._plan.typing import IncompleteCyclic
+    from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
+    from narwhals._plan.typing import IncompleteCyclic, IncompleteVarianceLie
+    from narwhals._utils import Version
+    from narwhals.typing import PythonLiteral
+
+Incomplete: TypeAlias = Any
 
 
-# NOTE: At some point `Series` needs to be swapped out for `Column`
-class CompliantExpr(HasVersion, Protocol[FrameT_contra, SeriesT_co]):
-    """Everything common to `Expr`/`Series` and `Scalar` literal values."""
+if TYPE_CHECKING:
+    from typing_extensions import TypeAliasType
 
-    _evaluated: Any
-    """Compliant or native value."""
+    # NOTE: `TypeAliasType` allows specifying the order of `type_params`.
+    # This is useful because it means we can spell the following types:
+    #   `CompliantExpr   = ct.Column[Frame, NativeExpr_co,   NativeExpr_co, NativeScalar_co]`
+    #   `CompliantScalar = ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]`
+    # ... with less dancing around which position each parameters goes into:
+    #   `Scalar[Frame, NativeExpr_co, NativeScalar_co]`
+    Scalar = TypeAliasType(
+        "Scalar",
+        "ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]",
+        type_params=(Frame, NativeExpr_co, NativeScalar_co),
+    )
 
-    def _with_native(self, native: Any, name: str, /) -> Self:
-        return self.from_native(native, name or self.name, self.version)
+elif sys.version_info >= (3, 12):
+    from typing import TypeAliasType
 
-    @classmethod
-    def from_native(
-        cls, native: Any, name: str = "", /, version: Version = Version.MAIN
-    ) -> Self: ...
+    Scalar = TypeAliasType(
+        "Scalar",
+        "ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]",
+        type_params=(Frame, NativeExpr_co, NativeScalar_co),
+    )
+else:  # pragma: no cover
+    Scalar: TypeAlias = (
+        "ct.Column[Frame, NativeScalar_co, NativeExpr_co, NativeScalar_co]"
+    )
+
+
+class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScalar_co]):
+    """Everything common to `Expr` and `Scalar` literal values.
+
+    `[FrameT_contra, NativeColumn_co, NativeExpr_co, NativeScalar_co]`.
+    """
+
+    __slots__ = ()
+    version: ClassVar[Version]
+
     @property
-    def name(self) -> str: ...
-    # series & scalar
-    def abs(self, node: FunctionExpr[F.Abs], frame: FrameT_contra, name: str) -> Self: ...
-    def binary_expr(self, node: BinaryExpr, frame: FrameT_contra, name: str) -> Self: ...
-    def cast(self, node: ir.Cast, frame: FrameT_contra, name: str) -> Self: ...
-    def ewm_mean(
-        self, node: FunctionExpr[F.EwmMean], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def fill_null(
-        self, node: FunctionExpr[F.FillNull], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def fill_nan(
-        self, node: FunctionExpr[F.FillNan], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_between(
-        self, node: FunctionExpr[IsBetween], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_finite(
-        self, node: FunctionExpr[IsFinite], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_first_distinct(
-        self, node: FunctionExpr[IsFirstDistinct], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_last_distinct(
-        self, node: FunctionExpr[IsLastDistinct], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_nan(
-        self, node: FunctionExpr[IsNan], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_null(
-        self, node: FunctionExpr[IsNull], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_not_nan(
-        self, node: FunctionExpr[IsNotNan], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_not_null(
-        self, node: FunctionExpr[IsNotNull], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def not_(self, node: FunctionExpr[Not], frame: FrameT_contra, name: str) -> Self: ...
-    def over(self, node: ir.Over, frame: FrameT_contra, name: str) -> Self: ...
-    # NOTE: `Scalar` is returned **only** for un-partitioned `OrderableAggExpr`
-    # e.g. `nw.col("a").first().over(order_by="b")`
-    def over_ordered(
-        self, node: ir.OverOrdered, frame: FrameT_contra, name: str
-    ) -> Self | CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def pow(self, node: FunctionExpr[F.Pow], frame: FrameT_contra, name: str) -> Self: ...
-    def rolling_expr(
-        self, node: ir.RollingExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def shift(
-        self, node: FunctionExpr[F.Shift], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def ternary_expr(
-        self, node: ir.TernaryExpr, frame: FrameT_contra, name: str
-    ) -> Self: ...
-    # series only
-    def filter(self, node: ir.Filter, frame: FrameT_contra, name: str) -> Self: ...
-    def sort(self, node: ir.Sort, frame: FrameT_contra, name: str) -> Self: ...
-    def sort_by(self, node: ir.SortBy, frame: FrameT_contra, name: str) -> Self: ...
-    def diff(
-        self, node: FunctionExpr[F.Diff], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def cum_count(
-        self, node: FunctionExpr[F.CumCount], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def cum_min(
-        self, node: FunctionExpr[F.CumMin], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def cum_max(
-        self, node: FunctionExpr[F.CumMax], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def cum_prod(
-        self, node: FunctionExpr[F.CumProd], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def cum_sum(
-        self, node: FunctionExpr[F.CumSum], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def rank(
-        self, node: FunctionExpr[F.Rank], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    # series -> scalar
-    def all(
-        self, node: FunctionExpr[boolean.All], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def any(
-        self, node: FunctionExpr[boolean.Any], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def arg_max(
-        self, node: agg.ArgMax, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def arg_min(
-        self, node: agg.ArgMin, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def count(
-        self, node: agg.Count, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def first(
-        self, node: agg.First, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def last(
-        self, node: agg.Last, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def len(
-        self, node: agg.Len, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def max(
-        self, node: agg.Max, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def mean(
-        self, node: agg.Mean, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def median(
-        self, node: agg.Median, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def min(
-        self, node: agg.Min, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def n_unique(
-        self, node: agg.NUnique, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def null_count(
-        self, node: FunctionExpr[F.NullCount], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def quantile(
-        self, node: agg.Quantile, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def sum(
-        self, node: agg.Sum, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def std(
-        self, node: agg.Std, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def var(
-        self, node: agg.Var, frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def kurtosis(
-        self, node: FunctionExpr[F.Kurtosis], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
-    def skew(
-        self, node: FunctionExpr[F.Skew], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def native(self) -> NativeColumn_co: ...
 
-    # TODO @dangotbanned: Reorder these
-    def clip(
-        self, node: FunctionExpr[F.Clip], frame: FrameT_contra, name: str
-    ) -> Self: ...
+    # Constructors (Scalar)  # noqa: ERA001
+    @classmethod
+    def len_star(
+        cls, node: ir.Len, frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    @classmethod
+    def lit(
+        cls, node: ir.Lit[PythonLiteral], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+
+    # Expr -> Expr
+    # Scalar -> Scalar
+    def abs(self, node: FExpr[F.Abs], frame: Frame, name: str, /) -> Self: ...
+    def binary_expr(self, node: BinaryExpr, frame: Frame, name: str, /) -> Self: ...
+    def cast(self, node: ir.Cast, frame: Frame, name: str, /) -> Self: ...
+    def ceil(self, node: FExpr[F.Ceil], frame: Frame, name: str, /) -> Self: ...
+    def clip(self, node: FExpr[F.Clip], frame: Frame, name: str, /) -> Self: ...
     def clip_lower(
-        self, node: FunctionExpr[F.ClipLower], frame: FrameT_contra, name: str
+        self, node: FExpr[F.ClipLower], frame: Frame, name: str, /
     ) -> Self: ...
     def clip_upper(
-        self, node: FunctionExpr[F.ClipUpper], frame: FrameT_contra, name: str
+        self, node: FExpr[F.ClipUpper], frame: Frame, name: str, /
     ) -> Self: ...
-    def drop_nulls(
-        self, node: FunctionExpr[F.DropNulls], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def exp(self, node: FunctionExpr[F.Exp], frame: FrameT_contra, name: str) -> Self: ...
-    def fill_null_with_strategy(
-        self, node: FunctionExpr[F.FillNullWithStrategy], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def hist_bins(
-        self, node: FunctionExpr[F.HistBins], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def hist_bin_count(
-        self, node: FunctionExpr[F.HistBinCount], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def is_duplicated(
-        self, node: FunctionExpr[boolean.IsDuplicated], frame: FrameT_contra, name: str
-    ) -> Self: ...
+    def exp(self, node: FExpr[F.Exp], frame: Frame, name: str, /) -> Self: ...
+    def fill_null(self, node: FExpr[F.FillNull], frame: Frame, name: str, /) -> Self: ...
+    def floor(self, node: FExpr[F.Floor], frame: Frame, name: str, /) -> Self: ...
+    def is_between(self, node: FExpr[IsBetween], frame: Frame, name: str, /) -> Self: ...
+    def is_finite(self, node: FExpr[IsFinite], frame: Frame, name: str, /) -> Self: ...
     def is_in_expr(
-        self, node: FunctionExpr[boolean.IsInExpr], frame: FrameT_contra, name: str
+        self, node: FExpr[ir.boolean.IsInExpr], frame: Frame, name: str, /
     ) -> Self: ...
     def is_in_seq(
-        self, node: FunctionExpr[boolean.IsInSeq], frame: FrameT_contra, name: str
+        self, node: FExpr[ir.boolean.IsInSeq], frame: Frame, name: str, /
     ) -> Self: ...
-    def is_unique(
-        self, node: FunctionExpr[boolean.IsUnique], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def log(self, node: FunctionExpr[F.Log], frame: FrameT_contra, name: str) -> Self: ...
-    def mode_all(
-        self, node: FunctionExpr[F.ModeAll], frame: FrameT_contra, name: str
-    ) -> Self: ...
-    def mode_any(
-        self, node: FunctionExpr[F.ModeAny], frame: FrameT_contra, name: str
-    ) -> CompliantScalar[FrameT_contra, SeriesT_co]: ...
+    def is_nan(self, node: FExpr[IsNan], frame: Frame, name: str, /) -> Self: ...
+    def is_null(self, node: FExpr[IsNull], frame: Frame, name: str, /) -> Self: ...
+    def is_not_nan(self, node: FExpr[IsNotNan], frame: Frame, name: str, /) -> Self: ...
+    def is_not_null(self, node: FExpr[IsNotNull], frame: Frame, name: str, /) -> Self: ...
+    def log(self, node: FExpr[F.Log], frame: Frame, name: str, /) -> Self: ...
+    def not_(self, node: FExpr[Not], frame: Frame, name: str, /) -> Self: ...
+    def pow(self, node: FExpr[F.Pow], frame: Frame, name: str, /) -> Self: ...
     def replace_strict(
-        self, node: FunctionExpr[F.ReplaceStrict], frame: FrameT_contra, name: str
+        self, node: FExpr[F.ReplaceStrict], frame: Frame, name: str, /
     ) -> Self: ...
     def replace_strict_default(
-        self, node: FunctionExpr[F.ReplaceStrictDefault], frame: FrameT_contra, name: str
+        self, node: FExpr[F.ReplaceStrictDefault], frame: Frame, name: str, /
     ) -> Self: ...
-    def round(
-        self, node: FunctionExpr[F.Round], frame: FrameT_contra, name: str
+    def round(self, node: FExpr[F.Round], frame: Frame, name: str, /) -> Self: ...
+    def sqrt(self, node: FExpr[F.Sqrt], frame: Frame, name: str, /) -> Self: ...
+    def ternary_expr(self, node: ir.TernaryExpr, frame: Frame, name: str, /) -> Self: ...
+
+    # `Scalar` has defined-behavior
+    def drop_nulls(
+        self, node: FExpr[F.DropNulls], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def ewm_mean(self, node: FExpr[F.EwmMean], frame: Frame, name: str, /) -> Self: ...
+    def shift(self, node: FExpr[F.Shift], frame: Frame, name: str, /) -> Self: ...
+    def is_duplicated(
+        self, node: FExpr[ir.boolean.IsDuplicated], frame: Frame, name: str, /
     ) -> Self: ...
-    def sqrt(
-        self, node: FunctionExpr[F.Sqrt], frame: FrameT_contra, name: str
+    def is_first_distinct(
+        self, node: FExpr[IsFirstDistinct], frame: Frame, name: str, /
     ) -> Self: ...
-    def unique(
-        self, node: FunctionExpr[F.Unique], frame: FrameT_contra, name: str
+    def is_last_distinct(
+        self, node: FExpr[IsLastDistinct], frame: Frame, name: str, /
     ) -> Self: ...
-    def ceil(
-        self, node: FunctionExpr[F.Ceil], frame: FrameT_contra, name: str
+    def is_unique(
+        self, node: FExpr[ir.boolean.IsUnique], frame: Frame, name: str, /
     ) -> Self: ...
-    def floor(
-        self, node: FunctionExpr[F.Floor], frame: FrameT_contra, name: str
-    ) -> Self: ...
+
+    # `Scalar` no-op
+    def sort(self, node: ir.Sort, frame: Frame, name: str, /) -> Self: ...
+    def sort_by(self, node: ir.SortBy, frame: Frame, name: str, /) -> Self: ...
+    def unique(self, node: FExpr[F.Unique], frame: Frame, name: str, /) -> Self: ...
+
+    # (Scalar, ...)              -> Scalar
+    # (Expr, ...)                -> Expr
+    # (Expr, Expr | Scalar, ...) -> Expr
+    def all_horizontal(
+        self, node: HExpr[ir.boolean.AllHorizontal], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def any_horizontal(
+        self, node: HExpr[ir.boolean.AnyHorizontal], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def coalesce(
+        self, node: HExpr[F.Coalesce], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def concat_str(
+        self, node: HExpr[strings.ConcatStr], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def max_horizontal(
+        self, node: HExpr[F.MaxHorizontal], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def mean_horizontal(
+        self, node: HExpr[F.MeanHorizontal], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def min_horizontal(
+        self, node: HExpr[F.MinHorizontal], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def sum_horizontal(
+        self, node: HExpr[F.SumHorizontal], frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+
+    # Range (technically, only valid to call on `*Scalar` and then produces `*Expr`)
+    def int_range(
+        self, node: ir.RangeExpr[IntRange], frame: Frame, name: str, /
+    ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
+    def date_range(
+        self, node: ir.RangeExpr[DateRange], frame: Frame, name: str, /
+    ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
+    def linear_space(
+        self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str, /
+    ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
+
+    @property
+    def __narwhals_classes__(
+        self,
+    ) -> cc.CompliantClasses[IncompleteCyclic, IncompleteCyclic]: ...
+
+    def dispatch(
+        self, node: ir.ExprIR, frame: IncompleteVarianceLie, name: str, /
+    ) -> ct.Column[Any, Any, NativeExpr_co, NativeScalar_co]:
+        """_summary_.
+
+        Arguments:
+            node: The expression to dispatch.
+            frame: A`Compliant*Frame` that shares the same backend as `self`.
+
+                Many methods will not need to use this *directly*, and simply pass the `frame`
+                they *received* down recursively, for those that do need it.
+
+                If a method needs to mutate `frame` (e.g. adding temporary columns), the mutated
+                version **must not** be passed down.
+
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+                When a method handles a unary expression, `name` is just passed down.
+
+                Otherwise, pass it down for the left-most expression and use `""` for all others.
+
+        ## Tip
+        Implementing this is easy, but providing accurate typing *inside* the protocol is not (*cries, recursively*).
+
+        It should look something like this:
+
+            def dispatch(self, node: ExprIR, frame: Frame, name: str, /) -> Expr | Scalar:
+                return node.__expr_ir_dispatch__(node, self, frame, name)
+        """
+        ...
+
     @property
     def cat(
         self,
-    ) -> ExprCatNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    ) -> ExprCatNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
+    @property
+    def dt(
+        self,
+    ) -> ExprDateTimeNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
     def list(
         self,
-    ) -> ExprListNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    ) -> ExprListNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
     def str(
         self,
-    ) -> ExprStringNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    ) -> ExprStringNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
     @property
     def struct(
         self,
-    ) -> ExprStructNamespace[FrameT_contra, CompliantExpr[FrameT_contra, SeriesT_co]]: ...
+    ) -> ExprStructNamespace[
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ]: ...
 
-    # NOTE: This test has a case for detecting `Expr` impl, but missing `CompliantExpr` member
-    # `tests/plan/dispatch_test.py::test_dispatch`
-    # TODO @dangotbanned: Update that logic when `dt` namespace is actually implemented
-    # dt: not_implemented = not_implemented()`
+
+class CompliantExpr(
+    CompliantColumn[Frame, NativeExpr_co, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeExpr_co, NativeScalar_co],
+):
+    """`[FrameT_contra, NativeExpr_co, NativeScalar_co]`."""
+
+    __slots__ = ()
+
+    # Constructor
+    @classmethod
+    def col(cls, node: ir.Column, frame: Frame, name: str, /) -> Self: ...
+
+    def fill_null_with_strategy(
+        self, node: FExpr[F.FillNullWithStrategy], frame: Frame, name: str, /
+    ) -> Self: ...
+    def mode_all(self, node: FExpr[F.ModeAll], frame: Frame, name: str, /) -> Self: ...
+
+    # has defined behavior for the empty expr case?
+    def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str, /) -> Self: ...
+    def hist_bin_count(
+        self, node: FExpr[F.HistBinCount], frame: Frame, name: str, /
+    ) -> Self: ...
+
+    # complicated
+    def over(self, node: ir.Over, frame: Frame, name: str, /) -> Self: ...
+    # NOTE: `Scalar` is returned **only** for un-partitioned `OrderableAggExpr`
+    #  - e.g. `nw.col("a").first().over(order_by="b")`
+    # TODO @dangotbanned: Split (un-partitioned + ordered) into another node?
+    # - The handling of the union would need repeating everything otherwise
+    # - https://github.com/narwhals-dev/narwhals/blob/489bada3e9318f91c9d73744e7a6de62d2478451/narwhals/_plan/arrow/expr.py#L560-L570
+    # un-partitioned is a possible no-op for `Scalar` (be careful as a single aggregation doesn't make it scalar)
+    def over_ordered(
+        self, node: ir.OverOrdered, frame: Frame, name: str, /
+    ) -> Self | Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+
+    def rolling_mean(
+        self, node: FExpr[F.RollingMean], frame: Frame, name: str, /
+    ) -> Self: ...
+    def rolling_sum(
+        self, node: FExpr[F.RollingSum], frame: Frame, name: str, /
+    ) -> Self: ...
+    def rolling_std(
+        self, node: FExpr[F.RollingStd], frame: Frame, name: str, /
+    ) -> Self: ...
+    def rolling_var(
+        self, node: FExpr[F.RollingVar], frame: Frame, name: str, /
+    ) -> Self: ...
+
+    def cum_count(self, node: FExpr[F.CumCount], frame: Frame, name: str, /) -> Self: ...
+    def cum_max(self, node: FExpr[F.CumMax], frame: Frame, name: str, /) -> Self: ...
+    def cum_min(self, node: FExpr[F.CumMin], frame: Frame, name: str, /) -> Self: ...
+    def cum_prod(self, node: FExpr[F.CumProd], frame: Frame, name: str, /) -> Self: ...
+    def cum_sum(self, node: FExpr[F.CumSum], frame: Frame, name: str, /) -> Self: ...
+    def diff(self, node: FExpr[F.Diff], frame: Frame, name: str, /) -> Self: ...
+    def filter(self, node: ir.Filter, frame: Frame, name: str, /) -> Self: ...
+    def rank(self, node: FExpr[F.Rank], frame: Frame, name: str, /) -> Self: ...
+
+    # Expr -> Scalar
+    # TODO @dangotbanned: Move this concept to the ExprIR layer?
+    # - Every `Function` has `FunctionFlags.AGGREGATION`
+    # - Everything* else is an `AggExpr`
+    # - `OverOrdered` is an outlier, and it also doesn't specify `is_scalar`?
+    def all(
+        self, node: FExpr[ir.boolean.All], frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def any(
+        self, node: FExpr[ir.boolean.Any], frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def arg_max(
+        self, node: agg.ArgMax, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def arg_min(
+        self, node: agg.ArgMin, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def count(
+        self, node: agg.Count, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def first(
+        self, node: agg.First, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def last(
+        self, node: agg.Last, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def len(
+        self, node: agg.Len, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def max(
+        self, node: agg.Max, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def mean(
+        self, node: agg.Mean, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def median(
+        self, node: agg.Median, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def min(
+        self, node: agg.Min, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def mode_any(
+        self, node: FExpr[F.ModeAny], frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def n_unique(
+        self, node: agg.NUnique, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def null_count(
+        self, node: FExpr[F.NullCount], frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def quantile(
+        self, node: agg.Quantile, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def sum(
+        self, node: agg.Sum, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def std(
+        self, node: agg.Std, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def var(
+        self, node: agg.Var, frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def kurtosis(
+        self, node: FExpr[F.Kurtosis], frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+    def skew(
+        self, node: FExpr[F.Skew], frame: Frame, name: str, /
+    ) -> Scalar[Frame, NativeExpr_co, NativeScalar_co]: ...
+
+
+class EagerColumn(
+    BroadcastSeries[NativeSeriesT],
+    CompliantColumn[Frame, NativeColumn_co, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScalar_co, NativeSeriesT],
+):
+    """`[FrameT_contra, NativeColumn_co, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
+
+    __slots__ = ()
+
+    def is_in_series(
+        self,
+        node: FExpr[ir.boolean.IsInSeries[IncompleteCyclic]],
+        frame: Frame,
+        name: str,
+        /,
+    ) -> Self: ...
 
 
 class EagerExpr(
-    EagerBroadcast[SeriesT],
-    CompliantExpr[FrameT_contra, SeriesT],
-    Protocol[FrameT_contra, SeriesT],
+    BroadcastSeries[NativeSeriesT],
+    CompliantExpr[Frame, NativeExpr_co, NativeScalar_co],
+    Protocol[Frame, NativeExpr_co, NativeScalar_co, NativeSeriesT],
 ):
+    """`[FrameT_contra, NativeExpr_co, NativeScalar_co, NativeSeriesT]`."""
+
+    __slots__ = ()
+
+    @classmethod
+    def lit_series(cls, node: ir.LitSeries[Any], frame: Frame, name: str, /) -> Self: ...
     def gather_every(
-        self, node: FunctionExpr[F.GatherEvery], frame: FrameT_contra, name: str
+        self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
     ) -> Self: ...
-    def is_in_series(
-        self,
-        node: FunctionExpr[boolean.IsInSeries[IncompleteCyclic]],
-        frame: FrameT_contra,
-        name: str,
-    ) -> Self: ...
-    # NOTE: `Scalar` when using `returns_scalar=True`
     def map_batches(
-        self, node: ir.AnonymousExpr, frame: FrameT_contra, name: str
-    ) -> Self | EagerScalar[FrameT_contra, SeriesT]: ...
-    # NOTE: `n=1` can behave similar to an aggregation in `select(...)`, but requires `.first()`
-    # to trigger broadcasting in `with_columns(...)`
-    def sample_n(
-        self, node: FunctionExpr[F.SampleN], frame: FrameT_contra, name: str
-    ) -> Self: ...
+        self, node: ir.AnonymousExpr, frame: Frame, name: str, /
+    ) -> Self | EagerScalar[Frame, NativeExpr_co, NativeScalar_co]: ...
     def sample_frac(
-        self, node: FunctionExpr[F.SampleFrac], frame: FrameT_contra, name: str
+        self, node: FExpr[F.SampleFrac], frame: Frame, name: str, /
     ) -> Self: ...
-    def __bool__(self) -> Literal[True]:
-        # NOTE: Avoids falling back to `__len__` when truth-testing on dispatch
-        return True
-
-
-# NOTE: At some point `Series` needs to be swapped out for `Column`
-class LazyExpr(
-    SupportsBroadcast[SeriesT, LengthT],
-    CompliantExpr[LazyFrameT_contra, SeriesT],
-    Protocol[LazyFrameT_contra, SeriesT, LengthT],
-): ...
+    def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str, /) -> Self: ...

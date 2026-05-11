@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 import string
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -16,6 +16,9 @@ from tests.utils import POLARS_VERSION
 
 pytest.importorskip("polars")
 import polars as pl
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 if POLARS_VERSION >= (1, 0):  # https://github.com/pola-rs/polars/pull/16743
     if POLARS_VERSION >= (1, 36):  # pragma: no cover
@@ -44,11 +47,6 @@ if POLARS_VERSION >= (0, 20, 5):
     LEN_CASE = (nwp.len(), pl.len(), "len")
 else:  # pragma: no cover
     LEN_CASE = (nwp.len().alias("count"), pl.count(), "count")
-
-
-XFAIL_LITERAL_LIST = pytest.mark.xfail(
-    reason="'list' is not supported in `nw.lit`", raises=TypeError
-)
 
 
 @pytest.mark.parametrize(
@@ -125,13 +123,13 @@ def test_meta_root_names(
                 nwp.col("ROOT")
                 .alias("ROOT-ALIAS")
                 .filter(nwp.col("b") >= 30, nwp.col("c").alias("d") == 7)
-                + nwp.col("RHS").alias("RHS-ALIAS")
+                + nwp.col("RHS").first().alias("RHS-ALIAS")
             ),
             (
                 pl.col("ROOT")
                 .alias("ROOT-ALIAS")
                 .filter(pl.col("b") >= 30, pl.col("c").alias("d") == 7)
-                + pl.col("RHS").alias("RHS-ALIAS")
+                + pl.col("RHS").first().alias("RHS-ALIAS")
             ),
             "ROOT-ALIAS",
             id="BinaryExpr-Multiple",
@@ -216,6 +214,20 @@ def test_meta_output_name(nw_expr: nwp.Expr, pl_expr: pl.Expr, expected: str) ->
     assert nw_result == pl_result
 
 
+@pytest.mark.parametrize(
+    "selector",
+    [(ncs.string() | ncs.last()), ~ncs.list(), ncs.first()],
+    ids=["BinarySelector", "InvertSelector", "ByIndex"],
+)
+@pytest.mark.parametrize("function", [None, nwp.Expr.cum_count])
+def test_meta_output_name_invalid(
+    selector: nwp.Selector, function: Callable[[nwp.Expr], nwp.Expr] | None
+) -> None:
+    expr = selector if not function else function(selector.as_expr())
+    with pytest.raises(ComputeError):
+        expr.meta.output_name()
+
+
 def test_root_and_output_names() -> None:
     e = nwp.col("foo") * nwp.col("bar")
     assert e.meta.output_name() == "foo"
@@ -236,17 +248,13 @@ def test_root_and_output_names() -> None:
     e = nwp.len()
     assert e.meta.output_name() == "len"
 
-    with pytest.raises(
-        ComputeError,
-        match=re.escape(
-            "unable to find root column name for expr 'ncs.all()' when calling 'output_name'"
-        ),
-    ):
-        nwp.all().name.suffix("_").meta.output_name()
-
-    assert (
-        nwp.all().name.suffix("_").meta.output_name(raise_if_undetermined=False) is None
+    pattern = re.escape(
+        "unable to find root column name for expr 'ncs.all()' when calling 'output_name'"
     )
+    e = nwp.all().name.suffix("_")
+    assert e.meta.output_name(raise_if_undetermined=False) is None
+    with pytest.raises(ComputeError, match=pattern):
+        e.meta.output_name()
 
 
 def test_meta_has_multiple_outputs() -> None:
@@ -310,9 +318,9 @@ def test_is_column_selection(expr: nwp.Expr, *, is_column_selection: bool) -> No
         dt.datetime(1974, 1, 1, 12, 45, 1),
         dt.time(10, 30, 45),
         dt.timedelta(hours=-24),
-        pytest.param(["x", "y", "z"], marks=XFAIL_LITERAL_LIST),
+        ["x", "y", "z"],
         series([None, None]),
-        pytest.param([[10, 20], [30, 40]], marks=XFAIL_LITERAL_LIST),
+        [[10, 20], [30, 40]],
         "this is the way",
     ],
 )
@@ -351,7 +359,7 @@ def test_selector_by_name_multiple() -> None:
     with pytest.raises(
         ComputeError,
         match=re.escape(
-            "unable to find root column name for expr 'ncs.by_name('foo', 'bar', require_all=True)' when calling 'output_name'"
+            "unable to find root column name for expr 'ncs.by_name('foo', 'bar')' when calling 'output_name'"
         ),
     ):
         ncs.by_name(["foo", "bar"]).meta.output_name()

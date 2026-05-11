@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 # ruff: noqa: PLC0414
-from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict, overload
 
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import _StoresNative as StoresNative
 
 if TYPE_CHECKING:
+    from io import BytesIO
+
     import pyarrow as pa
     import pyarrow.compute as pc
+    import pyarrow.csv
     from pyarrow import lib, types
     from pyarrow.lib import (
         BoolType as BoolType,
@@ -25,12 +27,18 @@ if TYPE_CHECKING:
         Uint32Type,
         Uint64Type,
     )
-    from typing_extensions import ParamSpec, TypeAlias
+    from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
+    from narwhals._plan.compliant.dataframe import (
+        CompliantDataFrame as _CompliantDataFrame,
+    )
+    from narwhals._plan.compliant.series import CompliantSeries as _CompliantSeries
     from narwhals._plan.typing import OneOrIterable
     from narwhals._translate import ArrowStreamExportable
     from narwhals.typing import (
+        FileSource,
+        NonNestedLiteral,
         SizedMultiIndexSelector as _SizedMultiIndexSelector,
         _AnyDArray,
     )
@@ -69,26 +77,15 @@ if TYPE_CHECKING:
     class _NumpyArray(Protocol):
         def __array__(self) -> _AnyDArray: ...
 
-    # TODO @dangotbanned: Move out of `TYPE_CHECKING` for docs after (3, 10) minimum
-    # https://github.com/narwhals-dev/narwhals/issues/3204
-    P = ParamSpec("P")
-
-    class UnaryFunctionP(Protocol[P]):
-        """A function wrapping at-most 1 `Expr` input."""
-
-        def __call__(
-            self, native: ChunkedOrScalarAny, /, *args: P.args, **kwds: P.kwargs
-        ) -> ChunkedOrScalarAny: ...
-
-    class VectorFunction(Protocol[P]):
-        def __call__(
-            self, native: ChunkedArrayAny, /, *args: P.args, **kwds: P.kwargs
-        ) -> ChunkedArrayAny: ...
-
     class BooleanLengthPreserving(Protocol):
         def __call__(
             self, indices: ChunkedArrayAny, aggregated: ChunkedArrayAny, /
         ) -> ChunkedArrayAny: ...
+
+    class CSVReaderOptions(TypedDict, total=False):
+        parse_options: pyarrow.csv.ParseOptions | None
+        convert_options: pyarrow.csv.ConvertOptions | None
+        read_options: pyarrow.csv.ReadOptions | None
 
 
 BooleanScalar: TypeAlias = "Scalar[BoolType]"
@@ -116,7 +113,7 @@ NumericOrTemporalScalarT = TypeVar(
 )
 
 
-class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
+class UnaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):  # type: ignore[misc]
     @overload
     def __call__(
         self, data: ScalarPT_contra, /, *args: Any, **kwds: Any
@@ -183,18 +180,24 @@ class BinaryFunction(Protocol[ScalarPT_contra, ScalarRT_co]):
     @overload
     def __call__(
         self,
-        lhs: ChunkedOrScalar[ScalarPT_contra],
-        rhs: ChunkedOrScalar[ScalarPT_contra],
+        lhs: ChunkedOrScalar[ScalarPT_contra] | NonNestedLiteral,
+        rhs: ChunkedOrScalar[ScalarPT_contra] | NonNestedLiteral,
         /,
     ) -> ChunkedOrScalar[ScalarRT_co]: ...
 
     @overload
     def __call__(
-        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
+        self,
+        lhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        rhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        /,
     ) -> Arrow[ScalarRT_co]: ...
 
     def __call__(
-        self, lhs: Arrow[ScalarPT_contra], rhs: Arrow[ScalarPT_contra], /
+        self,
+        lhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        rhs: Arrow[ScalarPT_contra] | NonNestedLiteral,
+        /,
     ) -> Arrow[ScalarRT_co]: ...
 
 
@@ -204,12 +207,6 @@ class BinaryComp(
 
 
 class BinaryLogical(BinaryFunction["BooleanScalar", "pa.BooleanScalar"], Protocol): ...
-
-
-# TODO @dangotbanned: Use stricter typing & revisit with
-# https://github.com/narwhals-dev/narwhals/blob/0d81b8b8cd1d24a68d360e6f8cf742b45cc2bdec/narwhals/_plan/arrow/functions/_horizontal.py#L7-L15
-class VariadicFunction(Protocol):
-    def __call__(self, *args: Arrow) -> Any: ...
 
 
 BinaryNumericTemporal: TypeAlias = BinaryFunction[
@@ -229,6 +226,16 @@ ScalarAny: TypeAlias = "Scalar[Any]"
 ArrayAny: TypeAlias = "Array[Any]"
 ChunkedArrayAny: TypeAlias = "ChunkedArray[Any]"
 ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
+Native: TypeAlias = ChunkedOrScalarAny
+"""The type of `Arrow{Expr,Scalar}.native`."""
+
+IntoNative: TypeAlias = "Native | NonNestedLiteral"
+"""Extends `Native`, for functions that implicitly wrap python values in `Scalar`.
+
+`pyarrow-stubs` rarely documents that this is possible.
+"""
+
+
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
 ChunkedOrScalarT = TypeVar("ChunkedOrScalarT", ChunkedArrayAny, ScalarAny)
@@ -253,6 +260,9 @@ Boolean, Null, Numeric, Temporal, Binary or String-typed, + Dictionary ([no-op])
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
+IntoArrowAny: TypeAlias = "IntoNative | ArrayAny"
+"""Extends `IntoNative` with `pa.Array[Any]`."""
+
 SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
 ArrowT = TypeVar("ArrowT", bound=ArrowAny)
 ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")
@@ -263,11 +273,7 @@ IntoChunkedArray: TypeAlias = (
     "ArrowAny | list[Iterable[Any]] | OneOrIterable[ArrowStreamExportable | _NumpyArray]"
 )
 
-NativeScalar: TypeAlias = ScalarAny
-BinOp: TypeAlias = Callable[..., ChunkedOrScalarAny]
-StoresNativeT_co = TypeVar(
-    "StoresNativeT_co", bound=StoresNative[ChunkedOrScalarAny], covariant=True
-)
+
 DataTypeRemap: TypeAlias = Mapping[DataType, DataType]
 NullPlacement: TypeAlias = Literal["at_start", "at_end"]
 
@@ -283,3 +289,10 @@ RankMethodSingle: TypeAlias = Literal["min", "max", "dense", "ordinal"]
 """
 
 SearchSortedSide: TypeAlias = Literal["left", "right"]
+IOSource: TypeAlias = "FileSource | pa.NativeFile | BytesIO"
+"""Superset of `nw.typing.FileSource`."""
+
+CompliantDataFrame: TypeAlias = "_CompliantDataFrame[pa.Table, ChunkedArrayAny]"
+"""Alias for `ArrowDataFrame` when used in the parameter position of a protocol method."""
+CompliantSeries: TypeAlias = "_CompliantSeries[ChunkedArrayAny]"
+"""Alias for `ArrowSeries` when used in the parameter position of a protocol method."""

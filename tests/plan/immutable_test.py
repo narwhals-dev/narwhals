@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import string
+from copy import copy, deepcopy
 from itertools import repeat
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -11,7 +12,9 @@ from narwhals._plan import when_then
 from narwhals._plan._immutable import Immutable
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
+
+
 T_co = TypeVar("T_co", covariant=True)
 
 
@@ -54,22 +57,35 @@ def two() -> TwoSlot:
     return TwoSlot(a=1, b="two")
 
 
-def test_immutable_really_immutable(
+def test_immutable_setattr(
     empty: Empty, empty_derived: EmptyDerived, one: OneSlot, two: TwoSlot
 ) -> None:
     with pytest.raises(AttributeError, match=r"Empty.+immutable.+'a'"):
-        empty.a = 1  # type: ignore[assignment]
+        empty.a = 1  # type: ignore[attr-defined]
     assert empty_derived.a == 1
     with pytest.raises(AttributeError, match=r"EmptyDerived.+immutable.+'a'"):
         empty_derived.a = 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'a'"):
         one.a = 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'b'"):
-        one.b = "two"  # type: ignore[assignment]
+        one.b = "two"  # type: ignore[attr-defined]
     with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'a'"):
         two.a += 2  # type: ignore[misc]
     with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'b'"):
         two.b = 2  # type: ignore[assignment, misc]
+
+
+def test_immutable_delattr(
+    empty_derived: EmptyDerived, one: OneSlot, two: TwoSlot
+) -> None:
+    with pytest.raises(AttributeError, match=r"EmptyDerived.+immutable.+'a'"):
+        del empty_derived.a  # pyright: ignore[reportAttributeAccessIssue]
+    with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'a'"):
+        del one.a  # pyright: ignore[reportAttributeAccessIssue]
+    with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'b'"):
+        del one.b  # type: ignore[attr-defined]
+    with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'a'"):
+        del two.a, two.b  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def test_immutable_hash(
@@ -110,16 +126,26 @@ def test_immutable_hash(
     assert hash(empty_again) != hash(empty)
 
 
+@pytest.mark.parametrize("function", [copy, deepcopy], ids=["copy", "deepcopy"])
+def test_immutable_copy(two: TwoSlot, function: Callable[[TwoSlot], TwoSlot]) -> None:
+    # NOTE: `__setattr__` is called unconditionally here and raises if we don't "implement" it
+    # This is just being considerate of others who might try to copy 🙂
+    # https://github.com/python/cpython/blob/60093096ba62110151d822b072a01061876e9404/Lib/copy.py#L267
+    clone = function(two)
+    assert clone == two
+    assert clone is two
+
+
 def test_immutable_invalid_constructor() -> None:
     with pytest.raises(TypeError):
         Empty(a=1)  # pyright: ignore[reportCallIssue]
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         EmptyDerived(b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         EmptyDerived(a=1, b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         EmptyDerived()  # type: ignore[call-arg]
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         OneSlot(b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         OneSlot(a=1, b="two")  # type: ignore[call-arg]
@@ -147,10 +173,10 @@ def test_immutable_hash_cache() -> None:
     obj = TwoSlot(a=int_long, b=str_long)
 
     with pytest.raises(AttributeError):
-        _ = getattr(obj, "__immutable_hash_value__")  # noqa: B009
+        _ = obj.__immutable_hash_value__
 
     hash_cache_miss = hash(obj)
-    cached = getattr(obj, "__immutable_hash_value__")  # noqa: B009
+    cached = obj.__immutable_hash_value__
     hash_cache_hit = hash(obj)
     assert hash_cache_miss == cached == hash_cache_hit
 
@@ -163,11 +189,10 @@ def _collect_immutable_descendants() -> list[type[Immutable]]:
         _function,
         expressions,
         options,
-        schema,
         when_then,
     )
 
-    _ = expressions, schema, options, _expansion, _expr_ir, _function, when_then
+    _ = expressions, options, _expansion, _expr_ir, _function, when_then
     return sorted(set(_iter_descendants(Immutable)), key=repr)
 
 
@@ -203,7 +228,7 @@ def test_immutable___slots___(immutable_type: type[Immutable]) -> None:
 
     # NOTE: If this fails, `__setattr__` has been overridden
     with pytest.raises(AttributeError, match=r"immutable"):
-        featureless_instance.i_dont_exist = 999  # type: ignore[assignment]
+        featureless_instance.i_dont_exist = 999  # type: ignore[attr-defined]
 
     # NOTE: If this fails, `__slots__` lose the size benefit
     with pytest.raises(AttributeError, match=re.escape("has no attribute '__dict__'")):

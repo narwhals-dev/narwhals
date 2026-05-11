@@ -20,9 +20,9 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Final, Literal, Union, cast
 
-import pyarrow as pa  # ignore-banned-import
+import pyarrow as pa
 import pyarrow.acero as pac
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 from pyarrow.acero import Declaration as Decl
 
 from narwhals._plan.arrow.guards import is_expression
@@ -323,6 +323,7 @@ def _join_asof_strategy_to_tolerance(
     lower = fn.min_horizontal(fn.min(left_on), fn.min(right_on))
     upper = fn.max_horizontal(fn.max(left_on), fn.max(right_on))
     scalar = fn.sub(lower, upper) if strategy == "backward" else fn.sub(upper, lower)
+    # NOTE: Extra annotation to reduce LSP overhead (it does match the overload *eventually*)
     tolerance: int = fn.cast(scalar, fn.I64).as_py()
     return tolerance
 

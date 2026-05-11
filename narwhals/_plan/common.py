@@ -1,29 +1,31 @@
 from __future__ import annotations
 
-import datetime as dt
+import re
 import sys
 from collections.abc import Iterable
-from decimal import Decimal
+from copy import deepcopy
+from inspect import getattr_static as _getattr_static
 from io import BytesIO
 from secrets import token_hex
-from typing import TYPE_CHECKING, cast, overload
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
-from narwhals._utils import _hasattr_static, qualified_type_name
+from narwhals._utils import qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
-from narwhals.utils import Version
 
 if TYPE_CHECKING:
     import reprlib
     from collections.abc import Iterator
-    from typing import Any, ClassVar, TypeVar
+    from typing import Any, ClassVar, Final, TypeVar
 
-    from typing_extensions import TypeIs
+    from typing_extensions import TypeAlias, TypeIs, Unpack
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
     from narwhals._plan.typing import (
+        ClosedKwds,
         ColumnNameOrSelector,
         DTypeT,
         NonNestedDTypeT,
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
         Seq,
     )
     from narwhals._utils import _StoresColumns
-    from narwhals.typing import FileSource, NonNestedDType, NonNestedLiteral
+    from narwhals.typing import FileSource
 
     T = TypeVar("T")
 
@@ -49,22 +51,34 @@ else:  # pragma: no cover
         return func(obj, **changes)  # type: ignore[no-any-return]
 
 
-def py_to_narwhals_dtype(obj: NonNestedLiteral, version: Version = Version.MAIN) -> DType:
-    dtypes = version.dtypes
-    mapping: dict[type[NonNestedLiteral], type[NonNestedDType]] = {
-        int: dtypes.Int64,
-        float: dtypes.Float64,
-        str: dtypes.String,
-        bool: dtypes.Boolean,
-        dt.datetime: dtypes.Datetime,
-        dt.date: dtypes.Date,
-        dt.time: dtypes.Time,
-        dt.timedelta: dtypes.Duration,
-        bytes: dtypes.Binary,
-        Decimal: dtypes.Decimal,
-        type(None): dtypes.Unknown,
-    }
-    return mapping.get(type(obj), dtypes.Unknown)()
+_SENTINEL: Final = object()
+
+NW_DEV_ENV_NAME: Final = "NARWHALS_DEV_HINTS"
+"""Name of an environment variable that controls conditionally defined paths.
+
+Important:
+    Use when there is an *opportunity* to provide help for a dev error,
+    but doing so may either:
+    1. Come at a performance cost.
+    2. Introduce false positives/negatives.
+"""
+
+
+def hasattrs_static(
+    obj: object | type, *attrs: Unpack[tuple[str, Unpack[tuple[str, ...]]]]
+) -> bool:
+    """Check attributes exist without triggering dynamic lookup [^1].
+
+    Arguments:
+        obj: Target object or type.
+        *attrs: One or more attribute names.
+
+    Note:
+        Reimplements `_utils._hasattr_static` to inline the `getattr_static` usage.
+
+    [^1]: via `__get__`, `__getattr__` or `__getattribute__`
+    """
+    return all(_getattr_static(obj, name, _SENTINEL) is not _SENTINEL for name in attrs)
 
 
 @overload
@@ -127,7 +141,7 @@ def ensure_list_str(obj: OneOrIterable[str], /) -> list[str]:
 
 
 def _has_columns(obj: Any) -> TypeIs[_StoresColumns]:
-    return _hasattr_static(obj, "columns")
+    return hasattrs_static(obj, "columns")
 
 
 def _reprlib_repr_backport() -> reprlib.Repr:
@@ -307,6 +321,8 @@ class temp:  # noqa: N801
 class todo:  # pragma: no cover  # noqa: N801
     """A variation of `not_implemented`, for shorter-lived placeholders."""
 
+    __slots__ = ("__name__", "_name_owner")
+
     def __set_name__(self, owner: type[Any], name: str) -> None:
         self._name_owner: str = owner.__name__
         self.__name__: str = name
@@ -320,3 +336,153 @@ class todo:  # pragma: no cover  # noqa: N801
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         msg = "Stop being clever!"
         raise NotImplementedError(msg)
+
+
+_Proxy: TypeAlias = "MappingProxyType[str, Any]"
+
+
+def closed_kwds(
+    strategy: Literal["reusable", "single_copy", "zero_copy"] = "zero_copy", **kwds: Any
+) -> ClosedKwds:
+    """Create a callable that returns *closed-over* keyword-only arguments.
+
+    Arguments:
+        strategy: {"reusable", "single_copy", "zero_copy"}
+
+            Strategy to balance mutability and memory usage.
+
+            - *"reusable"*: Updates to mutable *results* persist only for the result of the **current** call.
+            - *"single_copy"*: Updates to mutable *results* will be reflected across **all** calls.
+            - *"zero_copy"*: Updates to mutable *arguments* or the *results* will be reflected across **all** calls.
+        **kwds: Arbitrary keyword-only arguments.
+
+    Examples:
+        By default, this provides a lightweight wrapper for unhashable objects:
+
+        >>> f = closed_kwds(a={"mutable": [1, 2, 3]}, b=[4, 5, 6])
+        >>> hash(f) == hash(f)
+        True
+
+        >>> f == f
+        True
+
+        >>> f()
+        mappingproxy({'a': {'mutable': [1, 2, 3]}, 'b': [4, 5, 6]})
+
+        `strategy` comparison:
+
+        >>> def show_mutation(
+        ...     strategy: Literal["reusable", "single_copy", "zero_copy"],
+        ...     mutable: list[int],
+        ... ) -> None:
+        ...     function = closed_kwds(strategy, a="dog", b=mutable)
+        ...     result = function()
+        ...     print("First result    :", result)
+        ...     mutable.append(2)
+        ...     print("Mutated argument:", result)
+        ...     result["b"].append(3)
+        ...     print("Mutated result  :", result)
+        ...     print("Second result   :", function())
+
+        `"zero_copy"` may be reasonable if any of these apply:
+        - all arguments are immutable
+        - their types do not support `copy.deepcopy`
+        - making a single copy would be prohibitive
+
+        >>> show_mutation("zero_copy", [1])
+        First result    : {'a': 'dog', 'b': [1]}
+        Mutated argument: {'a': 'dog', 'b': [1, 2]}
+        Mutated result  : {'a': 'dog', 'b': [1, 2, 3]}
+        Second result   : {'a': 'dog', 'b': [1, 2, 3]}
+
+        `"single_copy"` provides some extra safety and should be considered if:
+        - at least one argument may be mutable
+        - the returned function will only be called once
+        - the result of the function will not be mutated
+
+        >>> show_mutation("single_copy", [1])
+        First result    : {'a': 'dog', 'b': [1]}
+        Mutated argument: {'a': 'dog', 'b': [1]}
+        Mutated result  : {'a': 'dog', 'b': [1, 3]}
+        Second result   : {'a': 'dog', 'b': [1, 3]}
+
+        `"reusable"` is both the safest and most expensive strategy, consider if:
+        - both mutable arguments and updates to them are expected
+        - the returned function will be called multiple times, and each should
+            be isolated from previous calls
+        - the cost of `copy.deepcopy`(s) is small/irrelevant
+
+        >>> show_mutation("reusable", [1])
+        First result    : {'a': 'dog', 'b': [1]}
+        Mutated argument: {'a': 'dog', 'b': [1]}
+        Mutated result  : {'a': 'dog', 'b': [1, 3]}
+        Second result   : {'a': 'dog', 'b': [1]}
+    """
+    if not kwds:
+        return _closed_kwds_empty
+    if strategy == "zero_copy":
+        return _closed_kwds_impl(kwds, copy=False)
+    if strategy == "single_copy":
+        return _closed_kwds_impl(kwds, copy=True)
+    return _closed_kwds_reusable_impl(kwds)
+
+
+_EMPTY_MAPPING_PROXY: _Proxy = MappingProxyType({})
+
+
+def _closed_kwds_empty() -> _Proxy:
+    return _EMPTY_MAPPING_PROXY
+
+
+def _closed_kwds_impl(mapping: dict[str, Any] | _Proxy, /, *, copy: bool) -> ClosedKwds:
+    # NOTE: `proxy` is assigned like this so `_.__closure__` has 1 cell and is not a `dict`
+    proxy = MappingProxyType(
+        mapping
+        if not copy
+        else deepcopy(mapping if isinstance(mapping, dict) else mapping.copy())
+    )
+
+    def _() -> _Proxy:
+        return proxy
+
+    return _
+
+
+def _closed_kwds_reusable_impl(mapping: dict[str, Any], /) -> ClosedKwds:
+    # ensure the next call produces the original `mapping`, while removing the input from this scope
+    next_copy = _closed_kwds_impl(mapping, copy=True)
+    del mapping
+
+    def iter_clone() -> Iterator[_Proxy]:
+        # infinite generator, maintaining the `next_copy` and exposing already deepcopy'd output
+        nonlocal next_copy
+        while True:
+            out = next_copy()
+            next_copy = _closed_kwds_impl(out, copy=True)
+            yield out
+
+    clones = iter(iter_clone())
+
+    def _() -> _Proxy:
+        return next(clones)
+
+    return _
+
+
+def pascal_to_snake_case(s: str) -> str:
+    """Convert a PascalCase string to snake_case.
+
+    Adapted from https://github.com/pydantic/pydantic/blob/f7a9b73517afecf25bf898e3b5f591dffe669778/pydantic/alias_generators.py#L43-L62
+    """
+    # Handle the sequence of uppercase letters followed by a lowercase letter
+    snake = _PATTERN_UPPER_LOWER.sub(_re_repl_snake, s)
+    # Insert an underscore between a lowercase letter and an uppercase letter
+    return _PATTERN_LOWER_UPPER.sub(_re_repl_snake, snake).lower()
+
+
+_PATTERN_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_PATTERN_LOWER_UPPER = re.compile(r"([a-z])([A-Z])")
+
+
+def _re_repl_snake(match: re.Match[str], /) -> str:
+    return f"{match.group(1)}_{match.group(2)}"

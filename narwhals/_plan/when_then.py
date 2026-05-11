@@ -2,30 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from narwhals._plan import _parse
 from narwhals._plan._immutable import Immutable
-from narwhals._plan._parse import (
-    parse_into_expr_ir as _parse_into_expr_ir,
-    parse_predicates_constraints_into_expr_ir,
-)
 from narwhals._plan.expr import Expr
 from narwhals._plan.expressions import ternary_expr
-from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR
     from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
-
-
-def _multi_output_error(expr: ExprIR) -> MultiOutputExpressionError:
-    msg = f"Multi-output expressions are not supported in a `when-then-otherwise` context: `{expr!r}`"
-    return MultiOutputExpressionError(msg)
-
-
-def parse_into_expr_ir(statement: IntoExpr, /) -> ExprIR:
-    expr_ir = _parse_into_expr_ir(statement)
-    if expr_ir.meta.has_multiple_outputs():
-        raise _multi_output_error(expr_ir)
-    return expr_ir
 
 
 class When(Immutable):
@@ -33,7 +17,7 @@ class When(Immutable):
     condition: ExprIR
 
     def then(self, expr: IntoExpr, /) -> Then:
-        return Then(condition=self.condition, statement=parse_into_expr_ir(expr))
+        return Then(condition=self.condition, statement=_parse.into_expr_ir(expr))
 
     @staticmethod
     def _from_ir(expr_ir: ExprIR, /) -> When:
@@ -48,7 +32,7 @@ class Then(Immutable, Expr):
     def when(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
-        condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
             conditions=(self.condition, condition), statements=(self.statement,)
         )
@@ -57,7 +41,9 @@ class Then(Immutable, Expr):
         return self._from_ir(self._otherwise(statement))
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
-        return ternary_expr(self.condition, self.statement, parse_into_expr_ir(statement))
+        return ternary_expr(
+            self.condition, self.statement, _parse.into_expr_ir(statement)
+        )
 
     @property
     def _ir(self) -> ExprIR:  # type: ignore[override]
@@ -79,7 +65,7 @@ class ChainedWhen(Immutable):
     def then(self, statement: IntoExpr, /) -> ChainedThen:
         return ChainedThen(
             conditions=self.conditions,
-            statements=(*self.statements, parse_into_expr_ir(statement)),
+            statements=(*self.statements, _parse.into_expr_ir(statement)),
         )
 
 
@@ -91,7 +77,7 @@ class ChainedThen(Immutable, Expr):
     def when(
         self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
     ) -> ChainedWhen:
-        condition = parse_predicates_constraints_into_expr_ir(*predicates, **constraints)
+        condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
         return ChainedWhen(
             conditions=(*self.conditions, condition), statements=self.statements
         )
@@ -100,7 +86,7 @@ class ChainedThen(Immutable, Expr):
         return self._from_ir(self._otherwise(statement))
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
-        otherwise = parse_into_expr_ir(statement)
+        otherwise = _parse.into_expr_ir(statement)
         for cond, stmt in zip(reversed(self.conditions), reversed(self.statements)):
             otherwise = ternary_expr(cond, stmt, otherwise)
         return otherwise
@@ -115,3 +101,17 @@ class ChainedThen(Immutable, Expr):
 
     def __eq__(self, other: IntoExpr) -> Expr:  # type: ignore[override]
         return Expr.__eq__(self, other)
+
+
+def when(*predicates: OneOrIterable[IntoExprColumn], **constraints: Any) -> When:
+    """Start a `when-then-otherwise` expression.
+
+    Examples:
+        >>> from narwhals import _plan as nw
+
+        >>> nw.when(nw.col("y") == "b").then(1)
+        nw._plan.Expr:
+        .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
+    """
+    condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
+    return When._from_ir(condition)

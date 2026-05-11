@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Generic
 
-from narwhals._plan._parse import parse_into_seq_of_expr_ir
+from narwhals._plan import _parse
 from narwhals._plan.compliant.group_by import GroupByResolver as Resolved, Grouper
-from narwhals._plan.typing import DataFrameT
+from narwhals._plan.typing import DataFrameT, LazyFrameT
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -38,6 +38,29 @@ class GroupBy(Generic[DataFrameT]):
             yield key, frame._with_compliant(df)
 
 
+class LazyGroupBy(Generic[LazyFrameT]):  # pragma: no cover
+    _frame: LazyFrameT
+    _keys: Seq[ExprIR]
+
+    def __init__(
+        self,
+        frame: LazyFrameT,
+        *by: OneOrIterable[IntoExpr],
+        drop_null_keys: bool = False,
+        **named_by: IntoExpr,
+    ) -> None:
+        if drop_null_keys:
+            msg = f"TODO: LazyFrame.group_by({drop_null_keys=})"
+            raise NotImplementedError(msg)
+        self._frame = frame
+        self._keys = tuple(_parse.into_iter_expr_ir(*by, **named_by))
+
+    def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> LazyFrameT:
+        frame = self._frame
+        aggs_ir = tuple(_parse.into_iter_expr_ir(*aggs, **named_aggs))
+        return frame._with_lp(frame._plan.group_by(self._keys, aggs_ir))
+
+
 class Grouped(Grouper["Resolved"]):
     """Narwhals-level `GroupBy` builder."""
 
@@ -53,12 +76,12 @@ class Grouped(Grouper["Resolved"]):
         **named_by: IntoExpr,
     ) -> Self:
         obj = cls.__new__(cls)
-        obj._keys = parse_into_seq_of_expr_ir(*by, **named_by)
+        obj._keys = tuple(_parse.into_iter_expr_ir(*by, **named_by))
         obj._drop_null_keys = drop_null_keys
         return obj
 
     def agg(self, *aggs: OneOrIterable[IntoExpr], **named_aggs: IntoExpr) -> Self:
-        self._aggs = parse_into_seq_of_expr_ir(*aggs, **named_aggs)
+        self._aggs = tuple(_parse.into_iter_expr_ir(*aggs, **named_aggs))
         return self
 
     @property

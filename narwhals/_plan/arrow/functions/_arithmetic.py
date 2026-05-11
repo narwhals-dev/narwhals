@@ -4,7 +4,7 @@ import math
 import typing as t
 from typing import TYPE_CHECKING
 
-import pyarrow.compute as pc  # ignore-banned-import
+import pyarrow.compute as pc
 
 from narwhals._arrow.utils import floordiv_compat as _floordiv
 from narwhals._plan.arrow.functions._dtypes import F64, is_integer
@@ -15,11 +15,12 @@ if TYPE_CHECKING:
         BinaryFunction,
         BinaryNumericTemporal,
         ChunkedOrScalarAny,
+        ChunkedOrScalarT,
         NumericScalar,
         UnaryNumeric,
     )
 
-__all__ = [
+__all__ = (
     "abs",
     "add",
     "exp",
@@ -31,7 +32,7 @@ __all__ = [
     "sqrt",
     "sub",
     "truediv",
-]
+)
 
 add = t.cast("BinaryNumericTemporal", pc.add)
 """Equivalent to `lhs + rhs`."""
@@ -65,7 +66,7 @@ def modulus(lhs: ChunkedOrScalarAny, rhs: ChunkedOrScalarAny, /) -> ChunkedOrSca
     return result
 
 
-def log(native: ChunkedOrScalarAny, base: float = math.e) -> ChunkedOrScalarAny:
+def log(native: ChunkedOrScalarT, base: float = math.e) -> ChunkedOrScalarT:
     """Compute the logarithm to a given base."""
-    result: ChunkedOrScalarAny = call("logb", native, base)
+    result: ChunkedOrScalarT = call("logb", native, base)
     return result

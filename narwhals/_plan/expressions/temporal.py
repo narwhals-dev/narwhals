@@ -1,93 +1,96 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar, Generic, Literal, TypeVar, get_args
 
+import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
-from narwhals._plan._function import Function
-from narwhals._plan.expressions.namespace import ExprNamespace, IRNamespace
-from narwhals._plan.options import FunctionOptions
+from narwhals._plan._dispatch import DispatcherOptions
+from narwhals._plan._dtype import ResolveDType
+from narwhals._plan._flags import FunctionFlags
+from narwhals._plan._function import Function, UnaryFunction
+from narwhals._plan.expressions.namespace import IRNamespace
+from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeAlias
 
     from narwhals._duration import IntervalUnit
-    from narwhals._plan.expr import Expr
+    from narwhals._plan.expressions import FunctionExpr as FExpr
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals.dtypes import DType
     from narwhals.typing import TimeUnit
 
 PolarsTimeUnit: TypeAlias = Literal["ns", "us", "ms"]
+_POLARS_TIME_UNIT = frozenset[PolarsTimeUnit](("ns", "us", "ms"))
+Tz = TypeVar("Tz", str, "str | None")
 
-
-def _is_polars_time_unit(obj: Any) -> TypeIs[PolarsTimeUnit]:
-    return obj in {"ns", "us", "ms"}
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+ELEMENTWISE = FunctionFlags.ELEMENTWISE
+same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
-class TemporalFunction(Function, accessor="dt", options=FunctionOptions.elementwise): ...
-class Date(TemporalFunction): ...
-class Year(TemporalFunction): ...
-class Month(TemporalFunction): ...
-class Day(TemporalFunction): ...
-class Hour(TemporalFunction): ...
-class Minute(TemporalFunction): ...
-class Second(TemporalFunction): ...
-class Millisecond(TemporalFunction): ...
-class Microsecond(TemporalFunction): ...
-class Nanosecond(TemporalFunction): ...
-class OrdinalDay(TemporalFunction): ...
-class WeekDay(TemporalFunction): ...
-class TotalMinutes(TemporalFunction): ...
-class TotalSeconds(TemporalFunction): ...
-class TotalMilliseconds(TemporalFunction): ...
-class TotalMicroseconds(TemporalFunction): ...
-class TotalNanoseconds(TemporalFunction): ...
-# fmt: on
-class ToString(TemporalFunction):
-    __slots__ = ("format",)
-    format: str
-
-
-class ReplaceTimeZone(TemporalFunction):
+class TemporalFunction(Function, dispatch=DispatcherOptions(accessor_name="dt"), flags=ELEMENTWISE): ...
+class _TemporalUnary(UnaryFunction, TemporalFunction): ...
+class _TemporalInt8(_TemporalUnary, dtype=dtm.I8): ...
+class _TemporalInt32(_TemporalUnary, dtype=dtm.I32): ...
+class _TemporalInt64(_TemporalUnary, dtype=dtm.I64): ...
+class _TemporalTimeZone(_TemporalUnary, Generic[Tz]):
     __slots__ = ("time_zone",)
-    time_zone: str | None
+    time_zone: Tz
+    def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:  # pragma: no cover
+        dtype = node.input[0].resolve_dtype(schema)
+        if isinstance(dtype, dtm.dtypes.Datetime):
+            return type(dtype)(dtype.time_unit, self.time_zone)
+        msg = f"Expected Datetime, got {dtype}"
+        raise ComputeError(msg)
 
-
-class ConvertTimeZone(TemporalFunction):
-    __slots__ = ("time_zone",)
-    time_zone: str
-
-
-class Timestamp(TemporalFunction):
-    __slots__ = ("time_unit",)
-    time_unit: PolarsTimeUnit
-
-    @staticmethod
-    def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
-        if not _is_polars_time_unit(time_unit):
-            msg = f"invalid `time_unit` \n\nExpected one of ['ns', 'us', 'ms'], got {time_unit!r}."
-            raise TypeError(msg)
-        return Timestamp(time_unit=time_unit)
-
-    def __repr__(self) -> str:
-        return f"{super().__repr__()}[{self.time_unit!r}]"
-
-
-class _IntervalFunction(TemporalFunction):
+class _TemporalInterval(_TemporalUnary, dtype=same_dtype()):
     __slots__ = ("multiple", "unit")
     multiple: int
     unit: IntervalUnit
-
     @classmethod
     def from_string(cls, interval: str, /) -> Self:
         return cls.from_interval(Interval.parse(interval))
-
     @classmethod
     def from_interval(cls, interval: Interval, /) -> Self:
         return cls(multiple=interval.multiple, unit=interval.unit)
 
-
-# fmt: off
-class Truncate(_IntervalFunction): ...
-class OffsetBy(_IntervalFunction): ...
+class Year(_TemporalInt32): ...
+class Month(_TemporalInt8): ...
+class Day(_TemporalInt8): ...
+class Hour(_TemporalInt8): ...
+class Minute(_TemporalInt8): ...
+class Second(_TemporalInt8): ...
+class Millisecond(_TemporalInt32): ...
+class Microsecond(_TemporalInt32): ...
+class Nanosecond(_TemporalInt32): ...
+class OrdinalDay(_TemporalUnary, dtype=dtm.I16): ...
+class WeekDay(_TemporalInt8): ...
+class TotalMinutes(_TemporalInt64): ...
+class TotalSeconds(_TemporalInt64): ...
+class TotalMilliseconds(_TemporalInt64): ...
+class TotalMicroseconds(_TemporalInt64): ...
+class TotalNanoseconds(_TemporalInt64): ...
+class ReplaceTimeZone(_TemporalTimeZone["str | None"]): ...
+class ConvertTimeZone(_TemporalTimeZone[str]): ...
+class Truncate(_TemporalInterval): ...
+class OffsetBy(_TemporalInterval): ...
+class Date(_TemporalUnary, dtype=dtm.DATE):...
+class ToString(_TemporalUnary, dtype=dtm.STR):
+    __slots__ = ("format",)
+    format: str
+class Timestamp(_TemporalInt64):
+    __slots__ = ("time_unit",)
+    time_unit: PolarsTimeUnit
+    @staticmethod
+    def from_time_unit(time_unit: TimeUnit = "us", /) -> Timestamp:
+        if time_unit in _POLARS_TIME_UNIT:
+            return Timestamp(time_unit=time_unit)
+        msg = f"Only the following time units are supported: {get_args(PolarsTimeUnit)}.\nGot: {time_unit!r}."
+        raise TypeError(msg)
+    def __repr__(self) -> str:
+        return f"{super().__repr__()}[{self.time_unit!r}]"
 # fmt: on
 
 
@@ -115,78 +118,3 @@ class IRDateTimeNamespace(IRNamespace):
     offset_by: ClassVar = staticmethod(OffsetBy.from_string)
     truncate: ClassVar = staticmethod(Truncate.from_string)
     timestamp: ClassVar = staticmethod(Timestamp.from_time_unit)
-
-
-class ExprDateTimeNamespace(ExprNamespace[IRDateTimeNamespace]):
-    @property
-    def _ir_namespace(self) -> type[IRDateTimeNamespace]:
-        return IRDateTimeNamespace
-
-    def date(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.date())
-
-    def year(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.year())
-
-    def month(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.month())
-
-    def day(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.day())
-
-    def hour(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.hour())
-
-    def minute(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.minute())
-
-    def second(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.second())
-
-    def millisecond(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.millisecond())
-
-    def microsecond(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.microsecond())
-
-    def nanosecond(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.nanosecond())
-
-    def ordinal_day(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.ordinal_day())
-
-    def weekday(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.weekday())
-
-    def total_minutes(self) -> Expr:
-        return self._with_unary(self._ir.total_minutes())
-
-    def total_seconds(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.total_seconds())
-
-    def total_milliseconds(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.total_milliseconds())
-
-    def total_microseconds(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.total_microseconds())
-
-    def total_nanoseconds(self) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.total_nanoseconds())
-
-    def to_string(self, format: str) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.to_string(format=format))
-
-    def replace_time_zone(self, time_zone: str | None) -> Expr:
-        return self._with_unary(self._ir.replace_time_zone(time_zone=time_zone))
-
-    def convert_time_zone(self, time_zone: str) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.convert_time_zone(time_zone=time_zone))
-
-    def timestamp(self, time_unit: TimeUnit = "us") -> Expr:
-        return self._with_unary(self._ir.timestamp(time_unit))
-
-    def truncate(self, every: str) -> Expr:
-        return self._with_unary(self._ir.truncate(every))
-
-    def offset_by(self, by: str) -> Expr:  # pragma: no cover
-        return self._with_unary(self._ir.offset_by(by))
