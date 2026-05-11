@@ -550,6 +550,44 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
     )
 
 
+def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
+    """Check whether `native_lazyframe` can be converted to a Narwhals LazyFrame.
+
+    Arguments:
+        native_lazyframe: The object to check.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> from narwhals.dependencies import is_into_lazyframe
+
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> lf_pl = pl.LazyFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> np_arr = np.array([[1, 4], [2, 5], [3, 6]])
+
+        >>> is_into_lazyframe(df_pd)
+        False
+        >>> is_into_lazyframe(lf_pl)
+        True
+        >>> is_into_lazyframe(np_arr)
+        False
+    """
+    from narwhals.dataframe import LazyFrame
+
+    return (
+        isinstance(native_lazyframe, LazyFrame)
+        or hasattr(native_lazyframe, "__narwhals_lazyframe__")
+        or is_polars_lazyframe(native_lazyframe)
+        or is_dask_dataframe(native_lazyframe)
+        or is_duckdb_relation(native_lazyframe)
+        or is_ibis_table(native_lazyframe)
+        or is_pyspark_dataframe(native_lazyframe)
+        or is_pyspark_connect_dataframe(native_lazyframe)
+        or is_sqlframe_dataframe(native_lazyframe)
+    )
+
+
 def is_narwhals_dataframe(
     df: DataFrame[IntoDataFrameT] | Any,
 ) -> TypeIs[DataFrame[IntoDataFrameT]]:
@@ -613,6 +651,7 @@ __all__ = [
     "is_dask_dataframe",
     "is_ibis_table",
     "is_into_dataframe",
+    "is_into_lazyframe",
     "is_into_series",
     "is_modin_dataframe",
     "is_modin_series",
