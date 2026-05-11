@@ -230,7 +230,7 @@ Native: TypeAlias = ChunkedOrScalarAny
 """The type of `Arrow{Expr,Scalar}.native`."""
 
 IntoNative: TypeAlias = "Native | NonNestedLiteral"
-"""Extends `Native`, for functions that implictly wrap python values in `Scalar`.
+"""Extends `Native`, for functions that implicitly wrap python values in `Scalar`.
 
 `pyarrow-stubs` rarely documents that this is possible.
 """

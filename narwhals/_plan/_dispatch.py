@@ -67,7 +67,7 @@ Bound: TypeAlias = "Callable[[Expr, ct.FrameAny, str], ct.E | ct.SC]"
 class Dispatch(Generic[Expr]):
     """Dispatch an expression to the compliant-level.
 
-    Translates `ExprIR` and `Function` defintions into error-wrapped method calls, and stores in ``__expr_ir_dispatch__`.
+    Translates `ExprIR` and `Function` definitions into error-wrapped method calls, and stores in ``__expr_ir_dispatch__`.
 
     By default, we dispatch to the compliant-level by calling a method that is the
     **snake_case**-equivalent of the class name:

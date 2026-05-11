@@ -23,16 +23,16 @@ if TYPE_CHECKING:
         NumericScalar,
         ScalarAny,
         ScalarPT_contra as ScalarP,
-        ScalarRT_co as ScalarR,
+        ScalarRT_co,
     )
     from narwhals._plan.typing import OneOrIterable, Seq
 
     def reduce(
-        function: BinaryFunction[ScalarP, ScalarR],
+        function: BinaryFunction[ScalarP, ScalarRT_co],
         iterable: Iterable[IntoArrowAny],
         initial: IntoArrowAny = None,
         /,
-    ) -> ChunkedOrScalar[ScalarR]:
+    ) -> ChunkedOrScalar[ScalarRT_co]:
         """`functools.reduce` with typing that's friendlier to `pyarrow`.
 
         The version in [`typeshed`] isn't compatible with broadcasting + type promotion.

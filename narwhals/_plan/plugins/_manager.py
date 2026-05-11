@@ -53,7 +53,7 @@ _VERSION_NAME: Final[Mapping[Version, VersionName]] = {
 # TODO @dangotbanned: (low-priority) Cover the duplicate name plugin case
 @functools.cache
 def _entry_points() -> EntryPoints:
-    # NOTE: Wrappped with some one-time validation, so everything outside is simpler
+    # NOTE: Wrapped with some one-time validation, so everything outside is simpler
     from importlib.metadata import entry_points
 
     if sys.version_info < (3, 10):
@@ -209,7 +209,7 @@ class PluginManager:
         raise NotImplementedError(msg)
 
     # NOTE: These overloads are *intentionally* less-precise than they could be
-    # Some early experiments handled unions & version matching (successfuly),
+    # Some early experiments handled unions & version matching (successfully),
     # but came at a very high cost to LSP performance.
     # **Before adding more complexity here again - consider operating on the plugin directly.**
     @overload
