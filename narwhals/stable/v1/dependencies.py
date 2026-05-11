@@ -195,7 +195,7 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
         or is_pandas_like_dataframe(native_dataframe)
         or is_ibis_table(native_dataframe)
         or is_duckdb_relation(native_dataframe)
-    )
+    ) and not is_sqlframe_dataframe(native_dataframe)
 
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
