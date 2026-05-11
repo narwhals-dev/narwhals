@@ -32,5 +32,5 @@ jobs:
         run: |
           uv run \
           --group core-tests \
-          --extra ibis \
-          pytest tests --constructors="ibis"
+          --extra ibis --extra pandas \
+          pytest tests --constructors=ibis

@@ -40,7 +40,7 @@ jobs:
         run: |
           uv run \
           --group core-tests \
-          --extra pyspark \
+          --extra pyspark --extra pandas \
           pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
           --constructors="pyspark"
 
@@ -64,7 +64,7 @@ jobs:
         run: |
           uv run \
           --with "pyspark==3.5.0" \
-          --group core-tests \
+          --group core-tests --extra pandas \
           pytest tests --constructors="pyspark"
 
   pytest-pyspark-connect-constructor:
@@ -97,7 +97,7 @@ jobs:
 
       - name: install-reqs
         # temporary pin to get CI green
-        run: uv pip install -e . --group core-tests --group extra "pyarrow<22.0"
+        run: uv pip install -e . --group core-tests --group extra --extra pandas "pyarrow<22.0"
       - name: install pyspark
         run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}"
       - name: show-deps

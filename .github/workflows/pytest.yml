@@ -58,7 +58,7 @@ jobs:
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
         run: |
           uv run \
-          --group plugins --group core-tests --group extra \
+          --group plugins --group core-tests --group extra --extra pandas \
           pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
@@ -87,7 +87,7 @@ jobs:
         run: |
           uv run \
           --extra dask \
-          --group core-tests --group extra --group plugins \
+          --group core-tests --group extra --group plugins --extra pandas \
           pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
@@ -96,7 +96,7 @@ jobs:
         run: |
           uv run \
           --extra dask \
-          --group core-tests --group extra --group plugins \
+          --group core-tests --group extra --group plugins --extra pandas \
           pytest src --doctest-modules
 
   # Test against smaller dependency set, used e.g. on Gentoo.
@@ -154,8 +154,8 @@ jobs:
       - name: Run pytest
         run: |
           uv run \
-          --group core-tests \
-          pytest tests --cov=src --cov=tests  --cov-fail-under=50 --runslow --durations=30 \
+          --group core-tests --extra pandas \
+          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   python-314t:

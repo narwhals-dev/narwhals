@@ -108,7 +108,7 @@ jobs:
 
   nightlies:
     env:
-      UV_SYSTEM_PYTHON: 1
+      UV_SYSTEM_PYTHON: "1"
     strategy:
       matrix:
         python-version: ["3.12"]

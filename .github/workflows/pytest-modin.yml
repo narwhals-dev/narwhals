@@ -32,5 +32,5 @@ jobs:
         run: |
           uv run \
           --group core-tests \
-          --extra "modin" \
+          --extra modin \
           pytest tests --constructors="modin[pyarrow]"

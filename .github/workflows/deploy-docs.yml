@@ -34,9 +34,9 @@ jobs:
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - name: Run hooks manually
         run: |
-          uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
-          uv run --group docs utils/generate_zen_content.py
-      - run: uv run --group docs zensical build --clean
+          uv run --group docs --extra pandas --extra dask --extra ibis utils/generate_backend_completeness.py
+          uv run --group docs --extra pandas utils/generate_zen_content.py
+      - run: uv run --group docs --extra pandas zensical build --clean
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site

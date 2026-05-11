@@ -31,6 +31,6 @@ jobs:
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
       - name: Check strict build
         run: |
-          uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
-          uv run --group docs utils/generate_zen_content.py
-          uv run --group docs zensical build --strict
+          uv run --group docs --extra pandas --extra dask --extra ibis utils/generate_backend_completeness.py
+          uv run --group docs --extra pandas utils/generate_zen_content.py
+          uv run --group docs --extra pandas zensical build --strict
