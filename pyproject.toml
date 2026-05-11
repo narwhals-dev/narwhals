@@ -132,6 +132,16 @@ wheel-include = [
   "src/*",
 ]
 
+[tool.uv]
+compile-bytecode = true
+conflicts = [
+  [
+    { extra = "pandas" },
+    { extra = "modin" },
+    { extra = "cudf" },
+  ],
+]
+
 [tool.uv.workspace]
 members = ["packages/*"]
 
