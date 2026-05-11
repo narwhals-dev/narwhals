@@ -41,7 +41,7 @@ else:  # pragma: no cover
         _T1 = TypeVar("_T1")
         _T2 = TypeVar("_T2")
         class Callable(Generic[_T1, _T2]): ...
-        class ParamSpec:
+        class ParamSpec(type):
             args = Any
             kwargs = Any
         P = ParamSpec()
