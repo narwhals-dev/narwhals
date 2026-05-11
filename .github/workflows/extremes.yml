@@ -107,8 +107,6 @@ jobs:
           --constructors="pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
 
   nightlies:
-    env:
-      UV_SYSTEM_PYTHON: "1"
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -123,6 +121,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: nightlies-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Create venv
+        run: uv venv --python ${{ matrix.python-version }}
       - name: install-reqs
         run: uv pip install -e . --group tests
       - name: install polars pre-release
@@ -160,5 +160,5 @@ jobs:
           echo "$DEPS" | grep 'dask.*@'
       - name: Run pytest
         run: |
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
+          uv run --no-sync pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb"
