@@ -44,7 +44,7 @@ else:  # pragma: no cover
         class ParamSpec(type):
             args = Any
             kwargs = Any
-        P = ParamSpec()
+        P = ParamSpec
 # fmt: on
 
 __all__ = ("from_native_dataframe", "from_native_lazyframe", "from_native_series")
