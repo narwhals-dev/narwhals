@@ -8,8 +8,9 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from collections.abc import Callable, Container, Iterable
     from types import MappingProxyType, ModuleType as _ModuleType
+    from typing import TypeAlias
 
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import LiteralString
 
     from narwhals import dtypes
     from narwhals._native import (
@@ -191,7 +192,7 @@ IntoExprColumn: TypeAlias = "Expr | Series[t.Any] | str"
 IntoExpr: TypeAlias = "PythonLiteral | IntoExprColumn"
 ColumnNameOrSelector: TypeAlias = "str | Selector"
 OneOrIterable: TypeAlias = "T | Iterable[T]"
-OneOrSeq: TypeAlias = t.Union[T, Seq[T]]
+OneOrSeq: TypeAlias = T | Seq[T]
 DataFrameT = TypeVar("DataFrameT", bound="DataFrame[t.Any, t.Any]")
 LazyFrameT = TypeVar("LazyFrameT", bound="LazyFrame[t.Any]")
 SeriesT = TypeVar("SeriesT", bound="Series[t.Any]")

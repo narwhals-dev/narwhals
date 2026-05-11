@@ -12,7 +12,9 @@ from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import Self
 
     from narwhals._duration import IntervalUnit
     from narwhals._plan.expressions import FunctionExpr as FExpr

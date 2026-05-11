@@ -10,8 +10,9 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType

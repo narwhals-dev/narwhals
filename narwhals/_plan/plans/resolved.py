@@ -24,13 +24,11 @@ from narwhals._plan.plans.typing import FrameT_co
 from narwhals._plan.schema import FrozenSchema
 from narwhals._plan.typing import ClosedKwds, Seq
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import zip_strict
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan._expr_ir import NamedIR
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
@@ -79,7 +77,9 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
     def rename(self, mapping: Mapping[str, str]) -> Select:  # pragma: no cover
         schema = self.schema
         exprs = tuple(ir.NamedIR(mapping.get(old, old), ir.col(old)) for old in schema)
-        output_schema = FrozenSchema(zip((e.name for e in exprs), schema.values()))
+        output_schema = FrozenSchema(
+            zip((e.name for e in exprs), schema.values())  # noqa: B905
+        )
         return Select(input=self, exprs=exprs, output_schema=output_schema)
 
     # or maybe `execute`?
@@ -497,7 +497,7 @@ class Rename(RpFunction):
     @property
     def mapping(self) -> dict[str, str]:
         """Return a new dictionary representing `{old: new}`."""
-        return dict(zip_strict(self.old, self.new))  # pragma: no cover
+        return dict(zip(self.old, self.new, strict=True))  # pragma: no cover
 
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], plan: MapFunction[Rename], /

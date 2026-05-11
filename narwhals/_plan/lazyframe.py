@@ -22,8 +22,9 @@ from narwhals.exceptions import InvalidOperationError, PerformanceWarning
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
     from io import BytesIO
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.dataframe import DataFrame

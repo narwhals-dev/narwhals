@@ -15,8 +15,7 @@ from narwhals._plan.arrow.functions._dtypes import DATE, F64, I32, I64
 
 if TYPE_CHECKING:
     import datetime as dt
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.arrow.typing import (
         Array,

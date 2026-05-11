@@ -10,9 +10,7 @@ from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Final
-
-    from typing_extensions import TypeAlias
+    from typing import Final, TypeAlias
 
     from tests.conftest import Data
     from tests.plan.utils import SubList

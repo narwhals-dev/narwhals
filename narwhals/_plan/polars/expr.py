@@ -11,7 +11,9 @@ from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fas
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions.ranges import IntRange

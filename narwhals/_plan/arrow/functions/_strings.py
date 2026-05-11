@@ -26,8 +26,7 @@ from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._arrow.typing import Incomplete
     from narwhals._plan.arrow.typing import (

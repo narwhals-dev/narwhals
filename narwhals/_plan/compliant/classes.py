@@ -52,7 +52,9 @@ from narwhals._plan.compliant.typing import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, TypeAlias, TypeIs
+    from typing import TypeAlias
+
+    from typing_extensions import Never, TypeIs
 
     from narwhals._plan.plans.visitors import LogicalToResolved
     from narwhals._utils import Version

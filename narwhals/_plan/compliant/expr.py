@@ -13,7 +13,9 @@ from narwhals._plan.compliant.typing import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.compliant import classes as cc, typing as ct

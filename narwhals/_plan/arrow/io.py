@@ -11,9 +11,10 @@ from narwhals._utils import unstable
 
 if TYPE_CHECKING:
     from io import BytesIO
+    from typing import TypeAlias
 
     from pyarrow import fs
-    from typing_extensions import TypeAlias, Unpack
+    from typing_extensions import Unpack
 
     from narwhals._plan.arrow.typing import CSVReaderOptions, IOSource
     from narwhals.typing import FileSource

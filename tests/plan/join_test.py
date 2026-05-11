@@ -12,8 +12,7 @@ from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals.typing import AsofJoinStrategy, JoinStrategy
     from tests.conftest import Data

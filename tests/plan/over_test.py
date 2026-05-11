@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pytest
 
+from narwhals._utils import Implementation
 from tests.utils import PYARROW_VERSION
 
 pytest.importorskip("pyarrow")
@@ -13,15 +14,14 @@ pytest.importorskip("pyarrow")
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
-from narwhals._utils import Implementation, zip_strict
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, Sequence
+    from typing import TypeAlias
 
     from _pytest.mark import ParameterSet
-    from typing_extensions import TypeAlias
 
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
     from narwhals.typing import NonNestedLiteral
@@ -478,7 +478,7 @@ def order_case(
     test_id = f"{columns}_{aggregation}-{ordering}"
 
     # Generating what our expected dataset should be
-    names_values = list(zip_strict(_ensure_list(columns), _ensure_list(expected)))
+    names_values = list(zip(_ensure_list(columns), _ensure_list(expected), strict=True))  # type: ignore[arg-type]
     result_data = {
         f"{name}{suffix}": [expect]
         for suffix in (suffix_over, suffix_sort_by)

@@ -11,9 +11,9 @@ from narwhals._plan import _nodes
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import Final, TypeVar
+    from typing import Final, TypeAlias, TypeVar
 
-    from typing_extensions import TypeAlias, dataclass_transform
+    from typing_extensions import dataclass_transform
 
     from narwhals._plan._nodes import ExprTraverser
     from narwhals._plan.typing import Seq

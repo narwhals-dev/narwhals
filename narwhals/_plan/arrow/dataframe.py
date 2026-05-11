@@ -30,10 +30,11 @@ from narwhals._utils import Version, generate_repr, requires, supports_arrow_c_s
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.arrow.series import ArrowSeries as Series
     from narwhals._plan.arrow.typing import (
@@ -108,7 +109,7 @@ class ArrowDataFrame(
         schema = self.native.schema
         return {
             name: native_to_narwhals_dtype(dtype, self.version)
-            for name, dtype in zip(schema.names, schema.types)
+            for name, dtype in zip(schema.names, schema.types, strict=False)
         }
 
     def __len__(self) -> int:
@@ -196,7 +197,7 @@ class ArrowDataFrame(
         return cls.from_native(io.read_parquet(source, **kwds))
 
     def _iter_columns(self) -> Iterator[tuple[str, ChunkedArrayAny]]:
-        return zip(self.native.column_names, self.native.itercolumns())
+        return zip(self.native.column_names, self.native.itercolumns(), strict=False)
 
     def iter_columns(self) -> Iterator[Series]:
         series = self.__narwhals_classes__.series
@@ -550,7 +551,9 @@ def insert_arrays_at(
             arrays = (*table.columns, *columns)
             names = (*table.column_names, *names)
         return fn.concat_horizontal(arrays, names)
-    for idx, name, column in zip(range(index, index + len(names)), names, columns):
+    for idx, name, column in zip(
+        range(index, index + len(names)), names, columns, strict=False
+    ):
         table = table.add_column(idx, name, column)
     return table
 

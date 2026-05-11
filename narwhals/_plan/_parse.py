@@ -34,8 +34,9 @@ from narwhals.dependencies import get_pandas, get_polars
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import TypeAlias
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._plan.expr import Expr
     from narwhals._plan.expressions import ExprIR, SelectorIR

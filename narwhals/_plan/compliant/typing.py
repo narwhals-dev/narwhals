@@ -15,7 +15,7 @@ from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals._plan.compliant import classes as cc

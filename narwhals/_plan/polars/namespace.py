@@ -14,7 +14,7 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals._plan.polars.expr import PolarsExpr as Expr

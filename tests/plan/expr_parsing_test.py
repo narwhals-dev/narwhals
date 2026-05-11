@@ -28,8 +28,7 @@ from tests.plan.utils import assert_equal_data, assert_expr_ir_equal, re_compile
 
 if TYPE_CHECKING:
     from contextlib import AbstractContextManager
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan._function import Function
     from narwhals._plan.typing import (

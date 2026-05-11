@@ -53,8 +53,9 @@ from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.expressions import HorizontalExpr as HExpr, lists, strings
@@ -626,7 +627,10 @@ class ArrowExpr(
             df = frame
         else:
             it_names = temp.column_names(frame)
-            by = (self._dispatch_expr(e, frame, nm) for e, nm in zip(node.by, it_names))
+            by = (
+                self._dispatch_expr(e, frame, nm)
+                for e, nm in zip(node.by, it_names, strict=False)
+            )
             df = frame.concat_series(by)
             keys = df.columns
         indices = fn.sort_indices(df.native, *keys, options=node.options)

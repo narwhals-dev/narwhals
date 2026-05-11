@@ -14,6 +14,7 @@ With a helping hand from [field specifiers] ([PEP 681]), all expressions can be 
 
 from __future__ import annotations
 
+# ruff: noqa: B905
 import enum
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, final, overload
 
@@ -21,8 +22,9 @@ from narwhals._plan.exceptions import combination_mixed_multi_output_error
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan._expansion import Expander
     from narwhals._plan._expr_ir import ExprIR

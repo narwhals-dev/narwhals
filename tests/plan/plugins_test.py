@@ -16,8 +16,9 @@ from tests.plan.utils import re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from typing import TypeAlias
 
-    from typing_extensions import LiteralString, TypeAlias, assert_type
+    from typing_extensions import LiteralString, assert_type
 
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import CompliantDataFrame

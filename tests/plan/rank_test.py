@@ -10,8 +10,7 @@ from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals.typing import RankMethod
 

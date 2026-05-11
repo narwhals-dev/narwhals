@@ -30,14 +30,14 @@ from narwhals._typing import IntoBackend
 from narwhals._utils import (
     Version,
     check_column_names_are_unique as raise_duplicate_error,
-    zip_strict,
 )
 from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan._expr_ir import NamedIR
     from narwhals._plan.compliant.typing import Native
@@ -112,7 +112,9 @@ def _align_diagonal(
         # Even if all fields are present, we always reorder the columns to match between plans.
         return rp.SelectNames(input=plan, output_schema=union_freeze)
 
-    return tuple(align(plan, schema) for plan, schema in zip(plans, schemas))
+    return tuple(
+        align(plan, schema) for plan, schema in zip(plans, schemas, strict=False)
+    )
 
 
 def _get_supertype(left: DType, right: DType, *, error_message: str) -> DType | None:
@@ -138,7 +140,7 @@ def _join_supertypes(
     """
     lhs_casts: deque[Cast] = deque()
     rhs_casts: deque[Cast] = deque()
-    for lhs, rhs in zip(left_on, right_on):
+    for lhs, rhs in zip(left_on, right_on, strict=False):
         lhs_dtype, rhs_dtype = left[lhs], right[rhs]
         if lhs_dtype == rhs_dtype:
             continue
@@ -335,7 +337,7 @@ class Resolver:
         safe_named_irs_keys: list[ir.NamedIR] = []
 
         for key, safe_name in zip(
-            keys, temp.column_names(chain(key_names, input_schema))
+            keys, temp.column_names(chain(key_names, input_schema)), strict=False
         ):
             safe_named_irs_keys.append(ir.NamedIR(safe_name, key.expr))
             with_output_schema_extra[safe_name] = output_schema_mut[key.name]
@@ -351,7 +353,7 @@ class Resolver:
             keys=safe_keys,
             aggs=aggs,
             output_schema=group_output_schema,
-        ).rename(dict(zip(with_output_schema_extra, key_names)))
+        ).rename(dict(zip(with_output_schema_extra, key_names, strict=False)))
 
     def join(self, plan: lp.Join, /) -> rp.Join:
         """Very stripped down, partial impl of [`join::resolve_join`].
@@ -364,7 +366,7 @@ class Resolver:
         input_left, input_right = (self.to_resolved(input) for input in plan.inputs)
         schema_left, schema_right = input_left.schema, input_right.schema
         left_on, right_on = plan.left_on, plan.right_on
-        if len(set(zip_strict(left_on, right_on))) != len(left_on):
+        if len(set(zip(left_on, right_on, strict=True))) != len(left_on):
             msg = f"joining with repeated key names:\n{left_on=}\n{right_on=}"
             raise InvalidOperationError(msg)
 
@@ -492,7 +494,7 @@ class Resolver:
         return rp.Select(
             input=input,
             exprs=tuple(exprs),
-            output_schema=FrozenSchema(zip(names, input_schema.values())),
+            output_schema=FrozenSchema(zip(names, input_schema.values(), strict=False)),
         )
 
     def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:

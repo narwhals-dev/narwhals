@@ -8,7 +8,6 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan._dispatch import get_dispatch_name
-from narwhals._utils import zip_strict
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
@@ -115,7 +114,7 @@ def cases_scalar(
     expected: Sequence[NonNestedLiteral],
 ) -> Iterator[ParameterSet]:
     name = get_dispatch_name(expr._ir).removeprefix("list.")
-    for idx, row_expected in enumerate(zip_strict(rows, expected), start=1):
+    for idx, row_expected in enumerate(zip(rows, expected, strict=True), start=1):
         row, out = row_expected
         yield pytest.param(expr, row, out, id=f"{name}-R{idx}")
 

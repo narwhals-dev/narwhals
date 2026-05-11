@@ -21,8 +21,9 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.arrow.dataframe import ArrowDataFrame as Frame
     from narwhals._plan.arrow.typing import (
@@ -316,7 +317,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
         specs = (AggSpec.from_named_ir(e) for e in irs)
         result = compliant._with_native(acero.group_by_table(native, key_names, specs))
         if original := self._key_names_original:
-            return result.rename(dict(zip(key_names, original)))
+            return result.rename(dict(zip(key_names, original, strict=False)))
         return result
 
     def agg_over(self, irs: Seq[NamedIR], sort_indices: Indices | None = None) -> Frame:
@@ -339,7 +340,7 @@ class ArrowGroupBy(EagerDataFrameGroupBy["Frame"]):
             partitions = native.select(key_names)
             it_temp_names = temp.column_names(chain(column_names, agg_names))
             by_names: list[str] = []
-            for orig_name, by in zip(key_names, partitions.columns):
+            for orig_name, by in zip(key_names, partitions.columns, strict=False):
                 if by.null_count:
                     by_name = next(it_temp_names)
                     native = native.append_column(by_name, fn.cat.encode(by))
@@ -425,7 +426,7 @@ def _generate_hash_to_scalar_name() -> Mapping[acero.Aggregation, acero.Aggregat
     # `(..., "hash_mean", ..., ...)`
     # `(..., "mean", ..., ...)`
     scalar_names = hash_to_scalar.values()
-    scalar_to_scalar = zip(scalar_names, scalar_names)
+    scalar_to_scalar = zip(scalar_names, scalar_names, strict=False)
     hash_to_scalar.update(dict(scalar_to_scalar))
     return cast("Mapping[acero.Aggregation, acero.Aggregation]", hash_to_scalar)
 

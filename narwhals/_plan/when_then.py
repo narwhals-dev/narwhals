@@ -87,7 +87,9 @@ class ChainedThen(Immutable, Expr):
 
     def _otherwise(self, statement: IntoExpr = None, /) -> ExprIR:
         otherwise = _parse.into_expr_ir(statement)
-        for cond, stmt in zip(reversed(self.conditions), reversed(self.statements)):
+        for cond, stmt in zip(
+            reversed(self.conditions), reversed(self.statements), strict=False
+        ):
             otherwise = ternary_expr(cond, stmt, otherwise)
         return otherwise
 

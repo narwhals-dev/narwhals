@@ -19,9 +19,7 @@ from narwhals.exceptions import (
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
-    from typing import Any
-
-    from typing_extensions import TypeAlias
+    from typing import Any, TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan._function import Function

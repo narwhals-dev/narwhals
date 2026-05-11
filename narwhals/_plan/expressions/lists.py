@@ -11,7 +11,9 @@ from narwhals._plan._function import BinaryFunction, Function, UnaryFunction
 from narwhals._plan.expressions.namespace import IRNamespace
 
 if TYPE_CHECKING:
-    from typing_extensions import Self, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import Self
 
     from narwhals._plan.expressions import FunctionExpr as FExpr
     from narwhals._plan.options import SortOptions

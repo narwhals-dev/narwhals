@@ -53,11 +53,12 @@ from narwhals.typing import (
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping
     from io import BytesIO
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._native import NativeSeries
     from narwhals._plan.arrow.typing import NativeArrowDataFrame

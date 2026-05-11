@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, ParamSpec, TypeVar
 
 from narwhals._plan.plugins._manager import PluginManager
 from narwhals._utils import Version, qualified_type_name
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+    from typing import TypeAlias
 
-    from typing_extensions import ParamSpec, TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._plan.compliant import typing as ct
@@ -25,28 +26,14 @@ if TYPE_CHECKING:
     )
     from narwhals._plan.typing import PluginAny, PluginName
 
-    P = ParamSpec("P")
 
-else:  # pragma: no cover
-    import sys
+else:
     from functools import singledispatch
-
-    # TODO @dangotbanned: Remove this hack once 3.9 is dropped
-    # fmt: off
-    if sys.version_info >= (3, 10):
-        from collections.abc import Callable
-        from typing import ParamSpec
-        P = ParamSpec("P")
-    else:
-        _T1 = TypeVar("_T1")
-        _T2 = TypeVar("_T2")
-        class Callable(Generic[_T1, _T2]): ...
-        P = TypeVar("P")
-# fmt: on
 
 __all__ = ("from_native_dataframe", "from_native_lazyframe", "from_native_series")
 
 Incomplete: TypeAlias = Any
+P = ParamSpec("P")
 R_co = TypeVar("R_co", bound="ct.FrameAny | ct.SeriesAny", covariant=True)
 TranslateName: TypeAlias = Literal["dataframe", "lazyframe", "series"]
 

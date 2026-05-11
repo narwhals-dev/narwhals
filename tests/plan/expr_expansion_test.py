@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Callable
+from functools import partial
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 from narwhals import _plan as nwp
 from narwhals._plan import expressions as ir, selectors as ncs
-from narwhals._utils import zip_strict
 from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
@@ -18,11 +18,13 @@ from narwhals.exceptions import (
 from tests.plan.utils import Frame, assert_expr_ir_equal, cols, named_ir, re_compile
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
 
     from narwhals._plan.typing import IntoExpr, MapIR
     from narwhals.dtypes import DType
     from narwhals.typing import IntoSchema
+
+zip_strict = partial(zip, strict=True)
 
 
 @pytest.fixture(scope="module")
@@ -363,7 +365,7 @@ def test_prepare_projection(
 ) -> None:
     actual = df_1.project(into_exprs)
     assert len(actual) == len(expected)
-    for lhs, rhs in zip(actual, expected):
+    for lhs, rhs in zip(actual, expected, strict=False):
         assert_expr_ir_equal(lhs, rhs)
 
 

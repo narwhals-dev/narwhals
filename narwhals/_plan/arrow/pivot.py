@@ -78,7 +78,7 @@ def _format_on_columns_titles(on_columns: pa.Table, /) -> ChunkedArray[StringSca
     # NOTE: Variation of https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.intersperse
     seps = (SEP,) * on_columns.num_columns
     interspersed: chain[ChunkedOrScalarAny] = chain.from_iterable(
-        zip(seps, on_columns.itercolumns())
+        zip(seps, on_columns.itercolumns(), strict=False)
     )
     # skip the first separator, we just need the zip-terminating iterable to be the columns
     next(interspersed)

@@ -18,9 +18,9 @@ from narwhals.exceptions import NarwhalsError
 if TYPE_CHECKING:
     import reprlib
     from collections.abc import Iterator
-    from typing import Any, ClassVar, Final, TypeVar
+    from typing import Any, ClassVar, Final, TypeAlias, TypeVar
 
-    from typing_extensions import TypeAlias, TypeIs, Unpack
+    from typing_extensions import TypeIs, Unpack
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series

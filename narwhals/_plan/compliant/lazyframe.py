@@ -10,11 +10,12 @@ from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._native import NativeDataFrame
     from narwhals._plan.compliant.dataframe import CompliantDataFrame

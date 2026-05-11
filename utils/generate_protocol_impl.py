@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Literal, TypedDict
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from typing import TypeAlias
 
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import LiteralString
 
     class Imports(TypedDict):
         runtime: deque[str]

@@ -19,8 +19,9 @@ from narwhals.dtypes import Unknown
 
 if TYPE_CHECKING:
     from collections.abc import ItemsView, Iterable, Iterator, KeysView, ValuesView
+    from typing import TypeAlias
 
-    from typing_extensions import Never, Self, TypeAlias, TypeIs
+    from typing_extensions import Never, Self, TypeIs
 
     from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType

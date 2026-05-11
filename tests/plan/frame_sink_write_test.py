@@ -9,8 +9,7 @@ from tests.utils import is_windows
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals.typing import FileSource
     from tests.conftest import Data

@@ -28,8 +28,9 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import TypeAlias
 
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._plan.typing import KnownImpl, PluginName
     from narwhals._typing import BackendName

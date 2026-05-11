@@ -13,8 +13,7 @@ from narwhals._arrow.utils import concat_tables
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.arrow.typing import (
         ArrayAny,

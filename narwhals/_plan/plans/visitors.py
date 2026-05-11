@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 from narwhals._plan.compliant.typing import Native
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.compliant.typing import DataFrameAny as CompliantDataFrameAny

@@ -9,9 +9,9 @@ from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import binary_expr_length_changing_error
 
 if TYPE_CHECKING:
-    from typing import Any, ClassVar
+    from typing import Any, ClassVar, TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.expressions import BinaryExpr
     from narwhals._plan.expressions.selectors import BinarySelector

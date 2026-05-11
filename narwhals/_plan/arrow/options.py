@@ -14,12 +14,9 @@ from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pyarrow.compute as pc
 
-from narwhals._utils import zip_strict
-
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.arrow import acero
@@ -160,7 +157,7 @@ def sort(
     if isinstance(descending, bool):
         keys = _sort_keys_every(by, descending=descending)
     else:
-        it = zip_strict(by, descending)
+        it = zip(by, descending, strict=True)
         keys = tuple(_sort_key(key, descending=desc) for (key, desc) in it)
     return pc.SortOptions(sort_keys=keys, null_placement=NULL_PLACEMENT[nulls_last])
 

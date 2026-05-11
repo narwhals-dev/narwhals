@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import TypeAlias
 
     import polars as pl
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
     from narwhals._plan.compliant import (

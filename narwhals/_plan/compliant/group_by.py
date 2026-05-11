@@ -86,7 +86,8 @@ class EagerDataFrameGroupBy(DataFrameGroupBy[ct.DF], Protocol[ct.DF]):
         obj = cls.__new__(cls)
         unique_names = temp.column_names(chain(key_names, df.columns))
         safe_keys = tuple(
-            replace(key, name=name) for key, name in zip(resolver.keys, unique_names)
+            replace(key, name=name)
+            for key, name in zip(resolver.keys, unique_names, strict=False)
         )
         obj._df = df.with_columns(resolver._schema_in.with_columns_irs(safe_keys))
         obj._keys = safe_keys

@@ -117,7 +117,7 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             for backend in test_backends
             if (lazy := getattr(backend, "backend_lazy", None))
         ]:
-            lazy_values, lazy_ids = zip(*lazy_values_ids)
+            lazy_values, lazy_ids = zip(*lazy_values_ids, strict=False)
         else:
             lazy_values, lazy_ids = (), ()
         metafunc.parametrize("lazy", lazy_values, ids=lazy_ids)

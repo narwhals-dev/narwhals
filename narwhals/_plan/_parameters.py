@@ -12,8 +12,7 @@ from narwhals._plan.exceptions import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import ExprIR, Function, FunctionExpr as FExpr
@@ -127,7 +126,7 @@ class Parameters(metaclass=SlottedMeta):
         if constraints := self._constraints:
             if len(exprs) != len(constraints):
                 raise function_arity_error(function, self.arity, exprs)
-            yield from zip(constraints, exprs)
+            yield from zip(constraints, exprs, strict=False)
 
     def __init_subclass__(cls, *, arity: Arity, **_: Any) -> None:
         super().__init_subclass__(**_)

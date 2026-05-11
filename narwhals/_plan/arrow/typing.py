@@ -8,6 +8,7 @@ from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from io import BytesIO
+    from typing import TypeAlias
 
     import pyarrow as pa
     import pyarrow.compute as pc
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
         Uint32Type,
         Uint64Type,
     )
-    from typing_extensions import TypeAlias
 
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals._plan.compliant.dataframe import (

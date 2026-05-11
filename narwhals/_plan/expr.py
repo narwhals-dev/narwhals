@@ -31,9 +31,9 @@ from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import TypeVar
+    from typing import Concatenate, TypeVar
 
-    from typing_extensions import Concatenate, LiteralString, ParamSpec, Self
+    from typing_extensions import LiteralString, ParamSpec, Self
 
     from narwhals._plan._function import UnaryFunction
     from narwhals._plan.selectors import Selector

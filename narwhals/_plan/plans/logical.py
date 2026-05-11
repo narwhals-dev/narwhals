@@ -36,14 +36,14 @@ from narwhals._utils import (
     is_lazy_allowed,
     normalize_path,
     qualified_type_name,
-    zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
     from narwhals._plan.dataframe import DataFrame
@@ -854,7 +854,7 @@ class Rename(LpFunction):
     @property
     def mapping(self) -> dict[str, str]:
         """Return a new dictionary representing `{old: new}`."""
-        return dict(zip_strict(self.old, self.new))
+        return dict(zip(self.old, self.new, strict=True))
 
     def __repr__(self) -> str:
         return f"RENAME {self.mapping!r}"

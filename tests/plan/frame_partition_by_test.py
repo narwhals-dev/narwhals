@@ -7,7 +7,6 @@ import pytest
 
 import narwhals as nw
 from narwhals._plan import Selector, selectors as ncs
-from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
@@ -64,7 +63,7 @@ def test_partition_by_single(
 ) -> None:
     df = dataframe(data)
     results = df.partition_by(by, include_key=include_key)
-    for df, expect in zip_strict(results, expected):
+    for df, expect in zip(results, expected, strict=True):
         assert_equal_data(df, expect)
 
 
@@ -120,7 +119,7 @@ def test_partition_by_multiple(
         results = df.partition_by(by, more_by, include_key=include_key)
     else:
         results = df.partition_by(by, *more_by, include_key=include_key)
-    for df, expect in zip_strict(results, expected):
+    for df, expect in zip(results, expected, strict=True):
         assert_equal_data(df, expect)
 
 

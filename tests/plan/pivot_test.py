@@ -390,7 +390,7 @@ def test_pivot_on_columns_invalid(data: Data, dataframe: DataFrame) -> None:
     index = "idx_1"
     df_1 = df.select(on_1)
     df_2 = df.select(on_2)
-    df_2_mismatch = df_2.rename(dict(zip(on_2, reversed(on_2))))
+    df_2_mismatch = df_2.rename(dict(zip(on_2, reversed(on_2), strict=False)))
     ser = df.get_column(on_1)
 
     same_n_cols = r"expected `on`.+`on_columns`.+same amount of columns"
@@ -504,5 +504,5 @@ def test_pivot_aggregate(
     result = df.pivot(
         "a", index="b", values="c", aggregate_function=agg_fn, sort_columns=True
     )
-    result_rows = [*zip(*result.to_dict(as_series=False).values())]
+    result_rows = [*zip(*result.to_dict(as_series=False).values(), strict=False)]
     assert result_rows == expected_rows

@@ -179,11 +179,11 @@ class ExplodeBuilder:
         if first_result.length() == native.num_rows:
             # fastpath for all length-1 lists
             # if only the first is length-1, then the others raise during iteration on either branch
-            for name, arr in zip(subset, chain([first_result], it)):
+            for name, arr in zip(subset, chain([first_result], it), strict=False):
                 result = result.set_column(column_names.index(name), name, arr)
         else:
             result = result.drop_columns(subset).take(_list_parent_indices(first_safe))
-            for name, arr in zip(subset, chain([first_result], it)):
+            for name, arr in zip(subset, chain([first_result], it), strict=False):
                 result = result.append_column(name, arr)
             result = result.select(column_names)
         return result

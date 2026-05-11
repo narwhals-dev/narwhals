@@ -9,7 +9,9 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 if TYPE_CHECKING:
-    from typing_extensions import LiteralString, TypeAlias
+    from typing import TypeAlias
+
+    from typing_extensions import LiteralString
 
     from narwhals._plan.arrow.typing import ArrowAny
     from narwhals.typing import PythonLiteral

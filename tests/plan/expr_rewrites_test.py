@@ -71,7 +71,7 @@ def test_rewrite_elementwise_over_multiple(schema_2: dict[str, DType]) -> None:
     )
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == 2
-    for lhs, rhs in zip(actual, expected):
+    for lhs, rhs in zip(actual, expected, strict=False):
         assert_expr_ir_equal(lhs, rhs)
 
 
@@ -98,7 +98,7 @@ def test_rewrite_elementwise_over_complex(schema_2: dict[str, DType]) -> None:
     )
     actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_elementwise_over])
     assert len(actual) == len(expected)
-    for lhs, rhs in zip(actual, expected):
+    for lhs, rhs in zip(actual, expected, strict=False):
         assert_expr_ir_equal(lhs, rhs)
 
 
@@ -113,7 +113,7 @@ def test_rewrite_binary_agg_over_simple(schema_2: dict[str, DType]) -> None:
     )
     actual = rewrite_all(*before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
     assert len(actual) == 2
-    for lhs, rhs in zip(actual, expected):
+    for lhs, rhs in zip(actual, expected, strict=False):
         assert_expr_ir_equal(lhs, rhs)
 
 
@@ -128,5 +128,5 @@ def test_rewrite_binary_agg_over_multiple(schema_2: dict[str, DType]) -> None:
     ).name.prefix("hi_")
     actual = rewrite_all(before, schema=schema_2, rewrites=[rewrite_binary_agg_over])
     assert len(actual) == 4
-    for lhs, rhs in zip(actual, expected):
+    for lhs, rhs in zip(actual, expected, strict=False):
         assert_expr_ir_equal(lhs, rhs)

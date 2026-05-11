@@ -29,7 +29,6 @@ from narwhals._plan.arrow.guards import is_expression
 from narwhals._plan.common import ensure_list_str, temp
 from narwhals._plan.typing import NonCrossJoinStrategy, OneOrSeq
 from narwhals._utils import check_column_names_are_unique
-from narwhals.typing import AsofJoinStrategy, JoinStrategy, SingleColSelector
 
 if TYPE_CHECKING:
     from collections.abc import (
@@ -40,8 +39,7 @@ if TYPE_CHECKING:
         Mapping,
         Sequence,
     )
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         AggregateOptions as _AggregateOptions,
@@ -55,12 +53,17 @@ if TYPE_CHECKING:
         ScalarAny,
     )
     from narwhals._plan.typing import OneOrIterable, Seq
-    from narwhals.typing import NonNestedLiteral
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        NonNestedLiteral,
+        SingleColSelector,
+    )
 
 Incomplete: TypeAlias = Any
 Expr: TypeAlias = pc.Expression
 IntoExpr: TypeAlias = "Expr | NonNestedLiteral | ScalarAny"
-Field: TypeAlias = Union[Expr, SingleColSelector]
+Field: TypeAlias = "Expr | SingleColSelector"
 """Anything that passes as a single item in [`_compute._ensure_field_ref`].
 
 [`_compute._ensure_field_ref`]: https://github.com/apache/arrow/blob/9b96bdbc733d62f0375a2b1b9806132abc19cd3f/python/pyarrow/_compute.pyx#L1507-L1531
@@ -82,7 +85,7 @@ AggregateOptions: TypeAlias = "_AggregateOptions"
 Opts: TypeAlias = "AggregateOptions | None"
 OutputName: TypeAlias = str
 
-IntoDecl: TypeAlias = Union[pa.Table, Decl]
+IntoDecl: TypeAlias = pa.Table | Decl
 """An in-memory table, or a plan that began with one."""
 
 _THREAD_UNSAFE: Final = frozenset[Aggregation](

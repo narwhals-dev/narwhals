@@ -26,8 +26,9 @@ from narwhals._utils import Version, deep_attrgetter
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+    from typing import TypeAlias
 
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import LiteralString
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.typing import PluginAny, PluginName, Seq, VersionName

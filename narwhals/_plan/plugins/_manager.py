@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import functools
-import sys
 from importlib import import_module
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Final, cast, final, overload
@@ -15,10 +14,11 @@ from narwhals._utils import Implementation, Version
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from importlib.metadata import EntryPoint, EntryPoints
+    from typing import TypeAlias
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Never, TypeAlias, TypeIs
+    from typing_extensions import Never, TypeIs
 
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import classes as cc, typing as ct
@@ -56,9 +56,6 @@ def _entry_points() -> EntryPoints:
     # NOTE: Wrapped with some one-time validation, so everything outside is simpler
     from importlib.metadata import entry_points
 
-    if sys.version_info < (3, 10):
-        msg = "Need `EntryPoints.{select,names}`, this can wait until 3.10 "
-        raise NotImplementedError(msg)
     if (eps := entry_points(group=_GROUP)) and len(eps) == len(eps.names):
         return eps
     if not eps:  # pragma: no cover

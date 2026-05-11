@@ -25,8 +25,9 @@ from narwhals._utils import deep_attrgetter
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import TypeAlias
 
-    from typing_extensions import Never, Self, TypeAlias
+    from typing_extensions import Never, Self
 
     from narwhals._plan import _expr_ir, expressions as ir
     from narwhals._plan.compliant import typing as ct

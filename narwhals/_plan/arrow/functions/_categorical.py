@@ -9,7 +9,7 @@ import pyarrow as pa
 from narwhals._plan.arrow.functions._construction import array
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.arrow.typing import (
         ArrayAny,

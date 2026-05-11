@@ -23,8 +23,9 @@ if TYPE_CHECKING:
     import datetime as dt
     import decimal
     from collections.abc import Iterable
+    from typing import TypeAlias
 
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan.polars.dataframe import (
         PolarsDataFrame,

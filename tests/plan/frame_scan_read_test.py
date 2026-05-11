@@ -17,8 +17,7 @@ import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._typing import BackendName, EagerAllowed, _LazyOnly
     from narwhals.typing import FileSource

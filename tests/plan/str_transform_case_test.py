@@ -8,7 +8,7 @@ import narwhals._plan as nwp
 from tests.plan.utils import assert_equal_data, dataframe
 
 if TYPE_CHECKING:
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     StrData: TypeAlias = dict[str, list[str]]
 

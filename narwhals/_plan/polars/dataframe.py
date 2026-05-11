@@ -20,10 +20,11 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
+    from typing import TypeAlias
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias
+    from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions

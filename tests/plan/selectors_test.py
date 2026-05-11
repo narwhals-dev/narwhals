@@ -16,7 +16,6 @@ import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 from narwhals import _plan as nwp
 from narwhals._plan import Selector, selectors as ncs
-from narwhals._utils import zip_strict
 from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
 from tests.plan.utils import (
     Frame,
@@ -766,7 +765,7 @@ def test_name_suffix_complex_selector(schema_mixed: nw.Schema) -> None:
     expecteds = (named_ir(f"{name}_after", nwp.col(name)) for name in selected_names)
     actuals = df.project(selector)
 
-    for actual, expected in zip_strict(actuals, expecteds):
+    for actual, expected in zip(actuals, expecteds, strict=True):
         assert_expr_ir_equal(actual, expected)
 
 

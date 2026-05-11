@@ -12,8 +12,7 @@ from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from tests.conftest import Data

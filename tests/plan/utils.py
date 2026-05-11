@@ -39,10 +39,11 @@ import pyarrow as pa
 if TYPE_CHECKING:
     import sys
     from collections.abc import Iterable, Mapping
+    from typing import TypeAlias
 
     import polars as pl
     from pytest import FixtureRequest  # noqa: PT013
-    from typing_extensions import LiteralString, ReadOnly, TypeAlias
+    from typing_extensions import LiteralString, ReadOnly
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
     from narwhals._typing import BackendName
