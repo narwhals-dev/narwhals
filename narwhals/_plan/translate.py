@@ -41,10 +41,7 @@ else:  # pragma: no cover
         _T1 = TypeVar("_T1")
         _T2 = TypeVar("_T2")
         class Callable(Generic[_T1, _T2]): ...
-        class ParamSpec(type):
-            args = Any
-            kwargs = Any
-        P = ParamSpec
+        P = TypeVar("P")
 # fmt: on
 
 __all__ = ("from_native_dataframe", "from_native_lazyframe", "from_native_series")
