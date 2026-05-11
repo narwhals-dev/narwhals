@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import ibis
 from ibis.expr.datatypes import Timestamp
@@ -9,8 +9,10 @@ from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import TypeAlias
+
     import ibis.expr.types as ir
-    from typing_extensions import TypeAlias
 
     from narwhals._ibis.expr import IbisExpr
 
@@ -76,6 +78,14 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
             return expr.as_date(format)
 
         return self.compliant._with_callable(fn)
+
+    def to_time(self, format: str | None) -> IbisExpr:
+        time_dtype = self.compliant._version.dtypes.Time()
+        if format is None:
+            return self.compliant.cast(time_dtype)
+        return self.compliant._with_callable(self._to_datetime_naive(format)).cast(
+            time_dtype
+        )
 
     def pad_start(self, length: int, fill_char: str) -> IbisExpr:
         def _pad_start(expr: ir.StringColumn) -> ir.Value:

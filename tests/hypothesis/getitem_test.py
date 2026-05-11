@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import hypothesis.strategies as st
 import pytest
@@ -11,7 +11,7 @@ from tests.conftest import pandas_constructor, pyarrow_table_constructor
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from narwhals.typing import IntoDataFrame
 

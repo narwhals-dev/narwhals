@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from functools import partial
 from typing import TYPE_CHECKING, cast
 
-from narwhals._utils import Implementation, Version, qualified_type_name, zip_strict
+from narwhals._utils import Implementation, Version, qualified_type_name
 from narwhals.dependencies import (
     get_cudf,
     is_cudf_dtype,
@@ -44,6 +44,13 @@ __all__ = ["Schema"]
 
 class Schema(OrderedDict[str, "DType"]):
     """Ordered mapping of column names to their data type.
+
+    Note:
+        The pandas-like and dask backends allow non-string column names
+        (e.g. integers or booleans). While discouraged, this is supported,
+        so we cannot guarantee that the keys are strictly strings.
+
+        See [concepts - column names](../concepts/column_names.md) for details.
 
     Arguments:
         schema: The schema definition given by column names and their associated
@@ -81,7 +88,15 @@ class Schema(OrderedDict[str, "DType"]):
         super().__init__(schema)
 
     def names(self) -> list[str]:
-        """Get the column names of the schema."""
+        """Get the column names of the schema.
+
+        Note:
+            The pandas-like and dask backends allow non-string column names
+            (e.g. integers or booleans). While discouraged, this is supported,
+            so the return type is not guaranteed to be `list[str]`.
+
+            See [concepts - column names](../concepts/column_names.md) for details.
+        """
         return list(self.keys())
 
     def dtypes(self) -> list[DType]:
@@ -305,7 +320,9 @@ class Schema(OrderedDict[str, "DType"]):
             raise ValueError(msg)
         return {
             name: to_native_dtype(dtype=dtype, dtype_backend=backend)
-            for name, dtype, backend in zip_strict(self.keys(), self.values(), backends)
+            for name, dtype, backend in zip(
+                self.keys(), self.values(), backends, strict=True
+            )
         }
 
     def to_polars(self) -> pl.Schema:

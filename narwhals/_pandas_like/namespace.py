@@ -17,12 +17,10 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_non_nullable_boolean
-from narwhals._utils import zip_strict
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._utils import Implementation, Version
     from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
@@ -338,7 +336,7 @@ class PandasLikeNamespace(
                 # error: Cannot determine type of "values"  [has-type]
                 values: list[PandasLikeSeries]
                 init_value, *values = (
-                    s.zip_with(~nm, "") for s, nm in zip_strict(series, null_mask)
+                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 )
                 sep_array = init_value._with_native(
                     init_value.__native_namespace__().Series(
@@ -351,11 +349,51 @@ class PandasLikeNamespace(
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(
                     operator.add,
-                    (s + v for s, v in zip_strict(separators, values)),
+                    (s + v for s, v in zip(separators, values, strict=True)),
                     init_value,
                 )
 
             return [result]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def struct(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            try:
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+                import pyarrow.compute as pc  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = (
+                    "struct requires pyarrow to be installed for pandas backend. "
+                    "Please install pyarrow: pip install pyarrow"
+                )
+                raise ImportError(msg) from exc
+
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
+            struct_array = pc.make_struct(
+                *(pa.array(s.native, from_pandas=True) for s in series),
+                field_names=[s.name for s in series],
+            )
+            result = pa.chunked_array([struct_array])
+
+            version = self._version
+            impl = self._implementation
+            ns = impl.to_native_namespace()
+
+            result_native = ns.Series(
+                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                name=name,
+                index=series[0].native.index,
+            )
+            return [self._series(result_native, implementation=impl, version=version)]
 
         return self._expr._from_callable(
             func=func,

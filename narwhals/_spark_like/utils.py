@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Callable
-from functools import lru_cache
+from functools import lru_cache, partial
 from importlib import import_module
 from operator import attrgetter
 from types import ModuleType
@@ -13,11 +13,11 @@ from narwhals.exceptions import ColumnNotFoundError, UnsupportedDTypeError
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import TypeAlias
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
     from sqlframe.base.session import _BaseSession as Session
-    from typing_extensions import TypeAlias
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
@@ -182,15 +182,13 @@ def narwhals_to_native_dtype(  # noqa: C901
         return native.ArrayType(
             elementType=narwhals_to_native_dtype(dtype.inner, version, native, session)
         )
-    if isinstance_or_issubclass(dtype, dtypes.Struct):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Struct):
+        to_native = partial(
+            narwhals_to_native_dtype, version=version, spark_types=native, session=session
+        )
         return native.StructType(
             fields=[
-                native.StructField(
-                    name=field.name,
-                    dataType=narwhals_to_native_dtype(
-                        field.dtype, version, native, session
-                    ),
-                )
+                native.StructField(name=field.name, dataType=to_native(field.dtype))
                 for field in dtype.fields
             ]
         )
@@ -217,7 +215,7 @@ def evaluate_exprs(
         if len(output_names) != len(native_series_list):  # pragma: no cover
             msg = f"Internal error: got output names {output_names}, but only got {len(native_series_list)} results"
             raise AssertionError(msg)
-        native_results.extend(zip(output_names, native_series_list))
+        native_results.extend(zip(output_names, native_series_list, strict=False))
 
     return native_results
 

@@ -24,7 +24,6 @@ from narwhals._utils import (
     not_implemented,
     parse_columns_to_drop,
     to_pyarrow_table,
-    zip_strict,
 )
 from narwhals.exceptions import InvalidOperationError
 
@@ -33,12 +32,13 @@ if TYPE_CHECKING:
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
     import pyarrow as pa
     from sqlframe.base.column import Column
     from sqlframe.base.dataframe import BaseDataFrame
     from sqlframe.base.window import Window
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._spark_like.expr import SparkLikeExpr
@@ -338,7 +338,7 @@ class SparkLikeLazyFrame(
                 for d in descending
             )
 
-        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs, strict=True)]
         return self._with_native(self.native.sort(*sort_cols))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
@@ -347,7 +347,7 @@ class SparkLikeLazyFrame(
         sort_funcs = (
             self._F.desc_nulls_last if not d else self._F.asc_nulls_last for d in reverse
         )
-        sort_cols = [sort_f(col) for col, sort_f in zip_strict(by, sort_funcs)]
+        sort_cols = [sort_f(col) for col, sort_f in zip(by, sort_funcs, strict=True)]
         return self._with_native(self.native.sort(*sort_cols).limit(k))
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
@@ -418,7 +418,7 @@ class SparkLikeLazyFrame(
         )
 
         rename_mapping = {
-            **dict(zip(right_on_, left_on_)),
+            **dict(zip(right_on_, left_on_, strict=False)),
             **{
                 colname: f"{colname}{suffix}" if colname in left_columns else colname
                 for colname in right_cols_to_rename
@@ -448,7 +448,9 @@ class SparkLikeLazyFrame(
                 and_,
                 (
                     getattr(self.native, left_key) == getattr(other_native, right_key)
-                    for left_key, right_key in zip_strict(left_on_, right_on_remapped)
+                    for left_key, right_key in zip(
+                        left_on_, right_on_remapped, strict=True
+                    )
                 ),
             )
             if how == "full"

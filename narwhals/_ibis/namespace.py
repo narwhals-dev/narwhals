@@ -12,6 +12,7 @@ from narwhals._compliant.namespace import AlignDiagonal
 from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
+    evaluate_output_names_and_aliases,
 )
 from narwhals._ibis.dataframe import IbisLazyFrame
 from narwhals._ibis.expr import IbisExpr
@@ -21,7 +22,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     from narwhals._utils import Version
     from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
@@ -157,4 +158,26 @@ class IbisNamespace(
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
+        )
+
+    def struct(self, *exprs: IbisExpr) -> IbisExpr:
+        version = self._version
+
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            names_to_cols: Mapping[str, ir.Value] = {
+                alias: native_expr
+                for expr in exprs
+                for native_expr, _, alias in zip(
+                    expr(df),
+                    *evaluate_output_names_and_aliases(expr, df, []),
+                    strict=True,
+                )
+            }
+            return [ibis.struct(names_to_cols)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
         )

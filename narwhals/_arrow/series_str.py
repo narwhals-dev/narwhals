@@ -11,6 +11,7 @@ from narwhals._arrow.utils import (
     extract_native,
     lit,
     parse_datetime_format,
+    parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
 
@@ -46,12 +47,28 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
             pc.utf8_trim(self.native, characters or string.whitespace)
         )
 
-    def starts_with(self, prefix: str) -> ArrowSeries:
-        return self.with_native(pc.equal(self.slice(0, len(prefix)).native, lit(prefix)))
-
-    def ends_with(self, suffix: str) -> ArrowSeries:
+    def starts_with(self, prefix: ArrowSeries) -> ArrowSeries:
+        _, prefix_native = extract_native(self.compliant, prefix)
+        if not isinstance(prefix_native, pa.StringScalar):
+            msg = "`.str.starts_with` only supports str prefix values for pyarrow backend"
+            raise TypeError(msg)
         return self.with_native(
-            pc.equal(self.slice(-len(suffix), None).native, lit(suffix))
+            pc.equal(
+                self.slice(0, len(prefix_native.as_py())).native,
+                lit(prefix_native.as_py()),
+            )
+        )
+
+    def ends_with(self, suffix: ArrowSeries) -> ArrowSeries:
+        _, suffix_native = extract_native(self.compliant, suffix)
+        if not isinstance(suffix_native, pa.StringScalar):
+            msg = "`.str.ends_with` only supports str suffix values for pyarrow backend"
+            raise TypeError(msg)
+        return self.with_native(
+            pc.equal(
+                self.slice(-len(suffix_native.as_py()), None).native,
+                lit(suffix_native.as_py()),
+            )
         )
 
     def contains(self, pattern: ArrowSeries, *, literal: bool) -> ArrowSeries:
@@ -79,6 +96,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
 
     def to_date(self, format: str | None) -> ArrowSeries:
         return self.to_datetime(format=format).dt.date()
+
+    def to_time(self, format: str | None) -> ArrowSeries:
+        format = parse_time_format(self.native) if format is None else format
+        timestamp_array = pc.strptime(self.native, format=format, unit="us")
+
+        nw_time_dtype = self.version.dtypes.Time()
+        return self.with_native(timestamp_array).cast(nw_time_dtype)
 
     def to_uppercase(self) -> ArrowSeries:
         return self.with_native(pc.utf8_upper(self.native))

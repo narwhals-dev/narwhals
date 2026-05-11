@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 
 import numpy as np
 import pandas as pd
@@ -30,13 +30,14 @@ from narwhals._utils import (
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Callable, Iterable, Iterator, Mapping
     from types import ModuleType
+    from typing import TypeAlias
 
     import pyarrow as pa
     from pandas._typing import Dtype as PandasDtype
     from pandas.core.dtypes.dtypes import BaseMaskedDtype
-    from typing_extensions import TypeAlias, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._duration import IntervalUnit
     from narwhals._pandas_like.expr import PandasLikeExpr
@@ -339,32 +340,15 @@ def native_to_narwhals_dtype(
     raise AssertionError(msg)
 
 
-if Implementation.PANDAS._backend_version() >= (1, 2):
-
-    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
-        """Return `True` if `dtype` is `"numpy_nullable"`."""
-        # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
-        # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
-        sentinel = object()
-        return (
-            isinstance(dtype, pd.api.extensions.ExtensionDtype)
-            and getattr(dtype, "base", sentinel) is None
-        )
-else:  # pragma: no cover
-
-    def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
-        # NOTE: `base` attribute was added between 1.1-1.2
-        # Checking by isinstance requires using an import path that is no longer valid
-        # `1.1`: https://github.com/pandas-dev/pandas/blob/b5958ee1999e9aead1938c0bba2b674378807b3d/pandas/core/arrays/masked.py#L37
-        # `1.2`: https://github.com/pandas-dev/pandas/blob/7c48ff4409c622c582c56a5702373f726de08e96/pandas/core/arrays/masked.py#L41
-        # `1.5`: https://github.com/pandas-dev/pandas/blob/35b0d1dcadf9d60722c055ee37442dc76a29e64c/pandas/core/dtypes/dtypes.py#L1609
-        if isinstance(dtype, pd.api.extensions.ExtensionDtype):
-            from pandas.core.arrays.masked import (  # type: ignore[attr-defined]
-                BaseMaskedDtype as OldBaseMaskedDtype,  # pyright: ignore[reportAttributeAccessIssue]
-            )
-
-            return isinstance(dtype, OldBaseMaskedDtype)
-        return False
+def is_dtype_numpy_nullable(dtype: Any) -> TypeIs[BaseMaskedDtype]:
+    """Return `True` if `dtype` is `"numpy_nullable"`."""
+    # NOTE: We need a sentinel as the positive case is `BaseMaskedDtype.base = None`
+    # See https://github.com/narwhals-dev/narwhals/pull/2740#discussion_r2171667055
+    sentinel = object()
+    return (
+        isinstance(dtype, pd.api.extensions.ExtensionDtype)
+        and getattr(dtype, "base", sentinel) is None
+    )
 
 
 def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBackend:
@@ -708,3 +692,36 @@ def broadcast_series_to_index(
         return series_class(pa_array, index=index, name=native.name)
 
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
+
+
+def binary_string_sum_fallback(left: pd.Series, right: Any, pdx: Any) -> pd.Series:
+    # Workaround some upstream issues:
+    # - https://github.com/pandas-dev/pandas/issues/64393
+    # - https://github.com/pandas-dev/pandas/issues/65220
+    left_dtype = left.dtype
+    left_dtype_str = str(left_dtype)
+    if left_dtype_str == "large_string[pyarrow]" and isinstance(right, str):
+        import pyarrow as pa  # ignore-banned-import
+
+        return left + pa.scalar(right, type=pa.large_string())
+    if isinstance(right, pdx.Series):
+        right_dtype = right.dtype
+        if left_dtype_str == "object":  # pragma: no cover
+            # Only for pandas pre 3.0. Anything is better than `object`, so take RHS.
+            return left.astype(right_dtype) + right
+        if hasattr(left.values, "__arrow_array__") and hasattr(
+            right.values, "__arrow_array__"
+        ):
+            import pyarrow as pa  # ignore-banned-import
+
+            left_arrow = left.values.__arrow_array__().type  # noqa: PD011  # type: ignore[attr-defined]
+            right_arrow = right.values.__arrow_array__().type  # noqa: PD011  # type: ignore[attr-defined]
+            if pa.types.is_string(left_arrow) and pa.types.is_large_string(right_arrow):
+                # https://github.com/pandas-dev/pandas/blob/b00d4f6710ff6c1c80319196657c31c2cf6c70ff/pandas/core/arrays/arrow/array.py#L1064-L1068
+                pd_pa_large_string = pd.ArrowDtype(pa.large_string())
+                return left.astype(pd_pa_large_string) + right.astype(pd_pa_large_string)
+        else:  # pragma: no cover
+            pass
+        # Give precedence to the left-hand-side dtype.
+        return left + right.astype(left_dtype)
+    return left + right  # pragma: no cover

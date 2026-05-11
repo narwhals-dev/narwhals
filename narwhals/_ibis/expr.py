@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import ibis
 
@@ -21,16 +21,15 @@ from narwhals._ibis.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import (
+    NO_DEFAULT,
     Implementation,
     Version,
     extend_bool,
-    no_default,
     not_implemented,
-    zip_strict,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
     import ibis.expr.types as ir
     from typing_extensions import Self
@@ -157,7 +156,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             (True, False): desc_nulls_first,
             (True, True): desc_nulls_last,
         }
-        for col, _desc, _nulls_last in zip_strict(cols, descending, nulls_last):
+        for col, _desc, _nulls_last in zip(cols, descending, nulls_last, strict=True):
             yield mapping[(_desc, _nulls_last)](col)
 
     @classmethod
@@ -213,6 +212,17 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             msg = "Only linear interpolation methods are supported for Ibis quantile."
             raise NotImplementedError(msg)
         return self._with_callable(lambda expr: expr.quantile(quantile))
+
+    def log(self, base: float) -> Self:
+        def _log(expr: ir.Value) -> ir.Value:
+            numeric_expr = cast("ir.NumericValue", expr)
+            return ibis.cases(
+                (expr < lit(0), lit(float("nan"))),
+                (expr == lit(0), lit(float("-inf"))),
+                else_=numeric_expr.log(lit(base)),
+            )
+
+        return self._with_elementwise(_log)
 
     def n_unique(self) -> Self:
         return self._with_callable(
@@ -331,7 +341,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        if default is no_default:
+        if default is NO_DEFAULT:
             msg = "`replace_strict` requires an explicit value for `default` for ibis backend."
             raise ValueError(msg)
         ns = self.__narwhals_namespace__()

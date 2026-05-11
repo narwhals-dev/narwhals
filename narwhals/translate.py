@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime as dt
 from decimal import Decimal
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 from narwhals import plugins
 from narwhals._constants import EPOCH, MS_PER_SECOND
@@ -38,6 +38,8 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from typing_extensions import Unpack
 
     from narwhals._translate import (
@@ -282,9 +284,25 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
     # Early returns
     if isinstance(native_object, (DataFrame, LazyFrame)) and not series_only:
-        return native_object
+        if native_object._version is version:
+            return native_object
+
+        real_native_object = native_object.to_native()
+        return (
+            version.namespace.from_native_object(real_native_object)
+            .compliant.from_native(real_native_object)
+            .to_narwhals()
+        )
     if isinstance(native_object, Series) and (series_only or allow_series):
-        return native_object
+        if native_object._version is version:
+            return native_object
+
+        real_native_object = native_object.to_native()
+        return (
+            version.namespace.from_native_object(real_native_object)
+            .compliant.from_native(real_native_object)
+            .to_narwhals()
+        )
 
     if series_only:
         if allow_series is False:

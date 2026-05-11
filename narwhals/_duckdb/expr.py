@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from duckdb import CoalesceOperator, StarExpression
 
@@ -21,10 +21,10 @@ from narwhals._duckdb.utils import (
     window_expression,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import Implementation, Version, extend_bool, no_default
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from duckdb import Expression
     from typing_extensions import Self
@@ -292,7 +292,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         *,
         return_dtype: IntoDType | None,
     ) -> Self:
-        if default is no_default:
+        if default is NO_DEFAULT:
             msg = "`replace_strict` requires an explicit value for `default` for duckdb backend."
             raise ValueError(msg)
 

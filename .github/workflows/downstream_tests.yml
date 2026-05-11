@@ -2,12 +2,17 @@ name: Test Downstream Libraries - Fast
 
 on:
   pull_request:
+  workflow_call:
 
 env:
   PY_COLORS: 1
 
+permissions:
+  contents: read
+
 jobs:
   altair:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -17,12 +22,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: altair-${{ matrix.python-version }}
@@ -56,6 +61,7 @@ jobs:
           mypy altair tests
 
   marimo:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -64,12 +70,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: marimo-${{ matrix.python-version }}
@@ -106,6 +112,7 @@ jobs:
         timeout-minutes: 15
 
   scikit-lego:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -115,12 +122,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: sklego-${{ matrix.python-version }}
@@ -145,6 +152,7 @@ jobs:
           pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -152,12 +160,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: shiny-${{ matrix.python-version }}
@@ -166,49 +174,42 @@ jobs:
         run: |
           git clone https://github.com/posit-dev/py-shiny.git
           cd py-shiny
-          uv venv -p ${{ matrix.python-version }}
           git log
-      - name: install-basics
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          uv pip install --upgrade tox virtualenv setuptools
-      - name: install-shiny-dev
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          # temporary pin to get CI green
-          uv pip install "flake8-bugbear<25.10.21"
-          make narwhals-install-shiny
+
+      - name: Narwhals integration setup
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-setup@main
+        with:
+          shiny-dir: py-shiny
+
       - name: install-narwhals-dev
+        env:
+          UV_SYSTEM_PYTHON: "1"
         run: |
           cd py-shiny
-          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: show-deps
+        env:
+          UV_SYSTEM_PYTHON: "1"
         run: |
           cd py-shiny
-          . .venv/bin/activate
           uv pip freeze
-      - name: Run `make narwhals-test-integration`
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          # Isort seems to behave slightly differently in CI
-          # so we ignore its output
-          make format -s
-          make narwhals-test-integration
+
+      - name: Narwhals integration test
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-test@main
+        with:
+          shiny-dir: py-shiny
 
   tea-tasting:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: clone-tea-tasting
@@ -217,7 +218,7 @@ jobs:
           cd tea-tasting
           git log
       - name: install-uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
           cache-suffix: tea-tasting-${{ matrix.python-version }}
@@ -246,6 +247,7 @@ jobs:
           uv run --no-sync pytest tests
 
   tubular:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -255,12 +257,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: tubular-${{ matrix.python-version }}
@@ -291,6 +293,7 @@ jobs:
           pytest tests --config-file=pyproject.toml
 
   plotly:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -298,12 +301,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: plotly-${{ matrix.python-version }}
@@ -336,6 +339,7 @@ jobs:
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -345,12 +349,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: hierarchicalforecast-${{ matrix.python-version }}
@@ -380,6 +384,7 @@ jobs:
 
 
   formulaic:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -387,12 +392,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: formulaic-${{ matrix.python-version }}
@@ -425,18 +430,19 @@ jobs:
           hatch run tests --config-file=pyproject.toml
 
   pointblank:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: pointblank-${{ matrix.python-version }}
@@ -480,18 +486,19 @@ jobs:
           make test
 
   validoopsie:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"] # 3.9 and 3.12 are enough to cover all the tests
+        python-version: ["3.10", "3.13"] # these are enough to cover all the tests
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: validoopsie-${{ matrix.python-version }}
@@ -530,6 +537,7 @@ jobs:
         timeout-minutes: 15
 
   darts:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -538,12 +546,12 @@ jobs:
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: darts-${{ matrix.python-version }}
@@ -556,10 +564,11 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          uv pip install . \
-          --group dev \
-          llvmlite==0.46.0 \
-          numba==0.63.1
+          uv build --wheel
+          uv pip install dist/darts-*.whl \
+            --group dev \
+            llvmlite==0.46.0 \
+            numba==0.63.1
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -575,6 +584,7 @@ jobs:
           pytest darts/tests/test_timeseries_static_covariates.py
 
   gt-extras:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -582,12 +592,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: gt-extras-${{ matrix.python-version }}
@@ -616,6 +626,7 @@ jobs:
           uv run --no-sync pytest
 
   fairlearn:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -625,12 +636,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: fairlearn-${{ matrix.python-version }}

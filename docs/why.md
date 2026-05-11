@@ -4,7 +4,7 @@ You may think that pandas, Polars, and all dataframe libraries are quite similar
 
 For example, do the following produce the same output?
 
-```python
+```py
 import pandas as pd
 import polars as pl
 
@@ -19,7 +19,7 @@ Polars checks if it's in the values.
 
 For another example, try running the code below - note how the outputs have different column names after the join!
 
-```python
+```py
 pd_df_left = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 pd_df_right = pd.DataFrame({"a": [1, 2, 3], "c": [4, 5, 6]})
 pd_left_merge = pd_df_left.merge(pd_df_right, left_on="b", right_on="c", how="left")

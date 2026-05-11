@@ -27,7 +27,7 @@
 
 To verify the installation, start the Python REPL and execute:
 
-```python exec="1" source="above" session="quickstart" result="python"
+```python exec="yes" source="above" session="quickstart" result="python"
 import narwhals
 
 print(narwhals.__version__)
@@ -52,7 +52,7 @@ they are not required dependencies - Narwhals only ever uses what the user passe
 
 Create a Python file `t.py` with the following content:
 
-```python exec="1" source="above" session="quickstart" result="python"
+```python exec="yes" source="above" session="quickstart" result="python"
 from __future__ import annotations
 
 import pandas as pd

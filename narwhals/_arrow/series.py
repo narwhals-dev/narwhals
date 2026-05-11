@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -27,22 +27,23 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
+    NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
     is_list_of,
-    no_default,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.namespace import ArrowNamespace
@@ -203,7 +204,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
         target_length = max(
-            length for length, s in zip(lengths, series) if not s._broadcast
+            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
         )
         fast_path = all(_len == target_length for _len in lengths)
         if fast_path:
@@ -761,7 +762,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 narwhals_to_native_dtype(return_dtype, self._version)
             )
         result = self._with_native(result_native)
-        if default is no_default:
+        if default is NO_DEFAULT:
             # Check that all non-null input values were matched
             # (result may have more nulls if mapping contains {value: None})
             unmatched_mask = pc.and_(pc.is_valid(self.native), pc.invert(was_matched))

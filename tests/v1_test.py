@@ -5,7 +5,7 @@ import re
 from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -44,7 +44,7 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
 
     from typing_extensions import assert_type
 
@@ -429,6 +429,18 @@ def test_any_horizontal() -> None:
     assert_equal_data(result, expected)
 
 
+def test_struct() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 2], "b": ["dogs", None], "c": ["play", "walk"]}
+
+    df = nw_v1.from_native(pl.DataFrame(data))
+    result = df.select(my_struct=nw_v1.struct("a", "b"))
+    expected = {"my_struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": None}]}
+    assert_equal_data(result, expected)
+
+
 def test_all_horizontal() -> None:
     # here, it defaults to Kleene logic.
     pytest.importorskip("polars")
@@ -621,7 +633,7 @@ def test_lazyframe_recursive_v1() -> None:
 
     pl_frame = pl.DataFrame({"a": [1, 2, 3]}).lazy()
     nw_frame = nw_v1.from_native(pl_frame)
-    with pytest.raises(AttributeError):
+    with pytest.raises(AssertionError):
         nw_v1.LazyFrame(nw_frame, level="lazy")
 
     nw_frame_early_return = nw_v1.from_native(nw_frame)

@@ -6,7 +6,6 @@ from itertools import chain
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     Generic,
     Literal,
@@ -43,7 +42,6 @@ from narwhals._utils import (
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
-    zip_strict,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.exceptions import (
@@ -57,15 +55,16 @@ from narwhals.series import Series
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
+    from typing import Concatenate, TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Concatenate, ParamSpec, Self, TypeAlias
+    from typing_extensions import ParamSpec, Self
 
     from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame
     from narwhals._compliant.typing import CompliantExprAny
@@ -1353,6 +1352,13 @@ class DataFrame(BaseFrame[DataFrameT]):
     def columns(self) -> list[str]:
         """Get column names.
 
+        Note:
+            The pandas-like and dask backends allow non-string column names
+            (e.g. integers or booleans). While discouraged, this is supported,
+            so the return type is not guaranteed to be `list[str]`.
+
+            See [concepts - column names](../concepts/column_names.md) for details.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -1797,7 +1803,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         _keys = [
             k if is_expr else col(k)
-            for k, is_expr in zip_strict(flat_keys, key_is_expr_or_series)
+            for k, is_expr in zip(flat_keys, key_is_expr_or_series, strict=True)
         ]
         expr_flat_keys = self._flatten_and_extract(*_keys)
         check_expressions_preserve_length(
@@ -2361,6 +2367,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         ```
     """
 
+    _version: ClassVar[Version] = Version.MAIN
+
     @property
     def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
         return self._compliant_frame
@@ -2635,6 +2643,13 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     @property
     def columns(self) -> list[str]:
         r"""Get column names.
+
+        Note:
+            The pandas-like and dask backends allow non-string column names
+            (e.g. integers or booleans). While discouraged, this is supported,
+            so the return type is not guaranteed to be `list[str]`.
+
+            See [concepts - column names](../concepts/column_names.md) for details.
 
         Examples:
             >>> import duckdb
@@ -3021,7 +3036,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             raise NotImplementedError(msg)
 
         _keys = [
-            k if is_expr else col(k) for k, is_expr in zip_strict(flat_keys, key_is_expr)
+            k if is_expr else col(k)
+            for k, is_expr in zip(flat_keys, key_is_expr, strict=True)
         ]
         expr_flat_keys = self._flatten_and_extract(*_keys)
         check_expressions_preserve_length(

@@ -37,8 +37,9 @@ from narwhals._native import (
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
+    from typing import TypeAlias
+
     import pandas as pd
-    from typing_extensions import TypeAlias
 
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._dask.namespace import DaskNamespace

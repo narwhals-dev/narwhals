@@ -245,6 +245,25 @@ class ArrowNamespace(
             context=self,
         )
 
+    def struct(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
+
+            struct_array = pc.make_struct(
+                *(s.native if len(s) > 1 else s.native[0] for s in series),
+                field_names=tuple(s.name for s in series),
+            )
+            result = pa.chunked_array([struct_array])
+            return [ArrowSeries(result, name=name, version=self._version)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def _if_then_else(
         self,
         when: ChunkedArrayAny,

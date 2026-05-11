@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 import warnings
-from typing import TYPE_CHECKING, Any, Callable, Literal, overload
+from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerSeries, EagerSeriesHist
 from narwhals._pandas_like.series_cat import PandasLikeSeriesCatNamespace
@@ -13,6 +13,7 @@ from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     NUMPY_VERSION,
     align_and_extract_native,
+    binary_string_sum_fallback,
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
@@ -24,18 +25,20 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, is_list_of, no_default
+from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
+from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable, Iterator, Sequence
+    from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
     from types import ModuleType
+    from typing import TypeAlias
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self, TypeAlias, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._arrow.typing import ChunkedArrayAny
     from narwhals._compliant.series import HistData
@@ -207,7 +210,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         target_length = max(
-            length for length, s in zip(lengths, series) if not s._broadcast
+            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
         )
         idx = series[lengths.index(target_length)].native.index
         reindexed = []
@@ -300,11 +303,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
         series = native_series if in_place else native_series.copy(deep=True)
 
-        if impl.is_pandas():
-            if in_place and NUMPY_VERSION < (2,):  # pragma: no cover
-                values_native = values_native.copy()
-            if self._backend_version < (1, 2):
-                indices_native = indices_native.to_numpy()
+        if impl.is_pandas() and in_place and NUMPY_VERSION < (2,):  # pragma: no cover
+            values_native = values_native.copy()
 
         series.iloc[indices_native] = values_native
 
@@ -399,23 +399,29 @@ class PandasLikeSeries(EagerSeries[Any]):
     def last(self) -> PythonLiteral:
         return self.native.iloc[-1] if len(self.native) else None
 
-    def _with_binary(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary(self, op: Callable[..., pd.Series], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
-        if (
-            str(self.native.dtype) == "large_string[pyarrow]"
-            and isinstance(other_native, str)
-            and op.__name__ == "add"
-        ):
-            # https://github.com/pandas-dev/pandas/issues/64393
-            import pyarrow as pa  # ignore-banned-import
+        try:
+            res = op(ser, other_native)
+        except TypeError:
+            if (
+                op.__name__ == "add"
+                and self.dtype == String
+                and (
+                    isinstance(other, str)
+                    or (isinstance(other, self.__class__) and other.dtype == String)
+                )
+            ):
+                pdx = self.__native_namespace__()
+                res = binary_string_sum_fallback(ser, other_native, pdx)
+            else:
+                raise
+        return self._with_native(res, preserve_broadcast=preserve_broadcast).alias(
+            self.name
+        )
 
-            other_native = pa.scalar(other_native, type=pa.large_string())
-        return self._with_native(
-            op(ser, other_native), preserve_broadcast=preserve_broadcast
-        ).alias(self.name)
-
-    def _with_binary_right(self, op: Callable[..., PandasLikeSeries], other: Any) -> Self:
+    def _with_binary_right(self, op: Callable[..., pd.Series], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
@@ -567,7 +573,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         if not self.dtype.is_numeric():
             msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
-        # If/when pandas exposes an API which distinguishes NaN vs null, use that.
+        # TODO(Unassigned): If/when pandas exposes an API which distinguishes NaN vs null, use that.
         return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
 
     def fill_null(
@@ -693,7 +699,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         native_result = new_series.iloc[array_funcs.where(was_matched, idxs, 0)]
         native_result.index = native.index
 
-        if default is no_default:
+        if default is NO_DEFAULT:
             # Check that all non-null input values were matched
             unmatched_mask = native.notna() & (~was_matched)
             if unmatched_mask.any():

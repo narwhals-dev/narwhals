@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Final, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 import narwhals as nw
 from narwhals import exceptions, functions as nw_f
@@ -72,7 +72,7 @@ from narwhals.stable.v1.typing import (
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
     from types import ModuleType
 
     from typing_extensions import ParamSpec, Self, Unpack
@@ -258,6 +258,8 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
 
 
 class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
+    _version = Version.V1
+
     @inherit_doc(NwLazyFrame)
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         assert df._version is Version.V1  # noqa: S101
@@ -667,29 +669,33 @@ def from_native(
 
 @overload
 def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT], *, strict: Literal[True] = ...
+    narwhals_object: DataFrame[IntoDataFrameT], *, strict: Literal[True] | None = ...
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoLazyFrameT], *, strict: Literal[True] = ...
+    narwhals_object: LazyFrame[IntoLazyFrameT], *, strict: Literal[True] | None = ...
 ) -> IntoLazyFrameT: ...
 @overload
 def to_native(
-    narwhals_object: Series[IntoSeriesT], *, strict: Literal[True] = ...
+    narwhals_object: Series[IntoSeriesT], *, strict: Literal[True] | None = ...
 ) -> IntoSeriesT: ...
 @overload
 def to_native(narwhals_object: Any, *, strict: bool) -> Any: ...
 @overload
 def to_native(
-    narwhals_object: DataFrame[IntoDataFrameT], *, pass_through: Literal[False] = ...
+    narwhals_object: DataFrame[IntoDataFrameT],
+    *,
+    pass_through: Literal[False] | None = ...,
 ) -> IntoDataFrameT: ...
 @overload
 def to_native(
-    narwhals_object: LazyFrame[IntoLazyFrameT], *, pass_through: Literal[False] = ...
+    narwhals_object: LazyFrame[IntoLazyFrameT],
+    *,
+    pass_through: Literal[False] | None = ...,
 ) -> IntoLazyFrameT: ...
 @overload
 def to_native(
-    narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] = ...
+    narwhals_object: Series[IntoSeriesT], *, pass_through: Literal[False] | None = ...
 ) -> IntoSeriesT: ...
 @overload
 def to_native(narwhals_object: Any, *, pass_through: bool) -> Any: ...
@@ -900,19 +906,14 @@ def get_level(
 class When(nw_f.When):
     @classmethod
     def from_when(cls, when: nw_f.When) -> When:
-        return cls(when._predicate)
+        return cls(when._predicate, chain=())
 
     def then(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Then:
-        return Then.from_then(super().then(value))
+        new_chain = (*self._chain, (self._predicate, value))
+        return Then._from_chain(new_chain)
 
 
-class Then(nw_f.Then, Expr):
-    @classmethod
-    def from_then(cls, then: nw_f.Then) -> Then:
-        return cls(*then._nodes)
-
-    def otherwise(self, value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
-        return _stableify(super().otherwise(value))
+class Then(nw_f.Then, Expr): ...
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1065,6 +1066,20 @@ def scan_parquet(
     return _stableify(nw_f.scan_parquet(source, backend=backend, **kwargs))
 
 
+def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Expr:
+    """Collect columns into a struct column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a struct column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+        **named_exprs: Additional columns to collect into the struct column,
+            specified as keyword arguments. The columns will be renamed to the
+            keyword used.
+    """
+    return _stableify(nw_f.struct(*exprs, **named_exprs))
+
+
 __all__ = [
     "Array",
     "Binary",
@@ -1146,6 +1161,7 @@ __all__ = [
     "scan_parquet",
     "selectors",
     "show_versions",
+    "struct",
     "sum",
     "sum_horizontal",
     "to_native",

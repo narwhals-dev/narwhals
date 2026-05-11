@@ -136,7 +136,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
-    def starts_with(self, prefix: str) -> ExprT:
+    def starts_with(self, prefix: str | IntoExpr) -> ExprT:
         r"""Check if string values start with a substring.
 
         Arguments:
@@ -158,10 +158,12 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────────────────┘
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "str.starts_with", prefix=prefix)
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.starts_with", exprs=(prefix,), str_as_lit=True
+            )
         )
 
-    def ends_with(self, suffix: str) -> ExprT:
+    def ends_with(self, suffix: str | IntoExpr) -> ExprT:
         r"""Check if string values end with a substring.
 
         Arguments:
@@ -183,7 +185,9 @@ class ExprStringNamespace(Generic[ExprT]):
             └────────────────────┘
         """
         return self._expr._append_node(
-            ExprNode(ExprKind.ELEMENTWISE, "str.ends_with", suffix=suffix)
+            ExprNode(
+                ExprKind.ELEMENTWISE, "str.ends_with", exprs=(suffix,), str_as_lit=True
+            )
         )
 
     def contains(self, pattern: str | IntoExpr, *, literal: bool = False) -> ExprT:
@@ -404,6 +408,41 @@ class ExprStringNamespace(Generic[ExprT]):
         """
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.to_date", format=format)
+        )
+
+    def to_time(self, format: str | None = None) -> ExprT:
+        """Convert to [`narwhals.dtypes.Time`][] dtype.
+
+        Warning:
+            As different backends auto-infer format in different ways, if `format=None`
+            there is no guarantee that the result will be equal.
+
+        Arguments:
+            format: Format to use for conversion. If set to None (default), the format is
+                inferred from the data.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": ["12:59:21", "18:42:12"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.select(nw.col("a").str.to_time(format="%H:%M:%S"))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 1)   |
+            |  ┌──────────┐    |
+            |  │ a        │    |
+            |  │ ---      │    |
+            |  │ time     │    |
+            |  ╞══════════╡    |
+            |  │ 12:59:21 │    |
+            |  │ 18:42:12 │    |
+            |  └──────────┘    |
+            └──────────────────┘
+        """
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.to_time", format=format)
         )
 
     def to_uppercase(self) -> ExprT:

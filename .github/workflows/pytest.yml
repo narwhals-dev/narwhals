@@ -2,28 +2,34 @@ name: PyTest
 
 on:
   pull_request:
+  workflow_call:
 
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
   UV_SYSTEM_PYTHON: 1
+
+permissions:
+  contents: read
+
 jobs:
-  pytest-39:
+  pytest-310:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
-          cache-suffix: pytest-39-${{ matrix.python-version }}
+          cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: install-reqs
         run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests
@@ -35,18 +41,19 @@ jobs:
         run: uv pip install -e test-plugin/.
 
   pytest-windows:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.13"]
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: pytest-windows-${{ matrix.python-version }}
@@ -63,6 +70,7 @@ jobs:
           pytest tests --cov=narwhals --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
 
   pytest-full-coverage:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.11", "3.13"]
@@ -74,12 +82,12 @@ jobs:
     env:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
@@ -99,18 +107,19 @@ jobs:
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
@@ -136,18 +145,19 @@ jobs:
         run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
 
   python-314:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.14"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
@@ -160,6 +170,7 @@ jobs:
         run: pytest tests --cov=narwhals --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
 
   python-314t:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.14t"]
@@ -168,12 +179,12 @@ jobs:
     env:
         PYTHON_GIL: 0
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}

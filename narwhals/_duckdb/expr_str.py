@@ -29,6 +29,15 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
         compliant_expr = self.compliant
         return compliant_expr.cast(compliant_expr._version.dtypes.Date())
 
+    def to_time(self, format: str | None) -> DuckDBExpr:
+        time_dtype = self.compliant._version.dtypes.Time()
+        if format is None:
+            return self.compliant.cast(time_dtype)
+
+        return self.compliant._with_elementwise(
+            lambda expr: F("strptime", expr, lit(format))
+        ).cast(time_dtype)
+
     @requires.backend_version((1, 2))
     def to_titlecase(self) -> DuckDBExpr:
         from narwhals._duckdb.utils import lambda_expr
