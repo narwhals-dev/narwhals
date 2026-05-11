@@ -560,7 +560,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or (python_full_version < '3.13' and extra == 'extra-8-narwhals-modin') or (python_full_version < '3.13' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -747,7 +747,7 @@ name = "importlib-metadata"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.12' or (python_full_version < '3.14' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a9/01/15bb152d77b21318514a96f43af312635eb2500c96b55398d020c93d86ea/importlib_metadata-9.0.0.tar.gz", hash = "sha256:a4f57ab599e6a2e3016d7595cfd72eb4661a5106e787a95bcc90c7105b831efc", size = 56405, upload-time = "2026-03-20T06:42:56.999Z" }
 wheels = [
@@ -1308,13 +1308,15 @@ sqlframe = [
 [package.dev-dependencies]
 core = [
     { name = "narwhals", extra = ["duckdb", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
 ]
 core-tests = [
     { name = "covdefaults" },
     { name = "hypothesis" },
     { name = "narwhals", extra = ["duckdb", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-env" },
@@ -1328,7 +1330,8 @@ dev = [
     { name = "hypothesis" },
     { name = "mypy" },
     { name = "narwhals", extra = ["dask", "duckdb", "ibis", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
     { name = "pandas-stubs" },
     { name = "pre-commit" },
     { name = "pyarrow" },
@@ -1350,7 +1353,8 @@ dev-core = [
     { name = "hypothesis" },
     { name = "mypy" },
     { name = "narwhals", extra = ["dask", "duckdb", "ibis", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
     { name = "pandas-stubs" },
     { name = "pre-commit" },
     { name = "pyarrow" },
@@ -1373,7 +1377,8 @@ docs = [
     { name = "mkdocs-autorefs" },
     { name = "mkdocstrings-python" },
     { name = "narwhals", extra = ["duckdb", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
     { name = "zensical" },
 ]
 extra = [
@@ -1391,7 +1396,8 @@ local-dev = [
     { name = "mkdocstrings-python" },
     { name = "mypy" },
     { name = "narwhals", extra = ["dask", "duckdb", "ibis", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
     { name = "pandas-stubs" },
     { name = "pre-commit" },
     { name = "pyarrow" },
@@ -1426,7 +1432,8 @@ typing = [
     { name = "hypothesis" },
     { name = "mypy" },
     { name = "narwhals", extra = ["dask", "duckdb", "ibis", "polars", "pyarrow", "sql", "sqlframe"] },
-    { name = "narwhals", extra = ["pandas"], marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra != 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra != 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas')" },
+    { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or extra == 'extra-8-narwhals-cudf' or extra == 'extra-8-narwhals-modin'" },
+    { name = "pandas", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas')" },
     { name = "pandas-stubs" },
     { name = "pyarrow" },
     { name = "pyarrow-stubs" },
@@ -1459,11 +1466,15 @@ requires-dist = [
 provides-extras = ["pandas", "modin", "cudf", "pyarrow", "pyspark", "pyspark-connect", "polars", "dask", "duckdb", "ibis", "sqlframe", "sql"]
 
 [package.metadata.requires-dev]
-core = [{ name = "narwhals", extras = ["duckdb", "pandas", "polars", "pyarrow", "sqlframe", "sql"] }]
+core = [
+    { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "pandas", specifier = ">=1.3.4" },
+]
 core-tests = [
     { name = "covdefaults" },
     { name = "hypothesis", specifier = ">=6.0.0" },
-    { name = "narwhals", extras = ["duckdb", "pandas", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "pandas", specifier = ">=1.3.4" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov" },
     { name = "pytest-env" },
@@ -1477,7 +1488,8 @@ dev = [
     { name = "hypothesis", specifier = ">=6.0.0" },
     { name = "mypy", specifier = "~=1.15.0" },
     { name = "narwhals", extras = ["dask", "ibis"] },
-    { name = "narwhals", extras = ["duckdb", "pandas", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "pandas", specifier = ">=1.3.4" },
     { name = "pandas-stubs", specifier = "==2.3.0.250703" },
     { name = "pre-commit" },
     { name = "pyarrow", specifier = "<24" },
@@ -1499,7 +1511,8 @@ dev-core = [
     { name = "hypothesis", specifier = ">=6.0.0" },
     { name = "mypy", specifier = "~=1.15.0" },
     { name = "narwhals", extras = ["dask", "ibis"] },
-    { name = "narwhals", extras = ["duckdb", "pandas", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "pandas", specifier = ">=1.3.4" },
     { name = "pandas-stubs", specifier = "==2.3.0.250703" },
     { name = "pre-commit" },
     { name = "pyarrow", specifier = "<24" },
@@ -1521,7 +1534,8 @@ docs = [
     { name = "markdown-exec", extras = ["ansi"], specifier = ">=1.12.1" },
     { name = "mkdocs-autorefs", specifier = ">=1.4.4" },
     { name = "mkdocstrings-python", specifier = ">=2.0.3" },
-    { name = "narwhals", extras = ["duckdb", "pandas", "pyarrow", "polars", "sql", "sqlframe"] },
+    { name = "narwhals", extras = ["duckdb", "pyarrow", "polars", "sql", "sqlframe"] },
+    { name = "pandas", specifier = ">=1.3.4" },
     { name = "zensical", specifier = ">=0.0.38" },
 ]
 extra = [{ name = "scikit-learn" }]
@@ -1536,8 +1550,9 @@ local-dev = [
     { name = "mkdocstrings-python", specifier = ">=2.0.3" },
     { name = "mypy", specifier = "~=1.15.0" },
     { name = "narwhals", extras = ["dask", "ibis"] },
-    { name = "narwhals", extras = ["duckdb", "pandas", "polars", "pyarrow", "sqlframe", "sql"] },
-    { name = "narwhals", extras = ["duckdb", "pandas", "pyarrow", "polars", "sql", "sqlframe"] },
+    { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "narwhals", extras = ["duckdb", "pyarrow", "polars", "sql", "sqlframe"] },
+    { name = "pandas", specifier = ">=1.3.4" },
     { name = "pandas-stubs", specifier = "==2.3.0.250703" },
     { name = "pre-commit" },
     { name = "pyarrow", specifier = "<24" },
@@ -1570,7 +1585,8 @@ typing = [
     { name = "hypothesis", specifier = ">=6.0.0" },
     { name = "mypy", specifier = "~=1.15.0" },
     { name = "narwhals", extras = ["dask", "ibis"] },
-    { name = "narwhals", extras = ["duckdb", "pandas", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
+    { name = "pandas", specifier = ">=1.3.4" },
     { name = "pandas-stubs", specifier = "==2.3.0.250703" },
     { name = "pyarrow", specifier = "<24" },
     { name = "pyarrow-stubs", specifier = "==19.2" },
