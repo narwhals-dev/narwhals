@@ -6,32 +6,44 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     import cudf
     import dask.dataframe as dd
+    import duckdb
     import ibis
     import modin.pandas as mpd
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    import pyspark.sql as pyspark_sql
+    from pyspark.sql.connect.dataframe import DataFrame as PySparkConnectDataFrame
     from typing_extensions import TypeIs
+
+    from narwhals._spark_like.dataframe import SQLFrameDataFrame
+    from narwhals.stable.v1.typing import IntoDataFrameT, IntoLazyFrameT, IntoSeriesT
 
 
 from narwhals.dependencies import (
     IMPORT_HOOKS,
     get_cudf,
+    get_dask,
     get_dask_dataframe,
+    get_duckdb,
     get_ibis,
     get_modin,
     get_numpy,
     get_pandas,
     get_polars,
     get_pyarrow,
-    is_into_dataframe,
-    is_into_lazyframe,
-    is_into_series,
+    get_pyspark,
+    get_pyspark_connect,
+    get_pyspark_sql,
+    get_sqlframe,
+    is_cudf_index,
+    is_modin_index,
     is_narwhals_dataframe,
     is_narwhals_lazyframe,
     is_narwhals_series,
     is_numpy_array,
     is_pandas_index,
+    is_pandas_like_index,
 )
 
 
@@ -76,6 +88,13 @@ def is_cudf_series(ser: Any) -> TypeIs[cudf.Series[Any]]:
 def is_dask_dataframe(df: Any) -> TypeIs[dd.DataFrame]:
     """Check whether `df` is a Dask DataFrame without importing Dask."""
     return (dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame)
+
+
+def is_duckdb_relation(df: Any) -> TypeIs[duckdb.DuckDBPyRelation]:
+    """Check whether `df` is a DuckDB Relation without importing DuckDB."""
+    return (duckdb := get_duckdb()) is not None and isinstance(
+        df, duckdb.DuckDBPyRelation
+    )
 
 
 def is_ibis_table(df: Any) -> TypeIs[ibis.Table]:
@@ -124,22 +143,115 @@ def is_pandas_like_series(ser: Any) -> bool:
     return is_pandas_series(ser) or is_modin_series(ser) or is_cudf_series(ser)
 
 
+def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
+    """Check whether `df` is a PySpark DataFrame without importing PySpark.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    return bool(
+        (pyspark_sql := get_pyspark_sql()) is not None
+        and isinstance(df, pyspark_sql.DataFrame)
+    )
+
+
+def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
+    """Check whether `df` is a PySpark Connect DataFrame without importing PySpark.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    if get_pyspark_connect() is not None:  # pragma: no cover
+        try:
+            from pyspark.sql.connect.dataframe import DataFrame
+        except ImportError:
+            return False
+        return isinstance(df, DataFrame)
+    return False
+
+
+def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame.
+
+    Warning:
+        This method cannot be called on a Narwhals DataFrame/LazyFrame.
+    """
+    if get_sqlframe() is not None:
+        from sqlframe.base.dataframe import BaseDataFrame
+
+        return isinstance(df, BaseDataFrame)
+    return False  # pragma: no cover
+
+
+def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
+    """Check whether `native_dataframe` can be converted to a narwhals.stable.v1.DataFrame."""
+    from narwhals.stable.v1 import DataFrame
+
+    return (
+        isinstance(native_dataframe, DataFrame)
+        or hasattr(native_dataframe, "__narwhals_dataframe__")
+        or is_polars_dataframe(native_dataframe)
+        or is_pyarrow_table(native_dataframe)
+        or is_pandas_like_dataframe(native_dataframe)
+        or is_ibis_table(native_dataframe)
+        or is_duckdb_relation(native_dataframe)
+    )
+
+
+def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
+    """Check whether `native_lazyframe` can be converted to a narwhals.stable.v1.LazyFrame."""
+    from narwhals.dataframe import LazyFrame
+
+    return (
+        isinstance(native_lazyframe, LazyFrame)
+        or hasattr(native_lazyframe, "__narwhals_lazyframe__")
+        or is_polars_lazyframe(native_lazyframe)
+        or is_dask_dataframe(native_lazyframe)
+        or is_pyspark_dataframe(native_lazyframe)
+        or is_pyspark_connect_dataframe(native_lazyframe)
+        or is_sqlframe_dataframe(native_lazyframe)
+    )
+
+
+def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
+    """Check whether `native_series` can be converted to a narwhals.stable.v1.Series."""
+    from narwhals.stable.v1 import Series
+
+    return (
+        isinstance(native_series, Series)
+        or hasattr(native_series, "__narwhals_series__")
+        or is_polars_series(native_series)
+        or is_pyarrow_chunked_array(native_series)
+        or is_pandas_like_series(native_series)
+    )
+
+
 __all__ = [
     "get_cudf",
+    "get_dask",
+    "get_dask_dataframe",
+    "get_duckdb",
     "get_ibis",
     "get_modin",
     "get_numpy",
     "get_pandas",
     "get_polars",
     "get_pyarrow",
+    "get_pyspark",
+    "get_pyspark_connect",
+    "get_pyspark_sql",
+    "get_sqlframe",
     "is_cudf_dataframe",
+    "is_cudf_index",
     "is_cudf_series",
     "is_dask_dataframe",
+    "is_duckdb_relation",
     "is_ibis_table",
     "is_into_dataframe",
     "is_into_lazyframe",
     "is_into_series",
     "is_modin_dataframe",
+    "is_modin_index",
     "is_modin_series",
     "is_narwhals_dataframe",
     "is_narwhals_lazyframe",
@@ -148,6 +260,7 @@ __all__ = [
     "is_pandas_dataframe",
     "is_pandas_index",
     "is_pandas_like_dataframe",
+    "is_pandas_like_index",
     "is_pandas_like_series",
     "is_pandas_series",
     "is_polars_dataframe",
@@ -155,4 +268,7 @@ __all__ = [
     "is_polars_series",
     "is_pyarrow_chunked_array",
     "is_pyarrow_table",
+    "is_pyspark_connect_dataframe",
+    "is_pyspark_dataframe",
+    "is_sqlframe_dataframe",
 ]
