@@ -105,13 +105,12 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
             if eager := getattr(backend, "backend_eager", None):
                 eager_values.append(eager)
                 eager_ids.append(backend.identifier)
-        if eager_values:
-            if "eager" in metafunc.fixturenames:
-                metafunc.parametrize("eager", eager_values, ids=eager_ids)
-            if "eager_or_false" in metafunc.fixturenames:
-                metafunc.parametrize(
-                    "eager_or_false", (*eager_values, False), ids=(*eager_ids, "False")
-                )
+        if "eager" in metafunc.fixturenames:
+            metafunc.parametrize("eager", eager_values, ids=eager_ids)
+        if "eager_or_false" in metafunc.fixturenames:
+            metafunc.parametrize(
+                "eager_or_false", (*eager_values, False), ids=(*eager_ids, "False")
+            )
     if "lazy" in metafunc.fixturenames:
         if lazy_values_ids := [
             (lazy, backend.identifier)
@@ -129,9 +128,8 @@ def _parametrize_constructor_fixture(
     metafunc: pytest.Metafunc,
     backends: tuple[TestBackendAny, ...],
 ) -> None:
-    if name in metafunc.fixturenames and (
-        impls := [
+    if name in metafunc.fixturenames:
+        impls = [
             impl for backend in backends if (impl := backend.try_get_constructor(name))
         ]
-    ):
         metafunc.parametrize(name, impls, ids=get_identifier)
