@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import narwhals as nw
+import narwhals.stable.v1 as nw_v1
 from narwhals.dependencies import is_into_dataframe
 from narwhals.stable.v1.dependencies import is_into_dataframe as v1_is_into_dataframe
 
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from tests.utils import Constructor, ConstructorEager
+    from tests.utils import Constructor
 
 EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow")
 V1_INTO_DATAFRAMES = (*EAGER_CONSTRUCTOR_NAMES, "duckdb", "ibis")
@@ -31,21 +33,22 @@ class DictDataFrame:
         return self
 
 
-def test_is_into_dataframe_lazy(constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES):
-        assert is_into_dataframe(constructor(data))
-    else:
-        assert not is_into_dataframe(constructor(data))
+@pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
+def test_is_into_dataframe(constructor: Constructor) -> None:
+    native_frame = constructor(data)
+    nw_frame = nw.from_native(native_frame)
+    nw_v1_frame = nw_v1.from_native(native_frame)
 
-    if any(x in str(constructor) for x in V1_INTO_DATAFRAMES):
-        assert v1_is_into_dataframe(constructor(data))
-    else:
-        assert not v1_is_into_dataframe(constructor(data))
+    result = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
+    assert is_into_dataframe(native_frame) == result
+    assert is_into_dataframe(nw_frame) == result
 
+    result_v1 = any(x in str(constructor) for x in V1_INTO_DATAFRAMES)
+    assert v1_is_into_dataframe(native_frame) == result_v1
+    assert v1_is_into_dataframe(nw_v1_frame) == result_v1
 
-def test_is_into_dataframe_eager(constructor_eager: ConstructorEager) -> None:
-    assert is_into_dataframe(constructor_eager(data))
-    assert v1_is_into_dataframe(constructor_eager(data))
+    assert is_into_dataframe(nw_v1_frame) == result_v1
+    assert not v1_is_into_dataframe(nw_frame)
 
 
 def test_is_into_dataframe_other() -> None:

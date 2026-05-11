@@ -5,10 +5,16 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals.stable.v1.dependencies import is_into_series
+import narwhals.stable.v1 as nw_v1
+from narwhals.dependencies import is_into_series
+from narwhals.stable.v1.dependencies import is_into_series as v1_is_into_series
 
 if TYPE_CHECKING:
     from typing_extensions import Self
+
+    from tests.utils import ConstructorEager
+
+data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
 class ListBackedSeries:
@@ -23,32 +29,30 @@ class ListBackedSeries:
         return self
 
 
-def test_is_into_series_pyarrow() -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
+@pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
+def test_is_into_series(constructor_eager: ConstructorEager) -> None:
+    native_frame = constructor_eager(data)
+    nw_series = nw.from_native(native_frame)["a"]
+    nw_v1_series = nw_v1.from_native(native_frame)["a"]
+    native_series = nw_series.to_native()
 
-    assert is_into_series(pa.chunked_array([["a", "b"]]))
+    assert is_into_series(native_series)
+    assert is_into_series(nw_series)
+    assert is_into_series(nw_v1_series)
 
-
-def test_is_into_series_polars() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    assert is_into_series(pl.Series([1, 2, 3]))
-
-
-def test_is_into_series_pandas() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    assert is_into_series(pd.Series([1, 2, 3]))
-    assert is_into_series(nw.from_native(pd.Series([1, 2, 3]), series_only=True))
+    assert v1_is_into_series(native_series)
+    assert not v1_is_into_series(nw_series)
+    assert v1_is_into_series(nw_v1_series)
 
 
-def test_is_into_series() -> None:
+def test_is_into_series_other() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
     assert is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
     assert not is_into_series(np.array([1, 2, 3]))
     assert not is_into_series([1, 2, 3])
+
+    assert v1_is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
+    assert not v1_is_into_series(np.array([1, 2, 3]))
+    assert not v1_is_into_series([1, 2, 3])

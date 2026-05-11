@@ -200,7 +200,7 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
     """Check whether `native_lazyframe` can be converted to a narwhals.stable.v1.LazyFrame."""
-    from narwhals.dataframe import LazyFrame
+    from narwhals.stable.v1 import LazyFrame
 
     return (
         isinstance(native_lazyframe, LazyFrame)
