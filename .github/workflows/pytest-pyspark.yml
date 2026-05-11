@@ -77,7 +77,6 @@ jobs:
       SPARK_VERSION: 4.1.0
       SPARK_PORT: 15002
       SPARK_CONNECT: true
-      UV_SYSTEM_PYTHON: 1
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -95,11 +94,14 @@ jobs:
           distribution: zulu
           java-version: 17
 
+      - name: Create venv
+        run: uv venv --python ${{ matrix.python-version }}
+
       - name: install-reqs
         # temporary pin to get CI green
         run: uv pip install -e . --group core-tests --group extra --extra pandas "pyarrow<22.0"
       - name: install pyspark
-        run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}"
+        run: uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" "setuptools<78"
       - name: show-deps
         run: uv pip freeze
 
@@ -130,8 +132,8 @@ jobs:
           echo "Spark Connect server started"
 
       - name: Run pytest
-        run: pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+        run: uv run --no-sync pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
 
       - name: Stop Spark Connect server
-        if: always()
+        if: always() && env.SPARK_HOME != ''
         run: $SPARK_HOME/sbin/stop-connect-server.sh

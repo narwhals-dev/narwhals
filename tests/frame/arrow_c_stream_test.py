@@ -43,6 +43,9 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.skipif(
     PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
+@pytest.mark.skipif(
+    PANDAS_VERSION == (0, 0, 0), reason="Require pandas for `backend='pandas'`"
+)
 def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works
     monkeypatch.delattr("polars.DataFrame.__arrow_c_stream__")
@@ -51,6 +54,5 @@ def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     expected = pa.table({"a": [1, 2, 3]})
     assert pc.all(pc.equal(result["a"], expected["a"])).as_py()
 
-    if PANDAS_VERSION > (0, 0, 0):
-        result_2 = nw.from_arrow(result, backend="pandas").to_arrow()
-        assert pc.all(pc.equal(result_2["a"], expected["a"])).as_py()
+    result_2 = nw.from_arrow(result, backend="pandas").to_arrow()
+    assert pc.all(pc.equal(result_2["a"], expected["a"])).as_py()
