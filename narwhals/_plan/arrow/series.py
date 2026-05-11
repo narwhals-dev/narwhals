@@ -8,8 +8,8 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import compat, functions as fn, options
+from narwhals._plan.arrow.classes import Versioned
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
-from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.compliant import CompliantSeries
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.expressions import functions as F
@@ -64,16 +64,18 @@ def bin_op(
     return f_reflect if reflect else f
 
 
-class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayAny"]):
+class ArrowSeries(
+    Versioned,
+    FrameSeries["ChunkedArrayAny"],
+    CompliantSeries["ChunkedArrayAny"],
+    version=Version.MAIN,
+):
     __slots__ = ("_name",)
     _name: str
 
     @property
     def name(self) -> str:
         return self._name
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        return ArrowNamespace()
 
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
@@ -82,7 +84,7 @@ class ArrowSeries(FrameSeries["ChunkedArrayAny"], CompliantSeries["ChunkedArrayA
         return self.from_native(native, self.name)
 
     def to_frame(self) -> DataFrame:
-        dataframe = self.__narwhals_namespace__()._dataframe
+        dataframe = self.__narwhals_classes__.dataframe
         return dataframe.from_dict({self.name: self.native})
 
     def to_list(self) -> list[Any]:
@@ -434,7 +436,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", ArrowSeries]):
             rec_batch: Incomplete = pa.RecordBatch.from_struct_array
             batches = (rec_batch(chunk) for chunk in native.chunks)
             table = pa.Table.from_batches(batches, fn.struct.schema(native))
-        dataframe = self.compliant.__narwhals_namespace__()._dataframe
+        dataframe = self.compliant.__narwhals_classes__.dataframe
         return dataframe.from_native(table)
 
     # name overriding *may* be wrong

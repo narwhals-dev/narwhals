@@ -7,11 +7,7 @@ import polars as pl
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.expr import CompliantExpr
 from narwhals._plan.polars.classes import PolarsClasses
-from narwhals._plan.polars.namespace import (
-    PolarsNamespace,
-    dtype_to_native,
-    dtype_to_native_fast,
-)
+from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
@@ -58,9 +54,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     @property
     def native(self) -> pl.Expr:
         return self._native
-
-    def __narwhals_namespace__(self) -> PolarsNamespace:
-        return PolarsNamespace()
 
     @property
     def __narwhals_classes__(self) -> PolarsClasses:

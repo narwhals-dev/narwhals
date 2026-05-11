@@ -10,12 +10,9 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant import CompliantDataFrame
 from narwhals._plan.polars import compat
+from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import (
-    PolarsNamespace as Namespace,
-    dtype_to_native,
-    explode_todo,
-)
+from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
 from narwhals._utils import Implementation, Version, not_implemented, requires
 from narwhals.exceptions import NarwhalsError
 
@@ -102,8 +99,9 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     _backend_version = compat.BACKEND_VERSION
     _implementation = Implementation.POLARS
 
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
+    @property
+    def __narwhals_classes__(self) -> PolarsClasses:
+        return PolarsClasses()
 
     def __len__(self) -> int:
         return self.native.__len__()
@@ -142,7 +140,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.native
 
     def to_lazy(self) -> PolarsLazyFrame:
-        return self.__narwhals_namespace__()._lazyframe.from_native(self.native.lazy())
+        return self.__narwhals_classes__.lazyframe.from_native(self.native.lazy())
 
     @overload
     def write_csv(self, target: None, /, **kwds: Any) -> str: ...
@@ -200,11 +198,11 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.from_native(self.native.gather_every(n, offset))
 
     def get_column(self, name: str) -> Series:
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         return series.from_native(self.native.get_column(name))
 
     def iter_columns(self) -> Iterator[Series]:
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         yield from (series.from_native(s) for s in self.native.iter_columns())
 
     def join(
@@ -276,7 +274,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.native.to_dict(as_series=False)
 
     def to_series(self, index: int = 0) -> Series:
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         return series.from_native(self.native.to_series(index))
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
@@ -293,7 +291,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         )
 
     def to_struct(self, name: str = "") -> Any:
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         return series.from_native(self.native.to_struct(name))
 
     def partition_by(self, by: Sequence[str], *, include_key: bool = True) -> list[Self]:
@@ -407,7 +405,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     filter = not_implemented()
 
     def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
-        expr = self.__narwhals_namespace__()._expr
+        expr = self.__narwhals_classes__.expr
         new = expr.__new__
         yield from (new(expr).dispatch(e.expr, self, e.name) for e in nodes)
 

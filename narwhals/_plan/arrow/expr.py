@@ -16,8 +16,7 @@ from narwhals._plan._guards import (
     is_seq_column,
 )
 from narwhals._plan.arrow import functions as fn, group_by
-from narwhals._plan.arrow.classes import ArrowClasses
-from narwhals._plan.arrow.namespace import ArrowNamespace as Namespace
+from narwhals._plan.arrow.classes import ArrowClasses, Versioned
 from narwhals._plan.arrow.series import ArrowSeries as Series
 from narwhals._plan.arrow.typing import (
     ChunkedArrayAny,
@@ -305,8 +304,6 @@ class _ArrowDispatch(
 ):
     """Common to `Expr`, `Scalar` + their dependencies."""
 
-    version: ClassVar[Version] = Version.MAIN
-
     __slots__ = ()
 
     @classmethod
@@ -315,9 +312,11 @@ class _ArrowDispatch(
     def _with_native(self, native: Any, name: str, /) -> Self:
         raise NotImplementedError
 
-    @property
-    def __narwhals_classes__(self) -> ArrowClasses:
-        return ArrowClasses()
+    if TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> ArrowClasses:
+            return ArrowClasses()
 
     def __new__(cls) -> Expr | Scalar: ...  # type: ignore[misc]
     def dispatch(self, node: ir.ExprIR, frame: Frame, name: str, /) -> Expr | Scalar:
@@ -527,8 +526,10 @@ class _ArrowDispatch(
 
 
 class ArrowExpr(
+    Versioned,
     _ArrowDispatch["ChunkedArrayAny"],
     EagerExpr["Frame", "ChunkedArrayAny", NativeScalar, ChunkedArrayAny],
+    version=Version.MAIN,
 ):
     __slots__ = ("_evaluated",)
     _evaluated: Series
@@ -536,13 +537,6 @@ class ArrowExpr(
     # NOTE: (low-priority) rough edge from the optional `Scalar` impl
     len_star = not_implemented()
     lit = not_implemented()
-
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
-
-    @property
-    def __narwhals_classes__(self) -> ArrowClasses:
-        return ArrowClasses()
 
     @property
     def name(self) -> str:
@@ -786,9 +780,6 @@ class ArrowExpr(
         return self.from_series(index._with_native(final_result))
 
     # TODO @dangotbanned: Fix direct `ArrowSeries`, `ArrowScalar`
-    # NOTE: Can't implement in `EagerExpr` (like on `main`)
-    # The version here is missing `__narwhals_namespace__`
-    #   I think that's not true any more?
     def map_batches(
         self, node: ir.AnonymousExpr, frame: Frame, name: str, /
     ) -> Self | Scalar:
@@ -946,18 +937,14 @@ class ArrowExpr(
 
 
 class ArrowScalar(
-    _ArrowDispatch[NativeScalar], EagerScalar["Frame", ChunkedArrayAny, NativeScalar]
+    Versioned,
+    _ArrowDispatch[NativeScalar],
+    EagerScalar["Frame", ChunkedArrayAny, NativeScalar],
+    version=Version.MAIN,
 ):
     __slots__ = ()
     _evaluated: NativeScalar
     _name: str
-
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
-
-    @property
-    def __narwhals_classes__(self) -> ArrowClasses:
-        return ArrowClasses()
 
     @classmethod
     def len_star(cls, node: ir.Len, frame: Frame, name: str) -> Self:

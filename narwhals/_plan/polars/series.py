@@ -9,8 +9,8 @@ from narwhals._plan._version import into_version
 from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.polars import compat
+from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import (
-    PolarsNamespace as Namespace,
     dtype_from_native,
     dtype_to_native,
     dtype_to_native_fast,
@@ -138,8 +138,9 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def dtype(self) -> DType:
         return dtype_from_native(self.native.dtype, self.version)
 
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
+    @property
+    def __narwhals_classes__(self) -> PolarsClasses:
+        return PolarsClasses()
 
     @classmethod
     def from_iterable(
@@ -205,7 +206,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(self.native.is_not_null())
 
     def to_frame(self) -> DataFrame:
-        dataframe = self.__narwhals_namespace__()._dataframe
+        dataframe = self.__narwhals_classes__.dataframe
         return dataframe.from_native(self.native.to_frame())
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
@@ -468,7 +469,7 @@ class SeriesStructNamespace(StructNamespace["DataFrame", PolarsSeries]):
 
     def unnest(self) -> PolarsDataFrame:
         df = self.native.struct.unnest()
-        return self.compliant.__narwhals_namespace__()._dataframe.from_native(df)
+        return self.compliant.__narwhals_classes__.dataframe.from_native(df)
 
     @property
     def schema(self) -> Schema:

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, overload
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant.group_by import Grouped
 from narwhals._plan.typing import (
-    IncompleteCyclic,
     IncompleteVarianceLie,
     IntoExpr,
     NativeDataFrameT_co,
@@ -31,7 +30,6 @@ if TYPE_CHECKING:
         EagerDataFrameGroupBy,
         GroupByResolver,
     )
-    from narwhals._plan.compliant.namespace import CompliantNamespace
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.compliant.typing import LazyFrameAny
     from narwhals._plan.dataframe import DataFrame
@@ -59,7 +57,6 @@ class CompliantFrame(Protocol[NativeFrameT_co]):
     implementation: ClassVar[Implementation]
     version: ClassVar[Version]
 
-    def __narwhals_namespace__(self) -> IncompleteCyclic: ...
     @classmethod
     def from_native(cls, native: IncompleteVarianceLie, /) -> Self: ...
     @property
@@ -132,8 +129,6 @@ class CompliantDataFrame(
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
-
-    def __narwhals_namespace__(self) -> CompliantNamespace[Any, Any]: ...
 
     @property
     def _grouper(self) -> type[Grouped]:

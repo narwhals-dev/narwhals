@@ -12,7 +12,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.utils import native_to_narwhals_dtype
 from narwhals._plan._version import into_version
 from narwhals._plan.arrow import acero, compat, functions as fn, io
-from narwhals._plan.arrow.classes import ArrowClasses
+from narwhals._plan.arrow.classes import Versioned
 from narwhals._plan.arrow.common import ArrowFrameSeries as FrameSeries
 from narwhals._plan.arrow.expr import ArrowExpr as Expr, ArrowScalar as Scalar
 from narwhals._plan.arrow.group_by import (
@@ -21,12 +21,11 @@ from narwhals._plan.arrow.group_by import (
     partition_by,
     unique_keep_boolean_length_preserving,
 )
-from narwhals._plan.arrow.namespace import ArrowNamespace
 from narwhals._plan.arrow.pivot import pivot_table
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.dataframe import EagerDataFrame
 from narwhals._plan.exceptions import shape_error
-from narwhals._utils import generate_repr, requires, supports_arrow_c_stream
+from narwhals._utils import Version, generate_repr, requires, supports_arrow_c_stream
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -66,16 +65,12 @@ Incomplete: TypeAlias = Any
 
 
 class ArrowDataFrame(
-    FrameSeries["pa.Table"], EagerDataFrame["pa.Table", "ChunkedArrayAny"]
+    Versioned,
+    FrameSeries["pa.Table"],
+    EagerDataFrame["pa.Table", "ChunkedArrayAny"],
+    version=Version.MAIN,
 ):
     __slots__ = ()
-
-    def __narwhals_namespace__(self) -> ArrowNamespace:
-        return ArrowNamespace()
-
-    @property
-    def __narwhals_classes__(self) -> ArrowClasses:
-        return ArrowClasses()
 
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
@@ -204,7 +199,7 @@ class ArrowDataFrame(
         return zip(self.native.column_names, self.native.itercolumns())
 
     def iter_columns(self) -> Iterator[Series]:
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         yield from (series.from_native(s, name) for name, s in self._iter_columns())
 
     def to_series(self, index: int = 0) -> Series:
@@ -225,7 +220,7 @@ class ArrowDataFrame(
     def _evaluate_irs(
         self, nodes: Iterable[NamedIR], /, *, length: int | None = None
     ) -> Iterator[CompliantSeries]:
-        expr = self.__narwhals_namespace__()._expr
+        expr = self.__narwhals_classes__.expr
         new = expr.__new__
         yield from expr.align(
             (new(expr).dispatch(e.expr, self, e.name) for e in nodes), default=length
@@ -342,7 +337,7 @@ class ArrowDataFrame(
                 struct = fn.chunked_array([], pa.struct(native.schema))
         else:
             struct = fn.struct.into_struct(native.columns, native.column_names)
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         return series.from_native(struct, name)
 
     def unnest(self, columns: Sequence[str]) -> Self:
@@ -373,7 +368,7 @@ class ArrowDataFrame(
         return self._with_native(pa.Table.from_arrays(arrays, names))
 
     def get_column(self, name: str) -> Series:
-        series = self.__narwhals_namespace__()._series
+        series = self.__narwhals_classes__.series
         return series.from_native(self.native.column(name), name)
 
     def drop(self, columns: Sequence[str]) -> Self:
@@ -481,7 +476,7 @@ class ArrowDataFrame(
 
     def filter(self, predicate: NamedIR) -> ArrowDataFrame:
         mask: pc.Expression | ChunkedArrayAny
-        expr = self.__narwhals_namespace__()._expr
+        expr = self.__narwhals_classes__.expr
         resolved = expr.__new__(expr).dispatch(predicate.expr, self, predicate.name)
         if isinstance(resolved, Expr):
             mask = resolved.broadcast(len(self)).native

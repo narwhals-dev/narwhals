@@ -9,7 +9,7 @@ from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import PolarsNamespace as Namespace, explode_todo
+from narwhals._plan.polars.namespace import explode_todo
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -91,9 +91,6 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     __slots__ = ()
     version: ClassVar[Version] = Version.MAIN
     implementation: ClassVar = Implementation.POLARS
-
-    def __narwhals_namespace__(self) -> Namespace:
-        return Namespace()
 
     # NOTE: These get special treatment as they're hot paths
     _lazyframe: ClassVar = PolarsLazyFrame

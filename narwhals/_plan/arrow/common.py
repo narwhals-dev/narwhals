@@ -8,7 +8,7 @@ from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions import random_indices
 from narwhals._plan.arrow.guards import is_series
 from narwhals._typing_compat import TypeVar
-from narwhals._utils import Implementation, Version, _StoresNative
+from narwhals._utils import Implementation, _StoresNative
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -24,7 +24,6 @@ class ArrowFrameSeries(Generic[NativeT]):
     __slots__ = ("_native",)
     implementation: ClassVar = Implementation.PYARROW
     _native: NativeT
-    version: ClassVar[Version] = Version.MAIN
 
     # NOTE: Aliases to integrate with `@requires.backend_version`
     _backend_version = compat.BACKEND_VERSION

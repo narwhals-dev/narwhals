@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from narwhals._plan.arrow import DataFrame, Expr, LazyFrame, Scalar, Series, v1, v2
 
 
@@ -126,3 +128,30 @@ class ArrowClassesV2:
         from narwhals._plan.arrow.v2 import Series
 
         return Series
+
+
+_CLASSES: Final[
+    Mapping[Version, type[ArrowClasses | ArrowClassesV1 | ArrowClassesV2]]
+] = {Version.MAIN: ArrowClasses, Version.V1: ArrowClassesV1, Version.V2: ArrowClassesV2}
+
+
+class Versioned:
+    """Enforce specifying `version=...` for each subclass.
+
+    `Versioned` should be used to the left of any protocols in the bases.
+    """
+
+    __slots__ = ()
+    version: ClassVar[Version]
+    # TODO @dangotbanned: Fix this *properly* (likely by adding a generic base for each to inherit from)
+    if TYPE_CHECKING:
+
+        @property
+        def __narwhals_classes__(self) -> ArrowClasses:
+            return ArrowClasses()
+
+    def __init_subclass__(cls, *, version: Version, **kwds: Any) -> None:
+        super().__init_subclass__(**kwds)
+        cls.version = version
+        if not TYPE_CHECKING:
+            cls.__narwhals_classes__ = _CLASSES[version]()

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar
 import pyarrow as pa
 
 from narwhals._plan._version import into_version
+from narwhals._plan.arrow.classes import Versioned
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._utils import Implementation, Version, unstable
@@ -19,7 +20,7 @@ MAIN = Version.MAIN
 
 
 @unstable
-class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
+class ArrowLazyFrame(Versioned, CompliantLazyFrame[pa.Table], version=Version.MAIN):
     """Experiment, expect lots of changes.
 
     Representing with `pa.Table` is *an option*, but may only need for a subset of operations.
@@ -39,8 +40,6 @@ class ArrowLazyFrame(CompliantLazyFrame[pa.Table]):
 
     __slots__ = ("_input_schema", "_native")
     implementation: ClassVar = Implementation.PYARROW
-    version: ClassVar[Version] = Version.MAIN
-
     _native: pa.Table
     _input_schema: Schema | None
 
