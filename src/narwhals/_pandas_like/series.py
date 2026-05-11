@@ -404,7 +404,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         try:
             res = op(ser, other_native)
-        except TypeError:
+        except TypeError:  # pragma: no cover
             if (
                 op.__name__ == "add"
                 and self.dtype == String

@@ -694,7 +694,9 @@ def broadcast_series_to_index(
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
 
 
-def binary_string_sum_fallback(left: pd.Series, right: Any, pdx: Any) -> pd.Series:
+def binary_string_sum_fallback(  # pragma: no cover
+    left: pd.Series, right: Any, pdx: Any
+) -> pd.Series:
     # Workaround some upstream issues:
     # - https://github.com/pandas-dev/pandas/issues/64393
     # - https://github.com/pandas-dev/pandas/issues/65220
