@@ -159,7 +159,7 @@ class AggExpr:
             result = self.native_agg()(grouped[[*group_by._keys, *names]])
             impl = group_by.compliant._implementation
             backend_version = impl._backend_version()
-            if impl.is_pandas() and backend_version >= (3, 0):  # pragma: no cover
+            if impl.is_pandas() and backend_version < (3, 0):  # pragma: no cover
                 # NOTE: Keep `inplace=True` to avoid making a redundant copy.
                 result.set_index(group_by._keys, inplace=True)  # noqa: PD002
             else:
