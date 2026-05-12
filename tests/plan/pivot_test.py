@@ -183,7 +183,7 @@ def test_pivot_agg(
     dataframe: DataFrame,
 ) -> None:
     df = dataframe(data)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     dataframe.xfail(
         # TODO @dangotbanned: Add more values for `median`, like in
         # https://github.com/narwhals-dev/narwhals/blob/b3d8c7349bbf7ecb7f11ea590c334e12d5c1d43e/tests/plan/list_agg_test.py#L24-L34
@@ -218,7 +218,7 @@ def test_pivot_sort_columns(
     dataframe: DataFrame,
 ) -> None:
     df = dataframe(data_no_dups_unordered)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     values = ["foo", "bar"]
     result = df.pivot("on_lower", index="idx_1", values=values, sort_columns=sort_columns)
     assert result.columns == expected
@@ -261,7 +261,7 @@ def test_pivot_on_multiple_names(
     index = "idx_1"
     data_ = data_no_dups_unordered
     df = dataframe(data_)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     result = df.pivot(on, values=values, index=index)
     assert result.columns == expected
     assert_names_match_polars(data_, on, index, values, result_columns=result.columns)
@@ -303,7 +303,7 @@ def test_pivot_on_multiple_names_agg(
 ) -> None:
     index = "idx_1"
     df = dataframe(data)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     result = df.pivot(on, values=values, aggregate_function="min", index=index)
     assert result.columns == expected
     assert_names_match_polars(
@@ -314,7 +314,7 @@ def test_pivot_on_multiple_names_agg(
 def test_pivot_no_agg_duplicated(
     data: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     with pytest.raises((ValueError, NarwhalsError)):
         dataframe(data).pivot("on_lower", index="idx_1")
 
@@ -322,7 +322,7 @@ def test_pivot_no_agg_duplicated(
 def test_pivot_no_agg_no_duplicates(
     data_no_dups: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     result = dataframe(data_no_dups).pivot("on_lower", index="idx_1")
     expected = {
         "idx_1": [1, 2],
@@ -430,7 +430,7 @@ def test_pivot_implicit_index(
     data_no_dups: Data, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
     df = dataframe(data_no_dups)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     expected = {
         "idx_1": [1, 1, 2, 2],
         "bar": ["x", "y", "w", "z"],
@@ -445,7 +445,7 @@ def test_pivot_test_scores_1(
     scores: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
     df = dataframe(scores)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     expected = {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 58]}
     result = df.pivot("subject", index="name", values="test_1")
     assert_equal_data(result, expected)
@@ -459,7 +459,7 @@ def test_pivot_test_scores_2(
     scores: Data, request: pytest.FixtureRequest, dataframe: DataFrame
 ) -> None:
     df = dataframe(scores)
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     expected = {
         "name": ["Cady", "Karen"],
         "test_1_maths": [98, 61],
@@ -492,7 +492,7 @@ def test_pivot_aggregate(
     df = dataframe(
         {"a": [1, 1, 2, 2, 3], "b": ["a", "a", "b", "b", "b"], "c": [2, 4, None, 8, 10]}
     )
-    dataframe.xfail_pyarrow_pivot_too_old(request)
+    dataframe.xfail_eager_pivot_too_old(request)
     dataframe.xfail(
         # TODO @dangotbanned: Consider fixing this?
         # The `pandas` impl on `main` has the same issue

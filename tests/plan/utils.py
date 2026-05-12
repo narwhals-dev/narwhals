@@ -27,7 +27,11 @@ from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
 from narwhals._plan.compliant.typing import Native as NativeLazyFrame
 from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
 from narwhals._utils import Implementation, Version, qualified_type_name
-from tests.utils import PYARROW_VERSION, assert_equal_data as _assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    assert_equal_data as _assert_equal_data,
+)
 
 pytest.importorskip("pyarrow")
 
@@ -557,11 +561,13 @@ class Constructor(Generic[R_co]):
             request, self.is_polars(), "with_columns", raises=raises
         )
 
-    def xfail_pyarrow_pivot_too_old(self, request: FixtureRequest, /) -> None:
+    def xfail_eager_pivot_too_old(self, request: FixtureRequest, /) -> None:
+        """Fail either polars or pyarrow below the version(s) they introduced `pivot`."""
         self.xfail(
             request,
-            (self.is_pyarrow() and PYARROW_VERSION < (20, 0, 0)),
-            reason="pyarrow too old for `pivot` support",
+            (self.is_pyarrow() and PYARROW_VERSION < (20, 0, 0))
+            or (self.is_polars() and POLARS_VERSION < (1, 0, 0)),
+            reason=f"{self.identifier} too old for `pivot` support",
             raises=NotImplementedError,
         )
 
