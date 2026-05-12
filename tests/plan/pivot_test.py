@@ -342,6 +342,7 @@ def test_pivot_no_values(dataframe: DataFrame, request: pytest.FixtureRequest) -
         "N1": [1, 2, 2, 4, 2],
         "N2": [1, 2, 2, 4, 2],
     }
+    dataframe.xfail_eager_pivot_too_old(request)
     dataframe.xfail(
         request,
         dataframe.is_pyarrow(),
