@@ -37,6 +37,9 @@ DUNDER_ARRAY_SUPPORTS_COPY: Final = BACKEND_VERSION >= (0, 20, 29)
 JOIN_OUTER_RENAMED_TO_FULL: Final = BACKEND_VERSION >= (0, 20, 29)
 """https://github.com/pola-rs/polars/pull/16417"""
 
+SERIES_HAS_HAS_NULLS: Final = BACKEND_VERSION >= (0, 20, 30)
+"""https://github.com/pola-rs/polars/pull/16488"""
+
 MELT_RENAMED_TO_UNPIVOT: Final = BACKEND_VERSION >= (1, 0)
 """https://github.com/pola-rs/polars/pull/17095"""
 

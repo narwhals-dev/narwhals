@@ -184,9 +184,9 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         result = self.native.cast(dtype_to_native(dtype, self.version))
         return self._with_native(result)
 
-    # TODO @dangotbanned: `Series.has_nulls` compat (found at polars==0.20.19)
     def has_nulls(self) -> bool:
-        return self.native.has_nulls()
+        s = self.native
+        return s.has_nulls() if compat.SERIES_HAS_HAS_NULLS else s.has_validity()
 
     def is_in(self, other: Self) -> Self:
         return self._with_native(self.native.is_in(other.native))
