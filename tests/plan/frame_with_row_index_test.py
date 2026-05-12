@@ -8,6 +8,7 @@ import pytest
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
+from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
@@ -20,8 +21,6 @@ def test_with_row_index_eager(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1381
-# x12 NotImplementedError: `over(..., order_by=...)` requires `polars>=1.0.0`
 @pytest.mark.parametrize(
     ("order_by", "expected_index"),
     [
@@ -43,9 +42,17 @@ def test_with_row_index_by(
     dataframe: DataFrame,
     order_by: OneOrIterable[ColumnNameOrSelector],
     expected_index: list[int],
+    request: pytest.FixtureRequest,
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3289
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
+
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and POLARS_VERSION < (1, 0),
+        reason="polars needs `over(order_by=...)`",
+        raises=NotImplementedError,
+    )
     result = dataframe(data).with_row_index(name="index", order_by=order_by).sort("b")
     expected = {"index": expected_index, **data}
     assert_equal_data(result, expected)

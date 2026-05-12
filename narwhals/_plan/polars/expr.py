@@ -72,6 +72,17 @@ else:
         raise compat.too_old("linear_space", "1.21.0")
 
 
+# TODO @dangotbanned: (low-priority) Support without triggering
+# `over(..., order_by=...)` requires `polars>=1.0.0`
+def row_index(
+    name: str = "index", order_by: Sequence[str] = (), *, nulls_last: bool = False
+) -> pl.Expr:
+    expr = pl.int_range(pl.len())
+    if order_by:
+        expr = over(expr, order_by=order_by, nulls_last=nulls_last)
+    return expr.alias(name)
+
+
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     __slots__ = ("_native",)
     _native: pl.Expr
