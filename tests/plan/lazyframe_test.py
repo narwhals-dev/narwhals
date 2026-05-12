@@ -62,7 +62,7 @@ def assert_equal_schema(
     result: nwp.LazyFrame[pl.LazyFrame], expected: pl.LazyFrame
 ) -> None:
     actual_schema = result.collect_schema()
-    expected_schema = actual_schema.from_polars(expected.collect_schema())
+    expected_schema = actual_schema.from_polars(expected.collect().schema)
     assert len(actual_schema) == len(expected_schema)
     assert actual_schema == expected_schema
 
