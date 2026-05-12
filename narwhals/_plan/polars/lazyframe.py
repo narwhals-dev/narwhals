@@ -8,6 +8,7 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
+from narwhals._plan.polars.expr import over
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import explode_todo
 from narwhals._utils import Implementation, Version
@@ -250,7 +251,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     def with_row_index_by(self, plan: rp.MapFunction[rp.RowIndexBy]) -> PolarsLazyFrame:
         f = plan.function
         native = plan.input.evaluate(self).native
-        int_range = pl.int_range(pl.len()).over(order_by=f.order_by).alias(f.name)
+        int_range = over(pl.int_range(pl.len()), order_by=f.order_by).alias(f.name)
         return self._into_compliant(native.select(int_range, pl.all()))
 
     # TODO @dangotbanned: All require adding an `Expr` layer

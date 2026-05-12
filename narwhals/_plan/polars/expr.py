@@ -6,11 +6,13 @@ import polars as pl
 
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.expr import CompliantExpr
+from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from typing import TypeAlias
 
     from typing_extensions import Self
@@ -23,6 +25,42 @@ if TYPE_CHECKING:
 
 
 Incomplete: TypeAlias = Any
+
+if compat.OVER_RESPECTS_NULLS_LAST:
+    # NOTE: Allows all features, so no need to branch in any calls
+    def over(
+        self: pl.Expr,
+        *partition_by: pl.Expr | str,
+        order_by: Sequence[str] | None = None,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> pl.Expr:
+        return self.over(
+            *partition_by, order_by=order_by, descending=descending, nulls_last=nulls_last
+        )
+else:
+
+    def over(
+        self: pl.Expr,
+        *partition_by: pl.Expr | str,
+        order_by: Sequence[str] | None = None,
+        descending: bool = False,
+        nulls_last: bool = False,
+    ) -> pl.Expr:
+        if nulls_last:
+            raise compat.over_error("nulls_last")
+        options: dict[str, Any] = {}
+        if order_by:
+            if not compat.OVER_SUPPORTS_ORDER_BY:
+                raise compat.over_error("order_by_any")
+            options["order_by"] = order_by
+            if descending:
+                if not compat.OVER_SUPPORTS_DESCENDING:
+                    raise compat.over_error("descending")
+                options["descending"] = descending
+            if not partition_by and compat.OVER_WITHOUT_PARTITION_BY:
+                raise compat.over_error("order_by_only")
+        return self.over(*partition_by, **options)
 
 
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
