@@ -163,7 +163,7 @@ def too_old(code: LiteralString, version: LiteralString, /) -> NotImplementedErr
 if NULLS_LAST_ACCEPTS_MULTIPLE:
 
     def sort(self: SortMultipleOptions, by: Sequence[str], /) -> _SortOptions:
-        """Try to convert `self` into something the current version of polars suppurts.
+        """Try to convert `self` into something the current version of polars supports.
 
         [`extend_bool`] doesn't broadcast length 1 sequences, so we do it here.
 
