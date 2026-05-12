@@ -190,11 +190,11 @@ def rename(
 ) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
-        implementation._backend_version() >= (3,)
+        implementation._backend_version() < (3,)
     ):  # pragma: no cover
-        result = obj.rename(*args, **kwargs, inplace=False)
-    else:  # pragma: no cover
         result = obj.rename(*args, **kwargs, copy=False, inplace=False)
+    else:
+        result = obj.rename(*args, **kwargs)
     return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
@@ -708,7 +708,7 @@ def binary_string_sum_fallback(  # pragma: no cover
         return left + pa.scalar(right, type=pa.large_string())
     if isinstance(right, pdx.Series):
         right_dtype = right.dtype
-        if left_dtype_str == "object":  # pragma: no cover
+        if left_dtype_str == "object":
             # Only for pandas pre 3.0. Anything is better than `object`, so take RHS.
             return left.astype(right_dtype) + right
         if hasattr(left.values, "__arrow_array__") and hasattr(
@@ -722,8 +722,8 @@ def binary_string_sum_fallback(  # pragma: no cover
                 # https://github.com/pandas-dev/pandas/blob/b00d4f6710ff6c1c80319196657c31c2cf6c70ff/pandas/core/arrays/arrow/array.py#L1064-L1068
                 pd_pa_large_string = pd.ArrowDtype(pa.large_string())
                 return left.astype(pd_pa_large_string) + right.astype(pd_pa_large_string)
-        else:  # pragma: no cover
+        else:
             pass
         # Give precedence to the left-hand-side dtype.
         return left + right.astype(left_dtype)
-    return left + right  # pragma: no cover
+    return left + right
