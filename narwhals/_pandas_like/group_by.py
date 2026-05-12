@@ -157,7 +157,12 @@ class AggExpr:
             )
         elif self.is_last() or self.is_first() or self.is_any_value():
             result = self.native_agg()(grouped[[*group_by._keys, *names]])
-            result.set_index(group_by._keys, inplace=True)  # noqa: PD002
+            impl = group_by.compliant._implementation
+            if impl.is_pandas() and impl._backend_version() >= (3, 0):
+                result = result.set_index(group_by._keys)
+            else:  # pragma: no cover
+                # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+                result.set_index(group_by._keys, inplace=True)  # noqa: PD002
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(grouped[select])
@@ -269,7 +274,7 @@ class PandasLikeGroupBy(
         if set(self._native.index.names).intersection(self.compliant.columns):
             self._native = self._native.reset_index(drop=True)
 
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0912
         all_aggs_are_simple = True
         agg_exprs: list[AggExpr] = []
         order_by = ()
@@ -305,9 +310,13 @@ class PandasLikeGroupBy(
             raise empty_results_error()
         else:
             result = self._apply_aggs(grouped, exprs)
-        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result.reset_index(inplace=True)  # noqa: PD002
+
+        impl = self.compliant._implementation
+        if impl.is_pandas() and impl._backend_version() >= (3, 0):
+            result = result.reset_index()
+        else:  # pragma: no cover
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            result.reset_index(inplace=True)  # noqa: PD002
         return self._select_results(result, agg_exprs)
 
     def _select_results(

@@ -631,10 +631,12 @@ class PandasLikeDataFrame(
             for left_key, right_key in zip(left_on, right_on, strict=True)
             if right_key != left_key
         ]
+        if self._implementation.is_pandas() and self._backend_version >= (3, 0):
+            return result_native.drop(columns=extra)
+
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result_native.drop(columns=extra, inplace=True)  # noqa: PD002
-        return result_native
+        result_native.drop(columns=extra, inplace=True)  # noqa: PD002  # pragma: no cover
+        return result_native  # pragma: no cover
 
     def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
@@ -684,10 +686,12 @@ class PandasLikeDataFrame(
                 right_on=key_token,
                 suffixes=("", suffix),
             )
+            if self._implementation.is_pandas() and self._backend_version >= (3, 0):
+                return result_native.drop(columns=key_token)
+
             # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-            # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-            result_native.drop(columns=key_token, inplace=True)  # noqa: PD002
-            return result_native
+            result_native.drop(columns=key_token, inplace=True)  # noqa: PD002  # pragma: no cover
+            return result_native  # pragma: no cover
         return self.native.merge(other.native, how="cross", suffixes=("", suffix))
 
     def _join_semi(
@@ -732,10 +736,13 @@ class PandasLikeDataFrame(
             left_on=left_on,
             right_on=left_on,
         ).loc[lambda t: t[indicator_token] == "left_only"]
+
+        if self._implementation.is_pandas() and self._backend_version >= (3, 0):
+            return result_native.drop(columns=indicator_token)
+
         # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-        # This may need updating, depending on https://github.com/pandas-dev/pandas/pull/51466/files
-        result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002
-        return result_native
+        result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002  # pragma: no cover
+        return result_native  # pragma: no cover
 
     def _join_filter_rename(
         self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]

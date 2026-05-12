@@ -609,7 +609,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         return res_ser
 
     def fill_nan(self, value: float | None) -> Self:
-        if self._implementation.is_cudf() and (value is None):
+        impl = self._implementation
+        if impl.is_cudf() and (value is None):
             # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/3231
             msg = "`fill_nan(value=None)` is not support for CuDF backend"
             raise NotImplementedError(msg)
@@ -620,8 +621,11 @@ class PandasLikeSeries(EagerSeries[Any]):
         fill = s.array.dtype.na_value if value is None else value
         # If/when pandas exposes an API which distinguishes NaN vs null, use that.
         mask = s != s  # noqa: PLR0124
-        # Carefully use `inplace`, as `mask` isn't provided by the user.
-        mask.fillna(False, inplace=True)  # noqa: PD002
+        if impl.is_pandas() and impl._backend_version() >= (3, 0):
+            mask = mask.fillna(False)
+        else:  # pragma: no cover
+            # Carefully use `inplace`, as `mask` isn't provided by the user.
+            mask.fillna(False, inplace=True)  # noqa: PD002
         return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:

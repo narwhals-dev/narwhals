@@ -364,7 +364,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                     _agg = getattr(
                         grouped[[*partition_by, *aliases]], pandas_function_name
                     )(**pandas_kwargs)
-                _agg.reset_index(drop=True, inplace=True)
+                impl = self._implementation
+                if impl.is_pandas() and impl._backend_version() >= (3, 0):
+                    _agg = _agg.reset_index(drop=True)
+                else:  # pragma: no cover
+                    # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+                    _agg.reset_index(drop=True, inplace=True)
                 keys = list(partition_by)
                 res_native = df.native[keys].merge(_agg, on=keys)[list(aliases)]
             else:
