@@ -158,11 +158,12 @@ class AggExpr:
         elif self.is_last() or self.is_first() or self.is_any_value():
             result = self.native_agg()(grouped[[*group_by._keys, *names]])
             impl = group_by.compliant._implementation
-            if impl.is_pandas() and impl._backend_version() >= (3, 0):
-                result = result.set_index(group_by._keys)
-            else:  # pragma: no cover
+            backend_version = impl._backend_version()
+            if impl.is_pandas() and backend_version >= (3, 0):  # pragma: no cover
                 # NOTE: Keep `inplace=True` to avoid making a redundant copy.
                 result.set_index(group_by._keys, inplace=True)  # noqa: PD002
+            else:
+                result = result.set_index(group_by._keys)
         else:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(grouped[select])
@@ -312,11 +313,13 @@ class PandasLikeGroupBy(
             result = self._apply_aggs(grouped, exprs)
 
         impl = self.compliant._implementation
-        if impl.is_pandas() and impl._backend_version() >= (3, 0):
-            result = result.reset_index()
-        else:  # pragma: no cover
+        backend_version = impl._backend_version()
+        if impl.is_pandas() and backend_version < (3, 0):  # pragma: no cover
             # NOTE: Keep `inplace=True` to avoid making a redundant copy.
             result.reset_index(inplace=True)  # noqa: PD002
+        else:
+            result = result.reset_index()
+
         return self._select_results(result, agg_exprs)
 
     def _select_results(

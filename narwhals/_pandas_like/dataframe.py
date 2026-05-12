@@ -631,12 +631,13 @@ class PandasLikeDataFrame(
             for left_key, right_key in zip(left_on, right_on, strict=True)
             if right_key != left_key
         ]
-        if self._implementation.is_pandas() and self._backend_version >= (3, 0):
-            return result_native.drop(columns=extra)
+        impl = self._implementation
+        if impl.is_pandas() and impl._backend_version() < (3, 0):  # pragma: no cover
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            result_native.drop(columns=extra, inplace=True)  # noqa: PD002
+            return result_native
 
-        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-        result_native.drop(columns=extra, inplace=True)  # noqa: PD002  # pragma: no cover
-        return result_native  # pragma: no cover
+        return result_native.drop(columns=extra)
 
     def _join_full(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
@@ -671,11 +672,11 @@ class PandasLikeDataFrame(
         )
 
     def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
-        implementation = self._implementation
-        backend_version = self._backend_version
-        if (implementation.is_modin() or implementation.is_cudf()) or (
-            implementation.is_pandas() and backend_version < (1, 4)
-        ):
+        impl = self._implementation
+        backend_version = impl._backend_version()
+        if (impl.is_modin() or impl.is_cudf()) or (
+            impl.is_pandas() and backend_version < (1, 4)
+        ):  # pragma: no cover
             key_token = generate_temporary_column_name(
                 n_bytes=8, columns=(*self.columns, *other.columns)
             )
@@ -686,12 +687,12 @@ class PandasLikeDataFrame(
                 right_on=key_token,
                 suffixes=("", suffix),
             )
-            if self._implementation.is_pandas() and self._backend_version >= (3, 0):
-                return result_native.drop(columns=key_token)
+            if impl.is_pandas():
+                # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+                result_native.drop(columns=key_token, inplace=True)  # noqa: PD002
+                return result_native
+            return result_native.drop(columns=key_token)
 
-            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-            result_native.drop(columns=key_token, inplace=True)  # noqa: PD002  # pragma: no cover
-            return result_native  # pragma: no cover
         return self.native.merge(other.native, how="cross", suffixes=("", suffix))
 
     def _join_semi(
@@ -709,9 +710,9 @@ class PandasLikeDataFrame(
     def _join_anti(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> pd.DataFrame:
-        implementation = self._implementation
+        impl = self._implementation
 
-        if implementation.is_cudf():
+        if impl.is_cudf():
             return self.native.merge(
                 other.native.dropna(subset=left_on, how="any"),
                 how="leftanti",
@@ -731,18 +732,18 @@ class PandasLikeDataFrame(
         result_native = self.native.merge(
             other_native.dropna(subset=left_on, how="any"),
             # TODO(FBruzzesi): See https://github.com/modin-project/modin/issues/7384
-            how="left" if implementation.is_pandas() else "outer",
+            how="left" if impl.is_pandas() else "outer",
             indicator=indicator_token,
             left_on=left_on,
             right_on=left_on,
         ).loc[lambda t: t[indicator_token] == "left_only"]
 
-        if self._implementation.is_pandas() and self._backend_version >= (3, 0):
-            return result_native.drop(columns=indicator_token)
+        if impl.is_pandas() and impl._backend_version() < (3, 0):  # pragma: no cover
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002
+            return result_native
 
-        # NOTE: Keep `inplace=True` to avoid making a redundant copy.
-        result_native.drop(columns=indicator_token, inplace=True)  # noqa: PD002  # pragma: no cover
-        return result_native  # pragma: no cover
+        return result_native.drop(columns=indicator_token)
 
     def _join_filter_rename(
         self, other: Self, columns_to_select: list[str], columns_mapping: dict[str, str]

@@ -621,11 +621,13 @@ class PandasLikeSeries(EagerSeries[Any]):
         fill = s.array.dtype.na_value if value is None else value
         # If/when pandas exposes an API which distinguishes NaN vs null, use that.
         mask = s != s  # noqa: PLR0124
-        if impl.is_pandas() and impl._backend_version() >= (3, 0):
-            mask = mask.fillna(False)
-        else:  # pragma: no cover
+        backend_version = impl._backend_version()
+        if impl.is_pandas() and backend_version < (3, 0):  # pragma: no cover
             # Carefully use `inplace`, as `mask` isn't provided by the user.
             mask.fillna(False, inplace=True)  # noqa: PD002
+        else:
+            mask = mask.fillna(False)
+
         return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:
