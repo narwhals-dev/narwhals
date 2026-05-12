@@ -63,6 +63,15 @@ else:
         return self.over(*partition_by, **options)
 
 
+if compat.HAS_LINEAR_SPACE or TYPE_CHECKING:
+    # NOTE: Has some pretty intricate `@overload`s that can be preserved this way
+    linear_space = pl.linear_space
+else:
+
+    def linear_space(*_: Any, **__: Any) -> Any:
+        raise compat.too_old("linear_space", "1.21.0")
+
+
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     __slots__ = ("_native",)
     _native: pl.Expr

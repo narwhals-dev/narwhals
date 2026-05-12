@@ -13,6 +13,8 @@ from narwhals._utils import Implementation
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from typing_extensions import LiteralString
+
 BACKEND_VERSION: Final = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
@@ -59,6 +61,9 @@ IS_NAN_NUMERIC_PROPAGATES_NULLS: Final = BACKEND_VERSION >= (1, 18)
 
 MIN_PERIODS_RENAMED_TO_MIN_SAMPLES: Final = BACKEND_VERSION >= (1, 21)
 """https://github.com/pola-rs/polars/pull/20850"""
+
+HAS_LINEAR_SPACE: Final = BACKEND_VERSION >= (1, 21)
+"""https://github.com/pola-rs/polars/pull/20678"""
 
 PIVOT_SUPPORTS_ON_COLUMNS: Final = BACKEND_VERSION >= (1, 36)
 """https://github.com/pola-rs/polars/pull/25016"""
@@ -122,5 +127,16 @@ _OVER_ERRORS: Final[Mapping[_OverFeature, tuple[str, str]]] = {
 
 def over_error(feature: _OverFeature, /) -> NotImplementedError:
     args, version = _OVER_ERRORS[feature]
-    msg = f"`over({args})` requires `polars>={version}`"
-    return NotImplementedError(msg)
+    return too_old(f"over({args})", version)
+
+
+def too_old(code: LiteralString, version: LiteralString, /) -> NotImplementedError:
+    """Create an error for a version of polars that's `too_old`.
+
+    >>> too_old("DataFrame.pivot(...)", "1.0.0")
+    NotImplementedError('`DataFrame.pivot(...)` requires `polars>=1.0.0`')
+
+    Tip:
+        Consider adding a layer above this for anything with complexity (see `over_error`)
+    """
+    return NotImplementedError(f"`{code}` requires `polars>={version}`")

@@ -10,6 +10,7 @@ from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
+from narwhals._plan.polars.expr import linear_space
 from narwhals._plan.polars.namespace import (
     dtype_from_native,
     dtype_to_native,
@@ -443,7 +444,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> Self:
-        native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
+        native = linear_space(start, end, num_samples, closed=closed, eager=True)
         return cls.from_native(native, name)
 
     @property
