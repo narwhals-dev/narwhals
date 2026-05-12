@@ -80,6 +80,8 @@ class SortMultipleOptions(Immutable):
         nulls_last = self._ensure_single_nulls_last("pyarrow")
         return sort(*by, descending=self.descending, nulls_last=nulls_last)
 
+    # TODO @dangotbanned: Use `_ensure_single_nulls_last` for old `polars` (found at polars==0.20.19)
+    # https://github.com/narwhals-dev/narwhals/actions/runs/25729399118/job/75550427567?pr=2572#step:9:9427
     def to_polars(self, by: Sequence[str]) -> _SortOptions:
         """[`extend_bool`] doesn't broadcast length 1 sequences, so we do it here.
 
