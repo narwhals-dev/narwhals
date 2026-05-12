@@ -191,22 +191,29 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def is_in(self, other: Self) -> Self:
         return self._with_native(self.native.is_in(other.native))
 
-    def is_nan(self) -> Self:
-        result = self.native.is_nan()
-        if not compat.IS_NAN_NUMERIC_PROPAGATES_NULLS:  # pragma: no cover
-            s = self.native
-            result = (
-                s.to_frame()
-                .select(pl.when(pl.col(s.name).is_not_null()).then(result))
-                .to_series()
-            )
-        return self._with_native(result)
+    def _preserve_nulls(self, after: pl.Expr | pl.Series, /) -> Self:  # pragma: no cover
+        """Propagate nulls positionally from `self.native` to `after`."""
+        s = self.native
+        expr = pl.when(pl.col(s.name).is_not_null()).then(after)
+        return self._with_native(s.to_frame().select(expr).to_series())
+
+    if compat.IS_NAN_NUMERIC_PRESERVES_NULLS:
+
+        def is_nan(self) -> Self:
+            return self._with_native(self.native.is_nan())
+
+        def is_not_nan(self) -> Self:
+            return self._with_native(self.native.is_not_nan())
+    else:  # pragma: no cover
+
+        def is_nan(self) -> Self:
+            return self._preserve_nulls(self.native.is_nan())
+
+        def is_not_nan(self) -> Self:
+            return self._preserve_nulls(self.native.is_not_nan())
 
     def is_null(self) -> Self:
         return self._with_native(self.native.is_null())
-
-    def is_not_nan(self) -> Self:
-        return self._with_native(self.native.is_not_nan())
 
     def is_not_null(self) -> Self:
         return self._with_native(self.native.is_not_null())
