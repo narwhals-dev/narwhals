@@ -6,8 +6,10 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+import narwhals.stable.v2 as nw_v2
 from narwhals.dependencies import is_into_series
 from narwhals.stable.v1.dependencies import is_into_series as v1_is_into_series
+from narwhals.stable.v2.dependencies import is_into_series as v2_is_into_series
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -34,15 +36,23 @@ def test_is_into_series(constructor_eager: ConstructorEager) -> None:
     native_frame = constructor_eager(data)
     nw_series = nw.from_native(native_frame)["a"]
     nw_v1_series = nw_v1.from_native(native_frame)["a"]
+    nw_v2_series = nw_v2.from_native(native_frame)["a"]
     native_series = nw_series.to_native()
 
     assert is_into_series(native_series)
     assert is_into_series(nw_series)
     assert is_into_series(nw_v1_series)
+    assert is_into_series(nw_v2_series)
 
     assert v1_is_into_series(native_series)
     assert not v1_is_into_series(nw_series)
     assert v1_is_into_series(nw_v1_series)
+    assert not v1_is_into_series(nw_v2_series)
+
+    assert v2_is_into_series(native_series)
+    assert not v2_is_into_series(nw_series)
+    assert not v2_is_into_series(nw_v1_series)
+    assert v2_is_into_series(nw_v2_series)
 
 
 def test_is_into_series_other() -> None:
@@ -56,3 +66,7 @@ def test_is_into_series_other() -> None:
     assert v1_is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
     assert not v1_is_into_series(np.array([1, 2, 3]))
     assert not v1_is_into_series([1, 2, 3])
+
+    assert v2_is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
+    assert not v2_is_into_series(np.array([1, 2, 3]))
+    assert not v2_is_into_series([1, 2, 3])

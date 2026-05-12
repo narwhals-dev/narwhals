@@ -6,8 +6,10 @@ import pytest
 
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
+import narwhals.stable.v2 as nw_v2
 from narwhals.dependencies import is_into_dataframe
 from narwhals.stable.v1.dependencies import is_into_dataframe as v1_is_into_dataframe
+from narwhals.stable.v2.dependencies import is_into_dataframe as v2_is_into_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -38,6 +40,7 @@ def test_is_into_dataframe(constructor: Constructor) -> None:
     native_frame = constructor(data)
     nw_frame = nw.from_native(native_frame)
     nw_v1_frame = nw_v1.from_native(native_frame)
+    nw_v2_frame = nw_v2.from_native(native_frame)
 
     result = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
     assert is_into_dataframe(native_frame) == result
@@ -46,9 +49,17 @@ def test_is_into_dataframe(constructor: Constructor) -> None:
     result_v1 = any(x in str(constructor) for x in V1_INTO_DATAFRAMES)
     assert v1_is_into_dataframe(native_frame) == result_v1
     assert v1_is_into_dataframe(nw_v1_frame) == result_v1
+    assert v1_is_into_dataframe(nw_v2_frame) is False
+
+    result_v2 = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
+    assert v2_is_into_dataframe(native_frame) == result_v2
+    assert v2_is_into_dataframe(nw_v2_frame) == result_v2
+    assert v2_is_into_dataframe(nw_v1_frame) is False
 
     assert is_into_dataframe(nw_v1_frame) == result_v1
+    assert is_into_dataframe(nw_v2_frame) == result_v2
     assert not v1_is_into_dataframe(nw_frame)
+    assert not v2_is_into_dataframe(nw_frame)
 
 
 def test_is_into_dataframe_other() -> None:
@@ -62,3 +73,7 @@ def test_is_into_dataframe_other() -> None:
     assert v1_is_into_dataframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
     assert not v1_is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v1_is_into_dataframe(data)
+
+    assert v2_is_into_dataframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert not v2_is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
+    assert not v2_is_into_dataframe(data)
