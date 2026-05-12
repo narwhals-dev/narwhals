@@ -59,6 +59,7 @@ def test_load_plugin_invalid() -> None:
         load_plugin("i dont exist")
 
 
+# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1379
 def test_plugin_is_imported(plugin: BuiltinAny) -> None:
     assert not plugin.is_imported()
     manager().import_modules(plugin.name)
@@ -67,6 +68,7 @@ def test_plugin_is_imported(plugin: BuiltinAny) -> None:
     assert manager().plugin(plugin.name).is_imported()
 
 
+# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1378
 def test_plugin_can_import(plugin: BuiltinAny) -> None:
     assert not plugin.is_imported()
     assert plugin.can_import()
@@ -91,6 +93,7 @@ def test_plugin_manager_importable() -> None:
         assert plug_man.plugin(name).is_imported()
 
 
+# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1377
 def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
     plug_man = manager()
     name = plugin.name

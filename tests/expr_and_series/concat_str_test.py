@@ -106,6 +106,7 @@ def test_pyarrow_string_type(
     assert expected_function(result.field("store_item").type)
 
 
+# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1395
 @pytest.mark.skipif(
     PANDAS_VERSION < (2, 2), reason='"add" was not implemented yet for large-string'
 )

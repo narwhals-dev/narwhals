@@ -192,6 +192,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(self.native.is_in(other.native))
 
     # NOTE: Needs compat
+    # https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1393
     # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L364-L372
     def is_nan(self) -> Self:
         if compat.IS_NAN_NUMERIC_PROPAGATES_NULLS:

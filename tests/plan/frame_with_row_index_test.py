@@ -20,6 +20,8 @@ def test_with_row_index_eager(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
+# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1381
+# x12 NotImplementedError: `over(..., order_by=...)` requires `polars>=1.0.0`
 @pytest.mark.parametrize(
     ("order_by", "expected_index"),
     [
