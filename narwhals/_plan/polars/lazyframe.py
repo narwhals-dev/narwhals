@@ -8,10 +8,9 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
-from narwhals._plan.polars import compat
 from narwhals._plan.polars.expr import over
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import explode_todo
+from narwhals._plan.polars.namespace import collect_schema, explode_todo
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -28,13 +27,6 @@ if TYPE_CHECKING:
     from narwhals._typing import IntoBackend
     from narwhals.schema import Schema
     from narwhals.typing import EagerAllowed
-
-if compat.LAZYFRAME_HAS_COLLECT_SCHEMA or TYPE_CHECKING:
-    collect_schema = pl.LazyFrame.collect_schema
-else:
-
-    def collect_schema(self: pl.LazyFrame) -> pl.Schema:
-        return self.schema
 
 
 class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
