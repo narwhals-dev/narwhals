@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias
+from typing import TYPE_CHECKING, Final, Literal, TypeAlias, TypedDict
 
 from narwhals._polars.utils import (
     SERIES_ACCEPTS_PD_INDEX as SERIES_ACCEPTS_PD_INDEX,  # noqa: PLC0414
@@ -11,9 +11,19 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from typing_extensions import LiteralString
+
+    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.typing import Seq
+
+    # TODO @dangotbanned: Replace with `dict[Literal["descending", "nulls_last"], Seq[bool]]` after bumping mypy
+    # to include https://github.com/python/mypy/pull/20416
+    class _SortOptions(TypedDict):
+        descending: bool | Seq[bool]
+        nulls_last: bool | Seq[bool]
+
 
 BACKEND_VERSION: Final = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
@@ -39,6 +49,9 @@ JOIN_OUTER_RENAMED_TO_FULL: Final = BACKEND_VERSION >= (0, 20, 29)
 
 SERIES_HAS_HAS_NULLS: Final = BACKEND_VERSION >= (0, 20, 30)
 """https://github.com/pola-rs/polars/pull/16488"""
+
+NULLS_LAST_ACCEPTS_MULTIPLE: Final = BACKEND_VERSION >= (0, 20, 31)
+"""https://github.com/pola-rs/polars/pull/16639"""
 
 MELT_RENAMED_TO_UNPIVOT: Final = BACKEND_VERSION >= (1, 0)
 """https://github.com/pola-rs/polars/pull/17095"""
@@ -145,3 +158,30 @@ def too_old(code: LiteralString, version: LiteralString, /) -> NotImplementedErr
         Consider adding a layer above this for anything with complexity (see `over_error`)
     """
     return NotImplementedError(f"`{code}` requires `polars>={version}`")
+
+
+if NULLS_LAST_ACCEPTS_MULTIPLE:
+
+    def sort(self: SortMultipleOptions, by: Sequence[str], /) -> _SortOptions:
+        """Try to convert `self` into something the current version of polars suppurts.
+
+        [`extend_bool`] doesn't broadcast length 1 sequences, so we do it here.
+
+        [`extend_bool`]: https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
+        """
+        desc, nulls = self.descending, self.nulls_last
+        len_by = len(by)
+        if len_by != 1:
+            desc = desc if len(desc) != 1 else desc * len_by
+            nulls = nulls if len(nulls) != 1 else nulls * len_by
+        return {"descending": desc, "nulls_last": nulls}
+else:
+
+    def sort(self: SortMultipleOptions, by: Sequence[str], /) -> _SortOptions:
+        desc, nulls = self.descending, self.nulls_last
+        desc = desc if len(desc) != 1 else desc * len(by)
+        first = nulls[0]
+        if len(nulls) != 1 and any(x != first for x in nulls[1:]):
+            msg = "nulls_last=(..., )"
+            raise too_old(msg, "0.20.31")
+        return {"descending": desc, "nulls_last": first}

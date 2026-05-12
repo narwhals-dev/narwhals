@@ -8,6 +8,7 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
+from narwhals._plan.polars import compat
 from narwhals._plan.polars.expr import over
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import collect_schema, explode_todo
@@ -192,7 +193,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     def sort(self, plan: rp.Sort, /) -> PolarsLazyFrame:
         by = plan.by
         return self._into_compliant(
-            plan.input.evaluate(self).native.sort(by, **plan.options.to_polars(by))
+            plan.input.evaluate(self).native.sort(by, **compat.sort(plan.options, by))
         )
 
     def unique(self, plan: rp.Unique) -> PolarsLazyFrame:

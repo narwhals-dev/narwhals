@@ -259,7 +259,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.from_native(self.native.slice(offset, length))
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
-        return self.from_native(self.native.sort(by, **options.to_polars(by)))
+        return self.from_native(self.native.sort(by, **compat.sort(options, by)))
 
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> Mapping[str, Series]: ...
