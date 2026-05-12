@@ -40,6 +40,8 @@ JOIN_OUTER_RENAMED_TO_FULL: Final = BACKEND_VERSION >= (0, 20, 29)
 MELT_RENAMED_TO_UNPIVOT: Final = BACKEND_VERSION >= (1, 0)
 """https://github.com/pola-rs/polars/pull/17095"""
 
+LAZYFRAME_HAS_COLLECT_SCHEMA: Final = BACKEND_VERSION >= (1, 0)
+
 CONSTRUCTOR_ACCEPTS_PYCAPSULE: Final = BACKEND_VERSION >= (1, 3)
 """https://github.com/pola-rs/polars/pull/17693"""
 
