@@ -11,12 +11,13 @@ from tests.utils import PANDAS_VERSION
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
+from collections.abc import Callable
 from pathlib import Path
 
 import polars as pl
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
     from typing import TypeAlias
 
     from narwhals._typing import BackendName
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 
 IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
-IntoKwds: TypeAlias = "dict[str, Any] | Callable[[], dict[str, Any]]"
+IntoKwds: TypeAlias = dict[str, Any] | Callable[[], dict[str, Any]]
 """Keyword-arguments, or a callback that returns them."""
 
 
@@ -186,7 +187,7 @@ def test_scan_csv(csv_path: FileSource, backend: BackendName) -> None:
 @scan_backend
 def test_read_parquet_schema(parquet_path: FileSource, backend: BackendName) -> None:
     schema = nwp.read_parquet_schema(parquet_path, backend=backend)
-    expected = pl.scan_parquet(Path(parquet_path)).collect_schema()
+    expected = pl.scan_parquet(Path(parquet_path)).collect().schema
     result = schema.to_polars()
     assert result == expected
 
@@ -194,7 +195,7 @@ def test_read_parquet_schema(parquet_path: FileSource, backend: BackendName) -> 
 @scan_backend
 def test_read_csv_schema(csv_path: FileSource, backend: BackendName) -> None:
     schema = nwp.read_csv_schema(csv_path, backend=backend)
-    expected = pl.scan_csv(Path(csv_path)).collect_schema()
+    expected = pl.scan_csv(Path(csv_path)).collect().schema
     result = schema.to_polars()
     assert result == expected
 
@@ -210,6 +211,6 @@ def test_read_csv_schema_kwargs_pyarrow(
 
     convert = csv.ConvertOptions(include_columns=include_columns)
     schema = nwp.read_csv_schema(csv_path, backend="pyarrow", convert_options=convert)
-    expected = pl.scan_csv(csv_path).select(include_columns).collect_schema()
+    expected = pl.scan_csv(csv_path).select(include_columns).collect().schema
     result = schema.to_polars()
     assert result == expected
