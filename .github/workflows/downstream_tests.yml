@@ -404,6 +404,8 @@ jobs:
       - name: install-formulaic-dev
         run: |
           cd formulaic
+          # Temporary pin until it's addressed upstream.
+          hatch run uv pip install "pandas<3"
           hatch run uv pip install -e ".[arrow,calculus]"
       - name: install-narwhals-dev
         run: |
@@ -448,6 +450,8 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
+          # Temporary pin to get CI green
+          uv pip install "pandas<3"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
