@@ -16,6 +16,7 @@ from narwhals.exceptions import (
 )
 from tests.plan.utils import (
     DataFrame,
+    Eager,
     Series,
     assert_equal_data,
     assert_equal_series,
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from _pytest.fixtures import TopRequest  # `pytest.FixtureRequest.node` returns `Any`
 
     from narwhals._plan.typing import ColumnNameOrSelector, IntoExpr, OneOrIterable
-    from narwhals.typing import EagerAllowed, PythonLiteral
+    from narwhals.typing import PythonLiteral
     from tests.conftest import Data
 
 
@@ -761,7 +762,7 @@ def test_dataframe_iter_columns(data_small: Data, dataframe: DataFrame) -> None:
     assert_equal_data(df, result)
 
 
-def test_dataframe_from_dict_misc(data_small: Data, eager: EagerAllowed) -> None:
+def test_dataframe_from_dict_misc(data_small: Data, eager: Eager) -> None:
     items = iter(data_small.items())
     name, values = next(items)
     mapping: dict[str, Any] = {
@@ -835,7 +836,7 @@ def test_dataframe_to_struct(data_small_af: Data, dataframe: DataFrame) -> None:
 
 
 # TODO @dangotbanned: Split this up
-def test_series_misc(eager: EagerAllowed) -> None:
+def test_series_misc(eager: Eager) -> None:
     values = [1.0, None, 7.1, float("nan"), 4.9, 12.0, 1.1, float("nan"), 0.2, None]
     name = "ser"
     ser = nwp.Series.from_iterable(values, name=name, dtype=nw.Float64, backend=eager)
@@ -867,7 +868,7 @@ def test_series_misc(eager: EagerAllowed) -> None:
     assert len(list(ser)) == len(values)
 
 
-def test_series_sort(eager: EagerAllowed) -> None:
+def test_series_sort(eager: Eager) -> None:
     ser = nwp.Series.from_iterable([1.0, 7.1, None, 4.9], backend=eager)
     assert_equal_series(ser.sort(), [None, 1.0, 4.9, 7.1], "")
     assert_equal_series(ser.sort(nulls_last=True), [1.0, 4.9, 7.1, None], "")
@@ -877,7 +878,7 @@ def test_series_sort(eager: EagerAllowed) -> None:
     )
 
 
-def test_series_cast(eager: EagerAllowed) -> None:
+def test_series_cast(eager: Eager) -> None:
     ser = nwp.int_range(10, step=2, eager=eager, dtype=nw.Int64)
     assert ser.dtype == nw.Int64
     ser_float = ser.cast(nw.Float64)

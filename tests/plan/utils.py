@@ -50,15 +50,9 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, ReadOnly
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
-    from narwhals._typing import BackendName
+    from narwhals._typing import BackendName, _EagerAllowed, _LazyAllowed
     from narwhals.schema import Schema
-    from narwhals.typing import (
-        EagerAllowed,
-        IntoBackend,
-        IntoDType,
-        IntoSchema,
-        LazyAllowed,
-    )
+    from narwhals.typing import IntoBackend, IntoDType, IntoSchema
 
     if sys.version_info >= (3, 11):
         _Flags: TypeAlias = "int | re.RegexFlag"
@@ -315,10 +309,10 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
     implementation: ClassVar[Implementation] = Implementation.UNKNOWN
     """Required for internal backends, plugins use the default `UNKNOWN`."""
 
-    backend_eager: ClassVar[IntoBackend[EagerAllowed]]
+    backend_eager: ClassVar[IntoBackend[Eager]]
     """Argument passed to `backend` or `eager` for `DataFrame`, `Series` constructors."""
 
-    backend_lazy: ClassVar[IntoBackend[LazyAllowed]]
+    backend_lazy: ClassVar[IntoBackend[Lazy]]
     """Argument passed to `backend` for `LazyFrame` constructors."""
 
     supports: ClassVar[SupportProfile]
@@ -580,6 +574,16 @@ DataFrame: TypeAlias = Constructor[nwp.DataFrame[Any, Any]]
 
 Series: TypeAlias = Constructor[nwp.Series[Any]]
 """The type of the `series` fixture."""
+
+
+Eager: TypeAlias = "_EagerAllowed"
+"""The type of the `eager` fixture."""
+
+EagerOrFalse: TypeAlias = "Eager | Literal[False]"
+"""The type of the `eager_or_false` fixture."""
+
+Lazy: TypeAlias = "_LazyAllowed"
+"""The type of the `lazy` fixture."""
 
 
 class PolarsBackend(

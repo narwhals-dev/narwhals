@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data
+from tests.plan.utils import Eager, Lazy, assert_equal_data
 from tests.utils import PANDAS_VERSION
 
 pytest.importorskip("polars")
@@ -19,9 +19,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
     from typing import TypeAlias
 
-    from narwhals._typing import BackendName, EagerAllowed, _LazyOnly
+    from narwhals._typing import BackendName
     from narwhals.typing import FileSource
     from tests.conftest import Data
+
 
 IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
 IntoKwds: TypeAlias = "dict[str, Any] | Callable[[], dict[str, Any]]"
@@ -112,7 +113,7 @@ def assert_equal_eager(result: nwp.DataFrame[Any], expected: Data) -> None:
     assert isinstance(result, nwp.DataFrame)
 
 
-def test_read_csv(data: Data, csv_path: FileSource, eager: EagerAllowed) -> None:
+def test_read_csv(data: Data, csv_path: FileSource, eager: Eager) -> None:
     assert_equal_eager(nwp.read_csv(csv_path, backend=eager), data)
 
 
@@ -120,20 +121,20 @@ def test_read_csv(data: Data, csv_path: FileSource, eager: EagerAllowed) -> None
     ("backend", "into_kwds"), [param_pandas_import, ("pyarrow", pyarrow_read_csv_kwds)]
 )
 def test_read_csv_kwargs(
-    data: Data, csv_path: FileSource, backend: EagerAllowed, into_kwds: IntoKwds
+    data: Data, csv_path: FileSource, backend: Eager, into_kwds: IntoKwds
 ) -> None:
     kwds = _into_kwds(into_kwds)
     assert_equal_eager(nwp.read_csv(csv_path, backend=backend, **kwds), data)
 
 
 @lazy_core_backend
-def test_read_csv_raise_with_lazy(backend: _LazyOnly) -> None:
+def test_read_csv_raise_with_lazy(backend: Lazy) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
-        nwp.read_csv("unused.csv", backend=backend)  # type: ignore[call-overload]
+        nwp.read_csv("unused.csv", backend=backend)  # type: ignore[arg-type]
 
 
-def test_read_parquet(data: Data, parquet_path: FileSource, eager: EagerAllowed) -> None:
+def test_read_parquet(data: Data, parquet_path: FileSource, eager: Eager) -> None:
     assert_equal_eager(nwp.read_parquet(parquet_path, backend=eager), data)
 
 
@@ -145,17 +146,17 @@ def test_read_parquet(data: Data, parquet_path: FileSource, eager: EagerAllowed)
     ],
 )
 def test_read_parquet_kwargs(
-    data: Data, parquet_path: FileSource, backend: EagerAllowed, into_kwds: IntoKwds
+    data: Data, parquet_path: FileSource, backend: Eager, into_kwds: IntoKwds
 ) -> None:
     kwds = _into_kwds(into_kwds)
     assert_equal_eager(nwp.read_parquet(parquet_path, backend=backend, **kwds), data)
 
 
 @lazy_core_backend
-def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
+def test_read_parquet_raise_with_lazy(backend: Lazy) -> None:
     pytest.importorskip(backend)
     with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
-        nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[call-overload]
+        nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[arg-type]
 
 
 # TODO @dangotbanned: Transform steps, change the schema

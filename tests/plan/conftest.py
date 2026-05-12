@@ -10,11 +10,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import LiteralString
 
-    from narwhals.typing import EagerAllowed, LazyAllowed
     from tests.plan.utils import (
         ConstructorFixtureName,
         DataFrame,
+        Eager,
+        EagerOrFalse,
         Identifier,
+        Lazy,
         LazyFrame,
         Series,
         TestBackendAny,
@@ -27,11 +29,11 @@ if TYPE_CHECKING:
     @pytest.fixture
     def series() -> Series: ...
     @pytest.fixture
-    def eager() -> EagerAllowed: ...
+    def eager() -> Eager: ...
     @pytest.fixture
-    def eager_or_false() -> EagerAllowed | Literal[False]: ...
+    def eager_or_false() -> EagerOrFalse: ...
     @pytest.fixture
-    def lazy() -> LazyAllowed: ...
+    def lazy() -> Lazy: ...
 
 
 _MAIN_DEFAULT_CONSTRUCTORS = (
