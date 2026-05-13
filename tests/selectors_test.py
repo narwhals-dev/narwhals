@@ -207,6 +207,10 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
         (ncs.boolean() & True, ["d"]),
         (ncs.boolean() | True, ["d"]),
         (ncs.numeric() - 1, ["a", "c"]),
+        (ncs.numeric() ^ ncs.boolean(), ["a", "c", "d"]),
+        (ncs.numeric() ^ ncs.by_dtype(nw.Int64), ["c"]),
+        (ncs.by_dtype(nw.Int64) ^ ncs.numeric(), ["c"]),
+        (ncs.numeric() ^ ncs.numeric(), []),
         (ncs.all(), ["a", "b", "c", "d"]),
     ],
 )
@@ -247,12 +251,19 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         df.select(1 | ncs.numeric())
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & ncs.numeric())
+    with pytest.raises((NotImplementedError, TypeError, ValueError)):
+        df.select(1 ^ ncs.numeric())
 
     with pytest.raises(
         TypeError,
         match=re.escape("unsupported operand type(s) for op: ('Selector' + 'Selector')"),
     ):
         df.select(ncs.boolean() + ncs.numeric())
+
+    with pytest.raises(
+        TypeError, match=re.escape("unsupported operand type(s) for op: ('Selector' ^ ")
+    ):
+        df.select(ncs.boolean() ^ 1)
 
 
 @pytest.mark.skipif(is_windows(), reason="windows is what it is")
