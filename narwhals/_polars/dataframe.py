@@ -486,7 +486,13 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 elif is_index_selector(columns):
                     if is_slice_index(columns) or is_range(columns):
                         native = native.select(
-                            self.columns[slice(columns.start, columns.stop, columns.step)]
+                            self.columns[
+                                slice(
+                                    cast("int | None", columns.start),
+                                    cast("int | None", columns.stop),
+                                    cast("int | None", columns.step),
+                                )
+                            ]
                         )
                     # NOTE: `mypy` loses track of `PolarsSeries` when `is_compliant_series` is used here
                     # `pyright` is fine
