@@ -409,7 +409,10 @@ def test_select_positional_iterable(
     dataframe: DataFrame, into_exprs: Iterable[IntoExpr], expected: Data
 ) -> None:
     data = {"one": ["A", "B", "A"], "two": [1, 2, 3], "three": [4, 5, 6]}
-    result = dataframe(data).select(*into_exprs)
+    result = dataframe(
+        data,
+        schema=nw.Schema({"one": nw.String(), "two": nw.Int64(), "three": nw.Int32()}),
+    ).select(*into_exprs)
     assert_equal_data(result, expected)
 
 
@@ -836,10 +839,10 @@ def test_dataframe_to_struct(data_small_af: Data, dataframe: DataFrame) -> None:
 
 
 # TODO @dangotbanned: Split this up
-def test_series_misc(eager: Eager) -> None:
+def test_series_misc(series: Series) -> None:
     values = [1.0, None, 7.1, float("nan"), 4.9, 12.0, 1.1, float("nan"), 0.2, None]
     name = "ser"
-    ser = nwp.Series.from_iterable(values, name=name, dtype=nw.Float64, backend=eager)
+    ser = series(values, name=name, dtype=nw.Float64)
     assert ser.is_empty() is False
     assert ser.has_nulls()
     assert ser.null_count() == 2

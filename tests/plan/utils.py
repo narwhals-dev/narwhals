@@ -27,11 +27,7 @@ from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
 from narwhals._plan.compliant.typing import Native as NativeLazyFrame
 from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
 from narwhals._utils import Implementation, Version, qualified_type_name
-from tests.utils import (
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    assert_equal_data as _assert_equal_data,
-)
+from tests.utils import assert_equal_data as _assert_equal_data
 
 pytest.importorskip("pyarrow")
 
@@ -287,7 +283,9 @@ def cols(name: str, *names: str) -> Iterator[nwp.Expr]:
 _lock = threading.Lock()
 
 
-def _parse_identifiers(ids: OneOrIterable[Identifier], /) -> frozenset[Identifier]:
+def _parse_identifiers(
+    ids: OneOrIterable[Identifier], /
+) -> frozenset[Identifier]:  # pragma: no cover
     return frozenset((ids,) if isinstance(ids, str) else ids)
 
 
@@ -326,19 +324,31 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
     )
 
     def lazyframe(
-        self, data: Mapping[str, Any], /, **kwds: Any
+        self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
     ) -> nwp.LazyFrame[NativeLazyFrame]:
-        return nwp.LazyFrame.from_native(self.native_lazyframe(data, **kwds))
+        return nwp.LazyFrame.from_native(
+            self.native_lazyframe(data, schema=schema, **kwds)
+        )
 
     def dataframe(
-        self, data: Mapping[str, Any], /, **kwds: Any
+        self, data: Mapping[str, Any], /, *, schema: Schema | None = None, **kwds: Any
     ) -> nwp.DataFrame[NativeDataFrameT_co, NativeSeriesT_co]:
-        return nwp.DataFrame.from_native(self.native_dataframe(data, **kwds))
+        return nwp.DataFrame.from_native(
+            self.native_dataframe(data, schema=schema, **kwds)
+        )
 
     def series(
-        self, values: Iterable[Any], /, **kwds: Any
+        self,
+        values: Iterable[Any],
+        /,
+        name: str = "",
+        *,
+        dtype: IntoDType | None = None,
+        **kwds: Any,
     ) -> nwp.Series[NativeSeriesT_co]:
-        return nwp.Series.from_native(self.native_series(values, **kwds))
+        return nwp.Series.from_native(
+            self.native_series(values, dtype=dtype, **kwds), name=name
+        )
 
     def native_lazyframe(
         self, data: Mapping[str, Any], /, **kwds: Any
@@ -380,7 +390,7 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         - Should be built entirely from **literal string(s)**, to support predictable filtering
         """
         if self.implementation is Implementation.UNKNOWN:
-            return self.import_or_skip_module
+            return self.import_or_skip_module  # pragma: no cover
         return self.implementation.value
 
     def try_get_constructor(
@@ -406,7 +416,9 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         cls, *, import_or_skip_module: ModuleName | None = None, **kwds: Any
     ) -> None:
         super().__init_subclass__(**kwds)
-        if not (hasattr(cls, "backend_eager") or hasattr(cls, "backend_lazy")):
+        if not (
+            hasattr(cls, "backend_eager") or hasattr(cls, "backend_lazy")
+        ):  # pragma: no cover
             msg = f"At least one of `backend_eager` or `backend_lazy` must be set as a class attribute for {cls!r}"
             raise TypeError(msg)
         if module := import_or_skip_module:
@@ -414,12 +426,12 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
         elif not (
             hasattr(cls, "import_or_skip_module")
             and (module := cls.import_or_skip_module)
-        ):
+        ):  # pragma: no cover
             msg = f"`import_or_skip_module` is a required argument for direct subclasses of `EagerBackend`, got: {import_or_skip_module=} for {cls!r}"
             raise TypeError(msg)
         if cls.implementation is Implementation.UNKNOWN and cls.import_or_skip_module in {
             impl.value for impl in Implementation
-        }:
+        }:  # pragma: no cover
             msg = (
                 f"`{cls.import_or_skip_module=}` implies {cls!r} should use {Implementation(import_or_skip_module)!r},\n"
                 f"but got: `{cls.implementation=}`"
@@ -451,10 +463,10 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
                 (backend_tps for name, backend_tps in known.items() if find_spec(name))
             )
             selected = (tp() for tp in installed)
-            if include != "ALL":
+            if include != "ALL":  # pragma: no cover
                 including = _parse_identifiers(include)
                 selected = (b for b in selected if b.identifier in including)
-            if exclude is not None:
+            if exclude is not None:  # pragma: no cover
                 excluding = _parse_identifiers(exclude)
                 selected = (b for b in selected if b.identifier not in excluding)
             return tuple(sorted(selected, key=attrgetter("identifier")))
@@ -559,8 +571,8 @@ class Constructor(Generic[R_co]):
         """Fail either polars or pyarrow below the version(s) they introduced `pivot`."""
         self.xfail(
             request,
-            (self.is_pyarrow() and PYARROW_VERSION < (20, 0, 0))
-            or (self.is_polars() and POLARS_VERSION < (1, 0, 0)),
+            (self.is_pyarrow() and self.backend_version() < (20, 0, 0))
+            or (self.is_polars() and self.backend_version() < (1, 0, 0)),
             reason=f"{self.identifier} too old for `pivot` support",
             raises=NotImplementedError,
         )

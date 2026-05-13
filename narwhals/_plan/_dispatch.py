@@ -339,7 +339,8 @@ def _dispatch_debug(
             f"Hint: Try adding `{self.name_full}()`"
         )
         raise NotImplementedError(msg) from err
-    return method(node, frame, name)
+    # NOTE: Coverage is flaky on the last line only?
+    return method(node, frame, name)  # pragma: no cover
 
 
 _DISPATCHER_CALL: Final = (

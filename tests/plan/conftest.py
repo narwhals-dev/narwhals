@@ -60,7 +60,9 @@ _option = cast("Callable[[pytest.Config, str], Any]", pytest.Config.getoption)
 
 def _resolve_options(
     config: pytest.Config,
-) -> tuple[Collection[Identifier] | Literal["ALL"], Collection[Identifier] | None]:
+) -> tuple[
+    Collection[Identifier] | Literal["ALL"], Collection[Identifier] | None
+]:  # pragma: no cover
     """Convert command line options into `include` and `exclude` sets.
 
     Piggybacks off of `--constructors`, if that was used instead of `--plan-include` or `--plan-exclude`.
@@ -92,7 +94,7 @@ def _resolve_options(
 get_identifier: Callable[[Any], str] = attrgetter("identifier")
 
 
-def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:  # pragma: no cover
     from tests.plan.utils import TestBackend
 
     include, exclude = _resolve_options(metafunc.config)
