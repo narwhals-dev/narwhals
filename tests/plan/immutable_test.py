@@ -79,13 +79,13 @@ def test_immutable_delattr(
     empty_derived: EmptyDerived, one: OneSlot, two: TwoSlot
 ) -> None:
     with pytest.raises(AttributeError, match=r"EmptyDerived.+immutable.+'a'"):
-        del empty_derived.a  # pyright: ignore[reportAttributeAccessIssue]
+        del empty_derived.a  # pyright: ignore[reportAttributeAccessIssue]  # pyrefly: ignore [read-only]
     with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'a'"):
-        del one.a  # pyright: ignore[reportAttributeAccessIssue]
+        del one.a  # pyright: ignore[reportAttributeAccessIssue] # pyrefly: ignore [read-only]
     with pytest.raises(AttributeError, match=r"OneSlot.+immutable.+'b'"):
         del one.b  # type: ignore[attr-defined]
     with pytest.raises(AttributeError, match=r"TwoSlot.+immutable.+'a'"):
-        del two.a, two.b  # pyright: ignore[reportAttributeAccessIssue]
+        del two.a, two.b  # pyright: ignore[reportAttributeAccessIssue] # pyrefly: ignore [read-only]
 
 
 def test_immutable_hash(
@@ -138,7 +138,7 @@ def test_immutable_copy(two: TwoSlot, function: Callable[[TwoSlot], TwoSlot]) ->
 
 def test_immutable_invalid_constructor() -> None:
     with pytest.raises(TypeError):
-        Empty(a=1)  # pyright: ignore[reportCallIssue]
+        Empty(a=1)  # pyright: ignore[reportCallIssue]  # pyrefly: ignore [unexpected-keyword]
     with pytest.raises(AttributeError):
         EmptyDerived(b="two")  # type: ignore[call-arg]
     with pytest.raises(TypeError):

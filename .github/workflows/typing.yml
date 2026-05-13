@@ -15,7 +15,8 @@ jobs:
     if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.12"]
+        # See https://github.com/narwhals-dev/narwhals/pull/3620#discussion_r3235918155
+        python-version: ["3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:

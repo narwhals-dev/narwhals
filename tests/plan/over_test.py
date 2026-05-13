@@ -11,6 +11,8 @@ from tests.utils import PYARROW_VERSION
 pytest.importorskip("pyarrow")
 
 
+from collections.abc import Iterable
+
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
@@ -18,7 +20,7 @@ from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, dataframe, re_compile
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
     from typing import TypeAlias
 
     from _pytest.mark import ParameterSet
@@ -427,10 +429,6 @@ def test_over_partition_by_order_by(
     assert_equal_data(result, expected)
 
 
-def _ensure_list(arg: T | list[T]) -> list[T]:
-    return [arg] if not isinstance(arg, list) else arg
-
-
 ValueColumn: TypeAlias = Literal["v1", "v2", "v3"]
 OrderColumn: TypeAlias = Literal["o1", "o2", "o3", "o4", "o5"]
 Agg: TypeAlias = Literal["first", "last"]
@@ -457,14 +455,14 @@ def data_order() -> Mapping[str, list[NonNestedLiteral]]:
 
 
 def order_case(
-    columns: ValueColumn | list[ValueColumn],
+    columns: ValueColumn | Sequence[ValueColumn],
     aggregation: Agg,
     /,
     order_by: OrderColumn | Sequence[OrderColumn],
     *,
     descending: bool = False,
     nulls_last: bool = False,
-    expected: NonNestedLiteral | list[NonNestedLiteral],
+    expected: NonNestedLiteral | Sequence[NonNestedLiteral],
 ) -> ParameterSet:
     """Generate `Expr`s and an expected dataset for ordered aggregations.
 
@@ -478,7 +476,15 @@ def order_case(
     test_id = f"{columns}_{aggregation}-{ordering}"
 
     # Generating what our expected dataset should be
-    names_values = list(zip(_ensure_list(columns), _ensure_list(expected), strict=True))  # type: ignore[arg-type]
+    names_values = list(
+        zip(
+            (columns,) if isinstance(columns, str) else tuple(columns),
+            (expected,)
+            if isinstance(expected, (str, bytes)) or not isinstance(expected, Iterable)
+            else tuple(expected),
+            strict=True,
+        )
+    )
     result_data = {
         f"{name}{suffix}": [expect]
         for suffix in (suffix_over, suffix_sort_by)

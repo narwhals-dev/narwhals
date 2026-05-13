@@ -551,7 +551,7 @@ class Constructor(Generic[R_co]):
         self.xfail(
             request,
             condition,
-            reason=f"TODO @dangotbanned: `{self.fixture_name}[{self.identifier}].{method}`",
+            reason=f"TODO @dangotbanned: `{self.fixture_name}[{self.identifier}].{method}`",  # pyrefly: ignore [bad-argument-type]
             raises=raises,
         )
 
@@ -682,7 +682,9 @@ def dataframe(
 
 # TODO @dangotbanned: Finish replacing with `tests.plan.conftest.series`
 def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
-    return nwp.Series.from_native(pa.chunked_array([values]))
+    array: Incomplete = pa.chunked_array
+    ca: pa.ChunkedArray[Any] = array([values])
+    return nwp.Series.from_native(ca)
 
 
 def assert_equal_data(

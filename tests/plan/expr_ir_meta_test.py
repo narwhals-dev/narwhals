@@ -61,7 +61,7 @@ def test_known_field_specifiers() -> None:
     e2s2 = E2S2(a=1, b=e1, c="c", d=(e2s1,))
 
     with pytest.raises(TypeError):
-        E1(a=1, b=e1, c="c", d=(e2s1,))  # pyright: ignore[reportCallIssue]
+        E1(a=1, b=e1, c="c", d=(e2s1,))  # pyright: ignore[reportCallIssue]  # pyrefly: ignore [unexpected-keyword]
 
     with pytest.raises(TypeError):
         E2(a=1, b=e1, c="c", d=1.0)  # type: ignore[call-arg]

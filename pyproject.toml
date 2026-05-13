@@ -83,7 +83,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
   "mypy==1.20.1", # Will break CI, only testing on `_plan` locally
-  "pyrefly==0.64.0",
+  "pyrefly==1.0.0",
   "pyright==1.1.408",  # https://github.com/narwhals-dev/narwhals/issues/3584
   "pyarrow<24", # https://github.com/narwhals-dev/narwhals/issues/3560
   "pyarrow-stubs==19.2",
@@ -377,7 +377,9 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests", "test-plugin"]
+# NOTE: Re-enable `mypy` for `main` when it isn't pinned to `1.15`
+# https://github.com/narwhals-dev/narwhals/issues/3606#issuecomment-4440007049
+files = ["narwhals/_plan", "tests/plan"]
 pretty = true
 strict = true
 check_untyped_defs = true
@@ -436,7 +438,30 @@ ignore = [
 defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
-project-includes = ["tests"]
+project-includes = ["narwhals/_plan", "tests"]
+project-excludes = [
+    # - waaaaaaaay too many things to deal with any time soon (`pyrefly==1.0.0`)
+    # - lots of false positives which spiral out
+    # - ([not-a-type], [bad-override], [bad-specialization], [invalid-type-var])
+    "narwhals/_plan/_dispatch.py",
+    "narwhals/_plan/_dtype.py",
+    "narwhals/_plan/_flags.py",
+    "narwhals/_plan/_parameters.py",
+    "narwhals/_plan/arrow",
+    "narwhals/_plan/common.py",
+    "narwhals/_plan/compliant",
+    "narwhals/_plan/dataframe.py",
+    "narwhals/_plan/expr.py",
+    "narwhals/_plan/expressions/temporal.py",
+    "narwhals/_plan/functions",
+    "narwhals/_plan/lazyframe.py",
+    "narwhals/_plan/plans/conversion.py",
+    "narwhals/_plan/polars",
+    "narwhals/_plan/schema.py",
+    "narwhals/_plan/selectors.py",
+    "narwhals/_plan/series.py",
+    "narwhals/_plan/translate.py",
+]
 ignore-missing-imports = [
     "cudf.*",
     "cupy.*",

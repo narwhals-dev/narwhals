@@ -1025,7 +1025,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         """
         return NamedIR.__replace__(self, expr=function(self.expr.map_ir(function)))
 
-    def __replace__(
+    def __replace__(  # pyright: ignore[reportIncompatibleMethodOverride]
         self, *, expr: ExprIR | None = None, name: str | None = None
     ) -> NamedIR[ExprIR]:
         name = self.name if name is None else name
