@@ -97,14 +97,6 @@ Supports:
     pl.col("a").first().over("b", order_by="c")
 """
 
-OVER_ORDER_BY_GROUP_BY_FIX: Final = BACKEND_VERSION >= (1, 9)
-"""https://github.com/MarcoGorelli/narwhals/commit/5f35d22857f231bc0fba6ace6389cb58d742923c
-
-- The condition checks for `< 1.9`
-- The message says         `<= 1.9`
-- Only thing for `over` in that release is https://github.com/pola-rs/polars/pull/18947
-"""
-
 OVER_SUPPORTS_DESCENDING: Final = BACKEND_VERSION >= (1, 22)
 """[#20919], [#20952]
 
