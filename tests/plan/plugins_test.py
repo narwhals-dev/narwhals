@@ -48,12 +48,12 @@ This **is not** something that `PluginManager` does, but is needed here and so w
 if POLARS_PARTIAL_INIT_BUG:  # pragma: no cover
 
     @pytest.fixture
-    def _sys_modules_delete_names() -> tuple[BuiltinName, ...]:
-        return tuple[BuiltinName, ...](name for name in BUILTIN_NAMES if name != "polars")
+    def _sys_modules_delete_names() -> tuple[Any, ...]:
+        return tuple(name for name in BUILTIN_NAMES if name != "polars")
 else:
 
     @pytest.fixture
-    def _sys_modules_delete_names() -> tuple[BuiltinName, ...]:
+    def _sys_modules_delete_names() -> tuple[Any, ...]:
         return BUILTIN_NAMES
 
 
