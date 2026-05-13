@@ -545,15 +545,16 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
         >>> is_into_dataframe(np_arr)
         False
     """
+    from narwhals._utils import _hasattr_static
     from narwhals.dataframe import DataFrame
 
     return (
         isinstance(native_dataframe, DataFrame)
-        or hasattr(native_dataframe, "__narwhals_dataframe__")
+        or _hasattr_static(native_dataframe, "__narwhals_dataframe__")
         or is_polars_dataframe(native_dataframe)
         or is_pyarrow_table(native_dataframe)
         or is_pandas_like_dataframe(native_dataframe)
-    ) and not is_sqlframe_dataframe(native_dataframe)
+    )
 
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:

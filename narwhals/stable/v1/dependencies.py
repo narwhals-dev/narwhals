@@ -185,17 +185,18 @@ def is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
 
 def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
     """Check whether `native_dataframe` can be converted to a narwhals.stable.v1.DataFrame."""
+    from narwhals._utils import _hasattr_static
     from narwhals.stable.v1 import DataFrame
 
     return (
         isinstance(native_dataframe, DataFrame)
-        or hasattr(native_dataframe, "__narwhals_dataframe__")
+        or _hasattr_static(native_dataframe, "__narwhals_dataframe__")
         or is_polars_dataframe(native_dataframe)
         or is_pyarrow_table(native_dataframe)
         or is_pandas_like_dataframe(native_dataframe)
         or is_ibis_table(native_dataframe)
         or is_duckdb_relation(native_dataframe)
-    ) and not is_sqlframe_dataframe(native_dataframe)
+    )
 
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
