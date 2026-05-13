@@ -39,10 +39,8 @@ def plugin(eager: BuiltinName) -> Generator[BuiltinAny, Any, None]:
     We use a context manager to first clear and then reset (related) changes to `sys.modules`.
     """
     with pytest.MonkeyPatch.context() as mp:
-        sys_modules = tuple(sys.modules)
-        for sys_modules_name in sys_modules:
-            if sys_modules_name.startswith(BUILTIN_NAMES):
-                mp.delitem(sys.modules, sys_modules_name, raising=False)
+        for name in BUILTIN_NAMES:
+            mp.delitem(sys.modules, name, raising=False)
         yield load_plugin(eager)
 
 
