@@ -14,14 +14,13 @@ from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.expr import row_index
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
-from narwhals._utils import Implementation, Version, not_implemented, requires
+from narwhals._utils import Implementation, not_implemented, requires
 from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
-    from typing import TypeAlias
 
     import pandas as pd
     import pyarrow as pa
@@ -43,10 +42,6 @@ if TYPE_CHECKING:
         PivotAgg,
         UniqueKeepStrategy,
     )
-
-
-Incomplete: TypeAlias = Any
-MAIN = Version.MAIN
 
 
 class remap_exceptions:  # noqa: N801
@@ -313,7 +308,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         separator: str = "_",
         sort_columns: bool = False,
     ) -> Self:
-        kwds: dict[str, Incomplete] = (
+        kwds: dict[str, Any] = (
             {"on_columns": on_columns.native}
             if compat.PIVOT_SUPPORTS_ON_COLUMNS
             else {"sort_columns": sort_columns}
