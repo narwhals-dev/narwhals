@@ -113,22 +113,6 @@ def test_plugin_manager_known() -> None:
     assert sorted(manager().known()) == ["polars", "pyarrow"]
 
 
-def test_plugin_manager_importable() -> None:
-    plug_man = manager()
-    for name in plug_man.importable():
-        plug_man.import_modules(name)
-        assert plug_man.plugin(name).is_imported()
-
-
-# https://github.com/narwhals-dev/narwhals/actions/runs/25753098308/job/75634350024?pr=3617#step:9:1377
-def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
-    plug_man = manager()
-    name = plugin.name
-    assert name not in set(plug_man.imported())
-    plug_man.import_modules(name)
-    assert name in set(plug_man.imported())
-
-
 @pytest.mark.parametrize("version", Version)
 def test_plugin_manager_dataframe(eager: BuiltinName, version: Version) -> None:
     data = {"a": [1, 2, 3, 4], "b": [1.3, 1.9, None, None]}

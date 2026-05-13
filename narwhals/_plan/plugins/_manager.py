@@ -146,7 +146,7 @@ class PluginManager:
             return self._plugin_load(name, entry_point)
         raise _unsupported_error(name, name)
 
-    def _iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:
+    def iter_plugins(self) -> Iterator[PluginAny | BuiltinAny]:
         yield from self._loaded.values()
         while self._discovered:  # pragma: no cover
             name, ep = self._discovered.popitem()
@@ -277,20 +277,6 @@ class PluginManager:
                 raise _unavailable_error(plugin)  # pragma: no cover
             for module in plugin.requirements:
                 import_module(module)
-
-    def importable(self) -> Iterator[BackendName | PluginName]:
-        """Yield the names of all importable plugins."""
-        for plugin in self._iter_plugins():
-            if plugin.can_import():
-                yield plugin.name
-            else:  # pragma: no cover
-                continue
-
-    def imported(self) -> Iterator[BackendName | PluginName]:
-        """Yield the names of all imported plugins."""
-        for plugin in self._iter_plugins():
-            if plugin.is_imported():
-                yield plugin.name
 
     def known(self) -> Iterator[BackendName | PluginName | str]:
         """Yield the names of all known plugins."""
