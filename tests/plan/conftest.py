@@ -10,11 +10,13 @@ if TYPE_CHECKING:
 
     from typing_extensions import LiteralString
 
-    from narwhals.typing import EagerAllowed, LazyAllowed
     from tests.plan.utils import (
         ConstructorFixtureName,
         DataFrame,
+        Eager,
+        EagerOrFalse,
         Identifier,
+        Lazy,
         LazyFrame,
         Series,
         TestBackendAny,
@@ -27,11 +29,11 @@ if TYPE_CHECKING:
     @pytest.fixture
     def series() -> Series: ...
     @pytest.fixture
-    def eager() -> EagerAllowed: ...
+    def eager() -> Eager: ...
     @pytest.fixture
-    def eager_or_false() -> EagerAllowed | Literal[False]: ...
+    def eager_or_false() -> EagerOrFalse: ...
     @pytest.fixture
-    def lazy() -> LazyAllowed: ...
+    def lazy() -> Lazy: ...
 
 
 _MAIN_DEFAULT_CONSTRUCTORS = (
@@ -58,7 +60,9 @@ _option = cast("Callable[[pytest.Config, str], Any]", pytest.Config.getoption)
 
 def _resolve_options(
     config: pytest.Config,
-) -> tuple[Collection[Identifier] | Literal["ALL"], Collection[Identifier] | None]:
+) -> tuple[
+    Collection[Identifier] | Literal["ALL"], Collection[Identifier] | None
+]:  # pragma: no cover
     """Convert command line options into `include` and `exclude` sets.
 
     Piggybacks off of `--constructors`, if that was used instead of `--plan-include` or `--plan-exclude`.
@@ -90,7 +94,7 @@ def _resolve_options(
 get_identifier: Callable[[Any], str] = attrgetter("identifier")
 
 
-def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
+def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:  # pragma: no cover
     from tests.plan.utils import TestBackend
 
     include, exclude = _resolve_options(metafunc.config)

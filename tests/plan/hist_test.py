@@ -6,12 +6,12 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data
+from tests.plan.utils import Eager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.typing import EagerAllowed, IntoDType
+    from narwhals.typing import IntoDType
     from tests.conftest import Data
 
 pytest.importorskip("pyarrow")
@@ -62,8 +62,8 @@ def column_data_missing(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture(scope="module", params=["pyarrow"])
-def backend(request: pytest.FixtureRequest) -> EagerAllowed:
-    result: EagerAllowed = request.param
+def backend(request: pytest.FixtureRequest) -> Eager:
+    result: Eager = request.param
     return result
 
 
@@ -74,7 +74,7 @@ def include_breakpoint(request: pytest.FixtureRequest) -> bool:
 
 
 def _series(
-    name: str, source: Data, schema: nw.Schema, backend: EagerAllowed, /
+    name: str, source: Data, schema: nw.Schema, backend: Eager, /
 ) -> nwp.Series[Any]:
     values, dtype = (source[name], schema[name])
     return nwp.Series.from_iterable(values, name=name, dtype=dtype, backend=backend)
@@ -111,7 +111,7 @@ bins_cases = pytest.mark.parametrize(
 def test_hist_bins(
     data: Data,
     schema_data: nw.Schema,
-    backend: EagerAllowed,
+    backend: Eager,
     column_data: str,
     bins: Sequence[float],
     expected_count: Sequence[int],
@@ -129,7 +129,7 @@ def test_hist_bins(
 def test_hist_bins_shifted(
     data: Data,
     schema_data: nw.Schema,
-    backend: EagerAllowed,
+    backend: Eager,
     column_data: str,
     bins: Sequence[float],
     expected_count: Sequence[int],
@@ -149,7 +149,7 @@ def test_hist_bins_shifted(
 def test_hist_bins_missing(
     data_missing: Data,
     schema_data_missing: nw.Schema,
-    backend: EagerAllowed,
+    backend: Eager,
     column_data_missing: str,
     bins: Sequence[float],
     expected_count: Sequence[int],
@@ -181,7 +181,7 @@ bin_count_cases = pytest.mark.parametrize(
 def test_hist_bin_count(
     data: Data,
     schema_data: nw.Schema,
-    backend: EagerAllowed,
+    backend: Eager,
     column_data: str,
     bin_count: int,
     expected_bins: Sequence[float],
@@ -253,7 +253,7 @@ def test_hist_bin_count(
 def test_hist_expr_counts_only(
     data: Data,
     schema_data: nw.Schema,
-    backend: EagerAllowed,
+    backend: Eager,
     expr: nwp.Expr,
     expected: dict[str, Any],
 ) -> None:
@@ -262,9 +262,7 @@ def test_hist_expr_counts_only(
     assert_equal_data(result, expected)
 
 
-def test_hist_expr_breakpoint(
-    data: Data, schema_data: nw.Schema, backend: EagerAllowed
-) -> None:
+def test_hist_expr_breakpoint(data: Data, schema_data: nw.Schema, backend: Eager) -> None:
     df = nwp.DataFrame.from_dict(data, schema_data, backend=backend)
     expr = nwp.all().hist(bin_count=3, include_breakpoint=True)
     result = df.select(expr)
@@ -317,7 +315,7 @@ def test_hist_expr_breakpoint(
 def test_hist_bin_count_missing(
     data_missing: Data,
     schema_data_missing: nw.Schema,
-    backend: EagerAllowed,
+    backend: Eager,
     column_data_missing: str,
     bin_count: int,
     expected_bins: Sequence[float],
@@ -345,7 +343,7 @@ def test_hist_bin_count_missing(
     ],
 )
 def test_hist_bin_count_no_spread(
-    backend: EagerAllowed,
+    backend: Eager,
     column: str,
     bin_count: int,
     expected_breakpoint: Sequence[float],
@@ -360,7 +358,7 @@ def test_hist_bin_count_no_spread(
 
 @pytest.mark.parametrize("bins", [[1, 5, 10]])
 def test_hist_bins_no_data(
-    backend: EagerAllowed, bins: list[int], *, include_breakpoint: bool
+    backend: Eager, bins: list[int], *, include_breakpoint: bool
 ) -> None:
     s = nwp.Series.from_iterable([], dtype=nw.Float64(), backend=backend)
     result = s.hist(bins, include_breakpoint=include_breakpoint)
@@ -370,7 +368,7 @@ def test_hist_bins_no_data(
 
 @pytest.mark.parametrize("bin_count", [1, 10])
 def test_hist_bin_count_no_data(
-    backend: EagerAllowed, bin_count: int, *, include_breakpoint: bool
+    backend: Eager, bin_count: int, *, include_breakpoint: bool
 ) -> None:
     s = nwp.Series.from_iterable([], dtype=nw.Float64(), backend=backend)
     result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
@@ -384,13 +382,13 @@ def test_hist_bin_count_no_data(
             assert bps[-1] == 1
 
 
-def test_hist_bins_none(backend: EagerAllowed) -> None:
+def test_hist_bins_none(backend: Eager) -> None:
     s = nwp.Series.from_iterable([1, 2, 3], backend=backend)
     result = s.hist(bins=None, bin_count=None)
     assert len(result) == 10
 
 
-def test_hist_series_compat_flag(backend: EagerAllowed) -> None:
+def test_hist_series_compat_flag(backend: Eager) -> None:
     # NOTE: Mainly for verifying `Expr.hist` has handled naming/collecting as struct
     # The flag itself is not desirable
     values = [1, 3, 8, 8, 2, 1, 3]

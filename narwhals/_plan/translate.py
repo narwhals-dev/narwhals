@@ -83,7 +83,7 @@ class _FromNative(Generic[P, R_co]):
         native_kind = cls._name
         query = (
             p
-            for p in manager._iter_plugins()
+            for p in manager.iter_plugins()
             if p.is_imported()
             and parse(p.name).has(native_kind)
             and cls.is_native(native, p)

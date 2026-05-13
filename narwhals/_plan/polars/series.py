@@ -10,6 +10,7 @@ from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
+from narwhals._plan.polars.expr import linear_space
 from narwhals._plan.polars.namespace import (
     dtype_from_native,
     dtype_to_native,
@@ -184,24 +185,35 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(result)
 
     def has_nulls(self) -> bool:
-        return self.native.has_nulls()
+        s = self.native
+        return s.has_nulls() if compat.SERIES_HAS_HAS_NULLS else s.has_validity()
 
     def is_in(self, other: Self) -> Self:
         return self._with_native(self.native.is_in(other.native))
 
-    # NOTE: Needs compat
-    # https://github.com/narwhals-dev/narwhals/blob/c207fc096263ce174470240748e0c568f38f93e2/narwhals/_polars/series.py#L364-L372
-    def is_nan(self) -> Self:
-        if compat.IS_NAN_NUMERIC_PROPAGATES_NULLS:
+    def _preserve_nulls(self, after: pl.Expr | pl.Series, /) -> Self:  # pragma: no cover
+        """Propagate nulls positionally from `self.native` to `after`."""
+        s = self.native
+        expr = pl.when(pl.col(s.name).is_not_null()).then(after)
+        return self._with_native(s.to_frame().select(expr).to_series())
+
+    if compat.IS_NAN_NUMERIC_PRESERVES_NULLS:
+
+        def is_nan(self) -> Self:
             return self._with_native(self.native.is_nan())
-        msg = "TODO @dangotbanned: `is_nan` backcompat\nSee https://github.com/narwhals-dev/narwhals/pull/1625#issuecomment-2565591385"
-        raise NotImplementedError(msg)
+
+        def is_not_nan(self) -> Self:
+            return self._with_native(self.native.is_not_nan())
+    else:  # pragma: no cover
+
+        def is_nan(self) -> Self:
+            return self._preserve_nulls(self.native.is_nan())
+
+        def is_not_nan(self) -> Self:
+            return self._preserve_nulls(self.native.is_not_nan())
 
     def is_null(self) -> Self:
         return self._with_native(self.native.is_null())
-
-    def is_not_nan(self) -> Self:
-        return self._with_native(self.native.is_not_nan())
 
     def is_not_null(self) -> Self:
         return self._with_native(self.native.is_not_null())
@@ -443,7 +455,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> Self:
-        native = pl.linear_space(start, end, num_samples, closed=closed, eager=True)
+        native = linear_space(start, end, num_samples, closed=closed, eager=True)
         return cls.from_native(native, name)
 
     @property

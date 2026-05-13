@@ -7,6 +7,7 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.common import todo
 from narwhals._plan.compliant.namespace import CompliantNamespace
+from narwhals._plan.polars import compat
 from narwhals._polars.utils import (
     narwhals_to_native_dtype as _dtype_native,
     native_to_narwhals_dtype as _dtype_from_native,
@@ -68,6 +69,14 @@ def explode_todo(
     return True, True
 
 
+if compat.LAZYFRAME_HAS_COLLECT_SCHEMA or TYPE_CHECKING:
+    collect_schema = pl.LazyFrame.collect_schema
+else:
+
+    def collect_schema(self: pl.LazyFrame) -> pl.Schema:
+        return self.schema
+
+
 class PolarsNamespace(CompliantNamespace["Expr", "Expr"]):
     __slots__ = ()
     version: ClassVar[Version] = MAIN
@@ -110,7 +119,7 @@ class PolarsNamespace(CompliantNamespace["Expr", "Expr"]):
         return PolarsEvaluator
 
     def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema:
-        schema = pl.scan_csv(source, **kwds).collect_schema()
+        schema = collect_schema(pl.scan_csv(source, **kwds))
         return into_version(self.version).schema.from_polars(schema)
 
     def read_parquet_schema(self, source: str, /, **kwds: Any) -> Schema:

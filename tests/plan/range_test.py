@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final
 
 import pytest
 
 from narwhals.exceptions import ShapeError
-from tests.utils import PYARROW_VERSION
+from tests.utils import POLARS_VERSION, PYARROW_VERSION
 
 if PYARROW_VERSION < (21,):  # pragma: no cover
     pytest.importorskip("numpy")
@@ -13,12 +13,20 @@ import datetime as dt
 
 import narwhals as nw
 from narwhals import _plan as nwp
-from tests.plan.utils import assert_equal_data, assert_equal_series, dataframe
+from tests.plan.utils import (
+    Eager,
+    EagerOrFalse,
+    assert_equal_data,
+    assert_equal_series,
+    dataframe,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from narwhals.typing import ClosedInterval, EagerAllowed, IntoDType
+    from typing_extensions import LiteralString
+
+    from narwhals.typing import ClosedInterval, IntoDType
 
 
 @pytest.fixture(scope="module")
@@ -40,6 +48,17 @@ def data() -> dict[str, Any]:
 def leap_year(request: pytest.FixtureRequest) -> int:
     result: int = request.param
     return result
+
+
+def skip_if(condition: bool, /, reason: LiteralString) -> None:  # noqa: FBT001
+    if condition:
+        pytest.skip(reason)
+
+
+def skip_if_polars_linear_space(is_polars: bool, /) -> None:  # noqa: FBT001
+    skip_if(
+        is_polars and POLARS_VERSION < (1, 21), reason="too old for `polars.linear_space`"
+    )
 
 
 EXPECTED_DATE_1: Final = [
@@ -105,7 +124,7 @@ def test_date_range(
     assert_equal_data(result, expected)
 
 
-def test_date_range_eager_leap(eager: EagerAllowed, leap_year: int) -> None:
+def test_date_range_eager_leap(eager: Eager, leap_year: int) -> None:
     series_leap = nwp.date_range(
         dt.date(leap_year, 2, 25), dt.date(leap_year, 3, 25), eager=eager
     )
@@ -132,7 +151,7 @@ def test_date_range_eager(
     interval: str | dt.timedelta,
     closed: ClosedInterval,
     expected: list[dt.date],
-    eager: EagerAllowed,
+    eager: Eager,
 ) -> None:
     ser = nwp.date_range(start, end, interval=interval, closed=closed, eager=eager)
     result = ser.to_list()
@@ -157,13 +176,13 @@ def test_int_range(
     assert_equal_data(result, expected)
 
 
-def test_int_range_eager(eager: EagerAllowed) -> None:
+def test_int_range_eager(eager: Eager) -> None:
     ser = nwp.int_range(50, eager=eager)
     assert isinstance(ser, nwp.Series)
     assert ser.to_list() == list(range(50))
 
 
-# TODO @dangotbanned: Add polars: `linear_space`, `DataFrame.select`
+# TODO @dangotbanned: Add polars (lazy) `linear_space`
 @pytest.mark.parametrize(("start", "end"), [(0, 0), (0, 1), (-1, 0), (-2.1, 3.4)])
 @pytest.mark.parametrize("num_samples", [0, 1, 2, 5, 1_000])
 @pytest.mark.parametrize("interval", ["both", "left", "right", "none"])
@@ -173,10 +192,11 @@ def test_linear_space_values(
     num_samples: int,
     interval: ClosedInterval,
     *,
-    eager_or_false: EagerAllowed | Literal[False],
+    eager_or_false: EagerOrFalse,
 ) -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L19-L56
     if eager_or_false:
+        skip_if_polars_linear_space(eager_or_false == "polars")
         result = nwp.linear_space(
             start, end, num_samples, closed=interval, eager=eager_or_false
         ).rename("ls")

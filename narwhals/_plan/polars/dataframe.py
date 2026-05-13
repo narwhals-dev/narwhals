@@ -11,16 +11,16 @@ from narwhals._plan.common import temp
 from narwhals._plan.compliant import CompliantDataFrame
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
+from narwhals._plan.polars.expr import row_index
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
-from narwhals._utils import Implementation, Version, not_implemented, requires
+from narwhals._utils import Implementation, not_implemented, requires
 from narwhals.exceptions import NarwhalsError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
     from io import BytesIO
     from pathlib import Path
-    from typing import TypeAlias
 
     import pandas as pd
     import pyarrow as pa
@@ -42,10 +42,6 @@ if TYPE_CHECKING:
         PivotAgg,
         UniqueKeepStrategy,
     )
-
-
-Incomplete: TypeAlias = Any
-MAIN = Version.MAIN
 
 
 class remap_exceptions:  # noqa: N801
@@ -91,7 +87,6 @@ class remap_exceptions:  # noqa: N801
         return False
 
 
-# TODO @dangotbanned: Add slots after making sure every protocol has empty one's
 class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     __slots__ = ("_native",)
     _native: pl.DataFrame
@@ -259,7 +254,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.from_native(self.native.slice(offset, length))
 
     def sort(self, by: Sequence[str], options: SortMultipleOptions) -> Self:
-        return self.from_native(self.native.sort(by, **options.to_polars(by)))
+        return self.from_native(self.native.sort(by, **compat.sort(options, by)))
 
     @overload
     def to_dict(self, *, as_series: Literal[True]) -> Mapping[str, Series]: ...
@@ -313,7 +308,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         separator: str = "_",
         sort_columns: bool = False,
     ) -> Self:
-        kwds: dict[str, Incomplete] = (
+        kwds: dict[str, Any] = (
             {"on_columns": on_columns.native}
             if compat.PIVOT_SUPPORTS_ON_COLUMNS
             else {"sort_columns": sort_columns}
@@ -394,12 +389,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     def with_row_index_by(
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
     ) -> Self:
-        int_range = (
-            pl.int_range(pl.len())
-            .over(order_by=order_by, nulls_last=nulls_last)
-            .alias(name)
-        )
-        return self.from_native(self.native.select(int_range, pl.all()))
+        expr = row_index(name, order_by=order_by, nulls_last=nulls_last)
+        return self.from_native(self.native.select(expr, pl.all()))
 
     _group_by = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     lazy = not_implemented()

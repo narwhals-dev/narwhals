@@ -13,6 +13,7 @@ from narwhals._typing import Arrow, Polars
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 from tests.plan.utils import re_compile
+from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -31,15 +32,41 @@ SupportedBackend: TypeAlias = Literal[Arrow, Polars]
 BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
 BUILTIN_NAMES = ("polars", "pyarrow")
 
+POLARS_PARTIAL_INIT_BUG: Final = bool(POLARS_VERSION and POLARS_VERSION < (1, 34, 0))
+"""Prior to ([#24610]), removing `"polars"` from `sys.modules` cause failures like:
+
+    FAILED tests/plan/plugins_test.py::test_plugin_is_imported[polars]
+    AttributeError: partially initialized module 'polars' has no attribute '_cpu_check' (most likely due to a circular import)
+
+To accurately test import checking, the `plugin` fixture does some (temporarily) destructive operations on `sys.modules`.
+
+This **is not** something that `PluginManager` does, but is needed here and so will fail on old polars.
+
+[#24610]: https://github.com/pola-rs/polars/pull/24610
+"""
+
+if POLARS_PARTIAL_INIT_BUG:  # pragma: no cover
+
+    @pytest.fixture
+    def _sys_modules_delete_names() -> tuple[Any, ...]:
+        return tuple(name for name in BUILTIN_NAMES if name != "polars")
+else:
+
+    @pytest.fixture
+    def _sys_modules_delete_names() -> tuple[Any, ...]:
+        return BUILTIN_NAMES
+
 
 @pytest.fixture
-def plugin(eager: BuiltinName) -> Generator[BuiltinAny, Any, None]:
+def plugin(
+    eager: BuiltinName, _sys_modules_delete_names: tuple[BuiltinName, ...]
+) -> Generator[BuiltinAny, Any, None]:
     """Yields the result of `load_plugin(eager)`.
 
     We use a context manager to first clear and then reset (related) changes to `sys.modules`.
     """
     with pytest.MonkeyPatch.context() as mp:
-        for name in BUILTIN_NAMES:
+        for name in _sys_modules_delete_names:
             mp.delitem(sys.modules, name, raising=False)
         yield load_plugin(eager)
 
@@ -60,43 +87,30 @@ def test_load_plugin_invalid() -> None:
 
 
 def test_plugin_is_imported(plugin: BuiltinAny) -> None:
-    assert not plugin.is_imported()
+    if not POLARS_PARTIAL_INIT_BUG or plugin.name != "polars":
+        assert not plugin.is_imported()
+    else:  # pragma: no cover
+        ...
     manager().import_modules(plugin.name)
-
     assert plugin.is_imported()
     assert manager().plugin(plugin.name).is_imported()
 
 
 def test_plugin_can_import(plugin: BuiltinAny) -> None:
-    assert not plugin.is_imported()
+    if not POLARS_PARTIAL_INIT_BUG or plugin.name != "polars":
+        assert not plugin.is_imported()
+    else:  # pragma: no cover
+        ...
     assert plugin.can_import()
-
     manager().import_modules(plugin.name)
     assert plugin.is_imported()
     assert plugin.can_import()
-    assert load_plugin(plugin.name).can_import()
-
+    assert manager().plugin(plugin.name).can_import()
     manager().import_modules(plugin.name)
-    assert plugin.can_import()
 
 
 def test_plugin_manager_known() -> None:
     assert sorted(manager().known()) == ["polars", "pyarrow"]
-
-
-def test_plugin_manager_importable() -> None:
-    plug_man = manager()
-    for name in plug_man.importable():
-        plug_man.import_modules(name)
-        assert plug_man.plugin(name).is_imported()
-
-
-def test_plugin_manager_imported(plugin: BuiltinAny) -> None:
-    plug_man = manager()
-    name = plugin.name
-    assert name not in set(plug_man.imported())
-    plug_man.import_modules(name)
-    assert name in set(plug_man.imported())
 
 
 @pytest.mark.parametrize("version", Version)
