@@ -237,7 +237,12 @@ class Immutable(metaclass=ImmutableMeta):
             raise _init_error(self, kwds)
 
     if TYPE_CHECKING:
-        ...
+        import sys
+
+        if sys.version_info < (3, 13):
+
+            def __replace__(self, **changes: Any) -> Self:
+                return self
     else:
         # NOTE: Everything here is synthesized by `@dataclass_transform`
         # Having it visible to a type checker can cause weird things to happen
