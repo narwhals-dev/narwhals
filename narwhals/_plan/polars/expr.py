@@ -72,12 +72,20 @@ else:
         raise compat.too_old("linear_space", "1.21.0")
 
 
+if compat.HAS_LEN or TYPE_CHECKING:
+    len = pl.len
+else:
+
+    def len() -> pl.Expr:
+        return pl.count().alias("len")
+
+
 # TODO @dangotbanned: (low-priority) Support without triggering
 # `over(..., order_by=...)` requires `polars>=1.0.0`
 def row_index(
     name: str = "index", order_by: Sequence[str] = (), *, nulls_last: bool = False
 ) -> pl.Expr:
-    expr = pl.int_range(pl.len())
+    expr = pl.int_range(len())
     if order_by:
         expr = over(expr, order_by=order_by, nulls_last=nulls_last)
     return expr.alias(name)
@@ -145,7 +153,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     @classmethod
     def len_star(cls, _: ir.Len, __: Incomplete, name: str, /) -> Self:
-        return cls.from_native(pl.len(), name)
+        return cls.from_native(len(), name)
 
     abs = todo()
     all = todo()
