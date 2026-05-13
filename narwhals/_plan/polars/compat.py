@@ -120,6 +120,8 @@ Supports:
 OVER_WITHOUT_PARTITION_BY: Final = BACKEND_VERSION >= (1, 30)
 """https://github.com/pola-rs/polars/pull/22712
 
+**Use `over(pl.lit(1), order_by=...)` on older versions!**
+
 Supports:
 
     pl.col("a").first().over(order_by="c", descending=True, nulls_last=False)
@@ -133,14 +135,11 @@ Supports:
     pl.col("a").first().over(order_by="c", descending=True, nulls_last=True)
 """
 
-_OverFeature: TypeAlias = Literal[
-    "order_by_any", "descending", "order_by_only", "nulls_last"
-]
+_OverFeature: TypeAlias = Literal["order_by_any", "descending", "nulls_last"]
 
 _OVER_ERRORS: Final[Mapping[_OverFeature, tuple[str, str]]] = {
     "order_by_any": ("..., order_by=...", "1.0.0"),
     "descending": ("..., order_by=..., descending=True", "1.22.0"),
-    "order_by_only": ("order_by=...", "1.30.0"),
     "nulls_last": ("order_by=..., nulls_last=True", "1.39.0"),
 }
 
