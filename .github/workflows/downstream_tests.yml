@@ -42,8 +42,6 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
           uv pip install -e ".[dev, all]"
       - name: install-narwhals-dev
         run: |
@@ -89,10 +87,6 @@ jobs:
         run: |
           cd marimo
           uv add ../ --editable
-          # Temporary pin until it's addressed upstream.
-          uv add "pandas<3" --group test-optional
-          # Temporary pin to get CI green
-          uv add "sqlglot<28.7.0" --group test-optional
       - name: show-deps
         run: |
           cd marimo
@@ -228,8 +222,6 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
-          # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -278,8 +270,6 @@ jobs:
       - name: install-tubular-dev
         run: |
           cd tubular
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
           uv pip install -e ".[dev]"
       - name: install-narwhals-dev
         run: |
@@ -461,8 +451,6 @@ jobs:
           . .venv/bin/activate
           uv pip install . --group dev
           # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
-          # Temporary pin to get CI green
           uv pip install "pandas<3"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
@@ -512,9 +500,6 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev --upgrade
-          # Temporary pin until it's addressed upstream.
-          uv remove pandas --group dev
-          uv add "pandas<3"
       - name: install-narwhals-dev
         run: |
           cd validoopsie
