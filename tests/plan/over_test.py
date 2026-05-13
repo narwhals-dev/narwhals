@@ -457,14 +457,14 @@ def data_order() -> Mapping[str, list[NonNestedLiteral]]:
 
 
 def order_case(
-    columns: ValueColumn | list[ValueColumn],
+    columns: ValueColumn | Sequence[ValueColumn],
     aggregation: Agg,
     /,
     order_by: OrderColumn | Sequence[OrderColumn],
     *,
     descending: bool = False,
     nulls_last: bool = False,
-    expected: NonNestedLiteral | list[NonNestedLiteral],
+    expected: NonNestedLiteral | Sequence[NonNestedLiteral],
 ) -> ParameterSet:
     """Generate `Expr`s and an expected dataset for ordered aggregations.
 

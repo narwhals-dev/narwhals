@@ -243,7 +243,7 @@ if TYPE_CHECKING:
 
         # Until `mypy` supports PEP 675 it won't report anything
         # https://github.com/python/mypy/issues/12554
-        manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue] # pyrefly: ignore [no-matching-overload]
 
         MYPY: Final = False  # noqa: N806
 
@@ -280,7 +280,7 @@ if TYPE_CHECKING:
             # Can't represent this yet
             # https://github.com/python/typing/issues/213
             # https://github.com/CarliJoy/intersection_examples/issues/53
-            assert_type(df_polars, pl.LazyFrame)  # pyright: ignore[reportAssertTypeFailure]
+            assert_type(df_polars, pl.LazyFrame)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore [assert-type]
 
         if not plugin.is_native_dataframe(polars_or_pandas):
             assert_type(polars_or_pandas, pd.DataFrame)
@@ -317,20 +317,20 @@ if TYPE_CHECKING:
         lazy = manager().plugin(backend)
         assert_type(lazy, PluginAny | BuiltinAny)
         classes = lazy.__narwhals_classes__
-        assert_type(classes, PolarsClasses | ArrowClasses | Any)
+        assert_type(classes, PolarsClasses | ArrowClasses | Any)  # pyrefly: ignore[assert-type, missing-attribute]
         if cc.can_lazy(classes):
             evaluator = classes.evaluator
             _assign_evaluator: type[pl_main.PlanEvaluator] = evaluator
             if cc.can_v2(classes):
-                assert_type(classes.v2.lazyframe, type[pl_v2.LazyFrame])
+                assert_type(classes.v2.lazyframe, type[pl_v2.LazyFrame])  # pyrefly: ignore[assert-type, missing-attribute]
             if cc.can_v1(classes):
-                assert_type(classes.v1.lazyframe, type[pl_v1.LazyFrame])
+                assert_type(classes.v1.lazyframe, type[pl_v1.LazyFrame])  # pyrefly: ignore [assert-type, missing-attribute]
 
     def typing_versioned_classes_eager(backend: IntoPlugin) -> None:
         eager = manager().plugin(backend)
         assert_type(eager, PluginAny | BuiltinAny)
         classes = eager.__narwhals_classes__
-        assert_type(classes, PolarsClasses | ArrowClasses | Any)
+        assert_type(classes, PolarsClasses | ArrowClasses | Any)  # pyrefly: ignore[assert-type, missing-attribute]
         if cc.can_eager(classes):
             _evaluator = classes.evaluator  # type: ignore[union-attr]
             _assign_dataframe: type[pl_main.DataFrame | pa_main.DataFrame] = (
