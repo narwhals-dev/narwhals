@@ -511,11 +511,12 @@ def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
         >>> nw.dependencies.is_into_series(np_arr)
         False
     """
+    from narwhals._utils import _hasattr_static
     from narwhals.series import Series
 
     return (
         isinstance(native_series, Series)
-        or hasattr(native_series, "__narwhals_series__")
+        or _hasattr_static(native_series, "__narwhals_series__")
         or is_polars_series(native_series)
         or is_pyarrow_chunked_array(native_series)
         or is_pandas_like_series(native_series)
@@ -580,11 +581,12 @@ def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazy
         >>> is_into_lazyframe(np_arr)
         False
     """
+    from narwhals._utils import _hasattr_static
     from narwhals.dataframe import LazyFrame
 
     return (
         isinstance(native_lazyframe, LazyFrame)
-        or hasattr(native_lazyframe, "__narwhals_lazyframe__")
+        or _hasattr_static(native_lazyframe, "__narwhals_lazyframe__")
         or is_polars_lazyframe(native_lazyframe)
         or is_dask_dataframe(native_lazyframe)
         or is_duckdb_relation(native_lazyframe)

@@ -68,11 +68,12 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
     """Check whether `native_lazyframe` can be converted to a narwhals.stable.v2.LazyFrame."""
+    from narwhals._utils import _hasattr_static
     from narwhals.stable.v2 import LazyFrame
 
     return (
         isinstance(native_lazyframe, LazyFrame)
-        or hasattr(native_lazyframe, "__narwhals_lazyframe__")
+        or _hasattr_static(native_lazyframe, "__narwhals_lazyframe__")
         or is_polars_lazyframe(native_lazyframe)
         or is_dask_dataframe(native_lazyframe)
         or is_duckdb_relation(native_lazyframe)
@@ -85,11 +86,12 @@ def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazy
 
 def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     """Check whether `native_series` can be converted to a narwhals.stable.v2.Series."""
+    from narwhals._utils import _hasattr_static
     from narwhals.stable.v2 import Series
 
     return (
         isinstance(native_series, Series)
-        or hasattr(native_series, "__narwhals_series__")
+        or _hasattr_static(native_series, "__narwhals_series__")
         or is_polars_series(native_series)
         or is_pyarrow_chunked_array(native_series)
         or is_pandas_like_series(native_series)
