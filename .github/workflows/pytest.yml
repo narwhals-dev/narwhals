@@ -98,17 +98,20 @@ jobs:
         run: uv pip install -e test-plugin/.
       - name: show-deps
         run: uv pip freeze
+      - name: Run pytest (plan-plugins-globals)
+        # NOTE: These seem to cause failures in other tests due to `sys.modules` monkeypatching
+        run: pytest tests/plan -m unsafe_globals --numprocesses=1 --cov=narwhals/_plan --cov=tests/plan --cov-fail-under=0
       - name: Run pytest (plan)
-        run: pytest tests/plan narwhals/_plan --cov=narwhals/_plan --doctest-modules --runslow --durations=30
+        run: pytest tests/plan narwhals/_plan --cov=narwhals/_plan --cov-append --doctest-modules --runslow --durations=30
       - name: Run pytest (main)
         # NOTE: `narwhals/_plan` has doctests that increase coverage, so they are run first and the `main`
         # run uses `--cov-append`
         # https://pytest-cov.readthedocs.io/en/latest/readme.html#coverage-data-file
-        run: pytest tests --cov=narwhals --cov=tests --cov-fail-under=100 --cov-append --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+        run: pytest tests --ignore=tests/plan --ignore=narwhals/_plan --cov=narwhals --cov=tests --cov-fail-under=100 --cov-append --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: pytest narwhals --doctest-modules
+        run: pytest narwhals --doctest-modules --ignore=narwhals/_plan
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:

@@ -58,7 +58,14 @@ else:
 
 
 @pytest.fixture
-def plugin(
+def plugin(eager: BuiltinName) -> BuiltinAny:
+    """Use this over `plugin_unsafe` whenever possible."""
+    return load_plugin(eager)
+
+
+# NOTE: Marks dependencies of the fixture (https://github.com/pytest-dev/pytest/issues/1368#issuecomment-2344450259)
+@pytest.fixture(params=[pytest.param(0, marks=pytest.mark.unsafe_globals)])
+def plugin_unsafe(
     eager: BuiltinName, _sys_modules_delete_names: tuple[BuiltinName, ...]
 ) -> Generator[BuiltinAny, Any, None]:
     """Yields the result of `load_plugin(eager)`.
@@ -86,27 +93,27 @@ def test_load_plugin_invalid() -> None:
         load_plugin("i dont exist")
 
 
-def test_plugin_is_imported(plugin: BuiltinAny) -> None:
+def test_plugin_is_imported(plugin_unsafe: BuiltinAny) -> None:
     if not POLARS_PARTIAL_INIT_BUG or plugin.name != "polars":
-        assert not plugin.is_imported()
+        assert not plugin_unsafe.is_imported()
     else:  # pragma: no cover
         ...
-    manager().import_modules(plugin.name)
-    assert plugin.is_imported()
-    assert manager().plugin(plugin.name).is_imported()
+    manager().import_modules(plugin_unsafe.name)
+    assert plugin_unsafe.is_imported()
+    assert manager().plugin(plugin_unsafe.name).is_imported()
 
 
-def test_plugin_can_import(plugin: BuiltinAny) -> None:
-    if not POLARS_PARTIAL_INIT_BUG or plugin.name != "polars":
-        assert not plugin.is_imported()
+def test_plugin_can_import(plugin_unsafe: BuiltinAny) -> None:
+    if not POLARS_PARTIAL_INIT_BUG or plugin_unsafe.name != "polars":
+        assert not plugin_unsafe.is_imported()
     else:  # pragma: no cover
         ...
-    assert plugin.can_import()
-    manager().import_modules(plugin.name)
-    assert plugin.is_imported()
-    assert plugin.can_import()
-    assert manager().plugin(plugin.name).can_import()
-    manager().import_modules(plugin.name)
+    assert plugin_unsafe.can_import()
+    manager().import_modules(plugin_unsafe.name)
+    assert plugin_unsafe.is_imported()
+    assert plugin_unsafe.can_import()
+    assert manager().plugin(plugin_unsafe.name).can_import()
+    manager().import_modules(plugin_unsafe.name)
 
 
 def test_plugin_manager_known() -> None:

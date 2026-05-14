@@ -311,7 +311,11 @@ filterwarnings = [
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
 ]
 xfail_strict = true
-markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "unsafe_globals: tests that may trigger failures elsewhere when run in parallel"
+]
+addopts = ["-m not slow and not unsafe_globals"]
 env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",
