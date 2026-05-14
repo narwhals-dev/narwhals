@@ -3,6 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from narwhals.dependencies import (
+    _is_into_native_dataframe,
+    _is_into_native_lazyframe,
+    _is_into_native_series,
+    _warn_if_narwhals_df_or_lf,
     get_cudf,
     get_dask,
     get_dask_dataframe,
@@ -54,48 +58,29 @@ if TYPE_CHECKING:
 
 def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
     """Check whether `native_dataframe` can be converted to a narwhals.stable.v2.DataFrame."""
-    from narwhals._utils import _hasattr_static
     from narwhals.stable.v2 import DataFrame
 
-    return (
-        isinstance(native_dataframe, DataFrame)
-        or _hasattr_static(native_dataframe, "__narwhals_dataframe__")
-        or is_polars_dataframe(native_dataframe)
-        or is_pyarrow_table(native_dataframe)
-        or is_pandas_like_dataframe(native_dataframe)
-    )
+    if isinstance(native_dataframe, DataFrame):
+        return True
+    _warn_if_narwhals_df_or_lf(native_dataframe)
+    return _is_into_native_dataframe(native_dataframe)
 
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
     """Check whether `native_lazyframe` can be converted to a narwhals.stable.v2.LazyFrame."""
-    from narwhals._utils import _hasattr_static
     from narwhals.stable.v2 import LazyFrame
 
-    return (
-        isinstance(native_lazyframe, LazyFrame)
-        or _hasattr_static(native_lazyframe, "__narwhals_lazyframe__")
-        or is_polars_lazyframe(native_lazyframe)
-        or is_dask_dataframe(native_lazyframe)
-        or is_duckdb_relation(native_lazyframe)
-        or is_ibis_table(native_lazyframe)
-        or is_pyspark_dataframe(native_lazyframe)
-        or is_pyspark_connect_dataframe(native_lazyframe)
-        or is_sqlframe_dataframe(native_lazyframe)
-    )
+    if isinstance(native_lazyframe, LazyFrame):
+        return True
+    _warn_if_narwhals_df_or_lf(native_lazyframe)
+    return _is_into_native_lazyframe(native_lazyframe)
 
 
 def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     """Check whether `native_series` can be converted to a narwhals.stable.v2.Series."""
-    from narwhals._utils import _hasattr_static
     from narwhals.stable.v2 import Series
 
-    return (
-        isinstance(native_series, Series)
-        or _hasattr_static(native_series, "__narwhals_series__")
-        or is_polars_series(native_series)
-        or is_pyarrow_chunked_array(native_series)
-        or is_pandas_like_series(native_series)
-    )
+    return isinstance(native_series, Series) or _is_into_native_series(native_series)
 
 
 __all__ = [
