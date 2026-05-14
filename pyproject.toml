@@ -315,7 +315,7 @@ markers = [
   "slow: marks tests as slow (deselect with '-m \"not slow\"')",
   "unsafe_globals: tests that may trigger failures elsewhere when run in parallel"
 ]
-addopts = ["-m not slow and not unsafe_globals"]
+addopts = ["-m not unsafe_globals"]
 env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",
