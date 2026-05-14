@@ -158,7 +158,7 @@ class IbisNamespace(
             raise NotImplementedError(msg)
 
         def func(_df: IbisLazyFrame) -> list[ir.Value]:
-            a_ = cast("ir.Column", _df._evaluate_single_output_expr(a))
+            a_ = _df._evaluate_single_output_expr(a)
             b_ = _df._evaluate_single_output_expr(b)
             return [a_.corr(b_, how="pop")]  # pyright: ignore[reportAttributeAccessIssue]
 
