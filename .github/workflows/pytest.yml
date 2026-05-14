@@ -102,7 +102,7 @@ jobs:
         # NOTE: These seem to cause failures in other tests due to `sys.modules` monkeypatching
         run: pytest tests/plan -m unsafe_globals --numprocesses=1 --cov=narwhals/_plan --cov=tests/plan --cov-fail-under=0
       - name: Run pytest (plan)
-        run: pytest tests/plan narwhals/_plan --cov=narwhals/_plan --cov-append --doctest-modules --runslow --durations=30
+        run: pytest tests/plan narwhals/_plan --cov=narwhals/_plan  --cov=tests/plan --cov-fail-under=0 --cov-append --doctest-modules --runslow --durations=30
       - name: Run pytest (main)
         # NOTE: `narwhals/_plan` has doctests that increase coverage, so they are run first and the `main`
         # run uses `--cov-append`
