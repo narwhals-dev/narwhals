@@ -154,7 +154,8 @@ def _warn_if_narwhals_series(ser: Any, /) -> None:
         issue_warning(msg, UserWarning)
 
 
-def _is_pandas_dataframe(df: Any) -> bool:
+def _is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
+    """Check whether `df` is a pandas DataFrame without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(df, mod.pandas.DataFrame)
@@ -172,7 +173,8 @@ def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
     return _is_pandas_dataframe(df)
 
 
-def _is_pandas_series(ser: Any) -> bool:
+def _is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
+    """Check whether `ser` is a pandas Series without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
         (mod := sys.modules.get(module_name, None)) is not None
         and isinstance(ser, mod.pandas.Series)
@@ -199,7 +201,8 @@ def is_pandas_index(index: Any) -> TypeIs[pd.Index[Any]]:
     )
 
 
-def _is_modin_dataframe(df: Any) -> bool:
+def _is_modin_dataframe(df: Any) -> TypeIs[mpd.DataFrame]:
+    """Check whether `df` is a modin DataFrame without importing modin."""
     return (mpd := get_modin()) is not None and isinstance(df, mpd.DataFrame)
 
 
@@ -213,7 +216,8 @@ def is_modin_dataframe(df: Any) -> TypeIs[mpd.DataFrame]:
     return _is_modin_dataframe(df)
 
 
-def _is_modin_series(ser: Any) -> bool:
+def _is_modin_series(ser: Any) -> TypeIs[mpd.Series]:
+    """Check whether `ser` is a modin Series without importing modin."""
     return (mpd := get_modin()) is not None and isinstance(ser, mpd.Series)
 
 
@@ -232,7 +236,8 @@ def is_modin_index(index: Any) -> TypeIs[mpd.Index[Any]]:  # pragma: no cover
     return (mpd := get_modin()) is not None and isinstance(index, mpd.Index)
 
 
-def _is_cudf_dataframe(df: Any) -> bool:
+def _is_cudf_dataframe(df: Any) -> TypeIs[cudf.DataFrame]:
+    """Check whether `df` is a cudf DataFrame without importing cudf."""
     return (cudf := get_cudf()) is not None and isinstance(df, cudf.DataFrame)
 
 
@@ -246,7 +251,8 @@ def is_cudf_dataframe(df: Any) -> TypeIs[cudf.DataFrame]:
     return _is_cudf_dataframe(df)
 
 
-def _is_cudf_series(ser: Any) -> bool:
+def _is_cudf_series(ser: Any) -> TypeIs[cudf.Series[Any]]:
+    """Check whether `ser` is a cudf Series without importing cudf."""
     return (cudf := get_cudf()) is not None and isinstance(ser, cudf.Series)
 
 
@@ -275,7 +281,8 @@ def is_cupy_scalar(obj: Any) -> bool:
     )  # pragma: no cover
 
 
-def _is_dask_dataframe(df: Any) -> bool:
+def _is_dask_dataframe(df: Any) -> TypeIs[dd.DataFrame]:
+    """Check whether `df` is a Dask DataFrame without importing Dask."""
     return (dd := get_dask_dataframe()) is not None and isinstance(df, dd.DataFrame)
 
 
@@ -289,7 +296,8 @@ def is_dask_dataframe(df: Any) -> TypeIs[dd.DataFrame]:
     return _is_dask_dataframe(df)
 
 
-def _is_duckdb_relation(df: Any) -> bool:
+def _is_duckdb_relation(df: Any) -> TypeIs[duckdb.DuckDBPyRelation]:
+    """Check whether `df` is a DuckDB Relation without importing DuckDB."""
     return (duckdb := get_duckdb()) is not None and isinstance(
         df, duckdb.DuckDBPyRelation
     )
@@ -305,7 +313,8 @@ def is_duckdb_relation(df: Any) -> TypeIs[duckdb.DuckDBPyRelation]:
     return _is_duckdb_relation(df)
 
 
-def _is_ibis_table(df: Any) -> bool:
+def _is_ibis_table(df: Any) -> TypeIs[ibis.Table]:
+    """Check whether `df` is a Ibis Table without importing Ibis."""
     return (ibis := get_ibis()) is not None and isinstance(df, ibis.expr.types.Table)
 
 
@@ -319,7 +328,8 @@ def is_ibis_table(df: Any) -> TypeIs[ibis.Table]:
     return _is_ibis_table(df)
 
 
-def _is_polars_dataframe(df: Any) -> bool:
+def _is_polars_dataframe(df: Any) -> TypeIs[pl.DataFrame]:
+    """Check whether `df` is a Polars DataFrame without importing Polars."""
     return (pl := get_polars()) is not None and isinstance(df, pl.DataFrame)
 
 
@@ -333,7 +343,8 @@ def is_polars_dataframe(df: Any) -> TypeIs[pl.DataFrame]:
     return _is_polars_dataframe(df)
 
 
-def _is_polars_lazyframe(df: Any) -> bool:
+def _is_polars_lazyframe(df: Any) -> TypeIs[pl.LazyFrame]:
+    """Check whether `df` is a Polars LazyFrame without importing Polars."""
     return (pl := get_polars()) is not None and isinstance(df, pl.LazyFrame)
 
 
@@ -347,7 +358,8 @@ def is_polars_lazyframe(df: Any) -> TypeIs[pl.LazyFrame]:
     return _is_polars_lazyframe(df)
 
 
-def _is_polars_series(ser: Any) -> bool:
+def _is_polars_series(ser: Any) -> TypeIs[pl.Series]:
+    """Check whether `ser` is a Polars Series without importing Polars."""
     return (pl := get_polars()) is not None and isinstance(ser, pl.Series)
 
 
@@ -372,7 +384,8 @@ def is_polars_data_type(obj: Any) -> TypeIs[pl.DataType]:
     return bool(pl := get_polars()) and isinstance(obj, pl.DataType)
 
 
-def _is_pyarrow_chunked_array(ser: Any) -> bool:
+def _is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
+    """Check whether `ser` is a PyArrow ChunkedArray without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(ser, pa.ChunkedArray)
 
 
@@ -386,7 +399,8 @@ def is_pyarrow_chunked_array(ser: Any) -> TypeIs[pa.ChunkedArray[Any]]:
     return _is_pyarrow_chunked_array(ser)
 
 
-def _is_pyarrow_table(df: Any) -> bool:
+def _is_pyarrow_table(df: Any) -> TypeIs[pa.Table]:
+    """Check whether `df` is a PyArrow Table without importing PyArrow."""
     return (pa := get_pyarrow()) is not None and isinstance(df, pa.Table)
 
 
@@ -412,7 +426,8 @@ def is_pyarrow_data_type(obj: Any) -> TypeIs[pa.DataType]:
     return bool(pa := get_pyarrow()) and isinstance(obj, pa.DataType)
 
 
-def _is_pyspark_dataframe(df: Any) -> bool:
+def _is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
+    """Check whether `df` is a PySpark DataFrame without importing PySpark."""
     return bool(
         (pyspark_sql := get_pyspark_sql()) is not None
         and isinstance(df, pyspark_sql.DataFrame)
@@ -429,7 +444,8 @@ def is_pyspark_dataframe(df: Any) -> TypeIs[pyspark_sql.DataFrame]:
     return _is_pyspark_dataframe(df)
 
 
-def _is_pyspark_connect_dataframe(df: Any) -> bool:
+def _is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
+    """Check whether `df` is a PySpark Connect DataFrame without importing PySpark."""
     if get_pyspark_connect() is not None:  # pragma: no cover
         try:
             from pyspark.sql.connect.dataframe import DataFrame
@@ -449,7 +465,8 @@ def is_pyspark_connect_dataframe(df: Any) -> TypeIs[PySparkConnectDataFrame]:
     return _is_pyspark_connect_dataframe(df)
 
 
-def _is_sqlframe_dataframe(df: Any) -> bool:
+def _is_sqlframe_dataframe(df: Any) -> TypeIs[SQLFrameDataFrame]:
+    """Check whether `df` is a SQLFrame DataFrame without importing SQLFrame."""
     if get_sqlframe() is not None:
         from sqlframe.base.dataframe import BaseDataFrame
 
@@ -507,6 +524,10 @@ def is_numpy_scalar(scalar: Any) -> TypeGuard[_NumpyScalar]:
 
 
 def _is_pandas_like_dataframe(df: Any) -> bool:
+    """Check whether `df` is a pandas-like DataFrame without doing any imports.
+
+    By "pandas-like", we mean: pandas, Modin, cuDF.
+    """
     return _is_pandas_dataframe(df) or _is_modin_dataframe(df) or _is_cudf_dataframe(df)
 
 
@@ -523,6 +544,10 @@ def is_pandas_like_dataframe(df: Any) -> bool:
 
 
 def _is_pandas_like_series(ser: Any) -> bool:
+    """Check whether `ser` is a pandas-like Series without doing any imports.
+
+    By "pandas-like", we mean: pandas, Modin, cuDF.
+    """
     return _is_pandas_series(ser) or _is_modin_series(ser) or _is_cudf_series(ser)
 
 
@@ -564,7 +589,7 @@ def is_cudf_dtype(
     )
 
 
-def _is_into_native_series(obj: Any) -> bool:
+def _is_into_native_series(obj: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     from narwhals._utils import _hasattr_static
 
     return (
@@ -575,7 +600,7 @@ def _is_into_native_series(obj: Any) -> bool:
     )
 
 
-def _is_into_native_dataframe(obj: Any) -> bool:
+def _is_into_native_dataframe(obj: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
     from narwhals._utils import _hasattr_static
 
     return (
@@ -586,7 +611,7 @@ def _is_into_native_dataframe(obj: Any) -> bool:
     )
 
 
-def _is_into_native_lazyframe(obj: Any) -> bool:
+def _is_into_native_lazyframe(obj: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
     from narwhals._utils import _hasattr_static
 
     return (
