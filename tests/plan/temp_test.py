@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import hypothesis.strategies as st
 import pytest
-from hypothesis import given
+from hypothesis import given, settings
 
 import narwhals as nw
 from narwhals._plan.common import temp
@@ -72,8 +72,12 @@ def test_temp_column_name_n_chars(n_chars: int) -> None:  # pragma: no cover
 
 
 @given(n_new_names=st.integers(10_000, 100_000))
+@settings(max_examples=30, deadline=None)
 @pytest.mark.slow
 def test_temp_column_names_always_new_names(n_new_names: int) -> None:  # pragma: no cover
+    # NOTE: This test *has* to take long because it creates an artificially large iterator in python
+    # `max_examples` is reduced from the default of `100` to offset this
+    # https://hypothesis.readthedocs.io/en/latest/reference/api.html#hypothesis.settings.deadline
     it = temp.column_names(_COLUMNS)
     new_names = set(islice(it, n_new_names))
     assert len(new_names) == n_new_names

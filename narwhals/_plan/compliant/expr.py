@@ -69,7 +69,7 @@ if TYPE_CHECKING:
         type_params=(Frame, NativeExpr_co, NativeScalar_co),
     )
 
-elif sys.version_info >= (3, 12):
+elif sys.version_info >= (3, 12):  # pragma: no cover
     from typing import TypeAliasType
 
     Scalar = TypeAliasType(

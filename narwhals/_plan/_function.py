@@ -267,8 +267,8 @@ class HorizontalFunction(Function, flags=ELEMENTWISE):
     >>> import narwhals._plan as nw
 
     >>> df = Frame.from_names("a", "b", "c")
-    >>> df.schema
-    Schema({'a': Int64, 'b': Int64, 'c': Int64})
+    >>> dict(df.schema)
+    {'a': Int64, 'b': Int64, 'c': Int64}
 
     We expand multiple inputs into a single output:
     >>> before = nw.sum_horizontal(nw.all())
