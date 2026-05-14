@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -20,35 +20,30 @@ def test_with_row_index_eager(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Remove after debugging CI
-def _fmt(obj: OneOrIterable[ColumnNameOrSelector]) -> str:
-    if isinstance(obj, ncs.Selector):
-        return repr(obj._ir)
-    if isinstance(obj, str):
-        return repr(obj)
-    if isinstance(obj, list) and all(isinstance(el, int) for el in obj):
-        return repr(obj)
-    s = ", ".join(_fmt(el) for el in obj)
-    return f"[{s}]"
+IDX_1: Final = [0, 2, 1]
+IDX_2: Final = [2, 0, 1]
+IDX_3: Final = [1, 2, 0]
+first, last = ncs.first(), ncs.last()
 
 
 @pytest.mark.parametrize(
     ("order_by", "expected_index"),
     [
-        (["a"], [0, 2, 1]),
-        (ncs.first(), [0, 2, 1]),
-        (ncs.string(), [0, 2, 1]),
-        (["c"], [2, 0, 1]),
-        (ncs.last(), [2, 0, 1]),
-        (ncs.integer() - ncs.by_index(1), [2, 0, 1]),
-        (["a", "c"], [1, 2, 0]),
-        ([ncs.first(), "c"], [1, 2, 0]),
-        (["a", ncs.by_name("c")], [1, 2, 0]),
-        (["c", "a"], [2, 0, 1]),
-        ([ncs.by_index(-1, 0)], [2, 0, 1]),
-        ([ncs.last(), ncs.first()], [2, 0, 1]),
+        pytest.param(["a"], IDX_1, id="['a']"),
+        pytest.param(first, IDX_1, id="first()"),
+        pytest.param(ncs.string(), IDX_1, id="string()"),
+        pytest.param(["c"], IDX_2, id="['c']"),
+        pytest.param(last, IDX_2, id="last()"),
+        pytest.param(
+            ncs.integer() - ncs.by_index(1), IDX_2, id="integer() - by_index(1)"
+        ),
+        pytest.param(["a", "c"], IDX_3, id="['a', 'c']"),
+        pytest.param([first, "c"], IDX_3, id="[first(), 'c']"),
+        pytest.param(["a", ncs.by_name("c")], IDX_3, id="['a', by_name('c')]"),
+        pytest.param(["c", "a"], IDX_2, id="['c', 'a']"),
+        pytest.param([ncs.by_index(-1, 0)], IDX_2, id="[by_index(-1, 0)]"),
+        pytest.param([last, first], IDX_2, id="[last(), first()]"),
     ],
-    ids=_fmt,
 )
 def test_with_row_index_by(
     dataframe: DataFrame,
