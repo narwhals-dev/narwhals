@@ -615,6 +615,7 @@ class DataFrame(
                 values=values_,
                 aggregate_function=aggregate_function,
                 separator=separator,
+                sort_columns=sort_columns,
             )
         )
 
