@@ -57,12 +57,6 @@ else:
         return BUILTIN_NAMES
 
 
-@pytest.fixture
-def plugin(eager: BuiltinName) -> BuiltinAny:
-    """Use this over `plugin_unsafe` whenever possible."""
-    return load_plugin(eager)
-
-
 # NOTE: Marks dependencies of the fixture (https://github.com/pytest-dev/pytest/issues/1368#issuecomment-2344450259)
 @pytest.fixture(params=[pytest.param(0, marks=pytest.mark.unsafe_globals)])
 def plugin_unsafe(
@@ -94,7 +88,7 @@ def test_load_plugin_invalid() -> None:
 
 
 def test_plugin_is_imported(plugin_unsafe: BuiltinAny) -> None:
-    if not POLARS_PARTIAL_INIT_BUG or plugin.name != "polars":
+    if not POLARS_PARTIAL_INIT_BUG or plugin_unsafe.name != "polars":
         assert not plugin_unsafe.is_imported()
     else:  # pragma: no cover
         ...
