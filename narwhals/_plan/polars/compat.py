@@ -41,7 +41,8 @@ Prior this this version, `nulls_last` was [only available on `*Frame` and `Expr`
 [only available on `*Frame` and `Expr`]: https://github.com/pola-rs/polars/issues/13788
 """
 
-HAS_LEN: Final = BACKEND_VERSION >= (0, 20, 6)
+HAS_LEN: Final = BACKEND_VERSION >= (0, 20, 5)
+"""https://github.com/pola-rs/polars/pull/13719"""
 
 DUNDER_ARRAY_SUPPORTS_COPY: Final = BACKEND_VERSION >= (0, 20, 29)
 """https://github.com/pola-rs/polars/pull/16401"""
