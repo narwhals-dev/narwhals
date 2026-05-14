@@ -21,6 +21,18 @@ def test_with_row_index_eager(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Remove after debugging CI
+def _fmt(obj: OneOrIterable[ColumnNameOrSelector]) -> str:
+    if isinstance(obj, ncs.Selector):
+        return repr(obj._ir)
+    if isinstance(obj, str):
+        return repr(obj)
+    if isinstance(obj, list) and all(isinstance(el, int) for el in obj):
+        return repr(obj)
+    s = ", ".join(_fmt(el) for el in obj)
+    return f"[{s}]"
+
+
 @pytest.mark.parametrize(
     ("order_by", "expected_index"),
     [
@@ -37,6 +49,7 @@ def test_with_row_index_eager(dataframe: DataFrame) -> None:
         ([ncs.by_index(-1, 0)], [2, 0, 1]),
         ([ncs.last(), ncs.first()], [2, 0, 1]),
     ],
+    ids=_fmt,
 )
 def test_with_row_index_by(
     dataframe: DataFrame,

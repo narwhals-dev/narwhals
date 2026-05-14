@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import builtins
 from typing import TYPE_CHECKING, Any, ClassVar
 
 import polars as pl
@@ -80,15 +81,18 @@ else:
         return pl.count().alias("len")
 
 
-# TODO @dangotbanned: (low-priority) Support without triggering
-# `over(..., order_by=...)` requires `polars>=1.0.0`
 def row_index(
     name: str = "index", order_by: Sequence[str] = (), *, nulls_last: bool = False
 ) -> pl.Expr:
-    expr = pl.int_range(len())
-    if order_by:
-        expr = over(expr, order_by=order_by, nulls_last=nulls_last)
-    return expr.alias(name)
+    int_range = pl.int_range(len()).alias(name)
+    if not order_by:
+        return int_range
+    if compat.OVER_RESPECTS_NULLS_LAST:
+        return int_range.over(order_by=order_by, nulls_last=nulls_last)
+    # NOTE: `nulls_last` isn't the missing feature,
+    # but the behavior is more predictable following that change
+    by = pl.col(order_by) if builtins.len(order_by) == 1 else pl.struct(order_by)
+    return int_range.sort_by(by.arg_sort(nulls_last=nulls_last))
 
 
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
