@@ -502,6 +502,18 @@ def test_pivot_aggregate(
         reason="`sum` & `len` are special-cased in `polars` to always return 0 instead on `None`",
         raises=(AssertionError, NotImplementedError),
     )
+    version = dataframe.backend_version()
+    dataframe.xfail(
+        request,
+        dataframe.is_polars()
+        and (version >= (1, 0, 0) and version < (1, 32, 0))
+        and agg_fn in {"sum", "len"},
+        reason=(
+            "`sum` & `len` were not special-cased in `polars` yet to always return 0 instead on `None`\n"
+            "https://github.com/pola-rs/polars/pull/23586"
+        ),
+        raises=(AssertionError),
+    )
     result = df.pivot(
         "a", index="b", values="c", aggregate_function=agg_fn, sort_columns=True
     )
