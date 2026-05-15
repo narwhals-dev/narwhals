@@ -205,6 +205,10 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         invert = cast("Callable[..., ir.Value]", operator.invert)
         return self._with_callable(invert)
 
+    def __neg__(self) -> Self:
+        neg = cast("Callable[..., ir.Value]", operator.neg)
+        return self._with_callable(neg)
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:

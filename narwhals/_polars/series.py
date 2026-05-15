@@ -63,6 +63,7 @@ INHERITED_METHODS = frozenset(
         "__iter__",
         "__mod__",
         "__mul__",
+        "__neg__",
         "__or__",
         "__pow__",
         "__radd__",
@@ -692,6 +693,7 @@ class PolarsSeries:
     __iter__: Method[Iterator[Any]]
     __mod__: Method[Self]
     __mul__: Method[Self]
+    __neg__: Method[Self]
     __or__: Method[Self]
     __pow__: Method[Self]
     __radd__: Method[Self]
