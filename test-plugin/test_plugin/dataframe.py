@@ -57,6 +57,7 @@ class DictLazyFrame(
 
     # Functions
     aggregate = not_implemented()
+    clear = not_implemented()
     collect = not_implemented()
     collect_schema = not_implemented()
     drop = not_implemented()

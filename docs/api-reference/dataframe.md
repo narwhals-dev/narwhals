@@ -6,6 +6,7 @@
       members:
         - __arrow_c_stream__
         - __getitem__
+        - clear
         - clone
         - collect_schema
         - columns
