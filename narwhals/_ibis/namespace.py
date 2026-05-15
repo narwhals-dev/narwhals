@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 class IbisNamespace(
-    SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", Any],
+    SQLNamespace[IbisLazyFrame, IbisExpr, "ir.Table", "ir.Value"],
     AlignDiagonal[IbisLazyFrame, IbisExpr],
 ):
     _implementation: Implementation = Implementation.IBIS

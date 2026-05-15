@@ -400,10 +400,12 @@ def catch_duckdb_exception(
 
 
 def function(name: str, *args: Expression) -> Expression:
-    if name == "isnull":
-        return args[0].isnull()
+    if name in {"isnull", "isnotnull"}:
+        return getattr(args[0], name)()  # type: ignore[no-any-return]
     if name == "count_distinct":
         return sql_expression(f"count(distinct {args[0]})")
+    if name == "floordiv":
+        return args[0] // args[1]
     return F(name, *args)
 
 

@@ -48,16 +48,16 @@ if TYPE_CHECKING:
     from narwhals.typing import IntoDType, RankMethod, RollingInterpolationMethod
 
     ExprT = TypeVar("ExprT", bound=ir.Value)
-    IbisWindowFunction = WindowFunction[IbisLazyFrame, Any]
-    IbisWindowInputs = WindowInputs[Any]
+    IbisWindowFunction = WindowFunction[IbisLazyFrame, ir.Value]
+    IbisWindowInputs = WindowInputs[ir.Value]
 
 
-class IbisExpr(SQLExpr["IbisLazyFrame", Any]):
+class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
 
     def __init__(
         self,
-        call: EvalSeries[IbisLazyFrame, Any],
+        call: EvalSeries[IbisLazyFrame, ir.Value],
         window_function: IbisWindowFunction | None = None,
         *,
         evaluate_output_names: EvalNames[IbisLazyFrame],
@@ -320,7 +320,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", Any]):
 
             return ibis.cases((expr.notnull(), rank_))
 
-        def window_f(df: IbisLazyFrame, inputs: WindowInputs[Any]) -> list[ir.Value]:
+        def window_f(df: IbisLazyFrame, inputs: WindowInputs[ir.Value]) -> list[ir.Value]:
             if inputs.order_by:
                 msg = "`rank` followed by `over` with `order_by` specified is not supported for Ibis backend."
                 raise NotImplementedError(msg)

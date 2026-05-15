@@ -40,6 +40,13 @@ FUNCTION_REMAPPINGS = {
     "regexp_matches": "regexp",
 }
 
+_BINARY_OPS = {
+    "add": operator.add,
+    "subtract": operator.sub,
+    "multiply": operator.mul,
+    "divide": operator.truediv,
+}
+
 
 class SparkLikeNamespace(
     SQLNamespace[SparkLikeLazyFrame, SparkLikeExpr, "SQLFrameDataFrame", "Column"]
@@ -77,6 +84,10 @@ class SparkLikeNamespace(
         return import_native_dtypes(self._implementation)
 
     def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
+        if name in _BINARY_OPS:
+            return _BINARY_OPS[name](*args)
+        if name == "isnotnull":
+            return args[0].isNotNull()  # type: ignore[union-attr]
         return getattr(self._F, FUNCTION_REMAPPINGS.get(name, name))(*args)
 
     def _lit(self, value: Any) -> Column:
