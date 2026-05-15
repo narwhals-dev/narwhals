@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
@@ -399,13 +400,16 @@ def catch_duckdb_exception(
     return exception
 
 
+_BINARY_OPS = {"floordiv": operator.floordiv, "and": operator.and_}
+
+
 def function(name: str, *args: Expression) -> Expression:
+    if name in _BINARY_OPS:
+        return _BINARY_OPS[name](*args)
     if name in {"isnull", "isnotnull"}:
         return getattr(args[0], name)()  # type: ignore[no-any-return]
     if name == "count_distinct":
         return sql_expression(f"count(distinct {args[0]})")
-    if name == "floordiv":
-        return args[0] // args[1]
     return F(name, *args)
 
 

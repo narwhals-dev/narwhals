@@ -45,6 +45,7 @@ _BINARY_OPS = {
     "subtract": operator.sub,
     "multiply": operator.mul,
     "divide": operator.truediv,
+    "and": operator.and_,
 }
 
 
