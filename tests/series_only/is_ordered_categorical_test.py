@@ -91,5 +91,5 @@ def test_is_ordered_categorical_pyarrow() -> None:
 
 
 def test_is_ordered_categorical_unknown_series() -> None:
-    series: nw.Series[Any] = nw.Series(MockCompliantSeries(), level="full")
+    series: nw.Series[Any] = nw.Series(MockCompliantSeries())
     assert nw.is_ordered_categorical(series) is False

@@ -58,6 +58,7 @@ if TYPE_CHECKING:
         RankMethod,
         RollingInterpolationMethod,
         SingleIndexSelector,
+        SupportLevel,
         TemporalLiteral,
         _1DArray,
     )
@@ -85,6 +86,8 @@ class Series(Generic[IntoSeriesT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
+    # See note on `BaseFrame._level`. Subclasses override at class or instance level.
+    _level: SupportLevel = "full"
 
     @property
     def _compliant(self) -> CompliantSeries[IntoSeriesT]:
@@ -101,10 +104,7 @@ class Series(Generic[IntoSeriesT]):
             ExprNode(ExprKind.SERIES, "_expr._from_series", series=self._compliant)
         )
 
-    def __init__(
-        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
-    ) -> None:
-        self._level: Literal["full", "lazy", "interchange"] = level
+    def __init__(self, series: Any) -> None:
         if is_compliant_series(series):
             self._compliant_series: CompliantSeries[IntoSeriesT] = (
                 series.__narwhals_series__()
@@ -169,8 +169,8 @@ class Series(Generic[IntoSeriesT]):
             ns = cls._version.namespace.from_backend(implementation).compliant
             compliant = ns.from_numpy(values).alias(name)
             if dtype:
-                return cls(compliant.cast(dtype), level="full")
-            return cls(compliant, level="full")
+                return cls(compliant.cast(dtype))
+            return cls(compliant)
         msg = (  # pragma: no cover
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
@@ -232,7 +232,7 @@ class Series(Generic[IntoSeriesT]):
             compliant = ns._series.from_iterable(
                 values, context=ns, name=name, dtype=dtype
             )
-            return cls(compliant, level="full")
+            return cls(compliant)
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
@@ -473,7 +473,7 @@ class Series(Generic[IntoSeriesT]):
         return arg
 
     def _with_compliant(self, series: Any) -> Self:
-        return self.__class__(series, level=self._level)
+        return self.__class__(series)
 
     def pipe(self, function: Callable[[Any], Self], *args: Any, **kwargs: Any) -> Self:
         """Pipe function call.
@@ -656,7 +656,7 @@ class Series(Generic[IntoSeriesT]):
             │ 2   │
             └─────┘
         """
-        return self._dataframe(self._compliant_series.to_frame(), level=self._level)
+        return self._dataframe(self._compliant_series.to_frame())
 
     def to_list(self) -> list[Any]:
         """Convert to list.
@@ -1956,8 +1956,7 @@ class Series(Generic[IntoSeriesT]):
         return self._dataframe(
             self._compliant_series.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
-            ),
-            level=self._level,
+            )
         )
 
     def quantile(
@@ -2195,8 +2194,7 @@ class Series(Generic[IntoSeriesT]):
             2    0    1
         """
         return self._dataframe(
-            self._compliant_series.to_dummies(separator=separator, drop_first=drop_first),
-            level=self._level,
+            self._compliant_series.to_dummies(separator=separator, drop_first=drop_first)
         )
 
     def gather_every(self, n: int, offset: int = 0) -> Self:
@@ -2726,7 +2724,7 @@ class Series(Generic[IntoSeriesT]):
                 bin_count=bin_count, include_breakpoint=include_breakpoint
             )
 
-        return self._dataframe(result, level=self._level)
+        return self._dataframe(result)
 
     def log(self, base: float = math.e) -> Self:
         r"""Compute the logarithm to a given base.

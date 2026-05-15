@@ -263,6 +263,8 @@ ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 - *"all"*: Keeps all the mode's.
 """
 
+SupportLevel: TypeAlias = Literal["full", "lazy", "interchange"]
+"""Level of Narwhals support for the object."""
 
 PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 

@@ -558,3 +558,17 @@ def test_first_last() -> None:
     result = df.select(b=nw_v2.col("a").first(), c=nw_v2.col("a").last())
     expected = {"b": [0], "c": [-1]}
     assert_equal_data(result, expected)
+
+
+def test_from_mock_interchange_protocol_rejected() -> None:
+    """v2 must reject objects which only implement `__dataframe__`."""
+
+    class MockDf:
+        def __dataframe__(self) -> None: ...  # pragma: no cover
+
+    mockdf = MockDf()
+    with pytest.raises(TypeError, match="Unsupported dataframe type"):
+        # Typing rejection **is** expected in v2, since IntoDataFrame excludes
+        # DataFrameLike objects!
+        nw_v2.from_native(mockdf)  # type: ignore[call-overload]
+    assert nw_v2.from_native(mockdf, pass_through=True) is mockdf
