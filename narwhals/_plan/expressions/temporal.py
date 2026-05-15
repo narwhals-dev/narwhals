@@ -41,7 +41,7 @@ class _TemporalTimeZone(_TemporalUnary, Generic[Tz]):
     __slots__ = ("time_zone",)
     time_zone: Tz
     def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:  # pragma: no cover
-        dtype = node.input[0].resolve_dtype(schema)
+        dtype = node.args[0].resolve_dtype(schema)
         if isinstance(dtype, dtm.dtypes.Datetime):
             return type(dtype)(dtype.time_unit, self.time_zone)
         msg = f"Expected Datetime, got {dtype}"

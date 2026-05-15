@@ -183,7 +183,7 @@ class AggSpec:
         tp = type(expr.function)
         if not (fn_name := SUPPORTED_FUNCTION.get(tp)):
             raise group_by_error(name, expr)
-        args = expr.input
+        args = expr.args
         if not (len(args) == 1 and isinstance(args[0], ir.Column)):
             raise group_by_error(name, expr, "too complex")
         return cls(args[0].name, fn_name, options.FUNCTION.get(tp), name)

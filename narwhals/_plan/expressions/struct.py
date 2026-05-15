@@ -59,7 +59,7 @@ class FieldByName(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
         if (
-            (struct_name := node.input[0].meta.output_name(raise_if_undetermined=False))
+            (struct_name := node.args[0].meta.output_name(raise_if_undetermined=False))
             and (struct := schema.get(struct_name))
             and isinstance(struct, STRUCT)
         ):

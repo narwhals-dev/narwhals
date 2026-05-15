@@ -12,7 +12,6 @@ These constraints allow top-level modules and the `functions` & `compliant` pack
 to freely import from here.
 """
 
-# ruff: noqa: A002
 from __future__ import annotations
 
 from collections import deque
@@ -63,19 +62,19 @@ Some functions use the `expr: OneOrIterable[IntoExpr], *more: IntoExpr` pattern,
 
 
 # TODO @dangotbanned: `str_as_lit` maybe stays, but could do some inheritance instead?
-def into_expr_ir(input: IntoExpr | dict[Any, Any], *, str_as_lit: bool = False) -> ExprIR:
+def into_expr_ir(arg: IntoExpr | dict[Any, Any], *, str_as_lit: bool = False) -> ExprIR:
     """Parse a single input into an expression.
 
     Arguments:
-        input: The input to be parsed as an expression.
+        arg: The input to be parsed as an expression.
         str_as_lit: Interpret string input as a string literal. If set to `False` (default),
             strings are parsed as column names.
     """
-    if isinstance(input, _import_expr()):
-        return input._ir
-    if not str_as_lit and isinstance(input, str):
-        return ir.col(input)
-    return _import_lit()(input)._ir
+    if isinstance(arg, _import_expr()):
+        return arg._ir
+    if not str_as_lit and isinstance(arg, str):
+        return ir.col(arg)
+    return _import_lit()(arg)._ir
 
 
 def predicates_constraints_into_expr_ir(
@@ -140,16 +139,16 @@ def sort_by_into_iter_expr_ir(
 
 
 def into_iter_expr_ir(
-    first_input: OneOrIterable[IntoExpr] = (),
-    *more_inputs: IntoExpr | Incomplete,
-    **named_inputs: IntoExpr,
+    first_arg: OneOrIterable[IntoExpr] = (),
+    *more_args: IntoExpr | Incomplete,
+    **named_args: IntoExpr,
 ) -> Iterator[ExprIR]:
     """Yield variadic inputs parsed into expressions.
 
     Arguments:
-        first_input: Input(s) to be parsed as expressions.
-        *more_inputs: Additional inputs to parse.
-        **named_inputs: Keyword-arguments from one of `select`, `with_columns`, `group_by`.
+        first_arg: Input(s) to be parsed as expressions.
+        *more_args: Additional inputs to parse.
+        **named_args: Keyword-arguments from one of `select`, `with_columns`, `group_by`.
             The columns will be renamed to the keyword used.
 
     *Most* cases are covered by these rules, see examples for special-cases:
@@ -161,7 +160,7 @@ def into_iter_expr_ir(
         PythonLiteral          -> Lit
 
     Examples:
-        `first_input` is separate as how it is parsed *depends on* `more_inputs`.
+        `first_arg` is separate as how it is parsed *depends on* `more_args`.
 
         >>> def parse(*args, **kwds):
         ...     return list(into_iter_expr_ir(*args, **kwds))
@@ -186,19 +185,19 @@ def into_iter_expr_ir(
 
         *This behavior matches `polars`*
     """
-    first = first_input
+    first = first_arg
     always_expr_or_lit = (_import_series(), _import_expr(), str, bytes, dict)
     if (isinstance(first, always_expr_or_lit) or not _is_iterable(first)) or (
-        more_inputs and isinstance(first, (list, tuple))
+        more_args and isinstance(first, (list, tuple))
     ):
         yield into_expr_ir(first)  # type: ignore[arg-type]
     else:
         for into in first:
             yield into_expr_ir(into)
-    for into in more_inputs:
+    for into in more_args:
         yield into_expr_ir(into)
-    for name, input in named_inputs.items():
-        yield into_expr_ir(input).alias(name)
+    for name, arg in named_args.items():
+        yield into_expr_ir(arg).alias(name)
 
 
 def _df_filter_into_iter_expr_ir(
@@ -227,8 +226,8 @@ def _df_filter_into_iter_expr_ir(
 # TODO @dangotbanned: Would be cool to have something like:
 # `into_selector_ir(...).expand_names(schema, **kwds)`
 def into_selector_ir(
-    first_input: OneOrIterable[str | Selector],
-    more_inputs: Seq[OneOrIterable[str | Selector]] = (),
+    first_arg: OneOrIterable[str | Selector],
+    more_args: Seq[OneOrIterable[str | Selector]] = (),
     /,
     *,
     require_all: bool = True,
@@ -239,8 +238,8 @@ def into_selector_ir(
         Prefer `into_iter_selector_ir` if there isn't a requirement for just one.
 
     Arguments:
-        first_input: One or more column names or selectors.
-        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+        first_arg: One or more column names or selectors.
+        more_args: Use if `*args` were accepted *in-addition-to* `first_arg` as syntax sugar.
         require_all: Whether to match *all* names (the default) or *any* of the names.
 
     Examples:
@@ -261,11 +260,11 @@ def into_selector_ir(
         >>> into_selector_ir(("a", "b"), (ncs.integer(), ncs.float(), "c"))
         [[ncs.by_name('a', 'b', 'c') | ncs.integer()] | ncs.float()]
     """
-    if not more_inputs and (
-        isinstance(first_input, str) or not isinstance(first_input, Iterable)
+    if not more_args and (
+        isinstance(first_arg, str) or not isinstance(first_arg, Iterable)
     ):
-        return _into_selector_ir(first_input, require_all=require_all)
-    flat = _flatten_column_names_or_selectors((first_input, *more_inputs))
+        return _into_selector_ir(first_arg, require_all=require_all)
+    flat = _flatten_column_names_or_selectors((first_arg, *more_args))
     if (first := next(flat, None)) is None:
         return s_ir.Empty()
     if (second := next(flat, None)) is None:
@@ -286,35 +285,35 @@ def into_selector_ir(
 
 
 def into_iter_selector_ir(
-    first_input: OneOrIterable[str | Selector], more_inputs: Seq[str | Selector] = (), /
+    first_arg: OneOrIterable[str | Selector], more_args: Seq[str | Selector] = (), /
 ) -> Iterator[SelectorIR]:
     """Yield input(s) parsed into selector(s).
 
     Arguments:
-        first_input: One or more column names or selectors.
-        more_inputs: Use if `*args` were accepted *in-addition-to* `first_input` as syntax sugar.
+        first_arg: One or more column names or selectors.
+        more_args: Use if `*args` were accepted *in-addition-to* `first_arg` as syntax sugar.
     """
-    if isinstance(first_input, str):
-        yield s_ir.ByName.from_name(first_input)
-    elif not isinstance(first_input, Iterable):
-        yield _into_selector_ir(first_input)
-    elif more_inputs:
-        raise invalid_into_expr_error(first_input, more_inputs, {})
+    if isinstance(first_arg, str):
+        yield s_ir.ByName.from_name(first_arg)
+    elif not isinstance(first_arg, Iterable):
+        yield _into_selector_ir(first_arg)
+    elif more_args:
+        raise invalid_into_expr_error(first_arg, more_args, {})
     else:
-        for into in first_input:
+        for into in first_arg:
             yield _into_selector_ir(into)
-    for into in more_inputs:
+    for into in more_args:
         yield _into_selector_ir(into)
 
 
 def _into_selector_ir(
-    input: str | Selector | Expr, /, *, require_all: bool = True
+    arg: str | Selector | Expr, /, *, require_all: bool = True
 ) -> SelectorIR:
-    if isinstance(input, _import_expr()):
-        return input._ir.to_selector_ir()
-    if isinstance(input, str):
-        return s_ir.ByName.from_name(input, require_all=require_all)
-    msg = f"cannot turn {qualified_type_name(input)!r} into a selector"
+    if isinstance(arg, _import_expr()):
+        return arg._ir.to_selector_ir()
+    if isinstance(arg, str):
+        return s_ir.ByName.from_name(arg, require_all=require_all)
+    msg = f"cannot turn {qualified_type_name(arg)!r} into a selector"
     raise TypeError(msg)
 
 

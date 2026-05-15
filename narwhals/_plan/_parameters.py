@@ -150,7 +150,7 @@ class Unary(Parameters, arity=1):
     >>> expr = nw.col("a").abs()
     >>> expr._ir.function.__function_parameters__
     Unary(DEFAULT)
-    >>> expr._ir.input[0]
+    >>> expr._ir.args[0]
     col('a')
     """
 
@@ -160,7 +160,7 @@ class Unary(Parameters, arity=1):
     def dispatch_args(
         self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
     ) -> Seq1[ct.E | ct.SC]:  # pragma: no cover
-        arg = node.input[0]
+        arg = node.args[0]
         return (arg.__expr_ir_dispatch__(arg, ctx, frame, name),)
 
 
@@ -171,12 +171,12 @@ class Binary(Parameters, arity=2):
     In many cases, this is like `Unary` but the `Expr` *method* accepts an expression:
     >>> import narwhals._plan as nw
     >>> expr = nw.col("a").fill_null(nw.col("a").min())
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
     Binary(DEFAULT, ANY) | (col('a'), col('a').min())
 
     We also use this to represent range *functions*:
     >>> expr = nw.int_range(0, 10)
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
     Binary(SCALAR, SCALAR) | (lit(int: 0), lit(int: 10))
     """
 
@@ -186,7 +186,7 @@ class Binary(Parameters, arity=2):
     def dispatch_args(
         self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
     ) -> Seq2[ct.E | ct.SC]:
-        left, right = node.input
+        left, right = node.args
         return (
             left.__expr_ir_dispatch__(left, ctx, frame, name),
             right.__expr_ir_dispatch__(right, ctx, frame, ""),
@@ -200,7 +200,7 @@ class Ternary(Parameters, arity=3):
     This is like `Unary` but the `Expr` *method* accepts two expressions:
     >>> import narwhals._plan as nw
     >>> expr = nw.col("a").alias("clip").clip(nw.col("b"), nw.col("c"))
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
     Ternary(DEFAULT, ANY, ANY) | (col('a').alias('clip'), col('b'), col('c'))
     """
 
@@ -215,7 +215,7 @@ class Ternary(Parameters, arity=3):
     def dispatch_args(
         self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
     ) -> Seq3[ct.E | ct.SC]:
-        arg_1, arg_2, arg_3 = node.input
+        arg_1, arg_2, arg_3 = node.args
         return (
             arg_1.__expr_ir_dispatch__(arg_1, ctx, frame, name),
             arg_2.__expr_ir_dispatch__(arg_2, ctx, frame, ""),
@@ -231,12 +231,12 @@ class Variadic(Parameters, arity="*"):
     Describes the parameters of horizontal functions:
     >>> import narwhals._plan as nw
     >>> expr = nw.all_horizontal("a", "b", "c", "d")
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
     Variadic(*) | (col('a'), col('b'), col('c'), col('d'))
 
     Yep, this too:
     >>> expr = nw.concat_str(nw.col("c"), nw.nth(-1))
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.input}")
+    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
     Variadic(*) | (col('c'), ncs.last())
     """
 
@@ -247,7 +247,7 @@ class Variadic(Parameters, arity="*"):
     def dispatch_args(
         self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
     ) -> Seq[ct.E | ct.SC]:  # pragma: no cover
-        it = iter(node.input)
+        it = iter(node.args)
         first = next(it)
         return (
             first.__expr_ir_dispatch__(first, ctx, frame, name),

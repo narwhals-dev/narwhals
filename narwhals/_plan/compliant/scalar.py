@@ -100,7 +100,7 @@ class CompliantScalar(
     def ewm_mean(
         self, node: FExpr[F.EwmMean], frame: Frame, name: str, /
     ) -> CompliantScalar[Frame, NativeExpr_co, NativeScalar_co]:
-        return self._cast_float(node.input[0], frame, name)
+        return self._cast_float(node.args[0], frame, name)
 
     def mean(
         self, node: agg.Mean, frame: Frame, name: str, /

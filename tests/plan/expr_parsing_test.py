@@ -172,8 +172,8 @@ def test_agg_non_elementwise_range_special() -> None:
     e_ir = e._ir
     assert isinstance(e_ir, ir.Alias)
     assert isinstance(e_ir.expr, ir.RangeExpr)
-    assert isinstance(e_ir.expr.input[0], ir.Lit)
-    assert isinstance(e_ir.expr.input[1], ir.Len)
+    assert isinstance(e_ir.expr.args[0], ir.Lit)
+    assert isinstance(e_ir.expr.args[1], ir.Len)
 
 
 def test_function_arity_invalid() -> None:
@@ -742,7 +742,7 @@ def test_operators_left_right(
         assert isinstance(ir_1.function, op)
         assert isinstance(ir_2, ir.FunctionExpr)
         assert isinstance(ir_2.function, op)
-        assert tuple(reversed(ir_2.input)) == ir_1.input
+        assert tuple(reversed(ir_2.args)) == ir_1.args
 
 
 def test_hist_bins() -> None:
@@ -962,7 +962,7 @@ def test_list_contains_invalid() -> None:
     assert_expr_ir_equal(
         ok,
         ir.FunctionExpr(
-            input=(ir.col("a"), ir.lit("a", nw.String)), function=ir.lists.Contains()
+            args=(ir.col("a"), ir.lit("a", nw.String)), function=ir.lists.Contains()
         ),
     )
     assert a.list.contains(a.first())

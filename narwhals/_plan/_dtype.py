@@ -86,7 +86,7 @@ class _FunctionExpr(_ExprIR, Protocol[_FunctionT_co]):
     @property
     def function(self) -> _FunctionT_co: ...
     @property
-    def input(self) -> tuple[_ExprIR,...]: ...
+    def args(self) -> tuple[_ExprIR,...]: ...
 # fmt: on
 
 
@@ -305,7 +305,7 @@ class FunctionVisitor(ResolveDType[_FunctionExpr[_FunctionT]], Generic[_Function
 
 class FunctionSameDType(_Singleton[_FunctionExprT]):
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return node.input[0].resolve_dtype(schema)
+        return node.args[0].resolve_dtype(schema)
 
     def __repr__(self) -> str:
         accessor = ResolveDType.function
@@ -319,7 +319,7 @@ class FunctionMapFirst(ResolveDType[_FunctionExprT]):
         self._mapper = mapper
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
-        return self._mapper(node.input[0].resolve_dtype(schema))  # pragma: no cover
+        return self._mapper(node.args[0].resolve_dtype(schema))  # pragma: no cover
 
     def __repr__(self) -> str:
         accessor = ResolveDType.function
@@ -334,7 +334,7 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
 
     def __call__(self, node: _FunctionExprT, schema: FrozenSchema, /) -> DType:
         return self._mapper(
-            e.resolve_dtype(schema) for e in node.input
+            e.resolve_dtype(schema) for e in node.args
         )  # pragma: no cover
 
     def __repr__(self) -> str:

@@ -31,7 +31,7 @@ class ListFunction(Function, dispatch=DispatcherOptions(accessor_name="list"), f
 class _ListUnary(UnaryFunction, ListFunction): ...
 class _ListInner(_ListUnary):
     def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:
-        return dtm.inner_dtype(node.input[0].resolve_dtype(schema), repr(self))  # pragma: no cover
+        return dtm.inner_dtype(node.args[0].resolve_dtype(schema), repr(self))  # pragma: no cover
 class Sum(_ListUnary, dtype=map_first(dtm.nested_sum_dtype)): ...
 class Join(_ListUnary, dtype=map_first(dtm.list_join_dtype)):
     __slots__ = ("ignore_nulls", "separator")

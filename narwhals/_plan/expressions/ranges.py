@@ -60,7 +60,7 @@ class RangeFunction(BinaryFunction, Generic[T_co]):
         """
         from narwhals._plan.expressions import Lit
 
-        start, end = node.input
+        start, end = node.args
         if isinstance(start, Lit) and isinstance(end, Lit):
             return self.ensure_py_scalars(start.value, end.value)
         return None

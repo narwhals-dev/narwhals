@@ -58,8 +58,8 @@ def rewrite_elementwise_over(window: ExprIR, /) -> ExprIR:
         and window.expr.flags.is_elementwise()
     ):
         func = window.expr
-        parent, *args = func.input
-        return replace(func, input=(replace(window, expr=parent), *args))
+        parent, *args = func.args
+        return replace(func, args=(replace(window, expr=parent), *args))
     return window
 
 

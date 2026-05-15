@@ -57,10 +57,10 @@ def function_arg_non_scalar_error(function: Function, value: Any) -> ShapeError:
 
 
 def function_arity_error(
-    function: Function, arity: Literal[1, 2, 3, "*"], inputs: Collection[ir.ExprIR]
+    function: Function, arity: Literal[1, 2, 3, "*"], args: Collection[ir.ExprIR]
 ) -> TypeError:
-    exprs = "" if not inputs else f":\n{format_expressions(*inputs)}"
-    msg = f"Expected {arity} {'input' if arity == 1 else 'inputs'} for `{function!r}()`, got {len(inputs)}{exprs}"
+    exprs = "" if not args else f":\n{format_expressions(*args)}"
+    msg = f"Expected {arity} {'input' if arity == 1 else 'inputs'} for `{function!r}()`, got {len(args)}{exprs}"
     return TypeError(msg)
 
 
@@ -199,16 +199,16 @@ def over_order_by_names_error(
 
 
 def invalid_into_expr_error(
-    first_input: Iterable[IntoExpr],
-    more_inputs: tuple[Any, ...],
-    named_inputs: dict[str, IntoExpr],
+    first_arg: Iterable[IntoExpr],
+    more_args: tuple[Any, ...],
+    named_args: dict[str, IntoExpr],
     /,
 ) -> InvalidIntoExprError:
-    named = f"\n{named_inputs!r}" if named_inputs else ""
+    named = f"\n{named_args!r}" if named_args else ""
     msg = (
         f"Passing both iterable and positional inputs is not supported.\n"
-        f"Hint:\nInstead try collecting all arguments into a {type(first_input).__name__!r}\n"
-        f"{first_input!r}\n{more_inputs!r}{named}"
+        f"Hint:\nInstead try collecting all arguments into a {type(first_arg).__name__!r}\n"
+        f"{first_arg!r}\n{more_args!r}{named}"
     )
     return InvalidIntoExprError(msg)
 

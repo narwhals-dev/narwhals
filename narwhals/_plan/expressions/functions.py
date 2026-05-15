@@ -103,7 +103,7 @@ class MeanHorizontal(HorizontalFunction):
     ) -> DType:  # pragma: no cover
         # NOTE: There are 6 supertype pairs (that we support) that could produce `Float32`
         # Otherwise, it is always `Float64`
-        if dtm.F32 in {e.resolve_dtype(schema) for e in node.input}:
+        if dtm.F32 in {e.resolve_dtype(schema) for e in node.args}:
             msg = f"{self!r} is not yet supported when inputs contain a {dtm.F32!r} dtype.\n"
             "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"
             raise NotImplementedError(msg)
@@ -171,8 +171,8 @@ class Pow(BinaryFunction, flags=ELEMENTWISE):
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
-        base = node.input[0].resolve_dtype(schema)
-        if base.is_integer() and (exp := node.input[1].resolve_dtype(schema)).is_float():
+        base = node.args[0].resolve_dtype(schema)
+        if base.is_integer() and (exp := node.args[1].resolve_dtype(schema)).is_float():
             return exp
         return base
 
@@ -182,7 +182,7 @@ class FillNull(BinaryFunction, flags=ELEMENTWISE):
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
-        expr, value = (e.resolve_dtype(schema) for e in node.input)
+        expr, value = (e.resolve_dtype(schema) for e in node.args)
         if expr != value:
             msg = f"{self!r} is currently only supported when the dtype of the expression {expr!r} matches the fill value {value!r}.\n"
             "This operation requires https://github.com/narwhals-dev/narwhals/pull/3396"

@@ -209,7 +209,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
             dtype = dtype_to_native_fast(func.dtype)
             native = pl.int_range(*fastpath, func.step, dtype=dtype)
             return self.from_native(native, name)
-        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.input[0]!r}\n{node.input[1]!r}"
+        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.args[0]!r}\n{node.args[1]!r}"
         raise NotImplementedError(msg)
 
     is_between = todo()

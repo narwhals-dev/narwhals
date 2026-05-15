@@ -40,14 +40,13 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-# TODO @dangotbanned: How painful will a rename for `input` -> `args` be?
 # TODO @dangotbanned: Docs should complement `Function`
 # - The two are very tightly coupled
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     """An expression wrapping a function and it's arguments.
 
     Arguments:
-        input: Expression arguments to the function.
+        args: Expression arguments to the function.
         function: The function to apply, which may contain non-expression arguments.
 
     ## What to doc?
@@ -63,8 +62,8 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     - Most operations (by count) are represented using this guy or some flavor of it
     """
 
-    __slots__ = ("function", "input")
-    input: Seq[ExprIR] = nodes()
+    __slots__ = ("args", "function")
+    args: Seq[ExprIR] = nodes()
     function: FunctionT_co
 
     __expr_ir_dispatch__: ClassVar[FunctionExprDispatch[Self]] = (
@@ -80,7 +79,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return FunctionFlags.AGGREGATION in self.flags
 
     def is_length_preserving(self) -> bool:
-        # NOTE: upstream is `... and all(e.is_length_preserving() for e in self.input)`
+        # NOTE: upstream is `... and all(e.is_length_preserving() for e in self.args)`
         # -but says it's overly conservative.
         # That won't make sense here as this is pre-expansion
         # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-stream/src/physical_plan/lower_expr.rs#L364-L374
@@ -90,10 +89,10 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return self.flags.changes_length()
 
     def __repr__(self) -> str:
-        if self.input:
-            first = self.input[0]
-            if len(self.input) >= 2:
-                return f"{first!r}.{self.function!r}({list(self.input[1:])!r})"
+        if self.args:
+            first = self.args[0]
+            if len(self.args) >= 2:
+                return f"{first!r}.{self.function!r}({list(self.args[1:])!r})"
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
 
@@ -116,10 +115,10 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return self.function.resolve_dtype(self, schema)
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
-        input_root, *non_root = self.input
+        input_root, *non_root = self.args
         children = tuple(ctx.only(self, child) for child in non_root) if non_root else ()
         for root in input_root.iter_expand(ctx):
-            yield self.__replace__(input=(root, *children))
+            yield self.__replace__(args=(root, *children))
 
     def dispatch_arg(
         self: FunctionExpr[UnaryFunction],
@@ -132,7 +131,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         Important:
             Exclusive to `Unary`
         """
-        node = self.input[0]
+        node = self.args[0]
         return node.__expr_ir_dispatch__(node, ctx, frame, name)
 
     @overload
@@ -199,7 +198,7 @@ class RangeExpr(FunctionExpr[RangeT_co]):
         # TODO @dangotbanned: (very low-priority) `Function` could take a format string
         # when subclassing instead of this
         # `dt.timestamp` and `struct.field` have some weirdness too
-        return f"{self.function!r}({list(self.input)!r})"
+        return f"{self.function!r}({list(self.args)!r})"
 
 
 class StructExpr(FunctionExpr[StructT_co]):

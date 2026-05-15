@@ -364,7 +364,7 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             ...     if isinstance(expr, ir.FunctionExpr) and isinstance(
             ...         expr.function, F.SumHorizontal
             ...     ):
-            ...         inputs = deque(expr.input)
+            ...         inputs = deque(expr.args)
             ...         left = inputs.popleft()
             ...         add = ir.operators.Add()
             ...         while inputs:

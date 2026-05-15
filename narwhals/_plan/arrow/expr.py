@@ -374,7 +374,7 @@ class _ArrowDispatch(
     def _dispatch_variadic_native(
         self, node: HExpr, frame: Frame, name: str, /
     ) -> Iterator[Native]:
-        exprs = iter(node.input)
+        exprs = iter(node.args)
         yield self.dispatch(next(exprs), frame, name).native
         for expr_ir in exprs:
             yield self.dispatch(expr_ir, frame, "").native
@@ -483,7 +483,7 @@ class _ArrowDispatch(
             return func.ensure_py_scalars(start.to_python(), end.to_python())
         # TODO @dangotbanned: Add some variant of `dispatch_args` that ensures we got a `ArrowScalar`
         # This should be unreachable, but the typing doesn't know that
-        bad = node.input[0] if isinstance(start, ArrowScalar) else node.input[1]
+        bad = node.args[0] if isinstance(start, ArrowScalar) else node.args[1]
         raise function_arg_non_scalar_error(func, bad)
 
     def int_range(self, node: ir.RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
@@ -787,7 +787,7 @@ class ArrowExpr(
     def map_batches(
         self, node: ir.AnonymousExpr, frame: Frame, name: str, /
     ) -> Self | Scalar:
-        series = self._dispatch_expr(node.input[0], frame, name)
+        series = self._dispatch_expr(node.args[0], frame, name)
         udf = node.function.function
         udf_result: Series | Iterable[Any] | Any = udf(series)
         if node.is_scalar():
@@ -824,19 +824,19 @@ class ArrowExpr(
     def gather_every(
         self, node: FExpr[F.GatherEvery], frame: Frame, name: str, /
     ) -> Self:
-        series = self._dispatch_expr(node.input[0], frame, name)
+        series = self._dispatch_expr(node.args[0], frame, name)
         n, offset = node.function.n, node.function.offset
         return self.from_series(series.gather_every(n=n, offset=offset))
 
     def sample_n(self, node: FExpr[F.SampleN], frame: Frame, name: str, /) -> Self:
-        series = self._dispatch_expr(node.input[0], frame, name)
+        series = self._dispatch_expr(node.args[0], frame, name)
         func = node.function
         n, replace, seed = func.n, func.with_replacement, func.seed
         result = series.sample_n(n, with_replacement=replace, seed=seed)
         return self.from_series(result)
 
     def sample_frac(self, node: FExpr[F.SampleFrac], frame: Frame, name: str, /) -> Self:
-        series = self._dispatch_expr(node.input[0], frame, name)
+        series = self._dispatch_expr(node.args[0], frame, name)
         func = node.function
         fraction, replace, seed = func.fraction, func.with_replacement, func.seed
         result = series.sample_frac(fraction, with_replacement=replace, seed=seed)
@@ -868,7 +868,7 @@ class ArrowExpr(
     }
 
     def _rolling(self, node: FExpr[F.RollingWindow], frame: Frame, name: str, /) -> Self:
-        s = self._dispatch_expr(node.input[0], frame, name)
+        s = self._dispatch_expr(node.args[0], frame, name)
         f = node.function
         return self.from_series(self._ROLLING[type(f)](s, **(f.options.to_dict())))
 
@@ -886,7 +886,7 @@ class ArrowExpr(
         return self.from_series(series)
 
     def hist_bins(self, node: FExpr[F.HistBins], frame: Frame, name: str, /) -> Self:
-        native = self._dispatch_expr(node.input[0], frame, name).native
+        native = self._dispatch_expr(node.args[0], frame, name).native
         func = node.function
         bins = func.bins
         include = func.include_breakpoint
@@ -901,7 +901,7 @@ class ArrowExpr(
     def hist_bin_count(
         self, node: FExpr[F.HistBinCount], frame: Frame, name: str, /
     ) -> Self:
-        native = self._dispatch_expr(node.input[0], frame, name).native
+        native = self._dispatch_expr(node.args[0], frame, name).native
         func = node.function
         bin_count = func.bin_count
         include = func.include_breakpoint
@@ -1107,7 +1107,7 @@ class ArrowListNamespace(
         self, node: FExpr[lists.Contains], frame: Frame, name: str, /
     ) -> Expr | Scalar:
         dispatch = self.compliant.dispatch
-        prev, item = (dispatch(e, frame, name).native for e in node.input)
+        prev, item = (dispatch(e, frame, name).native for e in node.args)
         if isinstance(item, pa.ChunkedArray):
             raise NotImplementedError
         return self.with_native(fn.list.contains(prev, item), name)
@@ -1115,7 +1115,7 @@ class ArrowListNamespace(
     def aggregate(
         self, node: FExpr[lists.Aggregation], frame: Frame, name: str, /
     ) -> Expr | Scalar:
-        previous = self.compliant.dispatch(node.input[0], frame, name).native
+        previous = self.compliant.dispatch(node.args[0], frame, name).native
         agg = group_by.AggSpec._from_list_agg(node.function, "values")
         return self.with_native(agg.agg_list(previous), name)
 
@@ -1169,7 +1169,7 @@ class ArrowStringNamespace(
         func = node.function
         pattern, literal, n = (func.pattern, func.literal, func.n)
         dispatch = self.compliant.dispatch
-        prev, value = (dispatch(e, frame, name).native for e in node.input)
+        prev, value = (dispatch(e, frame, name).native for e in node.args)
         if isinstance(value, pa.Scalar):
             result = fn.str.replace(prev, pattern, value.as_py(), literal=literal, n=n)
         elif isinstance(prev, pa.ChunkedArray):

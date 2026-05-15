@@ -10,7 +10,7 @@ pub enum Expr {                    // class ExprIR: ...
                                    // class Function: ...
                                    //
     Function {                     // class FunctionExpr(ExprIR):
-        input: Vec<Expr>,          //     input: Seq[ExprIR]
+        input: Vec<Expr>,          //     args: Seq[ExprIR]
         function: FunctionExpr,    //     function: Function
     //            ^^^^^^^^^^^^                      ^^^^^^^^
         options: FunctionOptions,  //     flags: FunctionFlags
@@ -78,9 +78,9 @@ class Function(Immutable):
     >>> isinstance(expr_ir, ir.FunctionExpr)
     True
 
-    >>> print(f"Function(args) : {expr_ir.function}\nExprIR input(s): {expr_ir.input[0]}")
+    >>> print(f"Function(args) : {expr_ir.function}\nExprIR args(s): {expr_ir.args[0]}")
     Function(args) : Shift(n=2)
-    ExprIR input(s): Col(name='a')
+    ExprIR args(s): Col(name='a')
 
     Whereas **classes** encode most of the details, like...
 
@@ -166,9 +166,9 @@ class Function(Immutable):
 
         class Pow(Function):
             def resolve_dtype(self, node: FunctionExpr, schema: FrozenSchema, /) -> DType:
-                base = node.input[0].resolve_dtype(schema)
+                base = node.args[0].resolve_dtype(schema)
                 if base.is_integer():
-                    if (exp := node.input[1].resolve_dtype(schema)).is_float():
+                    if (exp := node.args[1].resolve_dtype(schema)).is_float():
                         return exp
                 return base
 
@@ -186,15 +186,15 @@ class Function(Immutable):
         """Return the `ExprIR` subclass this function should be wrapped with."""
         return _import_function_expr()
 
-    def to_function_expr(self, *inputs: ExprIR) -> FunctionExpr[Self]:
+    def to_function_expr(self, *args: ExprIR) -> FunctionExpr[Self]:
         """Wrap this function as an expression.
 
         Arguments:
-            *inputs: Expression arguments for the function.
+            *args: Expression arguments for the function.
                 The first input is the root and responsible for the output name.
         """
-        exprs = self.__function_parameters__.check(self, inputs)
-        return self.__function_expr__()(input=exprs, function=self)
+        exprs = self.__function_parameters__.check(self, args)
+        return self.__function_expr__()(args=exprs, function=self)
 
     def __init_subclass__(
         cls: type[Self],
