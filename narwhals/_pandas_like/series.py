@@ -502,6 +502,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def __invert__(self) -> Self:
         return self._with_native(~self.native)
 
+    def __neg__(self) -> Self:
+        return self._with_native(-self.native)
+
     # Reductions
 
     def any(self) -> bool:

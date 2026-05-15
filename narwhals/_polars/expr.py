@@ -304,6 +304,9 @@ class PolarsExpr:
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
 
+    def __neg__(self) -> Self:
+        return self._with_native(self.native.__neg__())
+
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
