@@ -19,9 +19,9 @@ lint:
 
 .PHONY: typing
 typing: ## Run typing checks
-	uv run --group typing --upgrade pyright
-	uv run --group typing --upgrade mypy
-	uv run --group typing --upgrade pyrefly check
+	uv run --group typing pyright
+	uv run --group typing mypy
+	uv run --group typing pyrefly check
 
 .PHONY: docs-serve
 docs-serve:  # Build and serve the docs locally
