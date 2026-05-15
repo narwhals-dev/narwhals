@@ -8,8 +8,8 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
+    from narwhals.testing.typing import Data
     from narwhals.typing import IntoSchema
-    from tests.conftest import Data
 
 
 @pytest.fixture(scope="module")

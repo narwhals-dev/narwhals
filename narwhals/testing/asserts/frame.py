@@ -13,7 +13,6 @@ from narwhals.testing.asserts.utils import (
 
 if TYPE_CHECKING:
     from narwhals._typing import Arrow, IntoBackend, Pandas, Polars
-    from narwhals.typing import DataFrameT, LazyFrameT
 
 GUARANTEES_ROW_ORDER = {
     Implementation.PANDAS,
@@ -26,8 +25,8 @@ GUARANTEES_ROW_ORDER = {
 
 
 def assert_frame_equal(
-    left: DataFrameT | LazyFrameT,
-    right: DataFrameT | LazyFrameT,
+    left: DataFrame[Any] | LazyFrame[Any],
+    right: DataFrame[Any] | LazyFrame[Any],
     *,
     check_row_order: bool = True,
     check_column_order: bool = True,
@@ -145,8 +144,8 @@ def assert_frame_equal(
 
 
 def _check_correct_input_type(  # noqa: RET503
-    left: DataFrameT | LazyFrameT,
-    right: DataFrameT | LazyFrameT,
+    left: DataFrame[Any] | LazyFrame[Any],
+    right: DataFrame[Any] | LazyFrame[Any],
     backend: IntoBackend[Polars | Pandas | Arrow] | None,
 ) -> tuple[DataFrame[Any], DataFrame[Any]]:
     # Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/py-polars/src/polars/testing/asserts/frame.py#L15-L17
@@ -165,8 +164,8 @@ def _check_correct_input_type(  # noqa: RET503
 
 
 def _assert_dataframe_equal(
-    left: DataFrameT,
-    right: DataFrameT,
+    left: DataFrame[Any],
+    right: DataFrame[Any],
     impl: Implementation,
     *,
     check_row_order: bool,
@@ -232,7 +231,11 @@ def _assert_dataframe_equal(
 
 
 def _check_schema_equal(
-    left: DataFrameT, right: DataFrameT, *, check_dtypes: bool, check_column_order: bool
+    left: DataFrame[Any],
+    right: DataFrame[Any],
+    *,
+    check_dtypes: bool,
+    check_column_order: bool,
 ) -> None:
     """Compares DataFrame schema based on specified criteria.
 

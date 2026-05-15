@@ -45,7 +45,7 @@ def test_arithmetic_expr(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 3.0]}
-    df = nw.from_native(constructor(data))
+    df = constructor(data, nw)
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     assert_equal_data(result, {"a": expected})
 
@@ -76,7 +76,7 @@ def test_right_arithmetic_expr(
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor(data))
+    df = constructor(data)
     result = df.select(getattr(nw.col("a"), attr)(rhs))
     assert_equal_data(result, {"literal": expected})
 
@@ -98,16 +98,16 @@ def test_arithmetic_series(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor_eager: ConstructorEager,
+    nw_dataframe: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(nw_dataframe) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw_dataframe(data, nw)
     result = df.select(getattr(df["a"], attr)(rhs))
     assert_equal_data(result, {"a": expected})
 
@@ -128,29 +128,29 @@ def test_right_arithmetic_series(
     attr: str,
     rhs: Any,
     expected: list[Any],
-    constructor_eager: ConstructorEager,
+    nw_dataframe: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__rmod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(nw_dataframe) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 2, 3]}
-    df = nw.from_native(constructor_eager(data), eager_only=True)
+    df = nw_dataframe(data, nw)
     result_series = getattr(df["a"], attr)(rhs)
     assert result_series.name == "a"
     assert_equal_data({"a": result_series}, {"a": expected})
 
 
 def test_truediv_same_dims(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    nw_dataframe: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor_eager):
+    if "polars" in str(nw_dataframe):
         # https://github.com/pola-rs/polars/issues/17760
         request.applymarker(pytest.mark.xfail)
-    s_left = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)["a"]
-    s_right = nw.from_native(constructor_eager({"a": [2, 2, 1]}), eager_only=True)["a"]
+    s_left = nw_dataframe({"a": [1, 2, 3]}, nw)["a"]
+    s_right = nw_dataframe({"a": [2, 2, 1]}, nw)["a"]
     result = s_left / s_right
     assert_equal_data({"a": result}, {"a": [0.5, 1.0, 3.0]})
     result = s_left.__rtruediv__(s_right)
@@ -160,31 +160,27 @@ def test_truediv_same_dims(
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
 @pytest.mark.slow
-def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
-    if any(x in str(constructor_eager) for x in ["modin", "cudf"]):
+def test_floordiv(nw_dataframe: ConstructorEager, *, left: int, right: int) -> None:
+    if any(x in str(nw_dataframe) for x in ["modin", "cudf"]):
         # modin & cudf are too slow here
         pytest.skip()
     assume(right != 0)
     expected = {"a": [left // right]}
-    result = nw.from_native(constructor_eager({"a": [left]}), eager_only=True).select(
-        nw.col("a") // right
-    )
+    result = nw_dataframe({"a": [left]}, nw).select(nw.col("a") // right)
     assert_equal_data(result, expected)
 
 
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
-def test_mod(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
-    if any(x in str(constructor_eager) for x in ["pandas_pyarrow", "modin", "cudf"]):
+def test_mod(nw_dataframe: ConstructorEager, *, left: int, right: int) -> None:
+    if any(x in str(nw_dataframe) for x in ["pandas_pyarrow", "modin", "cudf"]):
         # pandas[pyarrow] does not implement mod
         # modin & cudf are too slow here
         pytest.skip()
     assume(right != 0)
     expected = {"a": [left % right]}
-    result = nw.from_native(constructor_eager({"a": [left]}), eager_only=True).select(
-        nw.col("a") % right
-    )
+    result = nw_dataframe({"a": [left]}, nw).select(nw.col("a") % right)
     assert_equal_data(result, expected)
 
 
@@ -218,7 +214,7 @@ def test_arithmetic_expr_left_literal(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 4.0]}
-    df = nw.from_native(constructor(data))
+    df = constructor(data, nw)
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
 
@@ -240,16 +236,16 @@ def test_arithmetic_series_left_literal(
     attr: str,
     lhs: Any,
     expected: list[Any],
-    constructor_eager: ConstructorEager,
+    nw_dataframe: ConstructorEager,
     request: pytest.FixtureRequest,
 ) -> None:
     if attr == "__mod__" and any(
-        x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
+        x in str(nw_dataframe) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1.0, 2.0, 4.0]}
-    df = nw.from_native(constructor_eager(data))
+    df = nw_dataframe(data, nw)
     result = df.select(getattr(lhs, attr)(nw.col("a")))
     assert_equal_data(result, {"literal": expected})
 
@@ -258,7 +254,7 @@ def test_std_broadcating(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # `std(ddof=2)` fails for duckdb here
         pytest.skip()
-    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    df = constructor({"a": [1, 2, 3]}, nw)
     result = df.with_columns(b=nw.col("a").std()).sort("a")
     expected = {"a": [1, 2, 3], "b": [1.0, 1.0, 1.0]}
     assert_equal_data(result, expected)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
@@ -9,10 +9,7 @@ import narwhals.stable.v1 as nw_v1
 pytest.importorskip("polars")
 import polars as pl
 
-if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+data: dict[str, list[Any]] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
 def test_interchange() -> None:
@@ -60,9 +57,9 @@ def test_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    df_pl = pl.DataFrame(data)  # noqa: F841
+    _df_pl = pl.DataFrame(data)
 
-    rel = duckdb.sql("select * from df_pl")
+    rel = duckdb.sql("select * from _df_pl")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     series = df["a"]
 
