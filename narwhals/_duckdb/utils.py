@@ -405,7 +405,7 @@ _BINARY_OPS = {"floordiv": operator.floordiv, "and": operator.and_}
 
 def function(name: str, *args: Expression) -> Expression:
     if name in _BINARY_OPS:
-        return _BINARY_OPS[name](*args)
+        return _BINARY_OPS[name](*args)  # type: ignore[no-any-return]
     if name in {"isnull", "isnotnull"}:
         return getattr(args[0], name)()  # type: ignore[no-any-return]
     if name == "count_distinct":
