@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Generic
+from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals.typing import SeriesT
+
+if TYPE_CHECKING:
+    from narwhals.dataframe import DataFrame
 
 
 class SeriesStructNamespace(Generic[SeriesT]):
@@ -27,4 +30,36 @@ class SeriesStructNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.struct.field(name)
+        )
+
+    def unnest(self) -> DataFrame[Any]:
+        r"""Convert this struct Series to a DataFrame with a separate column for each field.
+
+        Each field of the struct becomes a column in the resulting DataFrame.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series(
+            ...     [{"id": 0, "name": "john"}, {"id": 1, "name": "jane"}]
+            ... )
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.struct.unnest()
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |  shape: (2, 2)   |
+            |  ┌─────┬──────┐  |
+            |  │ id  ┆ name │  |
+            |  │ --- ┆ ---  │  |
+            |  │ i64 ┆ str  │  |
+            |  ╞═════╪══════╡  |
+            |  │ 0   ┆ john │  |
+            |  │ 1   ┆ jane │  |
+            |  └─────┴──────┘  |
+            └──────────────────┘
+        """
+        return self._narwhals_series._dataframe(
+            self._narwhals_series._compliant_series.struct.unnest(),
+            level=self._narwhals_series._level,
         )
