@@ -114,7 +114,7 @@ class LitSeries(
     >>> series = nw.Series.from_iterable([1], backend="pyarrow")
     >>> expr = nw.lit(series)
     >>> expr._ir
-    lit(Series)
+    lit(Series[pa.ChunkedArray])
     >>> expr.meta.is_literal()
     True
 
@@ -148,17 +148,19 @@ class LitSeries(
     def version(self) -> Version:  # pragma: no cover
         return self.value.version
 
-    # TODO @dangotbanned: Maybe show more detail on origin (not values)?
-    # - `lit(Series[polars])`
-    # - `lit(Series[pl.Series])`
-    # - `lit(Series<Implementation.POLARS: 'polars'>)`
+    # TODO @dangotbanned: Update with dtype after `Lit`
     def __repr__(self) -> str:
-        return "lit(Series)"
+        return f"lit(Series[{self.value._compliant.__narwhals_repr_name__()}])"
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
         # NOTE: Adding `Series.__eq__` means this needed a manual override
         yield from (self.name, self.dtype, id(self.value))
+
+
+def _dtype_repr(obj: Any) -> str:
+    msg = "TODO `lit[<dtype-something>](...)`"
+    raise NotImplementedError(msg)
 
 
 lit = Lit.from_python

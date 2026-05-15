@@ -45,6 +45,21 @@ class CompliantSeries(Protocol[NativeSeriesT_co]):
     implementation: ClassVar[Implementation]
     version: ClassVar[Version]
 
+    def __narwhals_repr_name__(self) -> str:
+        """Return the idiomatic type name for `self.native`.
+
+        E.g. `pl.Series`, `pd.Series`, etc.
+
+        Note:
+            This is optional and falls back to `<package>.<class-name>`
+        """
+        tp_native = type(self.native)
+        name_native = tp_native.__name__
+        prefix = ""
+        if module := getattr(tp_native, "__module__", ""):
+            prefix = f"{module.split('.')[0]}."
+        return f"{prefix}{name_native}"
+
     def __narwhals_series__(self) -> Self:
         return self
 

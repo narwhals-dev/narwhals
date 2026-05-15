@@ -136,6 +136,9 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def name(self) -> str:
         return self.native.name
 
+    def __narwhals_repr_name__(self) -> str:
+        return "pl.Series"
+
     @property
     def dtype(self) -> DType:
         return dtype_from_native(self.native.dtype, self.version)

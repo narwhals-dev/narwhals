@@ -78,6 +78,9 @@ class ArrowSeries(
     def name(self) -> str:
         return self._name
 
+    def __narwhals_repr_name__(self) -> str:
+        return "pa.ChunkedArray"
+
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.native.__repr__())
 

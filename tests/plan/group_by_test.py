@@ -704,7 +704,7 @@ def test_group_by_series_lit_22103() -> None:
     data = {"g": [0, 1]}
     series = nwp.Series.from_native(pa.chunked_array([[42, 2, 3]]))
     df = dataframe(data)
-    with pytest.raises(InvalidOperationError, match=re.escape("foo=lit(Series)")):
+    with pytest.raises(InvalidOperationError, match=r"foo=lit\(Series\[.+\]\)"):
         df.group_by("g").agg(foo=series)
 
 
