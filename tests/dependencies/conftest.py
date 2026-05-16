@@ -23,7 +23,7 @@ class DynamicAttrOnly:
     [`inspect.getattr_static`]: https://docs.python.org/3/library/inspect.html#inspect.getattr_static
     """
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> Any:  # pragma: no cover
         return self
 
 
