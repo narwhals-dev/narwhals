@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from tests.dependencies.conftest import DynamicAttrOnly
     from tests.utils import Constructor
 
 EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow")
@@ -31,7 +32,9 @@ class DictDataFrame:  # pragma: no cover
     def __narwhals_dataframe__(self) -> Self:
         return self
 
-    def __len__(self) -> int: ...
+    def __len__(self) -> int:
+        return len(next(iter(self._data.values())))
+
     @property
     def columns(self) -> Any: ...
     def drop(self, *args: Any, **kwargs: Any) -> Any: ...
@@ -65,18 +68,25 @@ def test_is_into_dataframe(constructor: Constructor) -> None:
     assert not v2_is_into_dataframe(nw_frame)
 
 
-def test_is_into_dataframe_other() -> None:
+def test_is_into_dataframe_numpy() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_dataframe(DictDataFrame(data))
-    assert not is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
+    arr = np.array([[1, 4], [2, 5], [3, 6]])
+    assert not is_into_dataframe(arr)
+    assert not v1_is_into_dataframe(arr)
+    assert not v2_is_into_dataframe(arr)
+
+
+def test_is_into_dataframe_other(dynamic_attr_only: DynamicAttrOnly) -> None:
     assert not is_into_dataframe(data)
-
-    assert v1_is_into_dataframe(DictDataFrame(data))
-    assert not v1_is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v1_is_into_dataframe(data)
-
-    assert v2_is_into_dataframe(DictDataFrame(data))
-    assert not v2_is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v2_is_into_dataframe(data)
+
+    assert is_into_dataframe(DictDataFrame(data))
+    assert v1_is_into_dataframe(DictDataFrame(data))
+    assert v2_is_into_dataframe(DictDataFrame(data))
+
+    assert not is_into_dataframe(dynamic_attr_only)
+    assert not v1_is_into_dataframe(dynamic_attr_only)
+    assert not v2_is_into_dataframe(dynamic_attr_only)

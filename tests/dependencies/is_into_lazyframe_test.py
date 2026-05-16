@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from tests.dependencies.conftest import DynamicAttrOnly
     from tests.utils import Constructor
 
 EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow")
@@ -64,18 +65,25 @@ def test_is_into_lazyframe(constructor: Constructor) -> None:
     assert not v2_is_into_lazyframe(nw_frame)
 
 
-def test_is_into_lazyframe_other() -> None:
+def test_is_into_lazyframe_numpy() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_lazyframe(DictLazyFrame(data))
-    assert not is_into_lazyframe(np.array([[1, 4], [2, 5], [3, 6]]))
+    arr = np.array([[1, 4], [2, 5], [3, 6]])
+    assert not is_into_lazyframe(arr)
+    assert not v1_is_into_lazyframe(arr)
+    assert not v2_is_into_lazyframe(arr)
+
+
+def test_is_into_lazyframe_other(dynamic_attr_only: DynamicAttrOnly) -> None:
     assert not is_into_lazyframe(data)
-
-    assert v1_is_into_lazyframe(DictLazyFrame(data))
-    assert not v1_is_into_lazyframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v1_is_into_lazyframe(data)
-
-    assert v2_is_into_lazyframe(DictLazyFrame(data))
-    assert not v2_is_into_lazyframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v2_is_into_lazyframe(data)
+
+    assert is_into_lazyframe(DictLazyFrame(data))
+    assert v1_is_into_lazyframe(DictLazyFrame(data))
+    assert v2_is_into_lazyframe(DictLazyFrame(data))
+
+    assert not is_into_lazyframe(dynamic_attr_only)
+    assert not v1_is_into_lazyframe(dynamic_attr_only)
+    assert not v2_is_into_lazyframe(dynamic_attr_only)
