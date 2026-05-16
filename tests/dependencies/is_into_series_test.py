@@ -82,6 +82,6 @@ def test_is_into_series_other(dynamic_attr_only: DynamicAttrOnly) -> None:
     assert v1_is_into_series(ListBackedSeries("a", values))
     assert v2_is_into_series(ListBackedSeries("a", values))
 
-    assert is_into_series(dynamic_attr_only)
-    assert v1_is_into_series(dynamic_attr_only)
-    assert v2_is_into_series(dynamic_attr_only)
+    assert not is_into_series(dynamic_attr_only)
+    assert not v1_is_into_series(dynamic_attr_only)
+    assert not v2_is_into_series(dynamic_attr_only)
