@@ -1,0 +1,709 @@
+"""Convert `LogicalPlan` -> `ResolvedPlan`.
+
+Intending for a rough equivalence of [`dsl_to_ir`]:
+
+    DslPlan     -> IR
+    LogicalPlan -> ResolvedPlan
+
+[`dsl_to_ir`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs
+"""
+
+from __future__ import annotations
+
+from collections import deque
+from functools import lru_cache
+from itertools import chain
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
+
+from narwhals._plan import expressions as ir, plugins
+from narwhals._plan._expansion import Expander, expand_selectors, prepare_projection
+from narwhals._plan.common import temp, todo
+from narwhals._plan.dtypes_mapper import IDX_DTYPE
+from narwhals._plan.exceptions import (
+    column_not_found_error,
+    invalid_dtype_operation_error,
+)
+from narwhals._plan.expressions import selectors as s_ir
+from narwhals._plan.plans import resolved as rp
+from narwhals._plan.schema import FrozenSchema
+from narwhals._typing import IntoBackend
+from narwhals._utils import (
+    Version,
+    check_column_names_are_unique as raise_duplicate_error,
+)
+from narwhals.exceptions import ComputeError, DuplicateError, InvalidOperationError
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Mapping
+    from typing import TypeAlias
+
+    from typing_extensions import Self
+
+    from narwhals._plan._expr_ir import NamedIR
+    from narwhals._plan.compliant.typing import Native
+    from narwhals._plan.plans import logical as lp
+    from narwhals._plan.typing import KnownImpl, Seq
+    from narwhals.dtypes import DType
+    from narwhals.typing import Backend, IntoBackend
+
+
+__all__ = ("Resolver",)
+
+Incomplete: TypeAlias = Any
+
+Cast: TypeAlias = "ir.NamedIR[ir.Cast]"
+
+dtypes = Version.MAIN.dtypes
+
+GET_SUPERTYPE_MSG = (
+    "This operation requires `get_supertype` to determine if a valid cast exists.\n"
+    "https://github.com/narwhals-dev/narwhals/pull/3396)"
+)
+
+
+def resolve_dtype_auto_implode(expr: NamedIR, schema: FrozenSchema, /) -> DType:
+    dtype = expr.resolve_dtype(schema)
+    return dtype if expr.expr.is_scalar() else dtypes.List(dtype)
+
+
+def align_diagonal(inputs: Seq[rp.ResolvedPlan]) -> Seq[rp.ResolvedPlan]:
+    """Port of `AlignDiagonal` (used for `ibis`)."""
+    schemas = tuple(input.schema for input in inputs)
+    it_schemas = iter(schemas)
+    union = dict(next(it_schemas))
+    seen = union.keys()
+    for schema in it_schemas:
+        union.update((nm, dtype) for nm, dtype in schema.items() if nm not in seen)
+    return _align_diagonal(inputs, schemas, union)
+
+
+def _align_diagonal(
+    plans: Iterable[rp.ResolvedPlan],
+    schemas: Iterable[FrozenSchema],
+    union_schema: Mapping[str, DType],
+) -> Seq[rp.ResolvedPlan]:
+    union_freeze = FrozenSchema(union_schema)
+    union_names = union_schema.keys()
+    null_exprs: dict[str, NamedIR] = {}
+
+    # NOTE: Main difference from `AlignDiagonal` is adding a cache
+    # for intermediate schema changes for each `with_columns`
+    seen_schemas: dict[FrozenSchema, FrozenSchema] = {}
+
+    def iter_missing_exprs(missing: Iterable[str]) -> Iterator[NamedIR]:
+        nonlocal null_exprs
+        expr: NamedIR | None
+        for name in missing:
+            if (expr := null_exprs.get(name)) is None:
+                dtype = union_schema[name]
+                expr = null_exprs[name] = ir.NamedIR(name, ir.lit(None, dtype))
+            yield expr
+
+    def align(plan: rp.ResolvedPlan, schema: FrozenSchema) -> rp.ResolvedPlan:
+        columns = schema.keys()
+        if missing := union_names - columns:
+            nonlocal seen_schemas
+            exprs = tuple(iter_missing_exprs(missing))
+            if (output := seen_schemas.get(schema)) is None:
+                get = union_schema.__getitem__
+                output = seen_schemas[schema] = schema.with_columns(exprs, get)
+            plan = rp.WithColumns(input=plan, exprs=exprs, output_schema=output)
+
+        # Even if all fields are present, we always reorder the columns to match between plans.
+        return rp.SelectNames(input=plan, output_schema=union_freeze)
+
+    return tuple(
+        align(plan, schema) for plan, schema in zip(plans, schemas, strict=False)
+    )
+
+
+def _get_supertype(left: DType, right: DType, *, error_message: str) -> DType | None:
+    """Placeholder for [#3396](https://github.com/narwhals-dev/narwhals/pull/3396)."""
+    msg = f"{error_message}\n\n{GET_SUPERTYPE_MSG}"
+    raise NotImplementedError(msg)
+
+
+def _join_supertypes(
+    left: FrozenSchema, right: FrozenSchema, left_on: Seq[str], right_on: Seq[str]
+) -> tuple[Seq[Cast], Seq[Cast]] | None:
+    """Supertyping + validating join key dtype match.
+
+    Adapted from [upstream].
+
+    If any casts were required (for either side), expressions for both sides are returned.
+
+    **However**, until we have [#3396] this function will always either return `None` or raise if
+    supertyping is required.
+
+    [upstream]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L254-L319
+    [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+    """
+    lhs_casts: deque[Cast] = deque()
+    rhs_casts: deque[Cast] = deque()
+    for lhs, rhs in zip(left_on, right_on, strict=False):
+        lhs_dtype, rhs_dtype = left[lhs], right[rhs]
+        if lhs_dtype == rhs_dtype:
+            continue
+        error_message = f"Unable to join on columns with different dtypes:\n    {lhs}: {lhs_dtype}\n    {rhs}: {rhs_dtype}"
+        if supertype := _get_supertype(lhs_dtype, rhs_dtype, error_message=error_message):
+            if supertype != lhs_dtype:
+                lhs_casts.append(ir.NamedIR(lhs, ir.col(lhs).cast(supertype)))
+            if supertype != rhs_dtype:
+                rhs_casts.append(ir.NamedIR(rhs, ir.col(rhs).cast(supertype)))
+        else:
+            msg = f"datatypes of join keys don't match - {lhs}: {lhs_dtype} on left does not match {rhs}: {rhs_dtype} on right (and no other type was available to cast to)"
+            raise InvalidOperationError(msg)
+    if lhs_casts or rhs_casts:
+        return tuple(lhs_casts), tuple(rhs_casts)
+    return None
+
+
+def _with_supertypes(plan: rp.ResolvedPlan, casts: Seq[Cast]) -> rp.WithColumns:
+    schema = dict(plan.schema)
+    schema.update((e.name, e.expr.dtype) for e in casts)
+    return rp.WithColumns(input=plan, exprs=casts, output_schema=FrozenSchema(schema))
+
+
+# TODO @dangotbanned: Replace `Resolver.from_backend` with something integrated with `PluginManager`
+# - E.g. add another kind of accessor that retrieves `Resolver` as a default concrete impl
+# TODO @dangotbanned: (When sinking from LazyFrame) where should subclasses be retrieved from?
+# TODO @dangotbanned: Add a sugar-y `__init_subclass__` to configure rules
+class Resolver:
+    """Default conversion from `LogicalPlan` into `ResolvedPlan`.
+
+    - Case branches in [`dsl_to_ir::to_alp_impl`] correspond to methods here
+      - Backends can override translations by subclassing
+
+    [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/8f60a2d641daf7f9eeac69694b5c952f4cc34099/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L142-L1666
+    """
+
+    __slots__ = ("implementation",)
+
+    implementation: KnownImpl
+
+    # NOTE: If the number of rules goes beyond 3, move them into some sort of *rewrites* attribute
+    # NOTE: Cheaper to *not* go through the ceremony of exprs
+    # - (dask, pandas, polars) `rename`
+    # - (ibis, pyarrow) `rename` (with modifications)
+    # - (pyspark, sqlframe) `withColumnsRenamed`
+    _RENAME_METHOD: ClassVar[Literal["native", "select"]] = "native"
+    """How the backend supports frame-level `{old: new}` column renaming.
+
+    - *"native"*: A mapping can be passed directly (default)
+    - *"select"*: Columns must be aliased individually, therefore
+        this operation requires expressions (override in subclass).
+    """
+
+    @classmethod
+    def from_backend(cls, backend: IntoBackend[Backend] | Incomplete, /) -> Self:
+        obj = cls.__new__(cls)
+        obj.implementation = plugins.manager().builtin(backend).implementation
+        return obj
+
+    def to_resolved(self, plan: lp.LogicalPlan, /) -> rp.ResolvedPlan:
+        """Converts `LogicalPlan` to `ResolvedPlan`.
+
+        All implementations should call this on the inputs of each plan as the first step.
+        """
+        return plan.resolve(self)
+
+    def collect_schema(self, plan: lp.LogicalPlan, /) -> FrozenSchema:
+        return self.to_resolved(plan).schema
+
+    def collect(self, plan: lp.Collect, /) -> rp.Collect:
+        return rp.Collect(input=self.to_resolved(plan.input), kwds=plan.kwds)
+
+    def concat_horizontal(self, plan: lp.HConcat, /) -> rp.HConcat:
+        inputs = tuple(self.to_resolved(input) for input in plan.inputs)
+        if not inputs:
+            msg = "expected at least one input in 'concat'"
+            raise InvalidOperationError(msg)
+        merged_schema: dict[str, DType] = {**inputs[0].schema}
+        seen = merged_schema.keys()
+        for input in inputs[1:]:
+            schema = input.schema
+            if seen.isdisjoint(schema):
+                merged_schema.update(schema)
+            else:
+                duplicate = next(nm for nm in schema if nm in seen)
+                msg = f"Column with name {duplicate!r} has more than one occurrence"
+                raise DuplicateError(msg)
+        return rp.HConcat(inputs=inputs, output_schema=FrozenSchema(merged_schema))
+
+    def concat_vertical(self, plan: lp.VConcat, /) -> rp.VConcat:
+        opts = plan.options
+        inputs = tuple(self.to_resolved(input) for input in plan.inputs)
+        if not inputs:
+            msg = "expected at least one input in 'concat'"
+            raise InvalidOperationError(msg)
+        if opts.diagonal:
+            inputs = align_diagonal(inputs)
+        if opts.to_supertypes:
+            msg = (
+                f"TODO: `{type(opts).__name__}.to_supertypes`\nRequires:\n"
+                "- https://github.com/narwhals-dev/narwhals/pull/3396\n"
+                "- https://github.com/narwhals-dev/narwhals/issues/3386"
+            )
+            raise NotImplementedError(msg)
+        output_schema = inputs[0].schema
+        for other in inputs[1:]:
+            if (schema := other.schema) != output_schema:
+                msg = f"'concat' inputs should all have the same schema, got\n{dict(output_schema)} and \n{dict(schema)}"
+                raise InvalidOperationError(msg)
+        return rp.VConcat(inputs=inputs, maintain_order=opts.maintain_order)
+
+    def explode(self, plan: lp.MapFunction[lp.Explode], /) -> rp.ResolvedPlan:
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        f_explode = plan.function
+        columns = expand_selectors((f_explode.columns,), schema=input_schema)
+        allowed = dtypes.List, dtypes.Array
+        schema = dict(input_schema)
+        for to_explode in columns:
+            dtype = schema[to_explode]
+            if not isinstance(dtype, allowed):
+                raise invalid_dtype_operation_error(dtype, "explode", *allowed)
+            inner = dtype.inner
+            schema[to_explode] = inner if not isinstance(inner, type) else inner()
+        return rp.MapFunction(
+            input=input,
+            function=rp.Explode(
+                columns=columns,
+                options=f_explode.options,
+                output_schema=FrozenSchema(schema),
+            ),
+        )
+
+    def filter(self, plan: lp.Filter, /) -> rp.Filter:
+        input = self.to_resolved(plan.input)
+        named_irs, _ = prepare_projection((plan.predicate,), schema=input.schema)
+        if len(named_irs) != 1:
+            msg = (
+                f"The predicate passed to 'LazyFrame.filter' expanded to {len(named_irs)!r} expressions:\n\n{named_irs!r}\n"
+                "This is ambiguous. Try to combine the predicates with the 'all' or `any' expression."
+            )
+            raise ComputeError(msg)
+        return rp.Filter(input=input, predicate=named_irs[0])
+
+    # TODO @dangotbanned: NEEDS SO MUCH WORK!
+    def group_by(self, plan: lp.GroupBy) -> rp.ResolvedPlan:
+        """Combines like 10 (current) abstractions into 1 method and it is felt!"""
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1523-L1618
+
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        # https://github.com/narwhals-dev/narwhals/blob/580142d389950003f3c4538e840b0cba831a457a/narwhals/_plan/compliant/group_by.py#L142-L154
+
+        expander = Expander(input_schema)
+        keys, key_names_mut = expander.prepare_projection(plan.keys)
+
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1536-L1537
+        keys_require_projection: bool = False
+        output_schema_mut: dict[str, DType] = {}
+
+        for key in keys:
+            output_schema_mut[key.name] = key.resolve_dtype(input_schema)
+            keys_require_projection = keys_require_projection or not (
+                isinstance(key.expr, ir.Column) and (key.name == key.expr.name)
+            )
+
+        key_names = tuple(key_names_mut)
+        expander.ignored = key_names
+        aggs, _ = expander.prepare_projection(plan.aggs)
+
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1586-L1587
+        # NOTE: Auto implode is here
+        # Probably wanna keep things mutable until needing to merge
+        # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L1597-L1603
+        aggs_schema_mut = {
+            expr.name: resolve_dtype_auto_implode(expr, input_schema) for expr in aggs
+        }
+
+        if not keys_require_projection:
+            group_output_schema = FrozenSchema(output_schema_mut | aggs_schema_mut)
+            return rp.GroupByNames(
+                input=input,
+                key_names=key_names,
+                aggs=aggs,
+                output_schema=group_output_schema,
+            )
+
+        # NOTE: Waaaaaay too complicated!!!!!!!
+        # https://github.com/narwhals-dev/narwhals/blob/580142d389950003f3c4538e840b0cba831a457a/narwhals/_plan/compliant/group_by.py#L84-L100
+        # `output_schema_mut |= aggs_schema_mut`
+        # here I want to reuse the resolved dtype of each aliased key expression
+        # it should use the dtype from the keys, not the one w/ aggs
+        with_output_schema_extra: dict[str, DType] = {}
+        safe_named_irs_keys: list[ir.NamedIR] = []
+
+        for key, safe_name in zip(
+            keys, temp.column_names(chain(key_names, input_schema)), strict=False
+        ):
+            safe_named_irs_keys.append(ir.NamedIR(safe_name, key.expr))
+            with_output_schema_extra[safe_name] = output_schema_mut[key.name]
+
+        safe_keys = tuple(safe_named_irs_keys)
+        group_output_schema = FrozenSchema(with_output_schema_extra | aggs_schema_mut)
+        return rp.GroupBy(
+            input=rp.WithColumns(
+                input=input,
+                exprs=safe_keys,
+                output_schema=FrozenSchema(output_schema_mut | with_output_schema_extra),
+            ),
+            keys=safe_keys,
+            aggs=aggs,
+            output_schema=group_output_schema,
+        ).rename(dict(zip(with_output_schema_extra, key_names, strict=False)))
+
+    def join(self, plan: lp.Join, /) -> rp.Join:
+        """Very stripped down, partial impl of [`join::resolve_join`].
+
+        See also [`schema::det_join_schema`].
+
+        [`join::resolve_join`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/conversion/dsl_to_ir/join.rs#L27-L441
+        [`schema::det_join_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L109-L250
+        """
+        input_left, input_right = (self.to_resolved(input) for input in plan.inputs)
+        schema_left, schema_right = input_left.schema, input_right.schema
+        left_on, right_on = plan.left_on, plan.right_on
+        if len(set(zip(left_on, right_on, strict=True))) != len(left_on):
+            msg = f"joining with repeated key names:\n{left_on=}\n{right_on=}"
+            raise InvalidOperationError(msg)
+
+        supertype_casts = _join_supertypes(schema_left, schema_right, left_on, right_on)
+        if plan.options.how in {"anti", "semi"}:
+            output_schema = schema_left
+        else:
+            new_schema = dict(schema_left)
+            suffix = plan.options.suffix
+            for name, dtype in schema_right.items():
+                new_name = name + suffix if name in schema_left else name
+                if new_name in new_schema:
+                    msg = f"column with name {new_name!r} already exists"
+                    raise DuplicateError(msg)
+                new_schema[new_name] = dtype
+            output_schema = FrozenSchema(new_schema)
+
+        if supertype_casts:
+            if casts_left := supertype_casts[0]:
+                input_left = _with_supertypes(input_left, casts_left)
+            if casts_right := supertype_casts[1]:
+                input_right = _with_supertypes(input_right, casts_right)
+        return rp.Join(
+            inputs=(input_left, input_right),
+            left_on=left_on,
+            right_on=right_on,
+            options=plan.options,
+            output_schema=output_schema,
+        )
+
+    # TODO @dangotbanned: `should_coalesce`
+    #  - `polars.LazyFrame.join_asof(coalesce)` defaults to `True`
+    #  - `pyarrow.acero.AsofJoinNodeOptions` doesn't have a parameter for it
+    def join_asof(self, plan: lp.JoinAsof, /) -> rp.JoinAsof:
+        """Based mainly on [`schema::det_join_schema`].
+
+        [`schema::det_join_schema`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L109-L250
+        """
+        input_left, input_right = (self.to_resolved(input) for input in plan.inputs)
+        schema_left, schema_right = input_left.schema, input_right.schema
+        left_on, right_on = plan.left_on, plan.right_on
+        supertype_casts = _join_supertypes(
+            schema_left, schema_right, (left_on,), (right_on,)
+        )
+
+        items: Iterable[tuple[str, DType]] = schema_right.items()
+        if by := plan.options.by:
+            # Asof join by columns are coalesced
+            # Do not add suffix. The column of the left table will be used
+            items = ((name, dtype) for name, dtype in items if name not in by.right_by)
+        # NOTE: default here is a placeholder to trigger the extra code
+        should_coalesce: bool = True
+        if should_coalesce and left_on == right_on:
+            # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/schema.rs#L207-L224
+            # Handles coalescing of asof-joins.
+            # Asof joins are not equi-joins so the columns that are joined on, may have different values
+            # so if the right has a different name, it is added to the schema
+            items = ((name, dtype) for name, dtype in items if name != right_on)
+        suffix = plan.options.suffix
+        new_schema = dict(schema_left)
+        for name, dtype in items:
+            new_name = name + suffix if name in schema_left else name
+            if new_name in new_schema:
+                msg = f"column with name {new_name!r} already exists"
+                raise DuplicateError(msg)
+            new_schema[new_name] = dtype
+        output_schema = FrozenSchema(new_schema)
+
+        if supertype_casts:
+            if casts_left := supertype_casts[0]:
+                input_left = _with_supertypes(input_left, casts_left)
+            if casts_right := supertype_casts[1]:
+                input_right = _with_supertypes(input_right, casts_right)
+        return rp.JoinAsof(
+            inputs=(input_left, input_right),
+            left_on=left_on,
+            right_on=right_on,
+            options=plan.options,
+            output_schema=output_schema,
+        )
+
+    def map_function(self, plan: lp.MapFunction[lp.LpFunctionT_co], /) -> rp.ResolvedPlan:
+        return plan.function.resolve(self, plan)
+
+    # NOTE: Don't prioritize getting this working, it's by far the most complex node
+    # and not supported in `nw.LazyFrame` (yet?)
+    pivot = todo()
+
+    def rename(
+        self, plan: lp.MapFunction[lp.Rename], /
+    ) -> rp.MapFunction[rp.Rename] | rp.Select | rp.ResolvedPlan:
+        if self._RENAME_METHOD == "select":
+            return self._rename_to_select(plan)
+        input = self.to_resolved(plan.input)
+        old, new = plan.function.old, plan.function.new
+        if not old:
+            return input
+        mapping = plan.function.mapping
+        return rp.MapFunction(
+            input=input,
+            function=rp.Rename(
+                output_schema=input.schema.rename(mapping), old=old, new=new
+            ),
+        )
+
+    def _rename_to_select(
+        self, plan: lp.MapFunction[lp.Rename], /
+    ) -> rp.Select | rp.ResolvedPlan:
+        input = self.to_resolved(plan.input)
+        f_rename = plan.function
+        if not f_rename.old:
+            return input
+        input_schema = input.schema
+        before_after = f_rename.mapping
+        names = deque[str]()
+        exprs = deque[ir.NamedIR]()
+        for name in input_schema:
+            actual = before_after.pop(name, name)
+            exprs.append(ir.NamedIR(actual, ir.col(name)))
+            names.append(actual)
+
+        if before_after:
+            # we had extra names not present in the schema
+            raise column_not_found_error(f_rename.old, input_schema)
+        return rp.Select(
+            input=input,
+            exprs=tuple(exprs),
+            output_schema=FrozenSchema(zip(names, input_schema.values(), strict=False)),
+        )
+
+    def scan_csv(self, plan: lp.ScanCsv, /) -> rp.ScanCsv:
+        return _scan(plan.source, self.implementation, "csv")
+
+    def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
+        return rp.ScanDataFrame(frame=plan.frame, output_schema=plan.schema)
+
+    def scan_lazyframe(
+        self, plan: lp.ScanLazyFrame[Native], /
+    ) -> rp.ScanLazyFrame[Native]:
+        return rp.ScanLazyFrame(frame=plan.frame, output_schema=plan.schema)
+
+    def scan_parquet(self, plan: lp.ScanParquet, /) -> rp.ScanParquet:
+        return _scan(plan.source, self.implementation, "parquet")
+
+    def select(self, plan: lp.Select, /) -> rp.Select:
+        input = self.to_resolved(plan.input)
+        named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
+        output_schema = input_schema.select_resolved(named_irs)
+        return rp.Select(input=input, exprs=named_irs, output_schema=output_schema)
+
+    def select_names(self, plan: lp.SelectNames, /) -> rp.SelectNames:
+        input = self.to_resolved(plan.input)
+        return rp.SelectNames(
+            input=input, output_schema=input.schema.select_names(plan.names)
+        )
+
+    def sink_parquet(self, plan: lp.SinkParquet, /) -> rp.SinkParquet:
+        return rp.SinkParquet(input=self.to_resolved(plan.input), target=plan.target)
+
+    def slice(self, plan: lp.Slice, /) -> rp.Slice:
+        return rp.Slice(
+            input=self.to_resolved(plan.input), offset=plan.offset, length=plan.length
+        )
+
+    def sort(self, plan: lp.Sort, /) -> rp.Sort:
+        input = self.to_resolved(plan.input)
+        by = expand_selectors(plan.by, schema=input.schema)
+        opts = plan.options
+        n_by = len(by)
+        n_desc = len(opts.descending)
+        if n_desc == 1:
+            desc = opts.descending * n_by
+        elif n_desc == n_by:
+            desc = opts.descending
+        else:
+            msg = f"the length of `descending` ({n_desc}) does not match the length of `by` ({n_by})"
+            raise ComputeError(msg)
+        if len(opts.nulls_last) not in {1, n_by}:
+            msg = f"the length of `descending` ({len(opts.nulls_last)}) does not match the length of `by` ({n_by})"
+            raise ComputeError(msg)
+        # NOTE: `polars` expands `nulls_last` here too, but `pyarrow<=23` doesn't support per-key
+        # See https://github.com/apache/arrow/pull/46926
+        return rp.Sort(input=input, by=by, options=opts.__replace__(descending=desc))
+
+    def unique(self, plan: lp.Unique, /) -> rp.Unique:
+        input, subset = self._unique(plan)
+        return rp.Unique(input=input, subset=subset, options=plan.options)
+
+    def unique_by(self, plan: lp.UniqueBy, /) -> rp.UniqueBy:
+        input, subset = self._unique(plan)
+        schema = input.schema
+        by = expand_selectors(plan.order_by, schema=schema)
+        return rp.UniqueBy(input=input, subset=subset, options=plan.options, order_by=by)
+
+    def _unique(self, plan: lp.Unique, /) -> tuple[rp.ResolvedPlan, Seq[str] | None]:
+        input = self.to_resolved(plan.input)
+        if (subset := plan.subset) is None:
+            return input, subset
+        schema = input.schema
+        return input, expand_selectors(subset, schema=schema)
+
+    def unnest(self, plan: lp.MapFunction[lp.Unnest], /) -> rp.MapFunction[rp.Unnest]:
+        # NOTE: Pretty delicate process to optimize for
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        columns = expand_selectors((plan.function.columns,), schema=input_schema)
+        tp_struct = dtypes.Struct
+
+        # We need to insert struct fields in the same order as the original, while removing the struct itself
+        schema: dict[str, DType] = {}
+
+        # guard against duplicates from unnesting
+        # allows skipping the duplicate check on iter 1
+        seen = schema.keys()
+
+        # struct columns that will be replaced with their fields
+        # used destructively to allow skipping everything after the last target struct is handled
+        to_unnest = set(columns)
+
+        for name, dtype in input_schema.items():
+            if not to_unnest or name not in to_unnest:
+                schema[name] = dtype
+            elif not isinstance(dtype, tp_struct):
+                raise invalid_dtype_operation_error(dtype, "unnest", tp_struct)
+            elif not seen or seen.isdisjoint(f.name for f in dtype.fields):
+                schema.update(
+                    (f.name, (f.dtype if not isinstance(f.dtype, type) else f.dtype()))
+                    for f in dtype.fields
+                )
+                to_unnest.remove(name)
+            else:
+                raise_duplicate_error((*seen, *(f.name for f in dtype.fields)))
+        return rp.MapFunction(
+            input=input,
+            function=rp.Unnest(columns=columns, output_schema=FrozenSchema(schema)),
+        )
+
+    def unpivot(self, plan: lp.MapFunction[lp.Unpivot], /) -> rp.ResolvedPlan:
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        f = plan.function
+        opts = f.options
+        for nm in (opts.variable_name, opts.value_name):
+            if nm in input_schema:
+                msg = f"duplicate column name {nm!r}"
+                raise DuplicateError(msg)
+        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/lazyframe/frame.py#L8484-L8488
+        if f.index == s_ir.Empty():
+            index: tuple[str, ...] = ()
+        else:
+            index = expand_selectors((f.index,), schema=input_schema)
+        if f.on:
+            on = expand_selectors((f.on,), schema=input_schema)
+        else:
+            on = tuple(nm for nm in input_schema if nm not in index)
+        schema = dict(input_schema)
+        on_dtypes: set[DType] = set()
+        for name in on:
+            on_dtypes.add(schema.pop(name))
+        schema[opts.variable_name] = dtypes.String()
+        if len(on_dtypes) == 1:
+            schema[opts.value_name] = on_dtypes.pop()
+        else:
+            # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/functions/schema.rs#L173-L179
+            msg = f"TODO: unpivot `output_schema` (multiple dtypes)\n{on_dtypes!r}\n\nRequires `get_supertype`"
+            raise NotImplementedError(msg)
+        return rp.MapFunction(
+            input=input,
+            function=rp.Unpivot(
+                on=on, index=index, options=opts, output_schema=FrozenSchema(schema)
+            ),
+        )
+
+    def with_columns(self, plan: lp.WithColumns, /) -> rp.WithColumns:
+        input = self.to_resolved(plan.input)
+        named_irs, input_schema = prepare_projection(plan.exprs, schema=input.schema)
+        output_schema = input_schema.with_columns_resolved(named_irs)
+        return rp.WithColumns(input=input, exprs=named_irs, output_schema=output_schema)
+
+    def with_row_index(self, plan: lp.MapFunction[lp.RowIndex], /) -> rp.ResolvedPlan:
+        input, output_schema = self._with_row_index(plan)
+        function = rp.RowIndex(name=plan.function.name, output_schema=output_schema)
+        return rp.MapFunction(input=input, function=function)
+
+    def with_row_index_by(
+        self, plan: lp.MapFunction[lp.RowIndexBy], /
+    ) -> rp.ResolvedPlan:
+        input, output_schema = self._with_row_index(plan)
+        f = plan.function
+        by = expand_selectors(f.order_by, schema=input.schema)
+        function = rp.RowIndexBy(name=f.name, output_schema=output_schema, order_by=by)
+        return rp.MapFunction(input=input, function=function)
+
+    def _with_row_index(
+        self, plan: lp.MapFunction[lp.RowIndex], /
+    ) -> tuple[rp.ResolvedPlan, FrozenSchema]:
+        input = self.to_resolved(plan.input)
+        input_schema = input.schema
+        name = plan.function.name
+        if name in input_schema:
+            msg = f"Duplicate column name {name!r}"
+            raise DuplicateError(msg)
+        return input, FrozenSchema(name=IDX_DTYPE, **input_schema)
+
+
+@overload
+def _scan(source: str, backend: Backend, /, format: Literal["csv"]) -> rp.ScanCsv: ...
+@overload
+def _scan(
+    source: str, backend: Backend, /, format: Literal["parquet"]
+) -> rp.ScanParquet: ...
+def _scan(
+    source: str, backend: Backend, /, format: Literal["csv", "parquet"]
+) -> rp.ScanFile:
+    """Cached conversion using `read_{csv,parquet}_schema`.
+
+    ## Warning
+    Very naive approach *for now* to make some progress.
+
+    Real thing needs to cache on file metadata like:
+
+        Path(source).resolve().stat()
+
+    - `str` could be a relative path, and another call changes working directory
+    - we could have correct file, but a stale schema in the cache
+    - probably 99 other concerns
+    """
+    from narwhals._plan import io
+
+    schema, tp = (
+        (io.read_csv_schema, rp.ScanCsv)
+        if format == "csv"
+        else (io.read_parquet_schema, rp.ScanParquet)
+    )
+    return tp(source=source, output_schema=FrozenSchema(schema(source, backend=backend)))
+
+
+if not TYPE_CHECKING:
+    # NOTE: Hack to preserve the `@overload`s when cached
+    _scan = lru_cache(maxsize=64)(_scan)

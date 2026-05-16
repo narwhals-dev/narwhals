@@ -56,6 +56,10 @@ ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["duckdb>=1.1", "sqlparse"]
 
+[project.entry-points.'narwhals.plugins-plan']
+polars = "narwhals._plan.polars:plugin"
+pyarrow = "narwhals._plan.arrow:plugin"
+
 [dependency-groups]
 core = [
   "narwhals[duckdb,pandas,polars,pyarrow,sqlframe,sql]"
@@ -78,15 +82,17 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pytest",
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
-  "mypy~=1.15.0",
-  "pyrefly==0.64.0",
+  "mypy==1.20.1", # Will break CI, only testing on `_plan` locally
+  "pyrefly==1.0.0",
   "pyright==1.1.408",  # https://github.com/narwhals-dev/narwhals/issues/3584
+  "pyarrow<24", # https://github.com/narwhals-dev/narwhals/issues/3560
   "pyarrow-stubs==19.2",
   "narwhals[dask]",
   "sqlframe",
   "polars",
   "uv",
   "narwhals[ibis]",
+  "numpy>=2.4.0", # https://numpy.org/doc/stable/release/2.4.0-notes.html#compatibility-notes
 ]
 docs = [
   "black",  # required by mkdocstrings_handlers
@@ -187,6 +193,9 @@ ignore = [
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["format"]
 
+[tool.ruff.lint.flake8-errmsg]
+max-string-length = 15
+
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
   "Series", 
@@ -194,6 +203,12 @@ extend-ignore-names = [
   "_Window", 
   "F", 
   "_F",
+  "_self", # needed to preserve the method `self` in a `Protocol` https://github.com/python/mypy/issues/16200
+  "unary",
+  # type variables
+  "DF", 
+  "LF",
+  "S",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -240,7 +255,13 @@ docstring-code-format = true
 skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
-norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
+norecursedirs =  [
+  '*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 
+  # `narwhals/_*` ignores `_plan` which has doctests at multiple levels
+  'narwhals/_arrow', 'narwhals/_compliant', 'narwhals/_dask', 'narwhals/_duckdb', 'narwhals/_ibis', 
+  'narwhals/_interchange', 'narwhals/_pandas_like', 'narwhals/_polars', 'narwhals/_spark_like', 
+  'narwhals/_sql', 
+]
 testpaths = ["tests"]
 filterwarnings = [
   "error",
@@ -290,7 +311,11 @@ filterwarnings = [
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
 ]
 xfail_strict = true
-markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "unsafe_globals: tests that may trigger failures elsewhere when run in parallel"
+]
+addopts = ["-m not unsafe_globals"]
 env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",
@@ -316,6 +341,16 @@ omit = [
   "tests/ibis_test.py",
   # Remove after finishing eager sub-protocols
   'narwhals/_compliant/namespace.py',
+  # NOTE: Gradually adding as things become more stable
+  'narwhals/_plan/arrow/*',
+  'narwhals/_plan/polars/*',
+  'narwhals/_plan/compliant/package.py',
+  'narwhals/_plan/compliant/scalar.py',
+  'narwhals/_plan/**/typing.py',
+  'narwhals/_plan/dtypes_mapper.py',
+  'narwhals/_plan/plans/visitors.py',
+  'narwhals/_plan/plans/_explain.py',
+  'narwhals/_plan/plans/conversion.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -332,13 +367,28 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',
+  'def __repr__',
+  'def __str__',
+  # Extends a `covdefaults` pattern to account for `EM10{1,2}`
+  # https://github.com/asottile/covdefaults/blob/a5228df597ffc7933bb2fb5b7bad94119a40a896/covdefaults.py#L90-L92
+  # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+  # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+  '^\s*msg = .+\n\s*raise NotImplementedError\b',
+  # Adapted from https://github.com/pydantic/pydantic/blob/aa4d8b3fbc5f449ce1c05ebec36b1d4b3b736b69/pyproject.toml#L271
+  'class .*\bProtocol(\[.+\])?\):',
+  "if MYPY:"
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests", "test-plugin"]
+# NOTE: Re-enable `mypy` for `main` when it isn't pinned to `1.15`
+# https://github.com/narwhals-dev/narwhals/issues/3606#issuecomment-4440007049
+files = ["narwhals/_plan", "tests/plan"]
 pretty = true
 strict = true
+check_untyped_defs = true
+allow_redefinition_new = true
+local_partial_types = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -368,6 +418,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "narwhals._plan.expressions.expr"
 ]
 warn_return_any = false
 
@@ -388,9 +439,33 @@ ignore = [
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
+defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
-project-includes = ["tests"]
+project-includes = ["narwhals/_plan", "tests"]
+project-excludes = [
+    # - waaaaaaaay too many things to deal with any time soon (`pyrefly==1.0.0`)
+    # - lots of false positives which spiral out
+    # - ([not-a-type], [bad-override], [bad-specialization], [invalid-type-var])
+    "narwhals/_plan/_dispatch.py",
+    "narwhals/_plan/_dtype.py",
+    "narwhals/_plan/_flags.py",
+    "narwhals/_plan/_parameters.py",
+    "narwhals/_plan/arrow",
+    "narwhals/_plan/common.py",
+    "narwhals/_plan/compliant",
+    "narwhals/_plan/dataframe.py",
+    "narwhals/_plan/expr.py",
+    "narwhals/_plan/expressions/temporal.py",
+    "narwhals/_plan/functions",
+    "narwhals/_plan/lazyframe.py",
+    "narwhals/_plan/plans/conversion.py",
+    "narwhals/_plan/polars",
+    "narwhals/_plan/schema.py",
+    "narwhals/_plan/selectors.py",
+    "narwhals/_plan/series.py",
+    "narwhals/_plan/translate.py",
+]
 ignore-missing-imports = [
     "cudf.*",
     "cupy.*",

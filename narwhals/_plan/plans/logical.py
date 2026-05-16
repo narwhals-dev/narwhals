@@ -1,0 +1,871 @@
+"""Query plan representation that contains unresolved expressions.
+
+The schema is not known at this stage.
+"""
+
+from __future__ import annotations
+
+from io import BytesIO
+from typing import TYPE_CHECKING, Any, Generic, Literal, get_args, overload
+
+from narwhals._plan import plugins
+from narwhals._plan._guards import is_seq_column
+from narwhals._plan._immutable import Immutable
+from narwhals._plan._version import into_version
+from narwhals._plan.compliant.typing import FromNative, Native, Native_co
+from narwhals._plan.expressions import selectors as s_ir
+from narwhals._plan.expressions.boolean import all_horizontal
+from narwhals._plan.options import (
+    ExplodeOptions,
+    JoinAsofOptions,
+    JoinOptions,
+    SortMultipleOptions,
+    UniqueOptions,
+    UnpivotOptions,
+    VConcatOptions,
+)
+from narwhals._plan.plans._base import _BasePlan
+from narwhals._plan.plans.typing import FrameT_co
+from narwhals._plan.schema import FrozenSchema
+from narwhals._plan.typing import ClosedKwds, Seq
+from narwhals._typing import _LazyAllowedImpl
+from narwhals._typing_compat import TypeVar
+from narwhals._utils import (
+    Implementation,
+    Version,
+    is_lazy_allowed,
+    normalize_path,
+    qualified_type_name,
+)
+from narwhals.exceptions import InvalidOperationError
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping
+    from typing import TypeAlias
+
+    from typing_extensions import Self
+
+    from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
+    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.expressions import ExprIR, SelectorIR
+    from narwhals._plan.lazyframe import LazyFrame
+    from narwhals._plan.plans.resolved import ResolvedPlan
+    from narwhals._plan.plans.visitors import LogicalToResolved
+    from narwhals.typing import Backend, ConcatMethod, FileSource, IntoBackend, PivotAgg
+
+__all__ = (
+    "Collect",
+    "Explode",
+    "Filter",
+    "GroupBy",
+    "HConcat",
+    "Join",
+    "LogicalPlan",
+    "MapFunction",
+    "MultipleInputs",
+    "Pivot",
+    "Rename",
+    "RowIndex",
+    "RowIndexBy",
+    "Scan",
+    "ScanCsv",
+    "ScanDataFrame",
+    "ScanFile",
+    "ScanParquet",
+    "Select",
+    "SingleInput",
+    "Sink",
+    "SinkFile",
+    "SinkParquet",
+    "Slice",
+    "Sort",
+    "Unique",
+    "UniqueBy",
+    "Unnest",
+    "Unpivot",
+    "VConcat",
+    "WithColumns",
+    "concat",
+    "from_df",
+    "scan_csv",
+    "scan_parquet",
+)
+
+Incomplete: TypeAlias = Any
+_Fwd: TypeAlias = "LogicalPlan"
+_InputsT = TypeVar("_InputsT", bound="Seq[LogicalPlan]")
+LpFunctionT = TypeVar("LpFunctionT", bound="LpFunction", default="LpFunction")
+LpFunctionT_co = TypeVar(
+    "LpFunctionT_co", bound="LpFunction", default="LpFunction", covariant=True
+)
+SinkT = TypeVar("SinkT", bound="Sink", default="Sink")
+VConcatMethod: TypeAlias = Literal[
+    "vertical", "diagonal", "vertical_relaxed", "diagonal_relaxed"
+]
+
+PivotOnColumns: TypeAlias = "DataFrame[Any, Any]"
+"""See https://github.com/narwhals-dev/narwhals/issues/1901#issuecomment-3697700426"""
+
+_OBJ_SETATTR = object.__setattr__
+
+
+class LogicalPlan(_BasePlan[_Fwd], _root=True):
+    """Representation of `LazyFrame` operations, based on [`polars_plan::dsl::plan::DslPlan`].
+
+    ## Notes
+
+    ### Collection
+    Calling [`LazyFrame.collect`] takes us through [`LazyFrame.collect_with_engine`]
+    where the plan ends with [`DslPlan::Sink(self.logical_plan, SinkType::Memory)`].
+
+    ### Conversion/lowering
+    The first pass, starts at [`LazyFrame.to_alp_optimized`] and leads over to [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`].
+
+    This is a big boi, recursive function handling the conversion of [`polars_plan::dsl::plan::DslPlan`] -> [`polars_plan::plans::ir::IR`].
+
+    *Some elements* of the work done here are already part of `narwhals._plan`, like [`_plan._expansion.py`] and [`GroupByResolver`].
+
+    ### Schema
+    Part of the conversion uses some high-*er* level APIs for propagating `Schema` transformations between each plan:
+    - [`expressions_to_schema`]
+    - [`Expr.to_field_amortized`]
+    - [`to_expr_ir`]
+
+    This is currently *not* part of `narwhals` or `_plan`.
+
+    Here the approximation of expressions is *richer* than `main`, but has not dived into the `DType` can-o-worms:
+
+        # Real polars
+        def lower_rust(expr: Expr) -> ExprIR: ...
+        #                    ^^^^     ^^^^^^
+        #                    |        |
+        #                    |        Expanded, resolved name
+        #                    |        Stores an index referring to an `AExpr` (another concept not here)
+        #                    |        Has a write-once `output_dtype: DType`
+        #                    Builder
+
+        # Over here
+        def lower_py(expr: ExprIR) -> NamedIR[ExprIR]: ...
+        #                  ^^^^^^     ^^^^^^^ ^^^^^^
+        #                  |          |       |
+        #                  |          |       Stores the expanded version, using the same type
+        #                  |          Expanded, resolved name
+        #                  |          No concept of `DType`
+        #                  Builder
+
+    [`polars_plan::dsl::plan::DslPlan`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/dsl/plan.rs#L28-L179
+    [`LazyFrame.collect`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L805-L824
+    [`LazyFrame.collect_with_engine`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L624-L628
+    [`DslPlan::Sink(self.logical_plan, SinkType::Memory)`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L631-L637
+    [`LazyFrame.to_alp_optimized`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-lazy/src/frame/mod.rs#L666
+    [`polars_plan::plans::conversion::dsl_to_ir::to_alp_impl`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/plans/conversion/dsl_to_ir/mod.rs#L102-L1375
+    [`polars_plan::plans::ir::IR`]: https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/crates/polars-plan/src/plans/ir/mod.rs#L38-L168
+    [`_plan._expansion.py`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/_expansion.py
+    [`GroupByResolver`]: https://github.com/narwhals-dev/narwhals/blob/9b9122b4ab38a6aebe2f09c29ad0f6191952a7a7/narwhals/_plan/compliant/group_by.py#L131-L194
+    [`expressions_to_schema`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/utils.rs#L217-L244
+    [`Expr.to_field_amortized`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/dsl/expr/mod.rs#L436-L455
+    [`to_expr_ir`]: https://github.com/pola-rs/polars/blob/00d7f7e1c3b24a54a13f235e69584614959f8837/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L6-L9
+    """
+
+    def iter_left(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        for input in self.iter_inputs():
+            yield from input.iter_left()
+        yield self
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        """Converts `LogicalPlan` to `ResolvedPlan`.
+
+        Most `resolve` implementations call a method that is the
+        **snake_case**-equivalent of the class name:
+
+            class ScanParquet(ScanFile):
+                def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+                    return resolver.scan_parquet(self)
+
+        Arguments:
+            resolver: Any object defining each method name, where all return a `ResolvedPlan`.
+        """
+        msg = f"TODO: `{type(self).__name__}.resolve`"
+        raise NotImplementedError(msg)
+
+    def explain(self) -> str:  # pragma: no cover
+        """Create a string representation of the query plan."""
+        from narwhals._plan.plans import _explain
+
+        return _explain.explain(self)
+
+    def __repr__(self) -> str:
+        from narwhals._plan.plans import _explain
+
+        return _explain._format(self, 0)
+
+    # NOTE: Methods based on [`polars_plan::dsl::builder_dsl::DslBuilder`]
+    # [`polars_plan::dsl::builder_dsl::DslBuilder`]: https://github.com/pola-rs/polars/blob/092b7ba3c9c486decb52c7b65b50a31be4892437/crates/polars-plan/src/dsl/builder_dsl.rs
+
+    # Scan
+    @classmethod
+    def from_df(cls, frame: DataFrame[Any, Any], /) -> ScanDataFrame:
+        return ScanDataFrame.from_narwhals(frame)
+
+    @staticmethod
+    def from_lf(frame: CompliantLazyFrame[Native], /) -> ScanLazyFrame[Native]:
+        return ScanLazyFrame.from_compliant(frame)
+
+    @classmethod
+    def scan_csv(cls, source: FileSource, /) -> ScanCsv:
+        return ScanCsv.from_source(source)
+
+    @classmethod
+    def scan_parquet(cls, source: FileSource, /) -> ScanParquet:
+        return ScanParquet.from_source(source)
+
+    # Single Input
+    def explode(
+        self, columns: SelectorIR, options: ExplodeOptions | None = None
+    ) -> MapFunction[Explode]:  # pragma: no cover
+        options = options or ExplodeOptions.default()
+        return self._map(Explode(columns=columns, options=options))
+
+    def filter(self, predicate: ExprIR) -> Filter:
+        return Filter(input=self, predicate=predicate)
+
+    def group_by(
+        self, keys: Seq[ExprIR], aggs: Seq[ExprIR]
+    ) -> GroupBy:  # pragma: no cover
+        return GroupBy(input=self, keys=keys, aggs=aggs)
+
+    def pivot(
+        self,
+        on: SelectorIR,
+        on_columns: PivotOnColumns,
+        *,
+        index: SelectorIR,
+        values: SelectorIR,
+        agg: PivotAgg | None = None,
+        separator: str = "_",
+    ) -> Pivot:  # pragma: no cover
+        return Pivot(
+            input=self,
+            on=on,
+            on_columns=on_columns,
+            index=index,
+            values=values,
+            agg=agg,
+            separator=separator,
+        )
+
+    def rename(self, mapping: Mapping[str, str]) -> MapFunction[Rename]:
+        return self._map(Rename.from_dict(mapping))
+
+    def _select(self, exprs: Seq[ExprIR]) -> Select:
+        return Select(input=self, exprs=exprs)
+
+    def select(self, exprs: Seq[ExprIR]) -> Select | SelectNames:
+        return (
+            self.select_names(tuple(e.name for e in exprs))
+            if is_seq_column(exprs)
+            else self._select(exprs)
+        )
+
+    def select_names(self, names: Seq[str]) -> SelectNames:
+        return SelectNames(input=self, names=names)
+
+    def slice(self, offset: int, length: int | None = None) -> Slice:  # pragma: no cover
+        return Slice(input=self, offset=offset, length=length)
+
+    def sort(
+        self, by: Seq[SelectorIR], options: SortMultipleOptions | None = None
+    ) -> Sort:
+        return Sort(input=self, by=by, options=options or SortMultipleOptions.default())
+
+    def unique(
+        self, subset: Seq[SelectorIR] | None = None, options: UniqueOptions | None = None
+    ) -> Unique:  # pragma: no cover
+        options = options or UniqueOptions.default()
+        return Unique(input=self, subset=subset, options=options)
+
+    # NOTE: Wish there was a nice way to give `subset` a default, without complicating `unique` too
+    # - Most methods that accept `options` don't need them as keywords (too verbose)
+    # - `order_by` intentionally doesn't have a default
+    # - the parameter order is already janky
+    #  - *`options` always last* is a nice rule, but makes `unique(_by)` is the ugly duckling
+    def unique_by(
+        self,
+        subset: Seq[SelectorIR] | None,
+        order_by: Seq[SelectorIR],
+        options: UniqueOptions | None = None,
+    ) -> UniqueBy:  # pragma: no cover
+        options = options or UniqueOptions.default()
+        return UniqueBy(input=self, subset=subset, options=options, order_by=order_by)
+
+    def unnest(self, columns: SelectorIR) -> MapFunction[Unnest]:  # pragma: no cover
+        return self._map(Unnest(columns=columns))
+
+    def unpivot(
+        self,
+        on: SelectorIR | None,
+        *,
+        index: SelectorIR | None = None,
+        options: UnpivotOptions | None = None,
+    ) -> MapFunction[Unpivot]:
+        # NOTE: polars `on` goes through a very long chain as None:
+        #   (python) -> `PyLazyFrame` -> `LazyFrame` -> `DslPlan` -> `UnpivotArgsDSL`
+        # then finally filled in for `UnpivotArgsIR::new`
+        # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-core/src/frame/explode.rs#L34-L49
+        options = options or UnpivotOptions.default()
+        return self._map(Unpivot(on=on, index=index or s_ir.Empty(), options=options))
+
+    def with_columns(self, exprs: Seq[ExprIR]) -> WithColumns:
+        return WithColumns(input=self, exprs=exprs)
+
+    def with_row_index(
+        self, name: str = "index"
+    ) -> MapFunction[RowIndex]:  # pragma: no cover
+        return self._map(RowIndex(name=name))
+
+    def with_row_index_by(
+        self, name: str = "index", *, order_by: Seq[SelectorIR]
+    ) -> MapFunction[RowIndexBy]:  # pragma: no cover
+        return self._map(RowIndexBy(name=name, order_by=order_by))
+
+    # Multiple Inputs
+    @overload
+    @staticmethod
+    def concat(items: Seq[LogicalPlan], *, how: Literal["horizontal"]) -> HConcat: ...
+    @overload
+    @staticmethod
+    def concat(
+        items: Seq[LogicalPlan], *, how: VConcatMethod = "vertical"
+    ) -> VConcat: ...
+    @staticmethod
+    def concat(
+        items: Seq[LogicalPlan], *, how: ConcatMethod | VConcatMethod = "vertical"
+    ) -> HConcat | VConcat:  # pragma: no cover
+        if how == "horizontal":
+            return HConcat(inputs=items)
+        return VConcat(inputs=items, options=VConcatOptions.from_how(how))
+
+    def join(
+        self,
+        other: LogicalPlan,
+        left_on: Seq[str],
+        right_on: Seq[str],
+        options: JoinOptions | None = None,
+    ) -> Join:  # pragma: no cover
+        options = options or JoinOptions.default()
+        inputs = (self, other)
+        return Join(inputs=inputs, left_on=left_on, right_on=right_on, options=options)
+
+    def join_cross(
+        self, other: LogicalPlan, *, suffix: str = "_right"
+    ) -> Join:  # pragma: no cover
+        return self.join(other, (), (), JoinOptions(how="cross", suffix=suffix))
+
+    def join_asof(
+        self,
+        other: LogicalPlan,
+        left_on: str,
+        right_on: str,
+        options: JoinAsofOptions | None = None,
+    ) -> JoinAsof:  # pragma: no cover
+        inputs = (self, other)
+        options = options or JoinAsofOptions.parse()
+        return JoinAsof(
+            inputs=inputs, left_on=left_on, right_on=right_on, options=options
+        )
+
+    # Terminal
+    def collect(self, kwds: ClosedKwds) -> Collect:  # pragma: no cover
+        return self._sink(Collect(input=self, kwds=kwds))
+
+    # TODO @dangotbanned: Handle `BytesIO`
+    def sink_parquet(self, target: FileSource | BytesIO) -> SinkParquet:
+        if isinstance(target, BytesIO):
+            msg = "TODO: LazyFrame.sink_parquet(BytesIO)"
+            raise NotImplementedError(msg)
+        return self._sink(SinkParquet(input=self, target=normalize_path(target)))
+
+    # Sugar
+    def drop(self, columns: SelectorIR) -> Select:
+        return self._select(((~columns.to_narwhals())._ir,))
+
+    def drop_nulls(self, subset: SelectorIR | None = None) -> Filter:  # pragma: no cover
+        predicate = all_horizontal((subset or s_ir.All()).to_narwhals().is_not_null()._ir)
+        return self.filter(predicate)
+
+    def head(self, n: int = 5) -> Slice:  # pragma: no cover
+        return self.slice(0, n)
+
+    def tail(self, n: int = 5) -> Slice:  # pragma: no cover
+        return self.slice(-n, n)
+
+    def with_column(self, expr: ExprIR) -> WithColumns:  # pragma: no cover
+        return self.with_columns((expr,))
+
+    def _map(self, function: LpFunctionT) -> MapFunction[LpFunctionT]:
+        return MapFunction(input=self, function=function)
+
+    def _sink(self, sink: SinkT) -> SinkT:
+        if isinstance(self, Sink):
+            msg = "cannot create a sink on top of another sink"  # pragma: no cover
+            raise InvalidOperationError(msg)  # pragma: no cover
+        return sink
+
+
+class Scan(LogicalPlan, has_inputs=False):
+    """Root node of a `LogicalPlan`.
+
+    All plans start with either:
+    - Reading from a file (`ScanFile`)
+    - Reading from an in-memory dataset (`ScanDataFrame`)
+
+    So the next question is, how do we introduce native lazy objects into mix?
+    """
+
+    def iter_right(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        yield self
+
+    def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        yield from ()
+
+
+class ScanFile(Scan):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L43-L52
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/file_scan/mod.rs#L47-L74
+    __slots__ = ("source",)
+    source: str
+
+    @classmethod
+    def from_source(cls, source: FileSource, /) -> Self:
+        return cls(source=normalize_path(source))
+
+    # TODO @dangotbanned: Review backend/version entrypoint
+    # TODO @dangotbanned: Typing needs injecting here
+    def to_narwhals(
+        self, backend: IntoBackend[Backend], version: Version
+    ) -> LazyFrame[Any]:
+        return into_version(version).lazyframe._from_lp_scan(
+            self, Implementation.from_backend(backend)
+        )
+
+
+class ScanCsv(ScanFile):
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_csv(self)
+
+
+class ScanParquet(ScanFile):
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_parquet(self)
+
+
+class ScanFrame(Scan, Generic[FrameT_co]):
+    __slots__ = ("frame", "schema")
+    frame: FrameT_co  # type: ignore[misc]
+    schema: FrozenSchema
+
+    def __str__(self) -> str:
+        scan = type(self).__name__
+        outer = f"nw.{type(self.frame).__name__}"
+        inner = qualified_type_name(self.frame.to_native())
+        return f"{scan}(frame={outer}[{inner}](...), schema={self.schema!s})"
+
+    @property
+    def implementation(self) -> Implementation:
+        return self.frame.implementation
+
+    @property
+    def version(self) -> Version:
+        return self.frame.version
+
+
+# NOTE: (low priority) Maybe use `CompliantDataFrame`?
+class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L53-L58
+
+    @staticmethod
+    def from_narwhals(frame: DataFrame[Any, Any], /) -> ScanDataFrame:
+        obj = ScanDataFrame.__new__(ScanDataFrame)
+        _OBJ_SETATTR(obj, "frame", frame.clone())
+        _OBJ_SETATTR(obj, "schema", FrozenSchema(frame.collect_schema()))
+        return obj
+
+    @property
+    def __immutable_values__(self) -> Iterator[Any]:  # pragma: no cover
+        # NOTE: Deferring how to handle the hash *for now*
+        # Currently, every `ScanDataFrame` will have a unique pseudo-hash
+        # Caching a native table seems like a non-starter, once `pandas` enters the party
+        yield from (id(self.frame), self.schema)
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_dataframe(self)
+
+    # TODO @dangotbanned: Remove all of the polars special-casing and use `plugins.manager` everywhere
+    def to_narwhals(self, backend: IntoBackend[Backend] | None = None) -> LazyFrame[Any]:
+        current = self.implementation
+        backend_ = backend or "unknown"
+        POLARS = Implementation.POLARS  # noqa: N806
+        version = self.version
+        if ((requested := Implementation.from_backend(backend_)) is POLARS) or (
+            current is POLARS and requested is Implementation.UNKNOWN
+        ):
+            # (4-1) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`])
+            # We can avoid storing the dataframe on the graph, by letting polars do it instead
+            return (
+                plugins.manager()
+                .lazyframe("polars", version)
+                .from_narwhals(self.frame)
+                .to_logical()
+                .to_narwhals()
+            )
+        if requested is current or requested is Implementation.UNKNOWN:
+            # (1) Fake lazy (needs a reference to eager data)
+            return into_version(version).lazyframe._from_lp_scan(self, current)
+        if is_lazy_allowed(requested):
+            msg = f"TODO: Other conversions\n({current=}) -> ({requested=})"
+            raise NotImplementedError(msg)
+        msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {requested}"
+        raise TypeError(msg)
+
+
+class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native_co]"], Generic[Native_co]):
+    """Target for `LazyFrame.from_native`.
+
+    The resulting `LazyFrame` stores this as:
+
+        LazyFrame._plan: ScanLazyFrame[Native_co]
+    """
+
+    @staticmethod
+    def from_compliant(
+        frame: CompliantLazyFrame[FromNative], /
+    ) -> ScanLazyFrame[FromNative]:
+        obj: ScanLazyFrame[FromNative] = ScanLazyFrame.__new__(ScanLazyFrame)
+        _OBJ_SETATTR(obj, "frame", frame)
+        _OBJ_SETATTR(obj, "schema", FrozenSchema(frame.input_schema))
+        return obj
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_lazyframe(self)
+
+    def to_narwhals(self) -> LazyFrame[Native_co]:
+        impl = self.implementation
+        return into_version(self.version).lazyframe._from_lp_scan(self, impl)
+
+
+class SingleInput(LogicalPlan, has_inputs=True):
+    __slots__ = ("input",)
+    input: LogicalPlan
+
+    def iter_right(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        yield self
+        yield from self.input.iter_right()
+
+    def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        yield self.input
+
+
+class MultipleInputs(LogicalPlan, Generic[_InputsT], has_inputs=True):
+    __slots__ = ("inputs",)
+    inputs: _InputsT
+
+    def iter_right(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        yield self
+        for input in reversed(self.inputs):
+            yield from input.iter_right()
+
+    def iter_inputs(self) -> Iterator[LogicalPlan]:  # pragma: no cover
+        yield from self.inputs
+
+
+class Sink(SingleInput):
+    """Terminal node of a `LogicalPlan`."""
+
+
+class Collect(Sink):
+    __slots__ = ("kwds",)
+    kwds: ClosedKwds
+
+    # NOTE: `LazyFrame` skips this and directly calls `Resolver.collect`
+    # https://github.com/narwhals-dev/narwhals/blob/da1cc83cacd81446c5ef70ec60c7cd076f458b5e/narwhals/_plan/lazyframe.py#L311-L319
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.collect(self)
+
+
+class SinkFile(Sink):
+    __slots__ = ("target",)
+    target: str
+    """`file: str | Path | BytesIO` on main."""
+
+
+class SinkParquet(SinkFile):
+    # NOTE: `LazyFrame` skips this and directly calls `Resolver.sink_parquet`
+    # https://github.com/narwhals-dev/narwhals/blob/da1cc83cacd81446c5ef70ec60c7cd076f458b5e/narwhals/_plan/lazyframe.py#L321-L325
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.sink_parquet(self)
+
+
+class Select(SingleInput):
+    __slots__ = ("exprs",)
+    exprs: Seq[ExprIR]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.select(self)
+
+
+class SelectNames(SingleInput):
+    __slots__ = ("names",)
+    names: Seq[str]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.select_names(self)
+
+
+# `DslPlan::HStack`
+class WithColumns(SingleInput):
+    __slots__ = ("exprs",)
+    exprs: Seq[ExprIR]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.with_columns(self)
+
+
+class Filter(SingleInput):
+    __slots__ = ("predicate",)
+    predicate: ExprIR
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.filter(self)
+
+
+class GroupBy(SingleInput):
+    __slots__ = ("aggs", "keys")
+    keys: Seq[ExprIR]
+    aggs: Seq[ExprIR]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.group_by(self)
+
+
+class Pivot(SingleInput):
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/plan.rs#L109-L115
+    __slots__ = ("agg", "index", "on", "on_columns", "separator", "values")
+    on: SelectorIR
+    on_columns: Incomplete
+    """`DataFrame` in both narwhals and polars (not `DataFrameScan`)."""
+    index: SelectorIR
+    values: SelectorIR
+    agg: PivotAgg | None
+    """polars has *just* `Expr`."""
+    separator: str
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.pivot(self)
+
+
+# `DslPlan::Distinct`
+class Unique(SingleInput):
+    __slots__ = ("options", "subset")
+    subset: Seq[SelectorIR] | None
+    options: UniqueOptions
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.unique(self)
+
+
+class UniqueBy(Unique):
+    __slots__ = ("order_by",)
+    order_by: Seq[SelectorIR]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.unique_by(self)
+
+
+class Sort(SingleInput):
+    __slots__ = ("by", "options")
+    by: Seq[SelectorIR]
+    options: SortMultipleOptions
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.sort(self)
+
+
+class Slice(SingleInput):
+    __slots__ = ("length", "offset")
+    offset: int
+    length: int | None
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.slice(self)
+
+
+class MapFunction(SingleInput, Generic[LpFunctionT_co]):
+    __slots__ = ("function",)
+    # NOTE: https://discuss.python.org/t/make-replace-stop-interfering-with-variance-inference/96092
+    function: LpFunctionT_co  # type: ignore[misc]
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.map_function(self)
+
+
+class Join(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
+    """Join two tables in an SQL-like fashion."""
+
+    __slots__ = ("left_on", "options", "right_on")
+    left_on: Seq[str]
+    right_on: Seq[str]
+    options: JoinOptions
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.join(self)
+
+
+class JoinAsof(MultipleInputs[tuple[LogicalPlan, LogicalPlan]]):
+    __slots__ = ("left_on", "options", "right_on")
+    left_on: str
+    right_on: str
+    options: JoinAsofOptions
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.join_asof(self)
+
+
+# `DslPlan::Union`
+class VConcat(MultipleInputs[Seq[LogicalPlan]]):
+    """`concat(how= "vertical" | "diagonal")`."""
+
+    __slots__ = ("options",)
+    options: VConcatOptions
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.concat_vertical(self)
+
+
+class HConcat(MultipleInputs[Seq[LogicalPlan]]):
+    """`concat(how="horizontal")`."""
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:  # pragma: no cover
+        return resolver.concat_horizontal(self)
+
+
+# NOTE: `DslFunction`
+# (reprs from) https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/mod.rs#L302-L382
+class LpFunction(Immutable):
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Incomplete], /
+    ) -> ResolvedPlan:
+        """Lower the `LogicalPlan` into `ResolvedPlan`."""
+        msg = f"TODO: `{type(self).__name__}.resolve`"
+        raise NotImplementedError(msg)
+
+
+class Explode(LpFunction):
+    __slots__ = ("columns", "options")
+    columns: SelectorIR
+    options: ExplodeOptions
+
+    def __repr__(self) -> str:
+        opts = self.options
+        s = f"EXPLODE {self.columns!r}"
+        if not opts.empty_as_null:
+            s += ", empty_as_null: False"
+        if not opts.keep_nulls:
+            s += ", keep_nulls: False"
+        return s
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Explode], /
+    ) -> ResolvedPlan:  # pragma: no cover
+        return resolver.explode(plan)
+
+
+class Unnest(LpFunction):
+    __slots__ = ("columns",)
+    columns: SelectorIR
+
+    def __repr__(self) -> str:
+        return f"UNNEST by: {self.columns!r}"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Unnest], /
+    ) -> ResolvedPlan:  # pragma: no cover
+        return resolver.unnest(plan)
+
+
+class Unpivot(LpFunction):
+    # NOTE: polars version is different and probably more efficient, but here:
+    # - Trying to avoid `None`
+    # - Keeping selectors outside of `*Options` for now
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/plans/functions/dsl.rs#L40-L42
+    # https://github.com/pola-rs/polars/blob/40c171f9725279cd56888f443bd091eea79e5310/crates/polars-plan/src/dsl/options/mod.rs#L189-L194
+    __slots__ = ("index", "on", "options")
+    on: SelectorIR | None
+    """Default `~index`."""
+    index: SelectorIR
+    """Default `all()`."""
+    options: UnpivotOptions
+
+    def __repr__(self) -> str:
+        var, val = self.options.variable_name, self.options.value_name
+        return f"UNPIVOT[on: {self.on!r}, index: {self.index!r}, variable_name: {var}, value_name: {val}]"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Unpivot], /
+    ) -> ResolvedPlan:  # pragma: no cover
+        return resolver.unpivot(plan)
+
+
+class RowIndex(LpFunction):
+    __slots__ = ("name",)
+    name: str
+
+    def __repr__(self) -> str:
+        return f"ROW INDEX name: {self.name}"
+
+    # TODO @dangotbanned: Try to get this and `RowIndexBy` to be nicer to each other
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Incomplete], /
+    ) -> ResolvedPlan:  # pragma: no cover
+        return resolver.with_row_index(plan)
+
+
+class RowIndexBy(RowIndex):
+    __slots__ = ("order_by",)
+    order_by: Seq[SelectorIR]
+
+    def __repr__(self) -> str:
+        return f"ROW INDEX[name: {self.name}, order_by: {list(self.order_by)!r}]"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[RowIndexBy], /
+    ) -> ResolvedPlan:  # pragma: no cover
+        return resolver.with_row_index_by(plan)
+
+
+class Rename(LpFunction):
+    __slots__ = ("new", "old")
+    old: Seq[str]
+    new: Seq[str]
+
+    @staticmethod
+    def from_dict(mapping: Mapping[str, str], /) -> Rename:
+        return Rename(old=tuple(mapping), new=tuple(mapping.values()))
+
+    @property
+    def mapping(self) -> dict[str, str]:
+        """Return a new dictionary representing `{old: new}`."""
+        return dict(zip(self.old, self.new, strict=True))
+
+    def __repr__(self) -> str:
+        return f"RENAME {self.mapping!r}"
+
+    def resolve(
+        self, resolver: LogicalToResolved, plan: MapFunction[Rename], /
+    ) -> ResolvedPlan:
+        return resolver.rename(plan)
+
+
+concat = LogicalPlan.concat
+from_df = LogicalPlan.from_df
+scan_csv = LogicalPlan.scan_csv
+scan_parquet = LogicalPlan.scan_parquet
