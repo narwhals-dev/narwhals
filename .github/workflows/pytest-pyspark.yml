@@ -38,9 +38,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
         run: |
-          uv run \
-          --group core-tests \
-          --extra pyspark --extra pandas \
+          uv run --group pyspark-tests \
           pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
           --constructors="pyspark"
 
@@ -61,11 +59,9 @@ jobs:
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: |
-          uv run \
-          --with "pyspark==3.5.0" \
-          --group core-tests --extra pandas \
-          pytest tests --constructors="pyspark"
+        run: uv run --group pyspark-tests --with "pyspark==3.5.0" \
+          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
+          --constructors="pyspark"
 
   pytest-pyspark-connect-constructor:
     if: github.head_ref != 'bump-version'

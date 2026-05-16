@@ -170,6 +170,11 @@ extreme-not-so-old-versions = [
   {include-group = "tests"},
 ]
 
+pyspark-tests = [
+  "narwhals[pandas,pyspark]",
+  {include-group = "core-tests"},
+]
+
 [tool.uv.build-backend]
 source-include = [
   "src/*",
