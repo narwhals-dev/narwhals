@@ -11,6 +11,8 @@ from pathlib import Path
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
 import polars as pl
 
 import narwhals as nw
@@ -111,7 +113,7 @@ SERIES_ONLY_METHODS = {
 }
 DIR_API_REF = Path("docs/api-reference")
 
-files = {fp.stem for fp in Path("narwhals").iterdir()}
+files = {fp.stem for fp in Path("src/narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
