@@ -71,7 +71,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
         run: |
-          uv run extreme-not-so-old-versions \
+          uv run --group extreme-not-so-old-versions \
           pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
           --constructors="pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
 
