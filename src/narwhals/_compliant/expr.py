@@ -511,6 +511,9 @@ class EagerExpr(
     def __invert__(self) -> Self:
         return self._reuse_series("__invert__")
 
+    def __neg__(self) -> Self:
+        return self._reuse_series("__neg__")
+
     # Reductions
     def null_count(self) -> Self:
         return self._reuse_series("null_count", returns_scalar=True)

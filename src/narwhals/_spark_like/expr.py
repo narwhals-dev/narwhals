@@ -244,6 +244,10 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         invert = cast("Callable[..., Column]", operator.invert)
         return self._with_elementwise(invert)
 
+    def __neg__(self) -> Self:
+        neg = cast("Callable[..., Column]", operator.neg)
+        return self._with_elementwise(neg)
+
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             spark_dtype = narwhals_to_native_dtype(

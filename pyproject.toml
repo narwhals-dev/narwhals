@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.21.0"
+version = "2.21.2"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -20,7 +20,6 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -119,14 +118,12 @@ local-dev = [
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "narwhals/*",
+  "src/narwhals/*",
   "tests/*",
 ]
 
 [tool.hatch.build.targets.wheel]
-include = [
-  "narwhals/*",
-]
+packages = ["src/narwhals"]
 
 [tool.ruff]
 line-length = 90
@@ -197,11 +194,11 @@ extend-ignore-names = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"narwhals/expr_dt.py" = ["RUF002"] 
-"narwhals/typing.py" = [
+"src/narwhals/expr_dt.py" = ["RUF002"]
+"src/narwhals/typing.py" = [
   "PYI042",  # snake-case-type-alias (catches `_1DArray`)
-] 
-"narwhals/_*/utils.py" = [
+]
+"src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
 "tests/*" = [
@@ -240,8 +237,9 @@ docstring-code-format = true
 skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
-norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'narwhals/_*']
+norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'src/narwhals/_*']
 testpaths = ["tests"]
+pythonpath = ["src"]
 filterwarnings = [
   "error",
   'ignore:.*defaulting to pandas implementation:Warning:modin',
@@ -303,19 +301,19 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
-  'narwhals/typing.py',
-  'narwhals/compliant.py',
-  'narwhals/stable/v1/typing.py',
-  'narwhals/stable/v2/typing.py',
-  'narwhals/this.py',
-  'narwhals/_arrow/typing.py',
-  'narwhals/_duckdb/typing.py',
-  'narwhals/_spark_like/typing.py',
+  "src/narwhals/typing.py",
+  "src/narwhals/compliant.py",
+  "src/narwhals/stable/v1/typing.py",
+  "src/narwhals/stable/v2/typing.py",
+  "src/narwhals/this.py",
+  "src/narwhals/_arrow/typing.py",
+  "src/narwhals/_duckdb/typing.py",
+  "src/narwhals/_spark_like/typing.py",
   # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
-  'narwhals/_ibis/*',
-  "tests/ibis_test.py",
+  "src/narwhals/_ibis/*",
   # Remove after finishing eager sub-protocols
-  'narwhals/_compliant/namespace.py',
+  "src/narwhals/_compliant/namespace.py",
+  "tests/ibis_test.py",
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -336,7 +334,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["narwhals", "tests", "test-plugin"]
+files = ["src/narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
 
@@ -382,7 +380,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests", "test-plugin"]
+include = ["src/narwhals", "tests", "test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
@@ -390,6 +388,7 @@ ignore = [
 ]
 
 [tool.pyrefly]
+search-path = ["src", "."]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",

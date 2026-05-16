@@ -111,6 +111,7 @@ class DaskExpr(
     sum = simple_aggregation("sum")
     var = simple_aggregation("var")
     __invert__ = simple_method("__invert__")
+    __neg__ = simple_method("__neg__")
     abs = simple_method("abs")
     diff = simple_method("diff")
     drop_nulls = simple_method("dropna")

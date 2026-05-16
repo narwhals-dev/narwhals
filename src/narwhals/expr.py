@@ -270,6 +270,9 @@ class Expr:
     def __invert__(self) -> Self:
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "__invert__"))
 
+    def __neg__(self) -> Self:
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "__neg__"))
+
     def any(self) -> Self:
         """Return whether any of the values in the column are `True`.
 
