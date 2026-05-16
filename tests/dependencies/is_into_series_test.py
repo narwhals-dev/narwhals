@@ -14,7 +14,7 @@ from narwhals.stable.v2.dependencies import is_into_series as v2_is_into_series
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from tests.dependencies.conftest import DynamicAttrOnly
+    from tests.dependencies.conftest import AlwaysHasAttr
     from tests.utils import ConstructorEager
 
 data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
@@ -71,7 +71,7 @@ def test_is_into_series_numpy() -> None:
     assert not v2_is_into_series(arr)
 
 
-def test_is_into_series_other(dynamic_attr_only: DynamicAttrOnly) -> None:
+def test_is_into_series_other(always_has_attr: AlwaysHasAttr) -> None:
     values = [1, 4, 2]
 
     assert not is_into_series(values)
@@ -82,6 +82,6 @@ def test_is_into_series_other(dynamic_attr_only: DynamicAttrOnly) -> None:
     assert v1_is_into_series(ListBackedSeries("a", values))
     assert v2_is_into_series(ListBackedSeries("a", values))
 
-    assert not is_into_series(dynamic_attr_only)
-    assert not v1_is_into_series(dynamic_attr_only)
-    assert not v2_is_into_series(dynamic_attr_only)
+    assert not is_into_series(always_has_attr)
+    assert not v1_is_into_series(always_has_attr)
+    assert not v2_is_into_series(always_has_attr)

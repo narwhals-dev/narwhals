@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from tests.dependencies.conftest import DynamicAttrOnly
+    from tests.dependencies.conftest import AlwaysHasAttr
     from tests.utils import Constructor
 
 EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow")
@@ -75,7 +75,7 @@ def test_is_into_lazyframe_numpy() -> None:
     assert not v2_is_into_lazyframe(arr)
 
 
-def test_is_into_lazyframe_other(dynamic_attr_only: DynamicAttrOnly) -> None:
+def test_is_into_lazyframe_other(always_has_attr: AlwaysHasAttr) -> None:
     assert not is_into_lazyframe(data)
     assert not v1_is_into_lazyframe(data)
     assert not v2_is_into_lazyframe(data)
@@ -84,6 +84,6 @@ def test_is_into_lazyframe_other(dynamic_attr_only: DynamicAttrOnly) -> None:
     assert v1_is_into_lazyframe(DictLazyFrame(data))
     assert v2_is_into_lazyframe(DictLazyFrame(data))
 
-    assert not is_into_lazyframe(dynamic_attr_only)
-    assert not v1_is_into_lazyframe(dynamic_attr_only)
-    assert not v2_is_into_lazyframe(dynamic_attr_only)
+    assert not is_into_lazyframe(always_has_attr)
+    assert not v1_is_into_lazyframe(always_has_attr)
+    assert not v2_is_into_lazyframe(always_has_attr)
