@@ -20,7 +20,6 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -302,19 +301,19 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
-  'src/narwhals/typing.py',
-  'src/narwhals/compliant.py',
-  'src/narwhals/stable/v1/typing.py',
-  'src/narwhals/stable/v2/typing.py',
-  'src/narwhals/this.py',
-  'src/narwhals/_arrow/typing.py',
-  'src/narwhals/_duckdb/typing.py',
-  'src/narwhals/_spark_like/typing.py',
+  "src/narwhals/typing.py",
+  "src/narwhals/compliant.py",
+  "src/narwhals/stable/v1/typing.py",
+  "src/narwhals/stable/v2/typing.py",
+  "src/narwhals/this.py",
+  "src/narwhals/_arrow/typing.py",
+  "src/narwhals/_duckdb/typing.py",
+  "src/narwhals/_spark_like/typing.py",
   # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
-  'src/narwhals/_ibis/*',
-  "tests/ibis_test.py",
+  "src/narwhals/_ibis/*",
   # Remove after finishing eager sub-protocols
-  'src/narwhals/_compliant/namespace.py',
+  "src/narwhals/_compliant/namespace.py",
+  "tests/ibis_test.py",
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -389,6 +388,7 @@ ignore = [
 ]
 
 [tool.pyrefly]
+search-path = ["src", "."]
 project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",
