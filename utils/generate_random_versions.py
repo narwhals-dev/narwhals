@@ -54,28 +54,26 @@ PYARROW_VERSION = (
 )
 
 
-def all_combos() -> tuple[tuple[str, str, str, str], ...]:
-    return tuple(
-        (pd, np, pl, pa)
-        for pd, np in PANDAS_AND_NUMPY_VERSION
-        for pl in POLARS_VERSION
-        for pa in PYARROW_VERSION
-    )
-
-
 def sample_distinct(n: int) -> list[dict[str, str]]:
-    pool = all_combos()
-    if n > len(pool):
-        msg = f"Requested {n} distinct combos but only {len(pool)} exist."
+    """Return `n` combos where no version of any single library is reused."""
+    n_max = min(len(PANDAS_AND_NUMPY_VERSION), len(POLARS_VERSION), len(PYARROW_VERSION))
+    if n > n_max:
+        msg = (
+            f"Requested {n} combos but at most {n_max} are possible "
+            "without reusing a version of any single library."
+        )
         raise ValueError(msg)
-    picks = random.sample(pool, n)
+    pandas_numpy = random.sample(PANDAS_AND_NUMPY_VERSION, n)
+    polars = random.sample(POLARS_VERSION, n)
+    pyarrow = random.sample(PYARROW_VERSION, n)
     return [
         {"pandas": pd, "numpy": np, "polars": pl, "pyarrow": pa}
-        for pd, np, pl, pa in picks
+        for (pd, np), pl, pa in zip(pandas_numpy, polars, pyarrow, strict=True)
     ]
 
 
 def to_requirements(combo: dict[str, str]) -> str:
+    """Render a single combo as the contents of a requirements.txt file."""
     return (
         f"numpy=={combo['numpy']}\n"
         f"pandas=={combo['pandas']}\n"
@@ -85,6 +83,7 @@ def to_requirements(combo: dict[str, str]) -> str:
 
 
 def main() -> None:
+    """Generate version combos and write them to the requested output path."""
     parser = argparse.ArgumentParser()
     parser.add_argument("-n", "--num", type=int, default=1)
     parser.add_argument(
@@ -99,16 +98,20 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    combos = sample_distinct(args.num)
+    num: int = args.num
+    output: Path = args.output
 
-    if args.output.suffix == ".json":
-        args.output.write_text(json.dumps(combos), "utf-8")
+    combos = sample_distinct(n=num)
+
+    if output.suffix == ".json":
+        output.write_text(json.dumps(combos), "utf-8")
         return
 
-    if args.num != 1:
-        msg = f"Non-JSON output ({args.output.suffix or 'no extension'}) requires --num=1"
+    if num != 1:
+        msg = f"Non-JSON output ({output.suffix or 'no extension'}) requires --num=1"
         raise ValueError(msg)
-    args.output.write_text(to_requirements(combos[0]), "utf-8")
+
+    output.write_text(to_requirements(combos[0]), "utf-8")
 
 
 if __name__ == "__main__":
