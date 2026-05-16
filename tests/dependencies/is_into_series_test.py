@@ -19,16 +19,19 @@ if TYPE_CHECKING:
 data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
-class ListBackedSeries:
+class ListBackedSeries:  # pragma: no cover
     def __init__(self, name: str, data: list[Any]) -> None:
         self._data = data
         self._name = name
 
-    def __len__(self) -> int:  # pragma: no cover
-        return len(self._data)
-
-    def __narwhals_series__(self) -> Self:  # pragma: no cover
+    def __narwhals_series__(self) -> Self:
         return self
+
+    def __len__(self) -> int: ...
+    def __iter__(self) -> Any: ...
+    def filter(self, *args: Any, **kwargs: Any) -> Any: ...
+    def value_counts(self, *args: Any, **kwargs: Any) -> Any: ...
+    def unique(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 @pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
@@ -59,14 +62,14 @@ def test_is_into_series_other() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
+    assert is_into_series(ListBackedSeries("a", [1, 4, 2]))
     assert not is_into_series(np.array([1, 2, 3]))
     assert not is_into_series([1, 2, 3])
 
-    assert v1_is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
+    assert v1_is_into_series(ListBackedSeries("a", [1, 4, 2]))
     assert not v1_is_into_series(np.array([1, 2, 3]))
     assert not v1_is_into_series([1, 2, 3])
 
-    assert v2_is_into_series(ListBackedSeries("a", [1, 4, 2]))  # pyrefly: ignore[bad-specialization]
+    assert v2_is_into_series(ListBackedSeries("a", [1, 4, 2]))
     assert not v2_is_into_series(np.array([1, 2, 3]))
     assert not v2_is_into_series([1, 2, 3])

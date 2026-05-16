@@ -24,15 +24,18 @@ V1_INTO_DATAFRAMES = (*EAGER_CONSTRUCTOR_NAMES, "duckdb", "ibis")
 data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
-class DictDataFrame:
+class DictDataFrame:  # pragma: no cover
     def __init__(self, data: Mapping[str, Any]) -> None:
         self._data = data
 
-    def __len__(self) -> int:  # pragma: no cover
-        return len(next(iter(self._data.values())))
-
-    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
+    def __narwhals_dataframe__(self) -> Self:
         return self
+
+    def __len__(self) -> int: ...
+    @property
+    def columns(self) -> Any: ...
+    def drop(self, *args: Any, **kwargs: Any) -> Any: ...
+    def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 @pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
@@ -66,14 +69,14 @@ def test_is_into_dataframe_other() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_dataframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert is_into_dataframe(DictDataFrame(data))
     assert not is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not is_into_dataframe(data)
 
-    assert v1_is_into_dataframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert v1_is_into_dataframe(DictDataFrame(data))
     assert not v1_is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v1_is_into_dataframe(data)
 
-    assert v2_is_into_dataframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert v2_is_into_dataframe(DictDataFrame(data))
     assert not v2_is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v2_is_into_dataframe(data)

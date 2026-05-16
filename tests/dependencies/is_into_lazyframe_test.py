@@ -24,15 +24,18 @@ V1_INTO_DATAFRAMES = (*EAGER_CONSTRUCTOR_NAMES, "duckdb", "ibis")
 data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
-class DictDataFrame:
+class DictLazyFrame:  # pragma: no cover
     def __init__(self, data: Mapping[str, Any]) -> None:
         self._data = data
 
-    def __len__(self) -> int:  # pragma: no cover
-        return len(next(iter(self._data.values())))
-
-    def __narwhals_lazyframe__(self) -> Self:  # pragma: no cover
+    def __narwhals_lazyframe__(self) -> Self:
         return self
+
+    @property
+    def columns(self) -> Any: ...
+    def drop(self, *args: Any, **kwargs: Any) -> Any: ...
+    def explain(self, *args: Any, **kwargs: Any) -> Any: ...
+    def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 @pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
@@ -65,14 +68,14 @@ def test_is_into_lazyframe_other() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_lazyframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert is_into_lazyframe(DictLazyFrame(data))
     assert not is_into_lazyframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not is_into_lazyframe(data)
 
-    assert v1_is_into_lazyframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert v1_is_into_lazyframe(DictLazyFrame(data))
     assert not v1_is_into_lazyframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v1_is_into_lazyframe(data)
 
-    assert v2_is_into_lazyframe(DictDataFrame(data))  # pyrefly: ignore[bad-specialization]
+    assert v2_is_into_lazyframe(DictLazyFrame(data))
     assert not v2_is_into_lazyframe(np.array([[1, 4], [2, 5], [3, 6]]))
     assert not v2_is_into_lazyframe(data)
