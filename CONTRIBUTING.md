@@ -141,14 +141,14 @@ If you add code that should be tested, please add tests.
 
 - To run tests, run `pytest`. To check coverage: `pytest --cov=src`
 - To run tests on the doctests, use `pytest src --doctest-modules`
-- To run unit tests and doctests at the same time, run `pytest src tests --cov=src --doctest-modules`
+- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=src --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
 - To choose which backends to run tests with you, you can use the `--constructors` flag:
   - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
   - To run tests for all CPU constructors, use `pytest --all-cpu-constructors`
   - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
-  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run python -m cudf.pandas -m pytest`
-  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors=polars[lazy]`
+  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run --extra cudf --module cudf.pandas --module pytest`
+  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors="polars[lazy]"`
 
 ### General considerations
 

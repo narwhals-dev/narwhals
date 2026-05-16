@@ -3,9 +3,9 @@ name: PyTest PySpark constructor
 on:
   pull_request:
     paths:
-      - narwhals/_expression_parsing.py
-      - narwhals/_spark_like/**
-      - narwhals/_sql/**
+      - src/narwhals/_expression_parsing.py
+      - src/narwhals/_spark_like/**
+      - src/narwhals/_sql/**
       - tests/*scan*.py
       - tests/frame/*sink*.py
   workflow_call:

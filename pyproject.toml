@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.21.0"
+version = "2.21.2"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -138,7 +138,6 @@ wheel-include = [
 ]
 
 [tool.uv]
-compile-bytecode = true
 default-groups = []  # Otherwise "dev" group is silently installed. See https://docs.astral.sh/uv/reference/settings/#default-groups
 conflicts = [
   [
@@ -268,6 +267,7 @@ skip-magic-trailing-comma = true
 [tool.pytest.ini_options]
 norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'src/narwhals/_*']
 testpaths = ["tests"]
+pythonpath = ["src"]
 filterwarnings = [
   "error",
   'ignore:.*defaulting to pandas implementation:Warning:modin',
@@ -330,19 +330,19 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
-  'src/narwhals/typing.py',
-  'src/narwhals/compliant.py',
-  'src/narwhals/stable/v1/typing.py',
-  'src/narwhals/stable/v2/typing.py',
-  'src/narwhals/this.py',
-  'src/narwhals/_arrow/typing.py',
-  'src/narwhals/_duckdb/typing.py',
-  'src/narwhals/_spark_like/typing.py',
+  "src/narwhals/typing.py",
+  "src/narwhals/compliant.py",
+  "src/narwhals/stable/v1/typing.py",
+  "src/narwhals/stable/v2/typing.py",
+  "src/narwhals/this.py",
+  "src/narwhals/_arrow/typing.py",
+  "src/narwhals/_duckdb/typing.py",
+  "src/narwhals/_spark_like/typing.py",
   # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
-  'src/narwhals/_ibis/*',
-  "tests/ibis_test.py",
+  "src/narwhals/_ibis/*",
   # Remove after finishing eager sub-protocols
-  'src/narwhals/_compliant/namespace.py',
+  "src/narwhals/_compliant/namespace.py",
+  "tests/ibis_test.py",
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -417,8 +417,8 @@ ignore = [
 ]
 
 [tool.pyrefly]
-project-includes = ["tests"]
 search-path = ["src", "."]
+project-includes = ["tests"]
 ignore-missing-imports = [
     "cudf.*",
     "cupy.*",
