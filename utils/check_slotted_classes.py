@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from narwhals._utils import Version, qualified_type_name
 from narwhals.dtypes import DType, Field
