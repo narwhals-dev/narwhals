@@ -78,7 +78,7 @@ class Expr:
         fmt: Callable[[Any], str] = repr,
         include_header: bool = True,
     ) -> str:
-        """Needs replacing with registering to a repr/format module's dispatch table.
+        """Needs replacing with registering to something in `_reprs.py`.
 
         Want to make the header:
         - available by configuration
