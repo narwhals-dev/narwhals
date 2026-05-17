@@ -7,10 +7,9 @@ repos:
   hooks:
     # Run the formatter.
     - id: ruff-format
-      args: [src, tests, tpch, utils, packages]
     # Run the linter.
     - id: ruff-check
-      args: [src, tests, tpch, utils, packages, --fix]
+      args: [--fix]
     - id: ruff
       name: check-docstrings
       alias: check-docstrings
