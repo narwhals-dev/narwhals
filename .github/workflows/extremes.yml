@@ -27,6 +27,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: min-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group extreme-minimum-versions
       - name: Run pytest
         run: |
           uv run --group extreme-minimum-versions \
@@ -48,6 +50,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pretty-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group extreme-pretty-old-versions
       - name: Run pytest
         run: |
           uv run --group extreme-pretty-old-versions \
@@ -69,6 +73,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: not-so-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group extreme-not-so-old-versions
       - name: Run pytest
         run: |
           uv run --group extreme-not-so-old-versions \

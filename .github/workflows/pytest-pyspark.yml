@@ -36,6 +36,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group pyspark-tests
       - name: Run pytest
         run: |
           uv run --group pyspark-tests \
@@ -58,6 +60,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group pyspark-tests
       - name: Run pytest
         run: uv run --group pyspark-tests --with "pyspark==3.5.0" \
           pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \

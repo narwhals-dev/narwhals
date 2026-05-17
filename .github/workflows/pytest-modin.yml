@@ -28,6 +28,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: modin-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group core-tests
       - name: Run pytest
         run: |
           uv run \

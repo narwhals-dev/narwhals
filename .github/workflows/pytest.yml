@@ -28,12 +28,14 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group tests
       - name: Run pytest
         shell: bash
         run: |
           uv run \
           --extra pandas --extra polars --extra pyarrow \
-          --group tests --group plugins \
+          --group tests \
           pytest tests --cov=src --cov=tests --cov-fail-under=75 \
           --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
 
@@ -53,12 +55,15 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group core-tests --group extra
       - name: Run pytest
         shell: bash
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
         run: |
           uv run \
-          --group plugins --group core-tests --group extra --extra pandas \
+          --group core-tests --group extra \
+          --extra pandas \
           pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
@@ -83,11 +88,13 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group core-tests --group extra
       - name: Run pytest
         run: |
           uv run \
-          --extra dask \
-          --group core-tests --group extra --group plugins --extra pandas \
+          --extra pandas --extra dask \
+          --group core-tests --group extra \
           pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
@@ -95,8 +102,8 @@ jobs:
         if: matrix.python-version == '3.13'
         run: |
           uv run \
-          --extra dask \
-          --group core-tests --group extra --group plugins --extra pandas \
+          --extra pandas --extra dask \
+          --group core-tests --group extra \
           pytest src --doctest-modules
 
   # Test against smaller dependency set, used e.g. on Gentoo.
@@ -116,6 +123,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group tests -U
       - name: Run pytest (pandas and pandas[nullable])
         run: |
           uv run --isolated -U \
@@ -151,6 +160,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group core-tests
       - name: Run pytest
         run: |
           uv run \
@@ -176,6 +187,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Show dependencies
+        run: uv tree --group tests --pre
       - name: Run pytest
         run: |
           uv run --pre \
