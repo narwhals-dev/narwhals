@@ -589,3 +589,16 @@ def test_over_when_then_aggregation_partition_by(
     result = df.select("a", "b", c=expr).sort("b")
     expected = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "c": expected_c}
     assert_equal_data(result, expected)
+
+
+def test_mutability(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [1, 2, 3]}))
+    left = nw.col("a").sum()
+    right = nw.col("a").mean()
+    expr = left + right
+    result = df.select(expr)
+    assert_equal_data(result, {"a": [16 / 3]})
+    result = df.with_columns(expr.over("b")).sort("b")
+    assert_equal_data(result, {"a": [2.0, 2.0, 4.0], "b": [1, 2, 3]})
+    result = df.select(expr)
+    assert_equal_data(result, {"a": [16 / 3]})
