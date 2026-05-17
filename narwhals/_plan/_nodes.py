@@ -107,7 +107,7 @@ def node(*, observe_scalar: bool = True) -> Any:
         Meaning we depend on it to answer that question:
         >>> lit_aliased = aliased.__replace__(expr=ir.lit(1))
         >>> lit_aliased
-        lit(int: 1).alias('b')
+        lit(1).alias('b')
         >>> lit_aliased.is_scalar()
         True
 
@@ -580,14 +580,14 @@ class ExprTraverser:
 
             And this is *not restricted* to any particular sub-expression:
             >>> show(df.project(nw.when("a").then(ncs.numeric())))
-            b=.when(col('a')).then(col('b')).otherwise(lit(null))
-            c=.when(col('a')).then(col('c')).otherwise(lit(null))
-            d=.when(col('a')).then(col('d')).otherwise(lit(null))
-            f=.when(col('a')).then(col('f')).otherwise(lit(null))
+            b=.when(col('a')).then(col('b')).otherwise(lit(None))
+            c=.when(col('a')).then(col('c')).otherwise(lit(None))
+            d=.when(col('a')).then(col('d')).otherwise(lit(None))
+            f=.when(col('a')).then(col('f')).otherwise(lit(None))
 
             >>> show(df.project(nw.when(ncs.boolean()).then(1).otherwise(0).name.keep()))
-            a=.when(col('a')).then(lit(int: 1)).otherwise(lit(int: 0))
-            e=.when(col('e')).then(lit(int: 1)).otherwise(lit(int: 0))
+            a=.when(col('a')).then(lit(1)).otherwise(lit(0))
+            e=.when(col('e')).then(lit(1)).otherwise(lit(0))
 
             We combine equal-sized multi-outputs by **zipping** them together:
             >>> zipping = (nw.col("b", "c") + nw.col("d", "f"))._ir
@@ -610,7 +610,7 @@ class ExprTraverser:
             [`fill_nan`] makes good use of that under-the-covers:
             >>> zip_broadcast_2 = ncs.float().fill_nan(0.0)._ir
             >>> zip_broadcast_2
-            .when([(ncs.float().is_not_nan()) | (ncs.float().is_null())]).then(ncs.float()).otherwise(lit(float: 0.0))
+            .when([(ncs.float().is_not_nan()) | (ncs.float().is_null())]).then(ncs.float()).otherwise(lit(0.0))
             >>> show(zip_broadcast_2.iter_expand(ctx))
             .when([(col('d').is_not_nan()) | (col('d').is_null())]).then(col('d')).otherwise(...)
             .when([(col('f').is_not_nan()) | (col('f').is_null())]).then(col('f')).otherwise(...)

@@ -113,7 +113,7 @@ def when(*predicates: OneOrIterable[IntoExprColumn], **constraints: Any) -> When
 
         >>> nw.when(nw.col("y") == "b").then(1)
         nw._plan.Expr:
-        .when([(col('y')) == (lit(str: b))]).then(lit(int: 1)).otherwise(lit(null))
+        .when([(col('y')) == (lit('b'))]).then(lit(1)).otherwise(lit(None))
     """
     condition = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
     return When._from_ir(condition)

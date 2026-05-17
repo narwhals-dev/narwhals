@@ -72,7 +72,7 @@ class Parameters(metaclass=SlottedMeta):
 
     Which permits literals and aggregations:
     >>> nw.int_range(0, nw.len())._ir
-    int_range([lit(int: 0), len()])
+    int_range([lit(0), len()])
 
     But will raise on anything else:
     >>> nw.int_range(0, nw.col("bad").abs())  # doctest: +IGNORE_EXCEPTION_DETAIL
@@ -177,7 +177,7 @@ class Binary(Parameters, arity=2):
     We also use this to represent range *functions*:
     >>> expr = nw.int_range(0, 10)
     >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
-    Binary(SCALAR, SCALAR) | (lit(int: 0), lit(int: 10))
+    Binary(SCALAR, SCALAR) | (lit(0), lit(10))
     """
 
     def __init__(self, left: Constraint = _DEFAULT, right: Constraint = _ANY) -> None:
