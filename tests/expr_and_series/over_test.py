@@ -592,6 +592,8 @@ def test_over_when_then_aggregation_partition_by(
 
 
 def test_mutability(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     df = nw.from_native(constructor({"a": [1, 1, 2], "b": [1, 2, 3]}))
     left = nw.col("a").sum()
     right = nw.col("a").mean()
