@@ -2,6 +2,7 @@ name: Test Downstream Libraries - Fast
 
 on:
   pull_request:
+  workflow_call:
 
 env:
   PY_COLORS: 1
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   altair:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -40,8 +42,6 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
           uv pip install -e ".[dev, all]"
       - name: install-narwhals-dev
         run: |
@@ -59,6 +59,7 @@ jobs:
           mypy altair tests
 
   marimo:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -86,10 +87,6 @@ jobs:
         run: |
           cd marimo
           uv add ../ --editable
-          # Temporary pin until it's addressed upstream.
-          uv add "pandas<3" --group test-optional
-          # Temporary pin to get CI green
-          uv add "sqlglot<28.7.0" --group test-optional
       - name: show-deps
         run: |
           cd marimo
@@ -109,6 +106,7 @@ jobs:
         timeout-minutes: 15
 
   scikit-lego:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -148,6 +146,7 @@ jobs:
           pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -196,6 +195,7 @@ jobs:
           shiny-dir: py-shiny
 
   tea-tasting:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -222,8 +222,6 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
-          # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -241,6 +239,7 @@ jobs:
           uv run --no-sync pytest tests
 
   tubular:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -271,8 +270,6 @@ jobs:
       - name: install-tubular-dev
         run: |
           cd tubular
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
           uv pip install -e ".[dev]"
       - name: install-narwhals-dev
         run: |
@@ -286,6 +283,7 @@ jobs:
           pytest tests --config-file=pyproject.toml
 
   plotly:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -331,6 +329,7 @@ jobs:
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -375,6 +374,7 @@ jobs:
 
 
   formulaic:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -420,6 +420,7 @@ jobs:
           hatch run tests --config-file=pyproject.toml
 
   pointblank:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -450,8 +451,6 @@ jobs:
           . .venv/bin/activate
           uv pip install . --group dev
           # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
-          # Temporary pin to get CI green
           uv pip install "pandas<3"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
@@ -475,9 +474,10 @@ jobs:
           make test
 
   validoopsie:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"] # 3.9 and 3.12 are enough to cover all the tests
+        python-version: ["3.10", "3.13"] # these are enough to cover all the tests
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -500,9 +500,6 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev --upgrade
-          # Temporary pin until it's addressed upstream.
-          uv remove pandas --group dev
-          uv add "pandas<3"
       - name: install-narwhals-dev
         run: |
           cd validoopsie
@@ -525,6 +522,7 @@ jobs:
         timeout-minutes: 15
 
   darts:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -571,6 +569,7 @@ jobs:
           pytest darts/tests/test_timeseries_static_covariates.py
 
   gt-extras:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -612,6 +611,7 @@ jobs:
           uv run --no-sync pytest
 
   fairlearn:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:

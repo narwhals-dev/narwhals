@@ -147,9 +147,9 @@ If you add code that should be tested, please add tests.
 
 ### 7. Running tests
 
-- To run tests, run `pytest`. To check coverage: `pytest --cov=narwhals`
-- To run tests on the doctests, use `pytest narwhals --doctest-modules`
-- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=narwhals --doctest-modules`
+- To run tests, run `pytest`. To check coverage: `pytest --cov=src`
+- To run tests on the doctests, use `pytest src --doctest-modules`
+- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=src --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
 - To choose which backends to run tests with you, you can use the `--constructors` flag:
   - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
@@ -234,17 +234,6 @@ Note: While we're not currently totally consistent with these patterns, any effo
    ```
 
 Document clear reasons in test comments for any skip/xfail patterns to help maintain test clarity.
-
-If you want to have less surprises when opening a PR, you can take advantage of [nox](https://nox.thea.codes/en/stable/index.html) to run the entire CI/CD test suite locally in your operating system.
-
-To do so, you will first need to install nox and then run the `nox` command in the root of the repository:
-
-```bash
-python -m pip install nox  # python -m pip install "nox[uv]"
-nox
-```
-
-Notice that nox will also require to have all the python versions that are defined in the `noxfile.py` installed in your system.
 
 #### Hypothesis tests
 

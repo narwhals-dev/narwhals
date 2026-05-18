@@ -38,13 +38,13 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/dependencies\.py|
+                src/narwhals/dependencies\.py|
                 # Private, so less urgent to document too well
-                narwhals/_.*|
+                src/narwhals/_.*|
                 # Internal use only, less urgent
                 ^utils/.*|
                 # Soft-deprecated, so less crucial to document so carefully
-                narwhals/stable/v1/.*
+                src/narwhals/stable/v1/.*
             )$
         # Keep in sync with `flake8-typing-imports` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
@@ -52,7 +52,7 @@ repos:
         # TODO(unassigned): replace with ruff once https://github.com/astral-sh/ruff/issues/2302 is addressed.
         name: flake8-typing-imports
         alias: flake8-typing-imports
-        entry: flake8 --select TYP --min-python-version=3.9.0
+        entry: flake8 --select TYP --min-python-version=3.10.0
         # Keep in sync with `darglint` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
@@ -77,13 +77,13 @@ repos:
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: python utils/import_check.py
       language: python
-      files: ^narwhals/
-      exclude: ^narwhals/dependencies\.py
+      files: ^src/narwhals/
+      exclude: ^src/narwhals/dependencies\.py
     - id: self-self
       name: don't annotate `self` argument using `Self`
       entry: "self: Self"
       language: pygrep
-      files: ^narwhals/
+      files: ^src/narwhals/
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
       entry: |
@@ -95,14 +95,14 @@ repos:
               ((Datetime|Duration|Enum)(,\ )?)+
               ((,\ )?DType)?
       language: pygrep
-      files: ^narwhals/
+      files: ^src/narwhals/
       exclude: |
         (?x)
           ^(
-            narwhals/_utils\.py|
-            narwhals/stable/v./_?dtypes.py|
-            narwhals/.*__init__.py|
-            narwhals/.*typing\.py
+            src/narwhals/_utils\.py|
+            src/narwhals/stable/v./_?dtypes.py|
+            src/narwhals/.*__init__.py|
+            src/narwhals/.*typing\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`
