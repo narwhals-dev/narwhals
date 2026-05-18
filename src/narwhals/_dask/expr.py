@@ -480,9 +480,11 @@ class DaskExpr(
             )
             frame = add_row_index(expr.to_frame(), col_token)
             group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
-            first_distinct_index = frame.groupby(_name, **group_by_kwargs).agg(
-                {col_token: "min"}
-            )[col_token]
+            agged = cast(
+                "dx.DataFrame",
+                frame.groupby(_name, **group_by_kwargs).agg({col_token: "min"}),
+            )
+            first_distinct_index = agged[col_token]
             return frame[col_token].isin(first_distinct_index)
 
         return self._with_callable(func)
@@ -495,9 +497,11 @@ class DaskExpr(
             )
             frame = add_row_index(expr.to_frame(), col_token)
             group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
-            last_distinct_index = frame.groupby(_name, **group_by_kwargs).agg(
-                {col_token: "max"}
-            )[col_token]
+            agged = cast(
+                "dx.DataFrame",
+                frame.groupby(_name, **group_by_kwargs).agg({col_token: "max"}),
+            )
+            last_distinct_index = agged[col_token]
             return frame[col_token].isin(last_distinct_index)
 
         return self._with_callable(func)

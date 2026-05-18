@@ -9,7 +9,7 @@ from narwhals._compliant.typing import NativeExprT, NativeFrameT
 from narwhals._sql.typing import SQLExprT, SQLLazyFrameT
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Sequence
 
     from narwhals.typing import PythonLiteral
 
@@ -60,7 +60,8 @@ class SQLNamespace(
     def sum_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return reduce(
-                operator.add, (self._coalesce(col, self._lit(0)) for col in cols)
+                lambda x, y: self._function("add", x, y),
+                (self._coalesce(col, self._lit(0)) for col in cols),
             )
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
@@ -75,10 +76,10 @@ class SQLNamespace(
     def when_then(
         self, predicate: SQLExprT, then: SQLExprT, otherwise: SQLExprT | None = None
     ) -> SQLExprT:
-        def func(cols: list[NativeExprT]) -> NativeExprT:
+        def func(cols: Sequence[NativeExprT]) -> NativeExprT:
             return self._when(cols[1], cols[0])
 
-        def func_with_otherwise(cols: list[NativeExprT]) -> NativeExprT:
+        def func_with_otherwise(cols: Sequence[NativeExprT]) -> NativeExprT:
             return self._when(cols[1], cols[0], cols[2])
 
         if otherwise is None:

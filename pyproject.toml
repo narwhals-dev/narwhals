@@ -81,9 +81,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   # Type checkers
   "mypy~=1.15.0",
   "pyrefly==0.64.0",
-  # NOTE: If `pyright` keeps updating itself, check if you've set `PYRIGHT_PYTHON_FORCE_VERSION`
-  # and remove it (https://github.com/RobertCraigie/pyright-python/blob/d7508e5425d3d02761d70dab1f9a2086573af429/README.md#modify-pyright-version)
-  "pyright==1.1.408",  #  temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3584
+  "pyright",
   # Dependencies
   "duckdb==1.4.4",
   "sqlparse>=0.5.5",
