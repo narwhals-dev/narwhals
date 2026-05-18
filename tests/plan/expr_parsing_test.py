@@ -500,16 +500,16 @@ def test_lit_invalid() -> None:
     pattern = re_compile(r"is not supported in `nw.lit`")
     context = pytest.raises(TypeError, match=pattern)
     with context:
-        nwp.lit(object())  # type: ignore[arg-type]
+        nwp.lit(object())  # type: ignore[call-overload]
     with context:
-        nwp.lit({1, 2, 3})  # type: ignore[arg-type]
+        nwp.lit({1, 2, 3})  # type: ignore[call-overload]
 
     # NOTE: The overloads are broken
     # this gets the right error without making the LSP blow up
     value: Any = 1
     bad: pa.Scalar[Any] = pa.scalar(value)
     with context:
-        nwp.lit(bad)  # type: ignore[arg-type]
+        nwp.lit(bad)  # type: ignore[call-overload]
     with context:
         nwp.lit([bad])
 

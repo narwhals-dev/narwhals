@@ -251,3 +251,13 @@ def test_lit_series(series: Series) -> None:
     else:
         raise NotImplementedError(series.identifier)
     assert_expr_ir_equal(nwp.lit(series([True, False, True])), expected)
+
+
+def test_lit_object() -> None:
+    class What:
+        def __repr__(self) -> str:
+            return "12345"
+
+    obj = What()
+    expr = nwp.lit(obj, nw.Object)
+    assert_expr_ir_equal(expr, "lit[object](12345)")
