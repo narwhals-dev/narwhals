@@ -220,11 +220,13 @@ def test_expr_ir_nodes() -> None:
                 nwp.lit([1, None], nw.Array(nw.Int32, 2)),
                 nwp.lit(["hi"], nw.Array(nw.String, 1)),
                 nwp.lit([None, None, None, None], nw.Array(nw.Float32, 4)),
+                nwp.lit((1, 2, 3, 4, 5), nw.Array(nw.UInt8, 5)),
             ],
             "[lit[array[i64, 3]]([1, 2, 3]), "
             "lit[array[i32, 2]]([1, None]), "
             "lit[array[str, 1]](['hi']), "
-            "lit[array[f32, 4]]([None, None, None, None])]",
+            "lit[array[f32, 4]]([None, None, None, None]), "
+            "lit[array[u8, 5]]([...])]",
         ),
     ],
 )
