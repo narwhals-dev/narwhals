@@ -29,6 +29,8 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Generate random versions
         run: uv run --no-project python utils/generate_random_versions.py
+      - name: Show dependencies
+        run: uv pip compile --with-requirements random-requirements.txt --group tests
       - name: Run pytest with random versions
         run: |
           uv run \
