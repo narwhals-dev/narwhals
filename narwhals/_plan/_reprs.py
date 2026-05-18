@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import functools
 import re
-from typing import TYPE_CHECKING, Any, TypeAlias, overload
+from string import ascii_letters
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, overload
 
 from narwhals._plan import common
 from narwhals.dtypes import (
@@ -30,8 +32,8 @@ from narwhals.dtypes import (
 )
 
 if TYPE_CHECKING:
-    import datetime as dt
     import decimal
+    from collections.abc import Callable
 
     from narwhals.dtypes import DType
     from narwhals.typing import PythonLiteral
@@ -54,28 +56,28 @@ def lit_repr(dtype: DType, value: PythonLiteral | None, /) -> LitRepr:
     return _lit_repr(dtype, value)
 
 
+def _escape_non_null(value: Any | None, fmt: Callable[[Any], str] = str) -> str:
+    return repr(value) if value is None else f"'{fmt(value)}'"
+
+
 @functools.singledispatch
 def _lit_repr(dtype: DType, value: PythonLiteral | None, /) -> LitRepr:
     raise NotImplementedError(dtype)
 
 
 @_lit_repr.register(Object)
-@_lit_repr.register(Categorical)
-@_lit_repr.register(Enum)
 @_lit_repr.register(Unknown)
-def _(dtype: Object | Categorical | Enum | Unknown, value: Any | None) -> LitRepr:
+def _(dtype: Object | Unknown, value: Any | None) -> LitRepr:
     value_s = str(value)
-    if isinstance(dtype, Categorical):
-        dtype_s = "cat"
-    elif isinstance(dtype, Enum):
-        dtype_s = "enum"
-    else:
-        dtype_s = dtype.__class__.__name__.lower()
-    if value is not None and isinstance(dtype, (Categorical, Enum)):
-        value_s = f"'{value_s}'"
     if value is None and isinstance(dtype, Unknown):
         return None, value_s
-    return dtype_s, value_s
+    return dtype.__class__.__name__.lower(), value_s
+
+
+@_lit_repr.register(Categorical)
+@_lit_repr.register(Enum)
+def _(dtype: Categorical | Enum, value: Any | None) -> LitRepr:
+    return "enum" if isinstance(dtype, Enum) else "cat", _escape_non_null(value)
 
 
 @_lit_repr.register(Duration)
@@ -99,12 +101,12 @@ def _(dtype: Duration, value: dt.timedelta | None) -> LitRepr:
 
 @_lit_repr.register(Date)
 def _(_dtype: Date, value: dt.date | None) -> LitRepr:
-    return "date", (f"'{value}'" if value is not None else repr(value))
+    return "date", _escape_non_null(value)
 
 
 @_lit_repr.register(Time)
 def _(_dtype: Time, value: dt.time | None) -> LitRepr:
-    return "time", (f"'{value}'" if value is not None else repr(value))
+    return "time", _escape_non_null(value)
 
 
 @_lit_repr.register(Datetime)
@@ -116,8 +118,7 @@ def _(dtype: Datetime, value: dt.datetime | None) -> LitRepr:
     else:
         args = f"{dtype.time_unit}, {dtype.time_zone}"
     dtype_s = f"datetime[{args}]" if args else "datetime"
-    value_s = f"'{value.isoformat('T')}'" if value else repr(value)
-    return dtype_s, value_s
+    return dtype_s, _escape_non_null(value, dt.datetime.isoformat)
 
 
 @_lit_repr.register(Decimal)
@@ -125,7 +126,7 @@ def _(dtype: Decimal, value: decimal.Decimal | None) -> LitRepr:
     dtype_s = "decimal"
     if not (dtype.precision == 38 and dtype.scale == 0):
         dtype_s = f"{dtype_s}[{dtype.precision},{dtype.scale}]"
-    return dtype_s, (f"'{value}'" if value is not None else repr(value))
+    return dtype_s, _escape_non_null(value)
 
 
 @_lit_repr.register(Boolean)
@@ -136,37 +137,30 @@ def _(dtype: Decimal, value: decimal.Decimal | None) -> LitRepr:
 def _(
     dtype: Boolean | Int64 | Float64 | String | Binary, value: float | str | bytes | None
 ) -> LitRepr:
-    # Value repr represents a type from `builtins` unambiguously.
-    # Except when we have `None`
-    d: str | None
-    v = repr(value)
     if value is not None:
-        d = None
-    elif isinstance(dtype, (Int64, Float64)):
-        d = dtype.__class__.__name__[0].lower() + "64"
-    elif isinstance(dtype, Boolean):
+        return None, repr(value)
+    if isinstance(dtype, (Int64, Float64)):
+        return _numeric(dtype, value)
+    if isinstance(dtype, Boolean):
         d = "bool"
     elif isinstance(dtype, String):
         d = "str"
     else:
         d = "binary"
-    return d, v
+    return d, repr(value)
+
+
+_strip_version_suffix: Final = functools.partial(re.compile(r"V\d*").sub, "")
+"""Remove any trailing `"V1"`, `"V2"`, etc from the name of a `DType` class."""
 
 
 @_lit_repr.register(FloatType)
 @_lit_repr.register(IntegerType)
-def _(dtype: FloatType | IntegerType, value: float | None) -> LitRepr:
-    # If we have this `DType`, it should be displayed to resolve ambiguity in the value repr
-    import string
-
+def _numeric(dtype: FloatType | IntegerType, value: float | None) -> LitRepr:
+    # Always display to resolve ambiguity in the value repr (e.g. `i8`, `f32`, `u128`)
     tp_name = dtype.__class__.__name__
-    code = tp_name[0].lower()
-    # we don't have any of these *yet*, but it would break the more naive version in a weird way
-    # e.g. `UInt128V2` -> `u1282`
-    version_suffix = r"V\d*"
-    bits = re.sub(version_suffix, "", tp_name).strip(string.ascii_letters)
-    # e.g. `i8`, `f64`, `u128`
-    return f"{code}{bits}", repr(value)
+    char = tp_name[0].lower()
+    return (f"{char}{_strip_version_suffix(tp_name).strip(ascii_letters)}", repr(value))
 
 
 @_lit_repr.register(Struct)
@@ -177,8 +171,7 @@ def _(dtype: Struct, value: dict[str, Any] | None) -> LitRepr:
 @_lit_repr.register(List)
 def _(dtype: List, value: list[Any] | tuple[Any, ...] | None) -> LitRepr:
     inner, values = _lit_repr_nested_partial(dtype, value)
-    dtype_s = f"list[{inner}]" if inner else "list"
-    return dtype_s, values
+    return f"list[{inner}]" if inner else "list", values
 
 
 @_lit_repr.register(Array)
@@ -187,8 +180,7 @@ def _(dtype: Array, value: list[Any] | tuple[Any, ...] | None) -> LitRepr:
     dtype_s = f"{inner}, " if inner else ""
     shape = dtype.shape
     shape_s = repr(shape[0] if len(shape) == 1 else shape)
-    dtype_s = f"array[{dtype_s}{shape_s}]"
-    return dtype_s, values
+    return f"array[{dtype_s}{shape_s}]", values
 
 
 # TODO @dangotbanned: Clean up (eventually)
