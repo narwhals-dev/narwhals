@@ -29,13 +29,11 @@ jobs:
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group tests
+        run: uv pip compile pyproject.toml --group tests --extra pandas --extra polars --extra pyarrow
       - name: Run pytest
         shell: bash
         run: |
-          uv run \
-          --extra pandas --extra polars --extra pyarrow \
-          --group tests \
+          uv run --group tests --extra pandas --extra polars --extra pyarrow \
           pytest tests --cov=src --cov=tests --cov-fail-under=75 \
           --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
 
@@ -56,14 +54,12 @@ jobs:
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests --group extra
+        run: uv pip compile pyproject.toml --group core-tests --group extra --extra pandas
       - name: Run pytest
         shell: bash
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
         run: |
-          uv run \
-          --group core-tests --group extra \
-          --extra pandas \
+          uv run --group core-tests --group extra --extra pandas \
           pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
@@ -89,12 +85,10 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests --group extra
+        run: uv pip compile pyproject.toml --extra pandas --extra dask --group core-tests --group extra
       - name: Run pytest
         run: |
-          uv run \
-          --extra pandas --extra dask \
-          --group core-tests --group extra \
+          uv run --extra pandas --extra dask --group core-tests --group extra \
           pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
@@ -124,12 +118,10 @@ jobs:
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group tests -U
+        run: uv pip compile pyproject.toml --isolated -U --group tests --extra pandas
       - name: Run pytest (pandas and pandas[nullable])
         run: |
-          uv run --isolated -U \
-          --group tests \
-          --extra pandas \
+          uv run --isolated -U --group tests --extra pandas \
           pytest tests --runslow --constructors="pandas,pandas[nullable]"
       - name: Run pytest (pandas[pyarrow] and pyarrow)
         run: |
@@ -161,11 +153,10 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests
+        run: uv pip compile pyproject.toml --group core-tests --extra pandas
       - name: Run pytest
         run: |
-          uv run \
-          --group core-tests --extra pandas \
+          uv run --group core-tests --extra pandas \
           pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
@@ -188,11 +179,9 @@ jobs:
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group tests --pre
+        run: uv pip compile pyproject.toml --pre --group tests --extra pandas --extra pyarrow
       - name: Run pytest
         run: |
-          uv run --pre \
-          --group tests \
-          --extra pandas --extra pyarrow \
+          uv run --pre --group tests --extra pandas --extra pyarrow \
           pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
           --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow"
