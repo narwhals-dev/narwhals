@@ -442,7 +442,7 @@ class EagerDataFrame(
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
             else:
-                columns = cast("Never", columns)  # help mypy
+                columns = cast("Never", columns)  # help mypy  # pragma: no cover
                 assert_never(columns)
 
         if not is_slice_none(rows):
