@@ -22,7 +22,14 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        IntoSchema,
+        NonNestedDType,
+        TimeUnit,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -239,7 +246,9 @@ class PolarsSelectorNamespace:
 
     def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
         native_dtypes = [
-            narwhals_to_native_dtype(dtype, self._version).__class__
+            narwhals_to_native_dtype(
+                cast("type[NonNestedDType]", dtype), self._version
+            ).__class__
             if isinstance(dtype, type) and issubclass(dtype, DType)
             else narwhals_to_native_dtype(dtype, self._version)
             for dtype in dtypes

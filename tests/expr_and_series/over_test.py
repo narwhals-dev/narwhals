@@ -245,7 +245,7 @@ def test_over_anonymous_cumulative(
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
-        else pytest.raises(KeyError)  # type: ignore[arg-type]
+        else pytest.raises(KeyError)
         if df.implementation.is_modin()
         or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 3))
         # TODO(unassigned): bug in old pandas + modin.

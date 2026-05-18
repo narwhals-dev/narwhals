@@ -321,6 +321,7 @@ class ArrowDataFrame(
         elif is_numpy_array_1d(columns):
             selector = columns.tolist()
         else:
+            columns = cast("Sequence[int]", columns)  # help mypy
             selector = columns
         return self._with_native(self.native.select(selector))
 

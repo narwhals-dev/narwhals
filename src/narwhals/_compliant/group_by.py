@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from itertools import chain
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast
 
 from narwhals._compliant.typing import (
     CompliantDataFrameT,
@@ -161,7 +161,7 @@ class DepthTrackingGroupBy(
         Arguments:
             name: Name of a `nw.Expr` aggregation method.
         """
-        return cls._REMAP_AGGS.get(name, name)
+        return cast("NativeAggregationT_co", cls._REMAP_AGGS.get(name, name))
 
     @classmethod
     def _leaf_name(cls, expr: DepthTrackingExprAny, /) -> NarwhalsAggregation | Any:

@@ -59,6 +59,7 @@ if TYPE_CHECKING:
         SingleIndexSelector,
         UniqueKeepStrategy,
         _2DArray,
+        _Slice,
     )
 
     T = TypeVar("T")
@@ -222,7 +223,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self._with_native(
             self.native.join(
                 other=other.native,
-                how=how_native,  # type: ignore[arg-type]
+                how=how_native,
                 left_on=left_on,
                 right_on=right_on,
                 suffix=suffix,
@@ -495,6 +496,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                     else:
                         native = native[:, columns]
                 elif isinstance(columns, slice):
+                    columns = cast("_Slice[str]", columns)  # help mypy
                     native = native.select(
                         self.columns[
                             slice(*convert_str_slice_to_int_slice(columns, self.columns))

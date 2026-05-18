@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast, overload
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import Never, Self
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
@@ -74,6 +74,7 @@ if TYPE_CHECKING:
         SizeUnit,
         UniqueKeepStrategy,
         _2DArray,
+        _Slice,
         _SliceIndex,
         _SliceName,
     )
@@ -434,12 +435,14 @@ class EagerDataFrame(
                 else:
                     compliant = compliant._select_multi_index(columns)
             elif isinstance(columns, slice):
+                columns = cast("_Slice[str]", columns)  # help mypy
                 compliant = compliant._select_slice_name(columns)
             elif is_compliant_series(columns):
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
             else:
+                columns = cast("Never", columns)  # help mypy
                 assert_never(columns)
 
         if not is_slice_none(rows):
@@ -450,6 +453,7 @@ class EagerDataFrame(
             elif is_compliant_series(rows):
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
+                rows = cast("SizedMultiIndexSelector[Any]", rows)  # help mypy
                 compliant = compliant._gather(rows)
             else:
                 assert_never(rows)

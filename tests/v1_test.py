@@ -591,7 +591,7 @@ def test_from_mock_interchange_protocol_non_strict() -> None:
 
     mockdf = MockDf()
     result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
-    assert result is mockdf
+    assert result is mockdf  # type: ignore[comparison-overlap]
 
 
 def test_from_native_lazyframe() -> None:
