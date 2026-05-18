@@ -230,7 +230,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(lambda expr: F("isfinite", expr))
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_elementwise(lambda expr: F("contains", lit(other), expr))
+        return self._with_elementwise(lambda expr: F("contains", lit(other), expr))  # type: ignore[arg-type]
 
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
