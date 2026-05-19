@@ -39,10 +39,10 @@ jobs:
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group pyspark-tests --depth 1
+        run: uv tree --group core-tests --depth 1
       - name: Run pytest
         run: |
-          uv run --group pyspark-tests \
+          uv run --group core-tests --extra pyspark --extra pandas \
           pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
           --constructors="pyspark"
 
@@ -63,9 +63,10 @@ jobs:
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group pyspark-tests --depth 1
+        run: uv tree --group core-tests --depth 1
       - name: Run pytest
-        run: uv run --group pyspark-tests --with "pyspark==3.5.0" \
+        run: |
+          uv run --group core-tests --extra pyspark --extra pandas --with "pyspark==3.5.0" \
           pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
           --constructors="pyspark"
 
