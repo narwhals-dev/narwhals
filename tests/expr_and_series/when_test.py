@@ -602,3 +602,16 @@ def test_when_then_composes_with_expr_operations(constructor: Constructor) -> No
 
     expected = {"result": [2, 4, 20, 0]}
     assert_equal_data(result, expected)
+
+
+def test_mutability(constructor: Constructor) -> None:
+    # check .otherwise doesn't mutate the expression
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+
+    expr = nw.when(nw.col("a") > 2).then(nw.col("a"))
+    result_before = df.select(expr)
+    assert_equal_data(result_before, {"a": [None, None, 3, 4]})
+    _ = expr.otherwise(0)
+    _ = expr.when(nw.col("a") == 2).then(20).otherwise(30)
+    result_after = df.select(expr)
+    assert_equal_data(result_after, {"a": [None, None, 3, 4]})
