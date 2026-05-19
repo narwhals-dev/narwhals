@@ -8,7 +8,6 @@ env:
   cache_id: ""
   UV_LOCKED: 1
   UV_NO_DEV: 1
-  UV_PRERELEASE: "allow"
   UV_SYSTEM_PYTHON: 1
 
 permissions:

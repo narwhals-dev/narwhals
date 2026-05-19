@@ -9,7 +9,6 @@ env:
   PYTEST_ADDOPTS: "--numprocesses=logical"
   UV_LOCKED: 1
   UV_NO_DEV: 1
-  UV_PRERELEASE: "allow"
 
 permissions:
   contents: read
@@ -172,6 +171,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
         PYTHON_GIL: 0
+        UV_LOCKED: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install uv

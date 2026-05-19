@@ -11,7 +11,6 @@ env:
   PY_COLORS: 1
   UV_LOCKED: 1
   UV_NO_DEV: 1
-  UV_PRERELEASE: "allow"
   UV_SYSTEM_PYTHON: 1
 
 jobs:
