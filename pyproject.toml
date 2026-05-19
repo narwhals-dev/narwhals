@@ -77,8 +77,8 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pytest",
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
-  "mypy~=1.15.0",
-  "pyrefly==0.64.0",
+  "mypy==2.1.0",
+  "pyrefly==1.0.0",
   "pyright",
   "pyarrow-stubs==19.2",
   "narwhals[dask]",
@@ -322,6 +322,7 @@ exclude_also = [
   'if "(cudf|modin|pyspark|ibis)" in',
   "if not .*.is_pandas",
   "if is_ibis_table",
+  "if MYPY",
   "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
@@ -386,6 +387,7 @@ ignore = [
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
+defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
 search-path = ["src", "."]
