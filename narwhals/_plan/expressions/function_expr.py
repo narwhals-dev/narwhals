@@ -5,7 +5,7 @@ from __future__ import annotations
 # mypy: disable-error-code="misc"
 # NOTE: Needs to be disabled as `mypy` reports the diagnostic twice, with one not attributed to a line number
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
-from typing import TYPE_CHECKING, ClassVar, Generic, overload
+from typing import TYPE_CHECKING, ClassVar, Generic, Literal, overload
 
 from narwhals._plan._dispatch import FunctionExprDispatch
 from narwhals._plan._expr_ir import ExprIR
@@ -62,6 +62,41 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         - UDFs
     - What behaviors can we describe with this type?
     - Most operations (by count) are represented using this guy or some flavor of it
+
+    Examples:
+        Typically, you'll create `FunctionExpr`s indirectly when calling methods on `Expr`:
+        >>> import narwhals._plan as nw
+        >>> fill_null = nw.col("a").fill_null("b")
+        >>> print(fill_null._ir)
+        FunctionExpr(args=[Col(name='a'), Lit(dtype=String, value='b')], function=FillNull())
+
+        But for *"fun"*, let's do that manually to get a feel for how it works:
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan.expressions import functions as F
+        >>> column = ir.col("a")
+        >>> literal = ir.lit("b")
+        >>> fill_null_ir = F.FillNull().to_function_expr(column, literal)
+        >>> fill_null_ir == fill_null._ir
+        True
+
+        `to_function_expr(*args)` will validate that we meet constraints defined by the function:
+        >>> F.FillNull().to_function_expr(column, literal, ir.lit("woops"))
+        Traceback (most recent call last):
+        TypeError: Expected 2 inputs for `fill_null()`, got 3:
+          col('a')
+          lit('b')
+          lit('woops')
+
+        >>> nw.col("a").max().drop_nulls()  # doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        InvalidOperationError: Cannot use `drop_nulls()` on aggregated expression `col('a').max()`.
+
+        We can inspect these rules using `explain`:
+        >>> print(nw.col("a").drop_nulls()._ir.explain(format="long"))
+        FunctionExpr[DropNulls]
+          Unary(Constraint.DEFAULT)
+            col('a')
+          FunctionFlags.ROW_SEPARABLE
     """
 
     __slots__ = ("args", "function")
@@ -181,6 +216,35 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     ) -> Seq[ct.E | ct.SC]:
         """Dispatch **all** expression arguments to this function."""
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
+
+    def explain(self, *, format: Literal["short", "long"] = "short") -> str:
+        """Create a rich string representation of the expression.
+
+        >>> import narwhals._plan as nw
+        >>> a = nw.col("a")
+        >>> print(a.shift(5)._ir.explain())
+        FunctionExpr[Shift(n=5)]
+          Unary(DEFAULT)
+            col('a')
+          LENGTH_PRESERVING
+
+        >>> print(nw.int_range(nw.col("a").max())._ir.explain(format="long"))
+        RangeExpr[IntRange(step=1, dtype=Int64)]
+          Binary(Constraint.SCALAR, Constraint.SCALAR)
+            lit(0)
+            col('a').max()
+          FunctionFlags.DEFAULT
+        """
+        nl, parens = "\n", "()"
+        indent = " " * 2
+        f = self.function
+        flags = self.flags
+        return (
+            f"{type(self).__name__}[{str(f).removesuffix(parens)}]"
+            f"{nl}{indent}{f.__function_parameters__.explain(format=format)}"
+            f"{nl}{nl.join(f'{indent * 2}{e!r}' for e in self.args)}"
+            f"{nl}{indent}{flags if format == 'short' else f'{type(flags).__name__}.{flags.name}'}"
+        )
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"]):

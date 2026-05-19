@@ -133,9 +133,14 @@ class Parameters(metaclass=SlottedMeta):
         cls._arity = arity
 
     def __repr__(self) -> str:
-        params = (
-            ", ".join(c.name for c in cons) if (cons := self._constraints) else self.arity
-        )
+        return self.explain(format="short")
+
+    def explain(self, *, format: Literal["short", "long"] = "short") -> str:
+        if cons := self._constraints:
+            it = (c.name for c in cons) if format == "short" else map(str, cons)
+            params: object = ", ".join(it)
+        else:
+            params = self.arity
         return f"{type(self).__name__}({params})"
 
 
