@@ -83,7 +83,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pyrefly==0.64.0",
   "pyright",
   # Dependencies
-  "duckdb==1.4.4",
+  "duckdb",
   "sqlparse>=0.5.5",
   "pyarrow<24", # temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3560
   "hypothesis>=6.0.0",
@@ -191,16 +191,11 @@ conflicts = [
     { extra = "pandas" },
   ],
   [
-    { extra = "duckdb" },
-    { group = "typing" },
-  ],
-  [
     { group = "core" },
     { group = "typing" },
   ],
   [
     { extra = "cudf" },
-    { extra = "duckdb" },
     { group = "typing" },
     { group = "extreme-minimum-versions" },
     { group = "extreme-not-so-old-versions" },
@@ -209,7 +204,6 @@ conflicts = [
   [
     { extra = "cudf" },
     { extra = "dask" },
-    { extra = "duckdb" },
     { extra = "modin" },
     { group = "extreme-minimum-versions" },
     { group = "extreme-pretty-old-versions" },
