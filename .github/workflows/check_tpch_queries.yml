@@ -30,7 +30,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests --depth 1
+        run: uv export --no-annotate --no-hashes --extra dask --extra pandas --group core-tests
       - name: generate-data
         run: uv run --extra dask --extra pandas --group core-tests --module tpch.generate_data --debug
       - name: tpch-tests 

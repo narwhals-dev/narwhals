@@ -32,7 +32,7 @@ jobs:
           cache-suffix: modin-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests
+        run: uv export --no-annotate --no-hashes --group core-tests --extra modin
       - name: Run pytest
         run: |
           uv run --group core-tests --extra modin \

@@ -40,7 +40,7 @@ jobs:
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests --depth 1
+        run: uv export --no-annotate --no-hashes --group core-tests --extra pyspark --extra pandas
       - name: Run pytest
         run: |
           uv run --group core-tests --extra pyspark --extra pandas \
@@ -64,7 +64,7 @@ jobs:
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv tree --group core-tests --depth 1
+        run: uv export --no-annotate --no-hashes --group core-tests --extra pyspark --extra pandas
       - name: Run pytest
         run: |
           uv run --group core-tests --extra pyspark --extra pandas --with "pyspark==3.5.0" \
