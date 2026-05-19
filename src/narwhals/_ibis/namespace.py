@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import ibis
 import ibis.expr.types as ir
@@ -109,9 +109,18 @@ class IbisNamespace(
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
             cols = list(cols)
-            return reduce(operator.add, (col.fill_null(lit(0)) for col in cols)) / reduce(
-                operator.add, (col.isnull().ifelse(lit(0), lit(1)) for col in cols)
+            numerator = reduce(
+                operator.add,
+                (cast("ir.NumericValue", col.fill_null(lit(0))) for col in cols),
             )
+            denominator = reduce(
+                operator.add,
+                (
+                    cast("ir.NumericValue", col.isnull().ifelse(lit(0), lit(1)))
+                    for col in cols
+                ),
+            )
+            return numerator / denominator
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator as op
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._compliant.expr import LazyExpr
@@ -225,7 +224,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             flags = extend_bool(reverse, len(inputs.order_by))
             return [
                 self._when(
-                    ~self._function("isnull", expr),  # type: ignore[operator]
+                    self._function("isnotnull", expr),
                     self._window_expression(
                         self._function(func_name, expr),
                         inputs.partition_by,
@@ -306,7 +305,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     @classmethod
     def _from_elementwise_horizontal_op(
-        cls, func: Callable[[list[NativeExprT]], NativeExprT], *exprs: Self
+        cls, func: Callable[[Sequence[NativeExprT]], NativeExprT], *exprs: Self
     ) -> Self:
         def call(df: SQLLazyFrameT) -> Sequence[NativeExprT]:
             return [func([e for expr in exprs for e in expr(df)])]
@@ -398,7 +397,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __floordiv__(self, other: Self) -> Self:
         def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
             return self._when(
-                other != self._lit(0), op.floordiv(expr, other), self._lit(None)
+                other != self._lit(0),
+                self._function("floordiv", expr, other),
+                self._lit(None),
             )
 
         return self._with_binary(func, other=other)
@@ -406,7 +407,9 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __rfloordiv__(self, other: Self) -> Self:
         def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
             return self._when(
-                expr != self._lit(0), op.floordiv(other, expr), self._lit(None)
+                expr != self._lit(0),
+                self._function("floordiv", other, expr),
+                self._lit(None),
             )
 
         return self._with_binary(func, other=other).alias("literal")
@@ -463,9 +466,17 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             if ddof == 1:
                 return self._function("stddev_samp", expr)
             n_samples = self._function("count", expr)
-            return op.mul(  # type: ignore[no-any-return]
+            return self._function(
+                "multiply",
                 self._function("stddev_samp", expr),
-                self._function("sqrt", (op.sub(n_samples, 1)) / op.sub(n_samples, ddof)),
+                self._function(
+                    "sqrt",
+                    self._function(
+                        "divide",
+                        self._function("subtract", n_samples, self._lit(1)),
+                        self._function("subtract", n_samples, self._lit(ddof)),
+                    ),
+                ),
             )
 
         return self._with_callable(func)
@@ -477,9 +488,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             if ddof == 1:
                 return self._function("var_samp", expr)
             n_samples = self._function("count", expr)
-            return op.mul(  # type: ignore[no-any-return]
+            return self._function(
+                "multiply",
                 self._function("var_samp", expr),
-                op.sub(n_samples, 1) / op.sub(n_samples, ddof),
+                self._function(
+                    "divide",
+                    self._function("subtract", n_samples, self._lit(1)),
+                    self._function("subtract", n_samples, self._lit(ddof)),
+                ),
             )
 
         return self._with_callable(func)
@@ -525,7 +541,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         zero, one = self._lit(0), self._lit(1)
 
         def func(expr: NativeExprT) -> NativeExprT:
-            return op.add(  # type: ignore[no-any-return]
+            return F(
+                "add",
                 F("count_distinct", expr),
                 F("max", self._when(F("isnull", expr), one, zero)),
             )
@@ -534,7 +551,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
         ) -> Sequence[NativeExprT]:
             return [
-                op.add(
+                F(
+                    "add",
                     W(F("count_distinct", expr), inputs.partition_by),
                     W(
                         F("max", self._when(F("isnull", expr), one, zero)),
@@ -618,7 +636,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
                 self._when(
                     expr == self._lit(0),
                     self._lit(float("-inf")),
-                    op.truediv(F("log", expr), F("log", self._lit(base))),
+                    F("divide", F("log", expr), F("log", self._lit(base))),
                 ),
             )
 
@@ -695,7 +713,11 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             F = self._function
             window = self._window_expression
             return [
-                op.sub(expr, window(F("lag", expr), inputs.partition_by, inputs.order_by))
+                F(
+                    "subtract",
+                    expr,
+                    window(F("lag", expr), inputs.partition_by, inputs.order_by),
+                )
                 for expr in self(df)
             ]
 
@@ -830,24 +852,32 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             window = self._window_expression
             F = self._function
             if method == "max":
-                rank_expr = op.sub(
-                    op.add(
+                rank_expr = F(
+                    "subtract",
+                    F(
+                        "add",
                         window(func, **window_kwargs),
                         window(count_expr, **count_window_kwargs),
                     ),
                     self._lit(1),
                 )
             elif method == "average":
-                rank_expr = op.add(
+                rank_expr = F(
+                    "add",
                     window(func, **window_kwargs),
-                    op.truediv(
-                        op.sub(window(count_expr, **count_window_kwargs), self._lit(1)),
+                    F(
+                        "divide",
+                        F(
+                            "subtract",
+                            window(count_expr, **count_window_kwargs),
+                            self._lit(1),
+                        ),
                         self._lit(2.0),
                     ),
                 )
             else:
                 rank_expr = window(func, **window_kwargs)
-            return self._when(~F("isnull", expr), rank_expr)  # type: ignore[operator]
+            return self._when(F("isnotnull", expr), rank_expr)
 
         def _unpartitioned_rank(expr: NativeExprT) -> NativeExprT:
             return _rank(expr, descending=descending)
