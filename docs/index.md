@@ -23,10 +23,10 @@ Seamlessly support all, without depending on any!
 - ✅ Support pandas' complicated type system and index, without
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
-- ✅ **Negligible overhead**, see [overhead](./overhead.md/)
+- ✅ **Negligible overhead**, see [overhead](overhead.md)
 - ✅ Let your IDE help you thanks to **full static typing**, see [`narwhals.typing`](./api-reference/typing.md)
 - ✅ **Perfect backwards compatibility policy**,
-  see [stable api](./backcompat.md/) for how to opt-in
+  see [stable api](backcompat.md) for how to opt-in
 
 ## Who's this for?
 
