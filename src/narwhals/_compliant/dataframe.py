@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, overload
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -74,7 +74,6 @@ if TYPE_CHECKING:
         SizeUnit,
         UniqueKeepStrategy,
         _2DArray,
-        _Slice,
         _SliceIndex,
         _SliceName,
     )
@@ -439,8 +438,9 @@ class EagerDataFrame(
             elif isinstance(columns, slice):
                 if MYPY:
                     # https://github.com/python/mypy/issues/21508
-                    columns = cast("_Slice[str]", columns)
-                compliant = compliant._select_slice_name(columns)
+                    compliant = compliant._select_slice_name(columns)  # type: ignore[arg-type]
+                else:
+                    compliant = compliant._select_slice_name(columns)
             elif is_compliant_series(columns):
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
@@ -459,10 +459,11 @@ class EagerDataFrame(
             elif is_compliant_series(rows):
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
-                if MYPY:
+                if MYPY:  # noqa: SIM108
                     # https://github.com/python/mypy/issues/21508
-                    rows = cast("SizedMultiIndexSelector[Any]", rows)  # help mypy
-                compliant = compliant._gather(rows)
+                    compliant = compliant._gather(rows)  # type: ignore[arg-type]
+                else:
+                    compliant = compliant._gather(rows)
             else:
                 assert_never(rows)
 

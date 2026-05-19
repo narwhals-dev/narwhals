@@ -322,9 +322,9 @@ class ArrowDataFrame(
         # **Doesn't accept `ndarray`**
         elif is_numpy_array_1d(columns):
             selector = columns.tolist()
+        elif MYPY:
+            selector = columns  # type: ignore[assignment]
         else:
-            if MYPY:
-                columns = cast("Sequence[int]", columns)
             selector = columns
         return self._with_native(self.native.select(selector))
 

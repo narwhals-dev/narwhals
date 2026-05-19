@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Generic, Literal, TypeVar, cast, overload
 
 import polars as pl
 
@@ -59,11 +59,12 @@ if TYPE_CHECKING:
         SingleIndexSelector,
         UniqueKeepStrategy,
         _2DArray,
-        _Slice,
     )
 
     T = TypeVar("T")
     R = TypeVar("R")
+
+MYPY: Final = False
 
 Method: TypeAlias = "Callable[..., R]"
 """Generic alias representing all methods implemented via `__getattr__`.
@@ -496,12 +497,11 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                     else:
                         native = native[:, columns]
                 elif isinstance(columns, slice):
-                    columns = cast("_Slice[str]", columns)  # help mypy
-                    native = native.select(
-                        self.columns[
-                            slice(*convert_str_slice_to_int_slice(columns, self.columns))
-                        ]
-                    )
+                    if MYPY:
+                        int_slice = convert_str_slice_to_int_slice(columns, self.columns)  # type: ignore[arg-type]
+                    else:
+                        int_slice = convert_str_slice_to_int_slice(columns, self.columns)
+                    native = native.select(self.columns[slice(*int_slice)])
                 elif is_compliant_series(columns):
                     native = native.select(columns.native.to_list())
                 elif is_sequence_like(columns):
