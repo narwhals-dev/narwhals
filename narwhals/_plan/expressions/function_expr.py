@@ -47,7 +47,11 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 
     Arguments:
         args: Expression arguments to the function.
-        function: The function to apply, which may contain non-expression arguments.
+        function: The function to apply.
+
+    Note:
+        Represents `args` successfully binding to `function`, when constructed via
+        `function.to_function_expr(*args)`.
 
     ## What to doc?
     - What things are functions?
@@ -56,8 +60,6 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         - Horizontal functions
         - Range functions
         - UDFs
-    - So what is a `FunctionExpr` then?
-        - ...
     - What behaviors can we describe with this type?
     - Most operations (by count) are represented using this guy or some flavor of it
     """
