@@ -96,22 +96,17 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             return f"{first!r}.{self.function!r}()"
         return f"{self.function!r}()"
 
-    # TODO @dangotbanned: Convert docs into a comment
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
-        """NOTE: Supported on many functions, but there are important gaps.
-
-        Requires `get_supertype`:
-        - `{max,min,sum}_horizontal`
-        - `coalesce`
-        - `replace_strict(..., dtype=None)`
-
-        Partially requires `get_supertype`:
-        - `mean_horizontal`
-        - `fill_null(value)`
-
-        Unlikely to ever be supported:
-        - `map_batches(..., dtype=None)`
-        """
+        # NOTE: Supported on many functions, but there are important gaps.
+        # - Requires [#3396]:
+        #   - `{max,min,sum}_horizontal`
+        #   - `coalesce`
+        #   - `replace_strict(..., dtype=None)`
+        #   - `mean_horizontal`   (partial)
+        #   - `fill_null(value)`  (partial)
+        # - Unlikely to ever be supported:
+        #   - `map_batches(..., dtype=None)`
+        # [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         return self.function.resolve_dtype(self, schema)
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
