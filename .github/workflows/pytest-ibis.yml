@@ -35,10 +35,7 @@ jobs:
       - name: install-reqs
         run: uv pip install -e . --group core-tests
       - name: install ibis
-        run: |
-          # Temporary pin until it's fixed upstream
-          uv pip install "sqlglot<28.6"
-          uv pip install -e ".[ibis]"
+        run: uv pip install -e ".[ibis]"
       - name: show-deps
         run: uv pip freeze
       - name: Run pytest
