@@ -70,9 +70,26 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         FunctionExprDispatch.root("FunctionExpr")
     )
 
-    # TODO @dangotbanned: (Docs) Maybe just duplicate `Function.__function_flags__`
     @property
     def flags(self) -> FunctionFlags:
+        """Defines properties of the wrapped function.
+
+        Flags tell us how a function transforms the shape of it's input:
+
+            ┌───────────────────┬───────────────┬───────────┐
+            │ Flag              ┆ Input         ┆ Output    │
+            ╞═══════════════════╪═══════════════╪═══════════╡
+            │ AGGREGATION       ┆ Column        ┆ Scalar    │
+            │ ROW_SEPARABLE     ┆ Column        ┆ Unknown   │
+            │ LENGTH_PRESERVING ┆ Column/Scalar ┆ Preserved │
+            │ ELEMENTWISE       ┆ Column/Scalar ┆ Preserved │
+            └───────────────────┴───────────────┴───────────┘
+
+        And that's the main nugget we can use to answer the question:
+        > Is the function valid *here*?
+
+        See `FunctionFlags` for examples.
+        """
         return self.function.__function_flags__
 
     def is_scalar(self) -> bool:
