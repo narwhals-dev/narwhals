@@ -137,7 +137,7 @@ def test_special_aliases_single(expr: nwp.Expr, expected: str) -> None:
 def test_keep_name_no_names(df_1: Frame) -> None:
     with pytest.raises(
         InvalidOperationError,
-        match=r"name.keep` expected at least one.+name.+got.+lit.+1.+name.keep",
+        match=r"name.keep` expected at least one.+name.+got.+lit\(1\).+name.keep",
     ):
         df_1.project(nwp.lit(1).name.keep())
 
@@ -550,8 +550,8 @@ def test_expand_binary_expr_combination_invalid(df_1: Frame) -> None:
         df_1.project(all_to_two)
 
     expr = re.escape(
-        "ncs.by_name('a', 'b').abs().fill_null([lit(int: 0)]).round() * ncs.by_index([9, 10, 11]).cast(Int64).sort(asc)\n"
-        "                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
+        "ncs.by_name('a', 'b').abs().fill_null([lit(0)]).round() * ncs.by_index([9, 10, 11]).cast(Int64).sort(asc)\n"
+        "                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     )
     shapes = "(2 != 3)"
     pattern = rf"{shapes}.+\n{expr}"

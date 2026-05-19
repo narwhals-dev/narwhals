@@ -184,7 +184,7 @@ class Frame:
              d=col('d').first().over(partition_by=[col('b'), col('c'), col('d')], order_by=[col('idx1'), col('idx2')]),
              a_abs=col('a').abs(),
              c_abs=col('c').abs(),
-             literal=lit(date: 2000-01-01))
+             literal=lit[date]('2000-01-01'))
         """
         expr_irs = tuple(_parse.into_iter_expr_ir(exprs, *more_exprs))
         named_irs, _ = _expansion.prepare_projection(expr_irs, schema=self.schema)

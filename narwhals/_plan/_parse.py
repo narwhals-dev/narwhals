@@ -177,11 +177,11 @@ def into_iter_expr_ir(
 
         Whereas `list | tuple` will otherwise be considered literals:
         >>> parse("one", ["two"])
-        [col('one'), lit(list: ['two'])]
+        [col('one'), lit[list](['two'])]
         >>> parse(["one"], "two")
-        [lit(list: ['one']), col('two')]
+        [lit[list](['one']), col('two')]
         >>> parse(["one"], ("two",))
-        [lit(list: ['one']), lit(list: ['two'])]
+        [lit[list](['one']), lit[list](['two'])]
 
         *This behavior matches `polars`*
     """

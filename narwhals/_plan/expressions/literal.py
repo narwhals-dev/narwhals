@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import datetime as dt
-from decimal import Decimal
+import decimal
 from functools import cache
 from typing import TYPE_CHECKING, Any, Generic, final
 
-from narwhals._plan import common
+from narwhals._plan import _reprs, common
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import Constructor
 from narwhals._plan._guards import is_python_literal_type
@@ -44,7 +44,7 @@ class Lit(Constructor, Generic[PythonLiteralT_co], dtype=get_dtype(), dispatch="
     >>> import narwhals._plan as nw
     >>> expr = nw.lit(1)
     >>> expr._ir
-    lit(int: 1)
+    lit(1)
     >>> expr.meta.is_literal()
     True
     >>> expr._ir.is_scalar()
@@ -82,20 +82,10 @@ class Lit(Constructor, Generic[PythonLiteralT_co], dtype=get_dtype(), dispatch="
         )
         return Lit(value=value, dtype=dtype)
 
-    # TODO @dangotbanned: Use quotes for `lit("string")`
-    # TODO @dangotbanned: (Noisy repr change) `lit(int: 1)` -> `lit[int](1)`
-    # - Vaguely resembles C-style typing, but there's not an identifier (just a value)
     def __repr__(self) -> str:
-        v: Any = self.value
-        if v is None:
-            return "lit(null)"
-        name = type(v).__name__
-        if self.dtype.is_nested():
-            if isinstance(v, dict):
-                name = f"struct[{len(v)}]"
-            elif isinstance(v, (tuple)):
-                name, v = "list", list(v)
-        return f"lit({name}: {v})"
+        dtype, value = _reprs.lit_repr(self.dtype, self.value)
+        ctor = f"lit[{dtype}]" if dtype else "lit"
+        return f"{ctor}({value})"
 
     @property
     def __immutable_values__(self) -> Iterator[Any]:
@@ -148,7 +138,6 @@ class LitSeries(
     def version(self) -> Version:  # pragma: no cover
         return self.value.version
 
-    # TODO @dangotbanned: Update with dtype after `Lit`
     def __repr__(self) -> str:
         return f"lit(Series[{self.value._compliant.__narwhals_repr_name__()}])"
 
@@ -156,11 +145,6 @@ class LitSeries(
     def __immutable_values__(self) -> Iterator[Any]:
         # NOTE: Adding `Series.__eq__` means this needed a manual override
         yield from (self.name, self.dtype, id(self.value))
-
-
-def _dtype_repr(obj: Any) -> str:
-    msg = "TODO `lit[<dtype-something>](...)`"
-    raise NotImplementedError(msg)
 
 
 lit = Lit.from_python
@@ -217,7 +201,7 @@ def _py_type_to_dtype(
         dt.time: dtypes.Time,
         dt.timedelta: dtypes.Duration,
         bytes: dtypes.Binary,
-        Decimal: dtypes.Decimal,
+        decimal.Decimal: dtypes.Decimal,
         type(None): dtypes.Unknown,
     }
     if dtype := non_nested.get(py_type):
