@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, cast, overload
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Never, Self
+    from typing_extensions import Self
 
     from narwhals._compliant.group_by import CompliantGroupBy, DataFrameGroupBy
     from narwhals._compliant.namespace import EagerNamespace
@@ -80,6 +80,8 @@ if TYPE_CHECKING:
     )
 
     Incomplete: TypeAlias = Any
+
+MYPY: Final = False
 
 __all__ = ["CompliantDataFrame", "CompliantFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
@@ -435,14 +437,18 @@ class EagerDataFrame(
                 else:
                     compliant = compliant._select_multi_index(columns)
             elif isinstance(columns, slice):
-                columns = cast("_Slice[str]", columns)  # help mypy
+                if MYPY:
+                    # https://github.com/python/mypy/issues/21508
+                    columns = cast("_Slice[str]", columns)
                 compliant = compliant._select_slice_name(columns)
             elif is_compliant_series(columns):
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
+            elif MYPY:
+                # https://github.com/python/mypy/issues/21508
+                pass
             else:
-                columns = cast("Never", columns)  # help mypy  # pragma: no cover
                 assert_never(columns)
 
         if not is_slice_none(rows):
@@ -453,7 +459,9 @@ class EagerDataFrame(
             elif is_compliant_series(rows):
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
-                rows = cast("SizedMultiIndexSelector[Any]", rows)  # help mypy
+                if MYPY:
+                    # https://github.com/python/mypy/issues/21508
+                    rows = cast("SizedMultiIndexSelector[Any]", rows)  # help mypy
                 compliant = compliant._gather(rows)
             else:
                 assert_never(rows)

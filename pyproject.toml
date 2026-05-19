@@ -386,6 +386,7 @@ ignore = [
   "../../../**/Lib",      # stdlib
   "../../../**/typeshed*" # typeshed-fallback
 ]
+defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
 search-path = ["src", "."]
