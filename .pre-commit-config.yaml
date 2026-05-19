@@ -14,6 +14,11 @@ repos:
       name: check-docstrings
       alias: check-docstrings
       entry: python utils/check_docstrings.py
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.11.15
+  hooks:
+    - id: uv-lock
+      args: [--prerelease=allow]
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.4.2'
   hooks:
