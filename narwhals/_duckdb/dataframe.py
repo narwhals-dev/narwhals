@@ -308,8 +308,13 @@ class DuckDBLazyFrame(
             # help mypy
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
+            # Use `==` to preserve the polars semantic of `null != null` in joins,
+            # and additionally match `NaN = NaN` since `==` in DuckDB treats `NaN`
+            # like SQL `NULL` (see https://github.com/narwhals-dev/narwhals/issues/3554).
+            # `isnan` is safe to apply as it returns `false` for non-float columns.
             it = (
-                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                (col(f'lhs."{left}"') == col(f'rhs."{right}"'))
+                | (F("isnan", col(f'lhs."{left}"')) & F("isnan", col(f'rhs."{right}"')))
                 for left, right in zip(left_on, right_on, strict=True)
             )
             condition: Expression = reduce(and_, it)

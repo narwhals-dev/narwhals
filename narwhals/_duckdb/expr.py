@@ -161,10 +161,6 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         invert = cast("Callable[..., Expression]", operator.invert)
         return self._with_elementwise(invert)
 
-    def __neg__(self) -> Self:
-        neg = cast("Callable[..., Expression]", operator.neg)
-        return self._with_elementwise(neg)
-
     def skew(self) -> Self:
         W = self._window_expression  # noqa: N806
 

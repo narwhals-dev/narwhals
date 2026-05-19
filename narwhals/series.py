@@ -1760,9 +1760,6 @@ class Series(Generic[IntoSeriesT]):
     def __invert__(self) -> Self:
         return self._with_compliant(self._compliant_series.__invert__())
 
-    def __neg__(self) -> Self:
-        return self._with_compliant(self._compliant_series.__neg__())
-
     def filter(self, predicate: Any) -> Self:
         """Filter elements in the Series based on a condition.
 

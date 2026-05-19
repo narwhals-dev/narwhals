@@ -311,9 +311,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def __invert__(self) -> Self:
         return self._with_native(pc.invert(self.native), preserve_broadcast=True)
 
-    def __neg__(self) -> Self:
-        return self._with_native(pc.negate(self.native), preserve_broadcast=True)
-
     @property
     def _type(self) -> pa.DataType:
         return self.native.type

@@ -190,11 +190,11 @@ def rename(
 ) -> NativeNDFrameT:
     """Wrapper around pandas' rename so that we can set `copy` based on implementation/version."""
     if implementation is Implementation.PANDAS and (
-        implementation._backend_version() < (3,)
+        implementation._backend_version() >= (3,)
     ):  # pragma: no cover
+        result = obj.rename(*args, **kwargs, inplace=False)
+    else:  # pragma: no cover
         result = obj.rename(*args, **kwargs, copy=False, inplace=False)
-    else:
-        result = obj.rename(*args, **kwargs)
     return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
 
 
