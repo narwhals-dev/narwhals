@@ -6,6 +6,8 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -28,7 +30,7 @@ jobs:
           cache-suffix: min-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --group extreme-minimum-versions
+        run: uv tree --group extreme-minimum-versions --depth 1
       - name: Run pytest
         run: |
           uv run --group extreme-minimum-versions \
@@ -51,7 +53,7 @@ jobs:
           cache-suffix: pretty-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --group extreme-pretty-old-versions
+        run: uv tree --group extreme-pretty-old-versions --depth 1
       - name: Run pytest
         run: |
           uv run --group extreme-pretty-old-versions \
@@ -74,7 +76,7 @@ jobs:
           cache-suffix: not-so-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --group extreme-not-so-old-versions
+        run: uv tree --group extreme-not-so-old-versions --depth 1
       - name: Run pytest
         run: |
           uv run --group extreme-not-so-old-versions \

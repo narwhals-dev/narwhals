@@ -7,6 +7,8 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -29,7 +31,7 @@ jobs:
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --group tests --extra pandas --extra polars --extra pyarrow
+        run: uv tree --group tests --depth 1
       - name: Run pytest
         shell: bash
         run: |
@@ -54,7 +56,7 @@ jobs:
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --group core-tests --group extra --extra pandas
+        run: uv tree --group core-tests --group extra --depth 1
       - name: Run pytest
         shell: bash
         # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
@@ -85,7 +87,7 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --extra pandas --extra dask --group core-tests --group extra
+        run: uv tree --group core-tests --group extra --depth 1
       - name: Run pytest
         run: |
           uv run --extra pandas --extra dask --group core-tests --group extra \
@@ -118,7 +120,7 @@ jobs:
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --isolated -U --group tests --extra pandas
+        run: uv tree -U --group tests --depth 1
       - name: Run pytest (pandas and pandas[nullable])
         run: |
           uv run --isolated -U --group tests --extra pandas \
@@ -153,7 +155,7 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --group core-tests --extra pandas
+        run: uv tree --group core-tests --depth 1
       - name: Run pytest
         run: |
           uv run --group core-tests --extra pandas \
@@ -179,7 +181,7 @@ jobs:
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --pre --group tests --extra pandas --extra pyarrow
+        run: uv tree --pre --group tests --depth 1
       - name: Run pytest
         run: |
           uv run --pre --group tests --extra pandas --extra pyarrow \

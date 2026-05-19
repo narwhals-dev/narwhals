@@ -5,6 +5,8 @@ on:
 
 env:
   PY_COLORS: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -27,7 +29,7 @@ jobs:
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Show dependencies
-        run: uv pip compile pyproject.toml --extra dask --extra pandas --group core-tests
+        run: uv tree --group core-tests --depth 1
       - name: generate-data
         run: uv run --extra dask --extra pandas --group core-tests --module tpch.generate_data --debug
       - name: tpch-tests 
