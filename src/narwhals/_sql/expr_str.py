@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator
 from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._compliant import LazyExprNamespace
@@ -67,7 +66,7 @@ class SQLExprStringNamespace(
             col_length = self._function("length", expr)
 
             _offset = (
-                operator.add(col_length, self._lit(offset + 1))
+                self._function("add", col_length, self._lit(offset + 1))
                 if offset < 0
                 else self._lit(offset + 1)
             )
@@ -132,10 +131,10 @@ class SQLExprStringNamespace(
             substring = self._function("substr", expr, self._lit(2))
             padded_substring = self._function("lpad", substring, width_after_sign, zero)
             return self._when(
-                operator.and_(starts_with_minus, less_than_width),
+                self._function("and", starts_with_minus, less_than_width),
                 self._function("concat", hyphen, padded_substring),
                 self._when(
-                    operator.and_(starts_with_plus, less_than_width),
+                    self._function("and", starts_with_plus, less_than_width),
                     self._function("concat", plus, padded_substring),
                     self._when(
                         less_than_width,

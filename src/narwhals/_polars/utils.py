@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, cast, overload
 
 import polars as pl
 
@@ -73,7 +73,7 @@ def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
 @overload
 def extract_native(obj: T) -> T: ...
 def extract_native(obj: _StoresNative[NativeT] | T) -> NativeT | T:
-    return obj.native if _is_compliant_polars(obj) else obj
+    return obj.native if _is_compliant_polars(obj) else cast("T", obj)
 
 
 def _is_compliant_polars(
