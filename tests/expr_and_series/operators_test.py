@@ -76,6 +76,23 @@ def test_xor_operator_expr(constructor: Constructor) -> None:
     assert and_result.get_column("a").to_list() == [True, False, False, False]
 
 
+def test_xor_operator_expr_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [True, True, False, None], "b": [True, None, None, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a") ^ nw.col("b"))
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
+        expected: list[bool | None] = [False, True, False, False]
+    else:
+        expected = [False, None, None, None]
+    assert_equal_data(result, {"a": expected})
+
+
 def test_logic_operators_expr_kleene(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:

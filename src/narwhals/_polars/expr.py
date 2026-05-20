@@ -275,12 +275,14 @@ class PolarsExpr:
     def __xor__(self, other: PolarsExpr) -> Self:
         other_native = extract_native(other)
         if self._backend_version < (1,):  # pragma: no cover
-            # Polars added Selector.__xor__ in 1.0.0; emulate via existing set ops.
-            return self._with_native(
-                self.native.__or__(other_native).__sub__(
-                    self.native.__and__(other_native)
+            # Polars added Selector.__xor__ in 1.0.0; emulate via set ops.
+            selector_cls = pl.selectors._selector_proxy_
+            if isinstance(self.native, selector_cls) and isinstance(
+                other_native, selector_cls
+            ):
+                return self._with_native(
+                    (self.native - other_native) | (other_native - self.native)
                 )
-            )
         return self._with_native(self.native.__xor__(other_native))
 
     def __add__(self, other: Any) -> Self:
