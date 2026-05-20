@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 from functools import lru_cache, partial
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
@@ -105,6 +106,7 @@ FUNCTION_REMAPPING = {
     "to_date": "date",
     "bool_and": "all",
     "bool_or": "any",
+    "isnotnull": "notnull",
 }
 
 
@@ -270,8 +272,21 @@ def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.Interv
     return ibis.interval(days=td.days, seconds=td.seconds, microseconds=td.microseconds)
 
 
+_BINARY_OPS = {
+    "add": operator.add,
+    "subtract": operator.sub,
+    "multiply": operator.mul,
+    "divide": operator.truediv,
+    "floordiv": operator.floordiv,
+    "and": operator.and_,
+    "or": operator.or_,
+}
+
+
 def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     # Workaround SQL vs Ibis differences.
+    if name in _BINARY_OPS:
+        return _BINARY_OPS[name](*args)
     if name == "row_number":
         return ibis.row_number() + lit(1)
     if name == "least":

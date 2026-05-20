@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import reduce
 from operator import and_
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import duckdb
 from duckdb import StarExpression
@@ -180,7 +180,7 @@ class DuckDBLazyFrame(
             val.alias(name) for name, val in evaluate_exprs_and_aliases(self, *exprs)
         ]
         try:
-            return self._with_native(self.native.aggregate(selection))  # type: ignore[arg-type]
+            return self._with_native(self.native.aggregate(selection))
         except Exception as e:  # noqa: BLE001
             raise catch_duckdb_exception(e, self) from None
 
@@ -297,7 +297,9 @@ class DuckDBLazyFrame(
         right_on: Sequence[str] | None,
         suffix: str,
     ) -> Self:
-        native_how = "outer" if how == "full" else how
+        native_how: Literal["inner", "left", "outer", "cross", "semi", "anti"] = (
+            "outer" if how == "full" else how
+        )
 
         if native_how == "cross":
             if self._backend_version < (1, 1, 4):

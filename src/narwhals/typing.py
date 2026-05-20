@@ -353,7 +353,7 @@ Either a string or an object that implements [`__fspath__`], such as [`pathlib.P
 
 # Annotations for `__getitem__` methods
 _T = TypeVar("_T")
-_Slice: TypeAlias = "slice[_T, Any, Any] | slice[Any, _T, Any] | slice[None, None, _T]"
+_Slice: TypeAlias = "slice[_T | None, _T | None, _T | None]"
 _SliceNone: TypeAlias = "slice[None, None, None]"
 # Boolean positions
 SizedMultiBoolSelector: TypeAlias = "Sequence[bool] | _T | _1DArrayBool"

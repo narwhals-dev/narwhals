@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, Sequence, Sized
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeVar, overload
 
 from narwhals._compliant.typing import (
     CompliantDataFrameAny,
@@ -78,6 +78,8 @@ if TYPE_CHECKING:
     )
 
     Incomplete: TypeAlias = Any
+
+MYPY: Final = False
 
 __all__ = ["CompliantDataFrame", "CompliantFrame", "CompliantLazyFrame", "EagerDataFrame"]
 
@@ -429,11 +431,18 @@ class EagerDataFrame(
                 else:
                     compliant = compliant._select_multi_index(columns)
             elif isinstance(columns, slice):
-                compliant = compliant._select_slice_name(columns)
+                if MYPY:
+                    # https://github.com/python/mypy/issues/21508
+                    compliant = compliant._select_slice_name(columns)  # type: ignore[arg-type]
+                else:
+                    compliant = compliant._select_slice_name(columns)
             elif is_compliant_series(columns):
                 compliant = self._select_multi_name(columns.native)
             elif is_sequence_like(columns):
                 compliant = self._select_multi_name(columns)
+            elif MYPY:
+                # https://github.com/python/mypy/issues/21508
+                pass
             else:
                 assert_never(columns)
 
@@ -445,7 +454,11 @@ class EagerDataFrame(
             elif is_compliant_series(rows):
                 compliant = compliant._gather(rows.native)
             elif is_sized_multi_index_selector(rows):
-                compliant = compliant._gather(rows)
+                if MYPY:  # noqa: SIM108
+                    # https://github.com/python/mypy/issues/21508
+                    compliant = compliant._gather(rows)  # type: ignore[arg-type]
+                else:
+                    compliant = compliant._gather(rows)
             else:
                 assert_never(rows)
 

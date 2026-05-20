@@ -1180,7 +1180,7 @@ class PandasLikeDataFrame(
         remapped = self._pivot_remap_column_names(
             columns, n_on=len(on), n_values=len(values), separator=separator
         )
-        result.columns = remapped  # type: ignore[assignment]
+        result.columns = remapped
         result.columns.names = [""]
         return self._with_native(result.reset_index())
 

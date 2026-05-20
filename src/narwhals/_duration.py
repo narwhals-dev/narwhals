@@ -57,8 +57,7 @@ class Interval:
             msg = f"Creating timedelta with {self.unit} unit is not supported."
             raise NotImplementedError(msg)
         kwd = UNIT_TO_TIMEDELTA[self.unit]
-        # error: Keywords must be strings (bad mypy)
-        return dt.timedelta(**{kwd: self.multiple})  # type: ignore[misc]
+        return dt.timedelta(**{kwd: self.multiple})
 
     @classmethod
     def parse(cls, every: str) -> Interval:
