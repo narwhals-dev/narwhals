@@ -123,10 +123,9 @@ class Parameters(metaclass=SlottedMeta):
         self, function: Function, exprs: Seq[ExprIR], /
     ) -> Iterator[tuple[Constraint, ExprIR]]:
         # `zip(strict=True)` produces a very unhelpful error message
-        if constraints := self._constraints:
-            if len(exprs) != len(constraints):
-                raise function_arity_error(function, self.arity, exprs)
-            yield from zip(constraints, exprs, strict=False)
+        if len(exprs) != len(self._constraints):
+            raise function_arity_error(function, self.arity, exprs)
+        yield from zip(self._constraints, exprs, strict=False)
 
     def __init_subclass__(cls, *, arity: Arity, **_: Any) -> None:
         super().__init_subclass__(**_)
@@ -136,12 +135,9 @@ class Parameters(metaclass=SlottedMeta):
         return self.explain(format="short")
 
     def explain(self, *, format: Literal["short", "long"] = "short") -> str:
-        if cons := self._constraints:
-            it = (c.name for c in cons) if format == "short" else map(str, cons)
-            params: object = ", ".join(it)
-        else:
-            params = self.arity
-        return f"{type(self).__name__}({params})"
+        cons = self._constraints
+        it = (c.name for c in cons) if format == "short" else map(str, cons)
+        return f"{type(self).__name__}({', '.join(it)})"
 
 
 @final
@@ -248,6 +244,11 @@ class Variadic(Parameters, arity="*"):
     def __init__(self) -> None:
         self._constraints = ()
 
+    def check(self, function: Function, exprs: Seq[ExprIR], /) -> Seq[ExprIR]:
+        if not exprs:
+            raise function_arity_error(function, self.arity, exprs)
+        return exprs
+
     # TODO @dangotbanned: Revisit later for coverage
     def dispatch_args(
         self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
@@ -258,3 +259,6 @@ class Variadic(Parameters, arity="*"):
             first.__expr_ir_dispatch__(first, ctx, frame, name),
             *(e.__expr_ir_dispatch__(e, ctx, frame, "") for e in it),
         )
+
+    def explain(self, *, format: Literal["short", "long"] = "short") -> str:
+        return f"{type(self).__name__}({self.arity})"

@@ -59,8 +59,11 @@ def function_arg_non_scalar_error(function: Function, value: Any) -> ShapeError:
 def function_arity_error(
     function: Function, arity: Literal[1, 2, 3, "*"], args: Collection[ir.ExprIR]
 ) -> TypeError:
-    exprs = "" if not args else f":\n{format_expressions(*args)}"
-    msg = f"Expected {arity} {'input' if arity == 1 else 'inputs'} for `{function!r}()`, got {len(args)}{exprs}"
+    if not args:
+        msg = f"At least one input is required for `{function!r}()`"
+    else:
+        exprs = f":\n{format_expressions(*args)}"
+        msg = f"Expected {arity} {'input' if arity == 1 else 'inputs'} for `{function!r}()`, got {len(args)}{exprs}"
     return TypeError(msg)
 
 

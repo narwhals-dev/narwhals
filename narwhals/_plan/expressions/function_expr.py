@@ -155,12 +155,10 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return self.flags.changes_length()
 
     def __repr__(self) -> str:
-        if self.args:
-            first = self.args[0]
-            if len(self.args) >= 2:
-                return f"{first!r}.{self.function!r}({list(self.args[1:])!r})"
-            return f"{first!r}.{self.function!r}()"
-        return f"{self.function!r}()"
+        first = self.args[0]
+        if len(self.args) >= 2:
+            return f"{first!r}.{self.function!r}({list(self.args[1:])!r})"
+        return f"{first!r}.{self.function!r}()"
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         # NOTE: Supported on many functions, but there are important gaps.
