@@ -87,6 +87,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
           lit('b')
           lit('woops')
 
+        And we can use constraints to reject the kind of input too:
         >>> nw.col("a").max().drop_nulls()  # doctest: +IGNORE_EXCEPTION_DETAIL
         Traceback (most recent call last):
         InvalidOperationError: Cannot use `drop_nulls()` on aggregated expression `col('a').max()`.
