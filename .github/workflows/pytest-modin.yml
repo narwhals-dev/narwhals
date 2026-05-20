@@ -7,13 +7,13 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
 
 jobs:
-
   pytest-modin-constructor:
     if: github.head_ref != 'bump-version'
     strategy:
@@ -23,21 +23,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: modin-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group core-tests
-      - name: install modin
-        run: |
-          uv pip install -e ".[modin]"
-      - name: show-deps
-        run: uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes --group core-tests --extra modin
       - name: Run pytest
-        run: pytest tests --constructors modin[pyarrow]
+        run: |
+          uv run --group core-tests --extra modin \
+          pytest tests --constructors="modin[pyarrow]"

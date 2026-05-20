@@ -7,7 +7,8 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -22,23 +23,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e ".[pandas,polars,pyarrow]" --group tests
-      - name: show-deps
-        run: uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes --group tests --extra pandas --extra polars --extra pyarrow
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
+        shell: bash
+        run: |
+          uv run --group tests --extra pandas --extra polars --extra pyarrow \
+          pytest tests --cov=src --cov=tests --cov-fail-under=75 \
+          --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
 
   pytest-windows:
     if: github.head_ref != 'bump-version'
@@ -49,25 +48,22 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: uv pip install -e "." --group core-tests --group extra
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
-      - name: show-deps
-        run: uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes --group core-tests --group extra --extra pandas
       - name: Run pytest
+        shell: bash
+        # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
         run: |
-          pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --durations=30
+          uv run --group core-tests --group extra --extra pandas \
+          pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 \
+          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   pytest-full-coverage:
     if: github.head_ref != 'bump-version'
@@ -83,27 +79,28 @@ jobs:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e ".[dask]" --group core-tests --group extra
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
-      - name: show-deps
-        run: uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes --extra pandas --extra dask --group core-tests --group extra
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --durations=30
+        run: |
+          uv run --extra pandas --extra dask --group core-tests --group extra \
+          pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 \
+          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: pytest src --doctest-modules
+        run: |
+          uv run \
+          --extra pandas --extra dask \
+          --group core-tests --group extra \
+          pytest src --doctest-modules
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
@@ -113,36 +110,35 @@ jobs:
         python-version: ["3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      UV_LOCKED: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: |
-          uv pip install -e ".[pandas]" --group tests
-          uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes -U --group tests --extra pandas
       - name: Run pytest (pandas and pandas[nullable])
-        run: pytest tests --runslow --constructors=pandas,pandas[nullable]
-      - name: install-more-reqs
         run: |
-          uv pip install -U pyarrow
-          uv pip freeze
+          uv run --isolated -U --group tests --extra pandas \
+          pytest tests --runslow --constructors="pandas,pandas[nullable]"
       - name: Run pytest (pandas[pyarrow] and pyarrow)
-        run: pytest tests --runslow --constructors=pandas[pyarrow],pyarrow
-      - name: install-polars
         run: |
-          uv pip uninstall pandas pyarrow
-          uv pip install polars
-          uv pip freeze
+          uv run --isolated -U \
+          --group tests \
+          --extra pandas --extra pyarrow \
+          pytest tests --runslow --constructors="pandas[pyarrow],pyarrow"
       - name: Run pytest (polars)
-        run: pytest tests --runslow --constructors=polars[eager],polars[lazy]
+        run: |
+          uv run --isolated -U \
+          --group tests \
+          --extra polars \
+          pytest tests --runslow --constructors="polars[eager],polars[lazy]"
 
   python-314:
     if: github.head_ref != 'bump-version'
@@ -153,21 +149,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group tests pandas polars pyarrow duckdb sqlframe
-      - name: show-deps
-        run: uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes --group core-tests --extra pandas
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe --cov-fail-under=50
+        run: |
+          uv run --group core-tests --extra pandas \
+          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
+          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   python-314t:
     if: github.head_ref != 'bump-version'
@@ -178,20 +173,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
         PYTHON_GIL: 0
+        UV_LOCKED: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group tests --pre pandas pyarrow
-      - name: show-deps
-        run: uv pip freeze
+      - name: Show dependencies
+        run: uv export --no-annotate --no-hashes --pre --group tests --extra pandas --extra pyarrow
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow --cov-fail-under=50
+        run: |
+          uv run --pre --group tests --extra pandas --extra pyarrow \
+          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
+          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow"

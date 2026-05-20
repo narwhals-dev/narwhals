@@ -14,6 +14,10 @@ repos:
       name: check-docstrings
       alias: check-docstrings
       entry: python utils/check_docstrings.py
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.11.15
+  hooks:
+    - id: uv-lock
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.4.2'
   hooks:
@@ -57,6 +61,8 @@ repos:
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
   hooks:
+    # `language: python` runs in an isolated venv.
+    # The scripts that need `narwhals` add `src/` to `sys.path` themselves.
     - id: check-api-reference
       name: check-api-reference
       pass_filenames: false
@@ -123,7 +129,7 @@ repos:
       exclude: |
         (?x)
           ^(tests/utils\.py)
-          |^(test_plugin/)
+          |^(packages/test_plugin/)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$
