@@ -40,7 +40,6 @@ from narwhals._plan.expressions.function_expr import (
     AnonymousExpr,
     FunctionExpr,
     HorizontalExpr,
-    RangeExpr,
     StructExpr,
 )
 from narwhals._plan.expressions.literal import Lit, LitSeries, lit, lit_series
@@ -74,7 +73,6 @@ __all__ = (
     "OrderableAggExpr",
     "Over",
     "OverOrdered",
-    "RangeExpr",
     "RenameAlias",
     "RootSelector",
     "SelectorIR",

@@ -168,11 +168,11 @@ def test_agg_non_elementwise_invalid() -> None:
 
 def test_agg_non_elementwise_range_special() -> None:
     e = nwp.int_range(0, 100)
-    assert isinstance(e._ir, ir.RangeExpr)
+    assert isinstance(e._ir, ir.FunctionExpr)
     e = nwp.int_range(nwp.len(), dtype=nw.UInt32).alias("index")
     e_ir = e._ir
     assert isinstance(e_ir, ir.Alias)
-    assert isinstance(e_ir.expr, ir.RangeExpr)
+    assert isinstance(e_ir.expr, ir.FunctionExpr)
     assert isinstance(e_ir.expr.args[0], ir.Lit)
     assert isinstance(e_ir.expr.args[1], ir.Len)
 

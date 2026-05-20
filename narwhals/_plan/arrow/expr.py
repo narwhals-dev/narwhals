@@ -473,7 +473,7 @@ class _ArrowDispatch(
 
     # TODO @dangotbanned: Consider returning the supertype of inputs
     def _range_function_inputs(
-        self, node: ir.RangeExpr[RangeFunction[NonNestedLiteralT_co]], frame: Frame
+        self, node: FExpr[RangeFunction[NonNestedLiteralT_co]], frame: Frame
     ) -> tuple[NonNestedLiteralT_co, NonNestedLiteralT_co]:
         func = node.function
         if fastpath := func.try_unwrap_literals(node):
@@ -486,23 +486,21 @@ class _ArrowDispatch(
         bad = node.args[0] if isinstance(start, ArrowScalar) else node.args[1]
         raise function_arg_non_scalar_error(func, bad)
 
-    def int_range(self, node: ir.RangeExpr[IntRange], frame: Frame, name: str) -> Expr:
+    def int_range(self, node: FExpr[IntRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         f = node.function
         ns = self.__narwhals_classes__
         series = ns.series.int_range(start, end, f.step, dtype=f.dtype, name=name)
         return ns.expr.from_series(series)
 
-    def date_range(self, node: ir.RangeExpr[DateRange], frame: Frame, name: str) -> Expr:
+    def date_range(self, node: FExpr[DateRange], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         f = node.function
         ns = self.__narwhals_classes__
         series = ns.series.date_range(start, end, f.interval, closed=f.closed, name=name)
         return ns.expr.from_series(series)
 
-    def linear_space(
-        self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str
-    ) -> Expr:
+    def linear_space(self, node: FExpr[LinearSpace], frame: Frame, name: str) -> Expr:
         start, end = self._range_function_inputs(node, frame)
         f = node.function
         ns = self.__narwhals_classes__

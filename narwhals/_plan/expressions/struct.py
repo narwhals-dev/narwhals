@@ -45,6 +45,9 @@ class FieldByName(
     def __repr__(self) -> str:
         return f"{super().__repr__()}({self.name!r})"
 
+    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        return f"{node.args[0]!r}.{self!r}"
+
     @property
     def needs_expansion(self) -> bool:
         return True

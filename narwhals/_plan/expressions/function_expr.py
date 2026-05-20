@@ -14,7 +14,6 @@ from narwhals._plan._nodes import nodes
 from narwhals._plan.typing import (
     FunctionT_co,
     HorizontalT_co,
-    RangeT_co,
     Seq,
     Seq1,
     Seq2,
@@ -155,10 +154,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return self.flags.changes_length()
 
     def __repr__(self) -> str:
-        first = self.args[0]
-        if len(self.args) >= 2:
-            return f"{first!r}.{self.function!r}({list(self.args[1:])!r})"
-        return f"{first!r}.{self.function!r}()"
+        return self.function.__expr_ir_repr__(self)
 
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
         # NOTE: Supported on many functions, but there are important gaps.
@@ -239,7 +235,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
           LENGTH_PRESERVING
 
         >>> print(nw.int_range(nw.col("a").max())._ir.explain(format="long"))
-        RangeExpr[IntRange(step=1, dtype=Int64)]
+        FunctionExpr[IntRange(step=1, dtype=Int64)]
           Binary(Constraint.SCALAR, Constraint.SCALAR)
             lit(0)
             col('a').max()
@@ -279,16 +275,7 @@ class HorizontalExpr(FunctionExpr[HorizontalT_co]):
     iter_expand = ExprIR.iter_expand
 
 
-class RangeExpr(FunctionExpr[RangeT_co]):
-    """E.g. `int_range(...)`."""
-
-    def __repr__(self) -> str:
-        # TODO @dangotbanned: (very low-priority) `Function` could take a format string
-        # when subclassing instead of this
-        # `dt.timestamp` and `struct.field` have some weirdness too
-        return f"{self.function!r}({list(self.args)!r})"
-
-
+# TODO @dangotbanned: Class doc
 class StructExpr(FunctionExpr[StructT_co]):
     """E.g. `col("a").struct.field(...)`.
 

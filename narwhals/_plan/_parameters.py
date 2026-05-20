@@ -72,7 +72,7 @@ class Parameters(metaclass=SlottedMeta):
 
     Which permits literals and aggregations:
     >>> nw.int_range(0, nw.len())._ir
-    int_range([lit(0), len()])
+    int_range(lit(0), len())
 
     But will raise on anything else:
     >>> nw.int_range(0, nw.col("bad").abs())  # doctest: +IGNORE_EXCEPTION_DETAIL

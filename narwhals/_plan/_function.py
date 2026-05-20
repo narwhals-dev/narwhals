@@ -244,6 +244,12 @@ class Function(Immutable):
     def __repr__(self) -> str:
         return self.__expr_ir_dispatch__.name
 
+    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        first, *rest = node.args
+        if rest:
+            return f"{first!r}.{self!r}({rest!r})"
+        return f"{first!r}.{self!r}()"
+
     def resolve_dtype(self, node: FunctionExpr[Any], schema: FrozenSchema, /) -> DType:
         """Get the data type of an expanded expression.
 

@@ -202,7 +202,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     hist_bins = todo()
 
     def int_range(
-        self, node: ir.RangeExpr[IntRange], frame: Incomplete, name: str
+        self, node: ir.FunctionExpr[IntRange], frame: Incomplete, name: str
     ) -> Self:
         func = node.function
         if fastpath := func.try_unwrap_literals(node):

@@ -92,7 +92,7 @@ class Timestamp(_TemporalInt64):
         msg = f"Only the following time units are supported: {get_args(PolarsTimeUnit)}.\nGot: {time_unit!r}."
         raise TypeError(msg)
     def __repr__(self) -> str:
-        return f"{super().__repr__()}[{self.time_unit!r}]"
+        return f"{super().__repr__()}[{self.time_unit}]"
 # fmt: on
 
 

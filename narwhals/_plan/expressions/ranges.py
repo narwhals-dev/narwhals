@@ -14,7 +14,7 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import RangeExpr
+    from narwhals._plan.expressions import FunctionExpr
     from narwhals.dtypes import IntegerType
     from narwhals.typing import ClosedInterval
 
@@ -25,12 +25,6 @@ map_all = ResolveDType.function.map_all
 
 class RangeFunction(BinaryFunction, Generic[T_co]):
     __function_parameters__: ClassVar = params.Binary(params.SCALAR, params.SCALAR)
-
-    @classmethod
-    def __function_expr__(cls) -> type[RangeExpr[Any]]:
-        from narwhals._plan.expressions import RangeExpr
-
-        return RangeExpr
 
     @classmethod
     def _valid_types(cls) -> tuple[type[T_co], ...]:
@@ -53,7 +47,7 @@ class RangeFunction(BinaryFunction, Generic[T_co]):
 
         raise InvalidOperationError(msg)
 
-    def try_unwrap_literals(self, node: RangeExpr[Self]) -> tuple[T_co, T_co] | None:
+    def try_unwrap_literals(self, node: FunctionExpr[Self]) -> tuple[T_co, T_co] | None:
         """If we were passed `(lit, lit)`, return the wrapped python literals.
 
         Otherwise, the inputs for `node` must be evaluated in a backend.
@@ -64,6 +58,10 @@ class RangeFunction(BinaryFunction, Generic[T_co]):
         if isinstance(start, Lit) and isinstance(end, Lit):
             return self.ensure_py_scalars(start.value, end.value)
         return None
+
+    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        args = ", ".join(map(repr, node.args))
+        return f"{self!r}({args})"
 
 
 class IntRange(RangeFunction[int], dtype=get_dtype()):
