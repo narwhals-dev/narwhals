@@ -39,10 +39,10 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-# TODO @dangotbanned: Docs should complement `Function`
-# - The two are very tightly coupled
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     """An expression wrapping a function and it's arguments.
+
+    By count, the majority of expressions are implemented using this guy or some flavor of it.
 
     Arguments:
         args: Expression arguments to the function.
@@ -52,15 +52,8 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         Represents `args` successfully binding to `function`, when constructed via
         `function.to_function_expr(*args)`.
 
-    ## What to doc?
-    - What things are functions?
-        - (Mostly) non-aggregating functions
-        - Data type namespaces
-        - Horizontal functions
-        - Range functions
-        - UDFs
-    - What behaviors can we describe with this type?
-    - Most operations (by count) are represented using this guy or some flavor of it
+    See Also:
+        `narwhals._plan._function.Function`
 
     Examples:
         Typically, you'll create `FunctionExpr`s indirectly when calling methods on `Expr`:
