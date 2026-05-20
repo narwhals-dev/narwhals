@@ -98,6 +98,17 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
           Unary(Constraint.DEFAULT)
             col('a')
           FunctionFlags.ROW_SEPARABLE
+
+        As we validate *only* via `to_function_expr` - we can cheaply rewrite our inputs later:
+        >>> from narwhals import Int64
+        >>> from narwhals._plan._expansion import Expander
+        >>> expr = nw.nth(0, -1).fill_null(0)
+        >>> expr._ir
+        ncs.by_index([0, -1]).fill_null([lit(0)])
+
+        >>> ctx = Expander({"a": Int64(), "b": Int64(), "c": Int64()})
+        >>> list(expr._ir.iter_expand(ctx))
+        [col('a').fill_null([lit(0)]), col('c').fill_null([lit(0)])]
     """
 
     __slots__ = ("args", "function")
