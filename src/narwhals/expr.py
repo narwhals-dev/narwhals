@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
@@ -63,7 +64,7 @@ class Expr:
     def _with_over_node(self, node: ExprNode) -> Self:
         # insert `over` before any elementwise operations.
         # check "how it works" page in docs for why we do this.
-        new_nodes = list(self._nodes)
+        new_nodes = deepcopy(list(self._nodes))
         kwargs_no_order_by = {
             key: value if key != "order_by" else []
             for (key, value) in node.kwargs.items()

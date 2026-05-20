@@ -349,7 +349,8 @@ class EagerSeriesStructNamespace(  # type: ignore[misc]
 ): ...
 
 
-class EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):
+# mypy says: `Covariant type variable "_CountsT_co" used in protocol where invariant one is expected`
+class EagerSeriesHist(Protocol[NativeSeriesT, _CountsT_co]):  # type: ignore[misc]
     _series: EagerSeries[NativeSeriesT]
     _breakpoint: bool
     _data: HistData[NativeSeriesT, _CountsT_co]

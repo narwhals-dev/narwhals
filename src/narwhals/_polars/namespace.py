@@ -237,7 +237,7 @@ class PolarsSelectorNamespace:
     def __init__(self, context: _LimitedContext, /) -> None:
         self._version = context._version
 
-    def by_dtype(self, dtypes: Iterable[DType]) -> PolarsExpr:
+    def by_dtype(self, dtypes: Iterable[IntoDType]) -> PolarsExpr:
         native_dtypes = [
             narwhals_to_native_dtype(dtype, self._version).__class__
             if isinstance(dtype, type) and issubclass(dtype, DType)

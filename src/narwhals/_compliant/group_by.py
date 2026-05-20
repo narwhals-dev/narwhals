@@ -161,7 +161,8 @@ class DepthTrackingGroupBy(
         Arguments:
             name: Name of a `nw.Expr` aggregation method.
         """
-        return cls._REMAP_AGGS.get(name, name)
+        result: NativeAggregationT_co = cls._REMAP_AGGS.get(name, name)
+        return result
 
     @classmethod
     def _leaf_name(cls, expr: DepthTrackingExprAny, /) -> NarwhalsAggregation | Any:

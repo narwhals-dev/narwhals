@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Collection, Iterator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, overload
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -76,6 +76,8 @@ if TYPE_CHECKING:
         "right outer",
         "full outer",
     ]
+
+MYPY: Final = False
 
 
 class ArrowDataFrame(
@@ -320,6 +322,8 @@ class ArrowDataFrame(
         # **Doesn't accept `ndarray`**
         elif is_numpy_array_1d(columns):
             selector = columns.tolist()
+        elif MYPY:
+            selector = columns  # type: ignore[assignment]
         else:
             selector = columns
         return self._with_native(self.native.select(selector))

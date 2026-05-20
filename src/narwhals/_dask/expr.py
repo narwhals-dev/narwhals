@@ -716,5 +716,5 @@ class DaskExpr(
     last = not_implemented()
 
     # namespaces
-    list: not_implemented = not_implemented()  # type: ignore[assignment]
-    struct: not_implemented = not_implemented()  # type: ignore[assignment]
+    list: Any = not_implemented()
+    struct: Any = not_implemented()
