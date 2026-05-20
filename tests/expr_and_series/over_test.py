@@ -245,7 +245,7 @@ def test_over_anonymous_cumulative(
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
-        else pytest.raises(KeyError)  # type: ignore[arg-type]
+        else pytest.raises(KeyError)
         if df.implementation.is_modin()
         or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 3))
         # TODO(unassigned): bug in old pandas + modin.
@@ -465,9 +465,6 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
 def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
-        request.applymarker(pytest.mark.xfail)
-    if "sqlframe" in str(constructor):
-        # bug in sqlframes: https://github.com/eakmanrq/sqlframe/issues/625
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
