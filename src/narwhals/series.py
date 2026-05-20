@@ -1756,6 +1756,16 @@ class Series(Generic[IntoSeriesT]):
             self._compliant_series.__ror__(self._extract_native(other))
         )
 
+    def __xor__(self, other: Any) -> Self:
+        return self._with_compliant(
+            self._compliant_series.__xor__(self._extract_native(other))
+        )
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_compliant(
+            self._compliant_series.__rxor__(self._extract_native(other))
+        )
+
     # unary
     def __invert__(self) -> Self:
         return self._with_compliant(self._compliant_series.__invert__())

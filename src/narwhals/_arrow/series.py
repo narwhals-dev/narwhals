@@ -256,6 +256,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(pc.or_kleene, other)
 
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(pc.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(pc.xor, other)
+
     def __add__(self, other: Any) -> Self:
         return self._with_binary(pc.add, other)
 

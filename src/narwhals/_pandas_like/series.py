@@ -455,6 +455,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     def __ror__(self, other: Any) -> Self:
         return self._with_binary_right(operator.or_, other)
 
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary(operator.xor, other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return self._with_binary_right(operator.xor, other)
+
     def __add__(self, other: Any) -> Self:
         return self._with_binary(operator.add, other)
 
