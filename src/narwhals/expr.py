@@ -212,6 +212,12 @@ class Expr:
     def __ror__(self, other: Any) -> Self:
         return (self | other).alias("literal")  # type: ignore[no-any-return]
 
+    def __xor__(self, other: Any) -> Self:
+        return self._with_binary("__xor__", other)
+
+    def __rxor__(self, other: Any) -> Self:
+        return (self ^ other).alias("literal")  # type: ignore[no-any-return]
+
     def __add__(self, other: Any) -> Self:
         return self._with_binary("__add__", other)
 

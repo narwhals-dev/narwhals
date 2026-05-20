@@ -471,6 +471,9 @@ class EagerExpr(
     def __or__(self, other: Self) -> Self:
         return self._with_binary("__or__", other)
 
+    def __xor__(self, other: Self) -> Self:
+        return self._with_binary("__xor__", other)
+
     def __add__(self, other: Self) -> Self:
         return self._with_binary("__add__", other)
 
