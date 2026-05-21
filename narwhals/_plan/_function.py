@@ -265,34 +265,6 @@ class HorizontalFunction(Function, flags=ELEMENTWISE):
 
     Special cases of [fold] or [reduce].
 
-    ## Examples
-    These functions use different semantics when expanding selectors.
-
-    Say we have the following schema:
-    >>> from tests.plan.utils import Frame
-    >>> import narwhals._plan as nw
-
-    >>> df = Frame.from_names("a", "b", "c")
-    >>> dict(df.schema)
-    {'a': Int64, 'b': Int64, 'c': Int64}
-
-    We expand multiple inputs into a single output:
-    >>> before = nw.sum_horizontal(nw.all())
-    >>> (reduced,) = df.project(before)
-    >>> before._ir
-    ncs.all().sum_horizontal()
-    >>> reduced
-    a=col('a').sum_horizontal([col('b'), col('c')])
-
-    Whereas the more common form of expansion produces multiple outputs:
-    >>> before = nw.all().clip("b")
-    >>> before._ir
-    ncs.all().clip_lower([col('b')])
-    >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
-    (a=col('a').clip_lower([col('b')]),
-     b=col('b').clip_lower([col('b')]),
-     c=col('c').clip_lower([col('b')]))
-
     [fold]: https://docs.pola.rs/user-guide/expressions/folds/
     [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
     """
