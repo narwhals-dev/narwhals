@@ -177,7 +177,15 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """Dispatch the **only** expression argument to this function.
 
         Important:
-            Exclusive to `Unary`
+            Exclusive to `UnaryFunction`
+
+        Arguments:
+            ctx: An instance that implements `CompliantColumn`.
+            frame: A`Compliant*Frame` that shares the same backend as `ctx`.
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+        Note:
+            See `Caller` for how `ctx` differs from `CompliantExpr`.
         """
         node = self.args[0]
         return node.__expr_ir_dispatch__(node, ctx, frame, name)
@@ -213,7 +221,16 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     def dispatch_args(
         self, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
     ) -> Seq[ct.E | ct.SC]:
-        """Dispatch **all** expression arguments to this function."""
+        """Dispatch **all** expression arguments to this function.
+
+        Arguments:
+            ctx: An instance that implements `CompliantColumn`.
+            frame: A`Compliant*Frame` that shares the same backend as `ctx`.
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+        Note:
+            See `Caller` for how `ctx` differs from `CompliantExpr`.
+        """
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
 
     def explain(self, *, format: Literal["short", "long"] = "short") -> str:
@@ -263,6 +280,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
         return self.function.flags
 
 
+# TODO @dangotbanned: Class doc
 # TODO @dangotbanned: (Docs) Add a note and point to `HorizontalFunction` explainer on expansion
 class HorizontalExpr(FunctionExpr[HorizontalT_co]):
     iter_expand = ExprIR.iter_expand
