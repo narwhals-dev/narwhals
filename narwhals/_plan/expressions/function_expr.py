@@ -1,4 +1,27 @@
-# TODO @dangotbanned: Make use of module doc for impl details
+"""`FunctionExpr` and friends.
+
+## Implementation Notes
+The default for implementing new expressions should be to add a new `Function`.
+It becomes an `ExprIR` when wrapping it via `FunctionExpr`.
+
+This follows `polars`' lead, which simplifies any decision-making for us.
+
+ATOW, [the remaining variants] that would *not* be a new `Function` are:
+- `Element` (`pl.element`)
+- `DataTypeFunction` (`pl.{dtype_of,self_dtype,struct_with_fields}`)
+- `Gather` (`pl.Expr.{gather,get}`)
+- `Explode` (`pl.Expr.{explode,list.explode`)
+- `Rolling` (`pl.Expr.rolling`)
+- `Slice` (`pl.Expr.slice`)
+- `Field` (`pl.field`)
+- `Eval` (`pl.Expr.list.eval`)
+- `StructEval` (`pl.Expr.struct.with_fields`)
+
+Tip:
+    If it doesn't look like one of those, it is probably a function
+
+[the remaining variants]: https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/crates/polars-plan/src/dsl/expr/mod.rs#L98-L224
+"""
 
 from __future__ import annotations
 
