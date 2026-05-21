@@ -143,7 +143,7 @@ jobs:
       - name: Run pytest
         run: |
           cd scikit-lego
-          pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
+          pytest --numprocesses=logical --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
     if: github.head_ref != 'bump-version'
@@ -651,3 +651,43 @@ jobs:
         run: |
           cd fairlearn
           pytest test/unit -m "narwhals"
+
+  scikit-learn:
+    if: github.head_ref != 'bump-version'
+    env:
+      UV_SYSTEM_PYTHON: 1
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: Clone scikit-learn
+        run: |
+          git clone https://github.com/scikit-learn/scikit-learn.git --depth=1
+          cd scikit-learn
+          git log
+      - name: Build scikit-learn
+        run: |
+          cd scikit-learn
+          uv pip install -U ninja meson-python numpy cython joblib threadpoolctl scipy
+          uv pip install --editable . --verbose --no-build-isolation --config-settings editable-verbose=true
+          uv pip install -U pandas polars pyarrow pytest pytest-xdist
+      - name: Install Narwhals branch
+        run: |
+          uv pip uninstall narwhals
+          uv pip install -e .
+      - name: Run tests
+        run: |
+          cd scikit-learn
+          pytest --numprocesses=logical
