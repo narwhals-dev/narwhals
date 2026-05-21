@@ -320,11 +320,11 @@ class HorizontalExpr(FunctionExpr[HorizontalT_co]):
     iter_expand = ExprIR.iter_expand
 
 
-# TODO @dangotbanned: Class doc
 class StructExpr(FunctionExpr[StructT_co]):
-    """E.g. `col("a").struct.field(...)`.
+    """An expression that applies a function to a struct column.
 
-    Requires special handling during expression expansion.
+    Note:
+        Requires special handling during expression expansion.
     """
 
     def needs_expansion(self) -> bool:
