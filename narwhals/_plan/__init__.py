@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import typing as _t
+
 from narwhals._plan import selectors
 from narwhals._plan.dataframe import DataFrame
 from narwhals._plan.expr import Expr
@@ -42,6 +44,8 @@ from narwhals._plan.selectors import Selector
 from narwhals._plan.series import Series
 from narwhals._plan.when_then import when
 
+from_dict: _t.Final = DataFrame.from_dict
+
 __all__ = (
     "DataFrame",
     "Expr",
@@ -58,6 +62,7 @@ __all__ = (
     "date_range",
     "exclude",
     "format",
+    "from_dict",
     "int_range",
     "len",
     "linear_space",
