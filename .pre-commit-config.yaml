@@ -38,13 +38,13 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/dependencies\.py|
+                src/narwhals/dependencies\.py|
                 # Private, so less urgent to document too well
-                narwhals/_.*|
+                src/narwhals/_.*|
                 # Internal use only, less urgent
                 ^utils/.*|
                 # Soft-deprecated, so less crucial to document so carefully
-                narwhals/stable/v1/.*
+                src/narwhals/stable/v1/.*
             )$
         # Keep in sync with `flake8-typing-imports` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
@@ -77,15 +77,15 @@ repos:
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: python utils/import_check.py
       language: python
-      files: ^narwhals/
-      exclude: ^narwhals/dependencies\.py
+      files: ^src/narwhals/
+      exclude: ^src/narwhals/dependencies\.py
     - id: self-self
       name: don't annotate `self` argument using `Self`
       entry: "self: Self"
       language: pygrep
-      files: ^narwhals/
+      files: ^src/narwhals/
       # mypy needs `Self` for `ExprIR.dispatch`
-      exclude: ^narwhals/_plan/.*\.py
+      exclude: ^src/narwhals/_plan/.*\.py
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
       entry: |
@@ -97,19 +97,19 @@ repos:
               ((Datetime|Duration|Enum)(,\ )?)+
               ((,\ )?DType)?
       language: pygrep
-      files: ^narwhals/
+      files: ^src/narwhals/
       exclude: |
         (?x)
           ^(
-            narwhals/_utils\.py|
-            narwhals/stable/v./_?dtypes.py|
-            narwhals/.*__init__.py|
-            narwhals/.*typing\.py|
-            narwhals/_plan/functions\.py|
-            narwhals/_plan/expressions/ranges\.py|
-            narwhals/_plan/schema\.py|
-            narwhals/_plan/expressions/selectors\.py|
-            narwhals/_plan/dtype.*\.py
+            src/narwhals/_utils\.py|
+            src/narwhals/stable/v./_?dtypes.py|
+            src/narwhals/.*__init__.py|
+            src/narwhals/.*typing\.py|
+            src/narwhals/_plan/functions\.py|
+            src/narwhals/_plan/expressions/ranges\.py|
+            src/narwhals/_plan/schema\.py|
+            src/narwhals/_plan/expressions/selectors\.py|
+            src/narwhals/_plan/dtype.*\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`

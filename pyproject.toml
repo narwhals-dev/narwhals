@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "narwhals"
-version = "2.21.0"
+version = "2.21.2"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -20,7 +20,6 @@ classifiers = [
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -77,14 +76,14 @@ extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
 ]
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
-  "duckdb==1.4.4",
+  "duckdb",
   "hypothesis",
   "pytest",
   "pandas-stubs==2.3.0.250703",
   "typing_extensions",
-  "mypy==1.20.1", # Will break CI, only testing on `_plan` locally
+  "mypy==2.1.0",
   "pyrefly==1.0.0",
-  "pyright==1.1.408",  # https://github.com/narwhals-dev/narwhals/issues/3584
+  "pyright",
   "pyarrow<24", # https://github.com/narwhals-dev/narwhals/issues/3560
   "pyarrow-stubs==19.2",
   "narwhals[dask]",
@@ -125,14 +124,12 @@ local-dev = [
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "narwhals/*",
+  "src/narwhals/*",
   "tests/*",
 ]
 
 [tool.hatch.build.targets.wheel]
-include = [
-  "narwhals/*",
-]
+packages = ["src/narwhals"]
 
 [tool.ruff]
 line-length = 90
@@ -212,11 +209,11 @@ extend-ignore-names = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"narwhals/expr_dt.py" = ["RUF002"] 
-"narwhals/typing.py" = [
+"src/narwhals/expr_dt.py" = ["RUF002"]
+"src/narwhals/typing.py" = [
   "PYI042",  # snake-case-type-alias (catches `_1DArray`)
-] 
-"narwhals/_*/utils.py" = [
+]
+"src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
 "tests/*" = [
@@ -256,13 +253,14 @@ skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
 norecursedirs =  [
-  '*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 
+  '*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'src/narwhals/_*',
   # `narwhals/_*` ignores `_plan` which has doctests at multiple levels
-  'narwhals/_arrow', 'narwhals/_compliant', 'narwhals/_dask', 'narwhals/_duckdb', 'narwhals/_ibis', 
-  'narwhals/_interchange', 'narwhals/_pandas_like', 'narwhals/_polars', 'narwhals/_spark_like', 
-  'narwhals/_sql', 
+  'src/narwhals/_arrow', 'src/narwhals/_compliant', 'src/narwhals/_dask', 'src/narwhals/_duckdb', 'src/narwhals/_ibis', 
+  'src/narwhals/_interchange', 'src/narwhals/_pandas_like', 'src/narwhals/_polars', 'src/narwhals/_spark_like', 
+  'src/narwhals/_sql', 
 ]
 testpaths = ["tests"]
+pythonpath = ["src"]
 filterwarnings = [
   "error",
   'ignore:.*defaulting to pandas implementation:Warning:modin',
@@ -328,29 +326,29 @@ plugins = ["covdefaults"]
 [tool.coverage.report]
 fail_under = 80  # This is just for local development, in CI we set it to 100
 omit = [
-  'narwhals/typing.py',
-  'narwhals/compliant.py',
-  'narwhals/stable/v1/typing.py',
-  'narwhals/stable/v2/typing.py',
-  'narwhals/this.py',
-  'narwhals/_arrow/typing.py',
-  'narwhals/_duckdb/typing.py',
-  'narwhals/_spark_like/typing.py',
+  "src/narwhals/typing.py",
+  "src/narwhals/compliant.py",
+  "src/narwhals/stable/v1/typing.py",
+  "src/narwhals/stable/v2/typing.py",
+  "src/narwhals/this.py",
+  "src/narwhals/_arrow/typing.py",
+  "src/narwhals/_duckdb/typing.py",
+  "src/narwhals/_spark_like/typing.py",
   # We run Ibis in a separate CI job to the coverage one, to avoid their tight dependency pins.
-  'narwhals/_ibis/*',
-  "tests/ibis_test.py",
+  "src/narwhals/_ibis/*",
   # Remove after finishing eager sub-protocols
-  'narwhals/_compliant/namespace.py',
+  "src/narwhals/_compliant/namespace.py",
+  "tests/ibis_test.py",
   # NOTE: Gradually adding as things become more stable
-  'narwhals/_plan/arrow/*',
-  'narwhals/_plan/polars/*',
-  'narwhals/_plan/compliant/package.py',
-  'narwhals/_plan/compliant/scalar.py',
-  'narwhals/_plan/**/typing.py',
-  'narwhals/_plan/dtypes_mapper.py',
-  'narwhals/_plan/plans/visitors.py',
-  'narwhals/_plan/plans/_explain.py',
-  'narwhals/_plan/plans/conversion.py',
+  'src/narwhals/_plan/arrow/*',
+  'src/narwhals/_plan/polars/*',
+  'src/narwhals/_plan/compliant/package.py',
+  'src/narwhals/_plan/compliant/scalar.py',
+  'src/narwhals/_plan/**/typing.py',
+  'src/narwhals/_plan/dtypes_mapper.py',
+  'src/narwhals/_plan/plans/visitors.py',
+  'src/narwhals/_plan/plans/_explain.py',
+  'src/narwhals/_plan/plans/conversion.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -359,6 +357,7 @@ exclude_also = [
   'if "(cudf|modin|pyspark|ibis)" in',
   "if not .*.is_pandas",
   "if is_ibis_table",
+  "if MYPY",
   "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
   'backend_version <',
@@ -381,9 +380,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-# NOTE: Re-enable `mypy` for `main` when it isn't pinned to `1.15`
-# https://github.com/narwhals-dev/narwhals/issues/3606#issuecomment-4440007049
-files = ["narwhals/_plan", "tests/plan"]
+files = ["src/narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
 check_untyped_defs = true
@@ -433,7 +430,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["narwhals", "tests", "test-plugin"]
+include = ["src/narwhals", "tests", "test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
@@ -442,29 +439,30 @@ ignore = [
 defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
-project-includes = ["narwhals/_plan", "tests"]
+search-path = ["src", "."]
+project-includes = ["src/narwhals/_plan", "tests"]
 project-excludes = [
     # - waaaaaaaay too many things to deal with any time soon (`pyrefly==1.0.0`)
     # - lots of false positives which spiral out
     # - ([not-a-type], [bad-override], [bad-specialization], [invalid-type-var])
-    "narwhals/_plan/_dispatch.py",
-    "narwhals/_plan/_dtype.py",
-    "narwhals/_plan/_flags.py",
-    "narwhals/_plan/_parameters.py",
-    "narwhals/_plan/arrow",
-    "narwhals/_plan/common.py",
-    "narwhals/_plan/compliant",
-    "narwhals/_plan/dataframe.py",
-    "narwhals/_plan/expr.py",
-    "narwhals/_plan/expressions/temporal.py",
-    "narwhals/_plan/functions",
-    "narwhals/_plan/lazyframe.py",
-    "narwhals/_plan/plans/conversion.py",
-    "narwhals/_plan/polars",
-    "narwhals/_plan/schema.py",
-    "narwhals/_plan/selectors.py",
-    "narwhals/_plan/series.py",
-    "narwhals/_plan/translate.py",
+    "src/narwhals/_plan/_dispatch.py",
+    "src/narwhals/_plan/_dtype.py",
+    "src/narwhals/_plan/_flags.py",
+    "src/narwhals/_plan/_parameters.py",
+    "src/narwhals/_plan/arrow",
+    "src/narwhals/_plan/common.py",
+    "src/narwhals/_plan/compliant",
+    "src/narwhals/_plan/dataframe.py",
+    "src/narwhals/_plan/expr.py",
+    "src/narwhals/_plan/expressions/temporal.py",
+    "src/narwhals/_plan/functions",
+    "src/narwhals/_plan/lazyframe.py",
+    "src/narwhals/_plan/plans/conversion.py",
+    "src/narwhals/_plan/polars",
+    "src/narwhals/_plan/schema.py",
+    "src/narwhals/_plan/selectors.py",
+    "src/narwhals/_plan/series.py",
+    "src/narwhals/_plan/translate.py",
 ]
 ignore-missing-imports = [
     "cudf.*",
