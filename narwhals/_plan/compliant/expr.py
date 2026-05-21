@@ -217,7 +217,7 @@ class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScal
     def dispatch(
         self, node: ir.ExprIR, frame: IncompleteVarianceLie, name: str, /
     ) -> ct.Column[Any, Any, NativeExpr_co, NativeScalar_co]:
-        """_summary_.
+        """Evaluate an expression.
 
         Arguments:
             node: The expression to dispatch.

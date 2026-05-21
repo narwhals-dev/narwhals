@@ -120,14 +120,99 @@ Classes = TypeVar("Classes", bound="cc.CompliantClasses[Any, Any]", covariant=Tr
 
 
 class _Dispatchee(Protocol[Classes, ColumnT_co]):
+    __slots__ = ()
+
     @property
     def __narwhals_classes__(self) -> Classes: ...
     # https://github.com/python/mypy/issues/15182
     def __new__(cls) -> ColumnT_co: ...  # type: ignore[misc]
 
 
-Caller: TypeAlias = "_Dispatchee[cc.CompliantClasses[E, SC], E | SC]"
-"""The type of `ctx` (the caller of `CompliantColumn.dispatch`)."""
+class Caller(_Dispatchee["cc.CompliantClasses[E, SC]", E | SC], Protocol[E, SC]):
+    """The type of the compliant context for `ExprIR` dispatch.
+
+    `Caller` describes `self` being rescoped as `ctx` here:
+
+        class CompliantColumn(Protocol):
+            def dispatch(self, node: Any, frame: Any, name: str, /) -> Any:
+                ctx: Caller[E, SC] = self
+                return node.__expr_ir_dispatch__(node, ctx, frame, name)
+
+    ## Why not `Compliant*`?
+    Great question! First though, some background ...
+
+    ### Background
+    - Dispatching an `ExprIR` starts from the most recent expression (not the first)
+    - Methods on `*Expr` and `*Scalar` can return the same type or transition to a different shape
+        - Using `Self` is not an option
+    - Implementations of `CompliantColumn` are versioned classes
+        - The protocols cannot be defined with an assumption of invariance
+
+    ### Ummmmm?
+    Yeah, it's a minefield. Let's look at an example to ground ourselves:
+
+    >>> import narwhals._plan as nw
+    >>> df = nw.from_dict({"a": [3, 1, 2], "b": [1.2, 2.0, 2.3]}, backend="pyarrow")
+    >>> expr = nw.col("a").sort().last()
+    >>> df.select(expr)
+    ┌─────────────┐
+    |nw.DataFrame |
+    |-------------|
+    |pyarrow.Table|
+    |a: int64     |
+    |----         |
+    |a: [[3]]     |
+    └─────────────┘
+
+    Dispatching an `ExprIR` starts from the most recent expression (not the first):
+    >>> for e in expr._ir.iter_right():
+    ...     print(f"{e.__expr_ir_dispatch__.name!s:<4} | {e!r}")
+    last | col('a').sort(asc).last()
+    sort | col('a').sort(asc)
+    col  | col('a')
+
+    Methods on `*Expr` and `*Scalar` can return the same type or transition to a different shape:
+    >>> from narwhals._plan import expressions as ir
+    >>> from narwhals._plan.compliant import typing as ct
+
+    >>> # A speedrun of what happens between `DataFrame.select` and `CompliantDataFrame.select`
+    >>> expr_ir = expr._ir
+    >>> # ...
+    >>> named_ir = ir.NamedIR("a", expr_ir)
+
+    >>> # Now, we need to set the scene for `CompliantColumn.dispatch`
+    >>> frame: ct.DataFrameAny = df._compliant
+    >>> tp_expr: type[ct.ExprAny] = frame.__narwhals_classes__.expr
+    >>> ctx = tp_expr.__new__(tp_expr)
+
+    >>> print("Initial context:", ctx.__class__.__name__)
+    Initial context: ArrowExpr
+    >>> result = ctx.dispatch(named_ir.expr, frame, named_ir.name)
+    >>> print("Final context  :", result.__class__.__name__)
+    Final context  : ArrowScalar
+
+    Implementations of `CompliantColumn` are versioned classes:
+    >>> print(f"{result.__class__.__name__} ({result.version})")
+    ArrowScalar (Version.MAIN)
+    >>> v1 = result.__narwhals_classes__.v1.scalar
+    >>> print(f"{v1.__name__} ({v1.version})")
+    ArrowScalarV1 (Version.V1)
+
+    ### So what?
+    `Caller` encodes a *degree of uncertainty*, which can be reeled in by each
+    implementation of `CompliantColumn.dispatch`.
+
+    The parts defined *here* (`__narwhals_classes__`, `__new__`) are generic but use **gradual**
+    typing in `CompliantColumn`.
+
+    This concession avoids [introducing cycles], which is inherent to:
+    - The idea of `__narwhals_classes__` being accessible by all of the classes it is generic over 🤯
+    - Protocols representing graphs
+
+    [introducing cycles]: https://github.com/narwhals-dev/narwhals/issues/3643
+    """
+
+    __slots__ = ()
 
 
 # TODO @dangotbanned: Finish migrating to post `CompliantFrame`/`CompliantNamespace`-typing
