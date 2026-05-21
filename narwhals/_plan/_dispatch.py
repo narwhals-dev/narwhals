@@ -137,7 +137,17 @@ class Dispatch(Generic[Expr]):
     def __call__(
         self, node: Expr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str, /
     ) -> ct.E | ct.SC:
-        """Evaluate this expression in `frame`, using implementation(s) provided by `ctx`."""
+        """Evaluate an expression.
+
+        Arguments:
+            node: The expression to evaluate.
+            ctx: An instance that implements `CompliantColumn`.
+            frame: A`Compliant*Frame` that shares the same backend as `ctx`.
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+        Note:
+            See `Caller` for how `ctx` differs from `CompliantExpr`.
+        """
         # NOTE: A `None` check is required for two related reasons.
         # 1. An un-implemented `Protocol` method body `...` returns `None`
         #    if you inherit but don't override it.
