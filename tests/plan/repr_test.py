@@ -79,6 +79,18 @@ def test_expr_ir_nodes() -> None:
     assert "<br>" in c_nodes_repr_html
 
 
+def assert_reprs_equal(
+    exprs: nwp.Expr | Sequence[nwp.Expr], expected: LiteralString, /
+) -> None:
+    if isinstance(exprs, nwp.Expr):
+        exprs = (exprs,)
+    if len(exprs) == 1:
+        assert_expr_ir_equal(exprs[0], expected)
+    else:
+        actual = "[" + (", ".join(repr(e._ir) for e in exprs)) + "]"
+        assert actual == expected
+
+
 @pytest.mark.parametrize(
     ("exprs", "expected"),
     [
@@ -91,8 +103,6 @@ def test_expr_ir_nodes() -> None:
             ],
             "[lit(1), lit[u8](1), lit[i32](1), lit[i64](None)]",
         ),
-        (nwp.int_range(nwp.len()), "int_range([lit(0), len()])"),
-        (nwp.int_range(0, 10), "int_range([lit(0), lit(10)])"),
         (
             [
                 nwp.lit(1.479).alias("renamed"),
@@ -233,13 +243,7 @@ def test_expr_ir_nodes() -> None:
 def test_lit(exprs: nwp.Expr | Sequence[nwp.Expr], expected: LiteralString) -> None:
     # NOTE: Checking both how `lit` looks like in isolation, and when appearing inside/alongside other expressions
     # The shape of the test code is intended to make the visual comparison in the `parametrize` cases easier to read
-    if isinstance(exprs, nwp.Expr):
-        exprs = (exprs,)
-    if len(exprs) == 1:
-        assert_expr_ir_equal(exprs[0], expected)
-    else:
-        actual = "[" + (", ".join(repr(e._ir) for e in exprs)) + "]"
-        assert actual == expected
+    assert_reprs_equal(exprs, expected)
 
 
 def test_lit_series(series: Series) -> None:
@@ -261,3 +265,26 @@ def test_lit_object() -> None:
     obj = What()
     expr = nwp.lit(obj, nw.Object)
     assert_expr_ir_equal(expr, "lit[object](12345)")
+
+
+@pytest.mark.parametrize(
+    ("exprs", "expected"),
+    [
+        (
+            [
+                nwp.int_range(nwp.len()),
+                nwp.int_range(0, 10),
+                nwp.date_range(dt.date(1980, 1, 1), dt.date(1990, 8, 3)),
+                nwp.linear_space(0.0, 1.0, 3),
+            ],
+            "[int_range(lit(0), len()), "
+            "int_range(lit(0), lit(10)), "
+            "date_range(lit[date]('1980-01-01'), lit[date]('1990-08-03')), "
+            "linear_space(lit(0.0), lit(1.0))]",
+        ),
+        (nwp.col("a").dt.timestamp("ns"), "col('a').dt.timestamp[ns]()"),
+        (nwp.col("b").struct.field("c"), "col('b').struct.field('c')"),
+    ],
+)
+def test_function(exprs: nwp.Expr | Sequence[nwp.Expr], expected: LiteralString) -> None:
+    assert_reprs_equal(exprs, expected)

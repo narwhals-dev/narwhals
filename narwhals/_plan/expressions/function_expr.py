@@ -1,11 +1,34 @@
-# TODO @dangotbanned: Make use of module doc for impl details
+"""`FunctionExpr` and friends.
+
+## Implementation Notes
+The default for implementing new expressions should be to add a new `Function`.
+It becomes an `ExprIR` when wrapping it via `FunctionExpr`.
+
+This follows `polars`' lead, which simplifies any decision-making for us.
+
+ATOW, [the remaining variants] that would *not* be a new `Function` are:
+- `Element` (`pl.element`)
+- `DataTypeFunction` (`pl.{dtype_of,self_dtype,struct_with_fields}`)
+- `Gather` (`pl.Expr.{gather,get}`)
+- `Explode` (`pl.Expr.{explode,list.explode`)
+- `Rolling` (`pl.Expr.rolling`)
+- `Slice` (`pl.Expr.slice`)
+- `Field` (`pl.field`)
+- `Eval` (`pl.Expr.list.eval`)
+- `StructEval` (`pl.Expr.struct.with_fields`)
+
+Tip:
+    If it doesn't look like one of those, it is probably a function
+
+[the remaining variants]: https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/crates/polars-plan/src/dsl/expr/mod.rs#L98-L224
+"""
 
 from __future__ import annotations
 
 # mypy: disable-error-code="misc"
 # NOTE: Needs to be disabled as `mypy` reports the diagnostic twice, with one not attributed to a line number
 # Sadly there's no way to disable  *just* the variance inference part for `function: FunctionT_co`
-from typing import TYPE_CHECKING, ClassVar, Generic, overload
+from typing import TYPE_CHECKING, ClassVar, Generic, Literal, overload
 
 from narwhals._plan._dispatch import FunctionExprDispatch
 from narwhals._plan._expr_ir import ExprIR
@@ -14,7 +37,6 @@ from narwhals._plan._nodes import nodes
 from narwhals._plan.typing import (
     FunctionT_co,
     HorizontalT_co,
-    RangeT_co,
     Seq,
     Seq1,
     Seq2,
@@ -40,26 +62,68 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 
-# TODO @dangotbanned: Docs should complement `Function`
-# - The two are very tightly coupled
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     """An expression wrapping a function and it's arguments.
 
+    By count, the majority of expressions are implemented using this guy or some flavor of it.
+
     Arguments:
         args: Expression arguments to the function.
-        function: The function to apply, which may contain non-expression arguments.
+        function: The function to apply.
 
-    ## What to doc?
-    - What things are functions?
-        - (Mostly) non-aggregating functions
-        - Data type namespaces
-        - Horizontal functions
-        - Range functions
-        - UDFs
-    - So what is a `FunctionExpr` then?
-        - ...
-    - What behaviors can we describe with this type?
-    - Most operations (by count) are represented using this guy or some flavor of it
+    Note:
+        Represents `args` successfully binding to `function`, when constructed via
+        `function.to_function_expr(*args)`.
+
+    See Also:
+        `narwhals._plan._function.Function`
+
+    Examples:
+        Typically, you'll create `FunctionExpr`s indirectly when calling methods on `Expr`:
+        >>> import narwhals._plan as nw
+        >>> fill_null = nw.col("a").fill_null("b")
+        >>> print(fill_null._ir)
+        FunctionExpr(args=[Col(name='a'), Lit(dtype=String, value='b')], function=FillNull())
+
+        But for *"fun"*, let's do that manually to get a feel for how it works:
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan.expressions import functions as F
+        >>> column = ir.col("a")
+        >>> literal = ir.lit("b")
+        >>> fill_null_ir = F.FillNull().to_function_expr(column, literal)
+        >>> fill_null_ir == fill_null._ir
+        True
+
+        `to_function_expr(*args)` will validate that we meet constraints defined by the function:
+        >>> F.FillNull().to_function_expr(column, literal, ir.lit("woops"))
+        Traceback (most recent call last):
+        TypeError: Expected 2 inputs for `fill_null()`, got 3:
+          col('a')
+          lit('b')
+          lit('woops')
+
+        And we can use constraints to reject the kind of input too:
+        >>> nw.col("a").max().drop_nulls()  # doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        InvalidOperationError: Cannot use `drop_nulls()` on aggregated expression `col('a').max()`.
+
+        We can inspect these rules using `explain`:
+        >>> print(nw.col("a").drop_nulls()._ir.explain(format="long"))
+        FunctionExpr[DropNulls]
+          Unary(Constraint.DEFAULT)
+            col('a')
+          FunctionFlags.ROW_SEPARABLE
+
+        As we validate *only* via `to_function_expr` - we can cheaply rewrite our inputs later:
+        >>> from narwhals import Int64
+        >>> from narwhals._plan._expansion import Expander
+        >>> expr = nw.nth(0, -1).fill_null(0)
+        >>> expr._ir
+        ncs.by_index([0, -1]).fill_null([lit(0)])
+
+        >>> ctx = Expander({"a": Int64(), "b": Int64(), "c": Int64()})
+        >>> list(expr._ir.iter_expand(ctx))
+        [col('a').fill_null([lit(0)]), col('c').fill_null([lit(0)])]
     """
 
     __slots__ = ("args", "function")
@@ -70,9 +134,26 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         FunctionExprDispatch.root("FunctionExpr")
     )
 
-    # TODO @dangotbanned: (Docs) Maybe just duplicate `Function.__function_flags__`
     @property
     def flags(self) -> FunctionFlags:
+        """Defines properties of the wrapped function.
+
+        Flags tell us how a function transforms the shape of it's input:
+
+            ┌───────────────────┬───────────────┬───────────┐
+            │ Flag              ┆ Input         ┆ Output    │
+            ╞═══════════════════╪═══════════════╪═══════════╡
+            │ AGGREGATION       ┆ Column        ┆ Scalar    │
+            │ ROW_SEPARABLE     ┆ Column        ┆ Unknown   │
+            │ LENGTH_PRESERVING ┆ Column/Scalar ┆ Preserved │
+            │ ELEMENTWISE       ┆ Column/Scalar ┆ Preserved │
+            └───────────────────┴───────────────┴───────────┘
+
+        And that's the main nugget we can use to answer the question:
+        > Is the function valid *here*?
+
+        See `FunctionFlags` for examples.
+        """
         return self.function.__function_flags__
 
     def is_scalar(self) -> bool:
@@ -89,29 +170,19 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         return self.flags.changes_length()
 
     def __repr__(self) -> str:
-        if self.args:
-            first = self.args[0]
-            if len(self.args) >= 2:
-                return f"{first!r}.{self.function!r}({list(self.args[1:])!r})"
-            return f"{first!r}.{self.function!r}()"
-        return f"{self.function!r}()"
+        return self.function.__expr_ir_repr__(self)
 
-    # TODO @dangotbanned: Convert docs into a comment
     def resolve_dtype(self, schema: FrozenSchema) -> DType:
-        """NOTE: Supported on many functions, but there are important gaps.
-
-        Requires `get_supertype`:
-        - `{max,min,sum}_horizontal`
-        - `coalesce`
-        - `replace_strict(..., dtype=None)`
-
-        Partially requires `get_supertype`:
-        - `mean_horizontal`
-        - `fill_null(value)`
-
-        Unlikely to ever be supported:
-        - `map_batches(..., dtype=None)`
-        """
+        # NOTE: Supported on many functions, but there are important gaps.
+        # - Requires [#3396]:
+        #   - `{max,min,sum}_horizontal`
+        #   - `coalesce`
+        #   - `replace_strict(..., dtype=None)`
+        #   - `mean_horizontal`   (partial)
+        #   - `fill_null(value)`  (partial)
+        # - Unlikely to ever be supported:
+        #   - `map_batches(..., dtype=None)`
+        # [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         return self.function.resolve_dtype(self, schema)
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
@@ -129,7 +200,15 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """Dispatch the **only** expression argument to this function.
 
         Important:
-            Exclusive to `Unary`
+            Exclusive to `UnaryFunction`
+
+        Arguments:
+            ctx: An instance that implements `CompliantColumn`.
+            frame: A`Compliant*Frame` that shares the same backend as `ctx`.
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+        Note:
+            See `Caller` for how `ctx` differs from `CompliantExpr`.
         """
         node = self.args[0]
         return node.__expr_ir_dispatch__(node, ctx, frame, name)
@@ -165,8 +244,46 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     def dispatch_args(
         self, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
     ) -> Seq[ct.E | ct.SC]:
-        """Dispatch **all** expression arguments to this function."""
+        """Dispatch **all** expression arguments to this function.
+
+        Arguments:
+            ctx: An instance that implements `CompliantColumn`.
+            frame: A`Compliant*Frame` that shares the same backend as `ctx`.
+            name: Output column name, which will typically have originated from `NamedIR.name`.
+
+        Note:
+            See `Caller` for how `ctx` differs from `CompliantExpr`.
+        """
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
+
+    def explain(self, *, format: Literal["short", "long"] = "short") -> str:
+        """Create a rich string representation of the expression.
+
+        >>> import narwhals._plan as nw
+        >>> a = nw.col("a")
+        >>> print(a.shift(5)._ir.explain())
+        FunctionExpr[Shift(n=5)]
+          Unary(DEFAULT)
+            col('a')
+          LENGTH_PRESERVING
+
+        >>> print(nw.int_range(nw.col("a").max())._ir.explain(format="long"))
+        FunctionExpr[IntRange(step=1, dtype=Int64)]
+          Binary(Constraint.SCALAR, Constraint.SCALAR)
+            lit(0)
+            col('a').max()
+          FunctionFlags.DEFAULT
+        """
+        nl, parens = "\n", "()"
+        indent = " " * 2
+        f = self.function
+        flags = self.flags
+        return (
+            f"{type(self).__name__}[{str(f).removesuffix(parens)}]"
+            f"{nl}{indent}{f.__function_parameters__.explain(format=format)}"
+            f"{nl}{nl.join(f'{indent * 2}{e!r}' for e in self.args)}"
+            f"{nl}{indent}{flags if format == 'short' else f'{type(flags).__name__}.{flags.name}'}"
+        )
 
 
 class AnonymousExpr(FunctionExpr["MapBatches"]):
@@ -186,25 +303,51 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
         return self.function.flags
 
 
-# TODO @dangotbanned: (Docs) Add a note and point to `HorizontalFunction` explainer on expansion
 class HorizontalExpr(FunctionExpr[HorizontalT_co]):
+    """An expression that applies a function *across* columns.
+
+    Special cases of [fold] or [reduce].
+
+    ## Examples
+    Horizontal functions use different semantics when expanding selectors.
+
+    Say we have the following schema:
+    >>> from tests.plan.utils import Frame
+    >>> import narwhals._plan as nw
+
+    >>> df = Frame.from_names("a", "b", "c")
+    >>> dict(df.schema)
+    {'a': Int64, 'b': Int64, 'c': Int64}
+
+    We expand multiple inputs into a single output:
+    >>> before = nw.sum_horizontal(nw.all())
+    >>> (reduced,) = df.project(before)
+    >>> before._ir
+    ncs.all().sum_horizontal()
+    >>> reduced
+    a=col('a').sum_horizontal([col('b'), col('c')])
+
+    Whereas the more common form of expansion produces multiple outputs:
+    >>> before = nw.all().clip("b")
+    >>> before._ir
+    ncs.all().clip_lower([col('b')])
+    >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
+    (a=col('a').clip_lower([col('b')]),
+     b=col('b').clip_lower([col('b')]),
+     c=col('c').clip_lower([col('b')]))
+
+    [fold]: https://docs.pola.rs/user-guide/expressions/folds/
+    [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
+    """
+
     iter_expand = ExprIR.iter_expand
 
 
-class RangeExpr(FunctionExpr[RangeT_co]):
-    """E.g. `int_range(...)`."""
-
-    def __repr__(self) -> str:
-        # TODO @dangotbanned: (very low-priority) `Function` could take a format string
-        # when subclassing instead of this
-        # `dt.timestamp` and `struct.field` have some weirdness too
-        return f"{self.function!r}({list(self.args)!r})"
-
-
 class StructExpr(FunctionExpr[StructT_co]):
-    """E.g. `col("a").struct.field(...)`.
+    """An expression that applies a function to a struct column.
 
-    Requires special handling during expression expansion.
+    Note:
+        Requires special handling during expression expansion.
     """
 
     def needs_expansion(self) -> bool:

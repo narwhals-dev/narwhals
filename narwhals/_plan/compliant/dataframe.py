@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant import classes as cc
     from narwhals._plan.compliant.group_by import (
         DataFrameGroupBy,
         EagerDataFrameGroupBy,
@@ -127,6 +128,8 @@ class CompliantDataFrame(
 
     __slots__ = ()
 
+    @property
+    def __narwhals_classes__(self) -> cc.EagerAny: ...
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 

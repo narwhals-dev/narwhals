@@ -72,7 +72,7 @@ class Parameters(metaclass=SlottedMeta):
 
     Which permits literals and aggregations:
     >>> nw.int_range(0, nw.len())._ir
-    int_range([lit(0), len()])
+    int_range(lit(0), len())
 
     But will raise on anything else:
     >>> nw.int_range(0, nw.col("bad").abs())  # doctest: +IGNORE_EXCEPTION_DETAIL
@@ -123,20 +123,21 @@ class Parameters(metaclass=SlottedMeta):
         self, function: Function, exprs: Seq[ExprIR], /
     ) -> Iterator[tuple[Constraint, ExprIR]]:
         # `zip(strict=True)` produces a very unhelpful error message
-        if constraints := self._constraints:
-            if len(exprs) != len(constraints):
-                raise function_arity_error(function, self.arity, exprs)
-            yield from zip(constraints, exprs, strict=False)
+        if len(exprs) != len(self._constraints):
+            raise function_arity_error(function, self.arity, exprs)
+        yield from zip(self._constraints, exprs, strict=False)
 
     def __init_subclass__(cls, *, arity: Arity, **_: Any) -> None:
         super().__init_subclass__(**_)
         cls._arity = arity
 
     def __repr__(self) -> str:
-        params = (
-            ", ".join(c.name for c in cons) if (cons := self._constraints) else self.arity
-        )
-        return f"{type(self).__name__}({params})"
+        return self.explain(format="short")
+
+    def explain(self, *, format: Literal["short", "long"] = "short") -> str:
+        cons = self._constraints
+        it = (c.name for c in cons) if format == "short" else map(str, cons)
+        return f"{type(self).__name__}({', '.join(it)})"
 
 
 @final
@@ -243,6 +244,11 @@ class Variadic(Parameters, arity="*"):
     def __init__(self) -> None:
         self._constraints = ()
 
+    def check(self, function: Function, exprs: Seq[ExprIR], /) -> Seq[ExprIR]:
+        if not exprs:
+            raise function_arity_error(function, self.arity, exprs)
+        return exprs
+
     # TODO @dangotbanned: Revisit later for coverage
     def dispatch_args(
         self, node: FExpr, ctx: ct.Caller[ct.E, ct.SC], frame: ct.FrameAny, name: str
@@ -253,3 +259,6 @@ class Variadic(Parameters, arity="*"):
             first.__expr_ir_dispatch__(first, ctx, frame, name),
             *(e.__expr_ir_dispatch__(e, ctx, frame, "") for e in it),
         )
+
+    def explain(self, *, format: Literal["short", "long"] = "short") -> str:
+        return f"{type(self).__name__}({self.arity})"

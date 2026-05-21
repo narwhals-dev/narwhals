@@ -200,13 +200,13 @@ class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScal
 
     # Range (technically, only valid to call on `*Scalar` and then produces `*Expr`)
     def int_range(
-        self, node: ir.RangeExpr[IntRange], frame: Frame, name: str, /
+        self, node: FExpr[IntRange], frame: Frame, name: str, /
     ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
     def date_range(
-        self, node: ir.RangeExpr[DateRange], frame: Frame, name: str, /
+        self, node: FExpr[DateRange], frame: Frame, name: str, /
     ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
     def linear_space(
-        self, node: ir.RangeExpr[LinearSpace], frame: Frame, name: str, /
+        self, node: FExpr[LinearSpace], frame: Frame, name: str, /
     ) -> CompliantExpr[Frame, Incomplete, Incomplete]: ...
 
     @property
@@ -217,7 +217,7 @@ class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScal
     def dispatch(
         self, node: ir.ExprIR, frame: IncompleteVarianceLie, name: str, /
     ) -> ct.Column[Any, Any, NativeExpr_co, NativeScalar_co]:
-        """_summary_.
+        """Evaluate an expression.
 
         Arguments:
             node: The expression to dispatch.

@@ -6,6 +6,7 @@ import re
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import nullcontext
+from functools import partial
 from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
@@ -167,11 +168,11 @@ def test_agg_non_elementwise_invalid() -> None:
 
 def test_agg_non_elementwise_range_special() -> None:
     e = nwp.int_range(0, 100)
-    assert isinstance(e._ir, ir.RangeExpr)
+    assert isinstance(e._ir, ir.FunctionExpr)
     e = nwp.int_range(nwp.len(), dtype=nw.UInt32).alias("index")
     e_ir = e._ir
     assert isinstance(e_ir, ir.Alias)
-    assert isinstance(e_ir.expr, ir.RangeExpr)
+    assert isinstance(e_ir.expr, ir.FunctionExpr)
     assert isinstance(e_ir.expr.args[0], ir.Lit)
     assert isinstance(e_ir.expr.args[1], ir.Len)
 
@@ -182,6 +183,34 @@ def test_function_arity_invalid() -> None:
     pattern = re_compile(rf"Expected 2 inputs for `{function}`, got 1:\n  {expr_s}")
     with pytest.raises(TypeError, match=pattern):
         IntRange(step=1, dtype=nw.Int64()).to_function_expr(agg.First(expr=ir.col("a")))
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        nwp.mean_horizontal,
+        nwp.sum_horizontal,
+        nwp.max_horizontal,
+        nwp.min_horizontal,
+        pytest.param(partial(nwp.concat_str, ()), id="concat_str"),
+        nwp.any_horizontal,
+        nwp.all_horizontal,
+        pytest.param(
+            partial(nwp.any_horizontal, ignore_nulls=True),
+            id="any_horizontal_ignore_nulls",
+        ),
+        pytest.param(
+            partial(nwp.all_horizontal, ignore_nulls=True),
+            id="all_horizontal_ignore_nulls",
+        ),
+        pytest.param(partial(nwp.coalesce, ()), id="coalesce"),
+    ],
+)
+def test_horizontal_empty(func: Callable[[], nwp.Expr]) -> None:
+    with pytest.raises(
+        TypeError, match=re_compile("At least one input is required for ")
+    ):
+        func()
 
 
 def test_int_range_invalid() -> None:

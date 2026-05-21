@@ -13,12 +13,7 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString
 
     from narwhals import dtypes
-    from narwhals._native import (
-        NativeDataFrame,
-        NativeFrame,
-        NativeLazyFrame,
-        NativeSeries,
-    )
+    from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
     from narwhals._plan._expr_ir import ExprIR, NamedIR, SelectorIR
     from narwhals._plan._function import Function, HorizontalFunction
     from narwhals._plan.arrow import ArrowPlugin
@@ -28,7 +23,6 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import operators as ops
     from narwhals._plan.expressions.aggregation import AggExpr
     from narwhals._plan.expressions.namespace import IRNamespace
-    from narwhals._plan.expressions.ranges import RangeFunction
     from narwhals._plan.expressions.struct import StructFunction
     from narwhals._plan.lazyframe import LazyFrame
     from narwhals._plan.polars import PolarsPlugin
@@ -48,7 +42,6 @@ __all__ = (
     "AggExprT_co",
     "ColumnNameOrSelector",
     "DataFrameT",
-    "FunctionT",
     "Ignored",
     "IntoExpr",
     "IntoExprColumn",
@@ -59,25 +52,16 @@ __all__ = (
     "OperatorFn",
     "OperatorT",
     "OutputNames",
-    "RangeT_co",
     "RightSelectorT",
     "RightT",
     "SelectorOperatorT",
-    "SelectorT",
     "Seq",
     "Udf",
 )
 
 
-FunctionT = TypeVar("FunctionT", bound="Function", default="Function")
 FunctionT_co = TypeVar(
     "FunctionT_co", bound="Function", default="Function", covariant=True
-)
-RangeT_co = TypeVar(
-    "RangeT_co",
-    bound="RangeFunction[t.Any]",
-    default="RangeFunction[t.Any]",
-    covariant=True,
 )
 StructT_co = TypeVar(
     "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
@@ -94,11 +78,9 @@ LeftT_co = TypeVar("LeftT_co", bound="ExprIR", default="ExprIR", covariant=True)
 RightT_co = TypeVar("RightT_co", bound="ExprIR", default="ExprIR", covariant=True)
 OperatorT = TypeVar("OperatorT", bound="ops.Operator", default="ops.Operator")
 OperatorFn: TypeAlias = "Callable[[t.Any, t.Any], t.Any]"
-ExprIRT = TypeVar("ExprIRT", bound="ExprIR", default="ExprIR")
 ExprIRT_co = TypeVar("ExprIRT_co", bound="ExprIR", default="ExprIR", covariant=True)
 NamedOrExprIRT = TypeVar("NamedOrExprIRT", "NamedIR[t.Any]", "ExprIR")
 AggExprT_co = TypeVar("AggExprT_co", bound="AggExpr", default="AggExpr", covariant=True)
-SelectorT = TypeVar("SelectorT", bound="SelectorIR", default="SelectorIR")
 LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
 RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
 SelectorT_co = TypeVar(
@@ -160,15 +142,6 @@ NativeDataFrameT_co = TypeVar(
     bound="NativeDataFrame",
     covariant=True,
     default="NativeDataFrame",
-)
-NativeLazyFrameT = TypeVar(
-    "NativeLazyFrameT", bound="NativeLazyFrame", default="NativeLazyFrame"
-)
-NativeLazyFrameT_co = TypeVar(
-    "NativeLazyFrameT_co",
-    bound="NativeLazyFrame",
-    default="NativeLazyFrame",
-    covariant=True,
 )
 MapIR: TypeAlias = "Callable[[ExprIR], ExprIR]"
 """A function to apply to all nodes in this tree."""
