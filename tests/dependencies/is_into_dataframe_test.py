@@ -5,53 +5,88 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals.stable.v1.dependencies import is_into_dataframe
+import narwhals.stable.v1 as nw_v1
+import narwhals.stable.v2 as nw_v2
+from narwhals.dependencies import is_into_dataframe
+from narwhals.stable.v1.dependencies import is_into_dataframe as v1_is_into_dataframe
+from narwhals.stable.v2.dependencies import is_into_dataframe as v2_is_into_dataframe
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from typing_extensions import Self
 
-DATA: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    from tests.dependencies.conftest import AlwaysHasAttr
+    from tests.utils import Constructor
+
+EAGER_CONSTRUCTOR_NAMES = ("pandas", "modin", "cudf", "polars_eager", "pyarrow")
+V1_INTO_DATAFRAMES = (*EAGER_CONSTRUCTOR_NAMES, "duckdb", "ibis")
+
+data: dict[str, Any] = {"a": [1, 2, 3], "b": [4, 5, 6]}
 
 
-class DictDataFrame:
+class DictDataFrame:  # pragma: no cover
     def __init__(self, data: Mapping[str, Any]) -> None:
         self._data = data
 
-    def __len__(self) -> int:  # pragma: no cover
-        return len(next(iter(self._data.values())))
-
-    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
+    def __narwhals_dataframe__(self) -> Self:
         return self
 
+    def __len__(self) -> int:
+        return len(next(iter(self._data.values())))
 
-def test_is_into_dataframe_pyarrow() -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
-
-    assert is_into_dataframe(pa.table(DATA))
-
-
-def test_is_into_dataframe_polars() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    assert is_into_dataframe(pl.DataFrame(DATA))
+    @property
+    def columns(self) -> Any: ...
+    def drop(self, *args: Any, **kwargs: Any) -> Any: ...
+    def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-def test_is_into_dataframe_pandas() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
+@pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
+def test_is_into_dataframe(constructor: Constructor) -> None:
+    native_frame = constructor(data)
+    nw_frame = nw.from_native(native_frame)
+    nw_v1_frame = nw_v1.from_native(native_frame)
+    nw_v2_frame = nw_v2.from_native(native_frame)
 
-    assert is_into_dataframe(pd.DataFrame(DATA))
-    assert is_into_dataframe(nw.from_native(pd.DataFrame(DATA)))
+    result = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
+    assert is_into_dataframe(native_frame) == result
+    assert is_into_dataframe(nw_frame) == result
+
+    result_v1 = any(x in str(constructor) for x in V1_INTO_DATAFRAMES)
+    assert v1_is_into_dataframe(native_frame) == result_v1
+    assert v1_is_into_dataframe(nw_v1_frame) == result_v1
+    assert v1_is_into_dataframe(nw_v2_frame) is False
+
+    result_v2 = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
+    assert v2_is_into_dataframe(native_frame) == result_v2
+    assert v2_is_into_dataframe(nw_v2_frame) == result_v2
+    assert v2_is_into_dataframe(nw_v1_frame) is False
+
+    assert is_into_dataframe(nw_v1_frame) == result_v1
+    assert is_into_dataframe(nw_v2_frame) == result_v2
+    assert not v1_is_into_dataframe(nw_frame)
+    assert not v2_is_into_dataframe(nw_frame)
 
 
-def test_is_into_dataframe_other() -> None:
+def test_is_into_dataframe_numpy() -> None:
     pytest.importorskip("numpy")
     import numpy as np
 
-    assert is_into_dataframe(DictDataFrame(DATA))  # pyrefly: ignore[bad-specialization]
-    assert not is_into_dataframe(np.array([[1, 4], [2, 5], [3, 6]]))
-    assert not is_into_dataframe(DATA)
+    arr = np.array([[1, 4], [2, 5], [3, 6]])
+    assert not is_into_dataframe(arr)
+    assert not v1_is_into_dataframe(arr)
+    assert not v2_is_into_dataframe(arr)
+
+
+def test_is_into_dataframe_other(always_has_attr: AlwaysHasAttr) -> None:
+    assert not is_into_dataframe(data)
+    assert not v1_is_into_dataframe(data)
+    assert not v2_is_into_dataframe(data)
+
+    assert is_into_dataframe(DictDataFrame(data))
+    assert v1_is_into_dataframe(DictDataFrame(data))
+    assert v2_is_into_dataframe(DictDataFrame(data))
+
+    assert not is_into_dataframe(always_has_attr)
+    assert not v1_is_into_dataframe(always_has_attr)
+    assert not v2_is_into_dataframe(always_has_attr)
