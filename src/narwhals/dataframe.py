@@ -94,7 +94,7 @@ if TYPE_CHECKING:
     PS = ParamSpec("PS")
     Incomplete: TypeAlias = Any
 
-_FrameT = TypeVar("_FrameT", bound="IntoFrame")
+FrameT = TypeVar("FrameT", bound="IntoFrame")
 LazyFrameT = TypeVar("LazyFrameT", bound="IntoLazyFrame")
 DataFrameT = TypeVar("DataFrameT", bound="IntoDataFrame")
 R = TypeVar("R")
@@ -103,7 +103,7 @@ MultiColSelector: TypeAlias = "_MultiColSelector[Series[Any]]"
 MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 
 
-class BaseFrame(Generic[_FrameT]):
+class BaseFrame(Generic[FrameT]):
     _compliant_frame: Any
     _level: Literal["full", "lazy", "interchange"]
 
@@ -446,7 +446,7 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.explode(columns=to_explode))
 
 
-class DataFrame(BaseFrame[DataFrameT]):
+class DataFrame(BaseFrame[FrameT]):
     """Narwhals DataFrame, backed by a native eager dataframe.
 
     Warning:
@@ -474,7 +474,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     _version: ClassVar[Version] = Version.MAIN
 
     @property
-    def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
+    def _compliant(self) -> CompliantDataFrame[Any, Any, FrameT, Self]:
         return self._compliant_frame
 
     @property
@@ -491,7 +491,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level: Literal["full", "lazy", "interchange"] = level
-        self._compliant_frame: CompliantDataFrame[Any, Any, DataFrameT, Self]
+        self._compliant_frame: CompliantDataFrame[Any, Any, FrameT, Self]
         if is_compliant_dataframe(df):
             self._compliant_frame = df.__narwhals_dataframe__()
         else:  # pragma: no cover
@@ -870,7 +870,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         msg = f"Not-supported backend.\n\nExpected one of {get_args(_LazyAllowedImpl)} or `None`, got {lazy_backend}"
         raise ValueError(msg)
 
-    def to_native(self) -> DataFrameT:
+    def to_native(self) -> FrameT:
         """Convert Narwhals DataFrame to native one.
 
         Examples:
@@ -2354,7 +2354,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         return super().explode(columns, *more_columns)
 
 
-class LazyFrame(BaseFrame[LazyFrameT]):
+class LazyFrame(BaseFrame[FrameT]):
     """Narwhals LazyFrame, backed by a native lazyframe.
 
     Warning:
@@ -2370,7 +2370,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     _version: ClassVar[Version] = Version.MAIN
 
     @property
-    def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
+    def _compliant(self) -> CompliantLazyFrame[Any, FrameT, Self]:
         return self._compliant_frame
 
     @property
@@ -2403,7 +2403,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
-        self._compliant_frame: CompliantLazyFrame[Any, LazyFrameT, Self]
+        self._compliant_frame: CompliantLazyFrame[Any, FrameT, Self]
         if is_compliant_lazyframe(df):
             self._compliant_frame = df.__narwhals_lazyframe__()
         else:  # pragma: no cover
@@ -2486,7 +2486,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         msg = f"Unsupported `backend` value.\nExpected one of {get_args(_LazyFrameCollectImpl)} or None, got: {eager_backend}."
         raise ValueError(msg)
 
-    def to_native(self) -> LazyFrameT:
+    def to_native(self) -> FrameT:
         """Convert Narwhals LazyFrame to native one.
 
         Examples:

@@ -255,7 +255,7 @@ def test_init_already_narwhals_stable_to_unstable() -> None:
 
     s = native["a"]
     stable_s = nw_v1.from_native(s, allow_series=True)  # type: ignore[var-annotated]
-    unstablified_s = nw.from_native(stable_s, allow_series=True)  # type: ignore[var-annotated]
+    unstablified_s = nw.from_native(stable_s, allow_series=True)
     assert isinstance(unstablified_s, nw.Series)
 
 
