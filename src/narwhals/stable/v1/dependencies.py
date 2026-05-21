@@ -57,7 +57,48 @@ from narwhals.dependencies import (
 
 
 def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
-    """Check whether `native_dataframe` can be converted to a narwhals.stable.v1.DataFrame."""
+    """Check whether `native_dataframe` can be converted to a [narwhals.stable.v1.DataFrame][].
+
+    Arguments:
+        native_dataframe: The object to check.
+
+    Notes:
+        This guard intentionally diverges from its counterpart in the main namespace
+        ([narwhals.dependencies.is_into_dataframe][]) to preserve `v1` semantics:
+        `ibis` tables and `duckdb` relations are treated as DataFrames here, since
+        `v1.from_native(..., eager_or_interchange_only=True)` returns a
+        [narwhals.stable.v1.DataFrame][] for them, whereas in the main namespace
+        they are LazyFrames.
+
+        The runtime check is narrower than the `v1.typing.IntoDataFrame` type alias.
+        In particular, arbitrary objects implementing the `__dataframe__` interchange
+        protocol ([DataFrameLike][narwhals.stable.v1.typing.DataFrameLike]) are accepted
+        by `v1.from_native(..., eager_or_interchange_only=True)` but are **not**
+        recognised by this function. If you need to dispatch on the interchange
+        protocol, check `__dataframe__` explicitly (preferably via
+        `inspect.getattr_static` to avoid false positives from dynamic attribute
+        lookup, e.g. a column literally named `"__dataframe__"`).
+
+        For new code, prefer `narwhals.stable.v2` where these inconsistencies have
+        been resolved.
+
+    Examples:
+        >>> import pandas as pd
+        >>> import polars as pl
+        >>> import numpy as np
+        >>> import narwhals.stable.v1 as nw_v1
+
+        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        >>> np_arr = np.array([[1, 4], [2, 5], [3, 6]])
+
+        >>> nw_v1.dependencies.is_into_dataframe(df_pd)
+        True
+        >>> nw_v1.dependencies.is_into_dataframe(df_pl)
+        True
+        >>> nw_v1.dependencies.is_into_dataframe(np_arr)
+        False
+    """
     from narwhals.stable.v1 import DataFrame
 
     return (
