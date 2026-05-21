@@ -7,15 +7,13 @@ Note:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import pyarrow as pa
 
 from narwhals._plan.arrow.functions._construction import lit
 
 if TYPE_CHECKING:
-    from typing import TypeAlias
-
     from narwhals._plan.arrow.typing import ArrayAny, ArrowAny, ScalarAny
     from narwhals.typing import NonNestedLiteral
 

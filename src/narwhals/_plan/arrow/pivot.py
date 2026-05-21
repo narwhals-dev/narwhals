@@ -98,9 +98,7 @@ def _replace_flatten_names(
 ) -> list[str]:
     """Replace the separator used in unnested struct columns.
 
-    [`pa.Table.flatten`] *unconditionally* uses the separator `"."`, so we *likely* need to fix that here.
-
-    [`pa.Table.flatten`]: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html#pyarrow.Table.flatten
+    `pa.Table.flatten` *unconditionally* uses the separator `"."`, so we *likely* need to fix that here.
     """
     if separator == ".":
         return column_names

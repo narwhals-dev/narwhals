@@ -67,7 +67,7 @@ def sort_indices(
         nulls_last: Place null values last.
 
     Notes:
-        Most commonly used as input for `take`, which forms a `sort_by` operation.
+        Most commonly used as input for `take`, which together form a `sort_by` operation.
     """
     if not isinstance(native, pa.Table):
         if options:

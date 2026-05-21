@@ -55,8 +55,7 @@ class FieldByName(
     def _field(self, dtype: Struct) -> Field:  # pragma: no cover
         if field := next((f for f in dtype.fields if f.name == self.name), None):
             return field
-        msg = f"Struct field not found {self.name!r}"
-        raise InvalidOperationError(msg)
+        raise not_found_error(self.name)
 
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
@@ -67,9 +66,13 @@ class FieldByName(
             and isinstance(struct, STRUCT)
         ):
             return into_dtype(self._field(struct).dtype)
-        msg = f"Struct field not found {self.name!r}"
-        raise InvalidOperationError(msg)
+        raise not_found_error(self.name)
 
 
 class IRStructNamespace(IRNamespace):
     field: ClassVar = FieldByName
+
+
+def not_found_error(name: str, /) -> InvalidOperationError:
+    msg = f"Struct field not found {name!r}"
+    return InvalidOperationError(msg)

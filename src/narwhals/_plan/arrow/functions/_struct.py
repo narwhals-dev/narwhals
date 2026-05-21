@@ -20,8 +20,8 @@ if TYPE_CHECKING:
         Arrow,
         ArrowAny,
         ChunkedArrayAny,
-        ChunkedOrScalarAny,
         ChunkedStruct,
+        Native,
         SameArrowT,
         ScalarAny,
         Struct,
@@ -97,7 +97,7 @@ def field(native: pa.StructScalar, name: Field, /) -> ScalarAny: ...
 @overload
 def field(native: SameArrowT, name: Field, /) -> SameArrowT: ...
 @overload
-def field(native: ChunkedOrScalarAny, name: Field, /) -> ChunkedOrScalarAny: ...
+def field(native: Native, name: Field, /) -> Native: ...
 def field(native: ArrowAny, name: Field, /) -> ArrowAny:
     """Retrieve a single field from a struct as a new array/scalar.
 

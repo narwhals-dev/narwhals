@@ -14,7 +14,6 @@ RANK_ACCEPTS_CHUNKED: Final = BACKEND_VERSION >= (14,)
 HAS_FROM_TO_STRUCT_ARRAY: Final = BACKEND_VERSION >= (15,)
 """`pyarrow.Table.{from,to}_struct_array` added in https://github.com/apache/arrow/pull/38520"""
 
-
 TABLE_RENAME_ACCEPTS_DICT: Final = BACKEND_VERSION >= (17,)
 
 TAKE_ACCEPTS_TUPLE: Final = BACKEND_VERSION >= (18,)

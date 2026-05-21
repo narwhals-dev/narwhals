@@ -25,7 +25,6 @@ if TYPE_CHECKING:
         nulls_last: bool | Seq[bool]
 
 
-# aaaaaaaaaa
 BACKEND_VERSION: Final = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
