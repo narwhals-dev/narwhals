@@ -28,7 +28,6 @@ def test_lazy(
     assert_equal_data(result.collect(), expected)
 
 
-@XFAIL_TODO
 @pytest.mark.parametrize(
     ("exprs", "named_exprs", "expected"),
     [((), {"numbers": nwp.int_range(10)}, {"numbers": list(range(10))})],
@@ -49,14 +48,20 @@ def test_empty_lazy(lazy: Lazy) -> None:
         nwp.select(lazy=lazy)
 
 
-@XFAIL_TODO
-def test_empty_eager(eager: Eager) -> None:
+# TODO @dangotbanned: Fix empty case in `BroadcastSeries._length_required`
+def test_empty_eager(eager: Eager, request: pytest.FixtureRequest) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            eager == "pyarrow",
+            raises=ValueError,
+            reason="TODO: Fix empty case in `BroadcastSeries._length_required`",
+        )
+    )
     result = nwp.select(eager=eager)
     assert result.shape == (0, 0)
     assert_equal_data(result, {})
 
 
-@XFAIL_TODO
 def test_neither() -> None:
     pattern = re_compile(r"either.+may be None")
     with pytest.raises(TypeError, match=pattern):
@@ -69,7 +74,6 @@ def test_neither() -> None:
         nwp.select(eager=None, lazy=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
-@XFAIL_TODO
 def test_both() -> None:
     with pytest.raises(TypeError, match=re_compile(r"either.+may be provided")):
         nwp.select(1, eager="polars", lazy="polars")  # pyright: ignore[reportArgumentType, reportCallIssue]
