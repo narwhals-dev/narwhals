@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions.ranges import IntRange
+    from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -186,7 +186,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     cum_min = todo()
     cum_prod = todo()
     cum_sum = todo()
-    date_range = todo()
     diff = todo()
     drop_nulls = todo()
     ewm_mean = todo()
@@ -202,6 +201,16 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     floor = todo()
     hist_bin_count = todo()
     hist_bins = todo()
+
+    def date_range(
+        self, node: ir.FunctionExpr[DateRange], frame: Incomplete, name: str
+    ) -> Self:
+        func = node.function
+        if fastpath := func.try_unwrap_literals(node):
+            native = pl.date_range(*fastpath, f"{func.interval}d", closed=func.closed)
+            return self.from_native(native, name)
+        msg = f"TODO @dangotbanned: `{self.date_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.args[0]!r}\n{node.args[1]!r}"
+        raise NotImplementedError(msg)
 
     def int_range(
         self, node: ir.FunctionExpr[IntRange], frame: Incomplete, name: str
