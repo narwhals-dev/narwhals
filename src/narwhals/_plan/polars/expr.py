@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 import polars as pl
 
 from narwhals._plan.common import todo
-from narwhals._plan.compliant.expr import CompliantExpr
+from narwhals._plan.compliant import CompliantExpr, typing as ct
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
@@ -20,8 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions.ranges import IntRange
-    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
-    from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
+    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
 
 
@@ -132,7 +131,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return PolarsClasses()
 
     def dispatch(
-        self, node: ir.ExprIR, frame: DataFrame | LazyFrame, name: str
+        self,
+        node: ir.ExprIR,
+        frame: ct.Frame[pl.DataFrame, pl.Series, pl.LazyFrame],
+        name: str,
     ) -> PolarsExpr:
         """Trying to limit the API surface for now.
 

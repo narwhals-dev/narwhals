@@ -9,12 +9,14 @@ from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
 from narwhals._plan.polars import compat
+from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.expr import row_index
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import collect_schema, explode_todo
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
     from io import BytesIO
     from pathlib import Path
 
@@ -22,8 +24,11 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
+    from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.compliant.typing import DataFrameAny
     from narwhals._plan.plans import resolved as rp
+    from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.typing import Seq
     from narwhals._typing import IntoBackend
     from narwhals.schema import Schema
@@ -34,6 +39,10 @@ class PolarsLazyFrame(PolarsFrame, CompliantLazyFrame[pl.LazyFrame]):
     __slots__ = ("_input_schema", "_native")
     _native: pl.LazyFrame
     _input_schema: Schema | None
+
+    @property
+    def __narwhals_classes__(self) -> PolarsClasses:
+        return PolarsClasses()
 
     @classmethod
     def from_native(cls, native: pl.LazyFrame, /) -> Self:
@@ -93,6 +102,10 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     __slots__ = ()
     version: ClassVar[Version] = Version.MAIN
     implementation: ClassVar = Implementation.POLARS
+
+    @property
+    def __narwhals_classes__(self) -> PolarsClasses:
+        return PolarsClasses()
 
     # NOTE: These get special treatment as they're hot paths
     _lazyframe: ClassVar = PolarsLazyFrame
@@ -169,6 +182,9 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     def scan_dataframe(self, plan: rp.ScanDataFrame, /) -> PolarsLazyFrame:
         return self._lazyframe.from_narwhals(plan.frame)
 
+    def scan_empty(self, plan: rp.ScanEmpty) -> PolarsLazyFrame:
+        return self._lazyframe.from_native(pl.LazyFrame())
+
     def scan_lazyframe(self, plan: rp.ScanLazyFrame[Any], /) -> PolarsLazyFrame:
         if plan.frame.implementation.is_polars() and isinstance(
             plan.frame, PolarsLazyFrame
@@ -178,6 +194,26 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
 
     def scan_parquet(self, plan: rp.ScanParquet) -> PolarsLazyFrame:
         return self._lazyframe.scan_parquet(plan.source)
+
+    def _evaluate_irs(
+        self, nodes: Iterable[ir.NamedIR], frame: ct.LazyFrame[pl.LazyFrame]
+    ) -> Iterator[Expr]:
+        expr = self.__narwhals_classes__.expr
+        new = expr.__new__
+        yield from (new(expr).dispatch(e.expr, frame, e.name) for e in nodes)
+
+    # NOTE: Based on this code, `select` and `_evaluate_irs` should be defined on `CompliantLazyFrame`
+    # - Conceptually, I'm trying to see how far I can take `CompliantLazyFrame` being a thin wrapper
+    #   - Having a method named `*evaluate*` outside of this class would end that experiment
+    # - Needing to pass *any* kind of frame to `PolarsExpr.dispatch` seems questionable anyway
+    #   - will make do with this wart *for now*
+    def select(self, plan: rp.Select) -> PolarsLazyFrame:
+        compliant = plan.input.evaluate(self)
+        return self._into_compliant(
+            compliant.native.select(
+                e.native for e in self._evaluate_irs(plan.exprs, compliant)
+            )
+        )
 
     def select_names(self, plan: rp.SelectNames) -> PolarsLazyFrame:
         return self._into_compliant(plan.input.evaluate(self).native.select(plan.names))
@@ -260,5 +296,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     filter = todo()
     group_by = todo()
     group_by_names = todo()
-    select = todo()
     with_columns = todo()
+
+
+PolarsEvaluator()
