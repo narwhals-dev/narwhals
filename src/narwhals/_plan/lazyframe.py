@@ -271,7 +271,7 @@ class LazyFrame(Generic[Native]):
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_lp(self._plan.rename(mapping))
 
-    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
+    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Self:
         e_irs = tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs))
         return self._with_lp(self._plan.select(e_irs))
 
