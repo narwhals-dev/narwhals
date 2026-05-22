@@ -216,6 +216,10 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         return ScanCsv.from_source(source)
 
     @classmethod
+    def scan_empty(cls) -> ScanEmpty:
+        return ScanEmpty()
+
+    @classmethod
     def scan_parquet(cls, source: FileSource, /) -> ScanParquet:
         return ScanParquet.from_source(source)
 
@@ -551,6 +555,50 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native_co]"], Generic[Native_c
     def to_narwhals(self) -> LazyFrame[Native_co]:
         impl = self.implementation
         return into_version(self.version).lazyframe._from_lp_scan(self, impl)
+
+
+class ScanEmpty(Scan):
+    """Root node for a bare `select(...)`.
+
+    ## Notes
+    Empty refers to a schema with no prior context (e.g. `pl.LazyFrame()`).
+
+    For a SQL-like backend, a user query like:
+
+        nw.select(numbers=nw.int_range(10))
+
+    Would translate to:
+
+        "SELECT range AS numbers FROM range(10)"
+
+
+    Important:
+        Uses a distinct node to make it easy to declare as unsupported.
+
+    ## Related
+    ### DuckDB
+    - https://duckdb.org/docs/current/sql/functions/list#range-functions
+    - https://duckdb.org/docs/current/sql/query_syntax/values
+    - https://duckdb.org/docs/current/sql/query_syntax/unnest
+    - https://duckdb.org/docs/current/sql/query_syntax/from#table-functions
+    - https://duckdb.org/docs/current/sql/functions/utility#repeat_rowvarargs-num_rows
+
+    ### PySpark
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.sql.html
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/functions.html#table-valued-functions
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.range.html
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.udtf.html#pyspark.sql.functions.udtf
+    """
+
+    def to_narwhals(
+        self, backend: IntoBackend[Backend], version: Version
+    ) -> LazyFrame[Any]:
+        return into_version(version).lazyframe._from_lp_scan(
+            self, Implementation.from_backend(backend)
+        )
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_empty(self)
 
 
 class SingleInput(LogicalPlan, has_inputs=True):

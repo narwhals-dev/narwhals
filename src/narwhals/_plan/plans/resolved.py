@@ -99,11 +99,18 @@ class ResolvedPlan(_BasePlan[_Fwd], _root=True):
 
 
 class Scan(ResolvedPlan, has_inputs=False):
+    __slots__ = ("output_schema",)
+    output_schema: FrozenSchema
+
     def iter_right(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield self
 
     def iter_inputs(self) -> Iterator[ResolvedPlan]:  # pragma: no cover
         yield from ()
+
+    @property
+    def schema(self) -> FrozenSchema:
+        return self.output_schema
 
 
 # TODO @dangotbanned: The inputs need to be typed as not allowing a `Sink`
@@ -166,17 +173,8 @@ class SinkParquet(SinkFile): ...
 
 
 class ScanFile(Scan):
-    __slots__ = ("output_schema", "source")
+    __slots__ = ("source",)
     source: str
-    output_schema: FrozenSchema
-    """Schema of the file.
-
-    Equivalent to `IR::Scan.file_info.schema`
-    """
-
-    @property
-    def schema(self) -> FrozenSchema:
-        return self.output_schema
 
 
 class ScanCsv(ScanFile):
@@ -194,17 +192,12 @@ class ScanParquet(ScanFile):
 
 
 class ScanFrame(Scan, Generic[FrameT_co]):
-    __slots__ = ("frame", "output_schema")
+    __slots__ = ("frame",)
     frame: FrameT_co  # type: ignore[misc]
-    output_schema: FrozenSchema
 
     @property
     def implementation(self) -> Implementation:  # pragma: no cover
         return self.frame.implementation
-
-    @property
-    def schema(self) -> FrozenSchema:
-        return self.output_schema
 
     def __str__(self) -> str:
         # not redoing, just avoiding `*Frame.__repr__`
@@ -231,6 +224,13 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
         self, evaluator: ResolvedToCompliant[Native] | Incomplete, /
     ) -> CompliantLazyFrame[Native]:  # pragma: no cover
         return evaluator.scan_lazyframe(self)
+
+
+class ScanEmpty(Scan):
+    def evaluate(
+        self, evaluator: ResolvedToCompliant[Native], /
+    ) -> CompliantLazyFrame[Native]:
+        return evaluator.scan_empty(self)
 
 
 # `IR::SimpleProjection`

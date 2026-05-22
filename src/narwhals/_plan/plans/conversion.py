@@ -503,6 +503,9 @@ class Resolver:
     def scan_dataframe(self, plan: lp.ScanDataFrame, /) -> rp.ScanDataFrame:
         return rp.ScanDataFrame(frame=plan.frame, output_schema=plan.schema)
 
+    def scan_empty(self, plan: lp.ScanEmpty, /) -> rp.ScanEmpty:
+        return rp.ScanEmpty(output_schema=FrozenSchema.empty())
+
     def scan_lazyframe(
         self, plan: lp.ScanLazyFrame[Native], /
     ) -> rp.ScanLazyFrame[Native]:
