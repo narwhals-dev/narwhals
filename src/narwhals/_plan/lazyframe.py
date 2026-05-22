@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Generic
 
 from narwhals._exceptions import issue_warning
 from narwhals._plan import _parse, plugins, translate
@@ -275,7 +275,7 @@ class LazyFrame(Generic[Native]):
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Self:
         e_irs = tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs))
         if not e_irs:
-            msg = "LazyFrame.select"
+            msg: Final = "LazyFrame.select"
             raise at_least_one_error(msg)
         return self._with_lp(self._plan.select(e_irs))
 

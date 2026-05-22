@@ -43,7 +43,7 @@ class PolarsLazyFrameV2(PolarsLazyFrame):
     version: ClassVar = Version.V2
 
     @property
-    def __narwhals_classes__(self) -> PolarsClassesV2:
+    def __narwhals_classes__(self) -> PolarsClassesV2:  # type: ignore[override]
         return PolarsClassesV2()
 
 
@@ -52,7 +52,7 @@ class PolarsEvaluatorV2(PolarsEvaluator):
     version: ClassVar = Version.V2
 
     @property
-    def __narwhals_classes__(self) -> PolarsClassesV2:
+    def __narwhals_classes__(self) -> PolarsClassesV2:  # type: ignore[override]
         return PolarsClassesV2()
 
     _lazyframe: ClassVar = PolarsLazyFrameV2

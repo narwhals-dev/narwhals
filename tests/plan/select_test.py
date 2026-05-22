@@ -86,18 +86,18 @@ def test_empty_eager(eager: Eager) -> None:
 def test_neither() -> None:
     pattern = re_compile(r"either.+may be None")
     with pytest.raises(TypeError, match=pattern):
-        nwp.select()  # pyright: ignore[reportCallIssue]
+        nwp.select()  # type: ignore[call-overload]
     with pytest.raises(TypeError, match=pattern):
-        nwp.select(eager=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.select(eager=None)  # type: ignore[call-overload]
     with pytest.raises(TypeError, match=pattern):
-        nwp.select(lazy=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.select(lazy=None)  # type: ignore[call-overload]
     with pytest.raises(TypeError, match=pattern):
-        nwp.select(eager=None, lazy=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.select(eager=None, lazy=None)  # type: ignore[call-overload]
 
 
 def test_both() -> None:
     with pytest.raises(TypeError, match=re_compile(r"either.+may be provided")):
-        nwp.select(1, eager="polars", lazy="polars")  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.select(1, eager="polars", lazy="polars")  # type: ignore[call-overload]
 
 
 if TYPE_CHECKING:
