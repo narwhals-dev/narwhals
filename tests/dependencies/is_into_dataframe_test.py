@@ -41,7 +41,6 @@ class DictDataFrame:  # pragma: no cover
     def join(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-@pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
 def test_is_into_dataframe(constructor: Constructor) -> None:
     native_frame = constructor(data)
     nw_frame = nw.from_native(native_frame)

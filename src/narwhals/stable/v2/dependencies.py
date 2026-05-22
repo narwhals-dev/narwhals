@@ -6,7 +6,6 @@ from narwhals.dependencies import (
     _is_into_native_dataframe,
     _is_into_native_lazyframe,
     _is_into_native_series,
-    _warn_if_narwhals_df_or_lf,
     get_cudf,
     get_dask,
     get_dask_dataframe,
@@ -60,20 +59,18 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
     """Check whether `native_dataframe` can be converted to a narwhals.stable.v2.DataFrame."""
     from narwhals.stable.v2 import DataFrame
 
-    if isinstance(native_dataframe, DataFrame):
-        return True
-    _warn_if_narwhals_df_or_lf(native_dataframe)
-    return _is_into_native_dataframe(native_dataframe)
+    return isinstance(native_dataframe, DataFrame) or _is_into_native_dataframe(
+        native_dataframe
+    )
 
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
     """Check whether `native_lazyframe` can be converted to a narwhals.stable.v2.LazyFrame."""
     from narwhals.stable.v2 import LazyFrame
 
-    if isinstance(native_lazyframe, LazyFrame):
-        return True
-    _warn_if_narwhals_df_or_lf(native_lazyframe)
-    return _is_into_native_lazyframe(native_lazyframe)
+    return isinstance(native_lazyframe, LazyFrame) or _is_into_native_lazyframe(
+        native_lazyframe
+    )
 
 
 def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:

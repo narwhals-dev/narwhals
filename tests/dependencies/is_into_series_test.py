@@ -37,7 +37,6 @@ class ListBackedSeries:  # pragma: no cover
     def unique(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-@pytest.mark.filterwarnings("ignore:.*You passed a.*:UserWarning")
 def test_is_into_series(constructor_eager: ConstructorEager) -> None:
     native_frame = constructor_eager(data)
     nw_series = nw.from_native(native_frame)["a"]

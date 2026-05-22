@@ -679,10 +679,9 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
     """
     from narwhals.dataframe import DataFrame
 
-    if isinstance(native_dataframe, DataFrame):
-        return True
-    _warn_if_narwhals_df_or_lf(native_dataframe)
-    return _is_into_native_dataframe(native_dataframe)
+    return isinstance(native_dataframe, DataFrame) or _is_into_native_dataframe(
+        native_dataframe
+    )
 
 
 def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
@@ -710,10 +709,9 @@ def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazy
     """
     from narwhals.dataframe import LazyFrame
 
-    if isinstance(native_lazyframe, LazyFrame):
-        return True
-    _warn_if_narwhals_df_or_lf(native_lazyframe)
-    return _is_into_native_lazyframe(native_lazyframe)
+    return isinstance(native_lazyframe, LazyFrame) or _is_into_native_lazyframe(
+        native_lazyframe
+    )
 
 
 def is_narwhals_dataframe(
