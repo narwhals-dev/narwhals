@@ -56,56 +56,17 @@ from narwhals.dependencies import (
 )
 
 
+# TODO(Unassigned): For duckdb and ibis backends:
+#   * is_into_dataframe(native_frame) returns False
+#   * nw_v1.from_native(native_frame) returns a narwhals.stable.v1.DataFrame
+#   * Therefore is_into_dataframe(nw_v1.from_native(native_frame)) returns True
+# See discussion https://github.com/narwhals-dev/narwhals/pull/3613#discussion_r3288440039
 def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
-    """Check whether `native_dataframe` can be converted to a narwhals.stable.v1.DataFrame.
-
-    Arguments:
-        native_dataframe: The object to check.
-
-    Note:
-        This guard intentionally diverges from its counterpart in the main namespace
-        `narwhals.dependencies.is_into_dataframe` to preserve `v1` semantics:
-        `ibis` tables and `duckdb` relations are treated as DataFrames here, since
-        `v1.from_native(..., eager_or_interchange_only=True)` returns a
-        `narwhals.stable.v1.DataFrame` for them, whereas in the main namespace
-        they are LazyFrames.
-
-        The runtime check is narrower than the `v1.typing.IntoDataFrame` type alias.
-        In particular, arbitrary objects implementing the `__dataframe__` interchange
-        protocol `narwhals.stable.v1.typing.DataFrameLike` are accepted
-        by `v1.from_native(..., eager_or_interchange_only=True)` but are **not**
-        recognised by this function. If you need to dispatch on the interchange
-        protocol, check `__dataframe__` explicitly (preferably via
-        `inspect.getattr_static` to avoid false positives from dynamic attribute
-        lookup, e.g. a column literally named `"__dataframe__"`).
-
-        For new code, prefer `narwhals.stable.v2` where these inconsistencies have
-        been resolved.
-
-    Examples:
-        >>> import pandas as pd
-        >>> import polars as pl
-        >>> import numpy as np
-        >>> import narwhals.stable.v1 as nw_v1
-
-        >>> df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        >>> df_pl = pl.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        >>> np_arr = np.array([[1, 4], [2, 5], [3, 6]])
-
-        >>> nw_v1.dependencies.is_into_dataframe(df_pd)
-        True
-        >>> nw_v1.dependencies.is_into_dataframe(df_pl)
-        True
-        >>> nw_v1.dependencies.is_into_dataframe(np_arr)
-        False
-    """
+    """Check whether `native_dataframe` can be converted to a narwhals.stable.v1.DataFrame."""
     from narwhals.stable.v1 import DataFrame
 
-    return (
-        isinstance(native_dataframe, DataFrame)
-        or _is_into_native_dataframe(native_dataframe)
-        or is_ibis_table(native_dataframe)
-        or is_duckdb_relation(native_dataframe)
+    return isinstance(native_dataframe, DataFrame) or _is_into_native_dataframe(
+        native_dataframe
     )
 
 
@@ -113,9 +74,8 @@ def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazy
     """Check whether `native_lazyframe` can be converted to a narwhals.stable.v1.LazyFrame."""
     from narwhals.stable.v1 import LazyFrame
 
-    return isinstance(native_lazyframe, LazyFrame) or (
-        _is_into_native_lazyframe(native_lazyframe)
-        and not (is_ibis_table(native_lazyframe) or is_duckdb_relation(native_lazyframe))
+    return isinstance(native_lazyframe, LazyFrame) or _is_into_native_lazyframe(
+        native_lazyframe
     )
 
 

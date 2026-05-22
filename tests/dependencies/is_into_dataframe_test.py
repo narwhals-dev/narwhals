@@ -48,23 +48,23 @@ def test_is_into_dataframe(constructor: Constructor) -> None:
     nw_v2_frame = nw_v2.from_native(native_frame)
 
     result = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
-    assert is_into_dataframe(native_frame) == result
-    assert is_into_dataframe(nw_frame) == result
-
     result_v1 = any(x in str(constructor) for x in V1_INTO_DATAFRAMES)
-    assert v1_is_into_dataframe(native_frame) == result_v1
-    assert v1_is_into_dataframe(nw_v1_frame) == result_v1
-    assert v1_is_into_dataframe(nw_v2_frame) is False
 
-    result_v2 = any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)
-    assert v2_is_into_dataframe(native_frame) == result_v2
-    assert v2_is_into_dataframe(nw_v2_frame) == result_v2
-    assert v2_is_into_dataframe(nw_v1_frame) is False
+    assert is_into_dataframe(native_frame) == result
+    assert v1_is_into_dataframe(native_frame) == result
+    assert v2_is_into_dataframe(native_frame) == result
 
-    assert is_into_dataframe(nw_v1_frame) == result_v1
-    assert is_into_dataframe(nw_v2_frame) == result_v2
+    assert is_into_dataframe(nw_frame) == result
     assert not v1_is_into_dataframe(nw_frame)
     assert not v2_is_into_dataframe(nw_frame)
+
+    assert is_into_dataframe(nw_v1_frame) == result_v1
+    assert v1_is_into_dataframe(nw_v1_frame) == result_v1
+    assert v2_is_into_dataframe(nw_v1_frame) is False
+
+    assert is_into_dataframe(nw_v2_frame) == result
+    assert v2_is_into_dataframe(nw_v2_frame) == result
+    assert v1_is_into_dataframe(nw_v2_frame) is False
 
 
 def test_is_into_dataframe_numpy() -> None:
