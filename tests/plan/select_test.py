@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, re_compile
 
 if TYPE_CHECKING:
@@ -42,9 +41,8 @@ def test_eager(
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
 def test_empty_lazy(lazy: Lazy) -> None:
-    with pytest.raises(InvalidOperationError, match=re_compile(r"at least one.+expr")):
+    with pytest.raises(TypeError, match=re_compile(r"at least one.+expression")):
         nwp.select(lazy=lazy)
 
 
