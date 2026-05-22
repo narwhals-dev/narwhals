@@ -77,15 +77,7 @@ def test_empty_lazy(lazy: Lazy) -> None:
         nwp.select(lazy=lazy)
 
 
-# TODO @dangotbanned: Fix empty case in `BroadcastSeries._length_required`
-def test_empty_eager(eager: Eager, request: pytest.FixtureRequest) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            eager == "pyarrow",
-            raises=ValueError,
-            reason="TODO: Fix empty case in `BroadcastSeries._length_required`",
-        )
-    )
+def test_empty_eager(eager: Eager) -> None:
     result = nwp.select(eager=eager)
     assert result.shape == (0, 0)
     assert_equal_data(result, {})

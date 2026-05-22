@@ -148,7 +148,11 @@ class ArrowDataFrame(
             for s in series:
                 arrays.append(s.native)
                 names.append(s.name)
-        return cls.from_native(fn.concat_horizontal(arrays, names))
+        if arrays:
+            native = fn.concat_horizontal(arrays, names)
+        else:
+            native = pa.schema({}).empty_table()
+        return cls.from_native(native)
 
     @classmethod
     def from_arrow(cls, data: IntoArrowTable, /) -> Self:
