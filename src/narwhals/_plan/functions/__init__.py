@@ -16,6 +16,7 @@ from narwhals._plan.functions.horizontal import (
     min_horizontal,
     sum_horizontal,
 )
+from narwhals._plan.functions.lazy import select
 from narwhals._plan.functions.len import len
 from narwhals._plan.functions.literal import lit
 from narwhals._plan.functions.ranges import date_range, int_range, linear_space
@@ -51,6 +52,7 @@ __all__ = (
     "min",
     "min_horizontal",
     "nth",
+    "select",
     "sum",
     "sum_horizontal",
 )
