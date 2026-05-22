@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 from narwhals._plan._version import into_version
 from narwhals._utils import Version
@@ -14,6 +14,30 @@ if TYPE_CHECKING:
 __all__ = ("select",)
 
 
+# NOTE: These guys ensure `eager` & `lazy` never fall into `**named_exprs`
+# TODO @dangotbanned: Add backend-specific overloads
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr], eager: IntoBackend[EagerAllowed]
+) -> DataFrame[Any, Any]: ...
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr], lazy: IntoBackend[LazyAllowed]
+) -> LazyFrame[Any]: ...
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr],
+    eager: IntoBackend[EagerAllowed],
+    lazy: None = ...,
+    **named_exprs: IntoExpr,
+) -> DataFrame[Any, Any]: ...
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr],
+    eager: None = ...,
+    lazy: IntoBackend[LazyAllowed],
+    **named_exprs: IntoExpr,
+) -> LazyFrame[Any]: ...
 def select(
     *exprs: OneOrIterable[IntoExpr],
     eager: IntoBackend[EagerAllowed] | None = None,

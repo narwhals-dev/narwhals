@@ -60,26 +60,26 @@ def test_empty_eager(eager: Eager) -> None:
 def test_neither() -> None:
     pattern = re_compile(r"either.+may be None")
     with pytest.raises(TypeError, match=pattern):
-        nwp.select()
+        nwp.select()  # pyright: ignore[reportCallIssue]
     with pytest.raises(TypeError, match=pattern):
-        nwp.select(eager=None)
+        nwp.select(eager=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
     with pytest.raises(TypeError, match=pattern):
-        nwp.select(lazy=None)
+        nwp.select(lazy=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
     with pytest.raises(TypeError, match=pattern):
-        nwp.select(eager=None, lazy=None)
+        nwp.select(eager=None, lazy=None)  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 @XFAIL_TODO
 def test_both() -> None:
     with pytest.raises(TypeError, match=re_compile(r"either.+may be provided")):
-        nwp.select(1, eager="polars", lazy="polars")
+        nwp.select(1, eager="polars", lazy="polars")  # pyright: ignore[reportArgumentType, reportCallIssue]
 
 
 if TYPE_CHECKING:
 
     def typing_exhaust_overloads() -> None:
-        df_pl = nwp.select(1, 2, 3, eager="polars")
-        df_pa = nwp.select(1, 2, 3, eager="pyarrow")
-        lf_pl = nwp.select(1, 2, 3, lazy="polars")
+        _df_pl = nwp.select(1, 2, 3, eager="polars")
+        _df_pa = nwp.select(1, 2, 3, eager="pyarrow")
+        _lf_pl = nwp.select(1, 2, 3, lazy="polars")
         # TODO @dangotbanned: Asserts
         # TODO @dangotbanned: More combinations of `*args`/`**kwds`
