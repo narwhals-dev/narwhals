@@ -14,11 +14,12 @@ import datetime as dt
 import narwhals as nw
 from narwhals import _plan as nwp
 from tests.plan.utils import (
+    DataFrame,
     Eager,
     EagerOrFalse,
     assert_equal_data,
     assert_equal_series,
-    dataframe,
+    dataframe as dataframe_old,
 )
 
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ EXPECTED_DATE_4: Final = [
 ]
 
 
-# TODO @dangotbanned: Add polars: `date_range`, `Expr.cast`, `DataFrame.select`
+# TODO @dangotbanned: Add polars: `date_range` (full)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -118,8 +119,15 @@ def test_date_range(
     expr: nwp.Expr | Sequence[nwp.Expr],
     expected: dict[str, Any],
     data: dict[str, list[dt.date]],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
-    pytest.importorskip("pyarrow")
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and "date_range_cast_expr" in expected,
+        reason="TODO @dangotbanned: `PolarsExpr.date_range()` w/ non-`Lit` inputs",
+        raises=NotImplementedError,
+    )
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
 
@@ -158,20 +166,38 @@ def test_date_range_eager(
     assert result == expected
 
 
-# TODO @dangotbanned: Add polars: `int_range` (full), `binary_expr`, `Expr.<aggregations>`, `DataFrame.select`
+# TODO @dangotbanned: Add polars: `int_range` (full), `binary_expr`, `Expr.<aggregations>`
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
         ([nwp.int_range(5)], {"literal": [0, 1, 2, 3, 4]}),
-        ([nwp.int_range(nwp.len())], {"literal": [0, 1, 2]}),
-        (nwp.int_range(nwp.len() * 5, 20).alias("lol"), {"lol": [15, 16, 17, 18, 19]}),
-        (nwp.int_range(nwp.col("b").min() + 4, nwp.col("d").last()), {"b": [5, 6, 7]}),
+        ([nwp.int_range(nwp.len()).alias("len")], {"len": [0, 1, 2]}),
+        (
+            nwp.int_range(nwp.len() * 5, 20).alias("binary_expr-1"),
+            {"binary_expr-1": [15, 16, 17, 18, 19]},
+        ),
+        (
+            nwp.int_range(
+                nwp.col("b").alias("binary_expr-2").min() + 4, nwp.col("d").last()
+            ),
+            {"binary_expr-2": [5, 6, 7]},
+        ),
     ],
 )
 def test_int_range(
-    expr: nwp.Expr | Sequence[nwp.Expr], expected: dict[str, Any], data: dict[str, Any]
+    expr: nwp.Expr | Sequence[nwp.Expr],
+    expected: dict[str, Any],
+    data: dict[str, Any],
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
-    pytest.importorskip("pyarrow")
+    polars_todo = frozenset(("len", "binary_expr-1", "binary_expr-2"))
+    dataframe.xfail(
+        request,
+        bool(dataframe.is_polars() and polars_todo.intersection(expected)),
+        reason="TODO @dangotbanned: `PolarsExpr.int_range()` w/ non-`Lit` inputs",
+        raises=NotImplementedError,
+    )
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
 
@@ -201,11 +227,9 @@ def test_linear_space_values(
             start, end, num_samples, closed=interval, eager=eager_or_false
         ).rename("ls")
     else:
-        result = (
-            dataframe({})
-            .select(ls=nwp.linear_space(start, end, num_samples, closed=interval))
-            .to_series()
-        )
+        result = nwp.select(
+            ls=nwp.linear_space(start, end, num_samples, closed=interval), eager="pyarrow"
+        ).to_series()
 
     pytest.importorskip("numpy")
     import numpy as np
@@ -222,11 +246,11 @@ def test_linear_space_values(
     assert_equal_series(result, expected, "ls")
 
 
-# TODO @dangotbanned: Add polars: `linear_space` (full), `Expr.len`, `DataFrame.select`
+# TODO @dangotbanned: Add polars: `linear_space` (full), `Expr.len`
 def test_linear_space_expr() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
     pytest.importorskip("pyarrow")
-    df = dataframe({"a": [1, 2, 3, 4, 5]})
+    df = dataframe_old({"a": [1, 2, 3, 4, 5]})
 
     result = df.select(nwp.linear_space(0, nwp.col("a").len(), 3))
     expected = df.select(
@@ -243,7 +267,7 @@ def test_linear_space_expr() -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Add polars: `linear_space`,`DataFrame.select`
+# TODO @dangotbanned: Add polars: `linear_space`
 # NOTE: More general "supertyping" behavior would need `pyarrow.unify_schemas`
 # (https://arrow.apache.org/docs/14.0/python/generated/pyarrow.unify_schemas.html)
 @pytest.mark.parametrize(
@@ -271,7 +295,7 @@ def test_linear_space_expr_numeric_dtype(
 ) -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L71-L95
     pytest.importorskip("pyarrow")
-    df = dataframe({})
+    df = nwp.select(eager="pyarrow")
     result = df.select(
         ls=nwp.linear_space(nwp.lit(0, dtype=dtype_start), nwp.lit(1, dtype=dtype_end), 6)
     )
@@ -288,6 +312,6 @@ def test_linear_space_expr_numeric_dtype(
 def test_linear_space_expr_wrong_length() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L194-L199
     pytest.importorskip("pyarrow")
-    df = dataframe({"a": [1, 2, 3, 4, 5]})
+    df = dataframe_old({"a": [1, 2, 3, 4, 5]})
     with pytest.raises(ShapeError, match="Expected object of length 6, got 5"):
         df.with_columns(nwp.linear_space(0, 1, 6))
