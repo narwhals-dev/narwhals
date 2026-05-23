@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, overload
 
 from narwhals._plan._version import into_version
-from narwhals._utils import Version
+from narwhals._utils import Version, unstable
 
 if TYPE_CHECKING:
     import polars as pl
@@ -99,6 +99,7 @@ def select(
 ) -> LazyFrame[Any]: ...
 
 
+@unstable
 def select(
     *exprs: OneOrIterable[IntoExpr],
     eager: IntoBackend[EagerAllowed] | None = None,
