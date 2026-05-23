@@ -7,6 +7,7 @@ import pytest
 
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
+from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import assert_equal_data, re_compile
 from tests.utils import PYARROW_VERSION
 
@@ -98,6 +99,50 @@ def test_neither() -> None:
 def test_both() -> None:
     with pytest.raises(TypeError, match=re_compile(r"either.+may be provided")):
         nwp.select(1, eager="polars", lazy="polars")  # type: ignore[call-overload]
+
+
+@pytest.mark.xfail(
+    raises=InvalidOperationError,
+    reason="BUG: Searching for struct in an empty schema, when it is defined in the current context",
+)
+@pytest.mark.parametrize(
+    ("exprs", "expected"),
+    [
+        (nwp.lit({"a": 1}).struct.field("a").alias("b"), {"b": [1]}),
+        (
+            [
+                nwp.lit(0).alias("a"),
+                nwp.lit({"a": 1, "b": 2}).struct.field("b").alias("c"),
+            ],
+            {"a": [0], "c": [2]},
+        ),
+    ],
+    ids=["alone", "with-a-friend"],
+)
+def test_lit_struct_field_lazy(
+    exprs: OneOrIterable[IntoExpr], expected: Data, lazy: Lazy
+) -> None:
+    result = nwp.select(exprs, lazy=lazy).collect()
+    assert_equal_data(result, expected)  # pragma: no cover
+
+
+@pytest.mark.parametrize(
+    ("expr", "name"),
+    [
+        (nwp.lit({"a": 1}).struct.field("b"), "b"),
+        (
+            nwp.lit({"a": {"b": {"c": "d"}}})
+            .struct.field("b")
+            .struct.field("c")
+            .struct.field("e"),
+            "e",
+        ),
+    ],
+    ids=["single", "nested"],
+)
+def test_lit_struct_field_missing_lazy(expr: nwp.Expr, name: str, lazy: Lazy) -> None:
+    with pytest.raises(InvalidOperationError, match=f"Struct field not found {name!r}"):
+        nwp.select(expr, lazy=lazy).collect()
 
 
 if TYPE_CHECKING:

@@ -57,6 +57,8 @@ class FieldByName(
             return field
         raise not_found_error(self.name)
 
+    # TODO @dangotbanned: Fix initial empty schema/lit edge case
+    #   `nwp.select(nwp.lit({"a": 1}).struct.field("a"), lazy="polars")`
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
