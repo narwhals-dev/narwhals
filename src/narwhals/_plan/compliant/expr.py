@@ -269,11 +269,14 @@ class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScal
     ) -> ExprStringNamespace[
         Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
     ]: ...
+
+    # TODO @dangotbanned: Migrate everything else from `DeprecatedFrameT_contra` -> `FrameT_contra`
+    # `ExprStructNamespace` is done
     @property
     def struct(
         self,
-    ) -> ExprStructNamespace[
-        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]
+    ) -> ExprStructNamespace[  # type: ignore[type-var]
+        Frame, ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]  # pyright: ignore[reportInvalidTypeArguments]
     ]: ...
 
 

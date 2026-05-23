@@ -379,7 +379,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         )
 
     # Terminal
-    def collect(self, kwds: ClosedKwds) -> Collect:  # pragma: no cover
+    def collect(self, kwds: ClosedKwds) -> Collect:
         return self._sink(Collect(input=self, kwds=kwds))
 
     # TODO @dangotbanned: Handle `BytesIO`

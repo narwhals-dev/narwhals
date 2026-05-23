@@ -222,7 +222,7 @@ class ScanDataFrame(ScanFrame["DataFrame[Any, Any]"]):
 class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native]"], Generic[Native]):
     def evaluate(  # type: ignore[override]
         self, evaluator: ResolvedToCompliant[Native] | Incomplete, /
-    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+    ) -> CompliantLazyFrame[Native]:
         return evaluator.scan_lazyframe(self)
 
 
@@ -265,7 +265,7 @@ class Select(SingleInput):
 
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], /
-    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+    ) -> CompliantLazyFrame[Native]:
         return evaluator.select(self)
 
 
@@ -314,7 +314,7 @@ class Sort(SingleInput):
 
     def evaluate(
         self, evaluator: ResolvedToCompliant[Native], /
-    ) -> CompliantLazyFrame[Native]:  # pragma: no cover
+    ) -> CompliantLazyFrame[Native]:
         return evaluator.sort(self)
 
 

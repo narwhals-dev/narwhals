@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import builtins
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import polars as pl
 
 from narwhals._plan.common import todo
 from narwhals._plan.compliant import CompliantExpr, typing as ct
+from narwhals._plan.compliant.accessors import ExprStructNamespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
@@ -19,12 +20,16 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
+    from narwhals._plan.expressions import FunctionExpr as FExpr
     from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
 
 
 Incomplete: TypeAlias = Any
+
+PolarsFrame: TypeAlias = "ct.Frame[pl.DataFrame, pl.Series, pl.LazyFrame]"
 
 if compat.OVER_RESPECTS_NULLS_LAST:
     # NOTE: Allows all features, so no need to branch in any calls
@@ -94,6 +99,9 @@ def row_index(
     return int_range.sort_by(by.arg_sort(nulls_last=nulls_last))
 
 
+ExprT_co = TypeVar("ExprT_co", bound="PolarsExpr", covariant=True)
+
+
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     __slots__ = ("_native",)
     _native: pl.Expr
@@ -130,12 +138,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def __narwhals_classes__(self) -> PolarsClasses:
         return PolarsClasses()
 
-    def dispatch(
-        self,
-        node: ir.ExprIR,
-        frame: ct.Frame[pl.DataFrame, pl.Series, pl.LazyFrame],
-        name: str,
-    ) -> PolarsExpr:
+    def dispatch(self, node: ir.ExprIR, frame: PolarsFrame, name: str) -> PolarsExpr:
         """Trying to limit the API surface for now.
 
         - polars only uses `PolarsDataFrame._evaluate_irs`
@@ -280,7 +283,28 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     dt = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     list = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     str = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
-    struct = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+
+    @property
+    def struct(self) -> PolarsStructNamespace[Self]:
+        return PolarsStructNamespace(self)
+
+
+class PolarsStructNamespace(ExprStructNamespace[PolarsFrame, ExprT_co]):
+    __slots__ = ("_compliant",)
+
+    def __init__(self, compliant: ExprT_co, /) -> None:
+        self._compliant: ExprT_co = compliant
+
+    @property
+    def compliant(self) -> ExprT_co:
+        return self._compliant
+
+    def field(
+        self, node: FExpr[FieldByName], frame: PolarsFrame, name: str, /
+    ) -> ExprT_co:
+        compliant = self.compliant
+        previous = node.dispatch_arg(compliant, frame, name).native
+        return compliant.from_native(previous.struct.field(node.function.name), name)
 
 
 PolarsExpr()

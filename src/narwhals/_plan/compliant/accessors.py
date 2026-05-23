@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
-    """`[FrameT, ExprT_co]`."""
+    """`[DeprecatedFrameT_contra, ExprT_co]`."""
 
     __slots__ = ()
 
@@ -33,7 +33,7 @@ class ExprCatNamespace(Protocol[FrameT, ExprT_co]):
 
 
 class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
-    """`[FrameT, ExprT_co]`."""
+    """`[DeprecatedFrameT_contra, ExprT_co]`."""
 
     __slots__ = ()
 
@@ -95,7 +95,7 @@ class ExprDateTimeNamespace(Protocol[FrameT, ExprT_co]):
 
 
 class ExprListNamespace(Protocol[FrameT, ExprT_co]):
-    """`[FrameT, ExprT_co]`."""
+    """`[DeprecatedFrameT_contra, ExprT_co]`."""
 
     __slots__ = ()
 
@@ -128,7 +128,7 @@ class ExprListNamespace(Protocol[FrameT, ExprT_co]):
 
 
 class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
-    """`[FrameT, ExprT_co]`."""
+    """`[DeprecatedFrameT_contra, ExprT_co]`."""
 
     __slots__ = ()
 
@@ -179,13 +179,13 @@ class ExprStringNamespace(Protocol[FrameT, ExprT_co]):
     ) -> ExprT_co: ...
 
 
-class ExprStructNamespace(Protocol[FrameT, ExprT_co]):
-    """`[FrameT, ExprT_co]`."""
+class ExprStructNamespace(Protocol[ct.FrameT_contra, ExprT_co]):
+    """`[FrameT_contra, ExprT_co]`."""
 
     __slots__ = ()
 
     def field(
-        self, node: FExpr[FieldByName], frame: FrameT, name: str, /
+        self, node: FExpr[FieldByName], frame: ct.FrameT_contra, name: str, /
     ) -> ExprT_co: ...
 
 
