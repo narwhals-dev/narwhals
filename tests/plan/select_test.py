@@ -9,7 +9,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, re_compile
+from tests.plan.utils import Series, assert_equal_data, re_compile
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -80,6 +80,22 @@ def test_eager(
     eager: Eager,
 ) -> None:
     result = nwp.select(*exprs, eager=eager, **named_exprs)
+    assert_equal_data(result, expected)
+
+
+def test_eager_series(series: Series) -> None:
+    ser = series([1, 2, 3], name="a")
+    result = nwp.select(ser, b=nwp.lit("four"), eager=series.implementation)
+    expected = {"a": [1, 2, 3], "b": ["four", "four", "four"]}
+    assert_equal_data(result, expected)
+
+
+def test_lazy_series(lazy: Lazy) -> None:
+    # NOTE: Will work for any backend that supports `LitSeries`
+    lf = nwp.select([1, 5, 7, 9], lazy=lazy).explode(ncs.first())
+    ser = lf.collect().to_series()
+    result = nwp.select(a=1, b=2, c=ser, lazy=lazy).sort(ncs.last()).collect()
+    expected = {"a": [1] * 4, "b": [2] * 4, "c": [1, 5, 7, 9]}
     assert_equal_data(result, expected)
 
 

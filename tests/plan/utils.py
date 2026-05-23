@@ -36,6 +36,8 @@ from typing import TypeVar
 
 import pyarrow as pa
 
+from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
+
 if TYPE_CHECKING:
     import sys
     from collections.abc import Iterable, Mapping
@@ -61,6 +63,7 @@ if TYPE_CHECKING:
     _Raises: TypeAlias = type[Exception] | tuple[type[Exception], ...]
 
 R_co = TypeVar("R_co", covariant=True)
+Impl_co = TypeVar("Impl_co", bound=Implementation, covariant=True)
 
 
 class _Constructor(Protocol[R_co]):
@@ -395,7 +398,7 @@ class TestBackend(Generic[NativeLazyFrame, NativeDataFrameT_co, NativeSeriesT_co
 
     def try_get_constructor(
         self, name: ConstructorFixtureName, /
-    ) -> Constructor[Incomplete] | None:
+    ) -> Constructor[Incomplete, Incomplete] | None:
         """Return a `Constructor` if the backend supports fixture `name`.
 
         The returned instance is callable, and gives easy access to:
@@ -484,7 +487,7 @@ def backend_support_profile(backend: type[TestBackend[Any, Any, Any]]) -> Suppor
     )
 
 
-class Constructor(Generic[R_co]):
+class Constructor(Generic[R_co, Impl_co]):
     """Metadata-rich constructor wrapper.
 
     Fixtures wrapped in this way provide access to things you may need in `request.applymarker`.
@@ -494,14 +497,14 @@ class Constructor(Generic[R_co]):
     _function: _Constructor[R_co]
     fixture_name: ConstructorFixtureName
     identifier: Identifier
-    implementation: Implementation
+    implementation: Impl_co
 
     def __init__(
         self,
         bound_method: _Constructor[R_co],
         name: ConstructorFixtureName,
         identifier: BackendName | ModuleName | LiteralString,
-        implementation: Implementation,
+        implementation: Impl_co,
         /,
     ) -> None:
         self._function = bound_method
@@ -578,13 +581,13 @@ class Constructor(Generic[R_co]):
         )
 
 
-LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any]]
+LazyFrame: TypeAlias = Constructor[nwp.LazyFrame[Any], _LazyAllowedImpl]
 """The type of the `lazyframe` fixture."""
 
-DataFrame: TypeAlias = Constructor[nwp.DataFrame[Any, Any]]
+DataFrame: TypeAlias = Constructor[nwp.DataFrame[Any, Any], _EagerAllowedImpl]
 """The type of the `dataframe` fixture."""
 
-Series: TypeAlias = Constructor[nwp.Series[Any]]
+Series: TypeAlias = Constructor[nwp.Series[Any], _EagerAllowedImpl]
 """The type of the `series` fixture."""
 
 
