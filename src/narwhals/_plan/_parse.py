@@ -183,12 +183,18 @@ def into_iter_expr_ir(
         >>> parse(["one"], ("two",))
         [lit[list](['one']), lit[list](['two'])]
 
+        These rules are exclusive to where it would resolve ambiguity:
+        >>> parse([1, 2, 3])
+        [lit[list]([1, 2, 3])]
+        >>> parse([1, 2, 3], [4, 5])
+        [lit[list]([1, 2, 3]), lit[list]([4, 5])]
+
         *This behavior matches `polars`*
     """
     first = first_arg
-    always_expr_or_lit = (_import_series(), _import_expr(), str, bytes, dict)
-    if (isinstance(first, always_expr_or_lit) or not _is_iterable(first)) or (
-        more_args and isinstance(first, (list, tuple))
+    always_single = (_import_series(), _import_expr(), str, bytes, dict)
+    if (isinstance(first, always_single) or not _is_iterable(first)) or _is_list_literal(
+        first, more_args, always_single
     ):
         yield into_expr_ir(first)  # type: ignore[arg-type]
     else:
@@ -198,6 +204,16 @@ def into_iter_expr_ir(
         yield into_expr_ir(into)
     for name, arg in named_args.items():
         yield into_expr_ir(arg).alias(name)
+
+
+def _is_list_literal(
+    first: object, more_args: object, always_single: tuple[type[Any], ...]
+) -> bool:
+    # No point in trying to type this
+    # Split out as a function due to complexity
+    return isinstance(first, (list, tuple)) and bool(
+        more_args or (first and not isinstance(first[0], always_single))
+    )
 
 
 def _df_filter_into_iter_expr_ir(
