@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
@@ -12,7 +12,11 @@ from tests.plan.utils import assert_equal_data, re_compile
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
+    import polars as pl
+    import pyarrow as pa
+
     from narwhals._plan.typing import IntoExpr, OneOrIterable
+    from narwhals._typing import Arrow, EagerAllowed, IntoBackend, LazyAllowed, Polars
     from tests.conftest import Data
     from tests.plan.utils import Eager, Lazy
 if PYARROW_VERSION and PYARROW_VERSION < (21,):  # pragma: no cover
@@ -146,10 +150,93 @@ def test_lit_struct_field_missing_lazy(expr: nwp.Expr, name: str, lazy: Lazy) ->
 
 
 if TYPE_CHECKING:
+    from typing_extensions import assert_type
 
-    def typing_exhaust_overloads() -> None:
-        _df_pl = nwp.select(1, 2, 3, eager="polars")
-        _df_pa = nwp.select(1, 2, 3, eager="pyarrow")
-        _lf_pl = nwp.select(1, 2, 3, lazy="polars")
-        # TODO @dangotbanned: Asserts
-        # TODO @dangotbanned: More combinations of `*args`/`**kwds`
+    def typing_exhaust_overloads(  # noqa: PLR0914, PLR0915
+        polars: Literal["polars"],
+        pyarrow: Literal["pyarrow"],
+        either: Polars | Arrow,
+        eager: IntoBackend[EagerAllowed],
+        lazy: IntoBackend[LazyAllowed],
+    ) -> None:
+        a, b = nwp.lit(1).alias("a"), nwp.lit(2).alias("b")
+
+        df_pl_1 = nwp.select(a, b, eager=polars)
+        df_pl_2 = nwp.select(named=1, eager=polars)
+        df_pl_3 = nwp.select(a, b, named=1, eager=polars)
+        df_pl_4 = nwp.select(a, b, eager=polars, lazy=None)
+        df_pl_5 = nwp.select(named=1, eager=polars, lazy=None)
+        df_pl_6 = nwp.select(a, b, named=1, eager=polars, lazy=None)
+
+        assert_type(df_pl_1, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+        assert_type(df_pl_2, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+        assert_type(df_pl_3, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+        assert_type(df_pl_4, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+        assert_type(df_pl_5, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+        assert_type(df_pl_6, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+
+        df_pa_1 = nwp.select(a, b, eager=pyarrow)
+        df_pa_2 = nwp.select(named=1, eager=pyarrow)
+        df_pa_3 = nwp.select(a, b, named=1, eager=pyarrow)
+        df_pa_4 = nwp.select(a, b, eager=pyarrow, lazy=None)
+        df_pa_5 = nwp.select(named=1, eager=pyarrow, lazy=None)
+        df_pa_6 = nwp.select(a, b, named=1, eager=pyarrow, lazy=None)
+
+        assert_type(df_pa_1, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+        assert_type(df_pa_2, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+        assert_type(df_pa_3, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+        assert_type(df_pa_4, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+        assert_type(df_pa_5, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+        assert_type(df_pa_6, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+
+        df_either_1 = nwp.select(a, b, eager=either)  # noqa: F841
+        df_either_2 = nwp.select(named=1, eager=either)  # noqa: F841
+        df_either_3 = nwp.select(a, b, named=1, eager=either)  # noqa: F841
+        df_either_4 = nwp.select(a, b, eager=either, lazy=None)  # noqa: F841
+        df_either_5 = nwp.select(named=1, eager=either, lazy=None)  # noqa: F841
+        df_either_6 = nwp.select(a, b, named=1, eager=either, lazy=None)  # noqa: F841
+
+        # TODO @dangotbanned: Decide on what to do for `either`
+        # Probably don't want to *enforce* this to be `Any`, but it's okay if it is
+
+        df_eager_1 = nwp.select(a, b, eager=eager)
+        df_eager_2 = nwp.select(named=1, eager=eager)
+        df_eager_3 = nwp.select(a, b, named=1, eager=eager)
+        df_eager_4 = nwp.select(a, b, eager=eager, lazy=None)
+        df_eager_5 = nwp.select(named=1, eager=eager, lazy=None)
+        df_eager_6 = nwp.select(a, b, named=1, eager=eager, lazy=None)
+
+        assert_type(df_eager_1, nwp.DataFrame[Any, Any])
+        assert_type(df_eager_2, nwp.DataFrame[Any, Any])
+        assert_type(df_eager_3, nwp.DataFrame[Any, Any])
+        assert_type(df_eager_4, nwp.DataFrame[Any, Any])
+        assert_type(df_eager_5, nwp.DataFrame[Any, Any])
+        assert_type(df_eager_6, nwp.DataFrame[Any, Any])
+
+        lf_pl_1 = nwp.select(a, b, lazy=polars)
+        lf_pl_2 = nwp.select(named=1, lazy=polars)
+        lf_pl_3 = nwp.select(a, b, named=1, lazy=polars)
+        lf_pl_4 = nwp.select(a, b, lazy=polars, eager=None)
+        lf_pl_5 = nwp.select(named=1, lazy=polars, eager=None)
+        lf_pl_6 = nwp.select(a, b, named=1, lazy=polars, eager=None)
+
+        assert_type(lf_pl_1, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+        assert_type(lf_pl_2, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+        assert_type(lf_pl_3, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+        assert_type(lf_pl_4, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+        assert_type(lf_pl_5, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+        assert_type(lf_pl_6, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+
+        lf_lazy_1 = nwp.select(a, b, lazy=lazy)
+        lf_lazy_2 = nwp.select(named=1, lazy=lazy)
+        lf_lazy_3 = nwp.select(a, b, named=1, lazy=lazy)
+        lf_lazy_4 = nwp.select(a, b, lazy=lazy, eager=None)
+        lf_lazy_5 = nwp.select(named=1, lazy=lazy, eager=None)
+        lf_lazy_6 = nwp.select(a, b, named=1, lazy=lazy, eager=None)
+
+        assert_type(lf_lazy_1, nwp.LazyFrame[Any])
+        assert_type(lf_lazy_2, nwp.LazyFrame[Any])
+        assert_type(lf_lazy_3, nwp.LazyFrame[Any])
+        assert_type(lf_lazy_4, nwp.LazyFrame[Any])
+        assert_type(lf_lazy_5, nwp.LazyFrame[Any])
+        assert_type(lf_lazy_6, nwp.LazyFrame[Any])
