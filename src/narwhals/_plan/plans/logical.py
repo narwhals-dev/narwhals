@@ -563,14 +563,45 @@ class ScanEmpty(Scan):
     ## Notes
     Empty refers to a schema with no prior context (e.g. `pl.LazyFrame()`).
 
-    For a SQL-like backend, a user query like:
+    For a SQL-like backend, a query [like this]:
+    >>> import narwhals._plan as nw
+    >>> print(
+    ...     nw.select(nwp.int_range(0, 100_000, 2).alias("n"), lazy="polars")
+    ...     .filter(nw.col("n") % 22_500 == 0)
+    ...     .explain()
+    ... )
+    FILTER [([(col('n')) % (lit(22500))]) == (lit(0))]
+    FROM
+      SELECT [int_range(lit(0), lit(100000)).alias('n')]
+        LF []; 0 COLUMNS
 
-        nw.select(numbers=nw.int_range(10))
 
     Would translate to:
+    >>> import duckdb
+    >>> sql_like_query = "SELECT range AS n FROM range(0, 100000, 2) WHERE n % 22500 == 0"
+    >>> print(duckdb.sql(sql_like_query))
+    ┌───────┐
+    │   n   │
+    │ int64 │
+    ├───────┤
+    │     0 │
+    │ 22500 │
+    │ 45000 │
+    │ 67500 │
+    │ 90000 │
+    └───────┘
 
-        "SELECT range AS numbers FROM range(10)"
-
+    >>> import sqlframe.duckdb
+    >>> sqlframe.duckdb.DuckDBSession().sql(sql_like_query).show()
+    +-------+
+    |   n   |
+    +-------+
+    |   0   |
+    | 22500 |
+    | 45000 |
+    | 67500 |
+    | 90000 |
+    +-------+
 
     Important:
         Uses a distinct node to make it easy to declare as unsupported.
@@ -588,6 +619,9 @@ class ScanEmpty(Scan):
     - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/functions.html#table-valued-functions
     - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.range.html
     - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.udtf.html#pyspark.sql.functions.udtf
+
+
+    [like this]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.select.html
     """
 
     def to_narwhals(
