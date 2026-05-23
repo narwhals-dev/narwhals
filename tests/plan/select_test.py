@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
 
+import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import InvalidOperationError
@@ -22,8 +23,7 @@ if TYPE_CHECKING:
 if PYARROW_VERSION and PYARROW_VERSION < (21,):  # pragma: no cover
     pytest.importorskip("numpy")
 
-
-@pytest.mark.parametrize(
+cases = pytest.mark.parametrize(
     ("exprs", "named_exprs", "expected"),
     [
         ((None,), {}, {"literal": [None]}),
@@ -51,8 +51,17 @@ if PYARROW_VERSION and PYARROW_VERSION < (21,):  # pragma: no cover
                 "literal": ["123"] * 4,
             },
         ),
+        (
+            (nwp.len().cast(nw.Boolean), nwp.lit(1).alias("lit")),
+            {},
+            {"len": [False], "lit": [1]},
+        ),
     ],
+    ids=["None", "mixed-positional-named", "int_range", "date_range", "len-0-cast"],
 )
+
+
+@cases
 def test_lazy(
     exprs: tuple[OneOrIterable[IntoExpr], ...],
     named_exprs: dict[str, IntoExpr],
@@ -63,10 +72,7 @@ def test_lazy(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(
-    ("exprs", "named_exprs", "expected"),
-    [((), {"numbers": nwp.int_range(10)}, {"numbers": list(range(10))})],
-)
+@cases
 def test_eager(
     exprs: tuple[OneOrIterable[IntoExpr], ...],
     named_exprs: dict[str, IntoExpr],
