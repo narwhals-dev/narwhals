@@ -168,12 +168,12 @@ if TYPE_CHECKING:
         df_pl_5 = nwp.select(named=1, eager=polars, lazy=None)
         df_pl_6 = nwp.select(a, b, named=1, eager=polars, lazy=None)
 
-        assert_type(df_pl_1, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
-        assert_type(df_pl_2, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
-        assert_type(df_pl_3, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
-        assert_type(df_pl_4, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
-        assert_type(df_pl_5, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
-        assert_type(df_pl_6, nwp.DataFrame[pl.DataFrame, pl.Series])  # type: ignore[assert-type]
+        assert_type(df_pl_1, nwp.DataFrame[pl.DataFrame, pl.Series])
+        assert_type(df_pl_2, nwp.DataFrame[pl.DataFrame, pl.Series])
+        assert_type(df_pl_3, nwp.DataFrame[pl.DataFrame, pl.Series])
+        assert_type(df_pl_4, nwp.DataFrame[pl.DataFrame, pl.Series])
+        assert_type(df_pl_5, nwp.DataFrame[pl.DataFrame, pl.Series])
+        assert_type(df_pl_6, nwp.DataFrame[pl.DataFrame, pl.Series])
 
         df_pa_1 = nwp.select(a, b, eager=pyarrow)
         df_pa_2 = nwp.select(named=1, eager=pyarrow)
@@ -182,12 +182,12 @@ if TYPE_CHECKING:
         df_pa_5 = nwp.select(named=1, eager=pyarrow, lazy=None)
         df_pa_6 = nwp.select(a, b, named=1, eager=pyarrow, lazy=None)
 
-        assert_type(df_pa_1, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
-        assert_type(df_pa_2, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
-        assert_type(df_pa_3, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
-        assert_type(df_pa_4, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
-        assert_type(df_pa_5, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
-        assert_type(df_pa_6, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])  # type: ignore[assert-type]
+        assert_type(df_pa_1, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])
+        assert_type(df_pa_2, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])
+        assert_type(df_pa_3, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])
+        assert_type(df_pa_4, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])
+        assert_type(df_pa_5, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])
+        assert_type(df_pa_6, nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]])
 
         df_either_1 = nwp.select(a, b, eager=either)  # noqa: F841
         df_either_2 = nwp.select(named=1, eager=either)  # noqa: F841
@@ -220,12 +220,12 @@ if TYPE_CHECKING:
         lf_pl_5 = nwp.select(named=1, lazy=polars, eager=None)
         lf_pl_6 = nwp.select(a, b, named=1, lazy=polars, eager=None)
 
-        assert_type(lf_pl_1, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
-        assert_type(lf_pl_2, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
-        assert_type(lf_pl_3, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
-        assert_type(lf_pl_4, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
-        assert_type(lf_pl_5, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
-        assert_type(lf_pl_6, nwp.LazyFrame[pl.LazyFrame])  # type: ignore[assert-type]
+        assert_type(lf_pl_1, nwp.LazyFrame[pl.LazyFrame])
+        assert_type(lf_pl_2, nwp.LazyFrame[pl.LazyFrame])
+        assert_type(lf_pl_3, nwp.LazyFrame[pl.LazyFrame])
+        assert_type(lf_pl_4, nwp.LazyFrame[pl.LazyFrame])
+        assert_type(lf_pl_5, nwp.LazyFrame[pl.LazyFrame])
+        assert_type(lf_pl_6, nwp.LazyFrame[pl.LazyFrame])
 
         lf_lazy_1 = nwp.select(a, b, lazy=lazy)
         lf_lazy_2 = nwp.select(named=1, lazy=lazy)

@@ -6,24 +6,76 @@ from narwhals._plan._version import into_version
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    import polars as pl
+    import pyarrow as pa
+
     from narwhals._plan import DataFrame, LazyFrame
     from narwhals._plan.typing import IntoExpr, OneOrIterable
+    from narwhals._typing import Arrow, Polars
     from narwhals.typing import EagerAllowed, IntoBackend, LazyAllowed
-
 
 __all__ = ("select",)
 
 
-# NOTE: These guys ensure `eager` & `lazy` never fall into `**named_exprs`
-# TODO @dangotbanned: Add backend-specific overloads
+# NOTE: (Per known backend)
+# Both overloads share the same [fully static] return type
+# - 1x Simply match the single keyword (should look like `.from_*` constructors)
+# - 1x Repeat, explicitly fill in the inverse default, add `**named_exprs`
+#   - This prevents overlapping between all *possible* keywords
+# [fully static]: https://typing.python.org/en/latest/spec/glossary.html#term-fully-static-type
+
+
+# `Arrow` -> `DataFrame`
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr], eager: Arrow
+) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr],
+    eager: Arrow,
+    lazy: None = ...,
+    **named_exprs: IntoExpr,
+) -> DataFrame[pa.Table, pa.ChunkedArray[Any]]: ...
+
+
+# `Polars` -> `DataFrame`
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr], eager: Polars
+) -> DataFrame[pl.DataFrame, pl.Series]: ...
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr],
+    eager: Polars,
+    lazy: None = ...,
+    **named_exprs: IntoExpr,
+) -> DataFrame[pl.DataFrame, pl.Series]: ...
+
+
+# `Polars` -> `LazyFrame`
+@overload
+def select(*exprs: OneOrIterable[IntoExpr], lazy: Polars) -> LazyFrame[pl.LazyFrame]: ...
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr],
+    eager: None = ...,
+    lazy: Polars,
+    **named_exprs: IntoExpr,
+) -> LazyFrame[pl.LazyFrame]: ...
+
+
+# NOTE: (Per keyword)
+# Both overloads share the same [gradual] return type
+# Same ideas as (Per known backend), but using the widest possible parameter type
+# [gradual]: https://typing.python.org/en/latest/spec/glossary.html#term-gradual-form
+
+
+# `*` -> `DataFrame`
 @overload
 def select(
     *exprs: OneOrIterable[IntoExpr], eager: IntoBackend[EagerAllowed]
 ) -> DataFrame[Any, Any]: ...
-@overload
-def select(
-    *exprs: OneOrIterable[IntoExpr], lazy: IntoBackend[LazyAllowed]
-) -> LazyFrame[Any]: ...
 @overload
 def select(
     *exprs: OneOrIterable[IntoExpr],
@@ -31,6 +83,13 @@ def select(
     lazy: None = ...,
     **named_exprs: IntoExpr,
 ) -> DataFrame[Any, Any]: ...
+
+
+# `*` -> `LazyFrame`
+@overload
+def select(
+    *exprs: OneOrIterable[IntoExpr], lazy: IntoBackend[LazyAllowed]
+) -> LazyFrame[Any]: ...
 @overload
 def select(
     *exprs: OneOrIterable[IntoExpr],
@@ -38,6 +97,8 @@ def select(
     lazy: IntoBackend[LazyAllowed],
     **named_exprs: IntoExpr,
 ) -> LazyFrame[Any]: ...
+
+
 def select(
     *exprs: OneOrIterable[IntoExpr],
     eager: IntoBackend[EagerAllowed] | None = None,
