@@ -189,6 +189,9 @@ def test_dtypes() -> None:
     df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
 
     pure_pd_expected = {**expected, "n": nw.Datetime, "s": nw.Object, "u": nw.Object}
+    if POLARS_VERSION < (1, 41):  # pragma: no cover
+        pure_pd_expected = {**pure_pd_expected, "r": nw.Categorical}
+
     assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
     assert {
         name: df_from_pd[name].dtype for name in df_from_pd.columns
