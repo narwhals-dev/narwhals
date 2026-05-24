@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
 
+__all__ = ("PolarsExpr", "len", "linear_space", "lit", "over", "row_index")
 
 Incomplete: TypeAlias = Any
 
@@ -97,6 +98,14 @@ def row_index(
     # but the behavior is more predictable following that change
     by = pl.col(order_by) if builtins.len(order_by) == 1 else pl.struct(order_by)
     return int_range.sort_by(by.arg_sort(nulls_last=nulls_last))
+
+
+if compat.LIT_ACCEPTS_DICT or TYPE_CHECKING:
+    lit = pl.lit
+else:
+
+    def lit(value: Any, dtype: pl.DataType | type[pl.DataType] | None = None) -> pl.Expr:
+        return pl.struct(**value) if isinstance(value, dict) else pl.lit(value, dtype)
 
 
 ExprT_co = TypeVar("ExprT_co", bound="PolarsExpr", covariant=True)
