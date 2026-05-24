@@ -10,7 +10,7 @@ import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import InvalidOperationError
 from tests.plan.utils import Series, assert_equal_data, re_compile
-from tests.utils import PYARROW_VERSION
+from tests.utils import POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
     import polars as pl
@@ -67,7 +67,19 @@ def test_lazy(
     named_exprs: dict[str, IntoExpr],
     expected: Data,
     lazy: Lazy,
+    request: pytest.FixtureRequest,
 ) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            lazy == "polars"
+            and POLARS_VERSION < (1, 17, 0)
+            and expected == {"literal": [None]},
+            reason=(
+                "PanicException: `arg_sort` operation not supported for dtype `null`.\n"
+                "https://github.com/pola-rs/polars/pull/20135"
+            ),
+        )
+    )
     result = nwp.select(*exprs, lazy=lazy, **named_exprs).collect().sort(ncs.first())
     assert_equal_data(result, expected)
 
