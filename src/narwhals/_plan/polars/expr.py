@@ -65,7 +65,7 @@ else:
                     raise compat.over_error("descending")
                 options["descending"] = descending
             if not partition_by and not compat.OVER_WITHOUT_PARTITION_BY:
-                partition_by = (pl.lit(1),)
+                partition_by = (lit(1),)
         return self.over(*partition_by, **options)
 
 
@@ -137,7 +137,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         unknown = cls.version.dtypes.Unknown
         dtype_pl = None if dtype == unknown else dtype_to_native(dtype, cls.version)
-        return cls.from_native(pl.lit(value, dtype_pl), name)
+        return cls.from_native(lit(value, dtype_pl), name)
 
     @property
     def native(self) -> pl.Expr:
@@ -167,7 +167,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def lit_series(
         cls, node: ir.LitSeries[pl.Series], _: Incomplete, name: str, /
     ) -> Self:
-        return cls.from_native(pl.lit(node.native), name)
+        return cls.from_native(lit(node.native), name)
 
     @classmethod
     def len_star(cls, _: ir.Len, __: Incomplete, name: str, /) -> Self:
