@@ -381,6 +381,32 @@ heavy third-party libraries (pandas, NumPy, Polars, etc...) please follow these 
 We're trying to be really lightweight and minimal-overhead, and
 unnecessary imports can slow things down.
 
+## AI-assisted contributions
+
+We do not categorically reject AI-assisted contributions, but we ask for transparency and accountability.
+
+The aim is to keep maintainer time focused on review quality, not on triaging machine-generated noise.
+
+1. **Disclose AI usage in the PR description**: when opening a pull request, the template
+    has a dedicated field that must be flagged to disclose whether or not the changes are
+    AI assisted and which tools and models were used to achieve that.
+    Disclosure is for transparency; it does not affect whether your PR is accepted.
+
+2. **You are responsible for every line you submit, regardless of how it was produced**:
+    the disclosure does not transfer responsibility to the tool.
+    Before opening a PR, read through your diff and make sure you can explain and defend each change in review.
+
+3. **Engage with review feedback**: we reserve the right to close, without extended discussion,
+    pull requests where the author does not engage with reviewer comments.
+    This applies whether or not AI was used.
+
+4. **First-time contributors** are asked to:
+    
+    - Post a screenshot of the test suite passing locally (not on CI) in the PR description.
+      This is a quick check that your dev environment works and that you have run the code you are proposing.
+    - Keep at most one open pull request at a time, so reviewers can give it proper attention before
+      you open the next one.
+
 ## Claiming issues
 
 If you start working on an issue, it's usually a good idea to let others know about this

@@ -25,8 +25,21 @@
 - Related issue #\<issue number\>
 - Closes #\<issue number\>
 
+## AI assistance
+
+<!--
+For transparency only.
+By submitting this PR you accept full responsibility for every line of code,
+regardless of how it was produced.
+See CONTRIBUTING.md "AI-assisted contributions" section.
+-->
+
+- [ ] No AI tools were used for this PR
+- [ ] AI tools were used (please list which tools and which models)
+
 ## Checklist
 
 - [ ] Code follows style guide (ruff)
 - [ ] Tests added
 - [ ] Documented the changes
+- [ ] If this is your first PR to narwhals, attach a screenshot of `pytest` passing locally (not CI)
