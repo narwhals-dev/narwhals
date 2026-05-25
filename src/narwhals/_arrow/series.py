@@ -600,14 +600,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         val_counts = pc.value_counts(self.native)
         values = val_counts.field("values")
-        counts = cast("ChunkedArrayAny", val_counts.field("counts"))
-
+        counts = val_counts.field("counts")
         if normalize:
-            arrays = [values, pc.divide(*cast_for_truediv(counts, pc.sum(counts)))]
-        else:
-            arrays = [values, counts]
-
-        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])  # type: ignore[arg-type]
+            counts = pc.divide(*cast_for_truediv(counts, pc.sum(counts)))
+        arrays = values, counts
+        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])
 
         if sort:
             val_count = val_count.sort_by([(value_name_, "descending")])
