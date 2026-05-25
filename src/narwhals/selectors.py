@@ -56,7 +56,7 @@ class Selector(Expr):
             ExprNode(ExprKind.ELEMENTWISE, "__and__", exprs=(other,), str_as_lit=True)
         )
 
-    def __xor__(self, other: Any) -> Expr:
+    def __xor__(self, other: Any) -> Expr:  # type: ignore[override]
         if isinstance(other, Selector):
             return self._append_node(
                 ExprNode(
