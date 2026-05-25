@@ -223,6 +223,15 @@ def test_array_inner_recursive() -> None:
         dtype = dtype.inner  # type: ignore[assignment]
 
 
+def test_array_inner_recursive_repr() -> None:
+    dtype_1 = nw.Array(nw.Int64, 2)
+    dtype_2 = nw.Array(dtype_1, 1)
+    dtype_3 = nw.Array(dtype_2, 2)
+    dtype_1.inner = dtype_3.inner
+    with pytest.raises(RecursionError):
+        repr(dtype_3)
+
+
 def test_second_time_unit() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
