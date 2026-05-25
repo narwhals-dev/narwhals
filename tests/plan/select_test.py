@@ -67,19 +67,19 @@ def test_lazy(
     named_exprs: dict[str, IntoExpr],
     expected: Data,
     lazy: Lazy,
-    request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            lazy == "polars"
-            and POLARS_VERSION < (1, 17, 0)
-            and expected == {"literal": [None]},
+    if (
+        lazy == "polars"
+        and POLARS_VERSION < (1, 17, 0)
+        and expected == {"literal": [None]}
+    ):
+        # NOTE: This was a regression, but unclear when it stopped working
+        pytest.skip(
             reason=(
                 "PanicException: `arg_sort` operation not supported for dtype `null`.\n"
                 "https://github.com/pola-rs/polars/pull/20135"
-            ),
+            )
         )
-    )
     result = nwp.select(*exprs, lazy=lazy, **named_exprs).collect().sort(ncs.first())
     assert_equal_data(result, expected)
 
@@ -139,10 +139,6 @@ def test_both() -> None:
         nwp.select(1, eager="polars", lazy="polars")  # type: ignore[call-overload]
 
 
-@pytest.mark.xfail(
-    raises=InvalidOperationError,
-    reason="BUG: Searching for struct in an empty schema, when it is defined in the current context",
-)
 @pytest.mark.parametrize(
     ("exprs", "expected"),
     [
@@ -170,6 +166,7 @@ def test_lit_struct_field_lazy(
         (nwp.lit({"a": 1}).struct.field("b"), "b"),
         (
             nwp.lit({"a": {"b": {"c": "d"}}})
+            .struct.field("a")
             .struct.field("b")
             .struct.field("c")
             .struct.field("e"),
