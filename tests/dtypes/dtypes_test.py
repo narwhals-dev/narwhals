@@ -187,7 +187,7 @@ def test_array_inner_recursive() -> None:
     for dim in shape:
         assert isinstance(dtype, nw.Array)
         assert dtype.size == dim
-        dtype = dtype.inner  # type: ignore[assignment]
+        dtype = dtype.inner
 
 
 def test_array_inner_recursive_repr() -> None:
