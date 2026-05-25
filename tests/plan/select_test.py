@@ -139,10 +139,6 @@ def test_both() -> None:
         nwp.select(1, eager="polars", lazy="polars")  # type: ignore[call-overload]
 
 
-@pytest.mark.xfail(
-    raises=InvalidOperationError,
-    reason="BUG: Searching for struct in an empty schema, when it is defined in the current context",
-)
 @pytest.mark.parametrize(
     ("exprs", "expected"),
     [
@@ -170,6 +166,7 @@ def test_lit_struct_field_lazy(
         (nwp.lit({"a": 1}).struct.field("b"), "b"),
         (
             nwp.lit({"a": {"b": {"c": "d"}}})
+            .struct.field("a")
             .struct.field("b")
             .struct.field("c")
             .struct.field("e"),

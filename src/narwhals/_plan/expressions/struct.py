@@ -57,15 +57,18 @@ class FieldByName(
             return field
         raise not_found_error(self.name)  # pragma: no cover
 
-    # TODO @dangotbanned: Fix initial empty schema/lit edge case
-    #   `nwp.select(nwp.lit({"a": 1}).struct.field("a"), lazy="polars")`
     def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
+        arg = node.args[0]
         if (
-            (struct_name := node.args[0].meta.output_name(raise_if_undetermined=False))
-            and (struct := schema.get(struct_name))
+            (struct_name := arg.meta.output_name(raise_if_undetermined=False))
+            and (
+                (struct := schema.get(struct_name))
+                or (not schema and (struct := arg.resolve_dtype(schema)))
+            )
             and isinstance(struct, STRUCT)
         ):
             return into_dtype(self._field(struct).dtype)
+
         raise not_found_error(self.name)
 
 
