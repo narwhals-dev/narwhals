@@ -970,12 +970,11 @@ class Array(NestedType):
 
     def __repr__(self) -> str:
         # Get leaf type
-        dtype_ = self
-        for _ in self.shape:
-            dtype_ = dtype_.inner  # type: ignore[union-attr]
-
-        class_name = self.__class__.__name__
-        return f"{class_name}({dtype_!r}, shape={self.shape})"
+        dtype: Self | IntoDType = self
+        tp_self = type(self)
+        while isinstance(dtype, tp_self):
+            dtype = dtype.inner
+        return f"{tp_self.__name__}({dtype!r}, shape={self.shape})"
 
 
 class Date(TemporalType):
