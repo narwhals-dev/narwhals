@@ -20,6 +20,7 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from narwhals._typing import _EagerAllowedImpl
     from narwhals.typing import IntoFrame, IntoSeries, NonNestedDType
     from tests.utils import Constructor, ConstructorPandasLike, NestedOrEnumDType
 
@@ -178,6 +179,46 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     )
     assert df.collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
     assert df.collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
+
+
+def test_recursive_array_dtype(eager_implementation: _EagerAllowedImpl) -> None:
+    # https://github.com/pola-rs/polars/blob/210b34bee60db71ece147db060f570a41ba63c5d/py-polars/tests/unit/datatypes/test_array.py#L333-L343
+    assert str(nw.Array(nw.Int64, (2, 3))) == "Array(Int64, shape=(2, 3))"
+    assert str(nw.Array(nw.Int64, 3)) == "Array(Int64, shape=(3,))"
+    dtype = nw.Array(nw.Int64, 3)
+    arr = [[0, 1, 2], [3, 4, 5]]
+    impl = eager_implementation
+    version_conditions = [
+        (
+            impl.is_pandas_like() and PANDAS_VERSION < (2, 2),
+            "Requires pandas 2.2+ for 2D array support",
+        ),
+        (
+            impl.is_pyarrow() and PYARROW_VERSION < (14,),
+            "PyArrow 14+ required for 2D array support",
+        ),
+    ]
+    for condition, reason in version_conditions:
+        if condition:
+            pytest.skip(reason)
+    s = nw.Series.from_iterable("", arr, dtype=dtype, backend=impl)
+    assert s.dtype == dtype
+    assert s.len() == 2
+    dtype = nw.Array(nw.List(nw.Array(nw.Int8, (2, 2))), 2)
+    s = nw.Series.from_iterable("", [], dtype=dtype, backend=impl)
+    assert s.dtype == dtype
+    assert s.shape == (0,)
+    assert s.name == ""
+    assert s.dtype == nw.Array(nw.List(nw.Array(nw.Int8, (2, 2))), 2)
+
+
+def test_array_inner_recursive() -> None:
+    # https://github.com/pola-rs/polars/blob/210b34bee60db71ece147db060f570a41ba63c5d/py-polars/tests/unit/datatypes/test_array.py#L360-L365
+    shape = (2, 3, 4, 5)
+    dtype = nw.Array(nw.Int64, shape=shape)
+    for dim in shape:
+        assert dtype.size == dim  # pyright: ignore[reportAttributeAccessIssue]
+        dtype = dtype.inner  # type: ignore[assignment]
 
 
 def test_second_time_unit() -> None:
