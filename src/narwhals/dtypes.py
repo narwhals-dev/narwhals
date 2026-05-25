@@ -972,6 +972,9 @@ class Array(NestedType):
         # Get leaf type
         dtype: Self | IntoDType = self
         tp_self = type(self)
+        # NOTE: This might look odd, but if we used a `while` loop
+        # it won't trigger a `RecursionError` like `for` does.
+        # https://github.com/narwhals-dev/narwhals/pull/3651
         for _ in self.shape:
             if isinstance(dtype, tp_self):
                 dtype = dtype.inner
