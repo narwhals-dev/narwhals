@@ -190,8 +190,8 @@ def test_recursive_array_dtype(eager_implementation: _EagerAllowedImpl) -> None:
     impl = eager_implementation
     version_conditions = [
         (
-            impl.is_pandas_like() and PANDAS_VERSION < (2, 2),
-            "Requires pandas 2.2+ for 2D array support",
+            impl.is_pandas_like() and (PANDAS_VERSION < (2, 2) or not PYARROW_VERSION),
+            "Requires pandas 2.2+ and pyarrow for 2D array support",
         ),
         (
             impl.is_pyarrow() and PYARROW_VERSION < (14,),
