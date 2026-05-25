@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 from contextlib import AbstractContextManager, nullcontext as does_not_warn
 from datetime import datetime, timedelta, timezone
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
@@ -190,7 +191,8 @@ def test_recursive_array_dtype(eager_implementation: _EagerAllowedImpl) -> None:
     impl = eager_implementation
     version_conditions = [
         (
-            impl.is_pandas_like() and (PANDAS_VERSION < (2, 2) or not PYARROW_VERSION),
+            impl.is_pandas_like()
+            and (PANDAS_VERSION < (2, 2) or find_spec("pyarrow") is None),
             "Requires pandas 2.2+ and pyarrow for 2D array support",
         ),
         (
