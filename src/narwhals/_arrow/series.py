@@ -607,7 +607,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         else:
             arrays = [values, counts]
 
-        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])
+        val_count = pa.Table.from_arrays(arrays, names=[index_name_, value_name_])  # type: ignore[arg-type]
 
         if sort:
             val_count = val_count.sort_by([(value_name_, "descending")])

@@ -195,7 +195,7 @@ def rename(
         result = obj.rename(*args, **kwargs, copy=False, inplace=False)
     else:
         result = obj.rename(*args, **kwargs)
-    return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
+    return cast("NativeNDFrameT", result)
 
 
 @functools.lru_cache(maxsize=16)

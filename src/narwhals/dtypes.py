@@ -972,7 +972,7 @@ class Array(NestedType):
         # Get leaf type
         dtype_ = self
         for _ in self.shape:
-            dtype_ = dtype_.inner  # type: ignore[assignment]
+            dtype_ = dtype_.inner  # type: ignore[union-attr]
 
         class_name = self.__class__.__name__
         return f"{class_name}({dtype_!r}, shape={self.shape})"
