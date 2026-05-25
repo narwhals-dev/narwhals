@@ -28,6 +28,7 @@ from narwhals._plan.compliant import (
     namespace,
     scalar,
     series,
+    typing,
 )
 from narwhals._plan.compliant.dataframe import CompliantDataFrame
 from narwhals._plan.compliant.expr import CompliantExpr
@@ -55,4 +56,5 @@ __all__ = (
     "namespace",
     "scalar",
     "series",
+    "typing",
 )

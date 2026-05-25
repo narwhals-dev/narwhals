@@ -74,6 +74,9 @@ Note:
     The bug impacts `__rmod__` as well, but didn't get fixed in narwhals?
 """
 
+LIT_ACCEPTS_DICT: Final = BACKEND_VERSION >= (1, 10)
+"""https://github.com/pola-rs/polars/pull/19214"""
+
 SERIES_RPOW_PRESERVES_NAME: Final = BACKEND_VERSION >= (1, 16, 1)
 """https://github.com/pola-rs/polars/pull/20072"""
 

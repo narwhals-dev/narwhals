@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import Seq
 
+_FMT_FRAME: Final[LiteralString] = "{kind} [{names}]; {n} COLUMNS"
 
 _NO_ATTRS: Final[Mapping[type[lp.LogicalPlan], LiteralString]] = {
     lp.Collect: "SINK (memory)",
@@ -21,6 +22,7 @@ _NO_ATTRS: Final[Mapping[type[lp.LogicalPlan], LiteralString]] = {
     lp.Pivot: "PIVOT[...]",  # NOTE: Only exists in `DslPlan`, not `IR` which defines the displays
     lp.HConcat: "HCONCAT",  # had extra indent
     lp.VConcat: "UNION",  # had extra indent
+    lp.ScanEmpty: _FMT_FRAME.format(kind="LF", names="", n="0"),
 }
 
 _INDENT_INCREMENT = 2
@@ -91,6 +93,7 @@ def explain(plan: lp.LogicalPlan) -> str:
 @_iter_format.register(lp.Pivot)
 @_iter_format.register(lp.HConcat)
 @_iter_format.register(lp.VConcat)
+@_iter_format.register(lp.ScanEmpty)
 def _(plan: lp.LogicalPlan, *_: Any) -> Iterator[str]:
     yield _NO_ATTRS[type(plan)]
 
@@ -104,8 +107,8 @@ def _(plan: lp.ScanDataFrame | lp.ScanLazyFrame[Any], *_: Any) -> Iterator[str]:
         fmt_names = ", ".join(f'"{name}"' for name in names[:4])
         if n_columns > 4:
             fmt_names += ", ..."
-    frame = "DF" if isinstance(plan, lp.ScanDataFrame) else "LF"
-    yield f"{frame} [{fmt_names}]; {n_columns} COLUMNS"
+    kind = "DF" if isinstance(plan, lp.ScanDataFrame) else "LF"
+    yield _FMT_FRAME.format(kind=kind, names=fmt_names, n=str(n_columns))
 
 
 @_iter_format.register(lp.ScanFile)

@@ -28,6 +28,7 @@ from narwhals._plan.functions import (
     min,
     min_horizontal,
     nth,
+    select,
     sum,
     sum_horizontal,
 )
@@ -81,6 +82,7 @@ __all__ = (
     "read_parquet_schema",
     "scan_csv",
     "scan_parquet",
+    "select",
     "selectors",
     "sum",
     "sum_horizontal",

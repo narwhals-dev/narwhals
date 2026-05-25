@@ -10,7 +10,7 @@ from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
-from narwhals._plan.polars.expr import linear_space
+from narwhals._plan.polars.expr import linear_space, lit
 from narwhals._plan.polars.namespace import (
     dtype_from_native,
     dtype_to_native,
@@ -243,7 +243,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return None if self.is_empty() else self.native.item(-1)
 
     def fill_nan(self, value: float | Self | None) -> Self:
-        fill_value = pl.lit(value.native) if isinstance(value, PolarsSeries) else value
+        fill_value = lit(value.native) if isinstance(value, PolarsSeries) else value
         return self._with_native(self.native.fill_nan(fill_value))
 
     def fill_null(self, value: NonNestedLiteral | Self) -> Self:

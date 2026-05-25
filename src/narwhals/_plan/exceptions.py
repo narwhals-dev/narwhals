@@ -216,10 +216,19 @@ def invalid_into_expr_error(
     return InvalidIntoExprError(msg)
 
 
-def at_least_one_error(method: ExprFunction, /) -> TypeError:
+def at_least_one_error(
+    method: ExprFunction | Literal["LazyFrame.select"], /
+) -> TypeError:
     predicate = "predicate or constraint"
-    kind = {"filter": predicate, "when": predicate, "sort_by": "sort key"}[method]
+    kind = {
+        "filter": predicate,
+        "when": predicate,
+        "sort_by": "sort key",
+        "LazyFrame.select": "expression",
+    }[method]
     msg = f"at least one {kind} must be provided"
+    if method == "LazyFrame.select":
+        msg = f"{msg} to {method}"
     return TypeError(msg)
 
 

@@ -5,17 +5,24 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+import narwhals._plan.selectors as ncs
+from tests.plan.utils import assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from tests.conftest import Data
+    from tests.plan.utils import DataFrame, LazyFrame
 
 pytest.importorskip("pyarrow")
 
 
-@pytest.mark.parametrize(
+@pytest.fixture
+def data() -> Data:
+    return {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
+
+
+cases = pytest.mark.parametrize(
     ("exprs", "expected"),
     [
         pytest.param(
@@ -33,7 +40,19 @@ pytest.importorskip("pyarrow")
         ),
     ],
 )
-def test_struct_field(exprs: nwp.Expr | Iterable[nwp.Expr], expected: Data) -> None:
-    data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
+
+
+@cases
+def test_struct_field(
+    data: Data, exprs: nwp.Expr | Iterable[nwp.Expr], expected: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data).select(exprs)
+    assert_equal_data(result, expected)
+
+
+@cases
+def test_struct_field_lazy(
+    data: Data, exprs: nwp.Expr | Iterable[nwp.Expr], expected: Data, lazyframe: LazyFrame
+) -> None:
+    result = lazyframe(data).select(exprs).sort(ncs.first()).collect()
     assert_equal_data(result, expected)

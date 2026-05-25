@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import builtins
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 import polars as pl
 
 from narwhals._plan.common import todo
-from narwhals._plan.compliant.expr import CompliantExpr
+from narwhals._plan.compliant import CompliantExpr, typing as ct
+from narwhals._plan.compliant.accessors import ExprStructNamespace
 from narwhals._plan.polars import compat
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
@@ -19,13 +20,17 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions.ranges import IntRange
-    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
-    from narwhals._plan.polars.lazyframe import PolarsLazyFrame as LazyFrame
+    from narwhals._plan.expressions import FunctionExpr as FExpr
+    from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.struct import FieldByName
+    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
 
+__all__ = ("PolarsExpr", "len", "linear_space", "lit", "over", "row_index")
 
 Incomplete: TypeAlias = Any
+
+PolarsFrame: TypeAlias = "ct.Frame[pl.DataFrame, pl.Series, pl.LazyFrame]"
 
 if compat.OVER_RESPECTS_NULLS_LAST:
     # NOTE: Allows all features, so no need to branch in any calls
@@ -60,7 +65,7 @@ else:
                     raise compat.over_error("descending")
                 options["descending"] = descending
             if not partition_by and not compat.OVER_WITHOUT_PARTITION_BY:
-                partition_by = (pl.lit(1),)
+                partition_by = (lit(1),)
         return self.over(*partition_by, **options)
 
 
@@ -95,6 +100,17 @@ def row_index(
     return int_range.sort_by(by.arg_sort(nulls_last=nulls_last))
 
 
+if compat.LIT_ACCEPTS_DICT or TYPE_CHECKING:
+    lit = pl.lit
+else:
+
+    def lit(value: Any, dtype: pl.DataType | type[pl.DataType] | None = None) -> pl.Expr:
+        return pl.struct(**value) if isinstance(value, dict) else pl.lit(value, dtype)
+
+
+ExprT_co = TypeVar("ExprT_co", bound="PolarsExpr", covariant=True)
+
+
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     __slots__ = ("_native",)
     _native: pl.Expr
@@ -121,7 +137,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         unknown = cls.version.dtypes.Unknown
         dtype_pl = None if dtype == unknown else dtype_to_native(dtype, cls.version)
-        return cls.from_native(pl.lit(value, dtype_pl), name)
+        return cls.from_native(lit(value, dtype_pl), name)
 
     @property
     def native(self) -> pl.Expr:
@@ -131,9 +147,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def __narwhals_classes__(self) -> PolarsClasses:
         return PolarsClasses()
 
-    def dispatch(
-        self, node: ir.ExprIR, frame: DataFrame | LazyFrame, name: str
-    ) -> PolarsExpr:
+    def dispatch(self, node: ir.ExprIR, frame: PolarsFrame, name: str) -> PolarsExpr:
         """Trying to limit the API surface for now.
 
         - polars only uses `PolarsDataFrame._evaluate_irs`
@@ -153,7 +167,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def lit_series(
         cls, node: ir.LitSeries[pl.Series], _: Incomplete, name: str, /
     ) -> Self:
-        return cls.from_native(pl.lit(node.native), name)
+        return cls.from_native(lit(node.native), name)
 
     @classmethod
     def len_star(cls, _: ir.Len, __: Incomplete, name: str, /) -> Self:
@@ -184,7 +198,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     cum_min = todo()
     cum_prod = todo()
     cum_sum = todo()
-    date_range = todo()
     diff = todo()
     drop_nulls = todo()
     ewm_mean = todo()
@@ -200,6 +213,16 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     floor = todo()
     hist_bin_count = todo()
     hist_bins = todo()
+
+    def date_range(
+        self, node: ir.FunctionExpr[DateRange], frame: Incomplete, name: str
+    ) -> Self:
+        func = node.function
+        if fastpath := func.try_unwrap_literals(node):
+            native = pl.date_range(*fastpath, f"{func.interval}d", closed=func.closed)
+            return self.from_native(native, name)
+        msg = f"TODO @dangotbanned: `{self.date_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.args[0]!r}\n{node.args[1]!r}"
+        raise NotImplementedError(msg)
 
     def int_range(
         self, node: ir.FunctionExpr[IntRange], frame: Incomplete, name: str
@@ -269,7 +292,28 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     dt = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     list = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     str = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
-    struct = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+
+    @property
+    def struct(self) -> PolarsStructNamespace[Self]:
+        return PolarsStructNamespace(self)
+
+
+class PolarsStructNamespace(ExprStructNamespace[PolarsFrame, ExprT_co]):
+    __slots__ = ("_compliant",)
+
+    def __init__(self, compliant: ExprT_co, /) -> None:
+        self._compliant: ExprT_co = compliant
+
+    @property
+    def compliant(self) -> ExprT_co:
+        return self._compliant
+
+    def field(
+        self, node: FExpr[FieldByName], frame: PolarsFrame, name: str, /
+    ) -> ExprT_co:
+        compliant = self.compliant
+        previous = node.dispatch_arg(compliant, frame, name).native
+        return compliant.from_native(previous.struct.field(node.function.name), name)
 
 
 PolarsExpr()

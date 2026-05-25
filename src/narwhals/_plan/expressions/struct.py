@@ -52,14 +52,14 @@ class FieldByName(
     def needs_expansion(self) -> bool:
         return True
 
-    def _field(self, dtype: Struct) -> Field:  # pragma: no cover
+    def _field(self, dtype: Struct) -> Field:
         if field := next((f for f in dtype.fields if f.name == self.name), None):
             return field
-        raise not_found_error(self.name)
+        raise not_found_error(self.name)  # pragma: no cover
 
-    def resolve_dtype(
-        self, node: FunctionExpr[Self], schema: FrozenSchema, /
-    ) -> DType:  # pragma: no cover
+    # TODO @dangotbanned: Fix initial empty schema/lit edge case
+    #   `nwp.select(nwp.lit({"a": 1}).struct.field("a"), lazy="polars")`
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
         if (
             (struct_name := node.args[0].meta.output_name(raise_if_undetermined=False))
             and (struct := schema.get(struct_name))

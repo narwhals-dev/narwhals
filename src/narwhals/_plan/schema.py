@@ -159,6 +159,7 @@ class FrozenSchema(_BaseSchema):
 
     @staticmethod
     def empty() -> FrozenSchema:
+        """Create a schema with 0 columns."""
         if (empty := FrozenSchema.__empty) is not None:
             return empty
         FrozenSchema.__empty = FrozenSchema._from_read_only(_read_only_mapping(()))

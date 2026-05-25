@@ -30,14 +30,14 @@ class BroadcastSeries(Protocol[NativeSeriesT]):
     ) -> Iterator[Series[NativeSeriesT]]:
         """Yield broadcasted `Scalar`s and unwrapped `Expr`s from `exprs`.
 
-        `default` must be provided when operating in a `with_columns` context.
+        - `default` must be provided when operating in a `with_columns` context.
+        - If 0 expressions were passed in (e.g. `df.select()`), this is a noop
         """
         exprs = tuple(exprs)
-        length = (
-            default
-            if len(exprs) == 1
-            else cls._length_required([len(e) for e in exprs], default)
-        )
+        if len(exprs) > 1:
+            length = cls._length_required([len(e) for e in exprs], default)
+        else:
+            length = default
         if length is None:
             yield from (e.to_series() for e in exprs)
         else:

@@ -1052,7 +1052,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         return isinstance(ir, Column) and ((self.name == ir.name) or allow_aliasing)
 
     @unstable
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
         """Get the data type of an expanded expression.
 
         Arguments:

@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import datetime as dt
 import decimal
+import textwrap
 from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
+import narwhals._plan.expressions as ir
 import narwhals.stable.v1 as nw_v1
 from tests.plan.utils import Series, assert_expr_ir_equal
 
@@ -288,3 +290,24 @@ def test_lit_object() -> None:
 )
 def test_function(exprs: nwp.Expr | Sequence[nwp.Expr], expected: LiteralString) -> None:
     assert_reprs_equal(exprs, expected)
+
+
+def test_function_expr_explain() -> None:
+    f_expr = nwp.col("a").shift(5)._ir
+    assert isinstance(f_expr, ir.FunctionExpr)
+    expected = textwrap.dedent("""\
+    FunctionExpr[Shift(n=5)]
+      Unary(DEFAULT)
+        col('a')
+      LENGTH_PRESERVING""")
+    assert f_expr.explain() == expected
+
+    f_expr = nwp.int_range(nwp.col("a").max())._ir
+    assert isinstance(f_expr, ir.FunctionExpr)
+    expected = textwrap.dedent("""\
+    FunctionExpr[IntRange(step=1, dtype=Int64)]
+      Binary(Constraint.SCALAR, Constraint.SCALAR)
+        lit(0)
+        col('a').max()
+      FunctionFlags.DEFAULT""")
+    assert f_expr.explain(format="long") == expected

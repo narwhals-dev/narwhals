@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Generic
 
 from narwhals._exceptions import issue_warning
 from narwhals._plan import _parse, plugins, translate
 from narwhals._plan.common import closed_kwds
 from narwhals._plan.compliant.typing import FromNative, Native
+from narwhals._plan.exceptions import at_least_one_error
 from narwhals._plan.group_by import LazyGroupBy
 from narwhals._plan.options import (
     ExplodeOptions,
@@ -271,8 +272,11 @@ class LazyFrame(Generic[Native]):
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_lp(self._plan.rename(mapping))
 
-    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
+    def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Self:
         e_irs = tuple(_parse.into_iter_expr_ir(*exprs, **named_exprs))
+        if not e_irs:
+            msg: Final = "LazyFrame.select"
+            raise at_least_one_error(msg)
         return self._with_lp(self._plan.select(e_irs))
 
     # TODO @dangotbanned: Open an issue to find out why we don't have this on main?

@@ -216,6 +216,10 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         return ScanCsv.from_source(source)
 
     @classmethod
+    def scan_empty(cls) -> ScanEmpty:
+        return ScanEmpty()
+
+    @classmethod
     def scan_parquet(cls, source: FileSource, /) -> ScanParquet:
         return ScanParquet.from_source(source)
 
@@ -375,7 +379,7 @@ class LogicalPlan(_BasePlan[_Fwd], _root=True):
         )
 
     # Terminal
-    def collect(self, kwds: ClosedKwds) -> Collect:  # pragma: no cover
+    def collect(self, kwds: ClosedKwds) -> Collect:
         return self._sink(Collect(input=self, kwds=kwds))
 
     # TODO @dangotbanned: Handle `BytesIO`
@@ -551,6 +555,84 @@ class ScanLazyFrame(ScanFrame["CompliantLazyFrame[Native_co]"], Generic[Native_c
     def to_narwhals(self) -> LazyFrame[Native_co]:
         impl = self.implementation
         return into_version(self.version).lazyframe._from_lp_scan(self, impl)
+
+
+class ScanEmpty(Scan):
+    """Root node for a bare `select(...)`.
+
+    ## Notes
+    Empty refers to a schema with no prior context (e.g. `pl.LazyFrame()`).
+
+    For a SQL-like backend, a query [like this]:
+    >>> import narwhals._plan as nw
+    >>> print(
+    ...     nw.select(nwp.int_range(0, 100_000, 2).alias("n"), lazy="polars")
+    ...     .filter(nw.col("n") % 22_500 == 0)
+    ...     .explain()
+    ... )
+    FILTER [([(col('n')) % (lit(22500))]) == (lit(0))]
+    FROM
+      SELECT [int_range(lit(0), lit(100000)).alias('n')]
+        LF []; 0 COLUMNS
+
+
+    Would translate to:
+    >>> import duckdb
+    >>> sql_like_query = "SELECT range AS n FROM range(0, 100000, 2) WHERE n % 22500 == 0"
+    >>> print(duckdb.sql(sql_like_query))
+    ┌───────┐
+    │   n   │
+    │ int64 │
+    ├───────┤
+    │     0 │
+    │ 22500 │
+    │ 45000 │
+    │ 67500 │
+    │ 90000 │
+    └───────┘
+
+    >>> import sqlframe.duckdb
+    >>> sqlframe.duckdb.DuckDBSession().sql(sql_like_query).show()
+    +-------+
+    |   n   |
+    +-------+
+    |   0   |
+    | 22500 |
+    | 45000 |
+    | 67500 |
+    | 90000 |
+    +-------+
+
+    Important:
+        Uses a distinct node to make it easy to declare as unsupported.
+
+    ## Related
+    ### DuckDB
+    - https://duckdb.org/docs/current/sql/functions/list#range-functions
+    - https://duckdb.org/docs/current/sql/query_syntax/values
+    - https://duckdb.org/docs/current/sql/query_syntax/unnest
+    - https://duckdb.org/docs/current/sql/query_syntax/from#table-functions
+    - https://duckdb.org/docs/current/sql/functions/utility#repeat_rowvarargs-num_rows
+
+    ### PySpark
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.sql.html
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/functions.html#table-valued-functions
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.SparkSession.range.html
+    - https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.functions.udtf.html#pyspark.sql.functions.udtf
+
+
+    [like this]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.select.html
+    """
+
+    def to_narwhals(
+        self, backend: IntoBackend[Backend], version: Version
+    ) -> LazyFrame[Any]:
+        return into_version(version).lazyframe._from_lp_scan(
+            self, Implementation.from_backend(backend)
+        )
+
+    def resolve(self, resolver: LogicalToResolved, /) -> ResolvedPlan:
+        return resolver.scan_empty(self)
 
 
 class SingleInput(LogicalPlan, has_inputs=True):

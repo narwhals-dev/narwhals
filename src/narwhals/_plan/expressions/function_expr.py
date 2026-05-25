@@ -256,6 +256,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         """
         return self.function.__function_parameters__.dispatch_args(self, ctx, frame, name)
 
+    # TODO @dangotbanned: Figure out why this docstring didn't give coverage
     def explain(self, *, format: Literal["short", "long"] = "short") -> str:
         """Create a rich string representation of the expression.
 

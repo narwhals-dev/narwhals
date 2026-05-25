@@ -76,6 +76,9 @@ Column: TypeAlias = "CompliantColumn[DeprecatedFrameT_contra, NativeColumn_co, N
 Series: TypeAlias = "CompliantSeries[NativeSeriesT_co]"
 DataFrame: TypeAlias = "CompliantDataFrame[NativeDataFrameT_co, NativeSeriesT_co]"
 LazyFrame: TypeAlias = "CompliantLazyFrame[Native_co]"
+Frame: TypeAlias = (
+    "DataFrame[NativeDataFrameT_co, NativeSeriesT_co] | LazyFrame[Native_co]"
+)
 PlanEvaluator: TypeAlias = "ResolvedToCompliant[Native]"
 
 ColumnAny: TypeAlias = "CompliantColumn[Any, Any, Any, Any]"
