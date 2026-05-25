@@ -67,19 +67,19 @@ def test_lazy(
     named_exprs: dict[str, IntoExpr],
     expected: Data,
     lazy: Lazy,
-    request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            lazy == "polars"
-            and POLARS_VERSION < (1, 17, 0)
-            and expected == {"literal": [None]},
+    if (
+        lazy == "polars"
+        and POLARS_VERSION < (1, 17, 0)
+        and expected == {"literal": [None]}
+    ):
+        # NOTE: This was a regression, but unclear when it stopped working
+        pytest.skip(
             reason=(
                 "PanicException: `arg_sort` operation not supported for dtype `null`.\n"
                 "https://github.com/pola-rs/polars/pull/20135"
-            ),
+            )
         )
-    )
     result = nwp.select(*exprs, lazy=lazy, **named_exprs).collect().sort(ncs.first())
     assert_equal_data(result, expected)
 
