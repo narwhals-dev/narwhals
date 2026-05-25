@@ -975,6 +975,9 @@ class Array(NestedType):
         for _ in self.shape:
             if isinstance(dtype, tp_self):
                 dtype = dtype.inner
+            else:  # pragma: no cover
+                msg = "Either something has gone horribly wrong in narwhals, or you've fiddled with the internals!"
+                raise TypeError(msg)
         return f"{tp_self.__name__}({dtype!r}, shape={self.shape})"
 
 
