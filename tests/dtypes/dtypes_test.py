@@ -219,7 +219,8 @@ def test_array_inner_recursive() -> None:
     shape = (2, 3, 4, 5)
     dtype = nw.Array(nw.Int64, shape=shape)
     for dim in shape:
-        assert dtype.size == dim  # pyright: ignore[reportAttributeAccessIssue]
+        assert isinstance(dtype, nw.Array)
+        assert dtype.size == dim
         dtype = dtype.inner  # type: ignore[assignment]
 
 
