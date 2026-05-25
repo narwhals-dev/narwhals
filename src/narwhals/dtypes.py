@@ -972,8 +972,9 @@ class Array(NestedType):
         # Get leaf type
         dtype: Self | IntoDType = self
         tp_self = type(self)
-        while isinstance(dtype, tp_self):
-            dtype = dtype.inner
+        for _ in self.shape:
+            if isinstance(dtype, tp_self):
+                dtype = dtype.inner
         return f"{tp_self.__name__}({dtype!r}, shape={self.shape})"
 
 
