@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import FunctionExpr, StructExpr
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType, Field, Struct
+    from narwhals.dtypes import DType
 
 STRUCT = Version.MAIN.dtypes.Struct
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
@@ -52,24 +52,19 @@ class FieldByName(
     def needs_expansion(self) -> bool:
         return True
 
-    def _field(self, dtype: Struct) -> Field:
-        if field := next((f for f in dtype.fields if f.name == self.name), None):
-            return field
-        raise not_found_error(self.name)  # pragma: no cover
-
     def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema, /) -> DType:
-        arg = node.args[0]
+        prev = node.args[0]
+        name = self.name
         if (
-            (struct_name := arg.meta.output_name(raise_if_undetermined=False))
-            and (
-                (struct := schema.get(struct_name))
-                or (not schema and (struct := arg.resolve_dtype(schema)))
+            (
+                (not schema and (dtype := prev.resolve_dtype(schema)))
+                or (dtype := schema.get(prev.meta.output_name()))
             )
-            and isinstance(struct, STRUCT)
+            and isinstance(dtype, STRUCT)
+            and (field := next((f for f in dtype.fields if f.name == name), None))
         ):
-            return into_dtype(self._field(struct).dtype)
-
-        raise not_found_error(self.name)
+            return into_dtype(field.dtype)
+        raise not_found_error(name)
 
 
 class IRStructNamespace(IRNamespace):
