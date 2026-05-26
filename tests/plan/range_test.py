@@ -166,7 +166,7 @@ def test_date_range_eager(
     assert result == expected
 
 
-# TODO @dangotbanned: Add polars: `int_range` (full), `binary_expr`, `Expr.<aggregations>`
+# TODO @dangotbanned: Add polars: `int_range` (full)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -246,7 +246,7 @@ def test_linear_space_values(
     assert_equal_series(result, expected, "ls")
 
 
-# TODO @dangotbanned: Add polars: `linear_space` (full), `Expr.len`
+# TODO @dangotbanned: Add polars: `linear_space` (full)
 def test_linear_space_expr() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
     pytest.importorskip("pyarrow")
@@ -308,7 +308,7 @@ def test_linear_space_expr_numeric_dtype(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Add polars: `linear_space`,`DataFrame.with_columns`
+# TODO @dangotbanned: Add polars: `linear_space`
 def test_linear_space_expr_wrong_length() -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L194-L199
     pytest.importorskip("pyarrow")

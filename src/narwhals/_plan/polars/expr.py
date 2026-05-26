@@ -123,7 +123,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def arg_min(self, node: agg.ArgMin, frame: Incomplete, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.arg_min())
 
-    binary_expr = todo()
+    def binary_expr(self, node: ir.BinaryExpr, frame: Any, name: str, /) -> Self:
+        lhs, rhs = (
+            self.dispatch(node.left, frame, name).native,
+            self.dispatch(node.right, frame, "").native,
+        )
+        result: pl.Expr = node.op(lhs, rhs)
+        return self.from_native(result, name)
 
     def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
         dtype = dtype_to_native(node.dtype, self.version)
