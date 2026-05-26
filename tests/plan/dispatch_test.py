@@ -44,12 +44,11 @@ def data() -> dict[str, Any]:
     }
 
 
-def test_dispatch(data: Data, dataframe: DataFrame, request: FixtureRequest) -> None:
+def test_dispatch(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     implemented_full = nwp.col("a").is_null()
     forgot_to_expand = (ir.NamedIR("howdy", nwp.nth(3, 4).first()._ir),)
     aliased_after_expand: tuple[ir.NamedIR] = (ir.NamedIR("b", ir.col("a").alias("b")),)
-    dataframe.xfail_polars_select(request)
     assert_equal_data(df.select(implemented_full), {"a": [False, True, False]})
 
     with pytest.raises(

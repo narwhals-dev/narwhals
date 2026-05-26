@@ -18,7 +18,12 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import FunctionExpr as FExpr, aggregation as agg
+    from narwhals._plan.expressions import (
+        FunctionExpr as FExpr,
+        aggregation as agg,
+        boolean,
+        functions as F,
+    )
     from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
@@ -97,9 +102,15 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return cls.from_native(fn.len(), name)
 
     abs = todo()
-    all = todo()
+
+    def all(self, node: FExpr[boolean.All], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.all())
+
     all_horizontal = todo()
-    any = todo()
+
+    def any(self, node: FExpr[boolean.Any], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.any())
+
     any_horizontal = todo()
 
     def arg_max(self, node: agg.ArgMax, frame: Incomplete, name: str) -> Self:
@@ -134,8 +145,18 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ewm_mean = todo()
     exp = todo()
     fill_nan = todo()
-    fill_null = todo()
-    fill_null_with_strategy = todo()
+
+    def fill_null(self, node: FExpr[F.FillNull], frame: Any, name: str) -> Self:
+        expr, value = node.dispatch_args(self, frame, name)
+        return self.from_native(expr.native.fill_null(value.native))
+
+    def fill_null_with_strategy(
+        self, node: FExpr[F.FillNullWithStrategy], frame: Any, name: str
+    ) -> Self:
+        f = node.function
+        native = node.dispatch_arg(self, frame, name).native
+        return self.from_native(native.fill_null(strategy=f.strategy, limit=f.limit))
+
     filter = todo()
 
     def first(self, node: agg.First, frame: Any, name: str) -> Self:
@@ -166,7 +187,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.args[0]!r}\n{node.args[1]!r}"
         raise NotImplementedError(msg)
 
-    is_between = todo()
+    def is_between(
+        self, node: FExpr[boolean.IsBetween], frame: Any, name: str, /
+    ) -> Self:
+        expr, lb, ub = node.dispatch_args(self, frame, name)
+        result = expr.native.is_between(lb.native, ub.native, node.function.closed)
+        return self.from_native(result, name)
+
     is_duplicated = todo()
     is_finite = todo()
     is_first_distinct = todo()
@@ -175,8 +202,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     is_last_distinct = todo()
     is_nan = todo()
     is_not_nan = todo()
-    is_not_null = todo()
-    is_null = todo()
+
+    def is_not_null(self, node: FExpr[boolean.IsNotNull], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.is_not_null())
+
+    def is_null(self, node: FExpr[boolean.IsNull], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.is_null())
+
     is_unique = todo()
     kurtosis = todo()
 
@@ -213,11 +245,18 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def n_unique(self, node: agg.NUnique, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.n_unique())
 
-    not_ = todo()
-    null_count = todo()
+    def not_(self, node: FExpr[boolean.Not], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.not_())
+
+    def null_count(self, node: FExpr[F.NullCount], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.null_count())
+
     over = todo()
     over_ordered = todo()
-    pow = todo()
+
+    def pow(self, node: FExpr[F.Pow], frame: Any, name: str) -> Self:
+        base, exponent = node.dispatch_args(self, frame, name)
+        return self.from_native(base.native.pow(exponent.native), name)
 
     def quantile(self, node: agg.Quantile, frame: Any, name: str) -> Self:
         return self.from_native(

@@ -379,7 +379,7 @@ def test_select(
     dataframe: DataFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (10 failed, 33 xfailed)
+    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 25 xfailed, 18 xpassed)
         #                                       pytest tests/plan/compliant_test.py -k "test_select" --plan-include=polars
         pytest.mark.xfail(
             dataframe.is_polars(),
@@ -518,15 +518,7 @@ def test_with_columns_all_aggregates(
     expr: nwp.Expr,
     expected: dict[str, PythonLiteral],
     dataframe: DataFrame,
-    request: TopRequest,
 ) -> None:
-    id_ = request.node.callspec.id
-    dataframe.xfail(
-        request,
-        dataframe.is_polars() and ("null_count" in id_ or "cast_fill_null_all" in id_),
-        reason="`PolarsExpr` is only partially implemented",
-        raises=NotImplementedError,
-    )
 
     height = len(next(iter(data_indexed.values())))
     expected_full = {k: height * [v] for k, v in expected.items()}
