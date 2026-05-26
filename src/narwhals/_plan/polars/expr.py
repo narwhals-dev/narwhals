@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         functions as F,
     )
     from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
     from narwhals.typing import IntoDType, PythonLiteral
@@ -153,11 +154,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     min_horizontal = horizontal
     sum_horizontal = horizontal
 
-    # TODO @dangotbanned: varadic (extra)
-    # - Add `functions.concat_str` (use backport `< (0, 20, 6)`)
-    # - Base it on spark_like/duckdb
-    #   - not PolarsNamespace
-    concat_str = todo()
+    def concat_str(self, node: HExpr[ConcatStr], frame: Any, name: str) -> Self:
+        return self.horizontal(node, frame, name, fn_native=fn.concat_str)
 
     def mean_horizontal(
         self, node: HExpr[F.MeanHorizontal], frame: Any, name: str, /

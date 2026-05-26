@@ -353,17 +353,7 @@ def test_select(
     expected: dict[str, Any],
     data_small: dict[str, Any],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 4 xfailed, 38 xpassed)
-        #                                       pytest tests/plan/compliant_test.py -k "test_select" --plan-include=polars
-        pytest.mark.xfail(
-            dataframe.is_polars(),
-            raises=NotImplementedError,
-            reason="TODO @dangotbanned: `dataframe[polars].select`",
-            strict=False,
-        )
-    )
     result = dataframe(data_small).select(expr)
     assert_equal_data(result, expected)
 

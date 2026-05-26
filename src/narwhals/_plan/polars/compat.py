@@ -32,6 +32,8 @@ BACKEND_VERSION: Final = Implementation.POLARS._backend_version()
 HAS_POLARS_ERROR: Final = BACKEND_VERSION >= (0, 20, 4)
 """https://github.com/pola-rs/polars/pull/13615"""
 
+HAS_LEN: Final = BACKEND_VERSION >= (0, 20, 5)
+"""https://github.com/pola-rs/polars/pull/13719"""
 
 SERIES_SORT_SUPPORTS_NULLS_LAST: Final = BACKEND_VERSION >= (0, 20, 6)
 """https://github.com/pola-rs/polars/pull/13794
@@ -41,8 +43,9 @@ Prior this this version, `nulls_last` was [only available on `*Frame` and `Expr`
 [only available on `*Frame` and `Expr`]: https://github.com/pola-rs/polars/issues/13788
 """
 
-HAS_LEN: Final = BACKEND_VERSION >= (0, 20, 5)
-"""https://github.com/pola-rs/polars/pull/13719"""
+CONCAT_STR_SUPPORTS_IGNORE_NULLS: Final = BACKEND_VERSION >= (0, 20, 6)
+"""https://github.com/pola-rs/polars/pull/13877"""
+
 
 HAS_MEAN_HORIZONTAL: Final = BACKEND_VERSION >= (0, 20, 8)
 """https://github.com/pola-rs/polars/pull/14369"""

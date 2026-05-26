@@ -18,7 +18,15 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-__all__ = ("len", "linear_space", "lit", "mean_horizontal", "over", "row_index")
+__all__ = (
+    "concat_str",
+    "len",
+    "linear_space",
+    "lit",
+    "mean_horizontal",
+    "over",
+    "row_index",
+)
 
 if compat.OVER_RESPECTS_NULLS_LAST:
     # NOTE: Allows all features, so no need to branch in any calls
@@ -107,5 +115,14 @@ else:
         )
 
 
-# TODO @dangotbanned: Backport `concat_str` fix
-concat_str = pl.concat_str
+# TODO @dangotbanned: This seems to good to be true, expect ci to tell me nope
+if compat.CONCAT_STR_SUPPORTS_IGNORE_NULLS or TYPE_CHECKING:
+    concat_str = pl.concat_str
+else:
+
+    def concat_str(
+        *exprs: pl.Expr, separator: str = "", ignore_nulls: bool = False
+    ) -> pl.Expr:
+        if ignore_nulls:
+            exprs = (e.fill_null("") for e in exprs)
+        return pl.concat_str(*exprs, separator=separator)

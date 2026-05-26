@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -23,7 +23,7 @@ from tests.plan.utils import assert_equal_data, dataframe
         ),
     ],
 )
-def test_format(expr: nwp.Expr, expected: list[str]) -> None:
+def test_format(expr: nwp.Expr, expected: list[str], dataframe: DataFrame) -> None:
     data = {
         "name": ["bob", "alice", "dodo"],
         "surname": ["builder", "wonderlander", "extinct"],
