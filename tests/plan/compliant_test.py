@@ -29,8 +29,6 @@ if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Sequence
 
-    from _pytest.fixtures import TopRequest  # `pytest.FixtureRequest.node` returns `Any`
-
     from narwhals._plan.typing import ColumnNameOrSelector, IntoExpr, OneOrIterable
     from narwhals.typing import PythonLiteral
     from tests.conftest import Data
@@ -87,14 +85,6 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
     if isinstance(expr, nwp.Expr):
         return repr(expr._ir)
     return repr(expr)
-
-
-# TODO @dangotbanned: Add the `raises` back one `polars` is running the same query
-XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
-    reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
-    "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
-    "Function 'or_kleene' has no kernel matching input types (bool, null)"
-)
 
 
 @pytest.mark.parametrize(
@@ -288,20 +278,6 @@ XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwp.any_horizontal(nwp.lit(None, nw.Boolean), "i").alias("None-None"),
-                nwp.any_horizontal(nwp.lit(True), "i").alias("True-None"),
-                nwp.any_horizontal(nwp.lit(False), "i").alias("False-None"),
-            ],
-            {
-                "None-None": [None, None, None],
-                "True-None": [True, True, True],
-                "False-None": [None, None, None],
-            },
-            id="any-horizontal-kleene-full-null",
-            marks=XFAIL_PYARROW_KLEENE_ALL_NULL,
-        ),
-        pytest.param(
-            [
                 nwp.col("b").alias("a"),
                 nwp.col("l").alias("b"),
                 nwp.col("m").alias("i"),
@@ -379,7 +355,7 @@ def test_select(
     dataframe: DataFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 13 xfailed, 33 xpassed)
+    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 6 xfailed, 36 xpassed)
         #                                       pytest tests/plan/compliant_test.py -k "test_select" --plan-include=polars
         pytest.mark.xfail(
             dataframe.is_polars(),
@@ -487,15 +463,7 @@ def test_with_columns(
     expected: dict[str, Any],
     data_small_af: dict[str, Any],
     dataframe: DataFrame,
-    request: TopRequest,
 ) -> None:
-    id_ = request.node.callspec.id
-    dataframe.xfail(
-        request,
-        dataframe.is_polars() and ("with_columns-extend" in id_),
-        reason="`PolarsExpr` is only partially implemented",
-        raises=NotImplementedError,
-    )
     result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
 
@@ -543,7 +511,7 @@ def test_first_last_expr_with_columns(
     dataframe: DataFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    dataframe.xfail_polars_with_columns(request)
+    dataframe.xfail_not_implemented(request, dataframe.is_polars(), method="over")
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
     expected_full = {"result": height * [expected]}

@@ -13,6 +13,7 @@ from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fas
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
     from typing import TypeAlias
 
     from typing_extensions import Self
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._plan import expressions as ir
     from narwhals._plan.expressions import (
         FunctionExpr as FExpr,
+        HorizontalExpr as HExpr,
         aggregation as agg,
         boolean,
         functions as F,
@@ -110,12 +112,50 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def all(self, node: FExpr[boolean.All], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.all())
 
-    all_horizontal = todo()
+    def _dispatch_variadic_native(
+        self, node: HExpr, frame: Any, name: str, /
+    ) -> Iterator[pl.Expr]:
+        exprs = iter(node.args)
+        yield self.dispatch(next(exprs), frame, name).native
+        for expr_ir in exprs:
+            yield self.dispatch(expr_ir, frame, "").native
+
+    def horizontal(
+        self, node: HExpr, frame: Any, name: str, /, *, fill: Any = None
+    ) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        f = node.function
+        kwds = f.to_dict()
+        if fill is not None and kwds.pop("ignore_nulls", False):
+            inputs = (e.fill_null(fill) for e in inputs)
+        fn_native: Callable[..., pl.Expr] = getattr(pl, f.__expr_ir_dispatch__.name)
+        return self.from_native(fn_native(*inputs, **kwds), name)
+
+    def all_horizontal(
+        self, node: HExpr[boolean.AllHorizontal], frame: Any, name: str, /
+    ) -> Self:
+        return self.horizontal(node, frame, name, fill=True)
+
+    def any_horizontal(
+        self, node: HExpr[boolean.AnyHorizontal], frame: Any, name: str, /
+    ) -> Self:
+        return self.horizontal(node, frame, name, fill=False)
+
+    coalesce = horizontal
+    max_horizontal = horizontal
+    min_horizontal = horizontal
+    sum_horizontal = horizontal
+
+    # TODO @dangotbanned: varadic (extra)
+    # - Add `functions.concat_str` (use backport `< (0, 20, 6)`)
+    # - Base it on spark_like/duckdb
+    #   - not PolarsNamespace
+    concat_str = todo()
+    # TODO @dangotbanned: varadic (extra)
+    mean_horizontal = todo()
 
     def any(self, node: FExpr[boolean.Any], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.any())
-
-    any_horizontal = todo()
 
     def arg_max(self, node: agg.ArgMax, frame: Incomplete, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.arg_max())
@@ -135,12 +175,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         dtype = dtype_to_native(node.dtype, self.version)
         return self.from_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
 
-    coalesce = todo()
     ceil = todo()
     clip = todo()
     clip_lower = todo()
     clip_upper = todo()
-    concat_str = todo()
 
     def count(self, node: agg.Count, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.count())
@@ -238,12 +276,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def max(self, node: agg.Max, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.max())
 
-    max_horizontal = todo()
-
     def mean(self, node: agg.Mean, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.mean())
-
-    mean_horizontal = todo()
 
     def median(self, node: agg.Median, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.median())
@@ -251,7 +285,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def min(self, node: agg.Min, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.min())
 
-    min_horizontal = todo()
     mode_all = todo()
     mode_any = todo()
 
@@ -309,8 +342,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     def sum(self, node: agg.Sum, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.sum())
-
-    sum_horizontal = todo()
 
     def ternary_expr(self, node: ir.TernaryExpr, frame: Any, name: str, /) -> Self:
         result = (
