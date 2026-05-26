@@ -239,13 +239,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def int_range(
         self, node: ir.FunctionExpr[IntRange], frame: Incomplete, name: str
     ) -> Self:
-        func = node.function
-        if fastpath := func.try_unwrap_literals(node):
-            dtype = dtype_to_native_fast(func.dtype)
-            native = pl.int_range(*fastpath, func.step, dtype=dtype)
-            return self.from_native(native, name)
-        msg = f"TODO @dangotbanned: `{self.int_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.args[0]!r}\n{node.args[1]!r}"
-        raise NotImplementedError(msg)
+        f = node.function
+        if fastpath := f.try_unwrap_literals(node):
+            start, end = fastpath
+        else:
+            start, end = (e.native for e in node.dispatch_args(self, frame, name))
+        native = pl.int_range(start, end, f.step, dtype=dtype_to_native_fast(f.dtype))
+        return self.from_native(native, name)
 
     def is_between(
         self, node: FExpr[boolean.IsBetween], frame: Any, name: str, /

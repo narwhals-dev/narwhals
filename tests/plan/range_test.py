@@ -166,7 +166,6 @@ def test_date_range_eager(
     assert result == expected
 
 
-# TODO @dangotbanned: Add polars: `int_range` (full)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -189,15 +188,7 @@ def test_int_range(
     expected: dict[str, Any],
     data: dict[str, Any],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
 ) -> None:
-    polars_todo = frozenset(("len", "binary_expr-1", "binary_expr-2"))
-    dataframe.xfail(
-        request,
-        bool(dataframe.is_polars() and polars_todo.intersection(expected)),
-        reason="TODO @dangotbanned: `PolarsExpr.int_range()` w/ non-`Lit` inputs",
-        raises=NotImplementedError,
-    )
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
 
