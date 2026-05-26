@@ -144,6 +144,8 @@ class Cast(ExprIR, dtype=get_dtype()):
 
 
 class Sort(ExprIR, dtype=same_dtype()):
+    """Sort an expression."""
+
     __slots__ = ("expr", "options")
     expr: ExprIR = node()
     options: SortOptions
@@ -155,8 +157,21 @@ class Sort(ExprIR, dtype=same_dtype()):
     def is_length_preserving(self) -> bool:
         return self.expr.is_length_preserving()
 
+    @property
+    def descending(self) -> bool:
+        return self.options.descending
 
+    @property
+    def nulls_last(self) -> bool:
+        return self.options.nulls_last
+
+
+# TODO @dangotbanned: This should lower into `SortByNames` (TBD),
+# if expansion yields `is_seq_column(self.by)`
+# `ArrowExpr.sort_by` has this fastpath and it'll be useful in other backends
 class SortBy(ExprIR, dtype=same_dtype()):
+    """Sort an expression by the ordering of other expressions."""
+
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
     expr: ExprIR = node()
     by: Seq[ExprIR] = nodes()

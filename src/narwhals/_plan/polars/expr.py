@@ -7,7 +7,7 @@ import polars as pl
 from narwhals._plan.common import todo
 from narwhals._plan.compliant import CompliantExpr, typing as ct
 from narwhals._plan.compliant.accessors import ExprStructNamespace
-from narwhals._plan.polars import functions as fn
+from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
 from narwhals._utils import Version
@@ -50,6 +50,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     # NOTE: Unsure how much of `name` might be needed for polars
     @classmethod
     def from_native(cls, native: pl.Expr, name: str = "", /) -> Self:
+        """`name` is only required for the inner-most `PolarsExpr` [^1].
+
+        [^1]: Excluding any bugs in older versions.
+        """
         obj = cls.__new__(cls)
         obj._native = native if not name else native.alias(name)
         return obj
@@ -275,8 +279,18 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     round = todo()
     shift = todo()
     skew = todo()
-    sort = todo()
-    sort_by = todo()
+
+    def sort(self, node: ir.Sort, frame: Any, name: str) -> Self:
+        native = self.dispatch(node.expr, frame, name).native
+        result = native.sort(descending=node.descending, nulls_last=node.nulls_last)
+        return self.from_native(result)
+
+    def sort_by(self, node: ir.SortBy, frame: Any, name: str) -> Self:
+        by = (self.dispatch(e, frame, "").native for e in node.by)
+        native = self.dispatch(node.expr, frame, name).native
+        result = native.sort_by(*by, **compat.sort(node.options, len(node.by)))
+        return self.from_native(result)
+
     sqrt = todo()
 
     def std(self, node: agg.Std, frame: Any, name: str) -> Self:

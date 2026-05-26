@@ -11,7 +11,7 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping, Sized
 
     from typing_extensions import LiteralString
 
@@ -159,7 +159,7 @@ def too_old(code: LiteralString, version: LiteralString, /) -> NotImplementedErr
 
 if NULLS_LAST_ACCEPTS_MULTIPLE:
 
-    def sort(self: SortMultipleOptions, by: Sequence[str], /) -> _SortOptions:
+    def sort(self: SortMultipleOptions, by: Sized | int, /) -> _SortOptions:
         """Try to convert `self` into something the current version of polars supports.
 
         [`extend_bool`] doesn't broadcast length 1 sequences, so we do it here.
@@ -167,16 +167,16 @@ if NULLS_LAST_ACCEPTS_MULTIPLE:
         [`extend_bool`]: https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
         """
         desc, nulls = self.descending, self.nulls_last
-        len_by = len(by)
+        len_by = by if isinstance(by, int) else len(by)
         if len_by != 1:
             desc = desc if len(desc) != 1 else desc * len_by
             nulls = nulls if len(nulls) != 1 else nulls * len_by
         return {"descending": desc, "nulls_last": nulls}
 else:
 
-    def sort(self: SortMultipleOptions, by: Sequence[str], /) -> _SortOptions:
+    def sort(self: SortMultipleOptions, by: Sized | int, /) -> _SortOptions:
         desc, nulls = self.descending, self.nulls_last
-        desc = desc if len(desc) != 1 else desc * len(by)
+        desc = desc if len(desc) != 1 else desc * (by if isinstance(by, int) else len(by))
         first = nulls[0]
         if len(nulls) != 1 and any(x != first for x in nulls[1:]):
             msg = "nulls_last=(..., )"

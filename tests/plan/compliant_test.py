@@ -379,7 +379,7 @@ def test_select(
     dataframe: DataFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 25 xfailed, 18 xpassed)
+    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 23 xfailed, 20 xpassed)
         #                                       pytest tests/plan/compliant_test.py -k "test_select" --plan-include=polars
         pytest.mark.xfail(
             dataframe.is_polars(),
@@ -492,8 +492,7 @@ def test_with_columns(
     id_ = request.node.callspec.id
     dataframe.xfail(
         request,
-        dataframe.is_polars()
-        and ("with_columns-extend" in id_ or "fill_null_last_sort_max" in id_),
+        dataframe.is_polars() and ("with_columns-extend" in id_),
         reason="`PolarsExpr` is only partially implemented",
         raises=NotImplementedError,
     )
