@@ -167,7 +167,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         native = node.dispatch_arg(self, frame, name).native
         return self.from_native(native.fill_null(strategy=f.strategy, limit=f.limit))
 
-    filter = todo()
+    def filter(self, node: ir.Filter, frame: Any, name: str, /) -> Self:
+        native = self.dispatch(node.expr, frame, name).native
+        result = native.filter(self.dispatch(node.by, frame, "").native)
+        return self.from_native(result)
 
     def first(self, node: agg.First, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.first())
