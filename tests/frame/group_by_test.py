@@ -81,7 +81,7 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
             assert isinstance(sub_df, nw.DataFrame)
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
-    expected_keys = [(1, 4), (3, 6)]  # type: ignore[list-item]
+    expected_keys = [(1, 4), (3, 6)]
     keys = []
     for key, _ in df.group_by("a", "b"):
         keys.append(key)

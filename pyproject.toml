@@ -383,9 +383,8 @@ exclude_also = [
 files = ["src/narwhals", "tests", "test-plugin"]
 pretty = true
 strict = true
+allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
 check_untyped_defs = true
-allow_redefinition_new = true
-local_partial_types = true
 
 [[tool.mypy.overrides]]
 module = [
