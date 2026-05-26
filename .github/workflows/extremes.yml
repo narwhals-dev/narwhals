@@ -29,13 +29,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: min-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group extreme-minimum-versions
       - name: Run pytest
-        run: |
-          uv run --group extreme-minimum-versions \
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
-          --constructors="pandas,pyarrow,polars[eager],polars[lazy],duckdb"
+        run: make run-ci DEPS="--group extreme-minimum-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
 
   pretty_old_versions:
     strategy:
@@ -52,13 +47,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pretty-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group extreme-pretty-old-versions
       - name: Run pytest
-        run: |
-          uv run --group extreme-pretty-old-versions \
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
-          --constructors="pandas,pyarrow,polars[eager],polars[lazy],duckdb"
+        run: make run-ci DEPS="--group extreme-pretty-old-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
 
   not_so_old_versions:
     strategy:
@@ -75,13 +65,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: not-so-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group extreme-not-so-old-versions
       - name: Run pytest
-        run: |
-          uv run --group extreme-not-so-old-versions \
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
-          --constructors="pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
+        run: make run-ci DEPS="--group extreme-not-so-old-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
 
   nightlies:
     strategy:

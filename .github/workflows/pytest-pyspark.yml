@@ -38,13 +38,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group core-tests --extra pyspark --extra pandas
       - name: Run pytest
-        run: |
-          uv run --group core-tests --extra pyspark --extra pandas \
-          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
-          --constructors="pyspark"
+        run: make run-ci DEPS="--group core-tests --extra pyspark --extra pandas" CMD="pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors=pyspark"
 
   pytest-pyspark-min-version-constructor:
     if: github.head_ref != 'bump-version'
@@ -62,13 +57,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group core-tests --extra pyspark --extra pandas
       - name: Run pytest
-        run: |
-          uv run --group core-tests --extra pyspark --extra pandas --with "pyspark==3.5.0" \
-          pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow \
-          --constructors="pyspark"
+        run: make run-ci DEPS="--group min-pyspark-version --extra pandas" CMD="pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors=pyspark"
 
   pytest-pyspark-connect-constructor:
     if: github.head_ref != 'bump-version'

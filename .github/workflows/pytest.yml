@@ -30,14 +30,9 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-310-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group tests --extra pandas --extra polars --extra pyarrow
       - name: Run pytest
         shell: bash
-        run: |
-          uv run --group tests --extra pandas --extra polars --extra pyarrow \
-          pytest tests --cov=src --cov=tests --cov-fail-under=75 \
-          --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
+        run: make run-ci DEPS="--group tests --extra pandas --extra polars --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]"
 
   pytest-windows:
     if: github.head_ref != 'bump-version'
@@ -55,15 +50,10 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-windows-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group core-tests --group extra --extra pandas
+      # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
       - name: Run pytest
         shell: bash
-        # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
-        run: |
-          uv run --group core-tests --group extra --extra pandas \
-          pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 \
-          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci DEPS="--group core-tests --group extra --extra pandas" CMD="pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   pytest-full-coverage:
     if: github.head_ref != 'bump-version'
@@ -86,21 +76,12 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --extra pandas --extra dask --group core-tests --group extra
       - name: Run pytest
-        run: |
-          uv run --extra pandas --extra dask --group core-tests --group extra \
-          pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 \
-          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: |
-          uv run \
-          --extra pandas --extra dask \
-          --group core-tests --group extra \
-          pytest src --doctest-modules
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest src --doctest-modules"
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
@@ -121,24 +102,12 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-narrower-deps-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes -U --group tests --extra pandas
       - name: Run pytest (pandas and pandas[nullable])
-        run: |
-          uv run --isolated -U --group tests --extra pandas \
-          pytest tests --runslow --constructors="pandas,pandas[nullable]"
+        run: make run-ci DEPS="-U --group tests --extra pandas" RUN_ONLY="--isolated" CMD="pytest tests --runslow --constructors=pandas,pandas[nullable]"
       - name: Run pytest (pandas[pyarrow] and pyarrow)
-        run: |
-          uv run --isolated -U \
-          --group tests \
-          --extra pandas --extra pyarrow \
-          pytest tests --runslow --constructors="pandas[pyarrow],pyarrow"
+        run: make run-ci DEPS="-U --group tests --extra pandas --extra pyarrow" RUN_ONLY="--isolated" CMD="pytest tests --runslow --constructors=pandas[pyarrow],pyarrow"
       - name: Run pytest (polars)
-        run: |
-          uv run --isolated -U \
-          --group tests \
-          --extra polars \
-          pytest tests --runslow --constructors="polars[eager],polars[lazy]"
+        run: make run-ci DEPS="-U --group tests --extra polars" RUN_ONLY="--isolated" CMD="pytest tests --runslow --constructors=polars[eager],polars[lazy]"
 
   python-314:
     if: github.head_ref != 'bump-version'
@@ -156,13 +125,8 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group core-tests --extra pandas
       - name: Run pytest
-        run: |
-          uv run --group core-tests --extra pandas \
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
-          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci DEPS="--group core-tests --extra pandas" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   python-314t:
     if: github.head_ref != 'bump-version'
@@ -183,10 +147,5 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --pre --group tests --extra pandas --extra pyarrow
       - name: Run pytest
-        run: |
-          uv run --pre --group tests --extra pandas --extra pyarrow \
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 \
-          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow"
+        run: make run-ci DEPS="--pre --group tests --extra pandas --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"

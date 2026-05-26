@@ -170,6 +170,11 @@ extreme-not-so-old-versions = [
   {include-group = "tests"},
 ]
 
+min-pyspark-version = [
+  "pyspark==3.5.0",
+  {include-group = "core-tests"},
+]
+
 [tool.uv.build-backend]
 source-include = [
   "src/*",

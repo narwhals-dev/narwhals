@@ -24,3 +24,8 @@ docs-serve: ## Build and serve the docs locally
 	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
 	uv run --group docs utils/generate_zen_content.py
 	uv run --group docs zensical serve
+
+.PHONY: run-ci
+run-ci:  ## Print resolved deps, then run a command via uv. Usage: make run-ci DEPS="<groups/extras>" CMD="<command>" [RUN_ONLY="<uv-run-only flags, e.g. --isolated, --with X, --no-sync>"]
+	uv export --no-annotate --no-hashes $(DEPS)
+	uv run $(DEPS) $(RUN_ONLY) $(CMD)

@@ -30,9 +30,5 @@ jobs:
           enable-cache: "true"
           cache-suffix: ibis-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --group core-tests --extra ibis --extra pandas
       - name: Run pytest
-        run: |
-          uv run --group core-tests --extra ibis --extra pandas \
-          pytest tests --constructors=ibis
+        run: make run-ci DEPS="--group core-tests --extra ibis --extra pandas" CMD="pytest tests --constructors=ibis"

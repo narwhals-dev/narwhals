@@ -28,9 +28,7 @@ jobs:
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Show dependencies
-        run: uv export --no-annotate --no-hashes --extra dask --extra pandas --group core-tests
       - name: generate-data
-        run: uv run --extra dask --extra pandas --group core-tests --module tpch.generate_data --debug
-      - name: tpch-tests 
-        run: uv run --extra dask --extra pandas --group core-tests pytest tpch/tests
+        run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="--module tpch.generate_data --debug"
+      - name: tpch-tests
+        run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="pytest tpch/tests"
