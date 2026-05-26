@@ -558,18 +558,6 @@ class Constructor(Generic[R_co, Impl_co]):
             raises=raises,
         )
 
-    def xfail_polars_select(
-        self, request: FixtureRequest, /, *, raises: _Raises = NotImplementedError
-    ) -> None:
-        self.xfail_not_implemented(request, self.is_polars(), "select", raises=raises)
-
-    def xfail_polars_with_columns(
-        self, request: FixtureRequest, /, *, raises: _Raises = NotImplementedError
-    ) -> None:
-        self.xfail_not_implemented(
-            request, self.is_polars(), "with_columns", raises=raises
-        )
-
     def xfail_eager_pivot_too_old(self, request: FixtureRequest, /) -> None:
         """Fail either polars or pyarrow below the version(s) they introduced `pivot`."""
         self.xfail(

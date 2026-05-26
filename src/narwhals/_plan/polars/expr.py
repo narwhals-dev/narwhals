@@ -222,6 +222,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return self.from_native(self.dispatch(node.expr, frame, name).native.first())
 
     floor = todo()
+    gather_every = todo()
     hist_bin_count = todo()
     hist_bins = todo()
 
@@ -327,6 +328,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     rolling_std = todo()
     rolling_var = todo()
     round = todo()
+    sample_frac = todo()
+    sample_n = todo()
     shift = todo()
     skew = todo()
 
