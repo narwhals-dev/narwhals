@@ -311,7 +311,15 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return self.from_native(self.dispatch(node.expr, frame, name).native.sum())
 
     sum_horizontal = todo()
-    ternary_expr = todo()
+
+    def ternary_expr(self, node: ir.TernaryExpr, frame: Any, name: str, /) -> Self:
+        result = (
+            pl.when(self.dispatch(node.predicate, frame, name).native)
+            .then(self.dispatch(node.truthy, frame, "").native)
+            .otherwise(self.dispatch(node.falsy, frame, "").native)
+        )
+        return self.from_native(result, name)
+
     unique = todo()
 
     def var(self, node: agg.Var, frame: Any, name: str) -> Self:
