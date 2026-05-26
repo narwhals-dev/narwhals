@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._plan import expressions as ir
-    from narwhals._plan.expressions import FunctionExpr as FExpr
+    from narwhals._plan.expressions import FunctionExpr as FExpr, aggregation as agg
     from narwhals._plan.expressions.ranges import DateRange, IntRange
     from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
@@ -34,6 +34,9 @@ PolarsFrame: TypeAlias = "ct.Frame[pl.DataFrame, pl.Series, pl.LazyFrame]"
 ExprT_co = TypeVar("ExprT_co", bound="PolarsExpr", covariant=True)
 
 
+# TODO @dangotbanned: Do the long way first,
+# then circle back on what pattern reduces the code the most
+# (e.g maybe `pl.Expr.<method>` wrapping)
 class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     __slots__ = ("_native",)
     _native: pl.Expr
@@ -98,8 +101,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     all_horizontal = todo()
     any = todo()
     any_horizontal = todo()
-    arg_max = todo()
-    arg_min = todo()
+
+    def arg_max(self, node: agg.ArgMax, frame: Incomplete, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.arg_max())
+
+    def arg_min(self, node: agg.ArgMin, frame: Incomplete, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.arg_min())
+
     binary_expr = todo()
 
     def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
@@ -112,7 +120,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     clip_lower = todo()
     clip_upper = todo()
     concat_str = todo()
-    count = todo()
+
+    def count(self, node: agg.Count, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.count())
+
     cum_count = todo()
     cum_max = todo()
     cum_min = todo()
@@ -127,7 +138,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     fill_null_with_strategy = todo()
     filter = todo()
 
-    def first(self, node: ir.aggregation.First, frame: Any, name: str) -> Self:
+    def first(self, node: agg.First, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.first())
 
     floor = todo()
@@ -168,26 +179,53 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     is_null = todo()
     is_unique = todo()
     kurtosis = todo()
-    last = todo()
+
+    def last(self, node: agg.Last, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.last())
+
     linear_space = todo()
-    len = todo()
+
+    def len(self, node: agg.Len, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.len())
+
     log = todo()
-    max = todo()
+
+    def max(self, node: agg.Max, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.max())
+
     max_horizontal = todo()
-    mean = todo()
+
+    def mean(self, node: agg.Mean, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.mean())
+
     mean_horizontal = todo()
-    median = todo()
-    min = todo()
+
+    def median(self, node: agg.Median, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.median())
+
+    def min(self, node: agg.Min, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.min())
+
     min_horizontal = todo()
     mode_all = todo()
     mode_any = todo()
-    n_unique = todo()
+
+    def n_unique(self, node: agg.NUnique, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.n_unique())
+
     not_ = todo()
     null_count = todo()
     over = todo()
     over_ordered = todo()
     pow = todo()
-    quantile = todo()
+
+    def quantile(self, node: agg.Quantile, frame: Any, name: str) -> Self:
+        return self.from_native(
+            self.dispatch(node.expr, frame, name).native.quantile(
+                node.quantile, node.interpolation
+            )
+        )
+
     rank = todo()
     replace_strict = todo()
     replace_strict_default = todo()
@@ -201,12 +239,23 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     sort = todo()
     sort_by = todo()
     sqrt = todo()
-    std = todo()
-    sum = todo()
+
+    def std(self, node: agg.Std, frame: Any, name: str) -> Self:
+        return self.from_native(
+            self.dispatch(node.expr, frame, name).native.std(node.ddof)
+        )
+
+    def sum(self, node: agg.Sum, frame: Any, name: str) -> Self:
+        return self.from_native(self.dispatch(node.expr, frame, name).native.sum())
+
     sum_horizontal = todo()
     ternary_expr = todo()
     unique = todo()
-    var = todo()
+
+    def var(self, node: agg.Var, frame: Any, name: str) -> Self:
+        return self.from_native(
+            self.dispatch(node.expr, frame, name).native.var(node.ddof)
+        )
 
     cat = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     dt = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
