@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 import polars as pl
 
 from narwhals._plan._version import into_version
-from narwhals._plan.common import temp
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant import CompliantDataFrame
 from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.common import remap_exceptions
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
-from narwhals._utils import Implementation, not_implemented, requires
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -347,10 +347,6 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         expr = fn.row_index(name, order_by=order_by, nulls_last=nulls_last)
         return self.from_native(self.native.select(expr, pl.all()))
 
-    _group_by = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
-    lazy = not_implemented()
-    filter = not_implemented()
-
     def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
         expr = self.__narwhals_classes__.expr
         new = expr.__new__
@@ -365,6 +361,15 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         it = (e.native for e in self._evaluate_irs(irs))
         with remap_exceptions():
             return self.from_native(self.native.with_columns(it))
+
+    def filter(self, predicate: ir.NamedIR) -> Self:
+        expr = self.__narwhals_classes__.expr
+        pred = expr.__new__(expr).dispatch(predicate.expr, self, "").native
+        return self.from_native(self.native.filter(pred))
+
+    # TODO @dangotbanned: Last context left for polars is group_by
+    _group_by = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    lazy = todo()
 
 
 PolarsDataFrame()

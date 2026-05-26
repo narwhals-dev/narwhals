@@ -104,9 +104,10 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
         ),
         (nwp.col("b").sort(descending=True).alias("b_desc"), {"b_desc": [3, 2, 1]}),
         (nwp.col("c").filter(a="B"), {"c": [2]}),
-        (
+        pytest.param(
             [nwp.nth(0, 1).filter(nwp.col("c") >= 4), nwp.col("d").last() - 4],
             {"a": ["A", "A"], "b": [1, 3], "d": [4, 4]},
+            id="[nth(0, 1).filter(col('c') >= 4), col('d').last() - 4]",
         ),
         (nwp.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
         (nwp.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),

@@ -142,6 +142,13 @@ def binary_expr_length_changing_error(
     return InvalidOperationError(msg)
 
 
+def frame_filter_length_changing_error(
+    expr: ir.ExprIR, frame: Literal["DataFrame", "LazyFrame"]
+) -> InvalidOperationError:
+    msg = f"Length-changing expressions cannot be used in `{frame}.filter()`, got:\n`{expr!r}`"
+    return InvalidOperationError(msg)
+
+
 # TODO @dangotbanned: (low-priority) Underline which part is not length-preserving (outer/inner)
 # `col('a').first()` (first)
 # `nwp.int_range(2).sort()` (int_range)
