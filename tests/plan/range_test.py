@@ -87,7 +87,6 @@ EXPECTED_DATE_4: Final = [
 ]
 
 
-# TODO @dangotbanned: Add polars: `date_range` (full)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -120,14 +119,7 @@ def test_date_range(
     expected: dict[str, Any],
     data: dict[str, list[dt.date]],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
 ) -> None:
-    dataframe.xfail(
-        request,
-        dataframe.is_polars() and "date_range_cast_expr" in expected,
-        reason="TODO @dangotbanned: `PolarsExpr.date_range()` w/ non-`Lit` inputs",
-        raises=NotImplementedError,
-    )
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
 

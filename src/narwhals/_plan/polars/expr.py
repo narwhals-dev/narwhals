@@ -229,12 +229,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def date_range(
         self, node: ir.FunctionExpr[DateRange], frame: Incomplete, name: str
     ) -> Self:
-        func = node.function
-        if fastpath := func.try_unwrap_literals(node):
-            native = pl.date_range(*fastpath, f"{func.interval}d", closed=func.closed)
-            return self.from_native(native, name)
-        msg = f"TODO @dangotbanned: `{self.date_range.__qualname__}()` w/ non-`Lit` inputs, got \n{node.args[0]!r}\n{node.args[1]!r}"
-        raise NotImplementedError(msg)
+        f = node.function
+        if fastpath := f.try_unwrap_literals(node):
+            start, end = fastpath
+        else:
+            start, end = (e.native for e in node.dispatch_args(self, frame, name))
+        native = pl.date_range(start, end, f"{f.interval}d", closed=f.closed)
+        return self.from_native(native, name)
 
     def int_range(
         self, node: ir.FunctionExpr[IntRange], frame: Incomplete, name: str
