@@ -26,10 +26,16 @@ if TYPE_CHECKING:
         boolean,
         functions as F,
     )
-    from narwhals._plan.expressions.ranges import DateRange, IntRange
+    from narwhals._plan.expressions.ranges import (
+        DateRange,
+        IntRange,
+        LinearSpace,
+        RangeFunction,
+    )
     from narwhals._plan.expressions.strings import ConcatStr
     from narwhals._plan.expressions.struct import FieldByName
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame  # noqa: F401
+    from narwhals._plan.typing import NonNestedLiteralT_co, Seq2
     from narwhals.typing import IntoDType, PythonLiteral
 
 __all__ = ("PolarsExpr",)
@@ -226,26 +232,30 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     hist_bin_count = todo()
     hist_bins = todo()
 
-    def date_range(
-        self, node: ir.FunctionExpr[DateRange], frame: Incomplete, name: str
-    ) -> Self:
+    def _range_args(
+        self, node: FExpr[RangeFunction[NonNestedLiteralT_co]], frame: Any
+    ) -> Seq2[NonNestedLiteralT_co | pl.Expr]:
+        if fastpath := node.function.try_unwrap_literals(node):
+            return fastpath
+        start, end = (e.native for e in node.dispatch_args(self, frame, ""))
+        return start, end
+
+    def date_range(self, node: FExpr[DateRange], frame: Any, name: str) -> Self:
         f = node.function
-        if fastpath := f.try_unwrap_literals(node):
-            start, end = fastpath
-        else:
-            start, end = (e.native for e in node.dispatch_args(self, frame, name))
-        native = pl.date_range(start, end, f"{f.interval}d", closed=f.closed)
+        interval = f"{f.interval}d"
+        native = pl.date_range(*self._range_args(node, frame), interval, closed=f.closed)
         return self.from_native(native, name)
 
-    def int_range(
-        self, node: ir.FunctionExpr[IntRange], frame: Incomplete, name: str
-    ) -> Self:
+    def int_range(self, node: FExpr[IntRange], frame: Any, name: str) -> Self:
         f = node.function
-        if fastpath := f.try_unwrap_literals(node):
-            start, end = fastpath
-        else:
-            start, end = (e.native for e in node.dispatch_args(self, frame, name))
-        native = pl.int_range(start, end, f.step, dtype=dtype_to_native_fast(f.dtype))
+        dtype = dtype_to_native_fast(f.dtype)
+        native = pl.int_range(*self._range_args(node, frame), f.step, dtype=dtype)
+        return self.from_native(native, name)
+
+    def linear_space(self, node: FExpr[LinearSpace], frame: Any, name: str) -> Self:
+        f = node.function
+        n = f.num_samples
+        native = fn.linear_space(*self._range_args(node, frame), n, closed=f.closed)
         return self.from_native(native, name)
 
     def is_between(
@@ -275,8 +285,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     def last(self, node: agg.Last, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.last())
-
-    linear_space = todo()
 
     def len(self, node: agg.Len, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.len())

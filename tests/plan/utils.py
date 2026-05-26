@@ -582,9 +582,6 @@ Series: TypeAlias = Constructor[nwp.Series[Any], _EagerAllowedImpl]
 Eager: TypeAlias = "_EagerAllowed"
 """The type of the `eager` fixture."""
 
-EagerOrFalse: TypeAlias = "Eager | Literal[False]"
-"""The type of the `eager_or_false` fixture."""
-
 Lazy: TypeAlias = "_LazyAllowed"
 """The type of the `lazy` fixture."""
 
