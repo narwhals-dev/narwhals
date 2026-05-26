@@ -6,31 +6,54 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  N_RUNS: 5
 
 permissions:
   contents: read
 
 jobs:
-  tox:
-    strategy:
-      matrix:
-        python-version: ["3.10"]
-        os: [ubuntu-latest]
-
-    runs-on: ${{ matrix.os }}
+  generate:
+    runs-on: ubuntu-latest
+    outputs:
+      combos: ${{ steps.gen.outputs.combos }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.10"
+      - id: gen
+        name: generate-random-versions
+        run: |
+          python utils/generate_random_versions.py --num "$N_RUNS" --output combos.json
+          echo "combos=$(cat combos.json)" >> "$GITHUB_OUTPUT"
+
+  tox:
+    needs: generate
+    strategy:
+      fail-fast: false
+      matrix:
+        combo: ${{ fromJson(needs.generate.outputs.combos) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.10"
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
-          cache-suffix: pytest-random-ci-${{ matrix.python-version }}
+          cache-suffix: pytest-random-ci-3.10
           cache-dependency-glob: "pyproject.toml"
-      - name: generate-random-versions
-        run: python utils/generate_random_versions.py
+      - name: write-requirements
+        run: |
+          cat > random-requirements.txt <<EOF
+          pandas==${{ matrix.combo.pandas }}
+          numpy==${{ matrix.combo.numpy }}
+          polars==${{ matrix.combo.polars }}
+          pyarrow==${{ matrix.combo.pyarrow }}
+          EOF
+          cat random-requirements.txt
       - name: install-random-versions
         run: uv pip install -r random-requirements.txt --system
       - name: install-narwhals
