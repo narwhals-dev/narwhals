@@ -970,12 +970,18 @@ class Array(NestedType):
 
     def __repr__(self) -> str:
         # Get leaf type
-        dtype_ = self
+        dtype: Self | IntoDType = self
+        tp_self = type(self)
+        # NOTE: This might look odd, but if we used a `while` loop
+        # it won't trigger a `RecursionError` like `for` does.
+        # https://github.com/narwhals-dev/narwhals/pull/3651
         for _ in self.shape:
-            dtype_ = dtype_.inner  # type: ignore[assignment]
-
-        class_name = self.__class__.__name__
-        return f"{class_name}({dtype_!r}, shape={self.shape})"
+            if isinstance(dtype, tp_self):
+                dtype = dtype.inner
+            else:  # pragma: no cover
+                msg = "Either something has gone horribly wrong in narwhals, or you've fiddled with the internals!"
+                raise TypeError(msg)
+        return f"{tp_self.__name__}({dtype!r}, shape={self.shape})"
 
 
 class Date(TemporalType):
