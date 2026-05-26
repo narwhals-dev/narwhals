@@ -39,9 +39,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     _native: pl.Expr
     version: ClassVar = Version.MAIN
 
-    def _with_native(self, native: pl.Expr, name: str = "", /) -> Self:
-        return self.from_native(native, name)
-
     # NOTE: Unsure how much of `name` might be needed for polars
     @classmethod
     def from_native(cls, native: pl.Expr, name: str = "", /) -> Self:
@@ -107,7 +104,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
         dtype = dtype_to_native(node.dtype, self.version)
-        return self._with_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
+        return self.from_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
 
     coalesce = todo()
     ceil = todo()
@@ -131,7 +128,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     filter = todo()
 
     def first(self, node: ir.aggregation.First, frame: Any, name: str) -> Self:
-        return self._with_native(self.dispatch(node.expr, frame, name).native.first())
+        return self.from_native(self.dispatch(node.expr, frame, name).native.first())
 
     floor = todo()
     hist_bin_count = todo()
