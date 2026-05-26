@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -44,7 +44,9 @@ def data_str() -> Data:
         ),
     ],
 )
-def test_coalesce_numeric(data_int: Data, expr: nwp.Expr, expected: Data) -> None:
+def test_coalesce_numeric(
+    data_int: Data, expr: nwp.Expr, expected: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data_int).select(expr)
     assert_equal_data(result, expected)
 
@@ -59,12 +61,14 @@ def test_coalesce_numeric(data_int: Data, expr: nwp.Expr, expected: Data) -> Non
         (nwp.coalesce("a", "b", "c", nwp.lit("xyz")), {"a": ["0", "xyz", "3", "5", "3"]}),
     ],
 )
-def test_coalesce_strings(data_str: Data, expr: nwp.Expr, expected: Data) -> None:
+def test_coalesce_strings(
+    data_str: Data, expr: nwp.Expr, expected: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data_str).select(expr)
     assert_equal_data(result, expected)
 
 
-def test_coalesce_series(data_str: Data) -> None:
+def test_coalesce_series(data_str: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_str)
     ser = df.get_column("b").alias("b_renamed")
     exprs = nwp.coalesce(ser, "a", nwp.col("c").fill_null("filled")), nwp.lit("ignored")
@@ -79,7 +83,7 @@ def test_coalesce_raises_non_expr() -> None:
         nwp.coalesce("a", "b", "c", NotAnExpr())  # type: ignore[arg-type]
 
 
-def test_coalesce_multi_output() -> None:
+def test_coalesce_multi_output(dataframe: DataFrame) -> None:
     data = {
         "col1": [True, None, False, False, None],
         "col2": [True, False, True, False, None],
