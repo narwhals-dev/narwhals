@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-__all__ = ("len", "linear_space", "lit", "over", "row_index")
+__all__ = ("len", "linear_space", "lit", "mean_horizontal", "over", "row_index")
 
 if compat.OVER_RESPECTS_NULLS_LAST:
     # NOTE: Allows all features, so no need to branch in any calls
@@ -94,3 +94,18 @@ else:
 
     def lit(value: Any, dtype: pl.DataType | type[pl.DataType] | None = None) -> pl.Expr:
         return pl.struct(**value) if isinstance(value, dict) else pl.lit(value, dtype)
+
+
+if compat.HAS_MEAN_HORIZONTAL or TYPE_CHECKING:
+    mean_horizontal = pl.mean_horizontal
+
+else:
+
+    def mean_horizontal(*exprs: pl.Expr) -> pl.Expr:
+        return pl.sum_horizontal(exprs) / pl.sum_horizontal(
+            e.is_not_null().cast(pl.Int64) for e in exprs
+        )
+
+
+# TODO @dangotbanned: Backport `concat_str` fix
+concat_str = pl.concat_str

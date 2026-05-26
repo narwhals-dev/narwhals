@@ -355,7 +355,7 @@ def test_select(
     dataframe: DataFrame,
     request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 6 xfailed, 36 xpassed)
+    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (4 passed, 4 xfailed, 38 xpassed)
         #                                       pytest tests/plan/compliant_test.py -k "test_select" --plan-include=polars
         pytest.mark.xfail(
             dataframe.is_polars(),

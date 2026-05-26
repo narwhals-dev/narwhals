@@ -121,15 +121,22 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
             yield self.dispatch(expr_ir, frame, "").native
 
     def horizontal(
-        self, node: HExpr, frame: Any, name: str, /, *, fill: Any = None
+        self,
+        node: HExpr,
+        frame: Any,
+        name: str,
+        /,
+        *,
+        fill: Any = None,
+        fn_native: Callable[..., pl.Expr] | None = None,
     ) -> Self:
         inputs = self._dispatch_variadic_native(node, frame, name)
         f = node.function
         kwds = f.to_dict()
         if fill is not None and kwds.pop("ignore_nulls", False):
             inputs = (e.fill_null(fill) for e in inputs)
-        fn_native: Callable[..., pl.Expr] = getattr(pl, f.__expr_ir_dispatch__.name)
-        return self.from_native(fn_native(*inputs, **kwds), name)
+        func = fn_native or getattr(pl, f.__expr_ir_dispatch__.name)
+        return self.from_native(func(*inputs, **kwds), name)
 
     def all_horizontal(
         self, node: HExpr[boolean.AllHorizontal], frame: Any, name: str, /
@@ -151,8 +158,11 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     # - Base it on spark_like/duckdb
     #   - not PolarsNamespace
     concat_str = todo()
-    # TODO @dangotbanned: varadic (extra)
-    mean_horizontal = todo()
+
+    def mean_horizontal(
+        self, node: HExpr[F.MeanHorizontal], frame: Any, name: str, /
+    ) -> Self:
+        return self.horizontal(node, frame, name, fn_native=fn.mean_horizontal)
 
     def any(self, node: FExpr[boolean.Any], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.any())
