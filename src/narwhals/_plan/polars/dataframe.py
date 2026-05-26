@@ -9,9 +9,8 @@ import narwhals.exceptions
 from narwhals._plan._version import into_version
 from narwhals._plan.common import temp
 from narwhals._plan.compliant import CompliantDataFrame
-from narwhals._plan.polars import compat
+from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
-from narwhals._plan.polars.expr import row_index
 from narwhals._plan.polars.frame import PolarsFrame
 from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
 from narwhals._utils import Implementation, not_implemented, requires
@@ -389,7 +388,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     def with_row_index_by(
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
     ) -> Self:
-        expr = row_index(name, order_by=order_by, nulls_last=nulls_last)
+        expr = fn.row_index(name, order_by=order_by, nulls_last=nulls_last)
         return self.from_native(self.native.select(expr, pl.all()))
 
     _group_by = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
