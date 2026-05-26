@@ -203,7 +203,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     cum_prod = todo()
     cum_sum = todo()
     diff = todo()
-    drop_nulls = todo()
+
+    def drop_nulls(self, node: FExpr[F.DropNulls], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.drop_nulls())
+
     ewm_mean = todo()
     exp = todo()
     fill_nan = todo()
