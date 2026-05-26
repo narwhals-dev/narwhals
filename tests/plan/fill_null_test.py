@@ -6,7 +6,7 @@ import pytest
 
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
@@ -110,7 +110,9 @@ DATA_LIMITS = {
         ),
     ],
 )
-def test_fill_null(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) -> None:
+def test_fill_null(
+    data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data, dataframe: DataFrame
+) -> None:
     df = dataframe(data)
     assert_equal_data(df.select(exprs), expected)
 
@@ -124,7 +126,7 @@ def test_fill_null(data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data) -
         (~ncs.last()).fill_null(strategy="backward", limit=20),
     ],
 )
-def test_fill_null_strategy_noop(expr: nwp.Expr) -> None:
+def test_fill_null_strategy_noop(expr: nwp.Expr, dataframe: DataFrame) -> None:
     data = {"a": [1, 2, 3], "b": [None, None, None], "i": [0, 1, 2]}
     expected = {"a": [1, 2, 3], "b": [None, None, None]}
     df = dataframe(data)

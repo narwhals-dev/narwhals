@@ -499,9 +499,7 @@ def test_first_last_expr_with_columns(
     agg: nwp.Expr,
     expected: PythonLiteral,
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
 ) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_polars(), method="over")
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
     height = len(next(iter(data_indexed.values())))
     expected_full = {"result": height * [expected]}

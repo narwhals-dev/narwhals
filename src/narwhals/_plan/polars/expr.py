@@ -315,8 +315,21 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def null_count(self, node: FExpr[F.NullCount], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.null_count())
 
-    over = todo()
-    over_ordered = todo()
+    def over(self, node: ir.Over, frame: Any, name: str) -> Self:
+        by = (self.dispatch(e, frame, "").native for e in node.partition_by)
+        result = self.dispatch(node.expr, frame, name).native.over(*by)
+        return self.from_native(result, name)
+
+    def over_ordered(self, node: ir.OverOrdered, frame: Any, name: str) -> Self:
+        by = (self.dispatch(e, frame, "").native for e in node.partition_by)
+        result = fn.over(
+            self.dispatch(node.expr, frame, "").native,
+            *by,
+            order_by=tuple(node.order_by_names()),
+            descending=node.descending,
+            nulls_last=node.nulls_last,
+        )
+        return self.from_native(result, name)
 
     def pow(self, node: FExpr[F.Pow], frame: Any, name: str) -> Self:
         base, exponent = node.dispatch_args(self, frame, name)

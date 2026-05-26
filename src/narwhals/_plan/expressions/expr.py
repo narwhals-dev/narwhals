@@ -256,6 +256,14 @@ class OverOrdered(Over):
             else:
                 raise over_order_by_names_error(self, by)
 
+    @property
+    def descending(self) -> bool:
+        return self.sort_options.descending
+
+    @property
+    def nulls_last(self) -> bool:
+        return self.sort_options.nulls_last
+
 
 class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
     """A binary operation applied to two expressions."""
