@@ -6,15 +6,9 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-pytest.importorskip("pyarrow")
 import narwhals._plan as nwp
 from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError, ShapeError
-from tests.plan.utils import (
-    DataFrame,
-    assert_equal_data,
-    dataframe as dataframe_old,
-    series as series_old,
-)
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -37,15 +31,23 @@ def data_2() -> Data:
 
 
 @pytest.mark.parametrize(
-    "predicate",
-    [[False, True, True], series_old([False, True, True]), nwp.col("a") > 1],
-    ids=["list[bool]", "Series", "Expr"],
+    "predicate", [[False, True, True], nwp.col("a") > 1], ids=["list[bool]", "Expr"]
 )
 def test_filter_single(
-    data: Data, predicate: list[bool] | nwp.Series[Any] | nwp.Expr
+    data: Data, predicate: list[bool] | nwp.Series[Any] | nwp.Expr, dataframe: DataFrame
 ) -> None:
     expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
-    result = dataframe_old(data).filter(predicate)
+    result = dataframe(data).filter(predicate)
+    assert_equal_data(result, expected)
+
+
+def test_filter_single_series(data: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data)
+    predicate = df.to_series().from_iterable(
+        [False, True, True], backend=dataframe.implementation
+    )
+    expected = {"a": [3, 2], "b": [4, 6], "z": [8.0, 9.0]}
+    result = df.filter(predicate)
     assert_equal_data(result, expected)
 
 
