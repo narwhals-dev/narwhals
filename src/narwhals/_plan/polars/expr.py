@@ -245,7 +245,11 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def floor(self, node: FExpr[F.Floor], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.floor())
 
-    gather_every = todo()
+    def gather_every(self, node: FExpr[F.GatherEvery], frame: Any, name: str) -> Self:
+        f = node.function
+        result = node.dispatch_arg(self, frame, name).native.gather_every(f.n, f.offset)
+        return self.from_native(result)
+
     hist_bin_count = todo()
     hist_bins = todo()
 

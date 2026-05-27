@@ -79,12 +79,7 @@ def test_gather_every_dataframe(
 
 @pytest.mark.parametrize("n", [1, 2, 3])
 @pytest.mark.parametrize("offset", [0, 1, 2, 3])
-def test_gather_every_expr(
-    data: Data, n: int, offset: int, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
-    dataframe.xfail_not_implemented(
-        request, dataframe.is_polars(), method="Expr.gather_every"
-    )
+def test_gather_every_expr(data: Data, n: int, offset: int, dataframe: DataFrame) -> None:
     df = dataframe(data)
     indices = slice(offset, None, n)
     v_idx, v_name = data["idx"][indices], data["name"][indices]
