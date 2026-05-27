@@ -271,8 +271,24 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     is_duplicated = todo()
     is_finite = todo()
     is_first_distinct = todo()
-    is_in_expr = todo()
-    is_in_seq = todo()
+
+    def is_in_expr(self, node: FExpr[boolean.IsInExpr], frame: Any, name: str, /) -> Self:
+        expr, other = node.dispatch_args(self, frame, name)
+        result = expr.native.is_in(other.native)
+        return self.from_native(result)
+
+    def is_in_seq(self, node: FExpr[boolean.IsInSeq], frame: Any, name: str, /) -> Self:
+        result = node.dispatch_arg(self, frame, name).native.is_in(node.function.other)
+        return self.from_native(result)
+
+    def is_in_series(
+        self, node: FExpr[boolean.IsInSeries[pl.Series]], frame: Any, name: str, /
+    ) -> Self:
+        result = node.dispatch_arg(self, frame, name).native.is_in(
+            node.function.other.native
+        )
+        return self.from_native(result)
+
     is_last_distinct = todo()
     is_nan = todo()
     is_not_nan = todo()
