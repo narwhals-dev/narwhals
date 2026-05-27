@@ -449,8 +449,14 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         result = node.dispatch_arg(self, frame, name).native.round(decimals)
         return self.from_native(result)
 
-    sample_frac = todo()
-    sample_n = todo()
+    def sample_frac(
+        self, node: FExpr[F.SampleFrac | F.SampleN], frame: Any, name: str
+    ) -> Self:
+        kwds = node.function.to_dict()
+        result = node.dispatch_arg(self, frame, name).native.sample(**kwds)
+        return self.from_native(result)
+
+    sample_n = sample_frac
 
     def shift(self, node: FExpr[F.Shift], frame: Any, name: str) -> Self:
         n = node.function.n
