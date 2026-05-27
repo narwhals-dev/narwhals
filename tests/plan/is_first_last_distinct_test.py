@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from narwhals import _plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -34,17 +34,21 @@ def expected_invert(expected: Data) -> Data:
     return {k: [not el for el in v] for k, v in expected.items()}
 
 
-def test_is_first_distinct(data: Data, expected: Data) -> None:
+def test_is_first_distinct(data: Data, expected: Data, dataframe: DataFrame) -> None:
     result = dataframe(data).select(nwp.all().is_first_distinct())
     assert_equal_data(result, expected)
 
 
-def test_is_last_distinct(data: Data, expected_invert: Data) -> None:
+def test_is_last_distinct(
+    data: Data, expected_invert: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data).select(nwp.all().is_last_distinct())
     assert_equal_data(result, expected_invert)
 
 
-def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
+def test_is_first_distinct_order_by(
+    data_indexed: Data, expected: Data, dataframe: DataFrame
+) -> None:
     result = (
         dataframe(data_indexed)
         .select(nwp.col("a", "b").is_first_distinct().over(order_by="i"), "i")
@@ -54,7 +58,9 @@ def test_is_first_distinct_order_by(data_indexed: Data, expected: Data) -> None:
     assert_equal_data(result, expected)
 
 
-def test_is_last_distinct_order_by(data_indexed: Data, expected_invert: Data) -> None:
+def test_is_last_distinct_order_by(
+    data_indexed: Data, expected_invert: Data, dataframe: DataFrame
+) -> None:
     result = (
         dataframe(data_indexed)
         .select(nwp.col("a", "b").is_last_distinct().over(order_by="i"), "i")
@@ -86,7 +92,7 @@ ORDER_NULL = "o_null"
 
 
 # NOTE: For `pyarrow`, the result is identical to `order_by`, because the index is already in order
-def test_is_first_last_distinct_partitioned(grouped: Data) -> None:
+def test_is_first_last_distinct_partitioned(grouped: Data, dataframe: DataFrame) -> None:
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_1: [1, 3, 3, 2, 3],
@@ -106,8 +112,11 @@ def test_is_first_last_distinct_partitioned(grouped: Data) -> None:
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 # NOTE: This works the same as `polars`
-def test_is_first_last_distinct_partitioned_order_by_desc(grouped: Data) -> None:
+def test_is_first_last_distinct_partitioned_order_by_desc(
+    grouped: Data, dataframe: DataFrame
+) -> None:
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_2: [1, 3, 3, 3, 3],
@@ -136,9 +145,11 @@ def test_is_first_last_distinct_partitioned_order_by_desc(grouped: Data) -> None
     assert_equal_data(result, expected)
 
 
-# NOTE: `polars` *currently* ignores the `nulls_last` argument
+# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 # https://github.com/pola-rs/polars/issues/24989
-def test_is_first_last_distinct_partitioned_order_by_nulls(grouped: Data) -> None:
+def test_is_first_last_distinct_partitioned_order_by_nulls(
+    grouped: Data, dataframe: DataFrame
+) -> None:
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_2: [1, 3, 3, 3, 3],

@@ -195,7 +195,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def dispatch_expr(self, expr: pl.Expr | pl.Series | NonNestedLiteral, /) -> Self:
         return self.from_native(self.native.to_frame().select(expr).to_series())
 
-    if compat.IS_NAN_NUMERIC_PRESERVES_NULLS:
+    if compat.IS_NAN_FINITE_NUMERIC_PRESERVES_NULLS:
 
         def is_nan(self) -> Self:
             return self._with_native(self.native.is_nan())

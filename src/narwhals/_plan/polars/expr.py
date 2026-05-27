@@ -274,9 +274,23 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         result = expr.native.is_between(lb.native, ub.native, node.function.closed)
         return self.from_native(result, name)
 
-    is_duplicated = todo()
-    is_finite = todo()
-    is_first_distinct = todo()
+    def is_duplicated(
+        self, node: FExpr[boolean.IsDuplicated], frame: Any, name: str
+    ) -> Self:
+        return self.from_native(
+            node.dispatch_arg(self, frame, name).native.is_duplicated()
+        )
+
+    def is_finite(self, node: FExpr[boolean.IsFinite], frame: Any, name: str) -> Self:
+        result = fn.is_finite(node.dispatch_arg(self, frame, name).native)
+        return self.from_native(result)
+
+    def is_first_distinct(
+        self, node: FExpr[boolean.IsFirstDistinct], frame: Any, name: str
+    ) -> Self:
+        return self.from_native(
+            node.dispatch_arg(self, frame, name).native.is_first_distinct()
+        )
 
     def is_in_expr(self, node: FExpr[boolean.IsInExpr], frame: Any, name: str, /) -> Self:
         expr, other = node.dispatch_args(self, frame, name)
@@ -295,7 +309,12 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         )
         return self.from_native(result)
 
-    is_last_distinct = todo()
+    def is_last_distinct(
+        self, node: FExpr[boolean.IsLastDistinct], frame: Any, name: str
+    ) -> Self:
+        return self.from_native(
+            node.dispatch_arg(self, frame, name).native.is_last_distinct()
+        )
 
     def is_not_nan(self, node: FExpr[boolean.IsNotNan], frame: Any, name: str) -> Self:
         result = fn.is_not_nan(node.dispatch_arg(self, frame, name).native)
@@ -311,7 +330,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def is_null(self, node: FExpr[boolean.IsNull], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.is_null())
 
-    is_unique = todo()
+    def is_unique(self, node: FExpr[boolean.IsUnique], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.is_unique())
 
     def kurtosis(self, node: FExpr[F.Kurtosis], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.kurtosis())

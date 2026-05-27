@@ -382,6 +382,7 @@ p2 = nwp.col("p2")
 p3 = nwp.col("p3")
 
 
+# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 @pytest.mark.parametrize(
     ("expr", "result_values"),
     [
@@ -521,6 +522,7 @@ def order_case(
     return pytest.param([over, sort_by], result_data, id=test_id)
 
 
+# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 # TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
 @pytest.mark.parametrize(
     ("expr", "expected"),
@@ -588,6 +590,7 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
     dataframe: DataFrame,
 ) -> None:
@@ -613,6 +616,7 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [

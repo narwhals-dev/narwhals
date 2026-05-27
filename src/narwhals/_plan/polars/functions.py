@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 __all__ = (
     "concat_str",
+    "is_finite",
     "is_nan",
     "is_not_nan",
     "len",
@@ -136,9 +137,10 @@ def preserve_nulls(before: pl.Expr | pl.Series, after: pl.Expr | pl.Series, /) -
     return pl.when(before.is_not_null()).then(after)
 
 
-if compat.IS_NAN_NUMERIC_PRESERVES_NULLS or TYPE_CHECKING:
+if compat.IS_NAN_FINITE_NUMERIC_PRESERVES_NULLS or TYPE_CHECKING:
     is_nan = pl.Expr.is_nan
     is_not_nan = pl.Expr.is_not_nan
+    is_finite = pl.Expr.is_finite
 else:
 
     def is_nan(self: pl.Expr) -> pl.Expr:
@@ -146,3 +148,6 @@ else:
 
     def is_not_nan(self: pl.Expr) -> pl.Expr:
         return preserve_nulls(self, self.is_not_nan())
+
+    def is_finite(self: pl.Expr) -> pl.Expr:
+        return preserve_nulls(self, self.is_finite())
