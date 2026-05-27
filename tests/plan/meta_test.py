@@ -11,7 +11,6 @@ import narwhals as nw
 import narwhals._plan.selectors as ncs
 from narwhals import _plan as nwp
 from narwhals.exceptions import ComputeError
-from tests.plan.utils import series
 from tests.utils import POLARS_VERSION
 
 pytest.importorskip("polars")
@@ -19,6 +18,8 @@ import polars as pl
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from tests.plan.utils import Series
 
 if POLARS_VERSION >= (1, 0):  # https://github.com/pola-rs/polars/pull/16743
     if POLARS_VERSION >= (1, 36):  # pragma: no cover
@@ -319,7 +320,6 @@ def test_is_column_selection(expr: nwp.Expr, *, is_column_selection: bool) -> No
         dt.time(10, 30, 45),
         dt.timedelta(hours=-24),
         ["x", "y", "z"],
-        series([None, None]),
         [[10, 20], [30, 40]],
         "this is the way",
     ],
@@ -335,7 +335,19 @@ def test_is_literal(value: Any) -> None:
     assert e.meta.is_literal(allow_aliasing=True)
 
 
-def test_literal_output_name() -> None:
+def test_is_literal_series(series: Series) -> None:
+    value = series([None, None])
+    e = nwp.lit(value)
+    assert e.meta.is_literal()
+
+    e = nwp.lit(value).alias("foo")
+    assert not e.meta.is_literal()
+
+    e = nwp.lit(value).alias("foo")
+    assert e.meta.is_literal(allow_aliasing=True)
+
+
+def test_literal_output_name(series: Series) -> None:
     e = nwp.lit(1)
     data = 1, 2, 3
     assert e.meta.output_name() == "literal"
