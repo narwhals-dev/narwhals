@@ -29,7 +29,7 @@ def test_value_counts(
     expected_index = [4, 1, 6]
 
     if normalize:
-        expected_count = [v / len(data) for v in expected_count]  # type: ignore[misc]
+        expected_count = [v / len(data) for v in expected_count]
 
     expected_name = name or ("proportion" if normalize else "count")
     expected = {"a": expected_index, expected_name: expected_count}

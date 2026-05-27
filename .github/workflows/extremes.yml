@@ -6,7 +6,8 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -21,45 +22,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: min-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-minimum-versions
-        run: |
-          uv pip install \
-            pipdeptree tox virtualenv setuptools tzdata \
-            pandas==1.3.4 \
-            polars==0.20.4 \
-            numpy==1.21.4 \
-            pyarrow==13.0.0 \
-            "pyarrow-stubs<17" \
-            scipy==1.7.3 \
-            scikit-learn==1.1.0 \
-            duckdb==1.1 \
-            --system
-      - name: install-reqs
-        run: |
-          uv pip install -e . --group tests
-      - name: show-deps
-        run: uv pip freeze
-      - name: Assert dependencies
-        run: |
-          DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'pandas==1.3.4'
-          echo "$DEPS" | grep 'polars==0.20.4'
-          echo "$DEPS" | grep 'numpy==1.21.4'
-          echo "$DEPS" | grep 'pyarrow==13.0.0'
-          echo "$DEPS" | grep 'scipy==1.7.3'
-          echo "$DEPS" | grep 'scikit-learn==1.1.0'
-          echo "$DEPS" | grep 'duckdb==1.1'
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+        run: make run-ci DEPS="--group extreme-minimum-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
 
   pretty_old_versions:
     strategy:
@@ -68,47 +39,16 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2    
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pretty-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-pretty-old-versions
-        run: |
-          uv pip install \
-            pipdeptree tox virtualenv setuptools tzdata \
-            pandas==1.4.1 \
-            polars==0.20.4 \
-            numpy==1.22.0 \
-            pyarrow==14.0.0 \
-            "pyarrow-stubs<17" \
-            scipy==1.8.0 \
-            scikit-learn==1.1.0 \
-            duckdb==1.2 \
-            --system
-      - name: install-reqs
-        run: uv pip install -e . --group tests
-      - name: show-deps
-        run: uv pip freeze
-      - name: show-deptree
-        run: pipdeptree
-      - name: Assert pretty old versions dependencies
-        run : |
-          DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'pandas==1.4.1'
-          echo "$DEPS" | grep 'polars==0.20.4'
-          echo "$DEPS" | grep 'numpy==1.22.0'
-          echo "$DEPS" | grep 'pyarrow==14.0.0'
-          echo "$DEPS" | grep 'scipy==1.8.0'
-          echo "$DEPS" | grep 'scikit-learn==1.1.0'
-          echo "$DEPS" | grep 'duckdb==1.2'
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb
+        run: make run-ci DEPS="--group extreme-pretty-old-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
 
   not_so_old_versions:
     strategy:
@@ -118,34 +58,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: not-so-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-not-so-old-versions
-        run: uv pip install tox virtualenv setuptools pandas==2.0.3 polars==0.20.8 numpy==1.24.4 pyarrow==15.0.0 "pyarrow-stubs<17" scipy==1.8.0 scikit-learn==1.3.0 duckdb==1.3 dask[dataframe]==2024.10 tzdata
-      - name: install-reqs
-        run: uv pip install -e . --group tests
-      - name: show-deps
-        run: uv pip freeze
-      - name: Assert not so old versions dependencies
-        run : |
-          DEPS=$(uv pip freeze)
-          echo "$DEPS" | grep 'pandas==2.0.3'
-          echo "$DEPS" | grep 'polars==0.20.8'
-          echo "$DEPS" | grep 'numpy==1.24.4'
-          echo "$DEPS" | grep 'pyarrow==15.0.0'
-          echo "$DEPS" | grep 'scipy==1.8.0'
-          echo "$DEPS" | grep 'scikit-learn==1.3.0'
-          echo "$DEPS" | grep 'dask==2024.10'
-          echo "$DEPS" | grep 'duckdb==1.3'
       - name: Run pytest
-        run: pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb
+        run: make run-ci DEPS="--group extreme-not-so-old-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
 
   nightlies:
     strategy:
@@ -153,17 +74,21 @@ jobs:
         python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      UV_LOCKED: 0
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: nightlies-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      # Manually install pre-releases as it's not possible to specify pre-releases per index
+      # See: https://github.com/astral-sh/uv/issues/15780
+      - name: Create venv
+        run: uv venv --python ${{ matrix.python-version }}
       - name: install-reqs
         run: uv pip install -e . --group tests
       - name: install polars pre-release
@@ -201,5 +126,5 @@ jobs:
           echo "$DEPS" | grep 'dask.*@'
       - name: Run pytest
         run: |
-          pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
-          --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb
+          uv run --no-sync pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow \
+          --constructors="pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb"

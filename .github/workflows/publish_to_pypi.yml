@@ -18,6 +18,10 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
 
+env:
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
+
 permissions: {}
 
 jobs:
@@ -81,16 +85,18 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         persist-credentials: false
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+    - name: Install uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
-        python-version: "3.x"
-    - name: Install pypa/build
-      run: python3 -m pip install build --user
+        python-version: "3.13"
     - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+      run: uv build
     - name: Check wheel content
-      run: python3 utils/check_dist_content.py
+      run: uv run python utils/check_dist_content.py
+    - name: Smoke tests (wheel and source distribution)
+      run: |
+        uv run --isolated --no-project --with dist/*.whl tests/version_test.py
+        uv run --isolated --no-project --with dist/*.tar.gz tests/version_test.py
     - name: Store the distribution packages
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:

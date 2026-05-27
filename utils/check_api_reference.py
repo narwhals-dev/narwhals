@@ -11,9 +11,10 @@ from pathlib import Path
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
 import polars as pl
+
+# Make working-tree narwhals importable when run from a hook env that hasn't installed it.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import narwhals as nw
 
