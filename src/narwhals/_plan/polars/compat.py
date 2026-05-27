@@ -71,6 +71,12 @@ MELT_RENAMED_TO_UNPIVOT: Final = BACKEND_VERSION >= (1, 0)
 
 LAZYFRAME_HAS_COLLECT_SCHEMA: Final = BACKEND_VERSION >= (1, 0)
 
+HAS_REPLACE_STRICT: Final = BACKEND_VERSION >= (1, 0)
+"""https://github.com/pola-rs/polars/pull/16921
+
+`replace` had two parameters deprecated here.
+"""
+
 CONSTRUCTOR_ACCEPTS_PYCAPSULE: Final = BACKEND_VERSION >= (1, 3)
 """https://github.com/pola-rs/polars/pull/17693"""
 

@@ -29,6 +29,7 @@ __all__ = (
     "mean_horizontal",
     "over",
     "preserve_nulls",
+    "replace_strict",
     "row_index",
 )
 
@@ -151,3 +152,9 @@ else:
 
     def is_finite(self: pl.Expr) -> pl.Expr:
         return preserve_nulls(self, self.is_finite())
+
+
+if compat.HAS_REPLACE_STRICT or TYPE_CHECKING:
+    replace_strict = pl.Expr.replace_strict
+else:
+    replace_strict = pl.Expr.replace

@@ -414,7 +414,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         f = node.function
         dtype = dtype_to_native(f.return_dtype, self.version)
         expr = node.dispatch_arg(self, frame, name).native
-        result = expr.replace_strict(f.old, f.new, return_dtype=dtype)
+        result = fn.replace_strict(expr, f.old, f.new, return_dtype=dtype)
         return self.from_native(result)
 
     def replace_strict_default(
@@ -423,7 +423,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         f = node.function
         dtype = dtype_to_native(f.return_dtype, self.version)
         expr, default = self.dispatch_args_native(node, frame, name)
-        result = expr.replace_strict(f.old, f.new, return_dtype=dtype, default=default)
+        result = fn.replace_strict(
+            expr, f.old, f.new, return_dtype=dtype, default=default
+        )
         return self.from_native(result)
 
     rolling_sum = todo()
