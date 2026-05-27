@@ -193,11 +193,8 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def is_in(self, other: Self) -> Self:
         return self._with_native(self.native.is_in(other.native))
 
-    def _preserve_nulls(self, after: pl.Expr | pl.Series, /) -> Self:  # pragma: no cover
-        """Propagate nulls positionally from `self.native` to `after`."""
-        s = self.native
-        expr = pl.when(pl.col(s.name).is_not_null()).then(after)
-        return self._with_native(s.to_frame().select(expr).to_series())
+    def dispatch_expr(self, expr: pl.Expr | pl.Series | NonNestedLiteral, /) -> Self:
+        return self.from_native(self.native.to_frame().select(expr).to_series())
 
     if compat.IS_NAN_NUMERIC_PRESERVES_NULLS:
 
@@ -206,13 +203,15 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
         def is_not_nan(self) -> Self:
             return self._with_native(self.native.is_not_nan())
-    else:  # pragma: no cover
+    else:
 
         def is_nan(self) -> Self:
-            return self._preserve_nulls(self.native.is_nan())
+            s = self.native
+            return self.dispatch_expr(fn.preserve_nulls(s, s.is_nan()))
 
         def is_not_nan(self) -> Self:
-            return self._preserve_nulls(self.native.is_not_nan())
+            s = self.native
+            return self.dispatch_expr(fn.preserve_nulls(s, s.is_not_nan()))
 
     def is_null(self) -> Self:
         return self._with_native(self.native.is_null())
@@ -291,11 +290,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         if compat.SERIES_RFLOORDIV_HANDLES_ZERO:
             return self._with_native(other // self.native)
         expr = pl.col(self.name)
-        return self._with_native(
-            self.native.to_frame()
-            .select(pl.when(expr != 0).then(other // expr).alias(self.name))
-            .to_series()
-        )
+        return self.dispatch_expr(pl.when(expr != 0).then(other // expr).alias(self.name))
 
     def __rpow__(self, other: float | Self) -> Self:
         other_ = other.native if isinstance(other, PolarsSeries) else other

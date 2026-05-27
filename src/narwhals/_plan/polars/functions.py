@@ -20,11 +20,14 @@ if TYPE_CHECKING:
 
 __all__ = (
     "concat_str",
+    "is_nan",
+    "is_not_nan",
     "len",
     "linear_space",
     "lit",
     "mean_horizontal",
     "over",
+    "preserve_nulls",
     "row_index",
 )
 
@@ -126,3 +129,20 @@ else:
         if ignore_nulls:
             exprs = (e.fill_null("") for e in exprs)
         return pl.concat_str(*exprs, separator=separator)
+
+
+def preserve_nulls(before: pl.Expr | pl.Series, after: pl.Expr | pl.Series, /) -> pl.Expr:
+    """Propagate nulls positionally from `before` to `after`."""
+    return pl.when(before.is_not_null()).then(after)
+
+
+if compat.IS_NAN_NUMERIC_PRESERVES_NULLS or TYPE_CHECKING:
+    is_nan = pl.Expr.is_nan
+    is_not_nan = pl.Expr.is_not_nan
+else:
+
+    def is_nan(self: pl.Expr) -> pl.Expr:
+        return preserve_nulls(self, self.is_nan())
+
+    def is_not_nan(self: pl.Expr) -> pl.Expr:
+        return preserve_nulls(self, self.is_not_nan())

@@ -216,7 +216,6 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     ewm_mean = todo()
     exp = todo()
-    fill_nan = todo()
 
     def fill_null(self, node: FExpr[F.FillNull], frame: Any, name: str) -> Self:
         expr, value = node.dispatch_args(self, frame, name)
@@ -297,8 +296,14 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return self.from_native(result)
 
     is_last_distinct = todo()
-    is_nan = todo()
-    is_not_nan = todo()
+
+    def is_not_nan(self, node: FExpr[boolean.IsNotNan], frame: Any, name: str) -> Self:
+        result = fn.is_not_nan(node.dispatch_arg(self, frame, name).native)
+        return self.from_native(result)
+
+    def is_nan(self, node: FExpr[boolean.IsNan], frame: Any, name: str) -> Self:
+        result = fn.is_nan(node.dispatch_arg(self, frame, name).native)
+        return self.from_native(result)
 
     def is_not_null(self, node: FExpr[boolean.IsNotNull], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.is_not_null())
