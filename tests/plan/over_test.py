@@ -14,12 +14,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import (
-    DataFrame,
-    assert_equal_data,
-    dataframe as dataframe_old,
-    re_compile,
-)
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
@@ -191,8 +186,8 @@ def test_over_anonymous_reduction(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-def test_over_raise_len_change(data: Data) -> None:
-    df = dataframe_old(data)
+def test_over_raise_len_change(data: Data, dataframe: DataFrame) -> None:
+    df = dataframe(data)
     with pytest.raises(InvalidOperationError):
         df.select(nwp.col("b").drop_nulls().over("a"))
 
@@ -201,8 +196,10 @@ def test_over_raise_len_change(data: Data) -> None:
 # (expr-ir): InvalidOperationError: `cum_sum()` is not supported in a `group_by` context
 # (main): NotImplementedError: Only aggregation or literal operations are supported in grouped `over` context for PyArrow.
 # https://github.com/narwhals-dev/narwhals/blob/ecde261d799a711c2e0a7acf11b108bc45035dc9/narwhals/_arrow/expr.py#L116-L118
-def test_unsupported_over(data: Data) -> None:
-    df = dataframe_old(data)
+def test_unsupported_over(data: Data, dataframe: DataFrame) -> None:
+    if dataframe.is_polars():
+        pytest.skip("polars supports this")
+    df = dataframe(data)
     with pytest.raises(InvalidOperationError):
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
