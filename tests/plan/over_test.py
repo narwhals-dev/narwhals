@@ -218,10 +218,7 @@ def test_over_without_partition_by(
     assert_equal_data(result, expected)
 
 
-def test_aggregation_over_without_partition_by(
-    dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_polars(), "Expr.diff")
+def test_aggregation_over_without_partition_by(dataframe: DataFrame) -> None:
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
         df.with_columns(b=nwp.col("a").diff().sum().over(order_by="i"))
