@@ -368,9 +368,6 @@ def test_kurtosis_over_skew(
         reason="too old for `pyarrow.compute.{kurtosis,skew}`",
         raises=NotImplementedError,
     )
-    dataframe.xfail_not_implemented(
-        request, dataframe.is_polars(), "PolarsExpr.{kurtosis,skew}"
-    )
     result = dataframe(data_kurtosis_skew).select(exprs)
     assert_equal_data(result, expected)
 

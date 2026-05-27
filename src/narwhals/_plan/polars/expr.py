@@ -312,7 +312,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return self.from_native(node.dispatch_arg(self, frame, name).native.is_null())
 
     is_unique = todo()
-    kurtosis = todo()
+
+    def kurtosis(self, node: FExpr[F.Kurtosis], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.kurtosis())
 
     def last(self, node: agg.Last, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.last())
@@ -384,7 +386,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     sample_frac = todo()
     sample_n = todo()
     shift = todo()
-    skew = todo()
+
+    def skew(self, node: FExpr[F.Skew], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.skew())
 
     def sort(self, node: ir.Sort, frame: Any, name: str) -> Self:
         native = self.dispatch(node.expr, frame, name).native
