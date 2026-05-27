@@ -410,7 +410,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
             )
         )
 
-    rank = todo()
+    def rank(self, node: FExpr[F.Rank], frame: Any, name: str) -> Self:
+        opts = node.function.options
+        expr = node.dispatch_arg(self, frame, name).native
+        return self.from_native(expr.rank(opts.method, descending=opts.descending))
 
     def replace_strict(self, node: FExpr[F.ReplaceStrict], frame: Any, name: str) -> Self:
         f = node.function
