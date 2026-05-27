@@ -358,6 +358,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         base = node.function.base
         return self.from_native(node.dispatch_arg(self, frame, name).native.log(base))
 
+    map_batches = todo()
+
     def max(self, node: agg.Max, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.max())
 
