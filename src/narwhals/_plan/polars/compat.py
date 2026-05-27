@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import LiteralString
 
-    from narwhals._plan.options import SortMultipleOptions
+    from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
 
     # TODO @dangotbanned: Replace with `dict[Literal["descending", "nulls_last"], Seq[bool]]` after bumping mypy
@@ -23,6 +23,10 @@ if TYPE_CHECKING:
     class _SortOptions(TypedDict):
         descending: bool | Seq[bool]
         nulls_last: bool | Seq[bool]
+
+    class _ExplodeOptions(TypedDict, total=False):
+        empty_as_null: bool
+        keep_nulls: bool
 
 
 BACKEND_VERSION: Final = Implementation.POLARS._backend_version()
@@ -97,6 +101,13 @@ HAS_LINEAR_SPACE: Final = BACKEND_VERSION >= (1, 21)
 
 PIVOT_SUPPORTS_ON_COLUMNS: Final = BACKEND_VERSION >= (1, 36)
 """https://github.com/pola-rs/polars/pull/25016"""
+
+EXPLODE_SUPPORTS_OPTIONS: Final = BACKEND_VERSION >= (1, 36)
+"""[#25289], [#25369]
+
+[#25289]: https://github.com/pola-rs/polars/pull/25289
+[#25369]: https://github.com/pola-rs/polars/pull/25369
+"""
 
 
 OVER_SUPPORTS_ORDER_BY: Final = BACKEND_VERSION >= (1, 0)
@@ -188,3 +199,31 @@ else:
             msg = "nulls_last=(..., )"
             raise too_old(msg, "0.20.31")
         return {"descending": desc, "nulls_last": first}
+
+
+if EXPLODE_SUPPORTS_OPTIONS:
+
+    def explode(
+        self: ExplodeOptions | None = None,
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> _ExplodeOptions:
+        if self:
+            empty_as_null, keep_nulls = self.empty_as_null, self.keep_nulls
+        return {"empty_as_null": empty_as_null, "keep_nulls": keep_nulls}
+
+else:
+    # NOTE: The default is backwards compatible
+    def explode(
+        self: ExplodeOptions | None = None,
+        *,
+        empty_as_null: bool = True,
+        keep_nulls: bool = True,
+    ) -> _ExplodeOptions:
+        if self:
+            empty_as_null, keep_nulls = self.empty_as_null, self.keep_nulls
+        if not (empty_as_null and keep_nulls):
+            msg = f"explode({empty_as_null=}, {keep_nulls=})"
+            raise too_old(msg, "1.36.0")  # pyright: ignore[reportArgumentType]
+        return {}

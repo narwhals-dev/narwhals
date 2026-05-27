@@ -662,7 +662,6 @@ class ArrowBackend(
 
 
 # TODO @dangotbanned: Finish replacing with `tests.plan.conftest.dataframe`
-# TODO @dangotbanned: Finish replacing with `tests.plan.conftest.series`
 if TYPE_CHECKING:
 
     @deprecated("Use the `dataframe` fixture instead")
@@ -670,20 +669,10 @@ if TYPE_CHECKING:
         data: Mapping[str, Any], /
     ) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
         return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
-
-    @deprecated("Use the `series` fixture instead")
-    def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
-        array: Incomplete = pa.chunked_array
-        ca: pa.ChunkedArray[Any] = array([values])
-        return nwp.Series.from_native(ca)
 else:
 
     def dataframe(data: Any) -> Any:
         return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
-
-    def series(values: Any, /) -> Any:
-        array: Incomplete = pa.chunked_array
-        return nwp.Series.from_native(array([values]))
 
 
 def assert_equal_data(

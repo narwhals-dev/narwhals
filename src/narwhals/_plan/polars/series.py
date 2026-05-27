@@ -14,7 +14,6 @@ from narwhals._plan.polars.namespace import (
     dtype_from_native,
     dtype_to_native,
     dtype_to_native_fast,
-    explode_todo,
 )
 from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
@@ -254,8 +253,8 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(self.native.fill_null(strategy=strategy, limit=limit))
 
     def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
-        explode_todo(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
-        return self._with_native(self.native.explode())
+        kwds = compat.explode(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        return self._with_native(self.native.explode(**kwds))
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())

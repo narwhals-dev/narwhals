@@ -11,7 +11,7 @@ from narwhals._plan.plans.visitors import ResolvedToCompliant
 from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import collect_schema, explode_todo
+from narwhals._plan.polars.namespace import collect_schema
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -260,9 +260,10 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
 
     def explode(self, plan: rp.MapFunction[rp.Explode]) -> PolarsLazyFrame:
         f = plan.function
-        opts = f.options
-        explode_todo(empty_as_null=opts.empty_as_null, keep_nulls=opts.keep_nulls)
-        return self._into_compliant(plan.input.evaluate(self).native.explode(f.columns))
+        kwds = compat.explode(f.options)
+        return self._into_compliant(
+            plan.input.evaluate(self).native.explode(f.columns, **kwds)
+        )
 
     def unnest(self, plan: rp.MapFunction[rp.Unnest]) -> PolarsLazyFrame:
         f = plan.function

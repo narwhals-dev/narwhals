@@ -12,7 +12,7 @@ from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.common import remap_exceptions
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
+from narwhals._plan.polars.namespace import dtype_to_native
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
@@ -115,8 +115,10 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.from_native(self.native.drop_nulls(subset))
 
     def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
-        explode_todo(empty_as_null=options.empty_as_null, keep_nulls=options.keep_nulls)
-        return self.from_native(self.native.explode(columns))
+        with remap_exceptions():
+            return self.from_native(
+                self.native.explode(columns, **compat.explode(options))
+            )
 
     @classmethod
     def concat_series(cls, series: Iterable[CompliantSeries]) -> Self:
