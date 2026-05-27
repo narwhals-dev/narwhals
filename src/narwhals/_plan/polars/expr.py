@@ -119,8 +119,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def all(self, node: FExpr[boolean.All], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.all())
 
-    def _dispatch_variadic_native(
-        self, node: HExpr, frame: Any, name: str, /
+    def dispatch_args_native(
+        self, node: FExpr, frame: Any, name: str, /
     ) -> Iterator[pl.Expr]:
         exprs = iter(node.args)
         yield self.dispatch(next(exprs), frame, name).native
@@ -137,7 +137,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         fill: Any = None,
         fn_native: Callable[..., pl.Expr] | None = None,
     ) -> Self:
-        inputs = self._dispatch_variadic_native(node, frame, name)
+        inputs = self.dispatch_args_native(node, frame, name)
         f = node.function
         kwds = f.to_dict()
         if fill is not None and kwds.pop("ignore_nulls", False):
@@ -190,9 +190,16 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return self.from_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
 
     ceil = todo()
-    clip = todo()
-    clip_lower = todo()
-    clip_upper = todo()
+
+    def clip(self, node: FExpr[F.Clip | F.ClipLower], frame: Any, name: str) -> Self:
+        it = self.dispatch_args_native(node, frame, name)
+        return self.from_native(next(it).clip(*it))
+
+    clip_lower = clip
+
+    def clip_upper(self, node: FExpr[F.ClipUpper], frame: Any, name: str) -> Self:
+        it = self.dispatch_args_native(node, frame, name)
+        return self.from_native(next(it).clip(upper_bound=next(it)))
 
     def count(self, node: agg.Count, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.count())
