@@ -497,7 +497,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         )
         return self.from_native(result, name)
 
-    unique = todo()
+    def unique(self, node: FExpr[F.Unique], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.unique())
 
     def var(self, node: agg.Var, frame: Any, name: str) -> Self:
         return self.from_native(
