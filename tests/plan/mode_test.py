@@ -7,7 +7,7 @@ import pytest
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import ShapeError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -28,18 +28,20 @@ def data() -> Data:
     ],
     ids=["single", "multiple-1", "multiple-2", "multiple-agg"],
 )
-def test_mode_expr_keep_all(data: Data, expr: nwp.Expr, expected: Data) -> None:
+def test_mode_expr_keep_all(
+    data: Data, expr: nwp.Expr, expected: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data).select(expr).sort(ncs.first())
     assert_equal_data(result, expected)
 
 
-def test_mode_expr_different_lengths_keep_all(data: Data) -> None:
+def test_mode_expr_different_lengths_keep_all(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     with pytest.raises(ShapeError):
         df.select(nwp.col("a", "b").mode(keep="all"))
 
 
-def test_mode_expr_keep_any(data: Data) -> None:
+def test_mode_expr_keep_any(data: Data, dataframe: DataFrame) -> None:
     result = dataframe(data).select(nwp.col("a", "b").mode(keep="any"))
     try:
         expected = {"a": [1], "b": [3]}

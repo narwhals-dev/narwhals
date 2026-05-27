@@ -7,6 +7,7 @@ import polars as pl
 from narwhals._plan.common import todo
 from narwhals._plan.compliant import CompliantExpr, typing as ct
 from narwhals._plan.compliant.accessors import ExprStructNamespace
+from narwhals._plan.expressions import functions as F
 from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
 from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fast
@@ -24,7 +25,6 @@ if TYPE_CHECKING:
         HorizontalExpr as HExpr,
         aggregation as agg,
         boolean,
-        functions as F,
     )
     from narwhals._plan.expressions.ranges import (
         DateRange,
@@ -114,7 +114,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def len_star(cls, _: ir.Len, __: Incomplete, name: str, /) -> Self:
         return cls.from_native(fn.len(), name)
 
-    abs = todo()
+    def abs(self, node: FExpr[F.Abs], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.abs())
 
     def all(self, node: FExpr[boolean.All], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.all())
@@ -189,7 +190,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         dtype = dtype_to_native(node.dtype, self.version)
         return self.from_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
 
-    ceil = todo()
+    def ceil(self, node: FExpr[F.Ceil], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.ceil())
 
     def clip(self, node: FExpr[F.Clip | F.ClipLower], frame: Any, name: str) -> Self:
         it = self.dispatch_args_native(node, frame, name)
@@ -215,7 +217,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return self.from_native(node.dispatch_arg(self, frame, name).native.drop_nulls())
 
     ewm_mean = todo()
-    exp = todo()
+
+    def exp(self, node: FExpr[F.Exp], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.exp())
 
     def fill_null(self, node: FExpr[F.FillNull], frame: Any, name: str) -> Self:
         expr, value = node.dispatch_args(self, frame, name)
@@ -236,7 +240,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def first(self, node: agg.First, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.first())
 
-    floor = todo()
+    def floor(self, node: FExpr[F.Floor], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.floor())
+
     gather_every = todo()
     hist_bin_count = todo()
     hist_bins = todo()
@@ -342,7 +348,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def len(self, node: agg.Len, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.len())
 
-    log = todo()
+    def log(self, node: FExpr[F.Log], frame: Any, name: str) -> Self:
+        base = node.function.base
+        return self.from_native(node.dispatch_arg(self, frame, name).native.log(base))
 
     def max(self, node: agg.Max, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.max())
@@ -356,8 +364,13 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def min(self, node: agg.Min, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.min())
 
-    mode_all = todo()
-    mode_any = todo()
+    def mode_all(self, node: FExpr[F.ModeAll | F.ModeAny], frame: Any, name: str) -> Self:
+        result = node.dispatch_arg(self, frame, name).native.mode()
+        if type(node.function) is F.ModeAny:
+            result = result.first()
+        return self.from_native(result)
+
+    mode_any = mode_all
 
     def n_unique(self, node: agg.NUnique, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.n_unique())
@@ -396,13 +409,33 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         )
 
     rank = todo()
-    replace_strict = todo()
-    replace_strict_default = todo()
+
+    def replace_strict(self, node: FExpr[F.ReplaceStrict], frame: Any, name: str) -> Self:
+        f = node.function
+        dtype = dtype_to_native(f.return_dtype, self.version)
+        expr = node.dispatch_arg(self, frame, name).native
+        result = expr.replace_strict(f.old, f.new, return_dtype=dtype)
+        return self.from_native(result)
+
+    def replace_strict_default(
+        self, node: FExpr[F.ReplaceStrictDefault], frame: Any, name: str
+    ) -> Self:
+        f = node.function
+        dtype = dtype_to_native(f.return_dtype, self.version)
+        expr, default = self.dispatch_args_native(node, frame, name)
+        result = expr.replace_strict(f.old, f.new, return_dtype=dtype, default=default)
+        return self.from_native(result)
+
     rolling_sum = todo()
     rolling_mean = todo()
     rolling_std = todo()
     rolling_var = todo()
-    round = todo()
+
+    def round(self, node: FExpr[F.Round], frame: Any, name: str) -> Self:
+        decimals = node.function.decimals
+        result = node.dispatch_arg(self, frame, name).native.round(decimals)
+        return self.from_native(result)
+
     sample_frac = todo()
     sample_n = todo()
 
@@ -424,7 +457,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         result = native.sort_by(*by, **compat.sort(node.options, len(node.by)))
         return self.from_native(result)
 
-    sqrt = todo()
+    def sqrt(self, node: FExpr[F.Sqrt], frame: Any, name: str) -> Self:
+        return self.from_native(node.dispatch_arg(self, frame, name).native.sqrt())
 
     def std(self, node: agg.Std, frame: Any, name: str) -> Self:
         return self.from_native(

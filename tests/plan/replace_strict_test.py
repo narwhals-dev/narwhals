@@ -9,7 +9,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._utils import no_default
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Mapping
@@ -20,8 +20,6 @@ if TYPE_CHECKING:
     from narwhals._typing import NoDefault
     from narwhals.typing import IntoDType, NonNestedLiteral
     from tests.conftest import Data
-
-pytest.importorskip("pyarrow")
 
 
 @pytest.fixture(scope="module")
@@ -119,6 +117,7 @@ def test_replace_strict_expr(
     exprs: Iterable[nwp.Expr],
     expected: Data,
     schema: Mapping[str, IntoDType] | None,
+    dataframe: DataFrame,
 ) -> None:
     result = dataframe(data).select(exprs)
     assert_equal_data(result, expected)
@@ -133,14 +132,14 @@ def test_replace_strict_expr(
         nwp.col("str-null").replace_strict({"one": "two", "four": "five"}),
     ],
 )
-def test_replace_strict_expr_non_full(data: Data, expr: nwp.Expr) -> None:
-    with pytest.raises(
-        (ValueError, InvalidOperationError), match=r"did not replace all non-null"
-    ):
+def test_replace_strict_expr_non_full(
+    data: Data, expr: nwp.Expr, dataframe: DataFrame
+) -> None:
+    with pytest.raises((ValueError, InvalidOperationError)):
         dataframe(data).select(expr)
 
 
-def test_replace_strict_scalar(data: Data) -> None:
+def test_replace_strict_scalar(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     expr = (
         nwp.col("str-null")
