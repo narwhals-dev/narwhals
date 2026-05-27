@@ -385,7 +385,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     round = todo()
     sample_frac = todo()
     sample_n = todo()
-    shift = todo()
+
+    def shift(self, node: FExpr[F.Shift], frame: Any, name: str) -> Self:
+        n = node.function.n
+        return self.from_native(node.dispatch_arg(self, frame, name).native.shift(n))
 
     def skew(self, node: FExpr[F.Skew], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.skew())

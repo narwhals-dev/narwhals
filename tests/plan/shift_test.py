@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -29,7 +29,7 @@ def data() -> Data:
         (-3, {"a": [None, None, None], "b": [None, None, None], "c": [None, None, None]}),
     ],
 )
-def test_shift(data: Data, n: int, expected: Data) -> None:
+def test_shift(data: Data, n: int, expected: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     result = df.with_columns(nwp.col("a", "b", "c").shift(n).over(order_by="i")).filter(
         nwp.col("i") > 1

@@ -239,10 +239,7 @@ def test_len_over_2369(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-def test_shift_kitchen_sink(
-    data_alt: Data, dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_polars(), "Expr.shift")
+def test_shift_kitchen_sink(data_alt: Data, dataframe: DataFrame) -> None:
     result = dataframe(data_alt).select(
         nwp.nth(1, 2)
         .shift(-1)
