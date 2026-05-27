@@ -10,6 +10,7 @@ from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
 from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
+from narwhals._plan.polars.compat import min_samples_periods
 from narwhals._plan.polars.namespace import (
     dtype_from_native,
     dtype_to_native,
@@ -44,14 +45,6 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 Int64 = Version.MAIN.dtypes.Int64()
-if compat.MIN_PERIODS_RENAMED_TO_MIN_SAMPLES:
-    _MIN_SAMPLES = "min_samples"
-else:
-    _MIN_SAMPLES = "min_periods"
-
-
-def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
-    return {_MIN_SAMPLES: min_samples, **kwds}
 
 
 _Inner: TypeAlias = Callable[[Any], ct.SeriesT]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict
 
 from narwhals._polars.utils import (
     SERIES_ACCEPTS_PD_INDEX as SERIES_ACCEPTS_PD_INDEX,  # noqa: PLC0414
@@ -76,6 +76,9 @@ HAS_REPLACE_STRICT: Final = BACKEND_VERSION >= (1, 0)
 
 `replace` had two parameters deprecated here.
 """
+
+ROLLING_VAR_STD_STABLE: Final = BACKEND_VERSION >= (1, 0)
+"""https://github.com/narwhals-dev/narwhals/pull/1451#issuecomment-2506066114"""
 
 CONSTRUCTOR_ACCEPTS_PYCAPSULE: Final = BACKEND_VERSION >= (1, 3)
 """https://github.com/pola-rs/polars/pull/17693"""
@@ -233,3 +236,10 @@ else:
             msg = f"explode({empty_as_null=}, {keep_nulls=})"
             raise too_old(msg, "1.36.0")  # pyright: ignore[reportArgumentType]
         return {}
+
+
+_MIN_SAMPLES = "min_samples" if MIN_PERIODS_RENAMED_TO_MIN_SAMPLES else "min_periods"
+
+
+def min_samples_periods(min_samples: int, **kwds: Any) -> dict[str, Any]:
+    return {_MIN_SAMPLES: min_samples, **kwds}

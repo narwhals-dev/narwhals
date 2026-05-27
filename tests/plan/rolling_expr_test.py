@@ -6,13 +6,11 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
-
-pytest.importorskip("pyarrow")
 
 
 def sqrt_or_null(*values: float | None) -> list[float | None]:
@@ -49,6 +47,7 @@ def test_rolling_var(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = nwp.col("var_std").rolling_var(
         window_size, min_samples=min_samples, center=center, ddof=ddof
@@ -76,6 +75,7 @@ def test_rolling_std(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = nwp.col("var_std").rolling_std(
         window_size, min_samples=min_samples, center=center, ddof=ddof
@@ -101,6 +101,7 @@ def test_rolling_sum(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = nwp.col("a").rolling_sum(window_size, min_samples=min_samples, center=center)
     result = dataframe(data).select(expr)
@@ -124,6 +125,7 @@ def test_rolling_mean(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = nwp.col("a").rolling_mean(window_size, min_samples=min_samples, center=center)
     result = dataframe(data).select(expr)
@@ -149,6 +151,7 @@ def test_rolling_sum_order_by(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = (
         nwp.col("b")
@@ -178,6 +181,7 @@ def test_rolling_mean_order_by(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = (
         nwp.col("b")
@@ -208,6 +212,7 @@ def test_rolling_var_order_by(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = (
         nwp.col("b")
@@ -244,6 +249,7 @@ def test_rolling_std_order_by(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = (
         nwp.col("b")

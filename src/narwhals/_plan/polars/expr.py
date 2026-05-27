@@ -14,7 +14,7 @@ from narwhals._plan.polars.namespace import dtype_to_native, dtype_to_native_fas
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable, Iterator, Mapping
     from typing import TypeAlias
 
     from typing_extensions import Self
@@ -428,10 +428,21 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         )
         return self.from_native(result)
 
-    rolling_sum = todo()
-    rolling_mean = todo()
-    rolling_std = todo()
-    rolling_var = todo()
+    _ROLLING: ClassVar[Mapping[type[F.RollingWindow], Callable[..., pl.Expr]]] = {
+        F.RollingSum: fn.rolling_sum,
+        F.RollingMean: fn.rolling_mean,
+        F.RollingVar: fn.rolling_var,
+        F.RollingStd: fn.rolling_std,
+    }
+
+    def _rolling(self, node: FExpr[F.RollingWindow], frame: Any, name: str, /) -> Self:
+        f = node.function
+        expr = node.dispatch_arg(self, frame, name).native
+        kwds = compat.min_samples_periods(**f.options.to_dict())
+        result = self._ROLLING[type(f)](expr, **kwds)
+        return self.from_native(result)
+
+    rolling_sum = rolling_mean = rolling_std = rolling_var = _rolling
 
     def round(self, node: FExpr[F.Round], frame: Any, name: str) -> Self:
         decimals = node.function.decimals

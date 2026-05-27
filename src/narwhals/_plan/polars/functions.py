@@ -30,6 +30,10 @@ __all__ = (
     "over",
     "preserve_nulls",
     "replace_strict",
+    "rolling_mean",
+    "rolling_std",
+    "rolling_sum",
+    "rolling_var",
     "row_index",
 )
 
@@ -158,3 +162,20 @@ if compat.HAS_REPLACE_STRICT or TYPE_CHECKING:
     replace_strict = pl.Expr.replace_strict
 else:
     replace_strict = pl.Expr.replace
+
+
+if compat.ROLLING_VAR_STD_STABLE or TYPE_CHECKING:
+    rolling_var = pl.Expr.rolling_var
+    rolling_std = pl.Expr.rolling_std
+
+else:
+
+    def rolling_var(*_: Any, **__: Any) -> Any:
+        raise compat.too_old("rolling_var", "1.0.0")
+
+    def rolling_std(*_: Any, **__: Any) -> Any:
+        raise compat.too_old("rolling_std", "1.0.0")
+
+
+rolling_sum = pl.Expr.rolling_sum
+rolling_mean = pl.Expr.rolling_mean
