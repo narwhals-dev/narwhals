@@ -6,14 +6,6 @@ Narwhals requires **Python 3.10+** and has no required dependencies: it only eve
 
 Pick the workflow that matches how you manage your project's dependencies.
 
-=== "pip"
-
-    First, [create and activate](https://docs.python.org/3/library/venv.html) a Python 3.10+ virtual environment, then run:
-
-    ```terminal
-    python -m pip install narwhals
-    ```
-
 === "uv"
 
     If you're starting a new project with [uv](https://docs.astral.sh/uv/), add Narwhals to it with:
@@ -30,6 +22,15 @@ Pick the workflow that matches how you manage your project's dependencies.
     uv pip install narwhals
     ```
 
+=== "pip"
+
+    First, [create and activate](https://docs.python.org/3/library/venv.html) a Python 3.10+ virtual environment, then run:
+
+    ```terminal
+    python -m pip install narwhals
+    ```
+
+    Unlike `uv add` or `poetry add`, `pip install` does not touch `pyproject.toml`. If you're working on a project, you'll need to record the dependency there yourself.
 
 === "Poetry"
 
@@ -45,21 +46,21 @@ Pick the workflow that matches how you manage your project's dependencies.
 
 Narwhals exposes optional extras that pull in a specific backend at a version known to be compatible. These are convenience pins, not requirements: if you already have the backend installed (or want to manage its version yourself), you can skip them.
 
-Available extras include `pandas`, `polars`, `pyarrow`, `modin`, `dask`, `duckdb`, `ibis`, `pyspark`, `pyspark-connect`, `sqlframe`, `sql`, and `cudf` (Linux only).
+Available extras include `pandas`, `polars`, `pyarrow`, `modin`, `dask`, `duckdb`, `ibis`, `pyspark`, `pyspark-connect`, `sqlframe`, `sql`, and `cudf` (Linux only). For the authoritative list, see `[project.optional-dependencies]` in [`pyproject.toml`](https://github.com/narwhals-dev/narwhals/blob/main/pyproject.toml).
 
 Specify one or more extras in square brackets, for example:
 
-
-=== "pip"
-
-    ```terminal
-    python -m pip install "narwhals[polars,pyarrow]"
-    ```
 
 === "uv"
 
     ```terminal
     uv add "narwhals[polars,pyarrow]"
+    ```
+
+=== "pip"
+
+    ```terminal
+    python -m pip install "narwhals[polars,pyarrow]"
     ```
 
 === "Poetry"
@@ -126,6 +127,19 @@ print(agnostic_get_columns(table_pa))
 ```
 
 If you run `python t.py` then your output should look like the above.
+
+!!! tip "Running with `uv` (no install needed)"
+
+    If you have [uv](https://docs.astral.sh/uv/), you can skip the environment setup entirely by declaring [inline script dependencies](https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies) at the top of `t.py`:
+
+    ```python
+    # /// script
+    # dependencies = ["narwhals[pandas,polars,pyarrow]"]
+    # ///
+    ```
+
+    Then run it with `uv run t.py`.
+
 This is the simplest possible example of a dataframe-agnostic function - as we'll soon
 see, we can do much more advanced things.
 

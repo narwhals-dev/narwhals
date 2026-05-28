@@ -21,7 +21,7 @@ For more detailed and beginner-friendly instructions, see below!
 
 ## Prerequisites
 
-Narwhals uses [uv](https://docs.astral.sh/uv/) as its package and environment manager. You must have `uv` installed to following the rest of this guide. The Makefile targets, dependency groups, and lockfile (`uv.lock`) all assume `uv` is present.
+Narwhals uses [uv](https://docs.astral.sh/uv/) as its package and environment manager. You must have `uv` installed to follow the rest of this guide. The Makefile targets, dependency groups, and lockfile (`uv.lock`) all assume `uv` is present.
 
 To install `uv`, follow the official instructions at [uv installation](https://docs.astral.sh/uv/getting-started/installation/). If you already have `uv`, keep it up-to-date with:
 
@@ -31,7 +31,7 @@ uv self update
 
 ### Optional: Java for PySpark tests
 
-If you want to run PySpark-related tests, you'll also need to have Java installed. Refer to the [Spark documentation](https://spark.apache.org/docs/latest/#downloading) for more information.
+If you want to run PySpark-related tests, you'll also need to have Java installed. Refer to the [Spark documentation](https://spark.apache.org/docs/latest/#downloading) for more information. As an alternative to a system-wide install, `conda` / `pixi` / `mamba` users can pull a compatible JDK from conda-forge ([`openjdk`](https://anaconda.org/conda-forge/openjdk)).
 
 ## Local development vs Codespaces
 
@@ -107,11 +107,13 @@ where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
 ### 5. Setting up your environment
 
-With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project. `uv sync` will create a `.venv` and install the project together with the `local-dev` dependency group (fast-ish core libraries and dev dependencies):
+With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project by running:
 
 ```terminal
 uv sync --group local-dev
 ```
+
+This creates a `.venv` and installs the project together with the `local-dev` [dependency group](https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups) (fast-ish core libraries and dev dependencies). The `--group local-dev` flag is what pulls in the dev dependencies: a bare `uv sync` would only install the project and its required dependencies.
 
 If you also want to test other libraries like Dask and PySpark, add their extras:
 
@@ -123,8 +125,8 @@ You don't need to pin a Python version manually: `uv` will pick a compatible int
 
 You then have two options to run commands inside the project environment:
 
+- **Recommended:** prefix commands with `uv run` (e.g. `uv run pytest`). `uv` will re-sync the environment if needed.
 - Activate the venv (`. .venv/bin/activate` on Linux/macOS, `.\.venv\Scripts\activate` on Windows) and run commands directly (e.g. `pytest`).
-- Prefix commands with `uv run` (e.g. `uv run pytest`). This is the recommended approach as `uv` will re-sync the environment if needed.
 
 The pre commit tool ([`prek`](https://prek.j178.dev/)) is installed as part of the `local-dev` dependency group.
 Run `uv run prek install` to install prek as a git hook.
@@ -259,17 +261,21 @@ We can't currently test in CI against cuDF, but you can test it manually in Kagg
 
 A few useful `uv` workflows when contributing:
 
-- Add a dependency to a group (e.g. `local-dev`): `uv add --group local-dev <package>`
-- Add a dependency to an extra (e.g. `dask`): `uv add --optional dask <package>`
-- Remove a dependency: `uv remove <package>` (with `--group`/`--optional` as appropriate)
-- Refresh the lockfile without changing pins: `uv lock`
-- Upgrade everything: `uv lock --upgrade`
+- `uv add --group local-dev <package>` — add a dependency to a group (e.g. `local-dev`)
+- `uv add --optional dask <package>` — add a dependency to an extra (e.g. `dask`)
+- `uv remove <package>` — remove a dependency (with `--group`/`--optional` as appropriate)
+- `uv lock` — refresh the lockfile without changing pins
+- `uv lock --upgrade` — upgrade everything
+
+After editing `pyproject.toml` (or `uv.lock`) manually, the right order to refresh things is `uv lock` then `uv sync` (the `uv add`/`uv remove` commands above already do both for you).
 
 All of these update `pyproject.toml` and `uv.lock`. Commit both files together when changing dependencies.
 
+See also the relevant `uv` docs: [`uv sync`](https://docs.astral.sh/uv/reference/cli/#uv-sync), [`uv lock`](https://docs.astral.sh/uv/reference/cli/#uv-lock), [syncing the environment](https://docs.astral.sh/uv/concepts/projects/sync/#syncing-the-environment), and [upgrading locked versions](https://docs.astral.sh/uv/concepts/projects/sync/#upgrading-locked-package-versions).
+
 ### Static typing
 
-We run `mypy`, `pyright`, and `pyrefly` in CI. All of them are included in the `typing` dependency group and are installed on-demand when running `make typing`.
+We run `mypy`, `pyright`, and `pyrefly` in CI. All of them are included in `--group typing` and are installed as needed when running `make typing`.
 
 Run them with:
 
@@ -277,7 +283,7 @@ Run them with:
 make typing
 ```
 
-to verify type completeness / correctness. Under the hood this runs `uv run --group typing pyright`, `uv run --group typing mypy`, and `uv run --group typing pyrefly check`.
+to verify type completeness / correctness.
 
 Note that:
 - In `_pandas_like`, we type all native objects as if they are pandas ones, though
@@ -323,8 +329,7 @@ and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
 
 ```terminal
-uv run --group docs zensical build --clean
-make docs-serve
+uv run --group docs zensical build --clean && make docs-serve
 ```
 
 ### 10. Pull requests
