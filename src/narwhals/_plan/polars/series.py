@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 import polars as pl
@@ -251,6 +251,9 @@ class PolarsSeries(CompliantSeries[pl.Series]):
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
+
+    def __iter__(self) -> Iterator[Any]:
+        yield from self.native.__iter__()
 
     __add__ = bin_op["Self"]()
     __and__ = bin_op["Self"]()

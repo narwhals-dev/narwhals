@@ -63,6 +63,9 @@ JOIN_OUTER_RENAMED_TO_FULL: Final = BACKEND_VERSION >= (0, 20, 29)
 SERIES_HAS_HAS_NULLS: Final = BACKEND_VERSION >= (0, 20, 30)
 """https://github.com/pola-rs/polars/pull/16488"""
 
+MAP_BATCHES_SUPPORTS_RETURNS_SCALAR: Final = BACKEND_VERSION >= (0, 20, 31)
+"""https://github.com/pola-rs/polars/pull/16556"""
+
 NULLS_LAST_ACCEPTS_MULTIPLE: Final = BACKEND_VERSION >= (0, 20, 31)
 """https://github.com/pola-rs/polars/pull/16639"""
 
@@ -107,6 +110,16 @@ MIN_PERIODS_RENAMED_TO_MIN_SAMPLES: Final = BACKEND_VERSION >= (1, 21)
 
 HAS_LINEAR_SPACE: Final = BACKEND_VERSION >= (1, 21)
 """https://github.com/pola-rs/polars/pull/20678"""
+
+HAS_DATA_TYPE_EXPR: Final = BACKEND_VERSION >= (1, 32)
+"""[#23167], [#23249], [#23353].
+
+Limited support starts at `1.31.0`, main changes follow in `1.32.0`.
+
+[#23167]: https://github.com/pola-rs/polars/pull/23167
+[#23249]: https://github.com/pola-rs/polars/pull/23249
+[#23353]: https://github.com/pola-rs/polars/pull/23353
+"""
 
 PIVOT_SUPPORTS_ON_COLUMNS: Final = BACKEND_VERSION >= (1, 36)
 """https://github.com/pola-rs/polars/pull/25016"""

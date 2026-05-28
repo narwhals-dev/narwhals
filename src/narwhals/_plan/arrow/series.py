@@ -19,7 +19,7 @@ from narwhals.dependencies import is_numpy_array_1d
 if TYPE_CHECKING:
     import datetime as dt
     import decimal
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Iterator
     from typing import TypeAlias
 
     import polars as pl
@@ -106,6 +106,10 @@ class ArrowSeries(
 
     def __len__(self) -> int:
         return self.native.length()
+
+    # TODO @dangotbanned: Rewrite this to slice and batch convert
+    def __iter__(self) -> Iterator[Any]:
+        yield from self.native.__iter__()
 
     @property
     def dtype(self) -> DType:

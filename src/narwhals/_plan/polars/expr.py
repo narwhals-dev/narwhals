@@ -358,7 +358,23 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         base = node.function.base
         return self.from_native(node.dispatch_arg(self, frame, name).native.log(base))
 
-    map_batches = todo()
+    def map_batches(self, node: ir.AnonymousExpr, frame: Any, name: str, /) -> Self:
+        # NOTE: The performance of `map_batches` doesn't matter, so keeping the branching per-call is fine
+        f = node.function
+        kwds: dict[str, Any] = {
+            "is_elementwise": f.is_elementwise(),
+            "return_dtype": (
+                dtype_to_native(dtype, self.version)
+                if (dtype := f.return_dtype) or not compat.HAS_DATA_TYPE_EXPR
+                else pl.self_dtype()
+            ),
+        }
+        if compat.MAP_BATCHES_SUPPORTS_RETURNS_SCALAR:
+            kwds["returns_scalar"] = node.is_scalar()
+        expr = node.dispatch_arg(self, frame, name).native
+        # NOTE: The ignore here makes `Expr.map_batches` friendlier
+        result = expr.map_batches(f.function, **kwds)  # type: ignore[arg-type]
+        return self.from_native(result)
 
     def max(self, node: agg.Max, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.max())

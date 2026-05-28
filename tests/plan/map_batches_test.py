@@ -7,14 +7,16 @@ import pytest
 import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from narwhals.dependencies import is_polars_series
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    import polars as pl
     import pyarrow as pa
 
-    from narwhals._plan.compliant.typing import SeriesAny as CompliantSeriesAny
+    from narwhals._plan.compliant import typing as ct
     from narwhals.typing import _1DArray, _NumpyScalar
     from tests.conftest import Data
 
@@ -37,32 +39,34 @@ def data() -> Data:
     }
 
 
-def elementwise_series(s: CompliantSeriesAny, /) -> CompliantSeriesAny:
+def elementwise_series(s: ct.SeriesAny | pl.Series, /) -> ct.SeriesAny | pl.Series | Any:
     dtype_name = type(s.dtype).__name__.lower()
     repeat_name = (dtype_name,) * (len(s) - 1)
     values = [*repeat_name, "last"]
-    return s.from_iterable(values, name="funky")
+    if is_polars_series(s):
+        return type(s)(values)
+    return s.from_iterable(values)
 
 
-def elementwise_1d_array(s: CompliantSeriesAny, /) -> _1DArray:
+def elementwise_1d_array(s: ct.SeriesAny | pl.Series, /) -> _1DArray:
     return s.to_numpy() + 1
 
 
-def to_numpy(s: CompliantSeriesAny, /) -> _1DArray:
+def to_numpy(s: ct.SeriesAny | pl.Series, /) -> _1DArray:
     return s.to_numpy()
 
 
-def groupwise_1d_array(s: CompliantSeriesAny, /) -> _1DArray:
+def groupwise_1d_array(s: ct.SeriesAny | pl.Series, /) -> _1DArray:
     result: _1DArray = np.append(s.to_numpy(), [10, 2])
     return result
 
 
-def aggregation_np_scalar(s: CompliantSeriesAny, /) -> _NumpyScalar:
+def aggregation_np_scalar(s: ct.SeriesAny | pl.Series, /) -> _NumpyScalar:
     result: _NumpyScalar = s.to_numpy().max()
     return result
 
 
-def aggregation_pa_scalar(s: CompliantSeriesAny) -> pa.Scalar[Any]:
+def aggregation_pa_scalar(s: ct.SeriesAny) -> pa.Scalar[Any]:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
@@ -80,7 +84,7 @@ def aggregation_pa_scalar(s: CompliantSeriesAny) -> pa.Scalar[Any]:
                 .map_batches(elementwise_series, is_elementwise=True),
                 nwp.col("e"),
             ],
-            {"funky": ["string", "string", "last"], "e": ["A", "B", "A"]},
+            {"...": ["string", "string", "last"], "e": ["A", "B", "A"]},
             id="is_elementwise-series",
         ),
         pytest.param(
@@ -132,7 +136,7 @@ def aggregation_pa_scalar(s: CompliantSeriesAny) -> pa.Scalar[Any]:
     ],
 )
 def test_map_batches(
-    data: Data, expr: nwp.Expr | Sequence[nwp.Expr], expected: Data
+    data: Data, expr: nwp.Expr | Sequence[nwp.Expr], expected: Data, dataframe: DataFrame
 ) -> None:
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
@@ -145,14 +149,65 @@ def test_map_batches(
         (aggregation_pa_scalar, ".+pyarrow.+scalar.+"),
         (len, "'int'"),
         (str, "'str'"),
+        (lambda s: str(next(iter(s))).encode(), "'bytes'"),
     ],
 )
 def test_map_batches_invalid(
-    data: Data, udf: Callable[[Any], Any], result_type_name: str
+    data: Data, udf: Callable[[Any], Any], result_type_name: str, dataframe: DataFrame
 ) -> None:
     expr = nwp.col("a", "b", "z").map_batches(udf)
-    pattern = re_compile(
-        rf"map.+ with `returns_scalar=False` must return a Series.+{result_type_name}"
+    pattern = (
+        None
+        if dataframe.is_polars()
+        else re_compile(
+            rf"map.+ with `returns_scalar=False` must return a Series.+{result_type_name}"
+        )
     )
     with pytest.raises(TypeError, match=pattern):
         dataframe(data).select(expr)
+
+
+def test_map_batches_ignore_rename(data: Data, dataframe: DataFrame) -> None:
+    """For parity with polars behavior."""
+    expected = {"...": ["A", "B", "A"], "z": [7.0, 8.0, 9.0], "e": ["A", "B", "A"]}
+    result = dataframe(data).select(
+        nwp.col("e")
+        .alias("...")
+        .map_batches(lambda s: s.alias("ignored"), is_elementwise=True),
+        "z",
+        "e",
+    )
+    assert_equal_data(result, expected)
+
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    e = nwp.col("a")
+
+    def bad_nw_series(series: nwp.Series, /) -> nwp.Series:
+        return series
+
+    def bad_nw_expr(expr: nwp.Expr, /) -> nwp.Expr:
+        return expr
+
+    def bad_compliant_expr(expr: ct.ExprAny, /) -> ct.ExprAny:
+        return expr
+
+    def typing_bad_function() -> None:
+        e.map_batches(aggregation_pa_scalar)  # type: ignore[arg-type]
+        e.map_batches(pd.Series)  # pyright: ignore[reportArgumentType]
+        e.map_batches(bad_nw_series)  # type: ignore[arg-type]
+        e.map_batches(bad_nw_expr)  # type: ignore[arg-type]
+        e.map_batches(bad_compliant_expr)  # type: ignore[arg-type]
+        e.map_batches(pl.Series.abs)  # type: ignore[arg-type]
+
+    def typing_bad_bidirectional() -> None:
+        e.map_batches(lambda s: s.i_dont_exist)  # type: ignore[attr-defined]
+        e.map_batches(lambda s: s.implementation)  # type: ignore[arg-type, return-value]
+        e.map_batches(lambda s: s.to_frame())  # type: ignore[arg-type, return-value]
+
+    def typing_good_bidirectional() -> None:
+        e.map_batches(lambda s: list(s))  # noqa: PLW0108
+        e.map_batches(list)
+        e.map_batches(lambda s: s.to_frame().to_series())

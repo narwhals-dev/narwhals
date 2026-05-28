@@ -36,8 +36,9 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, ParamSpec, Self
 
     from narwhals._plan._function import UnaryFunction
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
     from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
@@ -434,7 +435,7 @@ class Expr:
 
     def map_batches(
         self,
-        function: Udf,
+        function: ct.MapBatchesFn,
         return_dtype: IntoDType | None = None,
         *,
         is_elementwise: bool = False,
