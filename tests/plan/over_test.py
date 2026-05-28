@@ -1,14 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import pytest
-
-pytest.importorskip("pyarrow")
-
-
-from collections.abc import Iterable
 
 import narwhals as nw
 import narwhals._plan as nwp
@@ -123,7 +119,6 @@ def test_over_multiple(
 def test_over_cum_sum_partition_by(
     data_with_null: Data, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_polars(), "Expr.cum_sum")
     dataframe.xfail(
         request,
         dataframe.is_pyarrow(),
@@ -204,10 +199,7 @@ def test_unsupported_over(data: Data, dataframe: DataFrame) -> None:
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
 
-def test_over_without_partition_by(
-    dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_polars(), "Expr.{abs,cum_sum}")
+def test_over_without_partition_by(dataframe: DataFrame) -> None:
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
         df.with_columns(b=nwp.col("a").abs().cum_sum().over(order_by="i"))

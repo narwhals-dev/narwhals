@@ -206,11 +206,20 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def count(self, node: agg.Count, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.count())
 
-    cum_count = todo()
-    cum_max = todo()
-    cum_min = todo()
-    cum_prod = todo()
-    cum_sum = todo()
+    _CUMULATIVE: ClassVar[Mapping[type[F.CumAgg], Callable[..., pl.Expr]]] = {
+        F.CumSum: pl.Expr.cum_sum,
+        F.CumCount: pl.Expr.cum_count,
+        F.CumMin: pl.Expr.cum_min,
+        F.CumMax: pl.Expr.cum_max,
+        F.CumProd: pl.Expr.cum_prod,
+    }
+
+    def _cumulative(self, node: FExpr[F.CumAgg], frame: Any, name: str, /) -> Self:
+        native = node.dispatch_arg(self, frame, name).native
+        f = node.function
+        return self.from_native(self._CUMULATIVE[type(f)](native, reverse=f.reverse))
+
+    cum_count = cum_min = cum_max = cum_prod = cum_sum = _cumulative
 
     def diff(self, node: FExpr[F.Diff], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.diff())
