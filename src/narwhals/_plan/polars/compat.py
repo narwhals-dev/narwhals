@@ -69,6 +69,9 @@ MAP_BATCHES_SUPPORTS_RETURNS_SCALAR: Final = BACKEND_VERSION >= (0, 20, 31)
 NULLS_LAST_ACCEPTS_MULTIPLE: Final = BACKEND_VERSION >= (0, 20, 31)
 """https://github.com/pola-rs/polars/pull/16639"""
 
+EWM_MEAN_PRESERVES_NULLS: Final = BACKEND_VERSION >= (1,)
+"""https://github.com/pola-rs/polars/pull/15503"""
+
 MELT_RENAMED_TO_UNPIVOT: Final = BACKEND_VERSION >= (1, 0)
 """https://github.com/pola-rs/polars/pull/17095"""
 

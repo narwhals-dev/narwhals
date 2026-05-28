@@ -385,6 +385,9 @@ class Expr:
         min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
+        if sum((param is not None) for param in (com, span, half_life, alpha)) > 1:
+            msg = "parameters `com`, `span`, `half_life`, and `alpha` are mutually exclusive"
+            raise ValueError(msg)
         options = EWMOptions(
             com=com,
             span=span,

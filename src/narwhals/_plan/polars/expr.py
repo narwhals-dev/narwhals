@@ -218,7 +218,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def drop_nulls(self, node: FExpr[F.DropNulls], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.drop_nulls())
 
-    ewm_mean = todo()
+    def ewm_mean(self, node: FExpr[F.EwmMean], frame: Any, name: str) -> Self:
+        expr = node.dispatch_arg(self, frame, name).native
+        kwds = compat.min_samples_periods(**node.function.options.to_dict())
+        return self.from_native(fn.ewm_mean(expr, **kwds))
 
     def exp(self, node: FExpr[F.Exp], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.exp())

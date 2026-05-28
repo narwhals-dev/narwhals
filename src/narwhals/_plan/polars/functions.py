@@ -179,3 +179,10 @@ else:
 
 rolling_sum = pl.Expr.rolling_sum
 rolling_mean = pl.Expr.rolling_mean
+
+if compat.EWM_MEAN_PRESERVES_NULLS or TYPE_CHECKING:
+    ewm_mean = pl.Expr.ewm_mean
+else:
+
+    def ewm_mean(self: pl.Expr, **kwds: Any) -> pl.Expr:
+        return preserve_nulls(self, self.ewm_mean(**kwds))
