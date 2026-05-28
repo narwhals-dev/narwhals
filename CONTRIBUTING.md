@@ -107,11 +107,13 @@ where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
 ### 5. Setting up your environment
 
-With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project. `uv sync` will create a `.venv` and install the project together with the `local-dev` dependency group (fast-ish core libraries and dev dependencies):
+With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project by running:
 
 ```terminal
 uv sync --group local-dev
 ```
+
+This creates a `.venv` and installs the project together with the `local-dev` [dependency group](https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups) (fast-ish core libraries and dev dependencies). The `--group local-dev` flag is what pulls in the dev dependencies: a bare `uv sync` would only install the project and its required dependencies.
 
 If you also want to test other libraries like Dask and PySpark, add their extras:
 
