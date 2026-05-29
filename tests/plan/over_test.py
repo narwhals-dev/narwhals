@@ -495,6 +495,7 @@ def data_order() -> Mapping[str, list[NonNestedLiteral]]:
     }
 
 
+# TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
 def order_case(
     columns: ValueColumn | Sequence[ValueColumn],
     aggregation: Agg,
@@ -605,20 +606,22 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
     dataframe: DataFrame,
     request: TopRequest,
 ) -> None:
-    if dataframe.is_polars() and not (POLARS_SUPPORTS_OVER_FULL):
+    if dataframe.is_polars():
         xfail_polars_over_order_by(dataframe, request)
         is_desc = "desc" in request.node.callspec.id
         is_nulls_last = "nulls_last" in request.node.callspec.id
-        if is_desc or is_nulls_last:
-            xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
-            xfail_polars_over_descending(dataframe, request, is_desc)
-        else:
+        # TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
+        if POLARS_SUPPORTS_OVER_FULL or not (is_desc or is_nulls_last):
             dataframe.xfail(
                 request,
                 True,
                 reason="BUG: polars is broadcasting for `over(order_by=...)`, but aggregating for `sort_by`",
                 raises=(ValueError, AssertionError),
             )
+        else:
+            xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
+            xfail_polars_over_descending(dataframe, request, is_desc)
+
     result = dataframe(data_order).select(expr)
     assert_equal_data(result, expected)
 
