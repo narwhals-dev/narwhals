@@ -152,6 +152,18 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_finite())
         return self._with_native(native)
 
+    def _is_close_float_promote(self) -> Self:
+        # Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32`
+        # promotion), so `+ 0.0` is enough. Earlier versions keep `Decimal`, which then
+        # breaks `is_finite`/`clip` inside `is_close`; cast to `Float64` to align. This is
+        # scoped to `is_close` (Boolean output), so widening `Float32` here is harmless.
+        native = (
+            self.native + 0.0
+            if self._backend_version >= (1, 34)
+            else self.native.cast(pl.Float64)
+        )
+        return self._with_native(native)
+
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         # Use `pl.repeat(1, pl.len())` instead of `pl.lit(1)` to avoid issues for
         # non-numeric types: https://github.com/pola-rs/polars/issues/24756.
