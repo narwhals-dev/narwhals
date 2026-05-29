@@ -15,6 +15,24 @@ if TYPE_CHECKING:
     from tests.conftest import Data
 
 
+def xfail_polars_20077(
+    dataframe: DataFrame,
+    request: FixtureRequest,
+    min_samples: int | None,
+    ddof: int,
+    *,
+    center: bool,
+) -> None:
+    if center and min_samples == 1 and ddof == 1:
+        version = dataframe.backend_version()
+        dataframe.xfail(
+            request,
+            dataframe.is_polars() and ((1, 10) <= version < (1, 17)),
+            reason="None returned instead of 0 https://github.com/pola-rs/polars/pull/20077",
+            raises=AssertionError,
+        )
+
+
 def sqrt_or_null(*values: float | None) -> list[float | None]:
     return [el if el is None else math.sqrt(el) for el in values]
 
@@ -222,6 +240,7 @@ def test_rolling_var_order_by(
     request: FixtureRequest,
 ) -> None:
     xfail_polars_over_order_by(dataframe, request)
+    xfail_polars_20077(dataframe, request, min_samples, ddof, center=center)
     expr = (
         nwp.col("b")
         .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
@@ -261,6 +280,7 @@ def test_rolling_std_order_by(
     request: FixtureRequest,
 ) -> None:
     xfail_polars_over_order_by(dataframe, request)
+    xfail_polars_20077(dataframe, request, min_samples, ddof, center=center)
     expr = (
         nwp.col("b")
         .rolling_std(window_size, min_samples=min_samples, center=center, ddof=ddof)
