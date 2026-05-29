@@ -6,20 +6,36 @@ Thank you for your interest in contributing to Narwhals! Any kind of improvement
 
 If you've got experience with open source contributions, the following instructions might suffice:
 
-- clone repo: `git clone git@github.com:narwhals-dev/narwhals.git narwhals-dev`
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/) (required).
+- Clone repo: `git clone git@github.com:narwhals-dev/narwhals.git narwhals-dev`
 - `cd narwhals-dev/`
 - `git remote rename origin upstream`
 - `git remote add origin <your fork goes here>`
 - `uv sync --group local-dev` (creates `.venv` and installs project + dev deps)
+- Install pre-commit as a git hook: `uv run pre-commit install`
 - To run tests: `uv run pytest`
 - To run all linting checks: `uv run pre-commit run --all-files`
 - To run static typing checks: `make typing`
 
 For more detailed and beginner-friendly instructions, see below!
 
+## Prerequisites
+
+Narwhals uses [uv](https://docs.astral.sh/uv/) as its package and environment manager. You must have `uv` installed to follow the rest of this guide. The Makefile targets, dependency groups, and lockfile (`uv.lock`) all assume `uv` is present.
+
+To install `uv`, follow the official instructions at [uv installation](https://docs.astral.sh/uv/getting-started/installation/). If you already have `uv`, keep it up-to-date with:
+
+```terminal
+uv self update
+```
+
+### Optional: Java for PySpark tests
+
+If you want to run PySpark-related tests, you'll also need to have Java installed. Refer to the [Spark documentation](https://spark.apache.org/docs/latest/#downloading) for more information. As an alternative to a system-wide install, `conda` / `pixi` / `mamba` users can pull a compatible JDK from conda-forge ([`openjdk`](https://anaconda.org/conda-forge/openjdk)).
+
 ## Local development vs Codespaces
 
-You can contribute to Narwhals in your local development environment, using python3, git and your editor of choice.
+You can contribute to Narwhals in your local development environment, using `uv`, git and your editor of choice.
 You can also contribute to Narwhals using [Github Codespaces](https://docs.github.com/en/codespaces/overview) - a development environment that's hosted in the cloud.
 This way you can easily start to work from your browser without installing git and cloning the repo.
 Scroll down for instructions on how to use [Codespaces](#working-with-codespaces).
@@ -91,64 +107,55 @@ where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
 ### 5. Setting up your environment
 
-Here's how you can set up your local development environment to contribute.
+With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project by running:
 
-#### Prerequisites for PySpark tests
+```terminal
+uv sync --group local-dev
+```
 
-If you want to run PySpark-related tests, you'll need to have Java installed. Refer to the [Spark documentation](https://spark.apache.org/docs/latest/#downloading) for more information.
+This creates a `.venv` and installs the project together with the `local-dev` [dependency group](https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups) (fast-ish core libraries and dev dependencies). The `--group local-dev` flag is what pulls in the dev dependencies: a bare `uv sync` would only install the project and its required dependencies.
 
-#### Option 1: Use UV (recommended)
+If you also want to test other libraries like Dask and PySpark, add their extras:
 
-1. Install uv (see [uv getting started](https://github.com/astral-sh/uv?tab=readme-ov-file#getting-started))
-   or make sure it is up-to-date with:
+```terminal
+uv sync --group local-dev --extra dask --extra pyspark
+```
 
-   ```terminal
-   uv self update
-   ```
+You don't need to pin a Python version manually: `uv` will pick a compatible interpreter (downloading one if needed) based on `pyproject.toml`. If you want a specific version, pass `--python 3.12` (or similar) to `uv sync`.
 
-2. Set up the project. `uv sync` will create a `.venv` and install the project together with the `local-dev` dependency group (fast-ish core libraries and dev dependencies):
+You then have two options to run commands inside the project environment:
 
-   ```terminal
-   uv sync --group local-dev
-   ```
+- **Recommended:** prefix commands with `uv run` (e.g. `uv run pytest`). `uv` will re-sync the environment if needed.
+- Activate the venv (`. .venv/bin/activate` on Linux/macOS, `.\.venv\Scripts\activate` on Windows) and run commands directly (e.g. `pytest`).
 
-   If you also want to test other libraries like Dask, PySpark, and Modin, add their extras:
 
-   ```terminal
-   uv sync --group local-dev --extra dask --extra pyspark --extra modin
-   ```
+The `pre-commit` tool is installed as part of the `local-dev` dependency group.
+Run `uv run pre-commit install` to install pre-commit as a git hook.
+This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
-3. Either activate the venv (`. .venv/bin/activate` on Linux, `.\.venv\Scripts\activate` on Windows) so commands like `pytest` resolve from `.venv`, or prefix commands with `uv run` (e.g. `uv run pytest`).
 
-The pre-commit tool is installed as part of the local-dev dependency group. This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
-
-Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing`.
-
-#### Option 2: use python3-venv
-
-1. Make sure you have Python 3.8+ installed. If you don't, you can check [install Python](https://realpython.com/installing-python/)
-   to learn how. Then, [create and activate](https://realpython.com/python-virtual-environments-a-primer/)
-   a virtual environment.
-2. Then, follow steps 2-4 from above but using `pip install` instead of `uv pip install`.
+Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing` (which itself invokes `uv run --group typing ...` under the hood).
 
 ### 6. Working on your issue
 
 Create a new git branch from the `main` branch in your local repository.
-Note that your work cannot be merged if the test below fail.
+Note that your work cannot be merged if the tests below fail.
 If you add code that should be tested, please add tests.
 
 ### 7. Running tests
 
-- To run tests, run `pytest`. To check coverage: `pytest --cov=src`
-- To run tests on the doctests, use `pytest src --doctest-modules`
-- To run unit tests and doctests at the same time, run `pytest tests narwhals --cov=src --doctest-modules`
+- To run tests: `uv run pytest`. To check coverage: `uv run pytest --cov=src`
+- To run tests on the doctests, use `uv run pytest src --doctest-modules`
+- To run unit tests and doctests at the same time, run `uv run pytest src tests --cov=src --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
-- To choose which backends to run tests with you, you can use the `--constructors` flag:
-  - To only run tests for pandas, Polars, and PyArrow, use `pytest --constructors=pandas,pyarrow,polars`
-  - To run tests for all CPU constructors, use `pytest --all-cpu-constructors`
+- To choose which backends to run tests with, you can use the `--constructors` flag:
+  - To only run tests for pandas, Polars, and PyArrow, use `uv run pytest --constructors="pandas,pyarrow,polars[eager]"`
+  - To run tests for all CPU constructors, use `uv run --extra modin --extra pyspark pytest --all-cpu-constructors`
   - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run --extra cudf --module cudf.pandas --module pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors="polars[lazy]"`
+
+Tip: passing extras (`--extra <name>`) or groups (`--group <name>`) to `uv run` will transparently sync the environment to include those dependencies before running the command.
 
 ### General considerations
 
@@ -234,7 +241,7 @@ Document clear reasons in test comments for any skip/xfail patterns to help main
 
 We use Hypothesis to generate some random tests, to check for robustness.
 To keep local test suite times down, not all of these run by default - you can
-run them by passing the `--runslow` flag to PyTest.
+run them by passing the `--runslow` flag to PyTest (e.g. `uv run pytest --runslow`).
 
 #### Testing Dask and Modin
 
@@ -251,9 +258,25 @@ then their tests will run too.
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
 
+### Dependency management with uv
+
+A few useful `uv` workflows when contributing:
+
+- `uv add --group local-dev <package>` — add a dependency to a group (e.g. `local-dev`)
+- `uv add --optional dask <package>` — add a dependency to an extra (e.g. `dask`)
+- `uv remove <package>` — remove a dependency (with `--group`/`--optional` as appropriate)
+- `uv lock` — refresh the lockfile without changing pins
+- `uv lock --upgrade` — upgrade everything
+
+After editing `pyproject.toml` (or `uv.lock`) manually, the right order to refresh things is `uv lock` then `uv sync` (the `uv add`/`uv remove` commands above already do both for you).
+
+All of these update `pyproject.toml` and `uv.lock`. Commit both files together when changing dependencies.
+
+See also the relevant `uv` docs: [`uv sync`](https://docs.astral.sh/uv/reference/cli/#uv-sync), [`uv lock`](https://docs.astral.sh/uv/reference/cli/#uv-lock), [syncing the environment](https://docs.astral.sh/uv/concepts/projects/sync/#syncing-the-environment), and [upgrading locked versions](https://docs.astral.sh/uv/concepts/projects/sync/#upgrading-locked-package-versions).
+
 ### Static typing
 
-We run both `mypy` and `pyright` in CI. Both of these tools are included when installing Narwhals with the local-dev dependency group.
+We run `mypy`, `pyright`, and `pyrefly` in CI. All of them are included in `--group typing` and are installed as needed when running `make typing`.
 
 Run them with:
 
@@ -297,19 +320,18 @@ Full discussion at [narwhals#1943](https://github.com/narwhals-dev/narwhals/issu
 ### 9. Building the docs
 
 To serve the docs locally, run:
-  
-  ```terminal
-  make docs-serve
-  ```
+
+```terminal
+make docs-serve
+```
 
 and then open the link provided in a browser.
 
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
 
 ```terminal
-  uv run --group docs zensical build --clean
-  make docs-serve
-  ```
+make docs-clean-serve
+```
 
 ### 10. Pull requests
 
@@ -347,7 +369,7 @@ Fork the repository by clicking on the fork button. You can find it in the right
 Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories.
 Click on the green `Code` button and navigate to the `Codespaces` tab.
 Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
-with the complete repository and git installed.
+with the complete repository and git installed. If `uv` is not installed already, install it via the [uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/) before continuing.
 You can now proceed with the steps [5. Setting up your environment](#5-setting-up-your-environment) up to [10. Pull request](#10-pull-requests)
 listed above in [Working with local development environment](#working-with-local-development-environment).
 
