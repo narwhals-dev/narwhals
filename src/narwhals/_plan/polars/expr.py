@@ -514,7 +514,14 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def sort_by(self, node: ir.SortBy, frame: Any, name: str) -> Self:
         by = (self.dispatch(e, frame, "").native for e in node.by)
         native = self.dispatch(node.expr, frame, name).native
-        result = native.sort_by(*by, **compat.sort(node.options, len(node.by)))
+        if not compat.SORT_BY_SUPPORTS_NULLS_LAST:
+            if any(node.nulls_last):
+                msg = "sort_by(nulls_last=True)"
+                raise compat.too_old(msg, "0.20.20")
+            kwds = compat.sort(node.options, len(node.by))
+            result = native.sort_by(*by, descending=kwds["descending"])
+        else:
+            result = native.sort_by(*by, **compat.sort(node.options, len(node.by)))
         return self.from_native(result)
 
     def sqrt(self, node: FExpr[F.Sqrt], frame: Any, name: str) -> Self:

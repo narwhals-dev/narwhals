@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     # TODO @dangotbanned: Replace with `dict[Literal["descending", "nulls_last"], Seq[bool]]` after bumping mypy
     # to include https://github.com/python/mypy/pull/20416
-    class _SortOptions(TypedDict):
+    class _SortOptions(TypedDict, total=False):
         descending: bool | Seq[bool]
         nulls_last: bool | Seq[bool]
 
@@ -66,8 +66,17 @@ SERIES_HAS_HAS_NULLS: Final = BACKEND_VERSION >= (0, 20, 30)
 MAP_BATCHES_SUPPORTS_RETURNS_SCALAR: Final = BACKEND_VERSION >= (0, 20, 31)
 """https://github.com/pola-rs/polars/pull/16556"""
 
+SORT_BY_SUPPORTS_NULLS_LAST: Final = BACKEND_VERSION >= (0, 20, 20)
+"""https://github.com/pola-rs/polars/pull/15590
+
+`Expr.sort_by`-only
+"""
+
 NULLS_LAST_ACCEPTS_MULTIPLE: Final = BACKEND_VERSION >= (0, 20, 31)
-"""https://github.com/pola-rs/polars/pull/16639"""
+"""https://github.com/pola-rs/polars/pull/16639
+
+`Expr.sort_by`, `*Frame.sort`
+"""
 
 EWM_MEAN_PRESERVES_NULLS: Final = BACKEND_VERSION >= (1,)
 """https://github.com/pola-rs/polars/pull/15503"""
