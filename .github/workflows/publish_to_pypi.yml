@@ -67,6 +67,12 @@ jobs:
     permissions:
       contents: read
 
+  pre-commit-hooks:
+    name: Pre-commit hooks
+    uses: ./.github/workflows/pre-commit-hooks.yml
+    permissions:
+      contents: read
+
   build:
     name: Build distribution 📦
     needs:
@@ -77,6 +83,7 @@ jobs:
       - typing
       - downstream-tests
       - check-docs-build
+      - pre-commit-hooks
     runs-on: ubuntu-latest
     permissions:
       contents: read

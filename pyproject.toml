@@ -108,7 +108,7 @@ docs = [
   "zensical>=0.0.38"
 ]
 dev = [
-  "pre-commit",
+  "prek",
   "ruff",
   {include-group = "tests"},
 ]

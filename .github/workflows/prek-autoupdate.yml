@@ -1,0 +1,45 @@
+name: prek autoupdate
+
+on:
+  schedule:
+    # First day of every month at 06:00 UTC
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autoupdate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - name: Run prek autoupdate
+        run: uvx prek autoupdate
+      - name: Open PR if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .pre-commit-config.yaml; then
+            echo "No hook updates."
+            exit 0
+          fi
+          branch="chore/prek-autoupdate-$(date -u +%Y-%m-%d)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add .pre-commit-config.yaml
+          git commit -m "chore: prek autoupdate"
+          git push --set-upstream origin "$branch"
+          gh pr create \
+            --title "chore: prek autoupdate" \
+            --body "Automated hook version bump via \`prek autoupdate\`." \
+            --base main \
+            --head "$branch"
