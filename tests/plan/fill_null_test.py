@@ -9,6 +9,8 @@ from narwhals._plan import selectors as ncs
 from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest  # noqa: PT013
+
     from narwhals._plan.typing import OneOrIterable
     from tests.conftest import Data
 
@@ -126,7 +128,15 @@ def test_fill_null(
         (~ncs.last()).fill_null(strategy="backward", limit=20),
     ],
 )
-def test_fill_null_strategy_noop(expr: nwp.Expr, dataframe: DataFrame) -> None:
+def test_fill_null_strategy_noop(
+    expr: nwp.Expr, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1, 3),
+        reason="https://github.com/pola-rs/polars/pull/17861",
+        raises=None,
+    )
     data = {"a": [1, 2, 3], "b": [None, None, None], "i": [0, 1, 2]}
     expected = {"a": [1, 2, 3], "b": [None, None, None]}
     df = dataframe(data)

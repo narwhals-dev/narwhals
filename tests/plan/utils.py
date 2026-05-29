@@ -538,8 +538,12 @@ class Constructor(Generic[R_co, Impl_co]):
         condition: bool,
         *,
         reason: LiteralString,
-        raises: _Raises,
+        raises: _Raises | None,
     ) -> None:
+        """Try to avoid using `None` when possible.
+
+        A valid use-case is for `pyo3_runtime.PanicException` in older `polars` versions.
+        """
         request.applymarker(pytest.mark.xfail(condition, raises=raises, reason=reason))
 
     def xfail_not_implemented(
