@@ -150,8 +150,8 @@ def test_fill_null_strategy_noop(
 ) -> None:
     dataframe.xfail(
         request,
-        dataframe.is_polars() and dataframe.backend_version() < (1, 3),
-        reason="https://github.com/pola-rs/polars/pull/17861",
+        dataframe.is_polars() and dataframe.backend_version() < (1, 32),
+        reason="https://github.com/pola-rs/polars/pull/17861, https://github.com/pola-rs/polars/issues/23124",
         raises=None,
     )
     data = {"a": [1, 2, 3], "b": [None, None, None], "i": [0, 1, 2]}
