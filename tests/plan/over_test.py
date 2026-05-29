@@ -372,7 +372,7 @@ def test_kurtosis_over_skew(
         request,
         (dataframe.is_pyarrow() and dataframe.backend_version() < (20,)),
         reason="too old for `pyarrow.compute.{kurtosis,skew}`",
-        raises=NotImplementedError,
+        raises=(NotImplementedError, InvalidOperationError),
     )
     result = dataframe(data_kurtosis_skew).select(exprs)
     assert_equal_data(result, expected)
