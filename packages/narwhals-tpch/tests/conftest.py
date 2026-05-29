@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from contextlib import suppress
 from importlib.util import find_spec
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
-
-from tpch import constants
-from tpch.classes import Backend, Query, Query as q  # noqa: N813
+from narwhals_tpch import constants
+from narwhals_tpch.classes import Backend, Query, Query as q  # noqa: N813
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from tpch.typing_ import ScaleFactor
+    from narwhals_tpch.typing_ import ScaleFactor
 
 
 def is_xdist_worker(obj: pytest.FixtureRequest | pytest.Config, /) -> bool:
@@ -30,17 +29,17 @@ def pytest_configure(config: pytest.Config) -> None:
     # Only run before the session starts, instead of 1 + (`--numprocesses`)
     if is_xdist_worker(config):
         return
-    from tpch.generate_data import TPCHGen
+    from narwhals_tpch.generate_data import TPCHGen
 
     TPCHGen.from_pytest(config).run()
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    from tests.conftest import DEFAULT_CONSTRUCTORS
-
     parser.addoption(
         "--constructors",
-        default=DEFAULT_CONSTRUCTORS,
+        # Unused sink: absorbs the `--constructors` arg VSCode injects into the
+        # test command. tpch selects its own backends via `iter_backends`.
+        default="polars[lazy]",
         help="<sink for defaults in VSC getting injected>",
     )
     parser.addoption(
@@ -62,7 +61,7 @@ def iter_backends() -> Iterator[Backend]:
             with suppress(Exception):
                 pd.options.mode.copy_on_write = True
             with suppress(Exception):
-                pd.options.future.infer_string = True  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
+                pd.options.future.infer_string = True  # type: ignore[union-attr]  # pyright: ignore[reportAttributeAccessIssue, reportOptionalMemberAccess]
             yield Backend("pandas[pyarrow]", engine="pyarrow", dtype_backend="pyarrow")
         if find_spec("dask") and find_spec("dask.dataframe"):
             yield Backend("dask", engine="pyarrow", dtype_backend="pyarrow")
@@ -76,7 +75,8 @@ def iter_backends() -> Iterator[Backend]:
 
 @pytest.fixture(params=iter_backends(), ids=repr)
 def backend(request: pytest.FixtureRequest) -> Backend:
-    return request.param
+    result: Backend = request.param
+    return result
 
 
 def iter_queries() -> Iterator[Query]:
@@ -108,7 +108,7 @@ def iter_queries() -> Iterator[Query]:
 
 @pytest.fixture(scope="session")
 def scale_factor(request: pytest.FixtureRequest) -> ScaleFactor:
-    return request.config.getoption("--scale-factor")
+    return cast("ScaleFactor", request.config.getoption("--scale-factor"))
 
 
 @pytest.fixture(params=iter_queries(), ids=repr)

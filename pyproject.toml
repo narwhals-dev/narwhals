@@ -69,6 +69,9 @@ core = [
 plugins = [
   "test-plugin",
 ]
+tpch = [
+  "narwhals-tpch",
+]
 tests = [
   "covdefaults",
   "pytest>=9.0.3",
@@ -239,6 +242,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
+narwhals-tpch = { workspace = true }
 
 [tool.ruff]
 line-length = 90
@@ -322,19 +326,9 @@ extend-ignore-names = [
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
 ]
-"tpch/tests/*" = ["S101"]
+"packages/narwhals-tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "T201"]
 "utils/bump_version.py" = ["S603", "S607"]
-"tpch/execute/*" = ["T201"]
-"tpch/notebooks/*" = [
-  "ANN001",
-  "ANN201",
-  "EM101",
-  "EXE002",
-  "PTH123",
-  "T203",
-  "TRY003",
-]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -451,7 +445,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin"]
+files = ["src", "tests", "packages"]
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -498,7 +492,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin"]
+include = ["src", "tests", "packages"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
@@ -507,8 +501,8 @@ ignore = [
 defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
-search-path = ["src", "."]
-project-includes = ["tests"]
+search-path = ["src", ".", "packages"]
+project-includes = ["tests", "packages"]
 ignore-missing-imports = [
     "cudf.*",
     "cupy.*",

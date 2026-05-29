@@ -26,7 +26,7 @@ docs/api-completeness/*.md
 .venv
 
 # TPC-H data
-tpch/data/*
+packages/narwhals-tpch/src/narwhals_tpch/data/*
 
 # VSCode
 .vscode/

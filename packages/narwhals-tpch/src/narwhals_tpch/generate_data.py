@@ -12,10 +12,10 @@ import os
 import sys
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
-from tpch import constants
-from tpch.classes import TableLogger
+from narwhals_tpch import constants
+from narwhals_tpch.classes import TableLogger
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from duckdb import DuckDBPyConnection as Con, DuckDBPyRelation as Rel
     from typing_extensions import LiteralString
 
-    from tpch.typing_ import Artifact, QueryID, ScaleFactor
+    from narwhals_tpch.typing_ import Artifact, QueryID, ScaleFactor
 
 
 logger = logging.getLogger(constants.LOGGER_NAME)
@@ -81,7 +81,9 @@ class TPCHGen:
 
     @staticmethod
     def from_pytest(config: pytest.Config, /) -> TPCHGen:
-        return TPCHGen(scale_factor=config.getoption("--scale-factor"))
+        return TPCHGen(
+            scale_factor=cast("ScaleFactor", config.getoption("--scale-factor"))
+        )
 
     @staticmethod
     def from_argparse(parser: argparse.ArgumentParser, /) -> TPCHGen:
@@ -171,7 +173,9 @@ class TPCHGen:
         with TableLogger.database() as tbl_logger:
             for t in constants.DATABASE_TABLE_NAMES:
                 path = self.scale_factor_dir / f"{t}.parquet"
-                to_polars(self.sql(f"FROM {t}")).sink_parquet(path)
+                # `t` is a `DBTableName` literal, so the query is a `LiteralString`;
+                # pyrefly doesn't track that through f-strings (mypy/pyright do).
+                to_polars(self.sql(f"FROM {t}")).sink_parquet(path)  # pyrefly: ignore[bad-argument-type]
                 tbl_logger.log_row(path)
         return self.show_schemas("database")
 

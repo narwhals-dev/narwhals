@@ -4,7 +4,7 @@ from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
-from tpch.typing_ import Artifact, DBTableName, QueryID, ScaleFactor
+from narwhals_tpch.typing_ import Artifact, DBTableName, QueryID, ScaleFactor
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -34,4 +34,4 @@ LOGGER_NAME = "narwhals.tpch"
 
 [Logging Cookbook]: https://docs.python.org/3/howto/logging-cookbook.html#using-loggers-as-attributes-in-a-class-or-passing-them-as-parameters
 """
-QUERIES_PACKAGE = "tpch.queries"
+QUERIES_PACKAGE = "narwhals_tpch.queries"

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 from importlib import import_module
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tpch import constants
+from narwhals_tpch import constants
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -17,7 +17,13 @@ if TYPE_CHECKING:
 
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals.typing import FileSource
-    from tpch.typing_ import DBTableName, QueryID, QueryModule, ScaleFactor, TPCHBackend
+    from narwhals_tpch.typing_ import (
+        DBTableName,
+        QueryID,
+        QueryModule,
+        ScaleFactor,
+        TPCHBackend,
+    )
 
 
 class Backend:
@@ -89,8 +95,7 @@ class Query:
         return self
 
     def _import_module(self) -> QueryModule:
-        result: Any = import_module(f"{constants.QUERIES_PACKAGE}.{self}")
-        return result
+        return cast("QueryModule", import_module(f"{constants.QUERIES_PACKAGE}.{self}"))
 
 
 logger = logging.getLogger(constants.LOGGER_NAME)
