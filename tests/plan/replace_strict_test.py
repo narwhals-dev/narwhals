@@ -133,8 +133,14 @@ def test_replace_strict_expr(
     ],
 )
 def test_replace_strict_expr_non_full(
-    data: Data, expr: nwp.Expr, dataframe: DataFrame
+    data: Data, expr: nwp.Expr, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1,),
+        reason="replace is not strict in `polars<1`",
+        raises=None,
+    )
     with pytest.raises((ValueError, InvalidOperationError)):
         dataframe(data).select(expr)
 
