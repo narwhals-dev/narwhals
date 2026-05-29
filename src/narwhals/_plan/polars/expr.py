@@ -519,7 +519,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
                 msg = "sort_by(nulls_last=True)"
                 raise compat.too_old(msg, "0.20.20")
             kwds = compat.sort(node.options, len(node.by))
-            result = native.sort_by(*by, descending=kwds["descending"])
+            result = native.sort_by(*by, descending=kwds.get("descending", False))
         else:
             result = native.sort_by(*by, **compat.sort(node.options, len(node.by)))
         return self.from_native(result)
