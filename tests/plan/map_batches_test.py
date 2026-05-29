@@ -43,9 +43,8 @@ def elementwise_series(s: ct.SeriesAny | pl.Series, /) -> ct.SeriesAny | pl.Seri
     dtype_name = type(s.dtype).__name__.lower()
     repeat_name = (dtype_name,) * (len(s) - 1)
     values = [*repeat_name, "last"]
-    if is_polars_series(s):
-        return type(s)(values)
-    return s.from_iterable(values)
+    # NOTE: coverage in ci says `polars` branch isn't hit?
+    return type(s)(values) if is_polars_series(s) else s.from_iterable(values)
 
 
 def elementwise_1d_array(s: ct.SeriesAny | pl.Series, /) -> _1DArray:
