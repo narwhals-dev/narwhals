@@ -17,6 +17,8 @@ from narwhals._plan.polars import compat
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from narwhals._plan.typing import Seq
+
 
 __all__ = (
     "concat_str",
@@ -161,22 +163,27 @@ else:
 if compat.NO_LIST_AS_SERIES_REPLACE_STRICT or TYPE_CHECKING:
     replace_strict = pl.Expr.replace_strict
 else:
-    _replace_strict = (
-        pl.Expr.replace_strict if compat.HAS_REPLACE_STRICT else pl.Expr.replace
-    )
+    if compat.HAS_REPLACE_STRICT:
+        _replace_strict = pl.Expr.replace_strict
+    else:
+
+        def _replace_strict(
+            self: pl.Expr,
+            old: pl.Series,
+            new: pl.Series,
+            *,
+            return_dtype: Any | None,
+            **kwds: Any,
+        ) -> pl.Expr:
+            result = self.replace(old, new, return_dtype=return_dtype, **kwds)
+            if return_dtype is None:
+                result = result.cast(new.dtype)
+            return result
 
     def replace_strict(
-        self: pl.Expr,
-        old: pl.Expr | tuple[Any, ...],
-        new: pl.Expr | tuple[Any, ...],
-        **kwds: Any,
+        self: pl.Expr, old: Seq[Any], new: Seq[Any], **kwds: Any
     ) -> pl.Expr:
-        return _replace_strict(
-            self,
-            pl.Series(old) if isinstance(old, tuple) else old,
-            pl.Series(new) if isinstance(new, tuple) else new,
-            **kwds,
-        )
+        return _replace_strict(self, pl.Series(old), pl.Series(new), **kwds)
 
 
 if compat.ROLLING_VAR_STD_STABLE or TYPE_CHECKING:
