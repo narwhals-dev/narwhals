@@ -321,13 +321,6 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
             id="concat_str-preserve_nulls",
         ),
         pytest.param(
-            nwp.concat_str(
-                nwp.col("b") * 2, "n", nwp.col("o"), separator=" ", ignore_nulls=True
-            ),
-            {"b": ["2 dogs play", "4 cats swim", "6 walk"]},
-            id="concat_str-ignore_nulls",
-        ),
-        pytest.param(
             nwp.concat_str("a", nwp.lit("a")),
             {"a": ["Aa", "Ba", "Aa"]},
             id="concat_str-lit",
@@ -358,6 +351,21 @@ def test_select(
     data_small: dict[str, Any],
     dataframe: DataFrame,
 ) -> None:
+    result = dataframe(data_small).select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_concat_str_ignore_nulls(
+    data_small: dict[str, Any], dataframe: DataFrame
+) -> None:
+    if dataframe.is_polars() and dataframe.backend_version() < (0, 20, 6):
+        pytest.skip("https://github.com/pola-rs/polars/pull/13877")
+    expr = (
+        nwp.concat_str(
+            nwp.col("b") * 2, "n", nwp.col("o"), separator=" ", ignore_nulls=True
+        ),
+    )
+    expected = {"b": ["2 dogs play", "4 cats swim", "6 walk"]}
     result = dataframe(data_small).select(expr)
     assert_equal_data(result, expected)
 
