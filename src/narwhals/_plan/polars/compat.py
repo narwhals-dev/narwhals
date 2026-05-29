@@ -134,6 +134,22 @@ EXPLODE_SUPPORTS_OPTIONS: Final = BACKEND_VERSION >= (1, 36)
 [#25369]: https://github.com/pola-rs/polars/pull/25369
 """
 
+# TODO @dangotbanned: Use in `Expr.is_in`
+NO_LIST_AS_SERIES_IS_IN: Final = BACKEND_VERSION >= (1, 28)
+"""[#22149], [#22178]
+
+[#22149]: https://github.com/pola-rs/polars/issues/22149
+[#22178]: https://github.com/pola-rs/polars/pull/22178
+"""
+
+NO_LIST_AS_SERIES_REPLACE_STRICT: Final = BACKEND_VERSION >= (1, 29)
+"""[#22149], [#22465]
+
+Also, `pl.lit(tuple)` behaves differently *prior to* these changes
+
+[#22149]: https://github.com/pola-rs/polars/issues/22149
+[#22465]: https://github.com/pola-rs/polars/pull/22465
+"""
 
 OVER_SUPPORTS_ORDER_BY: Final = BACKEND_VERSION >= (1, 0)
 """https://github.com/pola-rs/polars/pull/16743

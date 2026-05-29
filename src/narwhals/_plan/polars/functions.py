@@ -158,10 +158,25 @@ else:
         return preserve_nulls(self, self.is_finite())
 
 
-if compat.HAS_REPLACE_STRICT or TYPE_CHECKING:
+if compat.NO_LIST_AS_SERIES_REPLACE_STRICT or TYPE_CHECKING:
     replace_strict = pl.Expr.replace_strict
 else:
-    replace_strict = pl.Expr.replace
+    _replace_strict = (
+        pl.Expr.replace_strict if compat.HAS_REPLACE_STRICT else pl.Expr.replace
+    )
+
+    def replace_strict(
+        self: pl.Expr,
+        old: pl.Expr | tuple[Any, ...],
+        new: pl.Expr | tuple[Any, ...],
+        **kwds: Any,
+    ) -> pl.Expr:
+        return _replace_strict(
+            self,
+            pl.Series(old) if isinstance(old, tuple) else old,
+            pl.Series(new) if isinstance(new, tuple) else new,
+            **kwds,
+        )
 
 
 if compat.ROLLING_VAR_STD_STABLE or TYPE_CHECKING:
