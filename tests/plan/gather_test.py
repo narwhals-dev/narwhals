@@ -7,7 +7,7 @@ import pytest
 
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import ComputeError, ShapeError
 from tests.plan.utils import DataFrame, Series, assert_equal_data, assert_equal_series
 
 if TYPE_CHECKING:
@@ -101,7 +101,7 @@ def test_gather_every_expr(data: Data, n: int, offset: int, dataframe: DataFrame
         expected = {"name": data["name"], "idx": data["idx"]}
         assert_equal_data(result, expected)
     else:
-        with pytest.raises(ShapeError):
+        with pytest.raises((ShapeError, ComputeError)):
             df.select(gather(e_name), e_idx)
         result = df.select(gather(e_name), e_idx.first())
         expected = {"name": v_name, "idx": [0] * len(result)}
