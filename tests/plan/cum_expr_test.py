@@ -8,9 +8,11 @@ import pytest
 
 import narwhals._plan as nwp
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import DataFrame, assert_equal_data
+from tests.plan.utils import DataFrame, assert_equal_data, xfail_polars_over_order_by
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest
+
     from tests.conftest import Data
     from tests.plan.utils import DataFrame
 
@@ -41,7 +43,7 @@ def id_func(obj: Callable[..., Any] | Any) -> str:
 
 
 # TODO @dangotbanned: Figure out what's going on
-def xfail_pyarrow_bug(dataframe: DataFrame, request: pytest.FixtureRequest) -> None:
+def xfail_pyarrow_bug(dataframe: DataFrame, request: FixtureRequest) -> None:
     dataframe.xfail(
         request,
         dataframe.is_pyarrow(),
@@ -104,8 +106,9 @@ def test_cumulative_order_by(
     fn: Fn,
     expected: list[int | None],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = fn(a).over(order_by="b")
     xfail_pyarrow_bug(dataframe, request)
     result = dataframe(data_over).with_columns(expr).sort("i")
@@ -133,15 +136,16 @@ def test_cumulative_partition_by_order_by(
     fn: Fn,
     expected: list[int | None],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
+    request: FixtureRequest,
 ) -> None:
-    expr = fn(a).over("g", order_by="b")
+    xfail_polars_over_order_by(dataframe, request)
     dataframe.xfail(
         request,
         dataframe.is_pyarrow(),
         reason="`cum_*.over(*partition_by, order_by=...)` is not implemented for `pyarrow`",
         raises=(NotImplementedError, InvalidOperationError),
     )
+    expr = fn(a).over("g", order_by="b")
     result = dataframe(data_over).with_columns(expr).sort("i")
     assert_equal_data(result, data_over | {"a": expected})
 
@@ -152,9 +156,8 @@ def test_shift_cum_sum(dataframe: DataFrame) -> None:
     assert_equal_data(result, {"a": [None, 1, 3, 6, 10]})
 
 
-def test_shift_cum_sum_order_by(
-    dataframe: DataFrame, request: pytest.FixtureRequest
-) -> None:
+def test_shift_cum_sum_order_by(dataframe: DataFrame, request: FixtureRequest) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     xfail_pyarrow_bug(dataframe, request)
     data = {"a": [1, 2, 3, 4, 5], "i": [0, 5, 2, 3, 2]}
     result = dataframe(data).select(a.shift(1).cum_sum().over(order_by="i"))

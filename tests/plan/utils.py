@@ -682,6 +682,7 @@ else:
 def assert_equal_data(
     result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any] | nwp.DataFrame[Any, Any]
 ) -> None:
+    __tracebackhide__ = True
     if isinstance(expected, nwp.DataFrame):
         expected = expected.to_dict(as_series=False)
     _assert_equal_data(result.to_dict(as_series=False), expected)
@@ -725,6 +726,18 @@ def _xfail_polars(
     if condition is not None:
         cond = cond and condition
     fixture.xfail(request, cond, reason=reason, raises=NotImplementedError)
+
+
+def xfail_polars_over_order_by(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(
+        (1, 10),
+        "`over(..., order_by=...)` requires `polars>=1.10.0`",
+        fixture,
+        request,
+        condition,
+    )
 
 
 def xfail_polars_over_descending(

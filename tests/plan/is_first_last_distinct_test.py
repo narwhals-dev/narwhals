@@ -10,6 +10,7 @@ from tests.plan.utils import (
     assert_equal_data,
     xfail_polars_over_descending,
     xfail_polars_over_nulls_last,
+    xfail_polars_over_order_by,
 )
 
 if TYPE_CHECKING:
@@ -54,8 +55,9 @@ def test_is_last_distinct(
 
 
 def test_is_first_distinct_order_by(
-    data_indexed: Data, expected: Data, dataframe: DataFrame
+    data_indexed: Data, expected: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     result = (
         dataframe(data_indexed)
         .select(nwp.col("a", "b").is_first_distinct().over(order_by="i"), "i")
@@ -66,8 +68,12 @@ def test_is_first_distinct_order_by(
 
 
 def test_is_last_distinct_order_by(
-    data_indexed: Data, expected_invert: Data, dataframe: DataFrame
+    data_indexed: Data,
+    expected_invert: Data,
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     result = (
         dataframe(data_indexed)
         .select(nwp.col("a", "b").is_last_distinct().over(order_by="i"), "i")

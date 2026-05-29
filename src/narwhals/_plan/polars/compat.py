@@ -151,12 +151,22 @@ Also, `pl.lit(tuple)` behaves differently *prior to* these changes
 [#22465]: https://github.com/pola-rs/polars/pull/22465
 """
 
-OVER_SUPPORTS_ORDER_BY: Final = BACKEND_VERSION >= (1, 0)
-"""https://github.com/pola-rs/polars/pull/16743
+OVER_SUPPORTS_ORDER_BY: Final = BACKEND_VERSION >= (1, 10)
+"""Added in [#16743], fixed in the version after [#18947].
 
 Supports:
 
     pl.col("a").first().over("b", order_by="c")
+
+## Notes
+- It is unclear exactly which expressions were not valid before `1.10`
+  - length-preserving functions are the most common issue
+- Some bugs look like they're data-dependent
+  - There's a chunk of test suite that *would* pass,
+    but we can't allow the general case where incorrect results occur
+
+[#16743]: https://github.com/pola-rs/polars/pull/16743
+[#18947]: https://github.com/pola-rs/polars/pull/18947
 """
 
 OVER_SUPPORTS_DESCENDING: Final = BACKEND_VERSION >= (1, 22)
@@ -198,7 +208,7 @@ Supports:
 _OverFeature: TypeAlias = Literal["order_by_any", "descending", "nulls_last"]
 
 _OVER_ERRORS: Final[Mapping[_OverFeature, tuple[str, str]]] = {
-    "order_by_any": ("..., order_by=...", "1.0.0"),
+    "order_by_any": ("..., order_by=...", "1.10.0"),
     "descending": ("..., order_by=..., descending=True", "1.22.0"),
     "nulls_last": ("order_by=..., nulls_last=True", "1.39.0"),
 }

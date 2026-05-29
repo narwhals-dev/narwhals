@@ -6,9 +6,11 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import DataFrame, assert_equal_data
+from tests.plan.utils import DataFrame, assert_equal_data, xfail_polars_over_order_by
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest
+
     from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
 
@@ -152,7 +154,9 @@ def test_rolling_sum_order_by(
     center: bool,
     expected: list[NonNestedLiteral],
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = (
         nwp.col("b")
         .rolling_sum(window_size, min_samples=min_samples, center=center)
@@ -182,7 +186,9 @@ def test_rolling_mean_order_by(
     center: bool,
     expected: list[NonNestedLiteral],
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = (
         nwp.col("b")
         .rolling_mean(window_size, min_samples=min_samples, center=center)
@@ -213,7 +219,9 @@ def test_rolling_var_order_by(
     ddof: int,
     expected: list[NonNestedLiteral],
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = (
         nwp.col("b")
         .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
@@ -250,7 +258,9 @@ def test_rolling_std_order_by(
     ddof: int,
     expected: list[NonNestedLiteral],
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = (
         nwp.col("b")
         .rolling_std(window_size, min_samples=min_samples, center=center, ddof=ddof)

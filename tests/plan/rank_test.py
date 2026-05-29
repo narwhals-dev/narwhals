@@ -6,11 +6,13 @@ import pytest
 
 import narwhals._plan as nwp
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import DataFrame, assert_equal_data
+from tests.plan.utils import DataFrame, assert_equal_data, xfail_polars_over_order_by
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
     from typing import TypeAlias
+
+    from pytest import FixtureRequest
 
     from narwhals.typing import RankMethod
 
@@ -109,16 +111,22 @@ def test_rank_expr_partition_by(
 
 @pytest.mark.parametrize("descending", [ASC, DESC], ids=["asc", "desc"])
 def test_rank_expr_order_by(
-    rank_method: RankMethod, data: Data, *, descending: bool, dataframe: DataFrame
+    rank_method: RankMethod,
+    data: Data,
+    *,
+    descending: bool,
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     result = dataframe(data).select(
         nwp.col("a").rank(rank_method, descending=descending).over(order_by="i")
     )
     assert_equal_data(result, {"a": EXPECTED_ORDER_BY[rank_method, descending]})
 
 
-def test_rank_expr_order_by_3177(dataframe: DataFrame) -> None:
-    # NOTE: #3177
+def test_rank_expr_order_by_3177(dataframe: DataFrame, request: FixtureRequest) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     data = {"a": [1, 1, 2, 2, 3, 3], "b": [3, None, 4, 3, 5, 6], "i": list(range(6))}
     df = dataframe(data)
     result = df.with_columns(c=nwp.col("a").rank("ordinal").over(order_by="b")).sort("i")

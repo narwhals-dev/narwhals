@@ -16,6 +16,7 @@ from tests.plan.utils import (
     re_compile,
     xfail_polars_over_descending,
     xfail_polars_over_nulls_last,
+    xfail_polars_over_order_by,
 )
 from tests.utils import POLARS_VERSION
 
@@ -210,7 +211,8 @@ def test_unsupported_over(data: Data, dataframe: DataFrame) -> None:
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
 
-def test_over_without_partition_by(dataframe: DataFrame) -> None:
+def test_over_without_partition_by(dataframe: DataFrame, request: FixtureRequest) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
         df.with_columns(b=nwp.col("a").abs().cum_sum().over(order_by="i"))
@@ -221,7 +223,10 @@ def test_over_without_partition_by(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-def test_aggregation_over_without_partition_by(dataframe: DataFrame) -> None:
+def test_aggregation_over_without_partition_by(
+    dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
         df.with_columns(b=nwp.col("a").diff().sum().over(order_by="i"))
@@ -239,7 +244,10 @@ def test_len_over_2369(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-def test_shift_kitchen_sink(data_alt: Data, dataframe: DataFrame) -> None:
+def test_shift_kitchen_sink(
+    data_alt: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     result = dataframe(data_alt).select(
         nwp.nth(1, 2)
         .shift(-1)
@@ -255,6 +263,7 @@ def test_shift_kitchen_sink(data_alt: Data, dataframe: DataFrame) -> None:
 def test_over_order_by_expr(
     data_alt: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     xfail_polars_over_descending(dataframe, request)
     df = dataframe(data_alt)
     result = df.select(
@@ -409,6 +418,7 @@ p3 = nwp.col("p3")
 def test_over_partition_by_nulls_order_by(
     expr: nwp.Expr, result_values: list[Any], dataframe: DataFrame, request: TopRequest
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     xfail_polars_over_descending(
         dataframe, request, "ascending" not in request.node.callspec.id
     )
@@ -450,6 +460,7 @@ def test_over_partition_by_order_by(
     dataframe: DataFrame,
     request: TopRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     xfail_polars_over_descending(
         dataframe, request, "descending" in request.node.callspec.id
     )
@@ -594,19 +605,13 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
     dataframe: DataFrame,
     request: TopRequest,
 ) -> None:
-    if dataframe.is_polars():
+    if dataframe.is_polars() and not (POLARS_SUPPORTS_OVER_FULL):
+        xfail_polars_over_order_by(dataframe, request)
         is_desc = "desc" in request.node.callspec.id
         is_nulls_last = "nulls_last" in request.node.callspec.id
-        if not (POLARS_SUPPORTS_OVER_FULL) and (is_desc or is_nulls_last):
+        if is_desc or is_nulls_last:
             xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
             xfail_polars_over_descending(dataframe, request, is_desc)
-
-        # TODO @dangotbanned: Why is this passing?
-        elif (
-            not (POLARS_SUPPORTS_OVER_FULL)
-            and "polars-v2_last-['o3', 'o5']-asc-nulls_first" in request.node.callspec.id
-        ):
-            ...
         else:
             dataframe.xfail(
                 request,
@@ -622,6 +627,7 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
     dataframe: DataFrame, request: FixtureRequest
 ) -> None:
     # Adapted from https://github.com/pola-rs/polars/issues/24989
+    xfail_polars_over_order_by(dataframe, request)
     xfail_polars_over_descending(dataframe, request)
     data = {"a": [1, 1, 2, 2], "b": [4, 5, 6, 7], "i": [1, None, 2, 3]}
     b_first = nwp.col("b").first()
@@ -677,6 +683,9 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
 def test_over_partition_by_projection(
     expr: nwp.Expr, expected: Data, dataframe: DataFrame, request: TopRequest
 ) -> None:
+    xfail_polars_over_order_by(
+        dataframe, request, "unordered" not in request.node.callspec.id
+    )
     xfail_polars_over_descending(
         dataframe, request, "descending" in request.node.callspec.id
     )

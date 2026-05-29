@@ -23,11 +23,14 @@ from tests.plan.utils import (
     first,
     last,
     re_compile,
+    xfail_polars_over_order_by,
 )
 
 if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Sequence
+
+    from pytest import FixtureRequest
 
     from narwhals._plan.typing import ColumnNameOrSelector, IntoExpr, OneOrIterable
     from narwhals.typing import PythonLiteral
@@ -500,8 +503,10 @@ def test_first_last_expr_with_columns(
     agg: nwp.Expr,
     expected: PythonLiteral,
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
+    xfail_polars_over_order_by(dataframe, request)
     height = len(next(iter(data_indexed.values())))
     expected_full = {"result": height * [expected]}
     frame = dataframe(data_indexed)

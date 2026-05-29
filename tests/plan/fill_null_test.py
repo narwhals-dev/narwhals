@@ -6,7 +6,7 @@ import pytest
 
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import DataFrame, assert_equal_data
+from tests.plan.utils import DataFrame, assert_equal_data, xfail_polars_over_order_by
 
 if TYPE_CHECKING:
     from pytest import FixtureRequest
@@ -54,6 +54,18 @@ DATA_LIMITS = {
             {"a": [0.0, 2, 2, 3, 4], "b": [1.0, 2, None, 5, 3]},
             id="expr-column",
         ),
+    ],
+)
+def test_fill_null(
+    data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data, dataframe: DataFrame
+) -> None:
+    df = dataframe(data)
+    assert_equal_data(df.select(exprs), expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "exprs", "expected"),
+    [
         pytest.param(
             DATA_LIMITS,
             ncs.by_index(0, 1).fill_null(strategy="forward").over(order_by="idx"),
@@ -112,9 +124,14 @@ DATA_LIMITS = {
         ),
     ],
 )
-def test_fill_null(
-    data: Data, exprs: OneOrIterable[nwp.Expr], expected: Data, dataframe: DataFrame
+def test_fill_null_order_by(
+    data: Data,
+    exprs: OneOrIterable[nwp.Expr],
+    expected: Data,
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     df = dataframe(data)
     assert_equal_data(df.select(exprs), expected)
 
