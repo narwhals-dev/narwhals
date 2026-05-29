@@ -589,7 +589,7 @@ def is_cudf_dtype(
     )
 
 
-def _is_into_native_series(obj: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
+def _is_native_into_series(obj: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     from narwhals._utils import _hasattr_static
 
     return (
@@ -600,7 +600,7 @@ def _is_into_native_series(obj: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     )
 
 
-def _is_into_native_dataframe(obj: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
+def _is_native_into_dataframe(obj: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
     from narwhals._utils import _hasattr_static
 
     return (
@@ -611,7 +611,7 @@ def _is_into_native_dataframe(obj: Any | IntoDataFrameT) -> TypeIs[IntoDataFrame
     )
 
 
-def _is_into_native_lazyframe(obj: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
+def _is_native_into_lazyframe(obj: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
     from narwhals._utils import _hasattr_static
 
     return (
@@ -651,7 +651,7 @@ def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     """
     from narwhals.series import Series
 
-    return isinstance(native_series, Series) or _is_into_native_series(native_series)
+    return isinstance(native_series, Series) or _is_native_into_series(native_series)
 
 
 def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
@@ -679,7 +679,7 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
     """
     from narwhals.dataframe import DataFrame
 
-    return isinstance(native_dataframe, DataFrame) or _is_into_native_dataframe(
+    return isinstance(native_dataframe, DataFrame) or _is_native_into_dataframe(
         native_dataframe
     )
 
@@ -709,7 +709,7 @@ def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazy
     """
     from narwhals.dataframe import LazyFrame
 
-    return isinstance(native_lazyframe, LazyFrame) or _is_into_native_lazyframe(
+    return isinstance(native_lazyframe, LazyFrame) or _is_native_into_lazyframe(
         native_lazyframe
     )
 
