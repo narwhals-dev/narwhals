@@ -618,7 +618,7 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
                 reason="BUG: polars is broadcasting for `over(order_by=...)`, but aggregating for `sort_by`",
                 raises=(ValueError, AssertionError),
             )
-        else:
+        else:  # pragma: no cover
             xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
             xfail_polars_over_descending(dataframe, request, is_desc)
 
