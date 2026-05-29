@@ -5,9 +5,16 @@ from typing import TYPE_CHECKING
 import pytest
 
 from narwhals import _plan as nwp
-from tests.plan.utils import DataFrame, assert_equal_data
+from tests.plan.utils import (
+    DataFrame,
+    assert_equal_data,
+    xfail_polars_over_descending,
+    xfail_polars_over_nulls_last,
+)
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest  # noqa: PT013
+
     from tests.conftest import Data
 
 
@@ -91,8 +98,8 @@ ORDER_ASC = "o_asc"
 ORDER_NULL = "o_null"
 
 
-# NOTE: For `pyarrow`, the result is identical to `order_by`, because the index is already in order
 def test_is_first_last_distinct_partitioned(grouped: Data, dataframe: DataFrame) -> None:
+    # NOTE: For `pyarrow`, the result is identical to `order_by`, because the index is already in order
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_1: [1, 3, 3, 2, 3],
@@ -112,11 +119,10 @@ def test_is_first_last_distinct_partitioned(grouped: Data, dataframe: DataFrame)
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
-# NOTE: This works the same as `polars`
 def test_is_first_last_distinct_partitioned_order_by_desc(
-    grouped: Data, dataframe: DataFrame
+    grouped: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
+    xfail_polars_over_descending(dataframe, request)
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_2: [1, 3, 3, 3, 3],
@@ -145,11 +151,11 @@ def test_is_first_last_distinct_partitioned_order_by_desc(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
-# https://github.com/pola-rs/polars/issues/24989
 def test_is_first_last_distinct_partitioned_order_by_nulls(
-    grouped: Data, dataframe: DataFrame
+    grouped: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
+    # https://github.com/pola-rs/polars/issues/24989
+    xfail_polars_over_nulls_last(dataframe, request)
     expected = {
         GROUP: ["A", "A", "B", "B", "B"],
         VALUE_2: [1, 3, 3, 3, 3],

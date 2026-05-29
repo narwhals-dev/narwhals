@@ -712,3 +712,40 @@ def re_compile(
     Helper to default to using `flags=re.DOTALL | re.IGNORECASE`.
     """
     return re.compile(pattern, flags)
+
+
+def _xfail_polars(
+    min_version: tuple[int, ...],
+    reason: LiteralString,
+    fixture: DataFrame,
+    request: FixtureRequest,
+    condition: bool | None,
+) -> None:
+    cond = fixture.is_polars() and fixture.backend_version() < min_version
+    if condition is not None:
+        cond = cond and condition
+    fixture.xfail(request, cond, reason=reason, raises=NotImplementedError)
+
+
+def xfail_polars_over_descending(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(
+        (1, 22),
+        "`over(..., order_by=..., descending=True)` requires `polars>=1.22.0`",
+        fixture,
+        request,
+        condition,
+    )
+
+
+def xfail_polars_over_nulls_last(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(
+        (1, 39),
+        "`over(order_by=..., nulls_last=True)` requires `polars>=1.39.0`",
+        fixture,
+        request,
+        condition,
+    )

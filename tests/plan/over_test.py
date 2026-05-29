@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+# ruff: noqa: PT013
 from collections.abc import Iterable
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
 import pytest
 
@@ -10,17 +11,28 @@ import narwhals as nw
 import narwhals._plan as nwp
 from narwhals._plan import selectors as ncs
 from narwhals.exceptions import InvalidOperationError
-from tests.plan.utils import DataFrame, assert_equal_data, re_compile
+from tests.plan.utils import (
+    DataFrame,
+    assert_equal_data,
+    re_compile,
+    xfail_polars_over_descending,
+    xfail_polars_over_nulls_last,
+)
+from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, Sequence
     from typing import TypeAlias
 
+    from _pytest.fixtures import TopRequest
     from _pytest.mark import ParameterSet
+    from pytest import FixtureRequest
 
     from narwhals._plan.typing import IntoExprColumn, OneOrIterable
     from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
+
+POLARS_SUPPORTS_OVER_FULL: Final = POLARS_VERSION >= (1, 39)
 
 
 @pytest.fixture
@@ -241,7 +253,10 @@ def test_shift_kitchen_sink(data_alt: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-def test_over_order_by_expr(data_alt: Data, dataframe: DataFrame) -> None:
+def test_over_order_by_expr(
+    data_alt: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_polars_over_descending(dataframe, request)
     df = dataframe(data_alt)
     result = df.select(
         nwp.all()
@@ -371,13 +386,14 @@ p2 = nwp.col("p2")
 p3 = nwp.col("p3")
 
 
-# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 @pytest.mark.parametrize(
     ("expr", "result_values"),
     [
         (v.first().over(p1, order_by="i", descending=True), [5, 2, 6, 6, 2, 1]),
         (v.last().over(p1, p2, order_by="i", descending=True), [5, 4, 3, 6, 2, 1]),
-        (v.first().over(p3, p2, order_by="i"), [5, 4, 3, 6, 6, 1]),
+        pytest.param(
+            v.first().over(p3, p2, order_by="i"), [5, 4, 3, 6, 6, 1], id="ascending"
+        ),
         (
             (
                 v.first().over(
@@ -392,8 +408,11 @@ p3 = nwp.col("p3")
     ],
 )
 def test_over_partition_by_nulls_order_by(
-    expr: nwp.Expr, result_values: list[Any], dataframe: DataFrame
+    expr: nwp.Expr, result_values: list[Any], dataframe: DataFrame, request: TopRequest
 ) -> None:
+    xfail_polars_over_descending(
+        dataframe, request, "ascending" not in request.node.callspec.id
+    )
     data = {
         "p1": ["a", "b", None, None, "b", "c"],
         "p2": [1, 2, 1, None, None, None],
@@ -409,9 +428,10 @@ def test_over_partition_by_nulls_order_by(
 @pytest.mark.parametrize(
     ("expr", "result_values"),
     [
-        (
+        pytest.param(
             nwp.col("c").first().over("a", order_by="i", descending=True),
             [5, 2, 6, 6, 2, 1],
+            id="descending",
         ),
         (nwp.col("c").first().over("a", order_by="i"), [5, 4, 3, 3, 4, 1]),
         (
@@ -425,8 +445,15 @@ def test_over_partition_by_nulls_order_by(
     ],
 )
 def test_over_partition_by_order_by(
-    data_groups: Data, expr: nwp.Expr, result_values: list[Any], dataframe: DataFrame
+    data_groups: Data,
+    expr: nwp.Expr,
+    result_values: list[Any],
+    dataframe: DataFrame,
+    request: TopRequest,
 ) -> None:
+    xfail_polars_over_descending(
+        dataframe, request, "descending" in request.node.callspec.id
+    )
     expected = data_groups | {"result": result_values}
     df = dataframe(data_groups)
     result = df.with_columns(result=expr).sort("i")
@@ -511,7 +538,6 @@ def order_case(
     return pytest.param([over, sort_by], result_data, id=test_id)
 
 
-# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 # TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
 @pytest.mark.parametrize(
     ("expr", "expected"),
@@ -567,23 +593,37 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
     expected: Data,
     data_order: Mapping[str, list[NonNestedLiteral]],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
+    request: TopRequest,
 ) -> None:
-    dataframe.xfail(
-        request,
-        dataframe.is_polars(),
-        reason="BUG: polars is broadcasting for `over(order_by=...)`, but aggregating for `sort_by`",
-        raises=(ValueError, AssertionError),
-    )
+    if dataframe.is_polars():
+        is_desc = "desc" in request.node.callspec.id
+        is_nulls_last = "nulls_last" in request.node.callspec.id
+        if not (POLARS_SUPPORTS_OVER_FULL) and (is_desc or is_nulls_last):
+            xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
+            xfail_polars_over_descending(dataframe, request, is_desc)
+
+        # TODO @dangotbanned: Why is this passing?
+        elif (
+            not (POLARS_SUPPORTS_OVER_FULL)
+            and "polars-v2_last-['o3', 'o5']-asc-nulls_first" in request.node.callspec.id
+        ):
+            ...
+        else:
+            dataframe.xfail(
+                request,
+                True,
+                reason="BUG: polars is broadcasting for `over(order_by=...)`, but aggregating for `sort_by`",
+                raises=(ValueError, AssertionError),
+            )
     result = dataframe(data_order).select(expr)
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
-    dataframe: DataFrame,
+    dataframe: DataFrame, request: FixtureRequest
 ) -> None:
     # Adapted from https://github.com/pola-rs/polars/issues/24989
+    xfail_polars_over_descending(dataframe, request)
     data = {"a": [1, 1, 2, 2], "b": [4, 5, 6, 7], "i": [1, None, 2, 3]}
     b_first = nwp.col("b").first()
     df = dataframe(data)
@@ -605,7 +645,6 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: Xfail old polars, based on `polars.compat.OVER*` equivialent
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -632,13 +671,16 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
             )
             .alias("e"),
             {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9], "e": [2, 1, 2]},
-            id="ordered-agg-ordered-partition",
+            id="ordered-agg-ordered-partition-descending",
         ),
     ],
 )
 def test_over_partition_by_projection(
-    expr: nwp.Expr, expected: Data, dataframe: DataFrame
+    expr: nwp.Expr, expected: Data, dataframe: DataFrame, request: TopRequest
 ) -> None:
+    xfail_polars_over_descending(
+        dataframe, request, "descending" in request.node.callspec.id
+    )
     data = {"a": [1, 1, 2], "b": [4, 5, 6], "d": [10, -1, -9]}
     result = dataframe(data).with_columns(expr).sort("b")
     assert_equal_data(result, expected)
