@@ -70,7 +70,7 @@ else:
                     raise compat.over_error("descending")
                 options["descending"] = descending
             if not partition_by and not compat.OVER_WITHOUT_PARTITION_BY:
-                partition_by = (lit(1),)
+                partition_by = (pl.repeat(lit(1), len()),)
         return self.over(*partition_by, **options)
 
 

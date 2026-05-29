@@ -172,13 +172,19 @@ Supports:
 """
 
 OVER_WITHOUT_PARTITION_BY: Final = BACKEND_VERSION >= (1, 30)
-"""https://github.com/pola-rs/polars/pull/22712
-
-**Use `over(pl.lit(1), order_by=...)` on older versions!**
+"""[#22712]
 
 Supports:
 
     pl.col("a").first().over(order_by="c", descending=True, nulls_last=False)
+
+
+Until [#24874] (`>=1.35.0`), the workaround of `pl.lit(1)` does not work in all contexts.
+
+So, `pl.repeat(1, len())` is required instead.
+
+[#22712]: https://github.com/pola-rs/polars/pull/22712
+[#24874]: https://github.com/pola-rs/polars/pull/24874
 """
 
 OVER_RESPECTS_NULLS_LAST: Final = BACKEND_VERSION >= (1, 39)
