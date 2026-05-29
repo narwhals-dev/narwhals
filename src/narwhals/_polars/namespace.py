@@ -186,7 +186,7 @@ class PolarsNamespace:
                     pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
                 ]
 
-                result = pl.fold(  # type: ignore[assignment]
+                result = pl.fold(
                     acc=init_value,
                     function=operator.add,
                     exprs=[s + v for s, v in zip(separators, values, strict=True)],
