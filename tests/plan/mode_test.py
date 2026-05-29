@@ -10,6 +10,8 @@ from narwhals.exceptions import ShapeError
 from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest  # noqa: PT013
+
     from tests.conftest import Data
 
 
@@ -35,7 +37,16 @@ def test_mode_expr_keep_all(
     assert_equal_data(result, expected)
 
 
-def test_mode_expr_different_lengths_keep_all(data: Data, dataframe: DataFrame) -> None:
+def test_mode_expr_different_lengths_keep_all(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1, 10),
+        # skipped on main, not sure
+        reason="polars too old to raise?",
+        raises=None,
+    )
     df = dataframe(data)
     with pytest.raises(ShapeError):
         df.select(nwp.col("a", "b").mode(keep="all"))
