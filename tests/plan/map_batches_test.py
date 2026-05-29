@@ -151,10 +151,11 @@ def test_map_batches(
         (lambda s: str(next(iter(s))).encode(), "'bytes'"),
     ],
 )
-def test_map_batches_invalid(
+def test_map_batches_returns_scalar_false_series(
     data: Data, udf: Callable[[Any], Any], result_type_name: str, dataframe: DataFrame
 ) -> None:
-    expr = nwp.col("a", "b", "z").map_batches(udf)
+    if dataframe.is_polars() and dataframe.backend_version() < (1, 32, 3):
+        pytest.skip(reason="polars too old for `returns_scalar`")
     pattern = (
         None
         if dataframe.is_polars()
@@ -163,7 +164,7 @@ def test_map_batches_invalid(
         )
     )
     with pytest.raises(TypeError, match=pattern):
-        dataframe(data).select(expr)
+        dataframe(data).select(nwp.col("a", "b", "z").map_batches(udf))
 
 
 def test_map_batches_ignore_rename(data: Data, dataframe: DataFrame) -> None:
