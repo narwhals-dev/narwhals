@@ -10,6 +10,7 @@ import pytest
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import InvalidOperationError, NarwhalsError
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
+from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from narwhals._plan.typing import OneOrIterable
@@ -264,6 +265,10 @@ def test_pivot_on_multiple_names(
     dataframe.xfail_eager_pivot_too_old(request)
     result = df.pivot(on, values=values, index=index)
     assert result.columns == expected
+    if POLARS_VERSION < (1, 0):
+        pytest.skip(
+            "test uses `polars` api directly, but we don't support `pivot` on polars this early"
+        )
     assert_names_match_polars(data_, on, index, values, result_columns=result.columns)
 
 
@@ -306,6 +311,10 @@ def test_pivot_on_multiple_names_agg(
     dataframe.xfail_eager_pivot_too_old(request)
     result = df.pivot(on, values=values, aggregate_function="min", index=index)
     assert result.columns == expected
+    if POLARS_VERSION < (1, 0):
+        pytest.skip(
+            "test uses `polars` api directly, but we don't support `pivot` on polars this early"
+        )
     assert_names_match_polars(
         data, on, index, values, "min", result_columns=result.columns
     )
