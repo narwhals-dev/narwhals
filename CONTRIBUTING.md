@@ -329,7 +329,7 @@ and then open the link provided in a browser.
 The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
 
 ```terminal
-uv run --group docs zensical build --clean && make docs-serve
+make docs-clean-serve
 ```
 
 ### 10. Pull requests
