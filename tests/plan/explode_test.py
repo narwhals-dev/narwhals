@@ -207,6 +207,12 @@ def test_explode_series_default_masked(
     values: list[Any], expected: list[Any], series: Series
 ) -> None:
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L471-484
+    if (
+        series.is_polars()
+        and series.backend_version() < (1,)
+        and values == [[1, 2, 3], [1, 2], [1, 2]]
+    ):
+        pytest.skip("this test came from polars, and it didn't work at some point")
     result = (
         series(values)
         .to_frame()
