@@ -262,6 +262,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         result = node.dispatch_arg(self, frame, name).native.gather_every(f.n, f.offset)
         return self.from_native(result)
 
+    # TODO @dangotbanned: `hist_*`
+    # pick a version to not_impl from (zero compat since it's unstable)
     hist_bin_count = todo()
     hist_bins = todo()
 
@@ -542,6 +544,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
             self.dispatch(node.expr, frame, name).native.var(node.ddof)
         )
 
+    # TODO @dangotbanned: 4x namespace
     cat = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     dt = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
     list = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
