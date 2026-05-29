@@ -234,6 +234,7 @@ def test_linear_space_values(
 
 def test_linear_space_expr(eager: Eager) -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
+    skip_if_polars_linear_space(eager == "polars")
     df = nwp.from_dict({"a": [1, 2, 3, 4, 5]}, backend=eager)
     result = df.select(nwp.linear_space(0, nwp.col("a").len(), 3))
     expected = df.select(
@@ -274,6 +275,7 @@ def test_linear_space_expr_numeric_dtype(
     dtype_start: IntoDType, dtype_end: IntoDType, dtype_expected: IntoDType, eager: Eager
 ) -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L71-L95
+    skip_if_polars_linear_space(eager == "polars")
     df = nwp.select(eager=eager)
     result = df.select(
         ls=nwp.linear_space(nwp.lit(0, dtype=dtype_start), nwp.lit(1, dtype=dtype_end), 6)
@@ -289,6 +291,7 @@ def test_linear_space_expr_numeric_dtype(
 
 def test_linear_space_expr_wrong_length(dataframe: DataFrame) -> None:
     # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L194-L199
+    skip_if_polars_linear_space(dataframe.is_polars())
     msg_narwhals = r"Expected object of length 6, got 5"
     msg_polars = r"6.+5"
     pattern = re_compile(rf"({msg_narwhals})|({msg_polars})")
