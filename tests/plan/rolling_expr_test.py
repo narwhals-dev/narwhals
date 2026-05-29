@@ -68,7 +68,15 @@ def test_rolling_var(
     ddof: int,
     expected: list[NonNestedLiteral],
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1,),
+        reason="polars too old",
+        raises=NotImplementedError,
+    )
+
     expr = nwp.col("var_std").rolling_var(
         window_size, min_samples=min_samples, center=center, ddof=ddof
     )
@@ -96,7 +104,14 @@ def test_rolling_std(
     ddof: int,
     expected: list[NonNestedLiteral],
     dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1,),
+        reason="polars too old",
+        raises=NotImplementedError,
+    )
     expr = nwp.col("var_std").rolling_std(
         window_size, min_samples=min_samples, center=center, ddof=ddof
     )
