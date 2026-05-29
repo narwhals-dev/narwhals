@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-# ruff: noqa: PT013
 from collections.abc import Iterable
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar

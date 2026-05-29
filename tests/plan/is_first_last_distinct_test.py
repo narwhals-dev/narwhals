@@ -13,7 +13,7 @@ from tests.plan.utils import (
 )
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest  # noqa: PT013
+    from pytest import FixtureRequest
 
     from tests.conftest import Data
 

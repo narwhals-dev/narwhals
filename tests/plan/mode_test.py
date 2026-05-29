@@ -10,7 +10,7 @@ from narwhals.exceptions import ShapeError
 from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest  # noqa: PT013
+    from pytest import FixtureRequest
 
     from tests.conftest import Data
 

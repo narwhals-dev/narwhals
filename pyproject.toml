@@ -222,6 +222,9 @@ extend-ignore-names = [
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
 ]
+"tests/plan/*" = [
+  "PT013",  # pytest-incorrect-pytest-import (like, really?)
+]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "T201"]
 "utils/bump_version.py" = ["S603", "S607"]

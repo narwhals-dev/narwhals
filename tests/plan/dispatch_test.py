@@ -24,7 +24,7 @@ from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 if TYPE_CHECKING:
     from typing import TypeAlias
 
-    from pytest import FixtureRequest  # noqa: PT013
+    from pytest import FixtureRequest
 
     from narwhals._plan.typing import Constructs
     from tests.conftest import Data

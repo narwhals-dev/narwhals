@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from typing import TypeAlias
 
     import polars as pl
-    from pytest import FixtureRequest  # noqa: PT013
+    from pytest import FixtureRequest
     from typing_extensions import LiteralString, ReadOnly, deprecated
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq

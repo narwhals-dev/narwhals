@@ -9,7 +9,7 @@ from narwhals._plan import selectors as ncs
 from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
-    from pytest import FixtureRequest  # noqa: PT013
+    from pytest import FixtureRequest
 
     from narwhals._plan.typing import OneOrIterable
     from tests.conftest import Data
