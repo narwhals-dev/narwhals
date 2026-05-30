@@ -293,12 +293,14 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
         expr = fn.row_index(f.name, f.order_by)
         return self._into_compliant(native.select(expr, pl.all()))
 
-    # TODO @dangotbanned: All require adding an `Expr` layer
-    # Revisit after getting coverage for everything else
+    # TODO @dangotbanned: Filter
     filter = todo()
+    # TODO @dangotbanned: WithColumns
+    with_columns = todo()
+
+    # TODO @dangotbanned: GroupBy (important, but prioritize the others)
     group_by = todo()
     group_by_names = todo()
-    with_columns = todo()
 
 
 PolarsEvaluator()
