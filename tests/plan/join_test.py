@@ -125,7 +125,6 @@ def test_join_full(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: does this have a test on main?
 def test_join_full_duplicate(dataframe: DataFrame) -> None:
     left = dataframe({"f": [1, 2, 3], "v": [1, 2, 3]})
     right = left.rename({"v": "f_right"})
@@ -133,8 +132,9 @@ def test_join_full_duplicate(dataframe: DataFrame) -> None:
         left.join(right, "f", how="full", suffix="_right")
 
 
-# TODO @dangotbanned: `POLARS_VERSION < (1, 26)`
 def test_join_inner_x2_duplicate(data_indexed: Data, dataframe: DataFrame) -> None:
+    # NOTE: Skipped on `polars<1.26` for cudf?
+    # https://github.com/narwhals-dev/narwhals/pull/2277
     df = dataframe(data_indexed)
     with pytest.raises(DuplicateError):
         df.join(df, "a").join(df, "a")
