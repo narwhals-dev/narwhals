@@ -9,6 +9,7 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
     FROM_DICTS_ACCEPTS_MAPPINGS,
+    RESPECT_JOIN_NULL_SEMI_ANTI,
     catch_polars_exception,
     extract_args_kwargs,
     narwhals_to_native_dtype,
@@ -222,10 +223,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             "outer" if (self._backend_version < (0, 20, 29) and how == "full") else how
         )
         other_native = other.native
-        if how in {"semi", "anti"} and self._backend_version < (0, 20, 22):
-            # Polars < 0.20.22 treats `null == null` as a match in semi/anti joins.
-            # Dropping rows with null keys on the right removes these spurious matches,
-            # which is always valid since narwhals treats nulls as non-matching.
+        if how in {"semi", "anti"} and not RESPECT_JOIN_NULL_SEMI_ANTI:
             other_native = other_native.drop_nulls(subset=right_on)
         return self._with_native(
             self.native.join(

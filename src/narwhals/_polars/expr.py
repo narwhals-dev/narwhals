@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -153,13 +154,11 @@ class PolarsExpr:
         return self._with_native(native)
 
     def _is_close_float_promote(self) -> Self:
-        # Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32`
-        # promotion), so `+ 0.0` is enough. Earlier versions keep `Decimal`, which then
-        # breaks `is_finite`/`clip` inside `is_close`; cast to `Float64` to align. This is
-        # scoped to `is_close` (Boolean output), so widening `Float32` here is harmless.
+        # This is scoped to `is_close` (Boolean output), so widening `Float16/Float32`
+        # here is harmless for the final result.
         native = (
             self.native + 0.0
-            if self._backend_version >= (1, 34)
+            if BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT
             else self.native.cast(pl.Float64)
         )
         return self._with_native(native)
