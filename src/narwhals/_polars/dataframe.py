@@ -223,7 +223,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             "outer" if (self._backend_version < (0, 20, 29) and how == "full") else how
         )
         other_native = other.native
-        if how in {"semi", "anti"} and not RESPECT_JOIN_NULL_SEMI_ANTI:
+        is_semi_or_anti = how in {"semi", "anti"}
+        if is_semi_or_anti and not RESPECT_JOIN_NULL_SEMI_ANTI:  # pragma: no cover
             other_native = other_native.drop_nulls(subset=right_on)
         return self._with_native(
             self.native.join(
