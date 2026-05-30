@@ -56,10 +56,11 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     _native: pl.Expr
     version: ClassVar = Version.MAIN
 
-    # NOTE: Unsure how much of `name` might be needed for polars
     @classmethod
     def from_native(cls, native: pl.Expr, name: str = "", /) -> Self:
-        """`name` is only required for the inner-most `PolarsExpr` [^1].
+        """`name` is required only for the inner-most `PolarsExpr` [^1].
+
+        It can be repeatedly passed in here, but each time it'll add an `alias`.
 
         [^1]: Excluding any bugs in older versions.
         """
