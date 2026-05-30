@@ -43,7 +43,6 @@ if TYPE_CHECKING:
         _1DArray,
     )
 
-Incomplete: TypeAlias = Any
 Int64 = Version.MAIN.dtypes.Int64()
 
 
@@ -143,7 +142,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         cls, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Self:
         dtype_pl = dtype_to_native(dtype, cls.version)
-        values: Incomplete = data
+        values = data
         if compat.SERIES_RESPECTS_DTYPE:
             native = pl.Series(name, values, dtype=dtype_pl)
         else:  # pragma: no cover
@@ -222,12 +221,12 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         method = self.native.__array__
         return method(dtype, copy) if compat.DUNDER_ARRAY_SUPPORTS_COPY else method(dtype)
 
-    def first(self) -> PythonLiteral | Incomplete:
+    def first(self) -> PythonLiteral | Any:
         if compat.SERIES_HAS_FIRST_LAST:
             return self.native.first()
         return None if self.is_empty() else self.native.item(0)
 
-    def last(self) -> PythonLiteral | Incomplete:
+    def last(self) -> PythonLiteral | Any:
         if compat.SERIES_HAS_FIRST_LAST:
             return self.native.last()
         return None if self.is_empty() else self.native.item(-1)

@@ -10,10 +10,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
-    from narwhals._plan.compliant import (
-        CompliantDataFrame as _CompliantDataFrame,
-        CompliantSeries as _CompliantSeries,
-    )
+    from narwhals._plan.compliant import CompliantSeries as _CompliantSeries
 
     # NOTE: Some obscure picks to make each protocol disjoint from `Native*`
     # and creating a link between each `NativePolars*`
@@ -45,9 +42,6 @@ if TYPE_CHECKING:
             self, *args: Any, **kwds: Any
         ) -> NativePolarsLazyFrame | None: ...
 
-
-CompliantDataFrame: TypeAlias = "_CompliantDataFrame[pl.DataFrame, pl.Series]"
-"""Alias for `PolarsDataFrame` when used in the parameter position of a protocol method."""
 
 CompliantSeries: TypeAlias = "_CompliantSeries[pl.Series]"
 """Alias for `PolarsSeries` when used in the parameter position of a protocol method."""

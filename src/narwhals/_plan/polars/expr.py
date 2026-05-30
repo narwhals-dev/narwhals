@@ -40,11 +40,7 @@ if TYPE_CHECKING:
 
 __all__ = ("PolarsExpr",)
 
-Incomplete: TypeAlias = Any
-
 PolarsFrame: TypeAlias = "ct.Frame[pl.DataFrame, pl.Series, pl.LazyFrame]"
-
-
 ExprT_co = TypeVar("ExprT_co", bound="PolarsExpr", covariant=True)
 
 
@@ -98,21 +94,19 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         return node.__expr_ir_dispatch__(node, self, frame, name)
 
     @classmethod
-    def col(cls, node: ir.Column, _: Incomplete, name: str, /) -> Self:
+    def col(cls, node: ir.Column, _: Any, name: str, /) -> Self:
         return cls.from_native(pl.col(node.name), name)
 
     @classmethod
-    def lit(cls, node: ir.Lit[PythonLiteral], _: Incomplete, name: str, /) -> Self:
+    def lit(cls, node: ir.Lit[PythonLiteral], _: Any, name: str, /) -> Self:
         return cls.from_python(node.value, name, dtype=node.dtype)
 
     @classmethod
-    def lit_series(
-        cls, node: ir.LitSeries[pl.Series], _: Incomplete, name: str, /
-    ) -> Self:
+    def lit_series(cls, node: ir.LitSeries[pl.Series], _: Any, name: str, /) -> Self:
         return cls.from_native(fn.lit(node.native), name)
 
     @classmethod
-    def len_star(cls, _: ir.Len, __: Incomplete, name: str, /) -> Self:
+    def len_star(cls, _: ir.Len, __: Any, name: str, /) -> Self:
         return cls.from_native(fn.len(), name)
 
     def abs(self, node: FExpr[F.Abs], frame: Any, name: str) -> Self:
@@ -173,10 +167,10 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def any(self, node: FExpr[boolean.Any], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.any())
 
-    def arg_max(self, node: agg.ArgMax, frame: Incomplete, name: str) -> Self:
+    def arg_max(self, node: agg.ArgMax, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.arg_max())
 
-    def arg_min(self, node: agg.ArgMin, frame: Incomplete, name: str) -> Self:
+    def arg_min(self, node: agg.ArgMin, frame: Any, name: str) -> Self:
         return self.from_native(self.dispatch(node.expr, frame, name).native.arg_min())
 
     def binary_expr(self, node: ir.BinaryExpr, frame: Any, name: str, /) -> Self:
@@ -187,7 +181,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         result: pl.Expr = node.op(lhs, rhs)
         return self.from_native(result)
 
-    def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
+    def cast(self, node: ir.Cast, frame: Any, name: str) -> Self:
         dtype = dtype_to_native(node.dtype, self.version)
         return self.from_native(self.dispatch(node.expr, frame, name).native.cast(dtype))
 
