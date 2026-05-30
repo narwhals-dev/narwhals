@@ -166,11 +166,25 @@ class Sort(ExprIR, dtype=same_dtype()):
         return self.options.nulls_last
 
 
-# TODO @dangotbanned: This should lower into `SortByNames` (TBD),
-# if expansion yields `is_seq_column(self.by)`
+# TODO @dangotbanned: This should lower into `SortByNames` (TBD), when we've finished expanding
+# and find `all(isinstance(e, ir.Col) for e in self.by)` returns True
 # `ArrowExpr.sort_by` has this fastpath and it'll be useful in other backends
 class SortBy(ExprIR, dtype=same_dtype()):
-    """Sort an expression by the ordering of other expressions."""
+    """Sort an expression by the ordering of other expressions.
+
+    For SQL-like backends, there will be limitations on where `sort_by` is valid.
+
+    The simplest case represents the [`ORDER BY` Clause in Aggregate Functions]:
+
+        # defaults to `descending=False, nulls_last=False`
+        nw.col("a").sort_by("b").first()
+
+    Which can be translated to:
+
+        first("a", ORDER BY "b" ASC NULLS FIRST)
+
+    [`ORDER BY` Clause in Aggregate Functions]: https://duckdb.org/docs/current/sql/functions/aggregates#order-by-clause-in-aggregate-functions
+    """
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
     expr: ExprIR = node()

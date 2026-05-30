@@ -299,7 +299,7 @@ _MapBatchesCallable: TypeAlias = Callable[
 #   - But it means losing bi-directional inference
 #     (IDE completions when you write `map_batches(lambda s: s.<TAB>)`)
 # - Using a `Callable` is special-cased for that
-#   - But means `PolarsSeries`  cannot match the native signature
+#   - But means `PolarsSeries` cannot match the native signature
 #    `Callable[[pl.Series], pl.Series | Any]`
 MapBatchesFn: TypeAlias = _MapBatchesOverloaded | _MapBatchesCallable
 """The type of a function accepted by `Expr.map_batches`.
