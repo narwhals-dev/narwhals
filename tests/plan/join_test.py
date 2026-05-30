@@ -127,7 +127,6 @@ def test_join_full(
 
 # TODO @dangotbanned: does this have a test on main?
 def test_join_full_duplicate(dataframe: DataFrame) -> None:
-    # does this have a test on main?
     left = dataframe({"f": [1, 2, 3], "v": [1, 2, 3]})
     right = left.rename({"v": "f_right"})
     with pytest.raises(DuplicateError):
@@ -375,13 +374,14 @@ def xfail_pyarrow_join_asof(
         fixture.xfail(request, condition, reason=reason, raises=NotImplementedError)
 
 
-# TODO @dangotbanned: pyo3_runtime.PanicException: index out of bounds: the len is 0 but the index is 0
 @pytest.mark.parametrize(
     ("strategy", "expected_values"),
     [("backward", [1, 3, 7]), ("forward", [1, 6, None]), ("nearest", [1, 6, 7])],
     ids=str,
 )
-@pytest.mark.parametrize("kwds", [AsofKwds(left_on="a", right_on="a"), AsofKwds(on="a")])
+@pytest.mark.parametrize(
+    "kwds", [AsofKwds(left_on="a", right_on="a"), AsofKwds(on="a")], ids=str
+)
 def test_join_asof_numeric(
     strategy: AsofJoinStrategy,
     expected_values: list[Any],
@@ -400,7 +400,6 @@ def test_join_asof_numeric(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: pyo3_runtime.PanicException: index out of bounds: the len is 0 but the index is 0
 @pytest.mark.parametrize(
     ("strategy", "expected_values"),
     [
@@ -411,7 +410,7 @@ def test_join_asof_numeric(
     ids=str,
 )
 @pytest.mark.parametrize(
-    "kwds", [AsofKwds(left_on="ts", right_on="ts"), AsofKwds(on="ts")]
+    "kwds", [AsofKwds(left_on="ts", right_on="ts"), AsofKwds(on="ts")], ids=str
 )
 def test_join_asof_time(
     strategy: AsofJoinStrategy,
@@ -443,7 +442,9 @@ def test_join_asof_time(
 
 
 @pytest.mark.parametrize(
-    "kwds", [AsofKwds(on="a", by_left="b", by_right="b"), AsofKwds(on="a", by="b")]
+    "kwds",
+    [AsofKwds(on="a", by_left="b", by_right="b"), AsofKwds(on="a", by="b")],
+    ids=str,
 )
 def test_join_asof_by(
     request: pytest.FixtureRequest, kwds: AsofKwds, dataframe: DataFrame
@@ -463,7 +464,6 @@ def test_join_asof_by(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: pyo3_runtime.PanicException: index out of bounds: the len is 0 but the index is 0
 def test_join_asof_suffix(request: pytest.FixtureRequest, dataframe: DataFrame) -> None:
     xfail_pyarrow_join_asof(dataframe, request)
     kwds = AsofKwds(left_on="a", right_on="a", suffix="_y")

@@ -178,6 +178,10 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
                 )
             )
 
+    # TODO @dangotbanned: Report panic on empty sequence to `by_*` (e.g. using `()` instead of `None`)
+    # https://github.com/pola-rs/polars/blob/c23a345f1bff6a2a00727ef42999459988bc68d8/py-polars/src/polars/lazyframe/frame.py#L6266-L6276
+    # thread '<unnamed>' (28128) panicked at crates\polars-core\src\chunked_array\ops\row_encode.rs:38:15:
+    # index out of bounds: the len is 0 but the index is 0
     def join_asof(
         self,
         other: Self,
@@ -194,8 +198,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
                 other.native,
                 left_on=left_on,
                 right_on=right_on,
-                by_left=left_by,
-                by_right=right_by,
+                by_left=left_by or None,
+                by_right=right_by or None,
                 strategy=strategy,
                 suffix=suffix,
             )

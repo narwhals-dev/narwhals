@@ -153,6 +153,7 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
             )
         )
 
+    # TODO @dangotbanned: Review if this avoids the panic `PolarsDataFrame.join_asof` has
     def join_asof(self, plan: rp.JoinAsof) -> PolarsLazyFrame:
         left, right = (input.evaluate(self).native for input in plan.inputs)
         by_left: Seq[str] | None = None
