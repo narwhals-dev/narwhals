@@ -145,7 +145,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
         if fill is not None and kwds.pop("ignore_nulls", False):
             inputs = (e.fill_null(fill) for e in inputs)
         func = fn_native or getattr(pl, f.__expr_ir_dispatch__.name)
-        return self.from_native(func(*inputs, **kwds), name)
+        return self.from_native(func(*inputs, **kwds))
 
     def all_horizontal(
         self, node: HExpr[boolean.AllHorizontal], frame: Any, name: str, /
@@ -185,7 +185,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
             self.dispatch(node.right, frame, "").native,
         )
         result: pl.Expr = node.op(lhs, rhs)
-        return self.from_native(result, name)
+        return self.from_native(result)
 
     def cast(self, node: ir.Cast, frame: Incomplete, name: str) -> Self:
         dtype = dtype_to_native(node.dtype, self.version)
@@ -299,7 +299,7 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         expr, lb, ub = node.dispatch_args(self, frame, name)
         result = expr.native.is_between(lb.native, ub.native, node.function.closed)
-        return self.from_native(result, name)
+        return self.from_native(result)
 
     def is_duplicated(
         self, node: FExpr[boolean.IsDuplicated], frame: Any, name: str
@@ -423,22 +423,22 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     def over(self, node: ir.Over, frame: Any, name: str) -> Self:
         by = (self.dispatch(e, frame, "").native for e in node.partition_by)
         result = self.dispatch(node.expr, frame, name).native.over(*by)
-        return self.from_native(result, name)
+        return self.from_native(result)
 
     def over_ordered(self, node: ir.OverOrdered, frame: Any, name: str) -> Self:
         by = (self.dispatch(e, frame, "").native for e in node.partition_by)
         result = fn.over(
-            self.dispatch(node.expr, frame, "").native,
+            self.dispatch(node.expr, frame, name).native,
             *by,
             order_by=tuple(node.order_by_names()),
             descending=node.descending,
             nulls_last=node.nulls_last,
         )
-        return self.from_native(result, name)
+        return self.from_native(result)
 
     def pow(self, node: FExpr[F.Pow], frame: Any, name: str) -> Self:
         base, exponent = node.dispatch_args(self, frame, name)
-        return self.from_native(base.native.pow(exponent.native), name)
+        return self.from_native(base.native.pow(exponent.native))
 
     def quantile(self, node: agg.Quantile, frame: Any, name: str) -> Self:
         return self.from_native(
@@ -538,11 +538,11 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
 
     def ternary_expr(self, node: ir.TernaryExpr, frame: Any, name: str, /) -> Self:
         result = (
-            pl.when(self.dispatch(node.predicate, frame, name).native)
-            .then(self.dispatch(node.truthy, frame, "").native)
+            pl.when(self.dispatch(node.predicate, frame, "").native)
+            .then(self.dispatch(node.truthy, frame, name).native)
             .otherwise(self.dispatch(node.falsy, frame, "").native)
         )
-        return self.from_native(result, name)
+        return self.from_native(result)
 
     def unique(self, node: FExpr[F.Unique], frame: Any, name: str) -> Self:
         return self.from_native(node.dispatch_arg(self, frame, name).native.unique())
