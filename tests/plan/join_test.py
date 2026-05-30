@@ -355,9 +355,6 @@ def test_join_not_implemented(data_a_only: Data, dataframe: DataFrame) -> None:
 
 
 # TODO @dangotbanned: move `join_asof` to a different file
-PYARROW_HAS_JOIN_ASOF = PYARROW_VERSION >= (16, 0, 0)
-
-
 def xfail_pyarrow_join_asof(
     fixture: DataFrame,
     request: pytest.FixtureRequest,
@@ -365,11 +362,11 @@ def xfail_pyarrow_join_asof(
 ) -> None:
     """Has partial support in most of our tested versions."""
     if fixture.is_pyarrow():
-        if PYARROW_HAS_JOIN_ASOF:
+        if PYARROW_VERSION >= (16, 0, 0):
             condition = strategy == "nearest"
             reason = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
-        else:
-            condition = not PYARROW_HAS_JOIN_ASOF
+        else:  # pragma: no cover
+            condition = True
             reason = "`pyarrow>=16` required for `join_asof` support"
         fixture.xfail(request, condition, reason=reason, raises=NotImplementedError)
 
