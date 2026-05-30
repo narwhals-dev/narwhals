@@ -16,9 +16,9 @@ from narwhals.dependencies import (
     _is_ibis_table as is_ibis_table,
     _is_modin_dataframe as is_modin_dataframe,
     _is_modin_series as is_modin_series,
-    _is_native_into_dataframe,
-    _is_native_into_lazyframe,
-    _is_native_into_series,
+    _is_native_dataframe,
+    _is_native_lazyframe,
+    _is_native_series,
     _is_pandas_dataframe as is_pandas_dataframe,
     _is_pandas_like_dataframe as is_pandas_like_dataframe,
     _is_pandas_like_series as is_pandas_like_series,
@@ -65,7 +65,7 @@ def is_into_dataframe(native_dataframe: Any | IntoDataFrameT) -> TypeIs[IntoData
     """Check whether `native_dataframe` can be converted to a narwhals.stable.v1.DataFrame."""
     from narwhals.stable.v1 import DataFrame
 
-    return isinstance(native_dataframe, DataFrame) or _is_native_into_dataframe(
+    return isinstance(native_dataframe, DataFrame) or _is_native_dataframe(
         native_dataframe
     )
 
@@ -74,7 +74,7 @@ def is_into_lazyframe(native_lazyframe: Any | IntoLazyFrameT) -> TypeIs[IntoLazy
     """Check whether `native_lazyframe` can be converted to a narwhals.stable.v1.LazyFrame."""
     from narwhals.stable.v1 import LazyFrame
 
-    return isinstance(native_lazyframe, LazyFrame) or _is_native_into_lazyframe(
+    return isinstance(native_lazyframe, LazyFrame) or _is_native_lazyframe(
         native_lazyframe
     )
 
@@ -83,7 +83,7 @@ def is_into_series(native_series: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
     """Check whether `native_series` can be converted to a narwhals.stable.v1.Series."""
     from narwhals.stable.v1 import Series
 
-    return isinstance(native_series, Series) or _is_native_into_series(native_series)
+    return isinstance(native_series, Series) or _is_native_series(native_series)
 
 
 __all__ = [
