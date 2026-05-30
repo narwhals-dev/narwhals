@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 _UNKNOWN: Final = Implementation.UNKNOWN
-_GROUP: Final = "narwhals.plugins-plan"
+_GROUP: Final = "narwhals.plugins.plan"
 
 
 # NOTE: https://github.com/python/mypy/issues/18786

@@ -60,7 +60,7 @@ ibis = ["ibis-framework>=6.0.0", "rich>=12.4.4", "packaging>=21.3", "pyarrow_hot
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
-[project.entry-points.'narwhals.plugins-plan']
+[project.entry-points.'narwhals.plugins.plan']
 polars = "narwhals._plan.polars:plugin"
 pyarrow = "narwhals._plan.arrow:plugin"
 
