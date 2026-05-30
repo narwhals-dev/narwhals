@@ -76,15 +76,9 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Run pytest (plan-plugins-globals)
-        # NOTE: These seem to cause failures in other tests due to `sys.modules` monkeypatching
-        run: make run-ci DEPS="--group core-tests" CMD="pytest tests/plan -m unsafe_globals --numprocesses=1 --cov=src/narwhals/_plan --cov=tests/plan --cov-fail-under=0"
       - name: Run pytest (plan)
-        run: make run-ci DEPS="--group core-tests" CMD="pytest tests/plan src/narwhals/_plan --cov=src/narwhals/_plan --cov=tests/plan --cov-fail-under=0 --doctest-modules --runslow --durations=30 --cov-append"
+        run: make run-ci-plan
       - name: Run pytest
-        # NOTE: `narwhals/_plan` has doctests that increase coverage, so they are run first and the `main`
-        # run uses `--cov-append`
-        # https://pytest-cov.readthedocs.io/en/latest/readme.html#coverage-data-file
         run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --ignore=tests/plan --ignore=src/narwhals/_plan --cov-append"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
