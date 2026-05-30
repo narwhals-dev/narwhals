@@ -125,7 +125,6 @@ def test_join_full(
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: use `remap_exceptions`
 # TODO @dangotbanned: does this have a test on main?
 def test_join_full_duplicate(dataframe: DataFrame) -> None:
     # does this have a test on main?
@@ -135,7 +134,6 @@ def test_join_full_duplicate(dataframe: DataFrame) -> None:
         left.join(right, "f", how="full", suffix="_right")
 
 
-# TODO @dangotbanned: use `remap_exceptions`
 # TODO @dangotbanned: `POLARS_VERSION < (1, 26)`
 def test_join_inner_x2_duplicate(data_indexed: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_indexed)

@@ -167,11 +167,16 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         suffix: str = "_right",
     ) -> Self:
         how_ = compat.JOIN_STRATEGY[how]
-        return self.from_native(
-            self.native.join(
-                other.native, how=how_, left_on=left_on, right_on=right_on, suffix=suffix
+        with remap_exceptions():
+            return self.from_native(
+                self.native.join(
+                    other.native,
+                    how=how_,
+                    left_on=left_on,
+                    right_on=right_on,
+                    suffix=suffix,
+                )
             )
-        )
 
     def join_asof(
         self,
