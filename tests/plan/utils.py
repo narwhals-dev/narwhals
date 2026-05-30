@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from collections import defaultdict
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from importlib.util import find_spec
 from itertools import chain
 from operator import attrgetter
@@ -16,6 +17,7 @@ from typing import (
     Literal,
     Protocol,
     TypedDict,
+    TypeVar,
     overload,
 )
 
@@ -26,24 +28,16 @@ from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
 from narwhals._plan.compliant.typing import Native as NativeLazyFrame
 from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
+from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 from narwhals._utils import Implementation, Version, qualified_type_name
 from tests.utils import assert_equal_data as _assert_equal_data
 
-pytest.importorskip("pyarrow")
-
-from collections.abc import Iterable, Iterator, Mapping, Sequence
-from typing import TypeVar
-
-import pyarrow as pa
-
-from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-
 if TYPE_CHECKING:
     import sys
-    from collections.abc import Iterable, Mapping
     from typing import TypeAlias
 
     import polars as pl
+    import pyarrow as pa
     from pytest import FixtureRequest
     from typing_extensions import LiteralString, ReadOnly, deprecated
 
@@ -672,10 +666,13 @@ if TYPE_CHECKING:
     def dataframe(
         data: Mapping[str, Any], /
     ) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
+        import pyarrow as pa
+
         return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 else:
 
     def dataframe(data: Any) -> Any:
+        pa = pytest.importorskip("pyarrow")
         return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
