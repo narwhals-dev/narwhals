@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 __all__ = (
     "concat_str",
+    "ewm_mean",
     "is_finite",
     "is_nan",
     "is_not_nan",
