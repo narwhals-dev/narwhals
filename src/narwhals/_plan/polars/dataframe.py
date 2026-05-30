@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
@@ -167,9 +166,7 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         right_on: Sequence[str],
         suffix: str = "_right",
     ) -> Self:
-        how_: Any = (
-            "outer" if how == "full" and compat.JOIN_OUTER_RENAMED_TO_FULL else how
-        )
+        how_ = compat.JOIN_STRATEGY[how]
         return self.from_native(
             self.native.join(
                 other.native, how=how_, left_on=left_on, right_on=right_on, suffix=suffix

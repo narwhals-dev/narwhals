@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
     from narwhals._plan.typing import Seq
+    from narwhals.typing import JoinStrategy
 
     # TODO @dangotbanned: Replace with `dict[Literal["descending", "nulls_last"], Seq[bool]]` after bumping mypy
     # to include https://github.com/python/mypy/pull/20416
@@ -57,7 +58,7 @@ HAS_MEAN_HORIZONTAL: Final = BACKEND_VERSION >= (0, 20, 8)
 DUNDER_ARRAY_SUPPORTS_COPY: Final = BACKEND_VERSION >= (0, 20, 29)
 """https://github.com/pola-rs/polars/pull/16401"""
 
-JOIN_OUTER_RENAMED_TO_FULL: Final = BACKEND_VERSION >= (0, 20, 29)
+_JOIN_OUTER_RENAMED_TO_FULL: Final = BACKEND_VERSION >= (0, 20, 29)
 """https://github.com/pola-rs/polars/pull/16417"""
 
 SERIES_HAS_HAS_NULLS: Final = BACKEND_VERSION >= (0, 20, 30)
@@ -300,3 +301,12 @@ _MIN_SAMPLES = "min_samples" if MIN_PERIODS_RENAMED_TO_MIN_SAMPLES else "min_per
 
 def min_samples_periods(min_samples: int, **kwds: Any) -> dict[str, Any]:
     return {_MIN_SAMPLES: min_samples, **kwds}
+
+
+_strategy: Final[Seq[JoinStrategy]] = ("inner", "left", "cross", "semi", "anti", "full")
+if _JOIN_OUTER_RENAMED_TO_FULL or TYPE_CHECKING:
+    JOIN_STRATEGY: Final[Mapping[JoinStrategy, JoinStrategy | Any]] = dict(
+        zip(_strategy, _strategy, strict=False)
+    )
+else:
+    JOIN_STRATEGY = {k: k if k != "full" else "outer" for k in _strategy}

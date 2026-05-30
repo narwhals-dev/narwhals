@@ -142,10 +142,11 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
 
     def join(self, plan: rp.Join) -> PolarsLazyFrame:
         left, right = (input.evaluate(self).native for input in plan.inputs)
+        how = compat.JOIN_STRATEGY[plan.options.how]
         return self._into_compliant(
             left.join(
                 right,
-                plan.options.how,
+                how,
                 left_on=plan.left_on,
                 right_on=plan.right_on,
                 suffix=plan.options.suffix,
