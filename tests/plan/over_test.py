@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from itertools import chain
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
 
@@ -479,6 +480,7 @@ _AGG_EXPR_METHOD: Mapping[Agg, Callable[[nwp.Expr], nwp.Expr]] = {
     "first": methodcaller("first"),
     "last": methodcaller("last"),
 }
+DATA_ORDER_LEN: Final = 4
 
 
 @pytest.fixture(scope="module")
@@ -495,7 +497,6 @@ def data_order() -> Mapping[str, list[NonNestedLiteral]]:
     }
 
 
-# TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
 def order_case(
     columns: ValueColumn | Sequence[ValueColumn],
     aggregation: Agg,
@@ -505,17 +506,16 @@ def order_case(
     descending: bool = False,
     nulls_last: bool = False,
     expected: NonNestedLiteral | Sequence[NonNestedLiteral],
-) -> ParameterSet:
+) -> Iterator[ParameterSet]:
     """Generate `Expr`s and an expected dataset for ordered aggregations.
 
-    Covers both `over(order_by=...)` and `sort_by(...)` to ensure their results are identical in a
-    select context.
+    Covers both `over(order_by=...)` and `sort_by(...)` to ensure they return the same result,
+    but match the broadcasting semantics of polars.
     """
     # Encoding argument combinations into column names and the shared test id
     ordering = f"{order_by}-{'desc' if descending else 'asc'}-{'nulls_last' if nulls_last else 'nulls_first'}"
     suffix_over = f"_{aggregation}-over-{ordering}"
     suffix_sort_by = f"_sort_by-{ordering}-{aggregation}"
-    test_id = f"{columns}_{aggregation}-{ordering}"
 
     # Generating what our expected dataset should be
     names_values = list(
@@ -527,11 +527,6 @@ def order_case(
             strict=True,
         )
     )
-    result_data = {
-        f"{name}{suffix}": [expect]
-        for suffix in (suffix_over, suffix_sort_by)
-        for name, expect in names_values
-    }
 
     # Finally, all the expressions
     cols = nwp.col(columns)
@@ -541,18 +536,24 @@ def order_case(
         .over(order_by=order_by, descending=descending, nulls_last=nulls_last)
         .name.suffix(suffix_over)
     )
+    result_data = {
+        f"{name}{suffix_over}": [expect] * DATA_ORDER_LEN for name, expect in names_values
+    }
+    yield pytest.param(over, result_data, id=f"{columns}{suffix_over}")
+
     sort_by = (
         cols.sort_by(order_by, descending=descending, nulls_last=nulls_last)
         .pipe(agg)
         .name.suffix(suffix_sort_by)
     )
-    return pytest.param([over, sort_by], result_data, id=test_id)
+    result_data = {f"{name}{suffix_sort_by}": [expect] for name, expect in names_values}
+    yield pytest.param(sort_by, result_data, id=f"{columns}{suffix_sort_by}")
 
 
-# TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
+# TODO @dangotbanned: Find out why `over` is being tripped up by some nulls (but not all)
 @pytest.mark.parametrize(
     ("expr", "expected"),
-    [
+    chain(
         order_case("v1", "first", order_by="o4", expected=2),
         order_case("v1", "first", order_by="o4", descending=True, expected=2),
         order_case("v1", "first", order_by="o4", nulls_last=True, expected=5),
@@ -560,9 +561,11 @@ def order_case(
             "v1", "first", order_by="o4", descending=True, nulls_last=True, expected=1
         ),
         order_case("v2", "last", order_by=["o3", "o5"], expected="magic"),
+        # `polars-v2_last-over-['o3', 'o5']-desc-nulls_first`
         order_case(
             "v2", "last", order_by=["o3", "o5"], descending=True, expected="unicorn"
         ),
+        # `polars-v2_last-over-['o3', 'o5']-asc-nulls_last`
         order_case(
             "v2", "last", order_by=["o3", "o5"], nulls_last=True, expected="under"
         ),
@@ -575,6 +578,7 @@ def order_case(
             expected="under",
         ),
         order_case(["v3", "v2"], "last", order_by=["o2", "o5"], expected=[5.9, "under"]),
+        # `polars-['v3', 'v2']_first-over-['o2', 'o5']-desc-nulls_first` (both v3 and v2 are wrong)
         order_case(
             ["v3", "v2"],
             "first",
@@ -597,26 +601,30 @@ def order_case(
             descending=True,
             expected=[22.9, "unicorn"],
         ),
-    ],
+    ),
 )
 def test_over_order_by_sort_by_asc_desc_nulls_first_last(
-    expr: OneOrIterable[nwp.Expr],
+    expr: nwp.Expr,
     expected: Data,
     data_order: Mapping[str, list[NonNestedLiteral]],
     dataframe: DataFrame,
     request: TopRequest,
 ) -> None:
+    bad_ids = (
+        "polars-['v3', 'v2']_first-over-['o2', 'o5']-desc-nulls_first",
+        "polars-v2_last-over-['o3', 'o5']-desc-nulls_first",
+        "polars-v2_last-over-['o3', 'o5']-asc-nulls_last",
+    )
     if dataframe.is_polars():
         xfail_polars_over_order_by(dataframe, request)
         is_desc = "desc" in request.node.callspec.id
         is_nulls_last = "nulls_last" in request.node.callspec.id
-        # TODO @dangotbanned: Fix polars broadcasting for `over(order_by=...)`, but aggregating for `sort_by`?
         if POLARS_SUPPORTS_OVER_FULL or not (is_desc or is_nulls_last):
             dataframe.xfail(
                 request,
-                True,
-                reason="BUG: polars is broadcasting for `over(order_by=...)`, but aggregating for `sort_by`",
-                raises=(ValueError, AssertionError),
+                request.node.callspec.id in bad_ids,
+                reason="polars bug in `over`? Result values differ from `sort_by`, seems null related",
+                raises=AssertionError,
             )
         else:  # pragma: no cover
             xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
@@ -624,6 +632,14 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
 
     result = dataframe(data_order).select(expr)
     assert_equal_data(result, expected)
+
+
+def test_over_order_broadcast(dataframe: DataFrame, request: FixtureRequest) -> None:
+    xfail_polars_over_order_by(dataframe, request)
+    data = {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": [0, 1, 2]}
+    df = dataframe(data)
+    assert df.select(nwp.col("a").first()).shape == (1, 1)
+    assert df.select(nwp.col("a").first().over(order_by="b")).shape == (3, 1)
 
 
 def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
