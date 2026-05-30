@@ -1,21 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 import polars as pl
 
-import narwhals.exceptions
 from narwhals._plan._version import into_version
-from narwhals._plan.common import temp
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant import CompliantDataFrame
-from narwhals._plan.polars import compat
+from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
-from narwhals._plan.polars.expr import row_index
+from narwhals._plan.polars.common import remap_exceptions
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import dtype_to_native, explode_todo
-from narwhals._utils import Implementation, not_implemented, requires
-from narwhals.exceptions import NarwhalsError
+from narwhals._plan.polars.namespace import dtype_to_native
+from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -42,49 +39,6 @@ if TYPE_CHECKING:
         PivotAgg,
         UniqueKeepStrategy,
     )
-
-
-class remap_exceptions:  # noqa: N801
-    """Fancy version of `catch_polars_exception`.
-
-    Just write *potentially-raising* code `with`-in the context manager:
-
-        with remap_exceptions():
-            risky_business()  # Any native exceptions will be re-raised
-                              # as their narwhals-equivalent
-        business_as_usual()
-
-    Works in a similar way to the implementation of [`suppress.__exit__`].
-
-    See Also:
-        [The `with` statement]
-
-    [`suppress.__exit__`]: https://github.com/python/cpython/blob/fa7212b0af1c3d4e0cf8ac2ead35df3541436fb4/Lib/contextlib.py#L450-L469
-    [The `with` statement]: https://docs.python.org/3/reference/compound_stmts.html#the-with-statement
-    """
-
-    __slots__ = ()
-
-    _REMAP: Mapping[type[BaseException], type[NarwhalsError]] = {
-        tp: getattr(narwhals.exceptions, tp.__name__, NarwhalsError)
-        for tp in pl.exceptions.PolarsError.__subclasses__()
-    }
-
-    def __enter__(self) -> None:
-        return
-
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        _: object,
-        /,
-    ) -> bool | None:
-        if exc_type is None or exc_value is None:
-            return None
-        if to_exc := remap_exceptions._REMAP.get(exc_type):
-            raise to_exc(str(exc_value)) from None
-        return False
 
 
 class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
@@ -160,8 +114,10 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         return self.from_native(self.native.drop_nulls(subset))
 
     def explode(self, columns: Sequence[str], options: ExplodeOptions) -> Self:
-        explode_todo(empty_as_null=options.empty_as_null, keep_nulls=options.keep_nulls)
-        return self.from_native(self.native.explode(columns))
+        with remap_exceptions():
+            return self.from_native(
+                self.native.explode(columns, **compat.explode(options))
+            )
 
     @classmethod
     def concat_series(cls, series: Iterable[CompliantSeries]) -> Self:
@@ -210,15 +166,22 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         right_on: Sequence[str],
         suffix: str = "_right",
     ) -> Self:
-        how_: Any = (
-            "outer" if how == "full" and compat.JOIN_OUTER_RENAMED_TO_FULL else how
-        )
-        return self.from_native(
-            self.native.join(
-                other.native, how=how_, left_on=left_on, right_on=right_on, suffix=suffix
+        how_ = compat.JOIN_STRATEGY[how]
+        with remap_exceptions():
+            return self.from_native(
+                self.native.join(
+                    other.native,
+                    how=how_,
+                    left_on=left_on,
+                    right_on=right_on,
+                    suffix=suffix,
+                )
             )
-        )
 
+    # TODO @dangotbanned: Report panic on empty sequence to `by_*` (e.g. using `()` instead of `None`)
+    # https://github.com/pola-rs/polars/blob/c23a345f1bff6a2a00727ef42999459988bc68d8/py-polars/src/polars/lazyframe/frame.py#L6266-L6276
+    # thread '<unnamed>' (28128) panicked at crates\polars-core\src\chunked_array\ops\row_encode.rs:38:15:
+    # index out of bounds: the len is 0 but the index is 0
     def join_asof(
         self,
         other: Self,
@@ -235,8 +198,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
                 other.native,
                 left_on=left_on,
                 right_on=right_on,
-                by_left=left_by,
-                by_right=right_by,
+                by_left=left_by or None,
+                by_right=right_by or None,
                 strategy=strategy,
                 suffix=suffix,
             )
@@ -389,12 +352,8 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
     def with_row_index_by(
         self, name: str, order_by: Sequence[str], *, nulls_last: bool = False
     ) -> Self:
-        expr = row_index(name, order_by=order_by, nulls_last=nulls_last)
+        expr = fn.row_index(name, order_by=order_by, nulls_last=nulls_last)
         return self.from_native(self.native.select(expr, pl.all()))
-
-    _group_by = not_implemented()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
-    lazy = not_implemented()
-    filter = not_implemented()
 
     def _evaluate_irs(self, nodes: Iterable[ir.NamedIR]) -> Iterator[Expr]:
         expr = self.__narwhals_classes__.expr
@@ -402,14 +361,23 @@ class PolarsDataFrame(PolarsFrame, CompliantDataFrame[pl.DataFrame, pl.Series]):
         yield from (new(expr).dispatch(e.expr, self, e.name) for e in nodes)
 
     def select(self, irs: Seq[ir.NamedIR]) -> Self:
-        return self.from_native(
-            self.native.select(e.native for e in self._evaluate_irs(irs))
-        )
+        it = (e.native for e in self._evaluate_irs(irs))
+        with remap_exceptions():
+            return self.from_native(self.native.select(it))
 
     def with_columns(self, irs: Seq[ir.NamedIR]) -> Self:
-        return self.from_native(
-            self.native.with_columns(e.native for e in self._evaluate_irs(irs))
-        )
+        it = (e.native for e in self._evaluate_irs(irs))
+        with remap_exceptions():
+            return self.from_native(self.native.with_columns(it))
+
+    def filter(self, predicate: ir.NamedIR) -> Self:
+        expr = self.__narwhals_classes__.expr
+        pred = expr.__new__(expr).dispatch(predicate.expr, self, "").native
+        return self.from_native(self.native.filter(pred))
+
+    # TODO @dangotbanned: Last context left for polars is group_by
+    _group_by = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+    lazy = todo()
 
 
 PolarsDataFrame()

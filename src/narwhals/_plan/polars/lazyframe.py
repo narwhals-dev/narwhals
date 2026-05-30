@@ -8,11 +8,10 @@ from narwhals._plan._version import into_version
 from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant.lazyframe import CompliantLazyFrame
 from narwhals._plan.plans.visitors import ResolvedToCompliant
-from narwhals._plan.polars import compat
+from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
-from narwhals._plan.polars.expr import row_index
 from narwhals._plan.polars.frame import PolarsFrame
-from narwhals._plan.polars.namespace import collect_schema, explode_todo
+from narwhals._plan.polars.namespace import collect_schema
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -143,16 +142,18 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
 
     def join(self, plan: rp.Join) -> PolarsLazyFrame:
         left, right = (input.evaluate(self).native for input in plan.inputs)
+        how = compat.JOIN_STRATEGY[plan.options.how]
         return self._into_compliant(
             left.join(
                 right,
-                plan.options.how,
+                how,
                 left_on=plan.left_on,
                 right_on=plan.right_on,
                 suffix=plan.options.suffix,
             )
         )
 
+    # TODO @dangotbanned: Review if this avoids the panic `PolarsDataFrame.join_asof` has
     def join_asof(self, plan: rp.JoinAsof) -> PolarsLazyFrame:
         left, right = (input.evaluate(self).native for input in plan.inputs)
         by_left: Seq[str] | None = None
@@ -261,9 +262,10 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
 
     def explode(self, plan: rp.MapFunction[rp.Explode]) -> PolarsLazyFrame:
         f = plan.function
-        opts = f.options
-        explode_todo(empty_as_null=opts.empty_as_null, keep_nulls=opts.keep_nulls)
-        return self._into_compliant(plan.input.evaluate(self).native.explode(f.columns))
+        kwds = compat.explode(f.options)
+        return self._into_compliant(
+            plan.input.evaluate(self).native.explode(f.columns, **kwds)
+        )
 
     def unnest(self, plan: rp.MapFunction[rp.Unnest]) -> PolarsLazyFrame:
         f = plan.function
@@ -288,15 +290,17 @@ class PolarsEvaluator(ResolvedToCompliant[pl.LazyFrame]):
     def with_row_index_by(self, plan: rp.MapFunction[rp.RowIndexBy]) -> PolarsLazyFrame:
         f = plan.function
         native = plan.input.evaluate(self).native
-        expr = row_index(f.name, f.order_by)
+        expr = fn.row_index(f.name, f.order_by)
         return self._into_compliant(native.select(expr, pl.all()))
 
-    # TODO @dangotbanned: All require adding an `Expr` layer
-    # Revisit after getting coverage for everything else
+    # TODO @dangotbanned: Filter
     filter = todo()
+    # TODO @dangotbanned: WithColumns
+    with_columns = todo()
+
+    # TODO @dangotbanned: GroupBy (important, but prioritize the others)
     group_by = todo()
     group_by_names = todo()
-    with_columns = todo()
 
 
 PolarsEvaluator()

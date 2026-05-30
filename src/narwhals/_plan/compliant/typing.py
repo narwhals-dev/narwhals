@@ -9,13 +9,16 @@
 # ruff: noqa: PLC0105
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, Any, Protocol, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from typing import TypeAlias
+
+    import polars as pl
 
     from narwhals._native import NativeDataFrame, NativeSeries
     from narwhals._plan.compliant import classes as cc
@@ -25,6 +28,7 @@ if TYPE_CHECKING:
     from narwhals._plan.compliant.scalar import CompliantScalar
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.plans.visitors import ResolvedToCompliant
+    from narwhals.typing import _NumpyScalar
 
 
 Native = TypeVar("Native")
@@ -276,3 +280,39 @@ FunctionImplMethod = ExprMethod[
 BoundFunctionImplMethod = BoundExprMethod[
     ir.FunctionExpr[F_contra], DeprecatedFrameT_contra, ColumnT_co
 ]
+
+
+class _MapBatchesOverloaded(Protocol):
+    @overload
+    def __call__(self, series: SeriesT, /) -> SeriesT | Any: ...
+    @overload
+    def __call__(self, series: pl.Series, /) -> pl.Series | Any: ...
+    def __call__(self, series: SeriesT | pl.Series, /) -> SeriesT | Any: ...
+
+
+_MapBatchesCallable: TypeAlias = Callable[
+    [SeriesAny], "SeriesAny | Iterable[Any] | _NumpyScalar"
+]
+
+# NOTE: This is a tradeoff
+# - `_MapBatchesOverloaded` works perfectly from a type checking perspective
+#   - But it means losing bi-directional inference
+#     (IDE completions when you write `map_batches(lambda s: s.<TAB>)`)
+# - Using a `Callable` is special-cased for that
+#   - But means `PolarsSeries` cannot match the native signature
+#    `Callable[[pl.Series], pl.Series | Any]`
+MapBatchesFn: TypeAlias = _MapBatchesOverloaded | _MapBatchesCallable
+"""The type of a function accepted by `Expr.map_batches`.
+
+For all backends *besides* polars, this should be:
+
+    def udf(series: CompliantSeriesT) -> CompliantSeriesT | Iterable[Any] | _NumpyScalar: ...
+
+But for `polars` the function is always passed a `pl.Series`.
+
+Therefore, you should consider:
+- Avoiding features not available to **both** `pl.Series` and `CompliantSeries`
+- Testing every use of `map_batches` against:
+    - All of `pandas`, `polars` and `pyarrow`
+    - The minimum supported `polars` version
+"""

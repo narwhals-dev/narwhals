@@ -5,9 +5,11 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data, xfail_polars_over_order_by
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest
+
     from tests.conftest import Data
 
 
@@ -29,7 +31,10 @@ def data() -> Data:
         (-3, {"a": [None, None, None], "b": [None, None, None], "c": [None, None, None]}),
     ],
 )
-def test_shift(data: Data, n: int, expected: Data) -> None:
+def test_shift(
+    data: Data, n: int, expected: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     df = dataframe(data)
     result = df.with_columns(nwp.col("a", "b", "c").shift(n).over(order_by="i")).filter(
         nwp.col("i") > 1

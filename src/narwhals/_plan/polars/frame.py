@@ -15,8 +15,6 @@ if TYPE_CHECKING:
     from narwhals._plan.dataframe import DataFrame as NwDataFrame
     from narwhals._translate import IntoArrowTable
 
-MAIN = Version.MAIN
-
 
 class PolarsFrame:
     __slots__ = ()

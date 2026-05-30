@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -26,6 +26,8 @@ def data() -> Data:
     ],
     ids=["ceil", "floor", "ceil-nulls", "floor-nulls"],
 )
-def test_ceil_floor(data: Data, expr: nwp.Expr, expected: list[Any]) -> None:
+def test_ceil_floor(
+    data: Data, expr: nwp.Expr, expected: list[Any], dataframe: DataFrame
+) -> None:
     result = dataframe(data).select(result=expr)
     assert_equal_data(result, {"result": expected})

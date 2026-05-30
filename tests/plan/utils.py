@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from collections import defaultdict
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from importlib.util import find_spec
 from itertools import chain
 from operator import attrgetter
@@ -16,6 +17,7 @@ from typing import (
     Literal,
     Protocol,
     TypedDict,
+    TypeVar,
     overload,
 )
 
@@ -26,26 +28,18 @@ from narwhals import _plan as nwp
 from narwhals._plan import Expr, Selector, _expansion, _parse, expressions as ir
 from narwhals._plan.compliant.typing import Native as NativeLazyFrame
 from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
+from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 from narwhals._utils import Implementation, Version, qualified_type_name
 from tests.utils import assert_equal_data as _assert_equal_data
 
-pytest.importorskip("pyarrow")
-
-from collections.abc import Iterable, Iterator, Mapping, Sequence
-from typing import TypeVar
-
-import pyarrow as pa
-
-from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-
 if TYPE_CHECKING:
     import sys
-    from collections.abc import Iterable, Mapping
     from typing import TypeAlias
 
     import polars as pl
-    from pytest import FixtureRequest  # noqa: PT013
-    from typing_extensions import LiteralString, ReadOnly
+    import pyarrow as pa
+    from pytest import FixtureRequest
+    from typing_extensions import LiteralString, ReadOnly, deprecated
 
     from narwhals._plan.typing import IntoExpr, OneOrIterable, Seq
     from narwhals._typing import BackendName, _EagerAllowed, _LazyAllowed
@@ -538,8 +532,12 @@ class Constructor(Generic[R_co, Impl_co]):
         condition: bool,
         *,
         reason: LiteralString,
-        raises: _Raises,
+        raises: _Raises | None,
     ) -> None:
+        """Try to avoid using `None` when possible.
+
+        A valid use-case is for `pyo3_runtime.PanicException` in older `polars` versions.
+        """
         request.applymarker(pytest.mark.xfail(condition, raises=raises, reason=reason))
 
     def xfail_not_implemented(
@@ -556,18 +554,6 @@ class Constructor(Generic[R_co, Impl_co]):
             condition,
             reason=f"TODO @dangotbanned: `{self.fixture_name}[{self.identifier}].{method}`",  # pyrefly: ignore [bad-argument-type]
             raises=raises,
-        )
-
-    def xfail_polars_select(
-        self, request: FixtureRequest, /, *, raises: _Raises = NotImplementedError
-    ) -> None:
-        self.xfail_not_implemented(request, self.is_polars(), "select", raises=raises)
-
-    def xfail_polars_with_columns(
-        self, request: FixtureRequest, /, *, raises: _Raises = NotImplementedError
-    ) -> None:
-        self.xfail_not_implemented(
-            request, self.is_polars(), "with_columns", raises=raises
         )
 
     def xfail_eager_pivot_too_old(self, request: FixtureRequest, /) -> None:
@@ -593,9 +579,6 @@ Series: TypeAlias = Constructor[nwp.Series[Any], _EagerAllowedImpl]
 
 Eager: TypeAlias = "_EagerAllowed"
 """The type of the `eager` fixture."""
-
-EagerOrFalse: TypeAlias = "Eager | Literal[False]"
-"""The type of the `eager_or_false` fixture."""
 
 Lazy: TypeAlias = "_LazyAllowed"
 """The type of the `lazy` fixture."""
@@ -677,22 +660,26 @@ class ArrowBackend(
 
 
 # TODO @dangotbanned: Finish replacing with `tests.plan.conftest.dataframe`
-def dataframe(
-    data: Mapping[str, Any], /
-) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
-    return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
+if TYPE_CHECKING:
 
+    @deprecated("Use the `dataframe` fixture instead")
+    def dataframe(
+        data: Mapping[str, Any], /
+    ) -> nwp.DataFrame[pa.Table, pa.ChunkedArray[Any]]:
+        import pyarrow as pa
 
-# TODO @dangotbanned: Finish replacing with `tests.plan.conftest.series`
-def series(values: Iterable[Any], /) -> nwp.Series[pa.ChunkedArray[Any]]:
-    array: Incomplete = pa.chunked_array
-    ca: pa.ChunkedArray[Any] = array([values])
-    return nwp.Series.from_native(ca)
+        return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
+else:
+
+    def dataframe(data: Any) -> Any:
+        pa = pytest.importorskip("pyarrow")
+        return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
 def assert_equal_data(
     result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any] | nwp.DataFrame[Any, Any]
 ) -> None:
+    __tracebackhide__ = True
     if isinstance(expected, nwp.DataFrame):
         expected = expected.to_dict(as_series=False)
     _assert_equal_data(result.to_dict(as_series=False), expected)
@@ -723,3 +710,52 @@ def re_compile(
     Helper to default to using `flags=re.DOTALL | re.IGNORECASE`.
     """
     return re.compile(pattern, flags)
+
+
+def _xfail_polars(
+    min_version: tuple[int, ...],
+    reason: LiteralString,
+    fixture: DataFrame,
+    request: FixtureRequest,
+    condition: bool | None,
+) -> None:
+    cond = fixture.is_polars() and fixture.backend_version() < min_version
+    if condition is not None:
+        cond = cond and condition
+    fixture.xfail(request, cond, reason=reason, raises=NotImplementedError)
+
+
+def xfail_polars_over_order_by(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(
+        (1, 10),
+        "`over(..., order_by=...)` requires `polars>=1.10.0`",
+        fixture,
+        request,
+        condition,
+    )
+
+
+def xfail_polars_over_descending(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(
+        (1, 22),
+        "`over(..., order_by=..., descending=True)` requires `polars>=1.22.0`",
+        fixture,
+        request,
+        condition,
+    )
+
+
+def xfail_polars_over_nulls_last(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(
+        (1, 39),
+        "`over(order_by=..., nulls_last=True)` requires `polars>=1.39.0`",
+        fixture,
+        request,
+        condition,
+    )

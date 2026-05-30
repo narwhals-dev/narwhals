@@ -36,8 +36,9 @@ if TYPE_CHECKING:
     from typing_extensions import LiteralString, ParamSpec, Self
 
     from narwhals._plan._function import UnaryFunction
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq, Udf
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
     from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
@@ -384,6 +385,9 @@ class Expr:
         min_samples: int = 1,
         ignore_nulls: bool = False,
     ) -> Self:
+        if sum((param is not None) for param in (com, span, half_life, alpha)) > 1:
+            msg = "parameters `com`, `span`, `half_life`, and `alpha` are mutually exclusive"
+            raise ValueError(msg)
         options = EWMOptions(
             com=com,
             span=span,
@@ -434,7 +438,7 @@ class Expr:
 
     def map_batches(
         self,
-        function: Udf,
+        function: ct.MapBatchesFn,
         return_dtype: IntoDType | None = None,
         *,
         is_elementwise: bool = False,

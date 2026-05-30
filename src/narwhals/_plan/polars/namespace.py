@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload
+from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 import polars as pl
 
@@ -15,8 +15,6 @@ from narwhals._polars.utils import (
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
-    from typing import TypeAlias
-
     from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
     from narwhals._plan.polars.expr import PolarsExpr as Expr
     from narwhals._plan.polars.lazyframe import (
@@ -27,9 +25,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import Date, DType, FloatType, IntegerType
     from narwhals.schema import Schema
     from narwhals.typing import IntoDType
-
-Incomplete: TypeAlias = Any
-MAIN = Version.MAIN
 
 
 @overload
@@ -50,23 +45,12 @@ def dtype_to_native_fast(dtype: IntegerType | FloatType | Date) -> Any:
     if native := getattr(pl, name, None):
         return native
     # NOTE: Purely an error path for 128-bit ints
-    return dtype_to_native(dtype, MAIN)
+    return dtype_to_native(dtype, Version.MAIN)
 
 
 def dtype_from_native(dtype: pl.DataType, version: Version, /) -> DType:
     """Convert a `polars.DataType` to a Narwhals `DType`."""
     return _dtype_from_native(dtype, version)
-
-
-# TODO @dangotbanned: Add version branching for False in `Explode.options`
-# Default is backwards compatible
-def explode_todo(
-    *, empty_as_null: bool, keep_nulls: bool
-) -> tuple[Literal[True], Literal[True]]:
-    if not (empty_as_null and keep_nulls):
-        msg = f"TODO @dangotbanned: Add version branching for False in `Explode.options`, got: {empty_as_null=}, {keep_nulls=}"
-        raise NotImplementedError(msg)
-    return True, True
 
 
 if compat.LAZYFRAME_HAS_COLLECT_SCHEMA or TYPE_CHECKING:
@@ -79,7 +63,7 @@ else:
 
 class PolarsNamespace(CompliantNamespace["Expr", "Expr"]):
     __slots__ = ()
-    version: ClassVar[Version] = MAIN
+    version: ClassVar[Version] = Version.MAIN
     implementation: ClassVar = Implementation.POLARS
 
     @property

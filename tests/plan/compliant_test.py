@@ -23,13 +23,14 @@ from tests.plan.utils import (
     first,
     last,
     re_compile,
+    xfail_polars_over_order_by,
 )
 
 if TYPE_CHECKING:
     import datetime as dt
     from collections.abc import Sequence
 
-    from _pytest.fixtures import TopRequest  # `pytest.FixtureRequest.node` returns `Any`
+    from pytest import FixtureRequest
 
     from narwhals._plan.typing import ColumnNameOrSelector, IntoExpr, OneOrIterable
     from narwhals.typing import PythonLiteral
@@ -89,14 +90,6 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
     return repr(expr)
 
 
-# TODO @dangotbanned: Add the `raises` back one `polars` is running the same query
-XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
-    reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
-    "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
-    "Function 'or_kleene' has no kernel matching input types (bool, null)"
-)
-
-
 @pytest.mark.parametrize(
     ("expr", "expected"),
     [
@@ -114,9 +107,10 @@ XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         (nwp.col("b").sort(descending=True).alias("b_desc"), {"b_desc": [3, 2, 1]}),
         (nwp.col("c").filter(a="B"), {"c": [2]}),
-        (
+        pytest.param(
             [nwp.nth(0, 1).filter(nwp.col("c") >= 4), nwp.col("d").last() - 4],
             {"a": ["A", "A"], "b": [1, 3], "d": [4, 4]},
+            id="[nth(0, 1).filter(col('c') >= 4), col('d').last() - 4]",
         ),
         (nwp.col("b").cast(nw.Float64()), {"b": [1.0, 2.0, 3.0]}),
         (nwp.lit(1).cast(nw.Float64).alias("literal_cast"), {"literal_cast": [1.0]}),
@@ -288,20 +282,6 @@ XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
         ),
         pytest.param(
             [
-                nwp.any_horizontal(nwp.lit(None, nw.Boolean), "i").alias("None-None"),
-                nwp.any_horizontal(nwp.lit(True), "i").alias("True-None"),
-                nwp.any_horizontal(nwp.lit(False), "i").alias("False-None"),
-            ],
-            {
-                "None-None": [None, None, None],
-                "True-None": [True, True, True],
-                "False-None": [None, None, None],
-            },
-            id="any-horizontal-kleene-full-null",
-            marks=XFAIL_PYARROW_KLEENE_ALL_NULL,
-        ),
-        pytest.param(
-            [
                 nwp.col("b").alias("a"),
                 nwp.col("l").alias("b"),
                 nwp.col("m").alias("i"),
@@ -341,13 +321,6 @@ XFAIL_PYARROW_KLEENE_ALL_NULL = pytest.mark.xfail(
             id="concat_str-preserve_nulls",
         ),
         pytest.param(
-            nwp.concat_str(
-                nwp.col("b") * 2, "n", nwp.col("o"), separator=" ", ignore_nulls=True
-            ),
-            {"b": ["2 dogs play", "4 cats swim", "6 walk"]},
-            id="concat_str-ignore_nulls",
-        ),
-        pytest.param(
             nwp.concat_str("a", nwp.lit("a")),
             {"a": ["Aa", "Ba", "Aa"]},
             id="concat_str-lit",
@@ -377,17 +350,22 @@ def test_select(
     expected: dict[str, Any],
     data_small: dict[str, Any],
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
 ) -> None:
-    request.applymarker(  # TODO @dangotbanned: re-enable `strict` once more are passing (10 failed, 33 xfailed)
-        #                                       pytest tests/plan/compliant_test.py -k "test_select" --plan-include=polars
-        pytest.mark.xfail(
-            dataframe.is_polars(),
-            raises=NotImplementedError,
-            reason="TODO @dangotbanned: `dataframe[polars].select`",
-            strict=False,
-        )
+    result = dataframe(data_small).select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_concat_str_ignore_nulls(
+    data_small: dict[str, Any], dataframe: DataFrame
+) -> None:
+    if dataframe.is_polars() and dataframe.backend_version() < (0, 20, 6):
+        pytest.skip("https://github.com/pola-rs/polars/pull/13877")
+    expr = (
+        nwp.concat_str(
+            nwp.col("b") * 2, "n", nwp.col("o"), separator=" ", ignore_nulls=True
+        ),
     )
+    expected = {"b": ["2 dogs play", "4 cats swim", "6 walk"]}
     result = dataframe(data_small).select(expr)
     assert_equal_data(result, expected)
 
@@ -487,16 +465,7 @@ def test_with_columns(
     expected: dict[str, Any],
     data_small_af: dict[str, Any],
     dataframe: DataFrame,
-    request: TopRequest,
 ) -> None:
-    id_ = request.node.callspec.id
-    dataframe.xfail(
-        request,
-        dataframe.is_polars()
-        and ("with_columns-extend" in id_ or "fill_null_last_sort_max" in id_),
-        reason="`PolarsExpr` is only partially implemented",
-        raises=NotImplementedError,
-    )
     result = dataframe(data_small_af).with_columns(expr)
     assert_equal_data(result, expected)
 
@@ -518,15 +487,7 @@ def test_with_columns_all_aggregates(
     expr: nwp.Expr,
     expected: dict[str, PythonLiteral],
     dataframe: DataFrame,
-    request: TopRequest,
 ) -> None:
-    id_ = request.node.callspec.id
-    dataframe.xfail(
-        request,
-        dataframe.is_polars() and ("null_count" in id_ or "cast_fill_null_all" in id_),
-        reason="`PolarsExpr` is only partially implemented",
-        raises=NotImplementedError,
-    )
 
     height = len(next(iter(data_indexed.values())))
     expected_full = {k: height * [v] for k, v in expected.items()}
@@ -550,10 +511,10 @@ def test_first_last_expr_with_columns(
     agg: nwp.Expr,
     expected: PythonLiteral,
     dataframe: DataFrame,
-    request: pytest.FixtureRequest,
+    request: FixtureRequest,
 ) -> None:
-    dataframe.xfail_polars_with_columns(request)
     """Related https://github.com/narwhals-dev/narwhals/pull/2528#discussion_r2225930065."""
+    xfail_polars_over_order_by(dataframe, request)
     height = len(next(iter(data_indexed.values())))
     expected_full = {"result": height * [expected]}
     frame = dataframe(data_indexed)

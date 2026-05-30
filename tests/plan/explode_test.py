@@ -9,11 +9,12 @@ import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from tests.plan.utils import (
+    DataFrame,
+    LazyFrame,
+    Series,
     assert_equal_data,
     assert_equal_series,
-    dataframe,
     re_compile,
-    series,
 )
 
 if TYPE_CHECKING:
@@ -22,7 +23,16 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import ColumnNameOrSelector
     from tests.conftest import Data
 
-pytest.importorskip("pyarrow")
+
+def xfail_polars_options(
+    request: pytest.FixtureRequest,
+    fixture: Series | DataFrame | LazyFrame,
+    condition: bool | None = None,  # noqa: FBT001
+) -> None:
+    cond = fixture.is_polars() and fixture.backend_version() < (1, 36)
+    if condition is not None:
+        cond = cond and condition
+    fixture.xfail(request, cond, reason="polars too old", raises=NotImplementedError)
 
 
 @pytest.fixture(scope="module")
@@ -44,7 +54,7 @@ def data() -> Data:
     [("l2", [None, 3, None, None, 42]), ("l3", [1, 1, 2, 3, None])],
 )
 def test_explode_frame_single_col(
-    column: str, expected_values: list[int | None], data: Data
+    column: str, expected_values: list[int | None], data: Data, dataframe: DataFrame
 ) -> None:
     result = (
         dataframe(data)
@@ -67,7 +77,7 @@ def test_explode_frame_single_col(
     ],
 )
 def test_explode_frame_only_column(
-    column: str, expected_values: list[int | None], data: Data
+    column: str, expected_values: list[int | None], data: Data, dataframe: DataFrame
 ) -> None:
     result = (
         dataframe(data)
@@ -106,6 +116,7 @@ def test_explode_frame_multiple_cols(
     more_columns: Sequence[str],
     expected: dict[str, list[str | int | None]],
     data: Data,
+    dataframe: DataFrame,
 ) -> None:
     result = (
         dataframe(data)
@@ -139,7 +150,9 @@ def test_explode_frame_multiple_cols(
         ),
     ],
 )
-def test_explode_frame_selectors(expr: nwp.Selector, expected: Data, data: Data) -> None:
+def test_explode_frame_selectors(
+    expr: nwp.Selector, expected: Data, data: Data, dataframe: DataFrame
+) -> None:
     result = (
         dataframe(data)
         .with_columns(expr.cast(nw.List(nw.Int32())))
@@ -150,7 +163,7 @@ def test_explode_frame_selectors(expr: nwp.Selector, expected: Data, data: Data)
     assert_equal_data(result, expected)
 
 
-def test_explode_frame_shape_error(data: Data) -> None:
+def test_explode_frame_shape_error(data: Data, dataframe: DataFrame) -> None:
     with pytest.raises(
         ShapeError, match=r".*exploded columns (must )?have matching element counts"
     ):
@@ -159,7 +172,7 @@ def test_explode_frame_shape_error(data: Data) -> None:
         ).explode(iter([ncs.list()]))
 
 
-def test_explode_frame_invalid_operation_error(data: Data) -> None:
+def test_explode_frame_invalid_operation_error(data: Data, dataframe: DataFrame) -> None:
     with pytest.raises(
         InvalidOperationError,
         match=re_compile(r"explode.+not supported for.+string.+expected.+list"),
@@ -175,7 +188,9 @@ def test_explode_frame_invalid_operation_error(data: Data) -> None:
         ([[1, 2, 3], []], [1, 2, 3, None]),
     ],
 )
-def test_explode_series_default(values: list[Any], expected: list[Any]) -> None:
+def test_explode_series_default(
+    values: list[Any], expected: list[Any], series: Series
+) -> None:
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L465-L470
     result = series(values).explode()
     assert_equal_series(result, expected, "")
@@ -188,8 +203,16 @@ def test_explode_series_default(values: list[Any], expected: list[Any]) -> None:
         ([[1, 2, 3], [], [1, 2]], [1, 2, 3, None, 1, 2]),
     ],
 )
-def test_explode_series_default_masked(values: list[Any], expected: list[Any]) -> None:
+def test_explode_series_default_masked(
+    values: list[Any], expected: list[Any], series: Series
+) -> None:
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L471-484
+    if (
+        series.is_polars()
+        and series.backend_version() < (1,)
+        and values == [[1, 2, 3], [1, 2], [1, 2]]
+    ):
+        pytest.skip("this test came from polars, and it didn't work at some point")
     result = (
         series(values)
         .to_frame()
@@ -217,9 +240,14 @@ DEFAULT: Final[Data] = {}
     ],
 )
 def test_explode_series_options(
-    values: list[Any], kwds: dict[str, Any], expected: list[Any]
+    values: list[Any],
+    kwds: dict[str, Any],
+    expected: list[Any],
+    series: Series,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L486-L505
+    xfail_polars_options(request, series)
     result = series(values).explode(**kwds)
     assert_equal_series(result, expected, "")
 
@@ -255,9 +283,14 @@ BOTH_B: Final = [None, "dog", "cat", "narwhal", None, "orca"]
     ],
 )
 def test_explode_frame_options(
-    columns: Sequence[ColumnNameOrSelector], kwds: dict[str, Any], expected: Data
+    columns: Sequence[ColumnNameOrSelector],
+    kwds: dict[str, Any],
+    expected: Data,
+    dataframe: DataFrame,
+    request: pytest.FixtureRequest,
 ) -> None:
     # Based on https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L596-L616
+    xfail_polars_options(request, dataframe, bool(kwds))
     data = {
         "a": [[1, 2, 3], None, [4, 5, 6], []],
         "b": [[None, "dog", "cat"], None, ["narwhal", None, "orca"], []],
@@ -274,7 +307,7 @@ def test_explode_frame_options(
     assert_equal_data(result, expected)
 
 
-def test_explode_frame_single_elements() -> None:
+def test_explode_frame_single_elements(dataframe: DataFrame) -> None:
     data = {"a": [[1], [2], [3]], "b": [[4], [5], [6]], "i": [0, 10, 20]}
     df = dataframe(data).with_columns(nwp.col("a", "b").cast(nw.List(nw.Int32())))
 

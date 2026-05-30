@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from _typeshed import ConvertibleToInt
     from typing_extensions import Self
 
+    from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import AnonymousExpr, FunctionExpr
     from narwhals._plan.options import (
         EWMOptions,
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
         RollingVarOptions,
     )
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import Seq, Udf
+    from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
     from narwhals.typing import FillNullStrategy
 
@@ -272,13 +273,13 @@ class GatherEvery(_UnarySameDType):
 
 class MapBatches(UnaryFunction):
     __slots__ = ("flags", "function", "return_dtype")
-    function: Udf
+    function: ct.MapBatchesFn
     return_dtype: DType | None
     flags: FunctionFlags
 
     @staticmethod
     def from_udf(
-        function: Udf,
+        function: ct.MapBatchesFn,
         return_dtype: DType | None,
         *,
         is_elementwise: bool,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from narwhals import _plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -19,7 +19,10 @@ from tests.plan.utils import assert_equal_data, dataframe
     ],
 )
 def test_kurtosis_skew_expr(
-    data: list[float], expected_kurtosis: float | None, expected_skew: float | None
+    data: list[float],
+    expected_kurtosis: float | None,
+    expected_skew: float | None,
+    dataframe: DataFrame,
 ) -> None:
     df = dataframe({"a": data})
     kurtosis = nwp.col("a").kurtosis()

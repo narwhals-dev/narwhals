@@ -12,6 +12,7 @@ from narwhals._plan._expansion import (
 from narwhals._plan._guards import is_series
 from narwhals._plan._version import into_version
 from narwhals._plan.common import ensure_seq_str, normalize_target_file
+from narwhals._plan.exceptions import frame_filter_length_changing_error
 from narwhals._plan.group_by import GroupBy, Grouped
 from narwhals._plan.options import ExplodeOptions, SortMultipleOptions
 from narwhals._plan.plans import LogicalPlan
@@ -122,17 +123,6 @@ class BaseFrame(Generic[NativeFrameT_co]):
 
     def to_native(self) -> NativeFrameT_co:
         return self._compliant.native
-
-    def filter(
-        self, *predicates: OneOrIterable[IntoExprColumn], **constraints: Any
-    ) -> Self:  # pragma: no cover
-        e = _parse.predicates_constraints_into_expr_ir(*predicates, **constraints)
-        named_irs, _ = prepare_projection((e,), schema=self)
-        if len(named_irs) != 1:
-            # Should be unreachable, but I guess we will see
-            msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
-            raise ValueError(msg)
-        return self._with_compliant(self._compliant.filter(named_irs[0]))
 
     def select(self, *exprs: OneOrIterable[IntoExpr], **named_exprs: Any) -> Self:
         named_irs, _ = prepare_projection(
@@ -557,11 +547,10 @@ class DataFrame(
             *predicates, _into_series=self._partial_series(), **constraints
         )
         named_irs, _ = prepare_projection((e,), schema=self)
-        if len(named_irs) != 1:  # pragma: no cover
-            # Should be unreachable, but I guess we will see
-            msg = f"Expected a single predicate after expansion, but got {len(named_irs)!r}\n\n{named_irs!r}"
-            raise ValueError(msg)
-        return self._with_compliant(self._compliant.filter(named_irs[0]))
+        named_ir = named_irs[0]
+        if named_ir.expr.changes_length():
+            raise frame_filter_length_changing_error(named_ir.expr, "DataFrame")
+        return self._with_compliant(self._compliant.filter(named_ir))
 
     def partition_by(
         self,

@@ -14,7 +14,6 @@ if TYPE_CHECKING:
         ConstructorFixtureName,
         DataFrame,
         Eager,
-        EagerOrFalse,
         Identifier,
         Lazy,
         LazyFrame,
@@ -30,8 +29,6 @@ if TYPE_CHECKING:
     def series() -> Series: ...
     @pytest.fixture
     def eager() -> Eager: ...
-    @pytest.fixture
-    def eager_or_false() -> EagerOrFalse: ...
     @pytest.fixture
     def lazy() -> Lazy: ...
 
@@ -102,19 +99,15 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:  # pragma: no cove
     for constructor in "lazyframe", "dataframe", "series":
         _parametrize_constructor_fixture(constructor, metafunc, test_backends)
 
-    if {"eager", "eager_or_false"}.intersection(metafunc.fixturenames):
+    if "eager" in metafunc.fixturenames:
         eager_values = []
         eager_ids = []
         for backend in test_backends:
             if eager := getattr(backend, "backend_eager", None):
                 eager_values.append(eager)
                 eager_ids.append(backend.identifier)
-        if "eager" in metafunc.fixturenames:
-            metafunc.parametrize("eager", eager_values, ids=eager_ids)
-        if "eager_or_false" in metafunc.fixturenames:
-            metafunc.parametrize(
-                "eager_or_false", (*eager_values, False), ids=(*eager_ids, "False")
-            )
+        metafunc.parametrize("eager", eager_values, ids=eager_ids)
+
     if "lazy" in metafunc.fixturenames:
         if lazy_values_ids := [
             (lazy, backend.identifier)

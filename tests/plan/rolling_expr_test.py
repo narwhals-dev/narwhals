@@ -6,13 +6,31 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals._plan as nwp
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data, xfail_polars_over_order_by
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest
+
     from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
 
-pytest.importorskip("pyarrow")
+
+def xfail_polars_20077(
+    dataframe: DataFrame,
+    request: FixtureRequest,
+    min_samples: int | None,
+    ddof: int,
+    *,
+    center: bool,
+) -> None:
+    if center and min_samples == 1 and ddof == 1:
+        version = dataframe.backend_version()
+        dataframe.xfail(
+            request,
+            dataframe.is_polars() and ((1, 10) <= version < (1, 17)),
+            reason="None returned instead of 0 https://github.com/pola-rs/polars/pull/20077",
+            raises=AssertionError,
+        )
 
 
 def sqrt_or_null(*values: float | None) -> list[float | None]:
@@ -49,7 +67,16 @@ def test_rolling_var(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1,),
+        reason="polars too old",
+        raises=NotImplementedError,
+    )
+
     expr = nwp.col("var_std").rolling_var(
         window_size, min_samples=min_samples, center=center, ddof=ddof
     )
@@ -76,7 +103,15 @@ def test_rolling_std(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    dataframe.xfail(
+        request,
+        dataframe.is_polars() and dataframe.backend_version() < (1,),
+        reason="polars too old",
+        raises=NotImplementedError,
+    )
     expr = nwp.col("var_std").rolling_std(
         window_size, min_samples=min_samples, center=center, ddof=ddof
     )
@@ -101,6 +136,7 @@ def test_rolling_sum(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = nwp.col("a").rolling_sum(window_size, min_samples=min_samples, center=center)
     result = dataframe(data).select(expr)
@@ -124,6 +160,7 @@ def test_rolling_mean(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
 ) -> None:
     expr = nwp.col("a").rolling_mean(window_size, min_samples=min_samples, center=center)
     result = dataframe(data).select(expr)
@@ -149,7 +186,10 @@ def test_rolling_sum_order_by(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = (
         nwp.col("b")
         .rolling_sum(window_size, min_samples=min_samples, center=center)
@@ -178,7 +218,10 @@ def test_rolling_mean_order_by(
     min_samples: int | None,
     center: bool,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
     expr = (
         nwp.col("b")
         .rolling_mean(window_size, min_samples=min_samples, center=center)
@@ -208,7 +251,11 @@ def test_rolling_var_order_by(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
+    xfail_polars_20077(dataframe, request, min_samples, ddof, center=center)
     expr = (
         nwp.col("b")
         .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
@@ -244,7 +291,11 @@ def test_rolling_std_order_by(
     center: bool,
     ddof: int,
     expected: list[NonNestedLiteral],
+    dataframe: DataFrame,
+    request: FixtureRequest,
 ) -> None:
+    xfail_polars_over_order_by(dataframe, request)
+    xfail_polars_20077(dataframe, request, min_samples, ddof, center=center)
     expr = (
         nwp.col("b")
         .rolling_std(window_size, min_samples=min_samples, center=center, ddof=ddof)

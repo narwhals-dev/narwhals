@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -58,7 +59,9 @@ def data() -> Data:
         ),
     ],
 )
-def test_all_horizontal(data: Data, expr: nwp.Expr, expected: Data) -> None:
+def test_all_horizontal(
+    data: Data, expr: nwp.Expr, expected: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data).select(expr)
     assert_equal_data(result, expected)
 
@@ -98,6 +101,34 @@ def test_all_horizontal(data: Data, expr: nwp.Expr, expected: Data) -> None:
         ),
     ],
 )
-def test_any_horizontal(data: Data, expr: nwp.Expr, expected: Data) -> None:
+def test_any_horizontal(
+    data: Data, expr: nwp.Expr, expected: Data, dataframe: DataFrame
+) -> None:
     result = dataframe(data).select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_any_horizontal_kleene_full_null(
+    dataframe: DataFrame, request: pytest.FixtureRequest
+) -> None:
+    data = {"i": [None, None, None]}
+    exprs = [
+        nwp.any_horizontal(nwp.lit(None, nw.Boolean), "i").alias("None-None"),
+        nwp.any_horizontal(nwp.lit(True), "i").alias("True-None"),
+        nwp.any_horizontal(nwp.lit(False), "i").alias("False-None"),
+    ]
+    expected = {
+        "None-None": [None, None, None],
+        "True-None": [True, True, True],
+        "False-None": [None, None, None],
+    }
+    dataframe.xfail(
+        request,
+        dataframe.is_pyarrow(),
+        reason="`pyarrow` uses `pa.null()`, which also fails in current `narwhals`.\n"
+        "In `polars`, the same op is supported and it uses `pl.Null`.\n\n"
+        "Function 'or_kleene' has no kernel matching input types (bool, null)",
+        raises=NotImplementedError,
+    )
+    result = dataframe(data).select(exprs)
     assert_equal_data(result, expected)

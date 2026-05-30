@@ -781,21 +781,19 @@ class ArrowExpr(
         final_result = mask(index.native, aggregated.get_column(idx_name).native)
         return self.from_series(index._with_native(final_result))
 
-    # TODO @dangotbanned: Fix direct `ArrowSeries`, `ArrowScalar`
     def map_batches(
         self, node: ir.AnonymousExpr, frame: Frame, name: str, /
     ) -> Self | Scalar:
         series = self._dispatch_expr(node.args[0], frame, name)
-        udf = node.function.function
-        udf_result: Series | Iterable[Any] | Any = udf(series)
+        f = node.function
+        udf_result = f.function(series)
+        classes = self.__narwhals_classes__
         if node.is_scalar():
-            return ArrowScalar.from_unknown(
-                udf_result, name, dtype=node.function.return_dtype
-            )
+            return classes.scalar.from_unknown(udf_result, name, dtype=f.return_dtype)
         if isinstance(udf_result, Series):
-            result = udf_result
+            result = udf_result if udf_result.name == name else udf_result.alias(name)
         elif isinstance(udf_result, Iterable) and not is_iterable_reject(udf_result):
-            result = Series.from_iterable(udf_result, name=name)
+            result = classes.series.from_iterable(udf_result, name=name)
         else:
             msg = (
                 "`map_batches` with `returns_scalar=False` must return a Series; "
@@ -803,7 +801,7 @@ class ArrowExpr(
                 "is set to `True`, a returned value can be a scalar value."
             )
             raise TypeError(msg)
-        if dtype := node.function.return_dtype:
+        if dtype := f.return_dtype:
             result = result.cast(dtype)
         return self.from_series(result)
 

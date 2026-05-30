@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 import polars as pl
@@ -8,14 +8,13 @@ import polars as pl
 from narwhals._plan._version import into_version
 from narwhals._plan.compliant import CompliantSeries, typing as ct
 from narwhals._plan.compliant.accessors import SeriesStructNamespace as StructNamespace
-from narwhals._plan.polars import compat
+from narwhals._plan.polars import compat, functions as fn
 from narwhals._plan.polars.classes import PolarsClasses
-from narwhals._plan.polars.expr import linear_space, lit
+from narwhals._plan.polars.compat import min_samples_periods
 from narwhals._plan.polars.namespace import (
     dtype_from_native,
     dtype_to_native,
     dtype_to_native_fast,
-    explode_todo,
 )
 from narwhals._utils import Implementation, Version, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
@@ -44,16 +43,7 @@ if TYPE_CHECKING:
         _1DArray,
     )
 
-Incomplete: TypeAlias = Any
 Int64 = Version.MAIN.dtypes.Int64()
-if compat.MIN_PERIODS_RENAMED_TO_MIN_SAMPLES:
-    _MIN_SAMPLES = "min_samples"
-else:
-    _MIN_SAMPLES = "min_periods"
-
-
-def min_samples_periods(min_samples: int, /, **kwds: Any) -> dict[str, Any]:
-    return {_MIN_SAMPLES: min_samples, **kwds}
 
 
 _Inner: TypeAlias = Callable[[Any], ct.SeriesT]
@@ -152,7 +142,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         cls, data: Iterable[Any], *, name: str = "", dtype: IntoDType | None = None
     ) -> Self:
         dtype_pl = dtype_to_native(dtype, cls.version)
-        values: Incomplete = data
+        values = data
         if compat.SERIES_RESPECTS_DTYPE:
             native = pl.Series(name, values, dtype=dtype_pl)
         else:  # pragma: no cover
@@ -194,26 +184,25 @@ class PolarsSeries(CompliantSeries[pl.Series]):
     def is_in(self, other: Self) -> Self:
         return self._with_native(self.native.is_in(other.native))
 
-    def _preserve_nulls(self, after: pl.Expr | pl.Series, /) -> Self:  # pragma: no cover
-        """Propagate nulls positionally from `self.native` to `after`."""
-        s = self.native
-        expr = pl.when(pl.col(s.name).is_not_null()).then(after)
-        return self._with_native(s.to_frame().select(expr).to_series())
+    def dispatch_expr(self, expr: pl.Expr | pl.Series | NonNestedLiteral, /) -> Self:
+        return self.from_native(self.native.to_frame().select(expr).to_series())
 
-    if compat.IS_NAN_NUMERIC_PRESERVES_NULLS:
+    if compat.IS_NAN_FINITE_NUMERIC_PRESERVES_NULLS:
 
         def is_nan(self) -> Self:
             return self._with_native(self.native.is_nan())
 
         def is_not_nan(self) -> Self:
             return self._with_native(self.native.is_not_nan())
-    else:  # pragma: no cover
+    else:
 
         def is_nan(self) -> Self:
-            return self._preserve_nulls(self.native.is_nan())
+            s = self.native
+            return self.dispatch_expr(fn.preserve_nulls(s, s.is_nan()))
 
         def is_not_nan(self) -> Self:
-            return self._preserve_nulls(self.native.is_not_nan())
+            s = self.native
+            return self.dispatch_expr(fn.preserve_nulls(s, s.is_not_nan()))
 
     def is_null(self) -> Self:
         return self._with_native(self.native.is_null())
@@ -232,18 +221,18 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         method = self.native.__array__
         return method(dtype, copy) if compat.DUNDER_ARRAY_SUPPORTS_COPY else method(dtype)
 
-    def first(self) -> PythonLiteral | Incomplete:
+    def first(self) -> PythonLiteral | Any:
         if compat.SERIES_HAS_FIRST_LAST:
             return self.native.first()
         return None if self.is_empty() else self.native.item(0)
 
-    def last(self) -> PythonLiteral | Incomplete:
+    def last(self) -> PythonLiteral | Any:
         if compat.SERIES_HAS_FIRST_LAST:
             return self.native.last()
         return None if self.is_empty() else self.native.item(-1)
 
     def fill_nan(self, value: float | Self | None) -> Self:
-        fill_value = lit(value.native) if isinstance(value, PolarsSeries) else value
+        fill_value = fn.lit(value.native) if isinstance(value, PolarsSeries) else value
         return self._with_native(self.native.fill_nan(fill_value))
 
     def fill_null(self, value: NonNestedLiteral | Self) -> Self:
@@ -256,11 +245,14 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         return self._with_native(self.native.fill_null(strategy=strategy, limit=limit))
 
     def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Self:
-        explode_todo(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
-        return self._with_native(self.native.explode())
+        kwds = compat.explode(empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        return self._with_native(self.native.explode(**kwds))
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
+
+    def __iter__(self) -> Iterator[Any]:
+        yield from self.native.__iter__()
 
     __add__ = bin_op["Self"]()
     __and__ = bin_op["Self"]()
@@ -292,11 +284,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         if compat.SERIES_RFLOORDIV_HANDLES_ZERO:
             return self._with_native(other // self.native)
         expr = pl.col(self.name)
-        return self._with_native(
-            self.native.to_frame()
-            .select(pl.when(expr != 0).then(other // expr).alias(self.name))
-            .to_series()
-        )
+        return self.dispatch_expr(pl.when(expr != 0).then(other // expr).alias(self.name))
 
     def __rpow__(self, other: float | Self) -> Self:
         other_ = other.native if isinstance(other, PolarsSeries) else other
@@ -458,7 +446,7 @@ class PolarsSeries(CompliantSeries[pl.Series]):
         closed: ClosedInterval = "both",
         name: str = "literal",
     ) -> Self:
-        native = linear_space(start, end, num_samples, closed=closed, eager=True)
+        native = fn.linear_space(start, end, num_samples, closed=closed, eager=True)
         return cls.from_native(native, name)
 
     @property

@@ -984,6 +984,14 @@ def test_rolling_expr_invalid(
         a.rolling_std(window_size, min_samples=min_samples)
 
 
+def test_ewm_mean_invalid() -> None:
+    with pytest.raises(
+        ValueError,
+        match="parameters `com`, `span`, `half_life`, and `alpha` are mutually exclusive",
+    ):
+        nwp.col("a").ewm_mean(span=1.5, half_life=0.75, ignore_nulls=False)
+
+
 def test_list_contains_invalid() -> None:
     a = nwp.col("a")
 

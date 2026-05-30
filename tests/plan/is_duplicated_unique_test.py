@@ -6,7 +6,7 @@ import pytest
 
 from narwhals import _plan as nwp
 from narwhals._plan import selectors as ncs
-from tests.plan.utils import assert_equal_data, dataframe
+from tests.plan.utils import DataFrame, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -22,7 +22,7 @@ def data() -> Data:
     }
 
 
-def test_is_duplicated_unique(data: Data) -> None:
+def test_is_duplicated_unique(data: Data, dataframe: DataFrame) -> None:
     expected = {
         "v1_is_unique": [True, True, False, True, False],
         "v2_is_unique": [True, False, False, False, False],
@@ -39,7 +39,7 @@ def test_is_duplicated_unique(data: Data) -> None:
 
 
 # NOTE: Not supported on `main`
-def test_is_duplicated_unique_partitioned(data: Data) -> None:
+def test_is_duplicated_unique_partitioned(data: Data, dataframe: DataFrame) -> None:
     expected = {
         "v1_is_unique": [True, True, True, True, True],
         "v2_is_unique": [True, False, False, False, False],

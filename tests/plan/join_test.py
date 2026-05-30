@@ -7,7 +7,7 @@ import pytest
 
 import narwhals._plan as nwp
 from narwhals.exceptions import DuplicateError
-from tests.plan.utils import assert_equal_data, dataframe, re_compile
+from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -110,7 +110,11 @@ EXPECTED_DATA_1 = {
     ids=["left_on-right_on-identical", "on", "left_on-right_on-different"],
 )
 def test_join_full(
-    left_data: Data, right_data: Data, expected: Data, kwds: JoinKwds
+    left_data: Data,
+    right_data: Data,
+    expected: Data,
+    kwds: JoinKwds,
+    dataframe: DataFrame,
 ) -> None:
     kwds["how"] = "full"
     result = (
@@ -121,21 +125,25 @@ def test_join_full(
     assert_equal_data(result, expected)
 
 
-def test_join_full_duplicate() -> None:
+def test_join_full_duplicate(dataframe: DataFrame) -> None:
     left = dataframe({"f": [1, 2, 3], "v": [1, 2, 3]})
     right = left.rename({"v": "f_right"})
     with pytest.raises(DuplicateError):
         left.join(right, "f", how="full", suffix="_right")
 
 
-def test_join_inner_x2_duplicate(data_indexed: Data) -> None:
+def test_join_inner_x2_duplicate(data_indexed: Data, dataframe: DataFrame) -> None:
+    # NOTE: Skipped on `polars<1.26` for cudf?
+    # https://github.com/narwhals-dev/narwhals/pull/2277
     df = dataframe(data_indexed)
     with pytest.raises(DuplicateError):
         df.join(df, "a").join(df, "a")
 
 
 @pytest.mark.parametrize("kwds", [JoinKwds(left_on="a", right_on="a"), JoinKwds(on="a")])
-def test_join_inner_single_key(data_indexed: Data, kwds: JoinKwds) -> None:
+def test_join_inner_single_key(
+    data_indexed: Data, kwds: JoinKwds, dataframe: DataFrame
+) -> None:
     df = dataframe(data_indexed)
     result = df.join(df, **kwds).sort("idx").drop("idx_right")
     expected = {
@@ -152,7 +160,9 @@ def test_join_inner_single_key(data_indexed: Data, kwds: JoinKwds) -> None:
 @pytest.mark.parametrize(
     "kwds", [JoinKwds(left_on=["a", "b"], right_on=["a", "b"]), JoinKwds(on=["a", "b"])]
 )
-def test_join_inner_two_keys(data_indexed: Data, kwds: JoinKwds) -> None:
+def test_join_inner_two_keys(
+    data_indexed: Data, kwds: JoinKwds, dataframe: DataFrame
+) -> None:
     df = dataframe(data_indexed)
     result = df.join(df, **kwds).sort("idx").drop("idx_right")
     expected = {
@@ -165,7 +175,7 @@ def test_join_inner_two_keys(data_indexed: Data, kwds: JoinKwds) -> None:
     assert_equal_data(result, expected)
 
 
-def test_join_left() -> None:
+def test_join_left(dataframe: DataFrame) -> None:
     data_left = {"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0], "idx": [0.0, 1.0, 2.0]}
     data_right = {"a": [1.0, 2.0, 3.0], "co": [4.0, 5.0, 7.0], "idx": [0.0, 1.0, 2.0]}
     df_left = dataframe(data_left)
@@ -182,7 +192,7 @@ def test_join_left() -> None:
     assert_equal_data(result_on_list, expected_on_list)
 
 
-def test_join_left_multiple_column() -> None:
+def test_join_left_multiple_column(dataframe: DataFrame) -> None:
     df = dataframe({"a": [1, 2, 3], "b": [4, 5, 6], "idx": [0, 1, 2]})
     right = df.rename({"b": "c"})
     result = (
@@ -221,7 +231,9 @@ def test_join_left_multiple_column() -> None:
         ),
     ],
 )
-def test_join_left_overlapping_column(kwds: JoinKwds, expected: dict[str, Any]) -> None:
+def test_join_left_overlapping_column(
+    kwds: JoinKwds, expected: dict[str, Any], dataframe: DataFrame
+) -> None:
     kwds["how"] = "left"
     source = {
         "a": [1.0, 2.0, 3.0],
@@ -235,7 +247,7 @@ def test_join_left_overlapping_column(kwds: JoinKwds, expected: dict[str, Any]) 
     assert_equal_data(result, expected)
 
 
-def test_join_cross(data_a_only: Data) -> None:
+def test_join_cross(data_a_only: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_a_only)
     result = df.join(df, how="cross").sort("a", "a_right")
     expected = {"a": [1, 1, 1, 2, 2, 2, 3, 3, 3], "a_right": [1, 2, 3, 1, 2, 3, 1, 2, 3]}
@@ -244,7 +256,9 @@ def test_join_cross(data_a_only: Data) -> None:
 
 @pytest.mark.parametrize("how", ["inner", "left"])
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_join_with_suffix(how: JoinStrategy, suffix: str, data: Data) -> None:
+def test_join_with_suffix(
+    how: JoinStrategy, suffix: str, data: Data, dataframe: DataFrame
+) -> None:
     df = dataframe(data)
     on = ["a", "b"]
     result = df.join(df, left_on=on, right_on=on, how=how, suffix=suffix)
@@ -252,7 +266,9 @@ def test_join_with_suffix(how: JoinStrategy, suffix: str, data: Data) -> None:
 
 
 @pytest.mark.parametrize("suffix", ["_right", "_custom_suffix"])
-def test_join_cross_with_suffix(suffix: str, data_a_only: Data) -> None:
+def test_join_cross_with_suffix(
+    suffix: str, data_a_only: Data, dataframe: DataFrame
+) -> None:
     df = dataframe(data_a_only)
     result = df.join(df, how="cross", suffix=suffix).sort("a", f"a{suffix}")
     expected = {
@@ -277,6 +293,7 @@ def test_join_filter(
     how: Literal["anti", "semi"],
     expected: Data,
     data: Data,
+    dataframe: DataFrame,
 ) -> None:
     # NOTE: "anti" and "semi" should be the inverse of each other
     df = dataframe(data)
@@ -302,7 +319,7 @@ SAME_LENGTH_ON = r"`left_on` and `right_on`.+same length"
 )
 @pytest.mark.parametrize("how", ["inner", "left", "semi", "anti"])
 def test_join_keys_exceptions(
-    how: JoinStrategy, kwds: JoinKwds, message: str, data: Data
+    how: JoinStrategy, kwds: JoinKwds, message: str, data: Data, dataframe: DataFrame
 ) -> None:
     df = dataframe(data)
     kwds["how"] = how
@@ -319,14 +336,16 @@ def test_join_keys_exceptions(
         JoinKwds(left_on="a", right_on="a"),
     ],
 )
-def test_join_cross_keys_exceptions(kwds: JoinKwds, data_a_only: Data) -> None:
+def test_join_cross_keys_exceptions(
+    kwds: JoinKwds, data_a_only: Data, dataframe: DataFrame
+) -> None:
     df = dataframe(data_a_only)
     kwds["how"] = "cross"
     with pytest.raises(ValueError, match=r"not.+ `left_on`.+`right_on`.+`on`.+cross"):
         df.join(df, **kwds)
 
 
-def test_join_not_implemented(data_a_only: Data) -> None:
+def test_join_not_implemented(data_a_only: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_a_only)
     pattern = (
         r"supported.+'inner', 'left', 'full', 'cross', 'semi', 'anti'.+ found 'right'"
@@ -335,52 +354,44 @@ def test_join_not_implemented(data_a_only: Data) -> None:
         df.join(df, left_on="a", right_on="a", how="right")  # type: ignore[arg-type]
 
 
-# NOTE: move `join_asof` to a different file later
-
-
-PYARROW_HAS_JOIN_ASOF = PYARROW_VERSION >= (16, 0, 0)
-
-
-def require_pyarrow_16(
-    df: nwp.DataFrame[Any, Any], request: pytest.FixtureRequest
+# TODO @dangotbanned: move `join_asof` to a different file
+def xfail_pyarrow_join_asof(
+    fixture: DataFrame,
+    request: pytest.FixtureRequest,
+    strategy: AsofJoinStrategy | None = None,
 ) -> None:
-    request.applymarker(
-        pytest.mark.xfail(
-            (df.implementation.is_pyarrow() and not PYARROW_HAS_JOIN_ASOF),
-            reason="pyarrow too old for `join_asof` support",
-            raises=NotImplementedError,
-        )
-    )
-
-
-XFAIL_NEAREST = pytest.mark.xfail(
-    PYARROW_HAS_JOIN_ASOF,
-    reason="Only 'backward' and 'forward' strategies are currently supported for `pyarrow`",
-    raises=NotImplementedError,
-)
+    """Has partial support in most of our tested versions."""
+    if fixture.is_pyarrow():
+        if PYARROW_VERSION >= (16, 0, 0):
+            condition = strategy == "nearest"
+            reason = "Only 'backward' and 'forward' strategies are currently supported for `pyarrow`"
+        else:  # pragma: no cover
+            condition = True
+            reason = "`pyarrow>=16` required for `join_asof` support"
+        fixture.xfail(request, condition, reason=reason, raises=NotImplementedError)
 
 
 @pytest.mark.parametrize(
     ("strategy", "expected_values"),
-    [
-        ("backward", [1, 3, 7]),
-        ("forward", [1, 6, None]),
-        pytest.param("nearest", [1, 6, 7], marks=XFAIL_NEAREST),
-    ],
+    [("backward", [1, 3, 7]), ("forward", [1, 6, None]), ("nearest", [1, 6, 7])],
     ids=str,
 )
-@pytest.mark.parametrize("kwds", [AsofKwds(left_on="a", right_on="a"), AsofKwds(on="a")])
+@pytest.mark.parametrize(
+    "kwds", [AsofKwds(left_on="a", right_on="a"), AsofKwds(on="a")], ids=str
+)
 def test_join_asof_numeric(
     strategy: AsofJoinStrategy,
     expected_values: list[Any],
     request: pytest.FixtureRequest,
     kwds: AsofKwds,
+    dataframe: DataFrame,
 ) -> None:
+    xfail_pyarrow_join_asof(dataframe, request, strategy)
     left = {"a": [1, 5, 10], "val": ["a", "b", "c"]}
     right = {"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}
     expected = left | {"val_right": expected_values}
     df = dataframe(left).sort("a")
-    require_pyarrow_16(df, request)
+
     df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, **kwds, strategy=strategy).sort("a")
     assert_equal_data(result, expected)
@@ -391,19 +402,21 @@ def test_join_asof_numeric(
     [
         ("backward", [4164, 4566, 4696]),
         ("forward", [4411, 4696, 4696]),
-        pytest.param("nearest", [4164, 4696, 4696], marks=XFAIL_NEAREST),
+        ("nearest", [4164, 4696, 4696]),
     ],
     ids=str,
 )
 @pytest.mark.parametrize(
-    "kwds", [AsofKwds(left_on="ts", right_on="ts"), AsofKwds(on="ts")]
+    "kwds", [AsofKwds(left_on="ts", right_on="ts"), AsofKwds(on="ts")], ids=str
 )
 def test_join_asof_time(
     strategy: AsofJoinStrategy,
     expected_values: list[float],
     request: pytest.FixtureRequest,
     kwds: AsofKwds,
+    dataframe: DataFrame,
 ) -> None:
+    xfail_pyarrow_join_asof(dataframe, request, strategy)
     left = {
         "ts": [dt.datetime(2016, 3, 1), dt.datetime(2018, 8, 1), dt.datetime(2019, 1, 1)],
         "pop": [82.19, 82.66, 83.12],
@@ -420,16 +433,20 @@ def test_join_asof_time(
     }
     expected = left | {"gdp": expected_values}
     df = dataframe(left).sort("ts")
-    require_pyarrow_16(df, request)
     df_right = dataframe(right).sort("ts")
     result = df.join_asof(df_right, **kwds, strategy=strategy).sort("ts")
     assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
-    "kwds", [AsofKwds(on="a", by_left="b", by_right="b"), AsofKwds(on="a", by="b")]
+    "kwds",
+    [AsofKwds(on="a", by_left="b", by_right="b"), AsofKwds(on="a", by="b")],
+    ids=str,
 )
-def test_join_asof_by(request: pytest.FixtureRequest, kwds: AsofKwds) -> None:
+def test_join_asof_by(
+    request: pytest.FixtureRequest, kwds: AsofKwds, dataframe: DataFrame
+) -> None:
+    xfail_pyarrow_join_asof(dataframe, request)
     left = {"a": [1, 5, 7, 10], "b": ["D", "D", "C", "A"], "c": [9, 2, 1, 1]}
     right = {"a": [1, 4, 5, 8], "b": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
     expected = {
@@ -439,26 +456,27 @@ def test_join_asof_by(request: pytest.FixtureRequest, kwds: AsofKwds) -> None:
         "d": [1, 3, None, 4],
     }
     df = dataframe(left).sort("a")
-    require_pyarrow_16(df, request)
     df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, **kwds).sort("a")
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("kwds", [AsofKwds(left_on="a", right_on="a", suffix="_y")])
-def test_join_asof_suffix(request: pytest.FixtureRequest, kwds: AsofKwds) -> None:
+def test_join_asof_suffix(request: pytest.FixtureRequest, dataframe: DataFrame) -> None:
+    xfail_pyarrow_join_asof(dataframe, request)
+    kwds = AsofKwds(left_on="a", right_on="a", suffix="_y")
     left = {"a": [1, 5, 10], "val": ["a", "b", "c"]}
     right = {"a": [1, 2, 3, 6, 7], "val": [1, 2, 3, 6, 7]}
     expected = {"a": [1, 5, 10], "val": ["a", "b", "c"], "val_y": [1, 3, 7]}
     df = dataframe(left).sort("a")
-    require_pyarrow_16(df, request)
     df_right = dataframe(right).sort("a")
     result = df.join_asof(df_right, **kwds).sort("a")
     assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize("strategy", ["back", "furthest"])
-def test_join_asof_not_implemented(strategy: str, data: Data) -> None:
+def test_join_asof_not_implemented(
+    strategy: str, data: Data, dataframe: DataFrame
+) -> None:
     df = dataframe(data)
     pattern = re_compile(
         rf"supported.+'backward', 'forward', 'nearest'.+ found '{strategy}'"
@@ -491,7 +509,9 @@ BY = "b"
         (AsofKwds(on=ON, by_right=BY), BOTH_BY),
     ],
 )
-def test_join_asof_invalid(data: Data, kwds: AsofKwds, message: str) -> None:
+def test_join_asof_invalid(
+    data: Data, kwds: AsofKwds, message: str, dataframe: DataFrame
+) -> None:
     df = dataframe(data)
     with pytest.raises(ValueError, match=message):
         df.join_asof(df, **kwds)
