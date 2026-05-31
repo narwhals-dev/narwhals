@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
 from itertools import chain
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar
@@ -22,14 +21,14 @@ from tests.plan.utils import (
 from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping
     from typing import TypeAlias
 
     from _pytest.fixtures import TopRequest
     from _pytest.mark import ParameterSet
     from pytest import FixtureRequest
 
-    from narwhals._plan.typing import IntoExprColumn, OneOrIterable
+    from narwhals._plan.typing import IntoExprColumn, OneOrIterable, Seq
     from narwhals.typing import NonNestedLiteral
     from tests.conftest import Data
 
@@ -498,56 +497,57 @@ def data_order() -> Mapping[str, list[NonNestedLiteral]]:
 
 
 def order_case(
-    columns: ValueColumn | Sequence[ValueColumn],
+    columns: ValueColumn | Seq[ValueColumn],
     aggregation: Agg,
     /,
-    order_by: OrderColumn | Sequence[OrderColumn],
+    order_by: OrderColumn | Seq[OrderColumn],
     *,
     descending: bool = False,
     nulls_last: bool = False,
-    expected: NonNestedLiteral | Sequence[NonNestedLiteral],
+    expected: NonNestedLiteral | Seq[NonNestedLiteral],
 ) -> Iterator[ParameterSet]:
     """Generate `Expr`s and an expected dataset for ordered aggregations.
 
-    Covers both `over(order_by=...)` and `sort_by(...)` to ensure they return the same result,
-    but match the broadcasting semantics of polars.
-    """
-    # Encoding argument combinations into column names and the shared test id
-    ordering = f"{order_by}-{'desc' if descending else 'asc'}-{'nulls_last' if nulls_last else 'nulls_first'}"
-    suffix_over = f"_{aggregation}-over-{ordering}"
-    suffix_sort_by = f"_sort_by-{ordering}-{aggregation}"
+    - Covers both `over(order_by=...)` and `sort_by(...)` to ensure they return the same values.
+    - In a `select` context, they should differ in whether they broadcast (`over`) or not (`sort_by`)
 
-    # Generating what our expected dataset should be
-    names_values = list(
-        zip(
-            (columns,) if isinstance(columns, str) else tuple(columns),
-            (expected,)
-            if isinstance(expected, (str, bytes)) or not isinstance(expected, Iterable)
-            else tuple(expected),
-            strict=True,
-        )
-    )
+    ## Related
+    - https://github.com/pola-rs/polars/issues/24756
+    - https://github.com/pola-rs/polars/pull/24874
+    - https://github.com/pola-rs/polars/pull/26718
+    """
+    columns = (columns,) if not isinstance(columns, tuple) else columns
+    order_by = (order_by,) if not isinstance(order_by, tuple) else order_by
+    expected = (expected,) if not isinstance(expected, tuple) else expected
+
+    # Encoding argument combinations into column names and the shared test id
+    # NOTE: This deviates from the repr for 3 reasons:
+    # 1. The position of `ordering` differs between `over` & `sort_by`
+    # 2. They use `SortOptions` and `SortMultipleOptions`, respectively
+    # 3. The cases use both `Col` and `ByName`
+    ordering_id = ", ".join(map(repr, order_by))
+    if descending:
+        ordering_id += ", desc"
+    if nulls_last:
+        ordering_id += ", nulls_last"
+    base_id = f"{aggregation}({', '.join(map(repr, columns))})-by({ordering_id})"
+    sort_by_id = f"sort_by-{base_id}"
+    over_id = f"over-{base_id}"
+
+    expect = {k: (v,) for k, v in zip(columns, expected, strict=True)}
 
     # Finally, all the expressions
-    cols = nwp.col(columns)
     agg = _AGG_EXPR_METHOD[aggregation]
-    over = (
-        cols.pipe(agg)
-        .over(order_by=order_by, descending=descending, nulls_last=nulls_last)
-        .name.suffix(suffix_over)
+    kwds = {"descending": descending, "nulls_last": nulls_last}
+    expr = nwp.col(columns)
+    yield from (
+        pytest.param(expr.sort_by(order_by, **kwds).pipe(agg), expect, id=sort_by_id),
+        pytest.param(
+            expr.pipe(agg).over(order_by=order_by, **kwds),
+            {k: v * DATA_ORDER_LEN for k, v in expect.items()},
+            id=over_id,
+        ),
     )
-    result_data = {
-        f"{name}{suffix_over}": [expect] * DATA_ORDER_LEN for name, expect in names_values
-    }
-    yield pytest.param(over, result_data, id=f"{columns}{suffix_over}")
-
-    sort_by = (
-        cols.sort_by(order_by, descending=descending, nulls_last=nulls_last)
-        .pipe(agg)
-        .name.suffix(suffix_sort_by)
-    )
-    result_data = {f"{name}{suffix_sort_by}": [expect] for name, expect in names_values}
-    yield pytest.param(sort_by, result_data, id=f"{columns}{suffix_sort_by}")
 
 
 # TODO @dangotbanned: Find out why `over` is being tripped up by some nulls (but not all)
@@ -560,46 +560,43 @@ def order_case(
         order_case(
             "v1", "first", order_by="o4", descending=True, nulls_last=True, expected=1
         ),
-        order_case("v2", "last", order_by=["o3", "o5"], expected="magic"),
-        # `polars-v2_last-over-['o3', 'o5']-desc-nulls_first`
+        order_case("v2", "last", order_by=("o3", "o5"), expected="magic"),
         order_case(
-            "v2", "last", order_by=["o3", "o5"], descending=True, expected="unicorn"
+            "v2", "last", order_by=("o3", "o5"), descending=True, expected="unicorn"
         ),
-        # `polars-v2_last-over-['o3', 'o5']-asc-nulls_last`
         order_case(
-            "v2", "last", order_by=["o3", "o5"], nulls_last=True, expected="under"
+            "v2", "last", order_by=("o3", "o5"), nulls_last=True, expected="under"
         ),
         order_case(
             "v2",
             "last",
-            order_by=["o3", "o5"],
+            order_by=("o3", "o5"),
             descending=True,
             nulls_last=True,
             expected="under",
         ),
-        order_case(["v3", "v2"], "last", order_by=["o2", "o5"], expected=[5.9, "under"]),
-        # `polars-['v3', 'v2']_first-over-['o2', 'o5']-desc-nulls_first` (both v3 and v2 are wrong)
+        order_case(("v3", "v2"), "last", order_by=("o2", "o5"), expected=(5.9, "under")),
         order_case(
-            ["v3", "v2"],
+            ("v3", "v2"),
             "first",
-            order_by=["o2", "o5"],
+            order_by=("o2", "o5"),
             descending=True,
-            expected=[1.2, "water"],
+            expected=(1.2, "water"),
         ),
         order_case(
-            ["v3", "v2"],
+            ("v3", "v2"),
             "first",
-            order_by=["o2", "o5"],
+            order_by=("o2", "o5"),
             nulls_last=True,
-            expected=[999.1, "magic"],
+            expected=(999.1, "magic"),
         ),
         order_case(
-            ["v3", "v2"],
+            ("v3", "v2"),
             "last",
-            order_by=["o5", "o2"],
+            order_by=("o5", "o2"),
             nulls_last=True,
             descending=True,
-            expected=[22.9, "unicorn"],
+            expected=(22.9, "unicorn"),
         ),
     ),
 )
@@ -611,19 +608,23 @@ def test_over_order_by_vs_sort_by(
     request: TopRequest,
 ) -> None:
     bad_ids = (
-        "polars-['v3', 'v2']_first-over-['o2', 'o5']-desc-nulls_first",
-        "polars-v2_last-over-['o3', 'o5']-desc-nulls_first",
-        "polars-v2_last-over-['o3', 'o5']-asc-nulls_last",
+        "polars-over-first('v3', 'v2')-by('o2', 'o5', desc)",
+        "polars-over-last('v2')-by('o3', 'o5', nulls_last)",
+        "polars-over-last('v2')-by('o3', 'o5', desc)",
     )
     if dataframe.is_polars():
         xfail_polars_over_order_by(dataframe, request)
-        is_desc = "desc" in request.node.callspec.id
-        is_nulls_last = "nulls_last" in request.node.callspec.id
+        name = request.node.callspec.id
+        is_desc = "desc" in name
+        is_nulls_last = "nulls_last" in name
         if POLARS_SUPPORTS_OVER_FULL or not (is_desc or is_nulls_last):
             dataframe.xfail(
                 request,
-                request.node.callspec.id in bad_ids,
-                reason="polars bug in `over`? Result values differ from `sort_by`, seems null related",
+                name in bad_ids,
+                reason=(
+                    "polars bug in `over`? Result values differ from `sort_by`, seems null related.\n"
+                    "Wasn't addressed after https://github.com/pola-rs/polars/issues/24989#issuecomment-3539077572"
+                ),
                 raises=AssertionError,
             )
         else:  # pragma: no cover
