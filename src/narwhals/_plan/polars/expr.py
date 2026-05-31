@@ -151,6 +151,8 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         return self.horizontal(node, frame, name, fill=False)
 
+    as_struct = todo()
+
     coalesce = horizontal
     max_horizontal = horizontal
     min_horizontal = horizontal

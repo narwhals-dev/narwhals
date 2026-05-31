@@ -24,7 +24,7 @@ from narwhals._plan.arrow.typing import (
     Native,
     ScalarAny as NativeScalar,
 )
-from narwhals._plan.common import temp
+from narwhals._plan.common import temp, todo
 from narwhals._plan.compliant import typing as ct
 from narwhals._plan.compliant.accessors import (
     ExprCatNamespace,
@@ -416,6 +416,8 @@ class _ArrowDispatch(
         f = node.function
         result = fn.all_horizontal(inputs, ignore_nulls=f.ignore_nulls)
         return self._with_native(result, name)
+
+    as_struct = todo()
 
     def sum_horizontal(
         self, node: HExpr[F.SumHorizontal], frame: Frame, name: str
