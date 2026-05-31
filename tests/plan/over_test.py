@@ -551,7 +551,6 @@ def order_case(
     )
 
 
-# TODO @dangotbanned: Find out why `over` is being tripped up by some nulls (but not all)
 @pytest.mark.parametrize(
     ("expr", "expected"),
     chain(
@@ -608,7 +607,7 @@ def test_over_order_by_vs_sort_by(
     dataframe: DataFrame,
     request: TopRequest,
 ) -> None:
-    bad_ids = (
+    pl_27819 = (
         "polars-over-first('v3', 'v2')-by('o2', 'o5', desc)",
         "polars-over-last('v2')-by('o3', 'o5', nulls_last)",
         "polars-over-last('v2')-by('o3', 'o5', desc)",
@@ -624,12 +623,9 @@ def test_over_order_by_vs_sort_by(
         if POLARS_SUPPORTS_OVER_FULL or not (is_desc or is_nulls_last):
             dataframe.xfail(
                 request,
-                name in bad_ids,
-                reason=(
-                    "polars bug in `over`? Result values differ from `sort_by`, seems null related.\n"
-                    "Wasn't addressed after https://github.com/pola-rs/polars/issues/24989#issuecomment-3539077572"
-                ),
-                raises=AssertionError,
+                name in pl_27819,
+                reason=("https://github.com/pola-rs/polars/issues/27819"),
+                raises=None,
             )
         else:  # pragma: no cover
             xfail_polars_over_nulls_last(dataframe, request, is_nulls_last and is_over)
