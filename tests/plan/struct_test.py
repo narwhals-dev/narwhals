@@ -6,7 +6,8 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
-from tests.plan.utils import DataFrame, assert_equal_data
+from narwhals.exceptions import DuplicateError
+from tests.plan.utils import DataFrame, Lazy, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.conftest import Data
@@ -172,3 +173,10 @@ def test_struct_named_with_series(data: Data, dataframe: DataFrame) -> None:
     }
 
     assert_equal_data(result, expected)
+
+
+@XFAIL_TODO
+def test_error_on_duplicate_field_name_22959(lazy: Lazy) -> None:
+    # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L270-L277
+    with pytest.raises(DuplicateError, match="'literal'"):
+        nwp.select(nwp.struct(nwp.lit(1), nwp.lit(2)), lazy=lazy).collect_schema()
