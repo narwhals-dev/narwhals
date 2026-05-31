@@ -15,7 +15,7 @@ from narwhals._plan.functions.categorical import ExprCatNamespace
 from narwhals._plan.functions.lists import ExprListNamespace
 from narwhals._plan.functions.name import ExprNameNamespace
 from narwhals._plan.functions.strings import ExprStringNamespace
-from narwhals._plan.functions.struct import ExprStructNamespace
+from narwhals._plan.functions.struct_ import ExprStructNamespace
 from narwhals._plan.functions.temporal import ExprDateTimeNamespace
 from narwhals._plan.meta import MetaNamespace
 from narwhals._plan.options import (

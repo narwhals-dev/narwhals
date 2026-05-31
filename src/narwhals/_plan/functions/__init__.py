@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._plan.expr import Expr
-    from narwhals._plan.typing import DataFrameT, LazyFrameT, OneOrIterable
+    from narwhals._plan.typing import DataFrameT, IntoExpr, LazyFrameT, OneOrIterable
 
 
 __all__ = (
@@ -53,6 +53,7 @@ __all__ = (
     "min_horizontal",
     "nth",
     "select",
+    "struct",
     "sum",
     "sum_horizontal",
 )
@@ -116,3 +117,9 @@ def _concat_lazy(
 
 def _concat_eager(dfs: Sequence[DataFrameT], how: ConcatMethod, /) -> DataFrameT:
     return type(dfs[0])(dfs[0]._compliant.concat((df._compliant for df in dfs), how))
+
+
+def struct(*exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Expr:
+    """Collect columns into a struct column."""
+    msg = "TODO `struct(...)`"
+    raise NotImplementedError(msg)
