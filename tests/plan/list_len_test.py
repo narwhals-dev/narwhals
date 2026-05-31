@@ -31,16 +31,14 @@ a = nwp.nth(0)
             [a.first().list.len().alias("first"), a.last().list.len().alias("last")],
             {"first": [2], "last": [1]},
         ),
-        (  # NOTE: `polars` produces nulls following the `over(order_by=...)`
-            # That's either a bug, or something that won't be ported to `narwhals`
+        (
             [
                 a.first().over(order_by="i").list.len().alias("first_order_i"),
                 a.last().over(order_by="i").list.len().alias("last_order_i"),
             ],
-            {"first_order_i": [1], "last_order_i": [2]},
+            {"first_order_i": [1] * 5, "last_order_i": [2] * 5},
         ),
         (
-            # NOTE: This does work already in `polars`
             [
                 a.sort_by("i").first().list.len().alias("sort_by_i_first"),
                 a.sort_by("i").last().list.len().alias("sort_by_i_last"),

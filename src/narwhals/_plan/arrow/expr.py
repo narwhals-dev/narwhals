@@ -739,17 +739,16 @@ class ArrowExpr(
         results = frame.group_by_resolver(resolved).agg_over(resolved.aggs, sort_indices)
         return self.from_series(results.get_column(name))
 
-    def over_ordered(
-        self, node: ir.OverOrdered, frame: Frame, name: str, /
-    ) -> Self | Scalar:
+    def over_ordered(self, node: ir.OverOrdered, frame: Frame, name: str, /) -> Self:
         by = node.order_by_names()
         indices = fn.sort_indices(frame.native, *by, options=node.sort_options)
         if node.partition_by:
             return self.over(node, frame, name, sort_indices=indices)
         evaluated = self.dispatch(node.expr, frame.gather(indices), name)
-        if isinstance(evaluated, ArrowScalar):
-            return evaluated
-        return self.from_series(evaluated.broadcast(len(frame)).gather(indices))
+        series = evaluated.broadcast(len(frame))
+        if not isinstance(evaluated, ArrowScalar):
+            series = series.gather(indices)
+        return self.from_series(series)
 
     def _boolean_length_preserving(
         self,
