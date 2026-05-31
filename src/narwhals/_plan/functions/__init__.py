@@ -14,6 +14,7 @@ from narwhals._plan.functions.horizontal import (
     max_horizontal,
     mean_horizontal,
     min_horizontal,
+    struct,
     sum_horizontal,
 )
 from narwhals._plan.functions.lazy import select
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
 
     from narwhals._plan.expr import Expr
-    from narwhals._plan.typing import DataFrameT, IntoExpr, LazyFrameT, OneOrIterable
+    from narwhals._plan.typing import DataFrameT, LazyFrameT, OneOrIterable
 
 
 __all__ = (
@@ -117,9 +118,3 @@ def _concat_lazy(
 
 def _concat_eager(dfs: Sequence[DataFrameT], how: ConcatMethod, /) -> DataFrameT:
     return type(dfs[0])(dfs[0]._compliant.concat((df._compliant for df in dfs), how))
-
-
-def struct(*exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Expr:
-    """Collect columns into a struct column."""
-    msg = "TODO `struct(...)`"
-    raise NotImplementedError(msg)
