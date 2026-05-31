@@ -17,6 +17,7 @@ from tests.plan.utils import (
     xfail_polars_over_descending,
     xfail_polars_over_nulls_last,
     xfail_polars_over_order_by,
+    xfail_polars_sort_by_nulls_last,
 )
 from tests.utils import POLARS_VERSION
 
@@ -613,10 +614,13 @@ def test_over_order_by_vs_sort_by(
         "polars-over-last('v2')-by('o3', 'o5', desc)",
     )
     if dataframe.is_polars():
-        xfail_polars_over_order_by(dataframe, request)
         name = request.node.callspec.id
+        is_over = "over" in name
+        is_sort_by = not is_over
         is_desc = "desc" in name
         is_nulls_last = "nulls_last" in name
+        xfail_polars_over_order_by(dataframe, request, is_over)
+
         if POLARS_SUPPORTS_OVER_FULL or not (is_desc or is_nulls_last):
             dataframe.xfail(
                 request,
@@ -628,8 +632,24 @@ def test_over_order_by_vs_sort_by(
                 raises=AssertionError,
             )
         else:  # pragma: no cover
-            xfail_polars_over_nulls_last(dataframe, request, is_nulls_last)
-            xfail_polars_over_descending(dataframe, request, is_desc)
+            xfail_polars_over_nulls_last(dataframe, request, is_nulls_last and is_over)
+            xfail_polars_over_descending(dataframe, request, is_desc and is_over)
+            xfail_polars_sort_by_nulls_last(
+                dataframe, request, is_nulls_last and is_sort_by
+            )
+            sort_multiple_desc = (
+                "polars-sort_by-first('v3', 'v2')-by('o2', 'o5', desc)",
+                "polars-sort_by-last('v2')-by('o3', 'o5', desc)",
+            )
+            dataframe.xfail(
+                request,
+                POLARS_VERSION < (0, 20, 17) and name in sort_multiple_desc,
+                reason=(
+                    "`sort(..., ..., descending=True)` breaks nulls\n"
+                    "https://github.com/pola-rs/polars/issues/15205"
+                ),
+                raises=AssertionError,
+            )
 
     result = dataframe(data_order).select(expr)
     assert_equal_data(result, expected)
@@ -649,6 +669,7 @@ def test_first_partition_by_order_by_nulls_24989(
     # Adapted from https://github.com/pola-rs/polars/issues/24989
     xfail_polars_over_order_by(dataframe, request)
     xfail_polars_over_descending(dataframe, request)
+    xfail_polars_over_nulls_last(dataframe, request)
     data = {"a": [1, 1, 2, 2], "b": [4, 5, 6, 7], "i": [1, None, 2, 3]}
     b_first = nwp.col("b").first()
     df = dataframe(data)

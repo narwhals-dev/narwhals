@@ -13,6 +13,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Final,
     Generic,
     Literal,
     Protocol,
@@ -725,37 +726,44 @@ def _xfail_polars(
     fixture.xfail(request, cond, reason=reason, raises=NotImplementedError)
 
 
+_PL_VERSION_REASON: Final[
+    Mapping[LiteralString, tuple[tuple[int, ...], LiteralString]]
+] = {
+    "sort_by_nulls_last": (
+        (0, 20, 20),
+        "`sort_by(nulls_last=True)` requires `polars>=0.20.20`",
+    ),
+    "over_order_by": ((1, 10), "`over(..., order_by=...)` requires `polars>=1.10.0`"),
+    "over_descending": (
+        (1, 22),
+        "`over(..., order_by=..., descending=True)` requires `polars>=1.22.0`",
+    ),
+    "over_nulls_last": (
+        (1, 39),
+        "`over(order_by=..., nulls_last=True)` requires `polars>=1.39.0`",
+    ),
+}
+
+
+def xfail_polars_sort_by_nulls_last(
+    fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
+) -> None:
+    _xfail_polars(*_PL_VERSION_REASON["sort_by_nulls_last"], fixture, request, condition)
+
+
 def xfail_polars_over_order_by(
     fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
 ) -> None:
-    _xfail_polars(
-        (1, 10),
-        "`over(..., order_by=...)` requires `polars>=1.10.0`",
-        fixture,
-        request,
-        condition,
-    )
+    _xfail_polars(*_PL_VERSION_REASON["over_order_by"], fixture, request, condition)
 
 
 def xfail_polars_over_descending(
     fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
 ) -> None:
-    _xfail_polars(
-        (1, 22),
-        "`over(..., order_by=..., descending=True)` requires `polars>=1.22.0`",
-        fixture,
-        request,
-        condition,
-    )
+    _xfail_polars(*_PL_VERSION_REASON["over_descending"], fixture, request, condition)
 
 
 def xfail_polars_over_nulls_last(
     fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
 ) -> None:
-    _xfail_polars(
-        (1, 39),
-        "`over(order_by=..., nulls_last=True)` requires `polars>=1.39.0`",
-        fixture,
-        request,
-        condition,
-    )
+    _xfail_polars(*_PL_VERSION_REASON["over_nulls_last"], fixture, request, condition)
