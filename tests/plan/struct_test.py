@@ -10,6 +10,8 @@ from narwhals.exceptions import DuplicateError
 from tests.plan.utils import DataFrame, Lazy, assert_equal_data
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest
+
     from tests.conftest import Data
 
 
@@ -18,12 +20,16 @@ def data() -> Data:
     return {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
 
-XFAIL_TODO = pytest.mark.xfail(
-    reason="TODO: Impl `struct(...)`", raises=NotImplementedError
+XFAIL_EXPANSION = pytest.mark.xfail(
+    reason="TODO: Handle aliasing during expr expansion",
+    raises=(NotImplementedError, AssertionError),
 )
 
 
-@XFAIL_TODO
+def xfail_pyarrow(dataframe: DataFrame, request: FixtureRequest) -> None:
+    dataframe.xfail_not_implemented(request, dataframe.is_pyarrow(), "struct")
+
+
 @pytest.mark.parametrize(
     "exprs",
     [
@@ -34,9 +40,12 @@ XFAIL_TODO = pytest.mark.xfail(
     ],
 )
 def test_struct_positional_exprs(
-    data: Data, dataframe: DataFrame, exprs: tuple[nwp.Expr | list[nwp.Expr], ...]
+    data: Data,
+    dataframe: DataFrame,
+    exprs: tuple[nwp.Expr | list[nwp.Expr], ...],
+    request: FixtureRequest,
 ) -> None:
-
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     result = df.select(nwp.struct(*exprs))
 
@@ -51,9 +60,11 @@ def test_struct_positional_exprs(
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_named_exprs(data: Data, dataframe: DataFrame) -> None:
-
+@XFAIL_EXPANSION
+def test_struct_named_exprs(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     result = df.select(nwp.struct(x="a", y="b").alias("struct"))
 
@@ -64,9 +75,11 @@ def test_struct_named_exprs(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_positional_and_named(data: Data, dataframe: DataFrame) -> None:
-
+@XFAIL_EXPANSION
+def test_struct_positional_and_named(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     result = df.select(nwp.struct("a", z="c").alias("struct"))
 
@@ -77,9 +90,12 @@ def test_struct_positional_and_named(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_with_expressions(data: Data, dataframe: DataFrame) -> None:
-
+@XFAIL_EXPANSION
+def test_struct_with_expressions(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
+    dataframe.xfail_not_implemented(request, dataframe.is_polars(), "str.len_chars")
     df = dataframe(data)
     result = df.select(
         nwp.struct(nwp.col("a") * 2, nwp.col("c").str.len_chars()).alias("struct")
@@ -90,9 +106,11 @@ def test_struct_with_expressions(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_with_literals(data: Data, dataframe: DataFrame) -> None:
-
+@XFAIL_EXPANSION
+def test_struct_with_literals(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     result = df.select(nwp.struct("a", x="c", y=nwp.lit(False)).alias("struct"))
 
@@ -107,9 +125,8 @@ def test_struct_with_literals(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_with_schema(dataframe: DataFrame) -> None:
-
+def test_struct_with_schema(dataframe: DataFrame, request: FixtureRequest) -> None:
+    xfail_pyarrow(dataframe, request)
     data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
     schema = {"a": nw.Float64(), "b": nw.Float32()}
     df = dataframe(data_numeric)
@@ -122,9 +139,10 @@ def test_struct_with_schema(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_with_series(data: Data, dataframe: DataFrame) -> None:
-
+def test_struct_with_series(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     s_a, s_b = df.get_column("a"), df.get_column("b")
     result = df.select(nwp.struct(s_a, s_b).alias("struct"))
@@ -136,9 +154,10 @@ def test_struct_with_series(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_mixed_series_and_exprs(data: Data, dataframe: DataFrame) -> None:
-
+def test_struct_mixed_series_and_exprs(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     s_a = df.get_column("a")
     result = df.select(nwp.struct(s_a, nwp.col("c")).alias("struct"))
@@ -150,9 +169,11 @@ def test_struct_mixed_series_and_exprs(data: Data, dataframe: DataFrame) -> None
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
-def test_struct_named_with_series(data: Data, dataframe: DataFrame) -> None:
-
+@XFAIL_EXPANSION
+def test_struct_named_with_series(
+    data: Data, dataframe: DataFrame, request: FixtureRequest
+) -> None:
+    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     s_a = df.get_column("a")
     result = df.select(nwp.struct(x=s_a, y="b").alias("struct"))
@@ -164,7 +185,9 @@ def test_struct_named_with_series(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-@XFAIL_TODO
+@pytest.mark.xfail(
+    reason="TODO: Impl `AsStruct.resolve_dtype`", raises=NotImplementedError
+)
 def test_error_on_duplicate_field_name_22959(lazy: Lazy) -> None:
     # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L270-L277
     with pytest.raises(DuplicateError, match="'literal'"):

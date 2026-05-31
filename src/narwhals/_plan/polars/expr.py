@@ -151,7 +151,9 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         return self.horizontal(node, frame, name, fill=False)
 
-    as_struct = todo()
+    def as_struct(self, node: HExpr[F.AsStruct], frame: Any, name: str, /) -> Self:
+        inputs = self.dispatch_args_native(node, frame, "")
+        return self.from_native(pl.struct(*inputs), name)
 
     coalesce = horizontal
     max_horizontal = horizontal
@@ -573,7 +575,7 @@ class PolarsStructNamespace(ExprStructNamespace[PolarsFrame, ExprT_co]):
         self, node: FExpr[FieldByName], frame: PolarsFrame, name: str, /
     ) -> ExprT_co:
         compliant = self.compliant
-        previous = node.dispatch_arg(compliant, frame, name).native
+        previous = node.dispatch_arg(compliant, frame, "").native
         return compliant.from_native(previous.struct.field(node.function.name), name)
 
 
