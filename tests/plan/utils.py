@@ -747,7 +747,7 @@ _PL_VERSION_REASON: Final[
 
 def xfail_polars_sort_by_nulls_last(
     fixture: DataFrame, request: FixtureRequest, condition: bool | None = None
-) -> None:
+) -> None:  # pragma: no cover
     _xfail_polars(*_PL_VERSION_REASON["sort_by_nulls_last"], fixture, request, condition)
 
 
