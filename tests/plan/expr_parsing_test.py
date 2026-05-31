@@ -204,6 +204,7 @@ def test_function_arity_invalid() -> None:
             id="all_horizontal_ignore_nulls",
         ),
         pytest.param(partial(nwp.coalesce, ()), id="coalesce"),
+        nwp.struct,
     ],
 )
 def test_horizontal_empty(func: Callable[[], nwp.Expr]) -> None:

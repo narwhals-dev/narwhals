@@ -100,5 +100,5 @@ def sum_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
 
 def struct(*exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Expr:
     """Collect columns into a struct column."""
-    msg = "TODO `struct(...)`"
-    raise NotImplementedError(msg)
+    it = _parse.into_iter_expr_ir(*exprs, **named_exprs)
+    return F.AsStruct().to_function_expr(*it).to_narwhals()

@@ -111,6 +111,16 @@ class MeanHorizontal(HorizontalFunction):
         return dtm.F64
 
 
+class AsStruct(HorizontalFunction):
+    def __repr__(self) -> str:
+        return "struct"
+
+    # TODO @dangotbanned: Do not merge without this done!
+    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema) -> DType:
+        msg = f"TODO @dangotbanned: {self.resolve_dtype.__qualname__}()"
+        raise NotImplementedError(msg)
+
+
 class Hist(
     UnaryFunction,
     # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L243

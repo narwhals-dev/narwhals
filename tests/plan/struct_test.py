@@ -107,17 +107,6 @@ def test_struct_with_literals(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-# TODO @dangotbanned: move to expr_parsing (doesn't require a backend)
-@XFAIL_TODO
-def test_struct_raise_no_exprs(data: Data, dataframe: DataFrame) -> None:
-    df = dataframe(data)
-    with pytest.raises(ValueError, match="expected at least 1 expression in 'struct'"):
-        df.select(nwp.struct().alias("struct"))
-
-    with pytest.raises(ValueError, match="expected at least 1 expression in 'struct'"):
-        df.select(nwp.struct().alias("struct"))
-
-
 @XFAIL_TODO
 def test_struct_with_schema(dataframe: DataFrame) -> None:
 
