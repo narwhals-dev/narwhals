@@ -70,7 +70,7 @@ def data_alt() -> Data:
         ncs.all() - ncs.numeric(),
     ],
 )
-def test_over_single(
+def test_single(
     data: Data, partition_by: OneOrIterable[IntoExprColumn], dataframe: DataFrame
 ) -> None:
     expected = {
@@ -111,7 +111,7 @@ def test_over_single(
         "binary_selector",
     ],
 )
-def test_over_multiple(
+def test_multiple(
     data: Data, partition_by: OneOrIterable[IntoExprColumn], dataframe: DataFrame
 ) -> None:
     expected = {
@@ -129,7 +129,7 @@ def test_over_multiple(
     assert_equal_data(result, expected)
 
 
-def test_over_cum_sum_partition_by(
+def test_cum_sum(
     data_with_null: Data, dataframe: DataFrame, request: pytest.FixtureRequest
 ) -> None:
     dataframe.xfail(
@@ -155,7 +155,7 @@ def test_over_cum_sum_partition_by(
     assert_equal_data(result, expected)  # pragma: no cover
 
 
-def test_over_std_var(data: Data, dataframe: DataFrame) -> None:
+def test_std_var(data: Data, dataframe: DataFrame) -> None:
     expected = {
         "a": ["a", "a", "b", "b", "b"],
         "b": [1, 2, 3, 5, 3],
@@ -187,14 +187,14 @@ def test_over_std_var(data: Data, dataframe: DataFrame) -> None:
 
 
 # NOTE: Supporting this for pyarrow is new 🥳
-def test_over_anonymous_reduction(dataframe: DataFrame) -> None:
+def test_anonymous_reduction(dataframe: DataFrame) -> None:
     df = dataframe({"a": [1, 1, 2], "b": [4, 5, 6]})
     result = df.with_columns(nwp.all().sum().over("a").name.suffix("_sum")).sort("a", "b")
     expected = {"a": [1, 1, 2], "b": [4, 5, 6], "a_sum": [2, 2, 2], "b_sum": [9, 9, 6]}
     assert_equal_data(result, expected)
 
 
-def test_over_raise_len_change(data: Data, dataframe: DataFrame) -> None:
+def test_raise_len_change(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     with pytest.raises(InvalidOperationError):
         df.select(nwp.col("b").drop_nulls().over("a"))
@@ -204,7 +204,7 @@ def test_over_raise_len_change(data: Data, dataframe: DataFrame) -> None:
 # (expr-ir): InvalidOperationError: `cum_sum()` is not supported in a `group_by` context
 # (main): NotImplementedError: Only aggregation or literal operations are supported in grouped `over` context for PyArrow.
 # https://github.com/narwhals-dev/narwhals/blob/ecde261d799a711c2e0a7acf11b108bc45035dc9/narwhals/_arrow/expr.py#L116-L118
-def test_unsupported_over(data: Data, dataframe: DataFrame) -> None:
+def test_unsupported(data: Data, dataframe: DataFrame) -> None:
     if dataframe.is_polars():
         pytest.skip("polars supports this")
     df = dataframe(data)
@@ -212,7 +212,8 @@ def test_unsupported_over(data: Data, dataframe: DataFrame) -> None:
         df.select(nwp.col("a").shift(1).cum_sum().over("b"))
 
 
-def test_over_without_partition_by(dataframe: DataFrame, request: FixtureRequest) -> None:
+def test_order_by(dataframe: DataFrame, request: FixtureRequest) -> None:
+    # `over_test.py::test_over_without_partition_by`
     xfail_polars_over_order_by(dataframe, request)
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
@@ -224,9 +225,8 @@ def test_over_without_partition_by(dataframe: DataFrame, request: FixtureRequest
     assert_equal_data(result, expected)
 
 
-def test_aggregation_over_without_partition_by(
-    dataframe: DataFrame, request: FixtureRequest
-) -> None:
+def test_aggregation_order_by(dataframe: DataFrame, request: FixtureRequest) -> None:
+    # `over_test.py::test_aggregation_over_without_partition_by`
     xfail_polars_over_order_by(dataframe, request)
     df = dataframe({"a": [1, -1, 2], "i": [0, 2, 1]})
     result = (
@@ -238,7 +238,7 @@ def test_aggregation_over_without_partition_by(
     assert_equal_data(result, expected)
 
 
-def test_len_over_2369(dataframe: DataFrame) -> None:
+def test_len_2369(dataframe: DataFrame) -> None:
     df = dataframe({"a": [1, 2, 4], "b": ["x", "x", "y"]})
     result = df.with_columns(a_len_per_group=nwp.len().over("b")).sort("a")
     expected = {"a": [1, 2, 4], "b": ["x", "x", "y"], "a_len_per_group": [2, 2, 1]}
@@ -261,7 +261,7 @@ def test_shift_kitchen_sink(
     assert_equal_data(result, expected)
 
 
-def test_over_order_by_expr(
+def test_order_by_expr(
     data_alt: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
     xfail_polars_over_order_by(dataframe, request)
@@ -275,7 +275,7 @@ def test_over_order_by_expr(
     assert_equal_data(result, expected)
 
 
-def test_over_order_by_expr_invalid(data_alt: Data, dataframe: DataFrame) -> None:
+def test_order_by_expr_invalid(data_alt: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_alt)
     with pytest.raises(
         InvalidOperationError,
@@ -284,7 +284,7 @@ def test_over_order_by_expr_invalid(data_alt: Data, dataframe: DataFrame) -> Non
         df.select(nwp.col("a").first().over(order_by=nwp.col("b").sort()))
 
 
-def test_null_count_over(dataframe: DataFrame) -> None:
+def test_null_count(dataframe: DataFrame) -> None:
     data = {
         "a": ["a", "b", None, None, "b", "c"],
         "b": [1, 2, 1, 5, 3, 3],
@@ -362,7 +362,7 @@ not_string = ~string
         ),
     ],
 )
-def test_kurtosis_over_skew(
+def test_kurtosis_skew(
     data_kurtosis_skew: Data,
     request: pytest.FixtureRequest,
     exprs: Iterable[nwp.Expr],
@@ -416,7 +416,7 @@ p3 = nwp.col("p3")
         ),
     ],
 )
-def test_over_partition_by_nulls_order_by(
+def test_partition_by_nulls_order_by(
     expr: nwp.Expr, result_values: list[Any], dataframe: DataFrame, request: TopRequest
 ) -> None:
     xfail_polars_over_order_by(dataframe, request)
@@ -454,7 +454,7 @@ def test_over_partition_by_nulls_order_by(
         ),
     ],
 )
-def test_over_partition_by_order_by(
+def test_partition_by_order_by(
     data_groups: Data,
     expr: nwp.Expr,
     result_values: list[Any],
@@ -603,7 +603,7 @@ def order_case(
         ),
     ),
 )
-def test_over_order_by_sort_by_asc_desc_nulls_first_last(
+def test_over_order_by_vs_sort_by(
     expr: nwp.Expr,
     expected: Data,
     data_order: Mapping[str, list[NonNestedLiteral]],
@@ -634,7 +634,7 @@ def test_over_order_by_sort_by_asc_desc_nulls_first_last(
     assert_equal_data(result, expected)
 
 
-def test_over_order_broadcast(dataframe: DataFrame, request: FixtureRequest) -> None:
+def test_order_by_broadcast(dataframe: DataFrame, request: FixtureRequest) -> None:
     xfail_polars_over_order_by(dataframe, request)
     data = {"a": [1, 2, 3], "b": ["x", "y", "z"], "c": [0, 1, 2]}
     df = dataframe(data)
@@ -642,7 +642,7 @@ def test_over_order_broadcast(dataframe: DataFrame, request: FixtureRequest) -> 
     assert df.select(nwp.col("a").first().over(order_by="b")).shape == (3, 1)
 
 
-def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
+def test_first_partition_by_order_by_nulls_24989(
     dataframe: DataFrame, request: FixtureRequest
 ) -> None:
     # Adapted from https://github.com/pola-rs/polars/issues/24989
@@ -699,7 +699,7 @@ def test_over_partition_by_order_by_asc_desc_nulls_first_24989(
         ),
     ],
 )
-def test_over_partition_by_projection(
+def test_partition_by_projection(
     expr: nwp.Expr, expected: Data, dataframe: DataFrame, request: TopRequest
 ) -> None:
     xfail_polars_over_order_by(
