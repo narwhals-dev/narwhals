@@ -40,7 +40,7 @@ class DictLazyFrame:  # pragma: no cover
 
 
 def test_is_into_lazyframe(constructor: Constructor) -> None:
-    native_frame = constructor(data)
+    native_frame = constructor(data).to_native()
     nw_frame = nw.from_native(native_frame)
     nw_v1_frame = nw_v1.from_native(native_frame)
     nw_v2_frame = nw_v2.from_native(native_frame)
