@@ -23,10 +23,6 @@ def data() -> Data:
     return {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
 
-def xfail_pyarrow(dataframe: DataFrame, request: FixtureRequest) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_pyarrow(), "struct")
-
-
 @pytest.mark.parametrize(
     "exprs",
     [
@@ -37,15 +33,10 @@ def xfail_pyarrow(dataframe: DataFrame, request: FixtureRequest) -> None:
     ],
 )
 def test_struct_positional_exprs(
-    data: Data,
-    dataframe: DataFrame,
-    exprs: tuple[nwp.Expr | list[nwp.Expr], ...],
-    request: FixtureRequest,
+    data: Data, dataframe: DataFrame, exprs: tuple[nwp.Expr | list[nwp.Expr], ...]
 ) -> None:
-    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
     result = df.select(nwp.struct(*exprs))
-
     expected = {
         "a": [
             {"a": 1, "b": "dogs", "c": "play"},
@@ -59,11 +50,9 @@ def test_struct_positional_exprs(
 
 @pytest.mark.parametrize("alias_struct", ["struct", None])
 def test_struct_named_exprs(
-    data: Data, dataframe: DataFrame, request: FixtureRequest, alias_struct: str | None
+    data: Data, dataframe: DataFrame, alias_struct: str | None
 ) -> None:
-    xfail_pyarrow(dataframe, request)
     df = dataframe(data)
-
     expr = nwp.struct(x="a", y="b")
     rows = [{"x": 1, "y": "dogs"}, {"x": 2, "y": "cats"}, {"x": 3, "y": None}]
     if alias_struct is None:
@@ -76,10 +65,7 @@ def test_struct_named_exprs(
     assert_equal_data(df.select(expr), expected)
 
 
-def test_struct_positional_and_named(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
-) -> None:
-    xfail_pyarrow(dataframe, request)
+def test_struct_positional_and_named(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     result = df.select(nwp.struct("a", z="c").alias("struct"))
 
@@ -93,7 +79,6 @@ def test_struct_positional_and_named(
 def test_struct_with_expressions(
     data: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
-    xfail_pyarrow(dataframe, request)
     dataframe.xfail_not_implemented(request, dataframe.is_polars(), "str.len_chars")
     df = dataframe(data)
     result = df.select(
@@ -101,14 +86,11 @@ def test_struct_with_expressions(
     )
 
     expected = {"struct": [{"a": 2, "c": 4}, {"a": 4, "c": 4}, {"a": 6, "c": 4}]}
-
     assert_equal_data(result, expected)
 
 
-def test_struct_with_literals(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
-) -> None:
-    xfail_pyarrow(dataframe, request)
+def test_struct_with_literals(data: Data, dataframe: DataFrame) -> None:
+
     df = dataframe(data)
     result = df.select(nwp.struct("a", x="c", y=nwp.lit(False)).alias("struct"))
 
@@ -123,8 +105,7 @@ def test_struct_with_literals(
     assert_equal_data(result, expected)
 
 
-def test_struct_with_schema(dataframe: DataFrame, request: FixtureRequest) -> None:
-    xfail_pyarrow(dataframe, request)
+def test_struct_with_schema(dataframe: DataFrame) -> None:
     data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
     schema = {"a": nw.Float64(), "b": nw.Float32()}
     df = dataframe(data_numeric)
@@ -137,10 +118,7 @@ def test_struct_with_schema(dataframe: DataFrame, request: FixtureRequest) -> No
     assert_equal_data(result, expected)
 
 
-def test_struct_with_series(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
-) -> None:
-    xfail_pyarrow(dataframe, request)
+def test_struct_with_series(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     s_a, s_b = df.get_column("a"), df.get_column("b")
     result = df.select(nwp.struct(s_a, s_b).alias("struct"))
@@ -152,10 +130,7 @@ def test_struct_with_series(
     assert_equal_data(result, expected)
 
 
-def test_struct_mixed_series_and_exprs(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
-) -> None:
-    xfail_pyarrow(dataframe, request)
+def test_struct_mixed_series_and_exprs(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     s_a = df.get_column("a")
     result = df.select(nwp.struct(s_a, nwp.col("c")).alias("struct"))
@@ -167,10 +142,7 @@ def test_struct_mixed_series_and_exprs(
     assert_equal_data(result, expected)
 
 
-def test_struct_named_with_series(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
-) -> None:
-    xfail_pyarrow(dataframe, request)
+def test_struct_named_with_series(data: Data, dataframe: DataFrame) -> None:
     df = dataframe(data)
     s_a = df.get_column("a")
     result = df.select(nwp.struct(x=s_a, y="b").alias("struct"))

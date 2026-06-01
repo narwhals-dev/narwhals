@@ -24,7 +24,7 @@ from narwhals._plan.arrow.typing import (
     Native,
     ScalarAny as NativeScalar,
 )
-from narwhals._plan.common import temp, todo
+from narwhals._plan.common import temp
 from narwhals._plan.compliant import typing as ct
 from narwhals._plan.compliant.accessors import (
     ExprCatNamespace,
@@ -77,6 +77,7 @@ if TYPE_CHECKING:
         Var,
     )
     from narwhals._plan.expressions.boolean import IsBetween
+    from narwhals._plan.expressions.function_expr import AsStructExpr
     from narwhals._plan.expressions.ranges import (
         DateRange,
         IntRange,
@@ -417,7 +418,10 @@ class _ArrowDispatch(
         result = fn.all_horizontal(inputs, ignore_nulls=f.ignore_nulls)
         return self._with_native(result, name)
 
-    as_struct = todo()  # type: ignore[misc]
+    def as_struct(self, node: AsStructExpr, frame: Frame, name: str) -> Self:
+        inputs = self._dispatch_variadic_native(node, frame, name)
+        result = fn.struct.into_struct(inputs, (name for name, _ in node.dtype))
+        return self._with_native(result, name)
 
     def sum_horizontal(
         self, node: HExpr[F.SumHorizontal], frame: Frame, name: str

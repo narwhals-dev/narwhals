@@ -12,7 +12,7 @@ from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
     from narwhals._plan.arrow.acero import Field
     from narwhals._plan.arrow.typing import (
@@ -43,9 +43,11 @@ def into_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructA
 def into_struct(
     columns: Iterable[ScalarAny], names: Iterable[str]
 ) -> pa.StructScalar: ...
+# NOTE: `Iterator` is a hack to make the overload non-overlapping
 @overload
 def into_struct(
-    columns: Iterable[ChunkedArrayAny | NonNestedLiteral], names: Iterable[str]
+    columns: Iterable[ChunkedArrayAny | NonNestedLiteral] | Iterator[Native],
+    names: Iterable[str],
 ) -> ChunkedStruct: ...
 def into_struct(
     columns: Iterable[ArrowAny | NonNestedLiteral], names: Iterable[str]
