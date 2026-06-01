@@ -417,7 +417,7 @@ class _ArrowDispatch(
         result = fn.all_horizontal(inputs, ignore_nulls=f.ignore_nulls)
         return self._with_native(result, name)
 
-    as_struct = todo()
+    as_struct = todo()  # type: ignore[misc]
 
     def sum_horizontal(
         self, node: HExpr[F.SumHorizontal], frame: Frame, name: str
