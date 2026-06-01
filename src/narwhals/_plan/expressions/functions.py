@@ -7,7 +7,7 @@ TODO @dangotbanned: Rename module and use the current name to re-export all publ
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
@@ -20,6 +20,7 @@ from narwhals._plan._function import (
     UnaryFunction,
 )
 from narwhals._plan.exceptions import hist_bins_monotonic_error
+from narwhals.exceptions import DuplicateError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from _typeshed import ConvertibleToInt
     from typing_extensions import Self
 
+    from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions import AnonymousExpr, FunctionExpr
     from narwhals._plan.options import (
@@ -115,10 +117,34 @@ class AsStruct(HorizontalFunction):
     def __repr__(self) -> str:
         return "struct"
 
-    # TODO @dangotbanned: Do not merge without this done!
+    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        args = ", ".join(map(repr, node.args))
+        return f"{self!r}({args})"
+
+    # TODO @dangotbanned: This isn't reachable anymore
     def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema) -> DType:
         msg = f"TODO @dangotbanned: {self.resolve_dtype.__qualname__}()"
         raise NotImplementedError(msg)
+
+    # TODO @dangotbanned: Less hacky solution (2)
+    def _pre_undo_aliases(
+        self, node: FunctionExpr[Any], schema: FrozenSchema, /
+    ) -> ExprIR:
+        from narwhals._plan.expressions.function_expr import AsStructExpr
+
+        names: list[str] = []
+        exprs: list[ExprIR] = []
+        fields: list[dtm.Field] = []
+        for arg in node.args:
+            name, expr = arg.resolve_name(schema)
+            fields.append(dtm.Field(name, expr.resolve_dtype(schema)))
+            names.append(name)
+            exprs.append(expr)
+
+        if len(names) != len(set(names)):
+            raise DuplicateError(names)
+
+        return AsStructExpr(args=tuple(exprs), dtype=dtm.Struct(fields), function=self)
 
 
 class Hist(

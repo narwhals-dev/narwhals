@@ -26,6 +26,7 @@ if TYPE_CHECKING:
         aggregation as agg,
         boolean,
     )
+    from narwhals._plan.expressions.function_expr import AsStructExpr
     from narwhals._plan.expressions.ranges import (
         DateRange,
         IntRange,
@@ -151,9 +152,11 @@ class PolarsExpr(CompliantExpr["DataFrame", pl.Expr, pl.Expr]):
     ) -> Self:
         return self.horizontal(node, frame, name, fill=False)
 
-    def as_struct(self, node: HExpr[F.AsStruct], frame: Any, name: str, /) -> Self:
+    def as_struct(self, node: AsStructExpr, frame: Any, name: str, /) -> Self:
         inputs = self.dispatch_args_native(node, frame, "")
-        return self.from_native(pl.struct(*inputs), name)
+        exprs_fields = zip(inputs, node.dtype.fields, strict=True)
+        struct = pl.struct(expr.alias(f.name) for expr, f in exprs_fields)
+        return self.from_native(struct, name)
 
     coalesce = horizontal
     max_horizontal = horizontal

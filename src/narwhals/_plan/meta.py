@@ -15,13 +15,15 @@ from narwhals._plan.expressions.literal import Lit, LitSeries
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._plan.expressions.struct import FieldByName
 from narwhals._utils import unstable
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals._plan import Selector
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import MapIR
 
 
 class MetaNamespace(IRNamespace):
@@ -153,3 +155,36 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )
     return ComputeError(msg)
+
+
+def resolve_name(expr: ir.ExprIR, schema: FrozenSchema, /) -> tuple[str, ir.ExprIR]:
+    # NOTE: "" is allowed as a name, but falsy
+    if (output_name := expr.meta.output_name(raise_if_undetermined=False)) is None:
+        if (root_name := next(iter_root_names(expr), None)) is None:
+            msg = f"`name.keep` expected at least one column name, got `{expr!r}`"
+            raise InvalidOperationError(msg)
+        # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L584-L597
+        # NOTE: This order ensures that renaming which occurs *after* `keep` uses the `root_name`
+        # https://github.com/pola-rs/polars/blob/aaa11d6af7383a5f9b62f432e14cc2d4af6d8548/py-polars/tests/unit/operations/namespaces/test_name.py#L118-L130
+        expr = expr.map_ir(_keep_name_to_alias(root_name))
+        output_name = expr.meta.output_name()
+    return (output_name, remove_aliases(expr, schema))
+
+
+def _keep_name_to_alias(name: str, /) -> MapIR:
+    def fn(child: ir.ExprIR, /) -> ir.ExprIR:
+        return child.expr.alias(name) if isinstance(child, ir.KeepName) else child
+
+    return fn
+
+
+# TODO @dangotbanned: Add a guard higher up to test if `_pre_undo_aliases` is required (is there a struct somewhere?)
+# and skip that extra traversal if possible.
+# Only need this for a single function - but **ALL** expressions are now paying more
+def remove_aliases(origin: ir.ExprIR, schema: FrozenSchema, /) -> ir.ExprIR:
+    origin = origin.map_ir(lambda child: child._pre_undo_aliases(schema))
+
+    def fn(child: ir.ExprIR, /) -> ir.ExprIR:
+        return child.expr if isinstance(child, (ir.Alias, ir.RenameAlias)) else child
+
+    return origin.map_ir(fn)

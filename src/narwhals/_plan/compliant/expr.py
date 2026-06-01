@@ -46,6 +46,7 @@ if TYPE_CHECKING:
         IsNull,
         Not,
     )
+    from narwhals._plan.expressions.function_expr import AsStructExpr
     from narwhals._plan.expressions.ranges import DateRange, IntRange, LinearSpace
     from narwhals._plan.typing import IncompleteCyclic, IncompleteVarianceLie
     from narwhals._utils import Version
@@ -180,7 +181,7 @@ class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScal
         self, node: HExpr[ir.boolean.AnyHorizontal], frame: Frame, name: str, /
     ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def as_struct(
-        self, node: HExpr[F.AsStruct], frame: Frame, name: str, /
+        self, node: AsStructExpr, frame: Frame, name: str, /
     ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def coalesce(
         self, node: HExpr[F.Coalesce], frame: Frame, name: str, /

@@ -47,7 +47,7 @@ from collections.abc import Iterator
 from itertools import chain
 from typing import TYPE_CHECKING
 
-from narwhals._plan import expressions as ir, meta
+from narwhals._plan import meta
 from narwhals._plan._parse import into_iter_selector_ir
 from narwhals._plan.exceptions import (
     column_not_found_error,
@@ -235,16 +235,12 @@ class Expander:
         named_irs = deque[NamedIR]()
         root_names = deque[Iterator[str]]()
         expand = self._iter_expand_expressions
+        schema = self.schema
+
         for e in expand(exprs):
-            # NOTE: "" is allowed as a name, but falsy
-            if (name := e.meta.output_name(raise_if_undetermined=False)) is not None:
-                target = _remove_alias(e)
-            else:
-                replaced = _replace_keep_name(e)
-                name = replaced.meta.output_name()
-                target = _remove_alias(replaced)
+            name, resolved = e.resolve_name(schema)
             output_names.append(name)
-            named_irs.append(ir.NamedIR(name, target))
+            named_irs.append(NamedIR(name, resolved))
             root_names.append(meta.iter_root_names(e))
 
         # NOTE: On failure, we repeat the expansion so the happy path doesn't need to collect as much

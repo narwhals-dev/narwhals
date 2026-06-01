@@ -23,12 +23,6 @@ def data() -> Data:
     return {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
 
 
-XFAIL_EXPANSION = pytest.mark.xfail(
-    reason="TODO: Handle aliasing during expr expansion",
-    raises=(NotImplementedError, AssertionError),
-)
-
-
 def xfail_pyarrow(dataframe: DataFrame, request: FixtureRequest) -> None:
     dataframe.xfail_not_implemented(request, dataframe.is_pyarrow(), "struct")
 
@@ -63,22 +57,25 @@ def test_struct_positional_exprs(
     assert_equal_data(result, expected)
 
 
-@XFAIL_EXPANSION
+@pytest.mark.parametrize("alias_struct", ["struct", None])
 def test_struct_named_exprs(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
+    data: Data, dataframe: DataFrame, request: FixtureRequest, alias_struct: str | None
 ) -> None:
     xfail_pyarrow(dataframe, request)
     df = dataframe(data)
-    result = df.select(nwp.struct(x="a", y="b").alias("struct"))
 
-    expected = {
-        "struct": [{"x": 1, "y": "dogs"}, {"x": 2, "y": "cats"}, {"x": 3, "y": None}]
-    }
+    expr = nwp.struct(x="a", y="b")
+    rows = [{"x": 1, "y": "dogs"}, {"x": 2, "y": "cats"}, {"x": 3, "y": None}]
+    if alias_struct is None:
+        # NOTE: This isn't a distinct case on `main`, but more of a minimal repro for expansion issue
+        # The outer aliasing already worked, but the inner bits are
+        expected = {"x": rows}
+    else:
+        expected = {alias_struct: rows}
+        expr = expr.alias(alias_struct)
+    assert_equal_data(df.select(expr), expected)
 
-    assert_equal_data(result, expected)
 
-
-@XFAIL_EXPANSION
 def test_struct_positional_and_named(
     data: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
@@ -93,7 +90,6 @@ def test_struct_positional_and_named(
     assert_equal_data(result, expected)
 
 
-@XFAIL_EXPANSION
 def test_struct_with_expressions(
     data: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
@@ -109,7 +105,6 @@ def test_struct_with_expressions(
     assert_equal_data(result, expected)
 
 
-@XFAIL_EXPANSION
 def test_struct_with_literals(
     data: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
@@ -172,7 +167,6 @@ def test_struct_mixed_series_and_exprs(
     assert_equal_data(result, expected)
 
 
-@XFAIL_EXPANSION
 def test_struct_named_with_series(
     data: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
@@ -188,9 +182,6 @@ def test_struct_named_with_series(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.xfail(
-    reason="TODO: Impl `AsStruct.resolve_dtype`", raises=NotImplementedError
-)
 def test_error_on_duplicate_field_name_22959(lazy: Lazy) -> None:
     # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L270-L277
     with pytest.raises(DuplicateError, match="'literal'"):

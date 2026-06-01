@@ -43,7 +43,7 @@ import functools
 
 # ruff: noqa: N806
 from functools import reduce
-from typing import TYPE_CHECKING, Generic, final
+from typing import TYPE_CHECKING, Any, Generic, final
 
 from narwhals._plan import _dispatch
 from narwhals._plan._dispatch import ConstructorDispatch, Dispatch, ExprIRDispatch
@@ -59,7 +59,7 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
-    from typing import Any, ClassVar
+    from typing import ClassVar
 
     from typing_extensions import Self
 
@@ -229,6 +229,20 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             schema: The same schema used to project this expression.
         """
         return self.__expr_ir_dtype__(self, schema)
+
+    # TODO @dangotbanned: Less hacky solution (1)
+    def resolve_name(self, schema: FrozenSchema) -> tuple[str, ExprIR]:
+        from narwhals._plan.meta import resolve_name
+
+        return resolve_name(self, schema)
+
+    # TODO @dangotbanned: Less hacky solution (2)
+    def _pre_undo_aliases(self, schema: FrozenSchema, /) -> ExprIR:
+        """Hook for after expansion and resolving the output name.
+
+        But before removing renaming ops and validating.
+        """
+        return self
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         """Convert this `ExprIR` into an narwhals-level `Expr`.
