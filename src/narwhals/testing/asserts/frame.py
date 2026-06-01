@@ -1,19 +1,26 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from narwhals._utils import Implementation, qualified_type_name
 from narwhals.dataframe import DataFrame, LazyFrame
 from narwhals.dependencies import is_narwhals_dataframe, is_narwhals_lazyframe
+from narwhals.schema import Schema
 from narwhals.testing.asserts.series import assert_series_equal
 from narwhals.testing.asserts.utils import (
     raise_assertion_error,
     raise_frame_assertion_error,
+    raise_schema_assertion_error,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping
+
+    from typing_extensions import Never
+
     from narwhals._typing import Arrow, IntoBackend, Pandas, Polars
-    from narwhals.typing import DataFrameT, LazyFrameT
+    from narwhals.testing.asserts.utils import ObjectName
+    from narwhals.typing import DataFrameT, IntoDType, LazyFrameT
 
 GUARANTEES_ROW_ORDER = {
     Implementation.PANDAS,
@@ -181,7 +188,11 @@ def _assert_dataframe_equal(
     # NOTE: Here `impl` comes from the original dataframe, not the `.collect`-ed one, and
     # it's used to distinguish between backends that do and do not guarantee row order.
     _check_schema_equal(
-        left, right, check_dtypes=check_dtypes, check_column_order=check_column_order
+        left.schema,
+        right.schema,
+        check_dtypes=check_dtypes,
+        check_column_order=check_column_order,
+        objects="DataFrames",
     )
 
     left_len, right_len = len(left), len(right)
@@ -231,14 +242,25 @@ def _assert_dataframe_equal(
             )
 
 
+_RAISER: Final[Mapping[ObjectName, Callable[..., Never]]] = {
+    "DataFrames": raise_frame_assertion_error,
+    "Schemas": raise_schema_assertion_error,
+}
+
+
 def _check_schema_equal(
-    left: DataFrameT, right: DataFrameT, *, check_dtypes: bool, check_column_order: bool
+    left: Schema,
+    right: Schema,
+    *,
+    check_dtypes: bool,
+    check_column_order: bool,
+    objects: ObjectName,
 ) -> None:
     """Compares DataFrame schema based on specified criteria.
 
     Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/crates/polars-testing/src/asserts/utils.rs#L667-L698
     """
-    lschema, rschema = left.schema, right.schema
+    lschema, rschema = Schema(left), Schema(right)
 
     # Fast path for equal DataFrames
     if lschema == rschema:
@@ -246,16 +268,17 @@ def _check_schema_equal(
 
     lnames, rnames = lschema.names(), rschema.names()
     lset, rset = set(lnames), set(rnames)
+    raiser = _RAISER[objects]
 
     if left_not_in_right := sorted(lset.difference(rset)):
-        raise_frame_assertion_error(
+        raiser(
             detail="in left, but not in right",
             left=lset,
             right=rset,
             detail_prefix=f"{left_not_in_right} ",
         )
     if right_not_in_left := sorted(rset.difference(lset)):
-        raise_frame_assertion_error(
+        raiser(
             detail="in right, but not in left",
             left=lset,
             right=rset,
@@ -263,9 +286,7 @@ def _check_schema_equal(
         )
 
     if check_column_order and lnames != rnames:
-        raise_frame_assertion_error(
-            detail="columns are not in the same order", left=lnames, right=rnames
-        )
+        raiser(detail="columns are not in the same order", left=lnames, right=rnames)
 
     if check_dtypes:
         rdtypes = (
@@ -275,6 +296,24 @@ def _check_schema_equal(
         )
 
         if (ldtypes := lschema.dtypes()) != rdtypes:
-            raise_frame_assertion_error(
-                detail="dtypes do not match", left=ldtypes, right=rdtypes
-            )
+            raiser(detail="dtypes do not match", left=ldtypes, right=rdtypes)
+
+
+def assert_schema_equal(
+    left: Schema | Mapping[str, IntoDType],
+    right: Schema | Mapping[str, IntoDType],
+    *,
+    check_dtypes: bool = True,
+    check_column_order: bool = True,
+) -> None:
+    __tracebackhide__ = True
+    left = left if isinstance(left, Schema) else Schema(left)  # type: ignore[arg-type]
+    right = right if isinstance(right, Schema) else Schema(right)  # type: ignore[arg-type]
+
+    _check_schema_equal(
+        left,
+        right,
+        check_dtypes=check_dtypes,
+        check_column_order=check_column_order,
+        objects="Schemas",
+    )

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     # NOTE: These aliases are created to facilitate autocompletion.
     # Feel free to extend them as you please when adding new features.
     # See: https://github.com/narwhals-dev/narwhals/pull/2983#discussion_r2337548736
-    ObjectName: TypeAlias = Literal["inputs", "Series", "DataFrames"]
+    ObjectName: TypeAlias = Literal["inputs", "Series", "DataFrames", "Schemas"]
     SeriesDetail: TypeAlias = Literal[
         "dtype mismatch",
         "exact value mismatch",
@@ -23,14 +23,17 @@ if TYPE_CHECKING:
         "null value mismatch",
         "values not within tolerance",
     ]
-    DataFramesDetail: TypeAlias = Literal[
+    SchemasDetail: TypeAlias = Literal[
         "columns are not in the same order",
         "dtypes do not match",
-        "height (row count) mismatch",
-        "implementation mismatch",
         "in left, but not in right",
         "in right, but not in left",
+    ]
+    DataFramesDetail: TypeAlias = Literal[
+        "height (row count) mismatch",
+        "implementation mismatch",
         "value mismatch for column",
+        SchemasDetail,
     ]
 
 
@@ -74,3 +77,9 @@ def raise_frame_assertion_error(
     raise_assertion_error(
         "DataFrames", f"{detail_prefix}{detail}{detail_suffix}", left, right, cause=cause
     )
+
+
+def raise_schema_assertion_error(
+    detail: SchemasDetail, left: Any, right: Any, *, detail_prefix: str = ""
+) -> Never:
+    raise_assertion_error("Schemas", f"{detail_prefix}{detail}", left, right)
