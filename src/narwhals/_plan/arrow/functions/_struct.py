@@ -40,10 +40,11 @@ def into_struct(
 @overload
 def into_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
 @overload
-def into_struct(
+def into_struct(  # type: ignore[overload-overlap]
     columns: Iterable[ScalarAny], names: Iterable[str]
 ) -> pa.StructScalar: ...
-# NOTE: `Iterator` is a hack to make the overload non-overlapping
+# NOTE: `Iterator` ~~is~~ should have been a hack to make the overloads non-overlapping,
+# just can't reason with broacasting in typing
 @overload
 def into_struct(
     columns: Iterable[ChunkedArrayAny | NonNestedLiteral] | Iterator[Native],
