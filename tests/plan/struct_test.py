@@ -76,6 +76,14 @@ def test_struct_positional_and_named(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.xfail(
+    reason=(
+        "`NamedIR[BinaryExpr[Multiply]].resolve_dtype()` is not yet implemented, got: "
+        "  [(col('a')) * (lit(2))]\n"
+        "Blocked by https://github.com/narwhals-dev/narwhals/pull/3396"
+    ),
+    raises=NotImplementedError,
+)
 def test_struct_with_expressions(
     data: Data, dataframe: DataFrame, request: FixtureRequest
 ) -> None:
