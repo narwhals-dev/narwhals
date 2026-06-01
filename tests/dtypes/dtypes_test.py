@@ -175,6 +175,25 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
     assert df.collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
 
 
+def test_array_inner_recursive() -> None:
+    # https://github.com/pola-rs/polars/blob/210b34bee60db71ece147db060f570a41ba63c5d/py-polars/tests/unit/datatypes/test_array.py#L360-L365
+    shape = (2, 3, 4, 5)
+    dtype = nw.Array(nw.Int64, shape=shape)
+    for dim in shape:
+        assert isinstance(dtype, nw.Array)
+        assert dtype.size == dim
+        dtype = dtype.inner
+
+
+def test_array_inner_recursive_repr() -> None:
+    dtype_1 = nw.Array(nw.Int64, 2)
+    dtype_2 = nw.Array(dtype_1, 1)
+    dtype_3 = nw.Array(dtype_2, 2)
+    dtype_1.inner = dtype_3.inner
+    with pytest.raises(RecursionError):
+        repr(dtype_3)
+
+
 def test_second_time_unit() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")

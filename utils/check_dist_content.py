@@ -23,9 +23,11 @@ with ZipFile(wheel_path) as wheel_file:
 
 with TarFile.open(sdist_path, mode="r:gz") as sdist_file:
     # Allow only 'narwhals' and 'tests' folders, and some extra files
-    sdist_dirs = {m.name.split("/")[1] for m in sdist_file.getmembers()}
+    sdist_dirs = {
+        parts[1] for m in sdist_file.getmembers() if len(parts := m.name.split("/")) > 1
+    }
     allowed_sdist_dirs = {
-        "narwhals",
+        "src",
         "tests",
         "pyproject.toml",
         "PKG-INFO",

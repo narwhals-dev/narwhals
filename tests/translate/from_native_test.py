@@ -509,7 +509,7 @@ def test_from_native_roundtrip_identity(native: Any, kwds: dict[str, Any]) -> No
 
 def test_pyspark_connect_deps_2517(constructor: Constructor) -> None:  # pragma: no cover
     if not ("pyspark" in str(constructor) and "sqlframe" not in str(constructor)):
-        # Only run this slow test if `--constructors=pyspark` is passed
+        # Only run this slow test if `--nw-backends=pyspark` is passed
         return
     pytest.importorskip("pyspark")
     # Don't delete this! It's crucial for the test that

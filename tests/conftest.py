@@ -10,7 +10,7 @@ from narwhals._utils import Implementation
 
 # `narwhals.testing.pytest_plugin` registers itself via the `pytest11` entry point (see pyproject.toml)
 # so it auto-loads as soon as Narwhals is installed.
-# That plugin is what owns the `--constructors`, `--all-cpu-constructors`, and `--use-external-constructor`
+# That plugin is what owns the `--nw-backends`, `--all-nw-backends`, and `--use-external-constructor`
 # CLI options as well as parametrising the `constructor*` fixtures.
 
 if TYPE_CHECKING:
