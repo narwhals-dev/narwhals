@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan.expressions import selectors as cs
+from narwhals._plan.expressions.functions import AsStruct
 from narwhals._plan.expressions.literal import Lit, LitSeries
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._plan.expressions.struct import FieldByName
@@ -168,7 +169,10 @@ def resolve_name(expr: ir.ExprIR, schema: FrozenSchema, /) -> tuple[str, ir.Expr
         # https://github.com/pola-rs/polars/blob/aaa11d6af7383a5f9b62f432e14cc2d4af6d8548/py-polars/tests/unit/operations/namespaces/test_name.py#L118-L130
         expr = expr.map_ir(_keep_name_to_alias(root_name))
         output_name = expr.meta.output_name()
-    return (output_name, remove_aliases(expr, schema))
+
+    if _has_struct(expr):
+        expr = expr.map_ir(lambda child: child._pre_undo_aliases(schema))
+    return output_name, expr.map_ir(_remove_alias)
 
 
 def _keep_name_to_alias(name: str, /) -> MapIR:
@@ -178,13 +182,14 @@ def _keep_name_to_alias(name: str, /) -> MapIR:
     return fn
 
 
-# TODO @dangotbanned: Add a guard higher up to test if `_pre_undo_aliases` is required (is there a struct somewhere?)
-# and skip that extra traversal if possible.
-# Only need this for a single function - but **ALL** expressions are now paying more
-def remove_aliases(origin: ir.ExprIR, schema: FrozenSchema, /) -> ir.ExprIR:
-    origin = origin.map_ir(lambda child: child._pre_undo_aliases(schema))
+def _remove_alias(child: ir.ExprIR, /) -> ir.ExprIR:
+    return child.expr if isinstance(child, (ir.Alias, ir.RenameAlias)) else child
 
-    def fn(child: ir.ExprIR, /) -> ir.ExprIR:
-        return child.expr if isinstance(child, (ir.Alias, ir.RenameAlias)) else child
 
-    return origin.map_ir(fn)
+@lru_cache(maxsize=32)
+def _has_struct(expr: ir.ExprIR, /) -> bool:
+    """Return True if this expression contains a `struct(...)`."""
+    return any(
+        isinstance(e, ir.HorizontalExpr) and isinstance(e.function, AsStruct)
+        for e in expr.iter_right()
+    )

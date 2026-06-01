@@ -230,12 +230,6 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         """
         return self.__expr_ir_dtype__(self, schema)
 
-    # TODO @dangotbanned: Less hacky solution (1)
-    def resolve_name(self, schema: FrozenSchema) -> tuple[str, ExprIR]:
-        from narwhals._plan.meta import resolve_name
-
-        return resolve_name(self, schema)
-
     # TODO @dangotbanned: Less hacky solution (2)
     def _pre_undo_aliases(self, schema: FrozenSchema, /) -> ExprIR:
         """Hook for after expansion and resolving the output name.

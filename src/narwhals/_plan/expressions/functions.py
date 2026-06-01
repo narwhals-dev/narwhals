@@ -131,12 +131,13 @@ class AsStruct(HorizontalFunction):
         self, node: FunctionExpr[Any], schema: FrozenSchema, /
     ) -> ExprIR:
         from narwhals._plan.expressions.function_expr import AsStructExpr
+        from narwhals._plan.meta import resolve_name
 
         names: list[str] = []
         exprs: list[ExprIR] = []
         fields: list[dtm.Field] = []
         for arg in node.args:
-            name, expr = arg.resolve_name(schema)
+            name, expr = resolve_name(arg, schema)
             fields.append(dtm.Field(name, expr.resolve_dtype(schema)))
             names.append(name)
             exprs.append(expr)

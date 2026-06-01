@@ -238,7 +238,7 @@ class Expander:
         schema = self.schema
 
         for e in expand(exprs):
-            name, resolved = e.resolve_name(schema)
+            name, resolved = meta.resolve_name(e, schema)
             output_names.append(name)
             named_irs.append(NamedIR(name, resolved))
             root_names.append(meta.iter_root_names(e))
