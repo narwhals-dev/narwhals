@@ -260,7 +260,7 @@ def _check_schema_equal(
 
     Adapted from https://github.com/pola-rs/polars/blob/afdbf3056d1228cf493901e45f536b0905cec8ea/crates/polars-testing/src/asserts/utils.rs#L667-L698
     """
-    lschema, rschema = Schema(left), Schema(right)
+    lschema, rschema = left, right
 
     # Fast path for equal DataFrames
     if lschema == rschema:
