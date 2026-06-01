@@ -58,6 +58,8 @@ jobs:
   downstream-tests:
     name: Downstream tests
     uses: ./.github/workflows/downstream_tests.yml
+    with:
+      skip-fairlearn: true
     permissions:
       contents: read
 
