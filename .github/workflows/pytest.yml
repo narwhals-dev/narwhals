@@ -39,8 +39,6 @@ jobs:
           COVERAGE_PATCH_EXECV: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'execv' }}
           COVERAGE_PATCH_FORK: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'fork' }}
         run: make run-ci-coverage DEPS="--group tests --extra pandas --extra polars --extra pyarrow" FAIL_UNDER="75" CMD="pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]"
-      - name: install-test-plugin
-        run: uv pip install -e test-plugin/.
 
   pytest-windows:
     if: github.head_ref != 'bump-version'

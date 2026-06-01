@@ -40,7 +40,7 @@ jobs:
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci-coverage DEPS="--group core-tests --extra pyspark --extra pandas" COV_RUN_ARGS="--source=src/narwhals/_spark_like" FAIL_UNDER="95" CMD="pytest tests --runslow --nw-backends=pyspark"
+        run: make run-ci-coverage DEPS="--group core-tests --extra pyspark --extra pandas" COV_SOURCE="src/narwhals/_spark_like" FAIL_UNDER="95" CMD="pytest tests --runslow --nw-backends=pyspark"
 
   pytest-pyspark-min-version-constructor:
     if: github.head_ref != 'bump-version'
@@ -59,7 +59,7 @@ jobs:
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci-coverage DEPS="--group min-pyspark-version --extra pandas" COV_RUN_ARGS="--source=src/narwhals/_spark_like" FAIL_UNDER="95" CMD="pytest tests --runslow --nw-backends=pyspark"
+        run: make run-ci-coverage DEPS="--group min-pyspark-version --extra pandas" COV_SOURCE="src/narwhals/_spark_like" FAIL_UNDER="95" CMD="pytest tests --runslow --nw-backends=pyspark"
 
   pytest-pyspark-connect-constructor:
     if: github.head_ref != 'bump-version'
@@ -130,7 +130,7 @@ jobs:
         run: |
           uv run --no-sync coverage run --source=src/narwhals/_spark_like -m pytest tests --runslow --nw-backends "pyspark[connect]"
           uv run --no-sync coverage combine
-          uv run --no-sync coverage report --fail-under=95
+          uv run --no-sync coverage report --include="src/narwhals/_spark_like/*" --fail-under=95
 
       - name: Stop Spark Connect server
         if: always() && env.SPARK_HOME != ''

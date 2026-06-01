@@ -36,8 +36,8 @@ run-ci:  ## Print resolved deps, then run a command via uv (no coverage; used by
 	uv run $(DEPS) $(RUN_ONLY) $(CMD)
 
 .PHONY: run-ci-coverage
-run-ci-coverage:  ## Like run-ci but under coverage (run -> combine -> report). Usage: make run-ci-coverage DEPS="<groups/extras>" CMD="<command, e.g. pytest tests --nw-backends=...>" [FAIL_UNDER="<int>"] [COV_RUN_ARGS="<extra 'coverage run' flags, e.g. --source=...>"] [RUN_ONLY="<uv-run-only flags>"]
+run-ci-coverage:  ## Like run-ci but under coverage (run -> combine -> report). Usage: make run-ci-coverage DEPS="<groups/extras>" CMD="<command, e.g. pytest tests --nw-backends=...>" [FAIL_UNDER="<int>"] [COV_SOURCE="<path to scope coverage to, e.g. src/narwhals/_spark_like; drives both 'run --source' and 'report --include'>"] [RUN_ONLY="<uv-run-only flags>"]
 	uv export --no-annotate --no-hashes $(DEPS)
-	uv run $(DEPS) $(RUN_ONLY) coverage run $(COV_RUN_ARGS) -m $(CMD)
+	uv run $(DEPS) $(RUN_ONLY) coverage run $(if $(COV_SOURCE),--source=$(COV_SOURCE)) -m $(CMD)
 	uv run $(DEPS) $(RUN_ONLY) coverage combine
-	uv run $(DEPS) $(RUN_ONLY) coverage report $(if $(FAIL_UNDER),--fail-under=$(FAIL_UNDER))
+	uv run $(DEPS) $(RUN_ONLY) coverage report $(if $(COV_SOURCE),--include=$(COV_SOURCE)/*) $(if $(FAIL_UNDER),--fail-under=$(FAIL_UNDER))
