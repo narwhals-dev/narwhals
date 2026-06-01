@@ -8,7 +8,13 @@ import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import DuplicateError
-from tests.plan.utils import DataFrame, Lazy, assert_equal_data, assert_equal_schema
+from tests.plan.utils import (
+    DataFrame,
+    Lazy,
+    Series,
+    assert_equal_data,
+    assert_equal_schema,
+)
 
 if TYPE_CHECKING:
     from pytest import FixtureRequest
@@ -126,10 +132,9 @@ def test_struct_with_schema(dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
-def test_struct_with_series(data: Data, dataframe: DataFrame) -> None:
-    df = dataframe(data)
-    s_a, s_b = df.get_column("a"), df.get_column("b")
-    result = df.select(nwp.struct(s_a, s_b).alias("struct"))
+def test_struct_with_series(data: Data, series: Series) -> None:
+    s_a, s_b = series(data["a"], name="a"), series(data["b"], name="b")
+    result = nwp.select(struct=nwp.struct(s_a, s_b), eager=series.implementation)
 
     expected = {
         "struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": "cats"}, {"a": 3, "b": None}]
