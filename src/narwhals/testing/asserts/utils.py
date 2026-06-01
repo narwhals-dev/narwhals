@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     # NOTE: These aliases are created to facilitate autocompletion.
     # Feel free to extend them as you please when adding new features.
     # See: https://github.com/narwhals-dev/narwhals/pull/2983#discussion_r2337548736
-    ObjectName: TypeAlias = Literal["inputs", "Series", "DataFrames"]
+    ObjectName: TypeAlias = Literal["inputs", "Series", "DataFrames", "Schemas"]
     SeriesDetail: TypeAlias = Literal[
         "dtype mismatch",
         "exact value mismatch",

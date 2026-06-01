@@ -6,12 +6,15 @@ import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
+import narwhals._plan.selectors as ncs
 from narwhals.exceptions import DuplicateError
-from tests.plan.utils import DataFrame, Lazy, assert_equal_data
+from tests.plan.utils import DataFrame, Lazy, assert_equal_data, assert_equal_schema
 
 if TYPE_CHECKING:
     from pytest import FixtureRequest
 
+    from narwhals._plan.typing import IntoExpr, OneOrIterable
+    from narwhals.typing import IntoDType
     from tests.conftest import Data
 
 
@@ -192,3 +195,46 @@ def test_error_on_duplicate_field_name_22959(lazy: Lazy) -> None:
     # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L270-L277
     with pytest.raises(DuplicateError, match="'literal'"):
         nwp.select(nwp.struct(nwp.lit(1), nwp.lit(2)), lazy=lazy).collect_schema()
+
+
+@pytest.mark.parametrize(
+    ("exprs", "expected_fields"),
+    [
+        (
+            (
+                ncs.last(),
+                ncs.boolean(),
+                ncs.string(),
+                ncs.float(),
+                ncs.integer() - ncs.by_dtype(nw.UInt32),
+            ),
+            {
+                "e": nw.UInt32,
+                "c": nw.Boolean,
+                "b": nw.String,
+                "d": nw.Float64,
+                "a": nw.Int64,
+            },
+        )
+    ],
+)
+@pytest.mark.parametrize("alias_struct", [None, "struct", "d"])
+def test_struct_select_lazy_schema(
+    lazy: Lazy,
+    exprs: OneOrIterable[IntoExpr],
+    expected_fields: dict[str, IntoDType],
+    alias_struct: str | None,
+) -> None:
+    lf = nwp.select(
+        a=1, b=nwp.lit("2"), c=False, d=1.3, e=nwp.lit(8).cast(nw.UInt32), lazy=lazy
+    )
+
+    if alias_struct:
+        struct = nwp.struct(exprs).alias(alias_struct)
+        name_outer = alias_struct
+    else:
+        struct = nwp.struct(exprs)
+        name_outer = next(iter(expected_fields))
+
+    expected = {name_outer: nw.Struct(expected_fields)}
+    assert_equal_schema(lf.select(struct), expected)
