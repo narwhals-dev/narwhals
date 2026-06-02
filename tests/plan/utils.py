@@ -685,7 +685,7 @@ def assert_equal_data(
     result: nwp.DataFrame[Any, Any],
     expected: Mapping[str, Any] | nwp.DataFrame[Any, Any],
     *,
-    check_column_order: bool = False,
+    check_column_order: bool = True,
 ) -> None:
     """Adds ordering checks, which aren't part of `tests.utils.assert_equal_data`."""
     __tracebackhide__ = True

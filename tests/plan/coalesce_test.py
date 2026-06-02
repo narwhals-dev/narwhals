@@ -71,9 +71,14 @@ def test_coalesce_strings(
 def test_coalesce_series(data_str: Data, dataframe: DataFrame) -> None:
     df = dataframe(data_str)
     ser = df.get_column("b").alias("b_renamed")
-    exprs = nwp.coalesce(ser, "a", nwp.col("c").fill_null("filled")), nwp.lit("ignored")
-    result = df.select(exprs)
-    assert_equal_data(result, {"b_renamed": ["1", "filled", "3", "5", "3"]})
+    result = df.select(
+        nwp.coalesce(ser, "a", nwp.col("c").fill_null("filled")), nwp.lit("not coalesced")
+    )
+    expected = {
+        "b_renamed": ["1", "filled", "3", "5", "3"],
+        "literal": ["not coalesced"] * 5,
+    }
+    assert_equal_data(result, expected)
 
 
 def test_coalesce_raises_non_expr() -> None:
