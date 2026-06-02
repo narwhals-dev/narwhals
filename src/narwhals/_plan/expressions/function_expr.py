@@ -349,7 +349,7 @@ class HorizontalExpr(FunctionExpr[HorizontalT_co]):
 
 
 class FromStructExpr(FunctionExpr[StructT_co]):
-    """An expression that applies a function to a struct column.
+    """An expression that applies a function to an existing struct column.
 
     Note:
         Requires special handling during expression expansion.
@@ -364,7 +364,7 @@ class FromStructExpr(FunctionExpr[StructT_co]):
 
 @unstable
 class AsStructExpr(HorizontalExpr["AsStruct"]):
-    r"""The result of resolving `nw.struct(...)`.
+    r"""An expression that creates a new struct column.
 
     ## Examples
     >>> import narwhals as nw
