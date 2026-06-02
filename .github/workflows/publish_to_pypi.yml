@@ -75,6 +75,12 @@ jobs:
     permissions:
       contents: read
 
+  test-sdist:
+    name: Test sdist
+    uses: ./.github/workflows/test_sdist.yml
+    permissions:
+      contents: read
+
   build:
     name: Build distribution 📦
     needs:
@@ -86,6 +92,7 @@ jobs:
       - downstream-tests
       - check-docs-build
       - pre-commit-hooks
+      - test-sdist
     runs-on: ubuntu-latest
     permissions:
       contents: read
