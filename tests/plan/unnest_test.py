@@ -92,7 +92,12 @@ def test_unnest_frame_multi_struct(data: Data, dataframe: DataFrame) -> None:
     )
     assert_equal_data(df.unnest(name_1, name_2), expected_identical_input)
     assert_equal_data(df.unnest(ncs.struct()), expected_identical_input)
-    assert_equal_data(df.unnest(ncs.by_index(2, 1)), expected_reorder)
+
+    # Unnest does not reorder columns
+    flipped = ncs.by_index(2, 1)
+    assert_equal_data(df.unnest(flipped), expected_identical_input)
+    # You'd need to do that yourself
+    assert_equal_data(df.select(BEFORE, flipped, AFTER).unnest(flipped), expected_reorder)
 
 
 def test_unnest_frame_invalid_operation_error(data: Data, dataframe: DataFrame) -> None:
