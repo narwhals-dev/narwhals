@@ -140,6 +140,7 @@ from narwhals._plan.arrow.functions._sort import (
     sort_indices,
     unsort_indices,
 )
+from narwhals._plan.arrow.functions._struct import as_struct
 from narwhals._plan.arrow.functions._vector import (
     diff,
     hist_bins,
@@ -165,6 +166,7 @@ __all__ = (
     "any",
     "any_horizontal",
     "array",
+    "as_struct",
     "binary",
     "cast",
     "cast_table",

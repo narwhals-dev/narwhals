@@ -30,28 +30,27 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import Seq
     from narwhals.typing import NonNestedLiteral
 
-__all__ = ("field", "field_names", "fields", "into_struct", "schema")
+__all__ = ("as_struct", "field", "field_names", "fields", "schema")
 
 
-# TODO @dangotbanned: Rename to `as_struct` & export to top-level
 @overload
-def into_struct(
+def as_struct(
     columns: Iterable[ChunkedArrayAny], names: Iterable[str]
 ) -> ChunkedStruct: ...
 @overload
-def into_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
+def as_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
 @overload
-def into_struct(  # type: ignore[overload-overlap]
+def as_struct(  # type: ignore[overload-overlap]
     columns: Iterable[ScalarAny], names: Iterable[str]
 ) -> pa.StructScalar: ...
 # NOTE: `Iterator` ~~is~~ should have been a hack to make the overloads non-overlapping,
 # just can't reason with broadcasting in typing
 @overload
-def into_struct(
+def as_struct(
     columns: Iterable[ChunkedArrayAny | NonNestedLiteral] | Iterator[Native],
     names: Iterable[str],
 ) -> ChunkedStruct: ...
-def into_struct(
+def as_struct(
     columns: Iterable[ArrowAny | NonNestedLiteral], names: Iterable[str]
 ) -> Struct:
     """Collect columns into a struct.

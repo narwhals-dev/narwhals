@@ -419,7 +419,7 @@ class _ArrowDispatch(
 
     def as_struct(self, node: ir.AsStructExpr, frame: Frame, name: str) -> Self:
         inputs = self._dispatch_variadic_native(node, frame, name)
-        result = fn.struct.into_struct(inputs, (name for name, _ in node.dtype))
+        result = fn.as_struct(inputs, (name for name, _ in node.dtype))
         return self._with_native(result, name)
 
     def sum_horizontal(
