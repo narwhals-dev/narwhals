@@ -30,7 +30,7 @@ jobs:
           cache-suffix: min-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--group extreme-minimum-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
+        run: make run-ci DEPS="--group extreme-minimum-versions --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
 
   pretty_old_versions:
     strategy:
@@ -48,7 +48,7 @@ jobs:
           cache-suffix: pretty-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--group extreme-pretty-old-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
+        run: make run-ci DEPS="--group extreme-pretty-old-versions --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],duckdb"
 
   not_so_old_versions:
     strategy:
@@ -66,7 +66,7 @@ jobs:
           cache-suffix: not-so-old-versions-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--group extreme-not-so-old-versions" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
+        run: make run-ci DEPS="--group extreme-not-so-old-versions --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --constructors=pandas,pyarrow,polars[eager],polars[lazy],dask,duckdb"
 
   nightlies:
     strategy:
@@ -90,7 +90,7 @@ jobs:
       - name: Create venv
         run: uv venv --python ${{ matrix.python-version }}
       - name: install-reqs
-        run: uv pip install -e . --group tests
+        run: uv pip install -e . --group tests --group plugins
       - name: install polars pre-release
         run: |
           uv pip uninstall polars
