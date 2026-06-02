@@ -56,16 +56,8 @@ from narwhals._plan.exceptions import (
     expand_multi_output_error,
     selectors_not_found_error,
 )
-from narwhals._plan.expressions import (
-    Alias,
-    ExprIR,
-    KeepName,
-    NamedIR,
-    RenameAlias,
-    SelectorIR,
-)
+from narwhals._plan.expressions import ExprIR, NamedIR, SelectorIR
 from narwhals._plan.schema import FrozenSchema, IntoFrozenSchema
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
@@ -145,24 +137,6 @@ def parse_expand_selectors(
 
 def _is_duplicated(names: Collection[str]) -> bool:
     return len(names) != len(set(names))
-
-
-def _remove_alias(origin: ExprIR, /) -> ExprIR:
-    def fn(child: ExprIR, /) -> ExprIR:
-        return child.expr if isinstance(child, (Alias, RenameAlias)) else child
-
-    return origin.map_ir(fn)
-
-
-def _replace_keep_name(origin: ExprIR, /) -> ExprIR:
-    if (name := next(meta.iter_root_names(origin), None)) is None:
-        msg = f"`name.keep` expected at least one column name, got `{origin!r}`"
-        raise InvalidOperationError(msg)
-
-    def fn(child: ExprIR, /) -> ExprIR:
-        return child.expr.alias(name) if isinstance(child, KeepName) else child
-
-    return origin.map_ir(fn)
 
 
 class Expander:
