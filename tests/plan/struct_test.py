@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeAlias
 
 import pytest
 
 import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
-from narwhals.exceptions import DuplicateError
+from narwhals.exceptions import ColumnNotFoundError, DuplicateError
 from tests.plan.utils import (
     DataFrame,
     Lazy,
+    LazyFrame,
     Series,
     assert_equal_data,
     assert_equal_schema,
@@ -22,6 +24,9 @@ if TYPE_CHECKING:
     from narwhals._plan.typing import IntoExpr, OneOrIterable
     from narwhals.typing import IntoDType
     from tests.conftest import Data
+
+CheckFrameFn: TypeAlias = Callable[[DataFrame | LazyFrame], None]
+"""A self-contained test that works with both `*Frame` fixtures."""
 
 
 @pytest.fixture(scope="module")
@@ -227,9 +232,59 @@ def test_struct_nested() -> None:
     raise NotImplementedError
 
 
-@pytest.mark.xfail(
-    reason=("TODO @dangotbanned: Add `KeepName`, `RenameAlias` cases"),
-    raises=NotImplementedError,
-)
-def test_struct_fancy_aliasing() -> None:
-    raise NotImplementedError
+def test_struct_broadcasting(dataframe: DataFrame) -> None:
+    # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L174-L193
+    data = {"col1": [1, 2], "col2": [10, 20]}
+    df = dataframe(data)
+    expr = nwp.struct([nwp.lit("a").alias("a"), nwp.col("col1").alias("col1")]).alias(
+        "my_struct"
+    )
+    result = df.select(expr)
+    expected = {"my_struct": [{"a": "a", "col1": 1}, {"a": "a", "col1": 2}]}
+    assert_equal_data(result, expected)
+
+
+def test_suffix_in_struct_creation(dataframe: DataFrame) -> None:
+    # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L240-L249
+    data = {"a": [1, 2], "b": [3, 4], "c": [5, 6]}
+    df = dataframe(data)
+    expr = nwp.struct(nwp.col(["a", "c"]).name.suffix("_foo")).alias("bar")
+    result = df.select(expr).unnest("bar")
+    expected = {"a_foo": [1, 2], "c_foo": [5, 6]}
+    assert_equal_data(result, expected)
+
+
+@pytest.fixture
+def query_15442() -> CheckFrameFn:
+    # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/functions/as_datatype/test_struct.py#L252-L267
+    center = nwp.struct(x=nwp.col("x"), y=nwp.col("y"))
+    left = 0
+    in_x = (left < center.struct.field("x")) & (center.struct.field("x") <= 1000)
+
+    def check(fixture: DataFrame | LazyFrame, /) -> None:
+        result = fixture({"x": [206.0], "y": [225.0]}).filter(in_x)
+        if isinstance(result, nwp.LazyFrame):
+            result = result.collect()
+        assert result.shape == (1, 2)
+
+    return check
+
+
+def test_resolved_names_15442(dataframe: DataFrame, query_15442: CheckFrameFn) -> None:
+    query_15442(dataframe)
+
+
+def test_resolved_names_15442_lazy(
+    lazyframe: LazyFrame, query_15442: CheckFrameFn, request: FixtureRequest
+) -> None:
+    # NOTE: Upstream test is only on LazyFrame
+    lazyframe.xfail_not_implemented(request, lazyframe.is_polars(), "LazyFrame.filter")
+    query_15442(lazyframe)
+
+
+def test_raise_subnodes_18787(dataframe: DataFrame) -> None:
+    # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/py-polars/tests/unit/lazyframe/test_schema.py#L416-L424
+    df = dataframe({"a": [1], "b": [2]})
+    bad = ncs.first().struct.field("a").filter(nwp.col("foo") == 1)
+    with pytest.raises(ColumnNotFoundError, match=r"'foo'"):
+        df.select(nwp.struct(nwp.all())).select(bad)
