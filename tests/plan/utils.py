@@ -680,7 +680,6 @@ else:
         return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
-# TODO @dangotbanned: Investigate the tests which are failing on `True`
 def assert_equal_data(
     result: nwp.DataFrame[Any, Any],
     expected: Mapping[str, Any] | nwp.DataFrame[Any, Any],
