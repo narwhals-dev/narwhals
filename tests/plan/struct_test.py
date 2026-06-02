@@ -56,7 +56,7 @@ AGG: Final = [
     {A: 3, C: WALK, B: None},
 ]
 VARIADIC: Final = [{B: f"{DOGS}-{PLAY}"}, {B: f"{CATS}-{SWIM}"}, {B: None}]
-LITS: Final = [{A: 1, X: PLAY, Y: 9}, {A: 2, X: SWIM, Y: 9}, {A: 3, X: WALK, Y: 9}]
+STRUCT_STRUCT: Final = [{A: {A: 1}, Z: PLAY}, {A: {A: 2}, Z: SWIM}, {A: {A: 3}, Z: WALK}]
 
 
 @pytest.mark.parametrize("alias_struct", ["aliased", None])
@@ -67,11 +67,10 @@ LITS: Final = [{A: 1, X: PLAY, Y: 9}, {A: 2, X: SWIM, Y: 9}, {A: 3, X: WALK, Y: 
         (([nwp.col(D) / nwp.col(A)]), {}, [{D: 4.0}, {D: 2.5}, {D: 2.0}]),
         ((A, nwp.col(C).last(), B), {}, AGG),
         ((nwp.concat_str(ncs.string(), separator="-"),), {}, VARIADIC),
-        ((), {X: A, Y: B}, [{X: 1, Y: DOGS}, {X: 2, Y: CATS}, {X: 3, Y: None}]),
-        ((A,), {Z: C}, [{A: 1, Z: PLAY}, {A: 2, Z: SWIM}, {A: 3, Z: WALK}]),
-        ((A,), {X: C, Y: 9}, LITS),
+        ((), {X: A, Y: 9}, [{X: 1, Y: 9}, {X: 2, Y: 9}, {X: 3, Y: 9}]),
+        ((nwp.struct("a"),), {Z: C}, STRUCT_STRUCT),
     ],
-    ids=["cols", "binary", "agg", "variadic", "named", "positional_named", "literals"],
+    ids=["cols", "binary", "agg", "variadic", "named", "struct_struct"],
 )
 def test_struct(
     data: Data,
@@ -181,13 +180,6 @@ def test_struct_select_lazy_schema(
 
     expected = {name_outer: nw.Struct(expected_fields)}
     assert_equal_schema(lf.select(struct), expected)
-
-
-@pytest.mark.xfail(
-    reason=("TODO @dangotbanned: Add nested `struct()` cases"), raises=NotImplementedError
-)
-def test_struct_nested() -> None:
-    raise NotImplementedError
 
 
 def test_struct_broadcasting(dataframe: DataFrame) -> None:
