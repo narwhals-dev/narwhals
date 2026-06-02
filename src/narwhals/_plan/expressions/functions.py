@@ -19,8 +19,7 @@ from narwhals._plan._function import (
     TernaryFunction,
     UnaryFunction,
 )
-from narwhals._plan.exceptions import hist_bins_monotonic_error
-from narwhals.exceptions import DuplicateError
+from narwhals._plan.exceptions import duplicate_names_error, hist_bins_monotonic_error
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -133,17 +132,17 @@ class AsStruct(HorizontalFunction):
         from narwhals._plan.expressions import AsStructExpr
         from narwhals._plan.meta import resolve_name
 
-        names: list[str] = []
+        seen: set[str] = set()
         exprs: list[ExprIR] = []
         fields: list[dtm.Field] = []
         for arg in node.args:
             name, expr = resolve_name(arg, schema)
-            fields.append(dtm.Field(name, expr.resolve_dtype(schema)))
-            names.append(name)
+            seen.add(name)
             exprs.append(expr)
+            fields.append(dtm.Field(name, expr.resolve_dtype(schema)))
 
-        if len(names) != len(set(names)):
-            raise DuplicateError(names)
+        if len(seen) != len(node.args):
+            raise duplicate_names_error([f.name for f in fields])
 
         return AsStructExpr(args=tuple(exprs), dtype=dtm.Struct(fields), function=self)
 
