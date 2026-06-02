@@ -680,12 +680,11 @@ else:
         return nwp.DataFrame.from_native(pa.Table.from_pydict(data))
 
 
-# TODO @dangotbanned: Investigate the tests which are failing on `True`
 def assert_equal_data(
     result: nwp.DataFrame[Any, Any],
     expected: Mapping[str, Any] | nwp.DataFrame[Any, Any],
     *,
-    check_column_order: bool = False,
+    check_column_order: bool = True,
 ) -> None:
     """Adds ordering checks, which aren't part of `tests.utils.assert_equal_data`."""
     __tracebackhide__ = True
@@ -694,6 +693,8 @@ def assert_equal_data(
     got = result.to_dict(as_series=False)
     if check_column_order:
         _assert_column_names_equal(got, expected)
+    else:  # pragma: no cover
+        ...
     _assert_equal_data(got, expected)
 
 
