@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -11,6 +11,8 @@ from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOper
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from narwhals._plan.typing import ColumnNameOrSelector, OneOrIterable
     from tests.conftest import Data
 
@@ -38,41 +40,37 @@ def data() -> Data:
     }
 
 
-# TODO @dangotbanned: Rewrite this whole thing (using indices was *because of* pyarrow's api)
-@pytest.mark.parametrize("insert_at", [-1, 0, 1])
+S = "struct"
+
+
 @pytest.mark.parametrize(
-    "columns", [[A], [A, B], [A, B, C, D]], ids=["1-column", "2-column", "4-column"]
+    ("struct_columns", "select_exprs", "expected_columns"),
+    [
+        ([C], [S, nwp.exclude(S)], [C, BEFORE, A, B, D, AFTER]),
+        ([A, B], [nwp.exclude(S), S], [BEFORE, C, D, AFTER, A, B]),
+        ([D, A, B, C], [ncs.first(), S, AFTER], [BEFORE, D, A, B, C, AFTER]),
+    ],
+    ids=["1-column", "2-column", "4-column"],
 )
 def test_unnest_frame_single_struct(
-    data: Data, columns: list[str], insert_at: Literal[-1, 0, 1], dataframe: DataFrame
+    data: Data,
+    struct_columns: list[str],
+    select_exprs: Sequence[str | nwp.Expr],
+    expected_columns: list[str],
+    dataframe: DataFrame,
 ) -> None:
-    expected = copy.deepcopy(data)
-    if insert_at in {-1, 0}:
-        if insert_at == -1:
-            for column in columns:
-                expected[column] = expected.pop(column)
-        else:
-            _tmp: Data = {}
-            for column in columns:
-                _tmp[column] = expected.pop(column)
-            _tmp |= expected
-            expected = _tmp
 
-    df = dataframe(data)
-    struct_name = "t_struct"
-    struct = nwp.struct(columns).alias("t_struct")
+    expected = dataframe(data).select(expected_columns).to_dict(as_series=False)
+    df = (
+        dataframe(data)
+        .with_columns(nwp.struct(struct_columns).alias(S))
+        .drop(struct_columns)
+        .select(select_exprs)
+    )
 
-    df = df.with_columns(struct).drop(columns)
-    if insert_at == 0:
-        df = df.select(struct_name, nwp.exclude(struct_name))
-    elif insert_at == -1:
-        df = df.select(nwp.exclude(struct_name), struct_name)
-    else:
-        df = df.select(ncs.first(), struct_name, ~(ncs.first() | ncs.last()))
-
-    assert_equal_data(df.unnest("t_struct"), expected)
-    assert_equal_data(df.unnest(ncs.struct()), expected)
-    assert_equal_data(df.unnest(nwp.nth(insert_at).meta.as_selector()), expected)
+    assert_equal_data(df.unnest(S), expected, check_column_order=True)
+    assert_equal_data(df.unnest(ncs.struct()), expected, check_column_order=True)
+    assert_equal_data(df.unnest(~~ncs.matches(S)), expected, check_column_order=True)
 
 
 def test_unnest_frame_multi_struct(data: Data, dataframe: DataFrame) -> None:
