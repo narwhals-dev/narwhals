@@ -740,11 +740,12 @@ def assert_equal_series(
 
 
 def assert_equal_schema(
-    result: nwp.LazyFrame[Any] | Schema, expected: IntoSchema | Mapping[str, IntoDType]
+    result: nwp.DataFrame[Any, Any] | nwp.LazyFrame[Any] | Schema,
+    expected: IntoSchema | Mapping[str, IntoDType],
 ) -> None:
     """https://github.com/narwhals-dev/narwhals/issues/739#issuecomment-4592180019."""
     __tracebackhide__ = True
-    if isinstance(result, nwp.LazyFrame):
+    if isinstance(result, (nwp.LazyFrame, nwp.DataFrame)):
         result = result.collect_schema()
     if not isinstance(expected, nw.Schema):  # pragma: no cover
         expected = nw.Schema(expected)  # type: ignore[arg-type]
