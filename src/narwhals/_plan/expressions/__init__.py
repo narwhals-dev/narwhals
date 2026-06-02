@@ -38,6 +38,7 @@ from narwhals._plan.expressions.expr import (
 )
 from narwhals._plan.expressions.function_expr import (
     AnonymousExpr,
+    AsStructExpr,
     FunctionExpr,
     HorizontalExpr,
     StructExpr,
@@ -55,6 +56,7 @@ __all__ = (
     "AggExpr",
     "Alias",
     "AnonymousExpr",
+    "AsStructExpr",
     "BinaryExpr",
     "BinarySelector",
     "Cast",

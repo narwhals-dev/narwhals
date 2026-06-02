@@ -131,7 +131,7 @@ class AsStruct(HorizontalFunction):
     def _pre_undo_aliases(
         self, node: FunctionExpr[Any], schema: FrozenSchema, /
     ) -> ExprIR:
-        from narwhals._plan.expressions.function_expr import AsStructExpr
+        from narwhals._plan.expressions import AsStructExpr
         from narwhals._plan.meta import resolve_name
 
         names: list[str] = []
