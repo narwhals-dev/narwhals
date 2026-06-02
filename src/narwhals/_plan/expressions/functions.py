@@ -117,8 +117,7 @@ class AsStruct(HorizontalFunction):
     def __repr__(self) -> str:
         return "struct"
 
-    # TODO @dangotbanned: cover in `repr_test.py::test_function`
-    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:  # pragma: no cover
+    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
         args = ", ".join(map(repr, node.args))
         return f"{self!r}({args})"
 

@@ -245,6 +245,7 @@ class Function(Immutable):
         return self.__expr_ir_dispatch__.name
 
     def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        """Format the repr of the expression that wraps this function."""
         first, *rest = node.args
         if rest:
             return f"{first!r}.{self!r}({rest!r})"
