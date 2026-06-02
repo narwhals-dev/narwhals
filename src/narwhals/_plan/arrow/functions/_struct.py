@@ -33,6 +33,7 @@ if TYPE_CHECKING:
 __all__ = ("field", "field_names", "fields", "into_struct", "schema")
 
 
+# TODO @dangotbanned: Rename to `as_struct` & export to top-level
 @overload
 def into_struct(
     columns: Iterable[ChunkedArrayAny], names: Iterable[str]
