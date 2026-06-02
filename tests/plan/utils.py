@@ -711,7 +711,7 @@ def assert_equal_schema(
     __tracebackhide__ = True
     if isinstance(result, nwp.LazyFrame):
         result = result.collect_schema()
-    if not isinstance(expected, nw.Schema):
+    if not isinstance(expected, nw.Schema):  # pragma: no cover
         expected = nw.Schema(expected)  # type: ignore[arg-type]
 
     l_schema = result
@@ -719,27 +719,27 @@ def assert_equal_schema(
     # Fast path for equal DataFrames
     if l_schema == r_schema:
         return
+    else:  # pragma: no cover  # noqa: RET505
+        l_names, r_names = l_schema.names(), r_schema.names()
+        l_set, r_set = set(l_names), set(r_names)
 
-    l_names, r_names = l_schema.names(), r_schema.names()
-    l_set, r_set = set(l_names), set(r_names)
+        if left_not_in_right := sorted(l_set.difference(r_set)):
+            raise_assertion_error(
+                "Schemas", f"{left_not_in_right} in left, but not in right", l_set, r_set
+            )
+        if right_not_in_left := sorted(r_set.difference(l_set)):
+            raise_assertion_error(
+                "Schemas", f"{right_not_in_left} in right, but not in left", l_set, r_set
+            )
 
-    if left_not_in_right := sorted(l_set.difference(r_set)):
-        raise_assertion_error(
-            "Schemas", f"{left_not_in_right} in left, but not in right", l_set, r_set
-        )
-    if right_not_in_left := sorted(r_set.difference(l_set)):
-        raise_assertion_error(
-            "Schemas", f"{right_not_in_left} in right, but not in left", l_set, r_set
-        )
+        if l_names != r_names:
+            raise_assertion_error(
+                "Schemas", "columns are not in the same order", l_names, r_names
+            )
 
-    if l_names != r_names:
-        raise_assertion_error(
-            "Schemas", "columns are not in the same order", l_names, r_names
-        )
-
-    r_dtypes = r_schema.dtypes()
-    if (l_dtypes := l_schema.dtypes()) != r_dtypes:
-        raise_assertion_error("Schemas", "dtypes do not match", l_dtypes, r_dtypes)
+        r_dtypes = r_schema.dtypes()
+        if (l_dtypes := l_schema.dtypes()) != r_dtypes:
+            raise_assertion_error("Schemas", "dtypes do not match", l_dtypes, r_dtypes)
 
 
 def re_compile(

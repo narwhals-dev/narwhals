@@ -101,8 +101,10 @@ def test_struct_with_expressions(
         nwp.struct(nwp.col("a") * 2, nwp.col("c").str.len_chars()).alias("struct")
     )
 
-    expected = {"struct": [{"a": 2, "c": 4}, {"a": 4, "c": 4}, {"a": 6, "c": 4}]}
-    assert_equal_data(result, expected)
+    expected = {
+        "struct": [{"a": 2, "c": 4}, {"a": 4, "c": 4}, {"a": 6, "c": 4}]
+    }  # pragma: no cover
+    assert_equal_data(result, expected)  # pragma: no cover
 
 
 def test_struct_with_literals(data: Data, dataframe: DataFrame) -> None:
