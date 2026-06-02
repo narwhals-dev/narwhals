@@ -693,6 +693,8 @@ def assert_equal_data(
     got = result.to_dict(as_series=False)
     if check_column_order:
         _assert_column_names_equal(got, expected)
+    else:  # pragma: no cover
+        ...
     _assert_equal_data(got, expected)
 
 
