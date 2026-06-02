@@ -117,7 +117,16 @@ def _ids_ir(expr: nwp.Expr | Any) -> str:
         pytest.param(
             nwp.lit(1).cast(nw.Float64()).name.suffix("_cast"), {"literal_cast": [1.0]}
         ),
-        ([ncs.string().first(), nwp.col("b")], {"a": ["A", "A", "A"], "b": [1, 2, 3]}),
+        pytest.param(
+            [ncs.string().first(), nwp.col("b")],
+            {
+                "a": ["A", "A", "A"],
+                "n": ["dogs", "dogs", "dogs"],
+                "o": ["play", "play", "play"],
+                "b": [1, 2, 3],
+            },
+            id="[ncs.string().first(), col('b')]",
+        ),
         (
             nwp.col("c", "d")
             .sort_by("a", "b", descending=[True, False])
