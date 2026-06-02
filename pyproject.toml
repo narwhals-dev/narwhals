@@ -176,13 +176,12 @@ min-pyspark-version = [
 ]
 
 [tool.uv.build-backend]
-source-include = [
-  "src/*",
-  "tests/*",
-]
-wheel-include = [
-  "src/*",
-]
+# The `src/narwhals` module, pyproject.toml, README and LICENSE are shipped by
+# default. We only need to add `tests/` to the sdist; `/**` recurses into
+# subdirectories (a bare `*` would not, dropping e.g. `tests/data/`).
+# See: https://docs.astral.sh/uv/reference/settings/#build-backend_source-exclude
+# > Glob expressions which files and directories to additionally include in the source distribution.
+source-include = ["tests/**"]
 
 [tool.uv]
 # NOTE: When updating these conflicts, every entry in a single inner list is
