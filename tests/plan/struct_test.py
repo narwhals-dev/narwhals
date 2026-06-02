@@ -216,3 +216,18 @@ def test_struct_select_lazy_schema(
 
     expected = {name_outer: nw.Struct(expected_fields)}
     assert_equal_schema(lf.select(struct), expected)
+
+
+@pytest.mark.xfail(
+    reason=("TODO @dangotbanned: Add nested `struct()` cases"), raises=NotImplementedError
+)
+def test_struct_nested() -> None:
+    raise NotImplementedError
+
+
+@pytest.mark.xfail(
+    reason=("TODO @dangotbanned: Add `KeepName`, `RenameAlias` cases"),
+    raises=NotImplementedError,
+)
+def test_struct_fancy_aliasing() -> None:
+    raise NotImplementedError
