@@ -69,7 +69,7 @@ Specify one or more extras in square brackets, for example:
     poetry add "narwhals[polars,pyarrow]"
     ```
 
-!!! warning "Library authors: prefer a dev dependency group"
+!!! warning "Library authors: prefer keeping backends out of your direct dependencies"
 
     `uv add "narwhals[polars,pyarrow]"` adds the extras to `[project.dependencies]`.
 
@@ -83,7 +83,7 @@ Specify one or more extras in square brackets, for example:
 
         ```terminal
         uv add narwhals
-        uv add --dev "narwhals[polars,pyarrow]"
+        uv add --group dev "narwhals[polars,pyarrow]"
         ```
 
     === "Poetry"
