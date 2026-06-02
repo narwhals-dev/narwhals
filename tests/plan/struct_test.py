@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, TypeAlias
 
 import pytest
 
@@ -28,64 +28,75 @@ if TYPE_CHECKING:
 CheckFrameFn: TypeAlias = Callable[[DataFrame | LazyFrame], None]
 """A self-contained test that works with both `*Frame` fixtures."""
 
+Rows: TypeAlias = list[dict[str, Any]]
+"""Expected rows in a struct column."""
+
 
 @pytest.fixture(scope="module")
 def data() -> Data:
-    return {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
+    return {
+        "a": [1, 2, 3],
+        "b": ["dogs", "cats", None],
+        "c": ["play", "swim", "walk"],
+        "d": [4.0, 5.0, 6.0],
+    }
 
 
+A, B, C, D, X, Y, Z = "a", "b", "c", "d", "x", "y", "z"
+DOGS, CATS, PLAY, SWIM, WALK = "dogs", "cats", "play", "swim", "walk"
+EXPECTED_1: Final = [
+    {A: 1, B: DOGS, C: PLAY},
+    {A: 2, B: CATS, C: SWIM},
+    {A: 3, B: None, C: WALK},
+]
+
+
+@pytest.mark.parametrize("alias_struct", ["aliased", None])
 @pytest.mark.parametrize(
-    "exprs",
+    ("args", "kwds", "expected_rows"),
     [
-        (nwp.col("a"), nwp.col("b"), nwp.col("c")),
-        ([nwp.col("a"), nwp.col("b"), nwp.col("c")]),
-        (nwp.all(),),
-        ("a", "b", "c"),
+        ((nwp.col(A), nwp.col(B), nwp.col(C)), {}, EXPECTED_1),
+        (([nwp.col(A), nwp.nth(1), nwp.col(C)]), {}, EXPECTED_1),
+        ((~ncs.last(),), {}, EXPECTED_1),
+        ((A, B, C), {}, EXPECTED_1),
+        ((), {X: A, Y: B}, [{X: 1, Y: DOGS}, {X: 2, Y: CATS}, {X: 3, Y: None}]),
+        ((A,), {Z: C}, [{A: 1, Z: PLAY}, {A: 2, Z: SWIM}, {A: 3, Z: WALK}]),
+        (
+            (A,),
+            {X: C, Y: False},
+            [
+                {A: 1, X: PLAY, Y: False},
+                {A: 2, X: SWIM, Y: False},
+                {A: 3, X: WALK, Y: False},
+            ],
+        ),
+    ],
+    ids=[
+        "positional-1",
+        "positional-2",
+        "positional-3",
+        "positional-4",
+        "named",
+        "positional_named",
+        "literals",
     ],
 )
-def test_struct_positional_exprs(
-    data: Data, dataframe: DataFrame, exprs: tuple[nwp.Expr | list[nwp.Expr], ...]
+def test_struct(
+    data: Data,
+    dataframe: DataFrame,
+    args: tuple[OneOrIterable[IntoExpr], ...],
+    kwds: dict[str, IntoExpr],
+    alias_struct: str | None,
+    expected_rows: Rows,
 ) -> None:
-    df = dataframe(data)
-    result = df.select(nwp.struct(*exprs))
-    expected = {
-        "a": [
-            {"a": 1, "b": "dogs", "c": "play"},
-            {"a": 2, "b": "cats", "c": "swim"},
-            {"a": 3, "b": None, "c": "walk"},
-        ]
-    }
-
-    assert_equal_data(result, expected)
-
-
-# TODO @dangotbanned: Collapse most tests into a few `parametrize`-based tests
-@pytest.mark.parametrize("alias_struct", ["struct", None])
-def test_struct_named_exprs(
-    data: Data, dataframe: DataFrame, alias_struct: str | None
-) -> None:
-    df = dataframe(data)
-    expr = nwp.struct(x="a", y="b")
-    rows = [{"x": 1, "y": "dogs"}, {"x": 2, "y": "cats"}, {"x": 3, "y": None}]
+    expr = nwp.struct(*args, **kwds)
     if alias_struct is None:
-        # NOTE: This isn't a distinct case on `main`, but more of a minimal repro for expansion issue
-        # The outer aliasing already worked, but the inner bits are
-        expected = {"x": rows}
+        lhs_name = next(iter(expected_rows[0]))
+        expected = {lhs_name: expected_rows}
     else:
-        expected = {alias_struct: rows}
         expr = expr.alias(alias_struct)
-    assert_equal_data(df.select(expr), expected)
-
-
-def test_struct_positional_and_named(data: Data, dataframe: DataFrame) -> None:
-    df = dataframe(data)
-    result = df.select(nwp.struct("a", z="c").alias("struct"))
-
-    expected = {
-        "struct": [{"a": 1, "z": "play"}, {"a": 2, "z": "swim"}, {"a": 3, "z": "walk"}]
-    }
-
-    assert_equal_data(result, expected)
+        expected = {alias_struct: expected_rows}
+    assert_equal_data(dataframe(data).select(expr), expected)
 
 
 # TODO @dangotbanned: Add a `parametrize` case that doesn't trigger things that aren't implemented too
@@ -112,33 +123,12 @@ def test_struct_with_expressions(
     assert_equal_data(result, expected)  # pragma: no cover
 
 
-def test_struct_with_literals(data: Data, dataframe: DataFrame) -> None:
-
-    df = dataframe(data)
-    result = df.select(nwp.struct("a", x="c", y=nwp.lit(False)).alias("struct"))
-
-    expected = {
-        "struct": [
-            {"a": 1, "x": "play", "y": False},
-            {"a": 2, "x": "swim", "y": False},
-            {"a": 3, "x": "walk", "y": False},
-        ]
-    }
-
-    assert_equal_data(result, expected)
-
-
-def test_struct_with_schema(dataframe: DataFrame) -> None:
-    data_numeric = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
-    schema = {"a": nw.Float64(), "b": nw.Float32()}
-    df = dataframe(data_numeric)
-    result = df.select(nwp.struct("a", "b").cast(nw.Struct(schema)).alias("struct"))
-    assert result.collect_schema()["struct"] == nw.Struct(schema)
-
-    expected = {
-        "struct": [{"a": 1.0, "b": 4.0}, {"a": 2.0, "b": 5.0}, {"a": 3.0, "b": 6.0}]
-    }
-    assert_equal_data(result, expected)
+def test_struct_with_schema(data: Data, dataframe: DataFrame) -> None:
+    dtype = nw.Struct({A: nw.Float64(), B: nw.Float32()})
+    expr = nwp.struct(A, nwp.col(D).name.map(lambda _s: B)).cast(dtype)
+    result = dataframe(data).select(x=expr)
+    assert_equal_schema(result, {X: dtype})
+    assert_equal_data(result, {X: [{A: 1.0, B: 4.0}, {A: 2.0, B: 5.0}, {A: 3.0, B: 6.0}]})
 
 
 def test_struct_with_series(data: Data, series: Series) -> None:
