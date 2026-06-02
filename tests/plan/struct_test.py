@@ -44,42 +44,34 @@ def data() -> Data:
 
 A, B, C, D, X, Y, Z = "a", "b", "c", "d", "x", "y", "z"
 DOGS, CATS, PLAY, SWIM, WALK = "dogs", "cats", "play", "swim", "walk"
-EXPECTED_1: Final = [
+
+COLS: Final = [
     {A: 1, B: DOGS, C: PLAY},
     {A: 2, B: CATS, C: SWIM},
     {A: 3, B: None, C: WALK},
 ]
+AGG: Final = [
+    {A: 1, C: WALK, B: DOGS},
+    {A: 2, C: WALK, B: CATS},
+    {A: 3, C: WALK, B: None},
+]
+VARIADIC: Final = [{B: f"{DOGS}-{PLAY}"}, {B: f"{CATS}-{SWIM}"}, {B: None}]
+LITS: Final = [{A: 1, X: PLAY, Y: 9}, {A: 2, X: SWIM, Y: 9}, {A: 3, X: WALK, Y: 9}]
 
 
 @pytest.mark.parametrize("alias_struct", ["aliased", None])
 @pytest.mark.parametrize(
     ("args", "kwds", "expected_rows"),
     [
-        ((nwp.col(A), nwp.col(B), nwp.col(C)), {}, EXPECTED_1),
-        (([nwp.col(A), nwp.nth(1), nwp.col(C)]), {}, EXPECTED_1),
-        ((~ncs.last(),), {}, EXPECTED_1),
-        ((A, B, C), {}, EXPECTED_1),
+        ((nwp.col(A), nwp.col(B), nwp.col(C)), {}, COLS),
+        (([nwp.col(D) / nwp.col(A)]), {}, [{D: 4.0}, {D: 2.5}, {D: 2.0}]),
+        ((A, nwp.col(C).last(), B), {}, AGG),
+        ((nwp.concat_str(ncs.string(), separator="-"),), {}, VARIADIC),
         ((), {X: A, Y: B}, [{X: 1, Y: DOGS}, {X: 2, Y: CATS}, {X: 3, Y: None}]),
         ((A,), {Z: C}, [{A: 1, Z: PLAY}, {A: 2, Z: SWIM}, {A: 3, Z: WALK}]),
-        (
-            (A,),
-            {X: C, Y: False},
-            [
-                {A: 1, X: PLAY, Y: False},
-                {A: 2, X: SWIM, Y: False},
-                {A: 3, X: WALK, Y: False},
-            ],
-        ),
+        ((A,), {X: C, Y: 9}, LITS),
     ],
-    ids=[
-        "positional-1",
-        "positional-2",
-        "positional-3",
-        "positional-4",
-        "named",
-        "positional_named",
-        "literals",
-    ],
+    ids=["cols", "binary", "agg", "variadic", "named", "positional_named", "literals"],
 )
 def test_struct(
     data: Data,
@@ -97,30 +89,6 @@ def test_struct(
         expr = expr.alias(alias_struct)
         expected = {alias_struct: expected_rows}
     assert_equal_data(dataframe(data).select(expr), expected)
-
-
-# TODO @dangotbanned: Add a `parametrize` case that doesn't trigger things that aren't implemented too
-@pytest.mark.xfail(
-    reason=(
-        "`NamedIR[BinaryExpr[Multiply]].resolve_dtype()` is not yet implemented, got: "
-        "  [(col('a')) * (lit(2))]\n"
-        "Blocked by https://github.com/narwhals-dev/narwhals/pull/3396"
-    ),
-    raises=NotImplementedError,
-)
-def test_struct_with_expressions(
-    data: Data, dataframe: DataFrame, request: FixtureRequest
-) -> None:
-    dataframe.xfail_not_implemented(request, dataframe.is_polars(), "str.len_chars")
-    df = dataframe(data)
-    result = df.select(
-        nwp.struct(nwp.col("a") * 2, nwp.col("c").str.len_chars()).alias("struct")
-    )
-
-    expected = {
-        "struct": [{"a": 2, "c": 4}, {"a": 4, "c": 4}, {"a": 6, "c": 4}]
-    }  # pragma: no cover
-    assert_equal_data(result, expected)  # pragma: no cover
 
 
 def test_struct_with_schema(data: Data, dataframe: DataFrame) -> None:
