@@ -54,6 +54,7 @@ def test_struct_positional_exprs(
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Collapse most tests into a few `parametrize`-based tests
 @pytest.mark.parametrize("alias_struct", ["struct", None])
 def test_struct_named_exprs(
     data: Data, dataframe: DataFrame, alias_struct: str | None
@@ -82,6 +83,7 @@ def test_struct_positional_and_named(data: Data, dataframe: DataFrame) -> None:
     assert_equal_data(result, expected)
 
 
+# TODO @dangotbanned: Add a `parametrize` case that doesn't trigger things that aren't implemented too
 @pytest.mark.xfail(
     reason=(
         "`NamedIR[BinaryExpr[Multiply]].resolve_dtype()` is not yet implemented, got: "
