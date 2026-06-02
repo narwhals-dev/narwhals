@@ -348,8 +348,7 @@ class HorizontalExpr(FunctionExpr[HorizontalT_co]):
     iter_expand = ExprIR.iter_expand
 
 
-# TODO @dangotbanned: Rename to hint at selecting from vs `AsStructExpr` which is creating a new struct
-class StructExpr(FunctionExpr[StructT_co]):
+class FromStructExpr(FunctionExpr[StructT_co]):
     """An expression that applies a function to a struct column.
 
     Note:

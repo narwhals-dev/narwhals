@@ -150,7 +150,7 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
             return ComputeError(msg)
         if isinstance(e, cs.ByName) and len(e.names) == 1:
             return e.names[0]
-        if isinstance(e, ir.StructExpr) and isinstance(e.function, FieldByName):
+        if isinstance(e, ir.FromStructExpr) and isinstance(e.function, FieldByName):
             return e.function.name
     msg = (
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"

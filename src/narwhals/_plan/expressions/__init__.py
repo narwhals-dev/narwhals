@@ -39,9 +39,9 @@ from narwhals._plan.expressions.expr import (
 from narwhals._plan.expressions.function_expr import (
     AnonymousExpr,
     AsStructExpr,
+    FromStructExpr,
     FunctionExpr,
     HorizontalExpr,
-    StructExpr,
 )
 from narwhals._plan.expressions.literal import Lit, LitSeries, lit, lit_series
 from narwhals._plan.expressions.name import KeepName, RenameAlias
@@ -63,6 +63,7 @@ __all__ = (
     "Column",
     "ExprIR",
     "Filter",
+    "FromStructExpr",
     "Function",
     "FunctionExpr",
     "HorizontalExpr",
@@ -80,7 +81,6 @@ __all__ = (
     "SelectorIR",
     "Sort",
     "SortBy",
-    "StructExpr",
     "TernaryExpr",
     "aggregation",
     "all_horizontal",
