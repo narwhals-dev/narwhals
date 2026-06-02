@@ -255,7 +255,6 @@ Boolean, Null, Numeric, Temporal, Binary or String-typed, + Dictionary ([no-op])
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
 
-
 SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
 ArrowT = TypeVar("ArrowT", bound=ArrowAny)
 ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")
