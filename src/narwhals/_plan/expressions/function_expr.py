@@ -391,7 +391,7 @@ class AsStructExpr(HorizontalExpr["AsStruct"]):
 
     Our outer context resolves into a different class:
     >>> resolved = named_ir.expr
-    >>> print(type(resolved).__name__})
+    >>> print(type(resolved).__name__)
     AsStructExpr
 
     And the output names of the fields are encoded into the dtype:
