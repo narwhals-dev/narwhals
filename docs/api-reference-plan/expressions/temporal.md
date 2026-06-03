@@ -1,4 +1,4 @@
-# `Expr.dt`
+# Temporal
 
 ::: narwhals._plan.expr.ExprDateTimeNamespace
     handler: python

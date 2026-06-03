@@ -1,4 +1,4 @@
-# `Expr.struct`
+# Struct
 
 ::: narwhals._plan.expr.ExprStructNamespace
     handler: python

@@ -1,4 +1,4 @@
-# `Expr.name`
+# Name
 
 ::: narwhals._plan.expr.ExprNameNamespace
     handler: python

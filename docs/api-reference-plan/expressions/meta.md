@@ -1,4 +1,4 @@
-# `Expr.meta`
+# Meta
 
 ::: narwhals._plan.expr.MetaNamespace
     handler: python

@@ -1,4 +1,4 @@
-# `Expr.cat`
+# Categorical
 
 ::: narwhals._plan.expr.ExprCatNamespace
     handler: python

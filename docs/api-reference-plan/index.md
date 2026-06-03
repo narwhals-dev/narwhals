@@ -11,14 +11,14 @@
         - GroupBy
     - [LazyFrame](lazyframe.md)
         - GroupBy
-    - [Expressions](expr.md)
-        - [Categorical](expr_cat.md)
-        - [List](expr_list.md)
-        - [Meta](expr_meta.md)
-        - [Name](expr_name.md)
-        - [String](expr_str.md)
-        - [Struct](expr_struct.md)
-        - [Temporal](expr_dt.md)
+    - [Expressions](expressions/index.md)
+        - [Categorical](expressions/categorical.md)
+        - [List](expressions/list.md)
+        - [Meta](expressions/meta.md)
+        - [Name](expressions/name.md)
+        - [String](expressions/string.md)
+        - [Struct](expressions/struct.md)
+        - [Temporal](expressions/temporal.md)
     - [Selectors](selectors.md)
     - Series
 - IR-level

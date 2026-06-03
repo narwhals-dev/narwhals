@@ -1,4 +1,4 @@
-# `Expr.str`
+# String
 
 ::: narwhals._plan.expr.ExprStringNamespace
     handler: python

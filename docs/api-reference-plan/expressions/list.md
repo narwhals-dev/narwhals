@@ -1,4 +1,4 @@
-# `Expr.list`
+# List
 
 ::: narwhals._plan.expr.ExprListNamespace
     handler: python
