@@ -8,8 +8,6 @@
         - ends_with
         - head
         - len_chars
-        - pad_end
-        - pad_start
         - replace
         - replace_all
         - slice
@@ -20,7 +18,6 @@
         - to_date
         - to_datetime
         - to_lowercase
-        - to_time
         - to_titlecase
         - to_uppercase
         - zfill
