@@ -8,11 +8,11 @@
         - alias
         - all
         - any
-        - any_value
+        - arg_min
+        - arg_max
         - cast
         - ceil
         - clip
-        - cos
         - count
         - cum_count
         - cum_max
@@ -22,20 +22,24 @@
         - diff
         - drop_nulls
         - ewm_mean
+        - exclude
         - exp
         - fill_nan
         - fill_null
         - filter
         - first
         - floor
+        - gather_every
+        - hist
         - is_between
-        - is_close
         - is_duplicated
         - is_finite
         - is_first_distinct
         - is_in
         - is_last_distinct
         - is_nan
+        - is_not_nan
+        - is_not_null
         - is_null
         - is_unique
         - kurtosis
@@ -60,13 +64,14 @@
         - rolling_sum
         - rolling_var
         - round
+        - sample
         - shift
-        - sin
         - skew
         - sqrt
+        - sort
+        - sort_by
         - std
         - sum
         - unique
         - var
       show_source: false
-      show_bases: false
