@@ -9,7 +9,7 @@
     - [Functions](functions.md)
     - [DataFrame](dataframe.md)
         - GroupBy
-    - LazyFrame
+    - [LazyFrame](lazyframe.md)
         - GroupBy
     - Expressions
         - Categorical
