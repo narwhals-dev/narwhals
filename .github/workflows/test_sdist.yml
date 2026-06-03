@@ -1,0 +1,68 @@
+name: Test sdist is installable and self-contained
+
+# Builds the sdist, unpacks it OUTSIDE the repo (so there is no workspace,
+# mirroring a downstream packager unpacking the PyPI tarball), installs it with
+# the `tests` dependency group via plain `pip`, and runs the test suite from the
+# unpacked tree. This guards against regressions like https://github.com/narwhals-dev/narwhals/pull/3664,
+# where the sdist shipped without `tests/data/` and the suite could not run from the tarball.
+#
+# NOTE: `pip` (not `uv pip`) is used on purpose.
+
+on:
+  pull_request:
+  workflow_call:
+
+env:
+  PY_COLORS: 1
+  PYTEST_ADDOPTS: "--numprocesses=logical"
+
+permissions:
+  contents: read
+
+jobs:
+  test-sdist:
+    if: github.head_ref != 'bump-version'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          python-version: "3.13"
+          enable-cache: "true"
+          cache-suffix: test-sdist
+          cache-dependency-glob: "pyproject.toml"
+
+      - name: Build the sdist
+        run: uv build --sdist
+
+      - name: Unpack the sdist outside the repo
+        run: |
+          mkdir -p "${RUNNER_TEMP}/sdist"
+          tar xzf dist/*.tar.gz -C "${RUNNER_TEMP}/sdist"
+          # Fail loudly if the workspace leaked into the tarball: its presence
+          # would mask exactly the kind of bug this job is meant to catch.
+          if [ -d "${RUNNER_TEMP}/sdist"/narwhals-*/packages ]; then
+            echo "::error::Unexpected 'packages/' (workspace) directory inside the sdist"
+            exit 1
+          fi
+
+      - name: Create an isolated venv with a recent pip
+        run: |
+          uv venv "${RUNNER_TEMP}/venv" --python 3.13
+          uv pip install --python "${RUNNER_TEMP}/venv" "pip>=25.1"
+
+      - name: Install the unpacked sdist with the tests group (via pip)
+        run: |
+          src=$(echo "${RUNNER_TEMP}/sdist"/narwhals-*)
+          "${RUNNER_TEMP}/venv/bin/python" -m pip install \
+            "${src}[pandas,pyarrow,polars]" \
+            --group "${src}/pyproject.toml:tests"
+
+      - name: Run the test suite from the unpacked sdist
+        run: |
+          # Validate that the sdist is complete and usable
+          src=$(echo "${RUNNER_TEMP}/sdist"/narwhals-*)
+          cd "${src}"
+          "${RUNNER_TEMP}/venv/bin/python" -m pytest tests \
+            --constructors="pandas,pyarrow,polars[eager],polars[lazy]"

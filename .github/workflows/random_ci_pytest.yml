@@ -32,9 +32,9 @@ jobs:
       - name: Generate random versions
         run: uv run --no-project python utils/generate_random_versions.py
       - name: Show dependencies
-        run: uv pip compile random-requirements.txt --group tests
+        run: uv pip compile random-requirements.txt --group tests --group plugins
       - name: Run pytest with random versions
         run: |
-          uv run --group tests --with-requirements random-requirements.txt \
+          uv run --group tests --group plugins --with-requirements random-requirements.txt \
           pytest tests --cov=src --cov=tests --cov-fail-under=75 \
           --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
