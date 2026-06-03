@@ -6,3 +6,4 @@
     is planned to be removed if it exists on `main`.
 
 - [narwhals._plan](narwhals.md)
+- [narwhals._plan.selectors](selectors.md)
