@@ -9,16 +9,16 @@
         - columns
         - drop
         - drop_nulls
+        - explain
         - explode
         - filter
-        - gather_every
+        - from_native
         - group_by
         - head
         - implementation
         - join
         - join_asof
-        - lazy
-        - pipe
+        - pivot
         - rename
         - schema
         - select
@@ -26,11 +26,10 @@
         - sort
         - tail
         - to_native
-        - top_k
         - unique
+        - unnest
         - unpivot
         - with_columns
         - with_row_index
       show_root_heading: false
       show_source: false
-      show_bases: false
