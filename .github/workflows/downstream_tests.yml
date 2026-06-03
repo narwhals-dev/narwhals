@@ -3,6 +3,10 @@ name: Test Downstream Libraries - Fast
 on:
   pull_request:
   workflow_call:
+    inputs:
+      skip-fairlearn:
+        type: boolean
+        default: false
 
 env:
   PY_COLORS: 1
@@ -611,7 +615,7 @@ jobs:
           uv run --no-sync pytest
 
   fairlearn:
-    if: github.head_ref != 'bump-version'
+    if: github.head_ref != 'bump-version' && !inputs.skip-fairlearn
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:

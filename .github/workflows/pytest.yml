@@ -38,7 +38,7 @@ jobs:
           # there (coverage dedupes) and keep the default values on Linux.
           COVERAGE_PATCH_EXECV: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'execv' }}
           COVERAGE_PATCH_FORK: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'fork' }}
-        run: make run-ci-coverage DEPS="--group tests --extra pandas --extra polars --extra pyarrow" FAIL_UNDER="75" CMD="pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]"
+        run: make run-ci-coverage DEPS="--group tests --group plugins --extra pandas --extra polars --extra pyarrow" FAIL_UNDER="75" CMD="pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]"
 
   pytest-windows:
     if: github.head_ref != 'bump-version'
@@ -64,7 +64,7 @@ jobs:
       # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
       - name: Run pytest
         shell: bash
-        run: make run-ci-coverage DEPS="--group core-tests --group extra --extra pandas" FAIL_UNDER="95" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci-coverage DEPS="--group core-tests --group extra --group plugins --extra pandas" FAIL_UNDER="95" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   pytest-full-coverage:
     if: github.head_ref != 'bump-version'
@@ -88,7 +88,7 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci-coverage DEPS="--extra pandas --extra dask --group core-tests --group extra" FAIL_UNDER="100" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+        run: make run-ci-coverage DEPS="--extra pandas --extra dask --group core-tests --group extra --group plugins" FAIL_UNDER="100" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
@@ -137,7 +137,7 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci-coverage DEPS="--group core-tests --extra pandas" FAIL_UNDER="50" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci-coverage DEPS="--group core-tests --group plugins --extra pandas" FAIL_UNDER="50" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   python-314t:
     if: github.head_ref != 'bump-version'
@@ -159,4 +159,4 @@ jobs:
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci-coverage DEPS="--pre --group tests --extra pandas --extra pyarrow" FAIL_UNDER="50" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
+        run: make run-ci-coverage DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" FAIL_UNDER="50" CMD="pytest tests --runslow --durations=30 --nw-backends=pandas,pandas[nullable],pandas[pyarrow],pyarrow"

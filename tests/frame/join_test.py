@@ -901,6 +901,24 @@ def test_join_on_null_values(
 # fmt: on
 
 
+@pytest.mark.parametrize(
+    ("how", "expected"),
+    [("semi", {"a": [1], "x": [10]}), ("anti", {"a": [2, None], "x": [20, 30]})],
+)
+def test_join_on_null_values_single_key(
+    constructor: Constructor, how: JoinStrategy, expected: dict[str, list[Any]]
+) -> None:
+    # Single-key semi/anti join: nulls must not match nulls. Polars < 0.20.22
+    # incorrectly matched `null == null` here (the two-key case in
+    # `test_join_on_null_values` only triggers it on 0.20.21).
+    # See https://github.com/narwhals-dev/narwhals/issues/3307
+    df_left = constructor({"a": [1, 2, None], "x": [10, 20, 30]}).lazy()
+    df_right = constructor({"a": [1, None], "y": [1.2, 3.4]}).lazy()
+
+    result = df_left.join(df_right, on="a", how=how).sort("a", nulls_last=True)
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.filterwarnings(
     "ignore:.*Merging dataframes with merge column data type mismatches:UserWarning:dask"
 )
