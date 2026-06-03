@@ -1,0 +1,62 @@
+# DataFrame
+
+::: narwhals._plan.dataframe.DataFrame
+    handler: python
+    options:
+      members:
+        - __arrow_c_stream__
+        - __getitem__
+        - clone
+        - collect_schema
+        - columns
+        - drop
+        - drop_nulls
+        - estimated_size
+        - explode
+        - filter
+        - from_arrow
+        - from_dict
+        - from_dicts
+        - from_numpy
+        - gather_every
+        - get_column
+        - group_by
+        - head
+        - implementation
+        - is_duplicated
+        - is_empty
+        - is_unique
+        - item
+        - iter_columns
+        - iter_rows
+        - join
+        - join_asof
+        - lazy
+        - null_count
+        - pipe
+        - pivot
+        - rename
+        - row
+        - rows
+        - sample
+        - schema
+        - select
+        - shape
+        - sort
+        - tail
+        - to_arrow
+        - to_dict
+        - to_native
+        - to_numpy
+        - to_pandas
+        - to_polars
+        - top_k
+        - unique
+        - unpivot
+        - with_columns
+        - with_row_index
+        - write_csv
+        - write_parquet
+      show_source: false
+      show_bases: false
+      inherited_members: true
