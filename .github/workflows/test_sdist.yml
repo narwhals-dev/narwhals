@@ -65,4 +65,4 @@ jobs:
           src=$(echo "${RUNNER_TEMP}/sdist"/narwhals-*)
           cd "${src}"
           "${RUNNER_TEMP}/venv/bin/python" -m pytest tests \
-            --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
+            --nw-backends="pandas,pyarrow,polars[eager],polars[lazy]"
