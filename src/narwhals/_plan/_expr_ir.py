@@ -230,11 +230,19 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         """
         return self.__expr_ir_dtype__(self, schema)
 
-    # TODO @dangotbanned: Less hacky solution (2)
-    def _pre_undo_aliases(self, schema: FrozenSchema, /) -> ExprIR:
-        """Hook for after expansion and resolving the output name.
+    # NOTE: I still don't like this solution, but it works and need to move on
+    def _resolve_name_nested(self, schema: FrozenSchema, /) -> ExprIR:
+        """Called when converting to `NamedIR`.
 
-        But before removing renaming ops and validating.
+        The flow is:
+
+            <expr expansion>
+                    ↓
+            (<resolve output name> -> <nested> -> <remove renaming ops>)*
+                    ↓
+            <schema validation>
+
+        Where `<nested>` gives `struct(...)` a chance to alias it's own fields.
         """
         return self
 

@@ -22,7 +22,7 @@ from narwhals.utils import Version
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan import Selector
+    from narwhals._plan import Expr, Selector
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import MapIR
 
@@ -121,6 +121,8 @@ class MetaNamespace(IRNamespace):
         """Get the root column names."""
         return list(iter_root_names(self._ir))
 
+    # TODO @dangotbanned: Add a `ExprMetaNamespace` to preserve the original version (also `undo_aliases`)
+    # - All of the other methods (and their docs) should still be shared
     @unstable
     def as_selector(self) -> Selector:
         """Try to turn this expression into a selector.
@@ -128,6 +130,15 @@ class MetaNamespace(IRNamespace):
         Raises if the underlying expression is not a column or selector.
         """
         return self._ir.to_selector_ir().to_narwhals()
+
+    # NOTE: The internal part is already posssible, but only safe from `ExprIR | SelectorIR`
+    # - At the narwhals-level, we'd lose track of `Expr | Selector` and their version
+    # - This guy is a placeholder to avoid using `undo_aliases` for something else
+    @unstable
+    def undo_aliases(self) -> Expr | Selector:
+        """Undo any renaming operation like `alias` or `name.keep`."""
+        msg = "`meta.undo_aliases()` is not yet implemented"
+        raise NotImplementedError(msg)
 
 
 _TP_DATETIME = Version.MAIN.dtypes.Datetime
@@ -171,7 +182,7 @@ def resolve_name(expr: ir.ExprIR, schema: FrozenSchema, /) -> tuple[str, ir.Expr
         output_name = expr.meta.output_name()
 
     if _has_struct(expr):
-        expr = expr.map_ir(lambda child: child._pre_undo_aliases(schema))
+        expr = expr.map_ir(lambda child: child._resolve_name_nested(schema))
     return output_name, expr.map_ir(_remove_alias)
 
 

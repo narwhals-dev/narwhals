@@ -125,8 +125,7 @@ class AsStruct(HorizontalFunction):
         msg = f"TODO @dangotbanned: {self.resolve_dtype.__qualname__}()"
         raise NotImplementedError(msg)
 
-    # TODO @dangotbanned: Less hacky solution (2)
-    def _pre_undo_aliases(
+    def _resolve_name_nested(
         self, node: FunctionExpr[Any], schema: FrozenSchema, /
     ) -> ExprIR:
         from narwhals._plan.expressions import AsStructExpr

@@ -260,14 +260,10 @@ class Function(Immutable):
         """
         return self.__expr_ir_dtype__(node, schema)
 
-    # TODO @dangotbanned: Less hacky solution (2)
-    def _pre_undo_aliases(
+    def _resolve_name_nested(
         self, node: FunctionExpr[Any], schema: FrozenSchema, /
     ) -> ExprIR:
-        """Hook for after expansion and resolving the output name.
-
-        But before removing renaming ops and validating.
-        """
+        """See `{ExprIR,AsStruct}._resolve_name_nested`."""
         return node
 
 

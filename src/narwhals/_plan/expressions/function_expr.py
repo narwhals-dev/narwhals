@@ -186,8 +186,8 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         # [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         return self.function.resolve_dtype(self, schema)
 
-    def _pre_undo_aliases(self, schema: FrozenSchema, /) -> ExprIR:
-        return self.function._pre_undo_aliases(self, schema)
+    def _resolve_name_nested(self, schema: FrozenSchema, /) -> ExprIR:
+        return self.function._resolve_name_nested(self, schema)
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
         input_root, *non_root = self.args
