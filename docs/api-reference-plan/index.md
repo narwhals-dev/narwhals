@@ -7,7 +7,7 @@
 
 - Narwhals-level
     - [Functions](functions.md)
-    - DataFrame
+    - [DataFrame](dataframe.md)
         - GroupBy
     - LazyFrame
         - GroupBy
