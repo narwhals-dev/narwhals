@@ -131,7 +131,7 @@ class MetaNamespace(IRNamespace):
         """
         return self._ir.to_selector_ir().to_narwhals()
 
-    # NOTE: The internal part is already posssible, but only safe from `ExprIR | SelectorIR`
+    # NOTE: The internal part is already possible, but only safe from `ExprIR | SelectorIR`
     # - At the narwhals-level, we'd lose track of `Expr | Selector` and their version
     # - This guy is a placeholder to avoid using `undo_aliases` for something else
     @unstable
