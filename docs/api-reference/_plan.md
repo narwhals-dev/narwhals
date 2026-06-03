@@ -47,3 +47,4 @@ Here are the top-level functions available in Narwhals.
         - sum_horizontal
         - when
       show_source: false
+      group_by_category: false
