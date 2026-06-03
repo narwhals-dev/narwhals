@@ -121,6 +121,12 @@ class CompliantExpr(
         context: _LimitedContext,
     ) -> Self: ...
     def broadcast(self) -> Self: ...
+    def _is_close_float_promote(self) -> Self:
+        # Default float promotion for `is_close`: equivalent to `self + 0.0`, letting
+        # each backend pick its float type (broadcast mirrors the node-evaluation path).
+        # Polars overrides this to align old versions (see `PolarsExpr`).
+        plx = self.__narwhals_namespace__()
+        return self + plx.lit(0.0, None).broadcast()
 
     # NOTE: `polars`
     def alias(self, name: str) -> Self: ...
