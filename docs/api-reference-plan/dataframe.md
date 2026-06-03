@@ -4,54 +4,43 @@
     handler: python
     options:
       members:
-        - __arrow_c_stream__
-        - __getitem__
         - clone
         - collect_schema
         - columns
         - drop
         - drop_nulls
-        - estimated_size
         - explode
         - filter
-        - from_arrow
         - from_dict
-        - from_dicts
-        - from_numpy
+        - from_native
         - gather_every
         - get_column
         - group_by
-        - head
         - implementation
-        - is_duplicated
-        - is_empty
-        - is_unique
-        - item
         - iter_columns
-        - iter_rows
         - join
         - join_asof
         - lazy
-        - null_count
+        - partition_by
         - pipe
         - pivot
         - rename
         - row
-        - rows
         - sample
         - schema
         - select
         - shape
+        - slice
         - sort
-        - tail
         - to_arrow
         - to_dict
         - to_native
-        - to_numpy
         - to_pandas
         - to_polars
-        - top_k
+        - to_series
+        - to_struct
         - unique
+        - unnest
         - unpivot
         - with_columns
         - with_row_index
