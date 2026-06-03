@@ -87,7 +87,15 @@ nav = [
         "api-reference-plan/functions.md",
         "api-reference-plan/dataframe.md",
         "api-reference-plan/lazyframe.md",
-        "api-reference-plan/expr.md", 
+        "api-reference-plan/expr.md",
+        # TODO @dangotbanned: needs to nest here
+        "api-reference-plan/expr_cat.md",
+        "api-reference-plan/expr_dt.md",
+        "api-reference-plan/expr_list.md",
+        # TODO @dangotbanned: meta
+        "api-reference-plan/expr_name.md",
+        "api-reference-plan/expr_str.md",
+        "api-reference-plan/expr_struct.md",
         "api-reference-plan/selectors.md", 
     ] },
     {"This" = "this.md"}

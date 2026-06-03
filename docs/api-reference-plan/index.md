@@ -12,13 +12,13 @@
     - [LazyFrame](lazyframe.md)
         - GroupBy
     - [Expressions](expr.md)
-        - Categorical
-        - List
+        - [Categorical](expr_cat.md)
+        - [List](expr_list.md)
         - Meta
-        - Name
-        - String
-        - Struct
-        - Temporal
+        - [Name](expr_name.md)
+        - [String](expr_str.md)
+        - [Struct](expr_struct.md)
+        - [Temporal](expr_dt.md)
     - [Selectors](selectors.md)
     - Series
 - IR-level
