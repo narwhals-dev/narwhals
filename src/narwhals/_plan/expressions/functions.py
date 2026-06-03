@@ -120,11 +120,6 @@ class AsStruct(HorizontalFunction):
         args = ", ".join(map(repr, node.args))
         return f"{self!r}({args})"
 
-    # TODO @dangotbanned: This isn't reachable anymore
-    def resolve_dtype(self, node: FunctionExpr[Self], schema: FrozenSchema) -> DType:
-        msg = f"TODO @dangotbanned: {self.resolve_dtype.__qualname__}()"
-        raise NotImplementedError(msg)
-
     def _resolve_name_nested(
         self, node: FunctionExpr[Any], schema: FrozenSchema, /
     ) -> ExprIR:
