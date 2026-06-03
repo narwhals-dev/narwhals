@@ -14,7 +14,7 @@
     - [Expressions](expr.md)
         - [Categorical](expr_cat.md)
         - [List](expr_list.md)
-        - Meta
+        - [Meta](expr_meta.md)
         - [Name](expr_name.md)
         - [String](expr_str.md)
         - [Struct](expr_struct.md)

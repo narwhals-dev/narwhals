@@ -92,7 +92,7 @@ nav = [
         "api-reference-plan/expr_cat.md",
         "api-reference-plan/expr_dt.md",
         "api-reference-plan/expr_list.md",
-        # TODO @dangotbanned: meta
+        "api-reference-plan/expr_meta.md",
         "api-reference-plan/expr_name.md",
         "api-reference-plan/expr_str.md",
         "api-reference-plan/expr_struct.md",
