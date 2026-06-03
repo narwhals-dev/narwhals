@@ -26,4 +26,3 @@
 - [narwhals.selectors](selectors.md)
 - [narwhals.typing](typing.md)
 - [narwhals.utils](utils.md)
-- [narwhals._plan](_plan.md)

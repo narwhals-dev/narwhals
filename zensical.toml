@@ -81,8 +81,11 @@ nav = [
         "api-reference/testing.md",
         "api-reference/typing.md",
         "api-reference/utils.md",
-        "api-reference/_plan.md",
     ]},
+    { "API Reference (Experimental)" = [
+        "api-reference-plan/index.md", 
+        "api-reference-plan/narwhals.md", 
+    ] },
     {"This" = "this.md"}
 ]
 
