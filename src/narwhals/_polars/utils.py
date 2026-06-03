@@ -52,20 +52,35 @@ BACKEND_VERSION = Implementation.POLARS._backend_version()
 SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
 """`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
 
+RESPECT_JOIN_NULL_SEMI_ANTI: Final[bool] = BACKEND_VERSION >= (0, 20, 22)
+"""Polars < 0.20.22 treats `null == null` as a match in semi/anti joins.
+
+Dropping rows with null keys on the right removes these spurious matches,
+which is always valid since narwhals treats nulls as non-matching.
+
+Fixed in https://github.com/pola-rs/polars/pull/15696
+"""
+
 SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
 """`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
 
 Includes `SERIES_ACCEPTS_PD_INDEX`.
 """
 
-HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
+HAS_INT_128: Final[bool] = BACKEND_VERSION >= (1, 18, 0)
 """https://github.com/pola-rs/polars/pull/20232"""
 
 FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
 """`pl.from_dicts(data: Iterable[Mapping[str, Any]])` since https://github.com/pola-rs/polars/pull/22638"""
 
-HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
+HAS_UINT_128: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 """https://github.com/pola-rs/polars/pull/24346"""
+
+BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
+"""Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32` promotion).
+
+https://github.com/pola-rs/polars/pull/24594
+"""
 
 
 @overload

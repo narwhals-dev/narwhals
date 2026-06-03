@@ -32,7 +32,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
         shell: bash
-        run: make run-ci DEPS="--group tests --extra pandas --extra polars --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]"
+        run: make run-ci DEPS="--group tests --group plugins --extra pandas --extra polars --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=75 --constructors=pandas,pyarrow,polars[eager],polars[lazy]"
 
   pytest-windows:
     if: github.head_ref != 'bump-version'
@@ -53,7 +53,7 @@ jobs:
       # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
       - name: Run pytest
         shell: bash
-        run: make run-ci DEPS="--group core-tests --group extra --extra pandas" CMD="pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci DEPS="--group core-tests --group extra --group plugins --extra pandas" CMD="pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   pytest-full-coverage:
     if: github.head_ref != 'bump-version'
@@ -79,7 +79,7 @@ jobs:
       - name: Run pytest (plan)
         run: make run-ci-plan
       - name: Run pytest
-        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --ignore=tests/plan --ignore=src/narwhals/_plan --cov-append"
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --ignore=tests/plan --ignore=src/narwhals/_plan --cov-append"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
@@ -128,7 +128,7 @@ jobs:
           cache-suffix: python-314-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--group core-tests --extra pandas" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci DEPS="--group core-tests --group plugins --extra pandas" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   python-314t:
     if: github.head_ref != 'bump-version'
@@ -150,4 +150,4 @@ jobs:
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--pre --group tests --extra pandas --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
+        run: make run-ci DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"

@@ -1796,7 +1796,7 @@ wheels = [
 
 [[package]]
 name = "narwhals"
-version = "2.21.2"
+version = "2.22.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
@@ -1882,7 +1882,6 @@ core-tests = [
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
-    { name = "test-plugin" },
 ]
 dev = [
     { name = "covdefaults" },
@@ -1894,7 +1893,6 @@ dev = [
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "test-plugin" },
 ]
 dev-core = [
     { name = "covdefaults" },
@@ -1910,7 +1908,6 @@ dev-core = [
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "test-plugin" },
 ]
 docs = [
     { name = "black" },
@@ -1949,7 +1946,6 @@ extreme-minimum-versions = [
     { name = "scikit-learn", version = "1.1.0", source = { registry = "https://pypi.org/simple" } },
     { name = "scipy", version = "1.7.3", source = { registry = "https://pypi.org/simple" } },
     { name = "setuptools" },
-    { name = "test-plugin" },
     { name = "tzdata" },
 ]
 extreme-not-so-old-versions = [
@@ -1970,7 +1966,6 @@ extreme-not-so-old-versions = [
     { name = "scikit-learn", version = "1.3.0", source = { registry = "https://pypi.org/simple" } },
     { name = "scipy", version = "1.8.0", source = { registry = "https://pypi.org/simple" } },
     { name = "setuptools" },
-    { name = "test-plugin" },
     { name = "tzdata" },
 ]
 extreme-pretty-old-versions = [
@@ -1990,7 +1985,6 @@ extreme-pretty-old-versions = [
     { name = "scikit-learn", version = "1.1.0", source = { registry = "https://pypi.org/simple" } },
     { name = "scipy", version = "1.8.0", source = { registry = "https://pypi.org/simple" } },
     { name = "setuptools" },
-    { name = "test-plugin" },
     { name = "tzdata" },
 ]
 local-dev = [
@@ -2028,7 +2022,6 @@ min-pyspark-version = [
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
-    { name = "test-plugin" },
 ]
 plugins = [
     { name = "test-plugin" },
@@ -2041,7 +2034,6 @@ tests = [
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
-    { name = "test-plugin" },
 ]
 typing = [
     { name = "hypothesis" },
@@ -2097,7 +2089,6 @@ core-tests = [
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
 ]
 dev = [
     { name = "covdefaults" },
@@ -2109,7 +2100,6 @@ dev = [
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
 ]
 dev-core = [
     { name = "covdefaults" },
@@ -2124,7 +2114,6 @@ dev-core = [
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
     { name = "ruff" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
 ]
 docs = [
     { name = "black", specifier = ">=26.3.1" },
@@ -2154,7 +2143,6 @@ extreme-minimum-versions = [
     { name = "scikit-learn", specifier = "==1.1.0" },
     { name = "scipy", specifier = "==1.7.3" },
     { name = "setuptools" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
     { name = "tzdata" },
 ]
 extreme-not-so-old-versions = [
@@ -2175,7 +2163,6 @@ extreme-not-so-old-versions = [
     { name = "scikit-learn", specifier = "==1.3.0" },
     { name = "scipy", specifier = "==1.8.0" },
     { name = "setuptools" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
     { name = "tzdata" },
 ]
 extreme-pretty-old-versions = [
@@ -2195,7 +2182,6 @@ extreme-pretty-old-versions = [
     { name = "scikit-learn", specifier = "==1.1.0" },
     { name = "scipy", specifier = "==1.8.0" },
     { name = "setuptools" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
     { name = "tzdata" },
 ]
 local-dev = [
@@ -2232,7 +2218,6 @@ min-pyspark-version = [
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
 ]
 plugins = [{ name = "test-plugin", editable = "packages/test-plugin" }]
 tests = [
@@ -2243,7 +2228,6 @@ tests = [
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
-    { name = "test-plugin", editable = "packages/test-plugin" },
 ]
 typing = [
     { name = "hypothesis", specifier = ">=6.0.0" },
