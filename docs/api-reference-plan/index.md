@@ -6,12 +6,12 @@
     is planned to be removed if it exists on `main`.
 
 - Narwhals-level
-    - [Functions](narwhals.md)
+    - [Functions](functions.md)
     - DataFrame
         - GroupBy
     - LazyFrame
         - GroupBy
-    - Expr
+    - Expressions
         - Categorical
         - List
         - Meta

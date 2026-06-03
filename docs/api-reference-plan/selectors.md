@@ -1,4 +1,4 @@
-# `narwhals._plan.selectors`
+# Selectors
 
 ::: narwhals._plan.selectors
     handler: python

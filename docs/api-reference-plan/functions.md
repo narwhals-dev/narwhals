@@ -1,4 +1,4 @@
-# `narwhals._plan`
+# Functions
 
 Here are the top-level functions available in Narwhals.
 
