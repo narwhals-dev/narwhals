@@ -13,7 +13,7 @@ from narwhals.exceptions import InvalidOperationError
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import FunctionExpr, StructExpr
+    from narwhals._plan.expressions import FromStructExpr, FunctionExpr
     from narwhals._plan.schema import FrozenSchema
     from narwhals.dtypes import DType
 
@@ -25,10 +25,10 @@ renamed = DispatcherOptions.renamed
 
 class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct")):
     @classmethod
-    def __function_expr__(cls) -> type[StructExpr[Any]]:
-        from narwhals._plan.expressions import StructExpr
+    def __function_expr__(cls) -> type[FromStructExpr[Any]]:
+        from narwhals._plan.expressions import FromStructExpr
 
-        return StructExpr
+        return FromStructExpr
 
     @property
     def needs_expansion(self) -> bool:

@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import threading
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Iterable, Iterator, KeysView, Mapping, Sequence
 from importlib.util import find_spec
 from itertools import chain
 from operator import attrgetter
@@ -31,6 +31,7 @@ from narwhals._plan.compliant.typing import Native as NativeLazyFrame
 from narwhals._plan.typing import NativeDataFrameT_co, NativeSeriesT_co
 from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 from narwhals._utils import Implementation, Version, qualified_type_name
+from narwhals.testing.asserts.utils import raise_assertion_error
 from tests.utils import assert_equal_data as _assert_equal_data
 
 if TYPE_CHECKING:
@@ -56,6 +57,8 @@ if TYPE_CHECKING:
     SubList: TypeAlias = list[T] | list[T | None] | list[None] | None
     TestBackendAny: TypeAlias = "TestBackend[Any, Any, Any]"
     _Raises: TypeAlias = type[Exception] | tuple[type[Exception], ...]
+
+    OrderedCollection: TypeAlias = Sequence[T] | Mapping[T, Any] | KeysView[T]
 
 R_co = TypeVar("R_co", covariant=True)
 Impl_co = TypeVar("Impl_co", bound=Implementation, covariant=True)
@@ -678,12 +681,45 @@ else:
 
 
 def assert_equal_data(
-    result: nwp.DataFrame[Any, Any], expected: Mapping[str, Any] | nwp.DataFrame[Any, Any]
+    result: nwp.DataFrame[Any, Any],
+    expected: Mapping[str, Any] | nwp.DataFrame[Any, Any],
+    *,
+    check_column_order: bool = True,
 ) -> None:
+    """Adds ordering checks, which aren't part of `tests.utils.assert_equal_data`."""
     __tracebackhide__ = True
     if isinstance(expected, nwp.DataFrame):
         expected = expected.to_dict(as_series=False)
-    _assert_equal_data(result.to_dict(as_series=False), expected)
+    got = result.to_dict(as_series=False)
+    if check_column_order:
+        _assert_column_names_equal(got, expected)
+    else:  # pragma: no cover
+        ...
+    _assert_equal_data(got, expected)
+
+
+def _assert_column_names_equal(
+    left: OrderedCollection[str], right: OrderedCollection[str], /
+) -> None:  # pragma: no cover
+    __tracebackhide__ = True
+    l_names, r_names = list(left), list(right)
+    if l_names == r_names:
+        return
+    l_set, r_set = set(l_names), set(r_names)
+
+    if left_not_in_right := sorted(l_set.difference(r_set)):
+        raise_assertion_error(
+            "Schemas", f"{left_not_in_right} in left, but not in right", l_names, r_names
+        )
+    if right_not_in_left := sorted(r_set.difference(l_set)):
+        raise_assertion_error(
+            "Schemas", f"{right_not_in_left} in right, but not in left", l_names, r_names
+        )
+
+    if l_names != r_names:
+        raise_assertion_error(
+            "Schemas", "columns are not in the same order", l_names, r_names
+        )
 
 
 @overload
@@ -701,6 +737,30 @@ def assert_equal_series(
     else:
         expected = expected if isinstance(expected, Sequence) else tuple(expected)
     assert_equal_data(result.to_frame(), {name: expected})
+
+
+def assert_equal_schema(
+    result: nwp.DataFrame[Any, Any] | nwp.LazyFrame[Any] | Schema,
+    expected: IntoSchema | Mapping[str, IntoDType],
+) -> None:
+    """https://github.com/narwhals-dev/narwhals/issues/739#issuecomment-4592180019."""
+    __tracebackhide__ = True
+    if isinstance(result, (nwp.LazyFrame, nwp.DataFrame)):
+        result = result.collect_schema()
+    if not isinstance(expected, nw.Schema):  # pragma: no cover
+        expected = nw.Schema(expected)  # type: ignore[arg-type]
+
+    l_schema = result
+    r_schema = expected
+    # NOTE: I think this circumvents the order check?
+    # Fast path for equal DataFrames
+    if l_schema == r_schema:
+        return
+    else:  # pragma: no cover  # noqa: RET505
+        _assert_column_names_equal(l_schema, r_schema)
+        r_dtypes = r_schema.dtypes()
+        if (l_dtypes := l_schema.dtypes()) != r_dtypes:
+            raise_assertion_error("Schemas", "dtypes do not match", l_dtypes, r_dtypes)
 
 
 def re_compile(

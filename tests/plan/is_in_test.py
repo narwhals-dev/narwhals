@@ -115,7 +115,9 @@ def test_expr_is_in_series(data: Data, dataframe: DataFrame) -> None:
     a_ser = df.get_column("a")
     b_ser = df.get_column("b")
 
-    assert_equal_data(df.filter(a.is_in(b_ser)), {"a": [1, 2], "b": [1, 2]})
+    assert_equal_data(
+        df.filter(a.is_in(b_ser)), {"a": [1, 2], "b": [1, 2], "c": [None, "hello"]}
+    )
     assert_equal_data(df.select(a_last.is_in(b_ser)), {"a": [False]})
     assert_equal_data(df.select(a_first.is_in(b_ser)), {"a": [True]})
     assert_equal_data(df.select((a_last - a_first).is_in(a_ser)), {"a": [True]})

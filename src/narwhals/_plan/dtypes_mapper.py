@@ -17,6 +17,7 @@ from narwhals.dtypes import (
     Decimal,
     DType,
     Duration,
+    Field as Field,  # noqa: PLC0414
     Float32,
     Float64,
     FloatType,

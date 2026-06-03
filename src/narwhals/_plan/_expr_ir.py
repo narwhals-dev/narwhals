@@ -43,7 +43,7 @@ import functools
 
 # ruff: noqa: N806
 from functools import reduce
-from typing import TYPE_CHECKING, Generic, final
+from typing import TYPE_CHECKING, Any, Generic, final
 
 from narwhals._plan import _dispatch
 from narwhals._plan._dispatch import ConstructorDispatch, Dispatch, ExprIRDispatch
@@ -59,7 +59,7 @@ from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
-    from typing import Any, ClassVar
+    from typing import ClassVar
 
     from typing_extensions import Self
 
@@ -229,6 +229,22 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             schema: The same schema used to project this expression.
         """
         return self.__expr_ir_dtype__(self, schema)
+
+    # NOTE: I still don't like this solution, but it works and need to move on
+    def _resolve_name_nested(self, schema: FrozenSchema, /) -> ExprIR:
+        """Called when converting to `NamedIR`.
+
+        The flow is:
+
+            <expr expansion>
+                    ↓
+            (<resolve output name> -> <nested> -> <remove renaming ops>)*
+                    ↓
+            <schema validation>
+
+        Where `<nested>` gives `struct(...)` a chance to alias it's own fields.
+        """
+        return self
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Expr:
         """Convert this `ExprIR` into an narwhals-level `Expr`.

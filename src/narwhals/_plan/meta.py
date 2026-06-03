@@ -11,17 +11,20 @@ from typing import TYPE_CHECKING, Literal, overload
 
 from narwhals._plan import expressions as ir
 from narwhals._plan.expressions import selectors as cs
+from narwhals._plan.expressions.functions import AsStruct
 from narwhals._plan.expressions.literal import Lit, LitSeries
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._plan.expressions.struct import FieldByName
 from narwhals._utils import unstable
-from narwhals.exceptions import ComputeError
+from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan import Selector
+    from narwhals._plan import Expr, Selector
+    from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import MapIR
 
 
 class MetaNamespace(IRNamespace):
@@ -118,6 +121,8 @@ class MetaNamespace(IRNamespace):
         """Get the root column names."""
         return list(iter_root_names(self._ir))
 
+    # TODO @dangotbanned: Add a `ExprMetaNamespace` to preserve the original version (also `undo_aliases`)
+    # - All of the other methods (and their docs) should still be shared
     @unstable
     def as_selector(self) -> Selector:
         """Try to turn this expression into a selector.
@@ -125,6 +130,15 @@ class MetaNamespace(IRNamespace):
         Raises if the underlying expression is not a column or selector.
         """
         return self._ir.to_selector_ir().to_narwhals()
+
+    # NOTE: The internal part is already possible, but only safe from `ExprIR | SelectorIR`
+    # - At the narwhals-level, we'd lose track of `Expr | Selector` and their version
+    # - This guy is a placeholder to avoid using `undo_aliases` for something else
+    @unstable
+    def undo_aliases(self) -> Expr | Selector:
+        """Undo any renaming operation like `alias` or `name.keep`."""
+        msg = "`meta.undo_aliases()` is not yet implemented"
+        raise NotImplementedError(msg)
 
 
 _TP_DATETIME = Version.MAIN.dtypes.Datetime
@@ -147,9 +161,46 @@ def _expr_output_name(expr: ir.ExprIR, /) -> str | ComputeError:
             return ComputeError(msg)
         if isinstance(e, cs.ByName) and len(e.names) == 1:
             return e.names[0]
-        if isinstance(e, ir.StructExpr) and isinstance(e.function, FieldByName):
+        if isinstance(e, ir.FromStructExpr) and isinstance(e.function, FieldByName):
             return e.function.name
     msg = (
         f"unable to find root column name for expr '{expr!r}' when calling 'output_name'"
     )
     return ComputeError(msg)
+
+
+def resolve_name(expr: ir.ExprIR, schema: FrozenSchema, /) -> tuple[str, ir.ExprIR]:
+    # NOTE: "" is allowed as a name, but falsy
+    if (output_name := expr.meta.output_name(raise_if_undetermined=False)) is None:
+        if (root_name := next(iter_root_names(expr), None)) is None:
+            msg = f"`name.keep` expected at least one column name, got `{expr!r}`"
+            raise InvalidOperationError(msg)
+        # https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_to_ir.rs#L584-L597
+        # NOTE: This order ensures that renaming which occurs *after* `keep` uses the `root_name`
+        # https://github.com/pola-rs/polars/blob/aaa11d6af7383a5f9b62f432e14cc2d4af6d8548/py-polars/tests/unit/operations/namespaces/test_name.py#L118-L130
+        expr = expr.map_ir(_keep_name_to_alias(root_name))
+        output_name = expr.meta.output_name()
+
+    if _has_struct(expr):
+        expr = expr.map_ir(lambda child: child._resolve_name_nested(schema))
+    return output_name, expr.map_ir(_remove_alias)
+
+
+def _keep_name_to_alias(name: str, /) -> MapIR:
+    def fn(child: ir.ExprIR, /) -> ir.ExprIR:
+        return child.expr.alias(name) if isinstance(child, ir.KeepName) else child
+
+    return fn
+
+
+def _remove_alias(child: ir.ExprIR, /) -> ir.ExprIR:
+    return child.expr if isinstance(child, (ir.Alias, ir.RenameAlias)) else child
+
+
+@lru_cache(maxsize=32)
+def _has_struct(expr: ir.ExprIR, /) -> bool:
+    """Return True if this expression contains a `struct(...)`."""
+    return any(
+        isinstance(e, ir.HorizontalExpr) and isinstance(e.function, AsStruct)
+        for e in expr.iter_right()
+    )

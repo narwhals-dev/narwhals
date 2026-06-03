@@ -179,6 +179,9 @@ class CompliantColumn(Protocol[Frame, NativeColumn_co, NativeExpr_co, NativeScal
     def any_horizontal(
         self, node: HExpr[ir.boolean.AnyHorizontal], frame: Frame, name: str, /
     ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
+    def as_struct(
+        self, node: ir.AsStructExpr, frame: Frame, name: str, /
+    ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...
     def coalesce(
         self, node: HExpr[F.Coalesce], frame: Frame, name: str, /
     ) -> Self | ct.Column[Frame, Incomplete, NativeExpr_co, NativeScalar_co]: ...

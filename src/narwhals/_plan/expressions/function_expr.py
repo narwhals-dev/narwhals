@@ -43,6 +43,7 @@ from narwhals._plan.typing import (
     Seq3,
     StructT_co,
 )
+from narwhals._utils import unstable
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -57,9 +58,9 @@ if TYPE_CHECKING:
         UnaryFunction,
     )
     from narwhals._plan.compliant import typing as ct
-    from narwhals._plan.expressions.functions import MapBatches  # noqa: F401
+    from narwhals._plan.expressions.functions import AsStruct, MapBatches  # noqa: F401
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import DType, Struct
 
 
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
@@ -184,6 +185,9 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         #   - `map_batches(..., dtype=None)`
         # [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
         return self.function.resolve_dtype(self, schema)
+
+    def _resolve_name_nested(self, schema: FrozenSchema, /) -> ExprIR:
+        return self.function._resolve_name_nested(self, schema)
 
     def iter_expand(self, ctx: Expander, /) -> Iterator[ExprIR]:
         input_root, *non_root = self.args
@@ -344,8 +348,8 @@ class HorizontalExpr(FunctionExpr[HorizontalT_co]):
     iter_expand = ExprIR.iter_expand
 
 
-class StructExpr(FunctionExpr[StructT_co]):
-    """An expression that applies a function to a struct column.
+class FromStructExpr(FunctionExpr[StructT_co]):
+    """An expression that applies a function to an existing struct column.
 
     Note:
         Requires special handling during expression expansion.
@@ -356,3 +360,48 @@ class StructExpr(FunctionExpr[StructT_co]):
 
     def iter_output_name(self) -> Iterator[ExprIR]:
         yield self
+
+
+@unstable
+class AsStructExpr(HorizontalExpr["AsStruct"]):
+    r"""An expression that creates a new struct column.
+
+    ## Examples
+    >>> import narwhals as nw
+    >>> import narwhals._plan as nwp
+    >>> from tests.plan.utils import Frame
+    >>> frame = Frame.from_mapping({"a": nw.Int64(), "b": nw.String(), "c": nw.Boolean()})
+    >>> expr = nwp.struct(nwp.col("a").alias("a_1"), nwp.nth(1).name.suffix("_2")).alias(
+    ...     "outer"
+    ... )
+
+    `struct` is unique as it has two contexts:
+    >>> expr._ir
+    struct(col('a').alias('a_1'), ncs.by_index([1]).name.suffix('_2')).alias('outer')
+
+    We start in a similar place to other variadic functions:
+    >>> print(type(expr._ir.expr).__name__)
+    HorizontalExpr
+
+    But after expansion, we need to handle the inner and outer contexts independently:
+    >>> named_ir = frame.project(expr)[0]
+    >>> named_ir
+    outer=struct(col('a'), col('b'))
+
+    Our outer context resolves into a different class:
+    >>> resolved = named_ir.expr
+    >>> print(type(resolved).__name__)
+    AsStructExpr
+
+    And the output names of the fields are encoded into the dtype:
+    >>> print(*zip(resolved.args, resolved.dtype.fields), sep="\n")
+    (col('a'), Field('a_1', Int64))
+    (col('b'), Field('b_2', String))
+    """
+
+    __slots__ = ("dtype",)
+    dtype: Struct
+    """The resolved struct dtype."""
+
+    def resolve_dtype(self, schema: FrozenSchema) -> Struct:
+        return self.dtype

@@ -229,12 +229,6 @@ ChunkedOrScalarAny: TypeAlias = "ChunkedOrScalar[ScalarAny]"
 Native: TypeAlias = ChunkedOrScalarAny
 """The type of `Arrow{Expr,Scalar}.native`."""
 
-IntoNative: TypeAlias = "Native | NonNestedLiteral"
-"""Extends `Native`, for functions that implicitly wrap python values in `Scalar`.
-
-`pyarrow-stubs` rarely documents that this is possible.
-"""
-
 
 ChunkedOrArrayAny: TypeAlias = "ChunkedOrArray[ScalarAny]"
 ChunkedOrArrayT = TypeVar("ChunkedOrArrayT", ChunkedArrayAny, ArrayAny)
@@ -260,8 +254,6 @@ Boolean, Null, Numeric, Temporal, Binary or String-typed, + Dictionary ([no-op])
 
 Arrow: TypeAlias = "ChunkedOrScalar[ScalarT_co] | Array[ScalarT_co]"
 ArrowAny: TypeAlias = "ChunkedOrScalarAny | ArrayAny"
-IntoArrowAny: TypeAlias = "IntoNative | ArrayAny"
-"""Extends `IntoNative` with `pa.Array[Any]`."""
 
 SameArrowT = TypeVar("SameArrowT", ChunkedArrayAny, ArrayAny, ScalarAny)
 ArrowT = TypeVar("ArrowT", bound=ArrowAny)
@@ -269,6 +261,15 @@ ArrowListT = TypeVar("ArrowListT", bound="Arrow[ListScalar[Any]]")
 Predicate: TypeAlias = "Arrow[BooleanScalar]"
 """Any `pyarrow` container that wraps boolean."""
 
+IntoScalar: TypeAlias = "ScalarAny | NonNestedLiteral"
+IntoNative: TypeAlias = "Native | IntoScalar"
+"""Extends `Native`, for functions that implicitly wrap python values in `Scalar`.
+
+`pyarrow-stubs` rarely documents that this is possible.
+"""
+
+IntoArrowAny: TypeAlias = "IntoNative | ArrayAny"
+"""Extends `IntoNative` with `pa.Array[Any]`."""
 IntoChunkedArray: TypeAlias = (
     "ArrowAny | list[Iterable[Any]] | OneOrIterable[ArrowStreamExportable | _NumpyArray]"
 )

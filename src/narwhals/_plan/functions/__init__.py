@@ -14,6 +14,7 @@ from narwhals._plan.functions.horizontal import (
     max_horizontal,
     mean_horizontal,
     min_horizontal,
+    struct,
     sum_horizontal,
 )
 from narwhals._plan.functions.lazy import select
@@ -53,6 +54,7 @@ __all__ = (
     "min_horizontal",
     "nth",
     "select",
+    "struct",
     "sum",
     "sum_horizontal",
 )

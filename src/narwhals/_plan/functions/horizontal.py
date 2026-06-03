@@ -96,3 +96,9 @@ def min_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
 def sum_horizontal(*exprs: OneOrIterable[IntoExpr]) -> Expr:
     it = _parse.into_iter_expr_ir(*exprs)
     return F.SumHorizontal().to_function_expr(*it).to_narwhals()
+
+
+def struct(*exprs: OneOrIterable[IntoExpr], **named_exprs: IntoExpr) -> Expr:
+    """Collect columns into a struct column."""
+    it = _parse.into_iter_expr_ir(*exprs, **named_exprs)
+    return F.AsStruct().to_function_expr(*it).to_narwhals()

@@ -286,6 +286,10 @@ def test_lit_object() -> None:
         ),
         (nwp.col("a").dt.timestamp("ns"), "col('a').dt.timestamp[ns]()"),
         (nwp.col("b").struct.field("c"), "col('b').struct.field('c')"),
+        (
+            nwp.struct(a="A", b="B").alias("c"),
+            "struct(col('A').alias('a'), col('B').alias('b')).alias('c')",
+        ),
     ],
 )
 def test_function(exprs: nwp.Expr | Sequence[nwp.Expr], expected: LiteralString) -> None:

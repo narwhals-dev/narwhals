@@ -12,7 +12,7 @@ from narwhals._plan.arrow import compat
 from narwhals._plan.arrow.functions.meta import call
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
     from narwhals._plan.arrow.acero import Field
     from narwhals._plan.arrow.typing import (
@@ -21,6 +21,8 @@ if TYPE_CHECKING:
         ArrowAny,
         ChunkedArrayAny,
         ChunkedStruct,
+        IntoArrowAny,
+        IntoScalar,
         Native,
         SameArrowT,
         ScalarAny,
@@ -28,28 +30,19 @@ if TYPE_CHECKING:
         StructArray,
     )
     from narwhals._plan.typing import Seq
-    from narwhals.typing import NonNestedLiteral
 
-__all__ = ("field", "field_names", "fields", "into_struct", "schema")
+__all__ = ("as_struct", "field", "field_names", "fields", "schema")
 
 
 @overload
-def into_struct(
-    columns: Iterable[ChunkedArrayAny], names: Iterable[str]
+def as_struct(columns: Seq[IntoScalar], names: Iterable[str]) -> pa.StructScalar: ...
+@overload
+def as_struct(
+    columns: Iterable[ChunkedArrayAny] | Iterator[Native], names: Iterable[str]
 ) -> ChunkedStruct: ...
 @overload
-def into_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
-@overload
-def into_struct(
-    columns: Iterable[ScalarAny], names: Iterable[str]
-) -> pa.StructScalar: ...
-@overload
-def into_struct(
-    columns: Iterable[ChunkedArrayAny | NonNestedLiteral], names: Iterable[str]
-) -> ChunkedStruct: ...
-def into_struct(
-    columns: Iterable[ArrowAny | NonNestedLiteral], names: Iterable[str]
-) -> Struct:
+def as_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
+def as_struct(columns: Iterable[IntoArrowAny], names: Iterable[str]) -> Struct:
     """Collect columns into a struct.
 
     Arguments:

@@ -245,6 +245,7 @@ class Function(Immutable):
         return self.__expr_ir_dispatch__.name
 
     def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        """Format the repr of the expression that wraps this function."""
         first, *rest = node.args
         if rest:
             return f"{first!r}.{self!r}({rest!r})"
@@ -258,6 +259,12 @@ class Function(Immutable):
             schema: The same schema used to project `node`.
         """
         return self.__expr_ir_dtype__(node, schema)
+
+    def _resolve_name_nested(
+        self, node: FunctionExpr[Any], schema: FrozenSchema, /
+    ) -> ExprIR:
+        """See `{ExprIR,AsStruct}._resolve_name_nested`."""
+        return node
 
 
 class HorizontalFunction(Function, flags=ELEMENTWISE):
