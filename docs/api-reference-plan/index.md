@@ -11,7 +11,7 @@
         - GroupBy
     - [LazyFrame](lazyframe.md)
         - GroupBy
-    - Expressions
+    - [Expressions](expr.md)
         - Categorical
         - List
         - Meta

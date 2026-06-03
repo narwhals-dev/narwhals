@@ -87,6 +87,7 @@ nav = [
         "api-reference-plan/functions.md",
         "api-reference-plan/dataframe.md",
         "api-reference-plan/lazyframe.md",
+        "api-reference-plan/expr.md", 
         "api-reference-plan/selectors.md", 
     ] },
     {"This" = "this.md"}
