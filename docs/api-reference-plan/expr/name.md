@@ -2,6 +2,7 @@
 
 ::: narwhals._plan.expr.ExprNameNamespace
     options:
+      show_bases: false
       members:
         - keep
         - map
@@ -9,4 +10,3 @@
         - suffix
         - to_lowercase
         - to_uppercase
-      show_bases: false

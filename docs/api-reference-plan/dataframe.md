@@ -2,6 +2,8 @@
 
 ::: narwhals._plan.dataframe.DataFrame
     options:
+      show_bases: false
+      inherited_members: true
       members:
         - clone
         - collect_schema
@@ -45,5 +47,3 @@
         - with_row_index
         - write_csv
         - write_parquet
-      show_bases: false
-      inherited_members: true

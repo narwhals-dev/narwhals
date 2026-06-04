@@ -2,6 +2,7 @@
 
 ::: narwhals._plan.expr.ExprDateTimeNamespace
     options:
+      show_bases: false
       members:
         - convert_time_zone
         - date
@@ -26,4 +27,3 @@
         - truncate
         - weekday
         - year
-      show_bases: false

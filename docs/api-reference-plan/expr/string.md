@@ -2,6 +2,7 @@
 
 ::: narwhals._plan.expr.ExprStringNamespace
     options:
+      show_bases: false
       members:
         - contains
         - ends_with
@@ -20,4 +21,3 @@
         - to_titlecase
         - to_uppercase
         - zfill
-      show_bases: false

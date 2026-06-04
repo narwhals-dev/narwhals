@@ -4,6 +4,7 @@ Here are the top-level functions available in Narwhals.
 
 ::: narwhals._plan
     options:
+      group_by_category: false
       members:
         - all
         - all_horizontal
@@ -39,4 +40,3 @@ Here are the top-level functions available in Narwhals.
         - sum
         - sum_horizontal
         - when
-      group_by_category: false

@@ -2,6 +2,7 @@
 
 ::: narwhals._plan.selectors
     options:
+      group_by_category: false
       members:
         - all
         - array
@@ -26,4 +27,3 @@
         - struct
         - temporal
         - Selector
-      group_by_category: false

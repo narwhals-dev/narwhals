@@ -2,6 +2,7 @@
 
 ::: narwhals._plan.expr.ExprListNamespace
     options:
+      show_bases: false
       members:
         - all
         - any
@@ -19,4 +20,3 @@
         - sort
         - sum
         - unique
-      show_bases: false
