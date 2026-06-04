@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from unittest import mock
+
 import pytest
+
+from narwhals.testing.pytest_plugin import _default_backend_ids
 
 pytest_plugins = ["pytester"]
 
@@ -65,3 +69,10 @@ def test_external_constructor_disables_parametrisation(pytester: pytest.Pytester
     result = pytester.runpytest_subprocess("--use-external-nw-backend")
     # Without external parametrisation in place, the fixture is missing.
     result.assert_outcomes(errors=1)
+
+
+def test_default_backends_env_var() -> None:
+    with mock.patch.dict(
+        "os.environ", {"NARWHALS_DEFAULT_BACKENDS": "pandas,polars[eager]"}
+    ):
+        assert _default_backend_ids() == ["pandas", "polars[eager]"]
