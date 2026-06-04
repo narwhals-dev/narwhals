@@ -71,6 +71,23 @@ def test_external_constructor_disables_parametrisation(pytester: pytest.Pytester
     result.assert_outcomes(errors=1)
 
 
+def test_multiple_frame_fixtures_raises(pytester: pytest.Pytester) -> None:
+    pytester.makeconftest("")
+    pytester.makepyfile("""
+        from narwhals.testing.typing import DataFrameConstructor, LazyFrameConstructor
+
+        def test_too_many(
+            nw_dataframe: DataFrameConstructor, nw_lazyframe: LazyFrameConstructor
+        ) -> None:
+            pass
+    """)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(errors=1)
+    result.stdout.fnmatch_lines(
+        ["*A test may only request one narwhals frame fixture, got:*"]
+    )
+
+
 def test_default_backends_env_var() -> None:
     with mock.patch.dict(
         "os.environ", {"NARWHALS_DEFAULT_BACKENDS": "pandas,polars[eager]"}
