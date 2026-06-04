@@ -4,7 +4,6 @@
 <!-- TODO @dangotbanned: Use `Col`, `LenStar` directly (aliases display without docs)-->
 ::: narwhals._plan.expressions
     options:
-      signature_crossrefs: true
       members:
         - ExprIR
         - Column

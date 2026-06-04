@@ -168,6 +168,16 @@ members_order = "alphabetical"
 separate_signature = true
 show_signature_annotations = true
 show_source = false
+show_if_no_docstring = true
+signature_crossrefs = true
+filters = [
+    "!^_",
+    "^__",
+    # above are default filters, everything after refines from them
+    # https://mkdocstrings.github.io/python/usage/configuration/members/#filters
+    "!^_+(repr|slots)"
+]
+
 
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.md_in_html]

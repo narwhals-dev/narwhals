@@ -2,7 +2,6 @@
 
 ::: narwhals._plan.expressions.aggregation
     options:
-      signature_crossrefs: true
       members:
         - AggExpr
         - ArgMax
