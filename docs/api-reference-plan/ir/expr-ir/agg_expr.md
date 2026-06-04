@@ -1,4 +1,4 @@
-# Aggregation
+# AggExpr
 
 ::: narwhals._plan.expressions.aggregation
     options:
