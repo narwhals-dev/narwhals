@@ -64,6 +64,7 @@ if TYPE_CHECKING:
 __all__ = (
     "available_backends",
     "available_cpu_backends",
+    "available_default_cpu_backends",
     "frame_constructor",
     "get_backend_constructor",
     "is_backend_available",
@@ -107,6 +108,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         is_eager: bool = False,
         is_nullable: bool = True,
         needs_gpu: bool = False,
+        default_include: bool = True,
     ) -> None:
         self.func = func
         self.name = name
@@ -115,6 +117,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self.is_eager = is_eager
         self.is_nullable = is_nullable
         self.needs_gpu = needs_gpu
+        self.default_include = default_include
 
     @classmethod
     def register(
@@ -126,6 +129,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         is_eager: bool = False,
         is_nullable: bool = True,
         needs_gpu: bool = False,
+        default_include: bool = True,
     ) -> Callable[[Callable[Concatenate[Data, ...], R]], frame_constructor[R]]:
         """Decorator: register `func` as the constructor named `name`.
 
@@ -137,6 +141,9 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
             is_eager: Whether the backend returns an eager dataframe.
             is_nullable: Whether the backend has native null support.
             needs_gpu: Whether the backend requires GPU hardware.
+            default_include: Whether this backend is included by default when running
+                `--all-nw-backends`. Set to `False` for backends that require
+                explicit opt-in (e.g. modin, pyspark[connect]).
 
         Returns:
             A decorator that replaces `func` with a `frame_constructor`
@@ -152,6 +159,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
                 is_eager=is_eager,
                 is_nullable=is_nullable,
                 needs_gpu=needs_gpu,
+                default_include=default_include,
             )
             cls._registry[name] = inst
             return inst
@@ -352,6 +360,7 @@ def pyarrow_table_constructor(obj: Data, /, **kwds: Any) -> pa.Table:
     requirements=("modin",),
     is_eager=True,
     is_nullable=False,
+    default_include=False,
 )
 def modin_constructor(obj: Data, /, **kwds: Any) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
@@ -365,6 +374,7 @@ def modin_constructor(obj: Data, /, **kwds: Any) -> IntoDataFrame:  # pragma: no
     implementation=Implementation.MODIN,
     requirements=("modin", "pyarrow"),
     is_eager=True,
+    default_include=False,
 )
 def modin_pyarrow_constructor(
     obj: Data, /, **kwds: Any
@@ -470,6 +480,7 @@ def pyspark_lazy_constructor(
     name="pyspark[connect]",
     implementation=Implementation.PYSPARK_CONNECT,
     requirements=("pyspark",),
+    default_include=False,
 )
 def pyspark_connect_lazy_constructor(
     obj: Data, /, **kwds: Any
@@ -543,6 +554,24 @@ def available_cpu_backends() -> frozenset[str]:  # pragma: no cover
         name
         for name, c in frame_constructor._registry.items()
         if c.is_available and not c.needs_gpu
+    )
+
+
+def available_default_cpu_backends() -> frozenset[str]:  # pragma: no cover
+    """Return the names of every CPU constructor that is available and included by default.
+
+    Backends registered with `default_include=False` (e.g. modin, pyspark[connect]) are
+    excluded — they must be requested explicitly via `--nw-backends`.
+
+    Examples:
+        >>> from narwhals.testing.constructors import available_default_cpu_backends
+        >>> "pandas" in available_default_cpu_backends()
+        True
+    """
+    return frozenset(
+        name
+        for name, c in frame_constructor._registry.items()
+        if c.is_available and not c.needs_gpu and c.default_include
     )
 
 
