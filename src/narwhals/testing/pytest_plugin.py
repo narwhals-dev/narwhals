@@ -86,20 +86,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 def _select_backends(config: pytest.Config) -> list[FrameConstructor]:  # pragma: no cover
-    from narwhals.testing.constructors import available_cpu_backends, prepare_backends
-
-    _available_cpu_backends = available_cpu_backends()
-
-    # Intersection is needed otherwise prepare_backends raises an exception if
-    # modin or pyspark are not installed
-    _all_cpu_exclusions = frozenset({"modin", "pyspark[connect]"}).intersection(
-        _available_cpu_backends
+    from narwhals.testing.constructors import (
+        available_default_cpu_backends,
+        prepare_backends,
     )
 
     if config.getoption("all_nw_backends"):
-        selected = prepare_backends(
-            include=_available_cpu_backends, exclude=_all_cpu_exclusions
-        )
+        selected = prepare_backends(include=available_default_cpu_backends())
     else:
         opt = cast("str", config.getoption("nw_backends"))
         names = [c for c in opt.split(",") if c]
