@@ -21,9 +21,9 @@
         - [Temporal](expr/temporal.md)
     - [Selectors](selectors.md)
     - Series
-- IR-level
+- [IR](ir/index.md)
     - Logical
-        - ExprIR
+        - [ExprIR](ir/expr-ir/index.md)
         - SelectorIR
         - LogicalPlan
     - Resolved

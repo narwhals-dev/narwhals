@@ -98,6 +98,13 @@ nav = [
             "api-reference-plan/expr/temporal.md",
         ]},
         "api-reference-plan/selectors.md", 
+        { "IR" = [
+            "api-reference-plan/ir/index.md",
+            { "ExprIR" = [
+                "api-reference-plan/ir/expr-ir/index.md",
+                "api-reference-plan/ir/expr-ir/agg.md",
+            ]}
+        ]},
     ] },
     {"This" = "this.md"}
 ]
