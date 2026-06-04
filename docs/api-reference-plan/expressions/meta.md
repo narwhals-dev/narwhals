@@ -1,7 +1,6 @@
 # Meta
 
 ::: narwhals._plan.expr.MetaNamespace
-    handler: python
     options:
       members:
         - as_selector

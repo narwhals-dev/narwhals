@@ -1,7 +1,6 @@
 # Selectors
 
 ::: narwhals._plan.selectors
-    handler: python
     options:
       members:
         - all

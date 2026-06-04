@@ -1,7 +1,6 @@
 # LazyFrame
 
 ::: narwhals._plan.lazyframe.LazyFrame
-    handler: python
     options:
       members:
         - collect

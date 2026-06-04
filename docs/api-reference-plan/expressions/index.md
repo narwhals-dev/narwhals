@@ -1,7 +1,6 @@
 # Expressions
 
 ::: narwhals._plan.expr.Expr
-    handler: python
     options:
       members:
         - abs

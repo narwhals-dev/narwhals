@@ -1,7 +1,6 @@
 # Categorical
 
 ::: narwhals._plan.expr.ExprCatNamespace
-    handler: python
     options:
       members:
         - get_categories

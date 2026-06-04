@@ -1,7 +1,6 @@
 # String
 
 ::: narwhals._plan.expr.ExprStringNamespace
-    handler: python
     options:
       members:
         - contains

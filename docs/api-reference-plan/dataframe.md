@@ -1,7 +1,6 @@
 # DataFrame
 
 ::: narwhals._plan.dataframe.DataFrame
-    handler: python
     options:
       members:
         - clone

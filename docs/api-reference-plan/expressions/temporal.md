@@ -1,7 +1,6 @@
 # Temporal
 
 ::: narwhals._plan.expr.ExprDateTimeNamespace
-    handler: python
     options:
       members:
         - convert_time_zone

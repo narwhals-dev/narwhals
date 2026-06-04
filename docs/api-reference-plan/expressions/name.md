@@ -1,7 +1,6 @@
 # Name
 
 ::: narwhals._plan.expr.ExprNameNamespace
-    handler: python
     options:
       members:
         - keep

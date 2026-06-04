@@ -1,7 +1,6 @@
 # Struct
 
 ::: narwhals._plan.expr.ExprStructNamespace
-    handler: python
     options:
       members:
         - field

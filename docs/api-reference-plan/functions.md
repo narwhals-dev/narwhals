@@ -3,7 +3,6 @@
 Here are the top-level functions available in Narwhals.
 
 ::: narwhals._plan
-    handler: python
     options:
       members:
         - all

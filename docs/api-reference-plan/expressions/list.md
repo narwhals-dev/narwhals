@@ -1,7 +1,6 @@
 # List
 
 ::: narwhals._plan.expr.ExprListNamespace
-    handler: python
     options:
       members:
         - all
