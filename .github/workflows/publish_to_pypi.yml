@@ -49,6 +49,12 @@ jobs:
     permissions:
       contents: read
 
+  pytest-fireducks:
+    name: PyTest Fireducks
+    uses: ./.github/workflows/pytest-fireducks.yml
+    permissions:
+      contents: read
+
   typing:
     name: Type checking
     uses: ./.github/workflows/typing.yml
