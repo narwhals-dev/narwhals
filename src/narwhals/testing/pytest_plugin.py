@@ -14,6 +14,8 @@ import os
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import pytest
 
     from narwhals.testing.typing import FrameConstructor
@@ -40,7 +42,7 @@ def _default_backend_ids() -> list[str]:
     Honours `NARWHALS_DEFAULT_BACKENDS` if set, otherwise restricts
     [`DEFAULT_BACKENDS`][] to backends whose libraries are importable.
     """
-    if env := os.environ.get("NARWHALS_DEFAULT_BACKENDS"):  # pragma: no cover
+    if env := os.environ.get("NARWHALS_DEFAULT_BACKENDS"):
         return env.split(",")
     from narwhals.testing.constructors import DEFAULT_BACKENDS, frame_constructor
 
@@ -108,30 +110,22 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     if metafunc.config.getoption("use_external_nw_backend"):  # pragma: no cover
         return
 
+    fixture_filters: dict[str, Callable[[FrameConstructor], bool]] = {
+        "nw_dataframe": lambda c: c.is_eager,
+        "nw_lazyframe": lambda c: not c.is_eager,
+        "nw_frame": lambda _: True,
+        "nw_pandas_like_frame": lambda c: c.is_eager and c.is_pandas_like,
+    }
     fixturenames = set(metafunc.fixturenames)
-    if not fixturenames & {
-        "nw_frame",
-        "nw_dataframe",
-        "nw_lazyframe",
-        "nw_pandas_like_frame",
-    }:
+    if not (matched_fixtures := fixturenames & fixture_filters.keys()):
         return
-
+    if len(matched_fixtures) > 1:
+        msg = (
+            f"A test may only request one narwhals frame fixture, got: {matched_fixtures}"
+        )
+        raise ValueError(msg)
     selected = _select_backends(metafunc.config)
-
-    if "nw_dataframe" in fixturenames:
-        params = [c for c in selected if c.is_eager]
-        ids = [c.name for c in params]
-        metafunc.parametrize("nw_dataframe", params, ids=ids)
-    elif "nw_lazyframe" in fixturenames:  # pragma: no cover
-        params = [c for c in selected if not c.is_eager]
-        ids = [c.name for c in params]
-        metafunc.parametrize("nw_dataframe", params, ids=ids)
-    elif "nw_frame" in fixturenames:
-        metafunc.parametrize("nw_frame", selected, ids=[c.name for c in selected])
-    elif "nw_pandas_like_frame" in fixturenames:
-        params = [c for c in selected if c.is_eager and c.is_pandas_like]
-        ids = [c.name for c in params]
-        metafunc.parametrize("nw_pandas_like_frame", params, ids=ids)
-    else:  # pragma: no cover
-        ...
+    fixture_name = next(iter(matched_fixtures))
+    filter_fn = fixture_filters[fixture_name]
+    params = [c for c in selected if filter_fn(c)]
+    metafunc.parametrize(fixture_name, params, ids=[c.name for c in params])
