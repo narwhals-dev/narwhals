@@ -172,6 +172,7 @@ show_signature_annotations = true
 show_source = false
 show_if_no_docstring = true
 signature_crossrefs = true
+type_parameter_headings = true
 filters = [
     "!^_",
     "^__",
