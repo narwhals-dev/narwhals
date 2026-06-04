@@ -7,7 +7,7 @@
 
 - Logical
     - [ExprIR](expr-ir/index.md)
-    - SelectorIR
+    - [SelectorIR](expr-ir/selectors.md)
     - LogicalPlan
 - Resolved
     - [NamedIR](named-ir.md)

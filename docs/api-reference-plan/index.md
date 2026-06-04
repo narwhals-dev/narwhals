@@ -24,7 +24,7 @@
 - [IR](ir/index.md)
     - Logical
         - [ExprIR](ir/expr-ir/index.md)
-        - SelectorIR
+        - [SelectorIR](ir/expr-ir/selectors.md)
         - LogicalPlan
     - Resolved
         - [NamedIR](ir/named-ir.md)
