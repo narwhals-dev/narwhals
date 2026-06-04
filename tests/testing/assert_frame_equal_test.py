@@ -41,7 +41,7 @@ def test_implementation_mismatch() -> None:
     import pyarrow as pa
 
     with _assertion_error("implementation mismatch"):
-        assert_frame_equal(
+        assert_frame_equal(  # type: ignore[type-var]
             nw.from_native(pd.DataFrame({"a": [1]})), nw.from_native(pa.table({"a": [1]}))
         )
 
