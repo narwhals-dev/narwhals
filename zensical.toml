@@ -103,6 +103,7 @@ nav = [
             { "ExprIR" = [
                 "api-reference-plan/ir/expr-ir/index.md",
                 "api-reference-plan/ir/expr-ir/agg.md",
+                "api-reference-plan/ir/expr-ir/functions.md",
                 "api-reference-plan/ir/expr-ir/selectors.md",
             ]},
             "api-reference-plan/ir/named-ir.md",
