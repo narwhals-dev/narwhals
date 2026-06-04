@@ -108,6 +108,7 @@ nav = [
             ]},
             "api-reference-plan/ir/named-ir.md",
         ]},
+        "api-reference-plan/typing.md",
     ] },
     {"This" = "this.md"}
 ]
@@ -175,7 +176,7 @@ filters = [
     "^__",
     # above are default filters, everything after refines from them
     # https://mkdocstrings.github.io/python/usage/configuration/members/#filters
-    "!^_+(repr|slots)"
+    "!^_+(repr|slots|all)"
 ]
 
 
