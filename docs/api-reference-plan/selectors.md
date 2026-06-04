@@ -27,4 +27,3 @@
         - temporal
         - Selector
       group_by_category: false
-      show_root_heading: false
