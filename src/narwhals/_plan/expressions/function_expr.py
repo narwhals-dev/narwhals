@@ -7,6 +7,7 @@ It becomes an `ExprIR` when wrapping it via `FunctionExpr`.
 This follows `polars`' lead, which simplifies any decision-making for us.
 
 ATOW, [the remaining variants] that would *not* be a new `Function` are:
+
 - `Element` (`pl.element`)
 - `DataTypeFunction` (`pl.{dtype_of,self_dtype,struct_with_fields}`)
 - `Gather` (`pl.Expr.{gather,get}`)
