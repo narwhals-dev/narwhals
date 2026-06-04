@@ -26,4 +26,4 @@ jobs:
           cache-suffix: fireducks-3.13
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="-U --group tests --extra pandas" RUN_ONLY="--with fireducks" CMD="python -m fireducks.pandas --hook-import-module -m pytest tests/fireducks_test.py"
+        run: make run-ci DEPS="--group core-tests --extra pandas" RUN_ONLY="--with fireducks --with 'pandas>2.2.0'" CMD="python -m fireducks.pandas --hook-import-module -m pytest tests/fireducks_test.py"
