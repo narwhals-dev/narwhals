@@ -73,4 +73,3 @@
         - sum
         - unique
         - var
-      show_source: false

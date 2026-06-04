@@ -20,5 +20,4 @@
         - to_titlecase
         - to_uppercase
         - zfill
-      show_source: false
       show_bases: false

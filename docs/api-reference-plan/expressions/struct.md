@@ -4,5 +4,4 @@
     options:
       members:
         - field
-      show_source: false
       show_bases: false

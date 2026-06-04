@@ -31,4 +31,3 @@
         - with_columns
         - with_row_index
       show_root_heading: false
-      show_source: false

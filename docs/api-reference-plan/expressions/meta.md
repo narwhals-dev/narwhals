@@ -10,5 +10,4 @@
         - is_literal
         - output_name
         - root_names
-      show_source: false
       show_bases: false

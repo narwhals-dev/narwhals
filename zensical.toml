@@ -157,6 +157,7 @@ docstring_style = "google"
 members_order = "alphabetical"
 separate_signature = true
 show_signature_annotations = true
+show_source = false
 
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.md_in_html]
