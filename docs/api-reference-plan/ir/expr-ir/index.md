@@ -4,6 +4,7 @@
 <!-- TODO @dangotbanned: Use `Col`, `LenStar` directly (aliases display without docs)-->
 ::: narwhals._plan.expressions
     options:
+      group_by_category: false
       members:
         - ExprIR
         - Column
