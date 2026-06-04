@@ -27,7 +27,7 @@
         - SelectorIR
         - LogicalPlan
     - Resolved
-        - NamedIR
+        - [NamedIR](ir/named-ir.md)
         - ResolvedPlan
 - Compliant-level
     - CompliantClasses

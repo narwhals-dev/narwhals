@@ -10,5 +10,5 @@
     - SelectorIR
     - LogicalPlan
 - Resolved
-    - NamedIR
+    - [NamedIR](named-ir.md)
     - ResolvedPlan
