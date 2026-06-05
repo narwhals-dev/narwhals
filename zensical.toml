@@ -162,7 +162,17 @@ icon = "fontawesome/brands/github"
 link = "https://github.com/narwhals-dev/narwhals"
 
 [project.plugins.mkdocstrings.handlers.python]
-inventories = ["https://docs.python.org/3/objects.inv"]
+# https://mkdocstrings.github.io/usage/#cross-references-to-other-projects-inventories
+inventories = [
+    "https://docs.python.org/3/objects.inv", 
+    "https://docs.pola.rs/py-polars/html/objects.inv",  # https://github.com/pola-rs/polars/issues/7027
+    "https://pandas.pydata.org/docs/objects.inv",
+    "https://arrow.apache.org/docs/objects.inv",
+    "https://numpy.org/doc/stable/objects.inv",
+    "https://typing-extensions.readthedocs.io/en/latest/objects.inv",
+    # https://github.com/ibis-project/ibis/issues/11723
+    # TODO @dangotbanned: cudf, dask, duckdb, pyspark, sqlframe
+]
 paths = ["narwhals"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
