@@ -6,17 +6,27 @@ import inspect
 import string
 import sys
 from inspect import isfunction, ismethoddescriptor
-from itertools import groupby
 from operator import attrgetter
 from types import MethodType
 from typing import TYPE_CHECKING, Any, Final, TypeVar
 
+import polars as pl
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
-LOWERCASE: Final = tuple(string.ascii_lowercase)
 
 T_co = TypeVar("T_co", covariant=True)
+
+LOWERCASE: Final = tuple(string.ascii_lowercase)
+NL: Final = "\n"
+WS: Final = " "
+
+MEMBERS_START: Final = f"members:{NL}"
+MEMBER_PREFIX: Final = f"{WS * 8}-{WS}"
+
+PRIVATE_PREFIX = "_"
+DUNDER_PREFIX = "__"
 
 GET_MODULE: Callable[[type[Any]], str] = attrgetter("__module__")
 
@@ -67,10 +77,43 @@ def qualified_type_name(tp: type[Any], /) -> str:
     return f"{tp.__module__}.{tp.__name__}"
 
 
-def group_descendant_names_by_module(*bases: type[T_co]) -> dict[str, list[str]]:
-    """Return a mapping from qualified module name to the names of subclasses that were found there."""
-    unique_public = {
-        tp for tp in iter_descendants(*bases) if not tp.__name__.startswith("_")
-    }
-    by_module = groupby(sorted(unique_public, key=qualified_type_name), key=GET_MODULE)
-    return {k: [tp.__name__ for tp in tps] for k, tps in by_module}
+def generate_function_autodoc(title: str = "Function") -> str:
+    """Collect the meaningful `Function` defs and build a string for mkdocstrings.
+
+    Pretty side-effect heavy, relies on the re-export location having everything in scope.
+    """
+    from narwhals._plan import expressions as ir
+
+    module, func = "module", "function"
+    sources = (
+        (tp.__module__, tp.__name__)
+        for tp in iter_descendants(ir.Function)
+        if not tp.__name__.startswith(PRIVATE_PREFIX)
+    )
+    df = (
+        pl.DataFrame(sources, (module, func))
+        .unique()
+        .pipe(_sort_functions, module, func, "Function")
+        .group_by(module)
+        .agg((pl.lit(MEMBER_PREFIX) + pl.col(func)).implode().list.join(NL))
+        .select(
+            pl.concat_str(
+                pl.lit("::: "),
+                module,
+                pl.lit(f"{NL}{WS * 4}options:{NL}{WS * 6}{MEMBERS_START}"),
+                pl.nth(1),
+            ).str.join(NL * 2)
+        )
+    )
+    content: str = df.item()
+    return f"# {title}{NL * 2}{content}"
+
+
+def _sort_functions(
+    frame: pl.DataFrame, /, col_module: str, col_name: str, base_suffix: str
+) -> pl.DataFrame:
+    # - Prioritize listing the base class first, if a module has one (e.g. `StringFunction`)
+    # - In `_function`, this also breaks ties to order by `Function`, then arity
+    name = pl.col(col_name)
+    key = pl.when(name.str.ends_with(base_suffix)).then(name.str.len_chars())
+    return frame.sort(col_module, key, col_name, nulls_last=True)
