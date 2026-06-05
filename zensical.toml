@@ -211,3 +211,7 @@ emoji_generator = "zensical.extensions.emoji.to_svg"
 generic = true
 
 [project.markdown_extensions.pymdownx.tilde]
+[project.markdown_extensions.pymdownx.highlight]
+# https://mkdocstrings.github.io/recipes/#automatic-highlighting-for-indented-code-blocks-in-docstrings
+pygments_lang_class = true
+default_lang = "python"
