@@ -117,16 +117,14 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         2: Lit(dtype=Float64, value=10.5)
         3: Col(name='howdy')
 
-    That comes in handy for [`meta`] operations, which are available for both `Expr` and `ExprIR`:
+    That comes in handy for [`meta`][meta] operations, which are available for both `Expr` and `ExprIR`:
 
         >>> bigger_ir.meta.root_names()
         ['howdy']
         >>> bigger_ir.meta.output_name()
         'more'
 
-    See `ExprIR.map_ir` for other superpowers this gives us.
-
-    [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
+    See [`map_ir`][narwhals._plan.expressions.ExprIR.map_ir] for other superpowers this gives us.
     """
 
     __expr_ir_nodes__: ClassVar[ExprTraverser] = ExprTraverser(())
@@ -212,17 +210,15 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     ) -> None:
         """Hook to [customize a new subclass] of `ExprIR`.
 
+        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+
         Arguments:
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 
-                See `IntoResolveDType` and `ResolveDType` for usage.
-
-                **Warning**: This functionality is considered **unstable**.
-                Full support depends on [#3396].
-
-        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+        See Also:
+            - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
+            - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
         """
         super().__init_subclass__(**_)
         if "__expr_ir_dispatch__" not in cls.__dict__:
@@ -234,11 +230,16 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
                 dtype = ResolveDType.expr_ir.visitor(dtype)  # pragma: no cover
             cls.__expr_ir_dtype__ = dtype
 
+    @unstable
     def resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
         """Get the data type of an expanded expression.
 
         Arguments:
             schema: The same schema used to project this expression.
+
+        Warning:
+            This functionality is considered **unstable**.
+            Full support depends on [#3396](https://github.com/narwhals-dev/narwhals/pull/3396).
         """
         return self.__expr_ir_dtype__(self, schema)
 
@@ -642,9 +643,9 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             col('d').cum_sum().over(partition_by=[col('b'), col('c')], order_by=[col('d')])
 
 
-        [^1]: This is an intentional deviation from polars (see [polars#25022]).
+            [^1]: This is an intentional deviation from polars (see [polars#25022]).
 
-        [polars#25022]: https://github.com/pola-rs/polars/issues/25022
+            [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         """
         yield from self.__expr_ir_nodes__.iter_expand(self, ctx)
 
