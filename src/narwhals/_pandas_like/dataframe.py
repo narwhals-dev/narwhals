@@ -687,7 +687,7 @@ class PandasLikeDataFrame(
                 right_on=key_token,
                 suffixes=("", suffix),
             )
-            if impl.is_pandas():
+            if impl.is_pandas() and backend_version < (3, 0):  # pragma: no cover
                 # NOTE: Keep `inplace=True` to avoid making a redundant copy.
                 result_native.drop(columns=key_token, inplace=True)  # noqa: PD002
                 return result_native
@@ -855,7 +855,13 @@ class PandasLikeDataFrame(
                 .native.drop_duplicates(subset or self.columns, keep=mapped_keep)
                 .sort_values(token)
             )
-            res.drop(columns=token, inplace=True)  # noqa: PD002
+            if (
+                self._implementation.is_pandas()
+                and self._implementation._backend_version() < (3, 0)
+            ):
+                res.drop(columns=token, inplace=True)  # noqa: PD002  # pragma: no cover
+            else:
+                res = res.drop(columns=token)
         elif order_by:
             res = self.sort(
                 *order_by, nulls_last=False, descending=False
