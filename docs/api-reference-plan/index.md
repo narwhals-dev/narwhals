@@ -20,7 +20,7 @@
         - [Struct](expr/struct.md)
         - [Temporal](expr/temporal.md)
     - [Selectors](selectors.md)
-    - Series
+    - [Series](series.md)
 - [IR](ir/index.md)
     - Logical
         - [ExprIR](ir/expr-ir/index.md)
