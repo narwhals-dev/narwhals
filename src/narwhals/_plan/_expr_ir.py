@@ -52,7 +52,7 @@ from narwhals._plan._immutable import _OBJ_SETATTR, Immutable
 from narwhals._plan._meta import ExprIRMeta
 from narwhals._plan._nodes import ExprTraverser
 from narwhals._plan._version import into_version
-from narwhals._plan.typing import Constructs, ExprIRT_co
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import Ignored, MapIR
+    from narwhals._plan.typing import Constructs, Ignored, MapIR
     from narwhals.typing import IntoDType
 
 
@@ -908,6 +908,9 @@ class SelectorIR(NoDispatch):
         from narwhals._plan.expressions.selectors import InvertSelector
 
         return InvertSelector(selector=self)
+
+
+ExprIRT_co = TypeVar("ExprIRT_co", bound=ExprIR, default=ExprIR, covariant=True)
 
 
 # TODO @dangotbanned: Final polish on class-level doc

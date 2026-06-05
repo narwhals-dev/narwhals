@@ -9,8 +9,9 @@ from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import Constructor, ExprIR, NoDispatch, SelectorIR
 from narwhals._plan._nodes import node, nodes
 from narwhals._plan.exceptions import over_order_by_names_error
+from narwhals._plan.expressions.operators import Operator
 from narwhals._plan.expressions.selectors import ByName
-from narwhals._plan.typing import LeftT_co, OperatorT, RightT_co, Seq
+from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan._expansion import Expander
     from narwhals._plan.options import SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
 
@@ -35,6 +37,10 @@ __all__ = (
     "col",
     "ternary_expr",
 )
+
+LeftT_co = TypeVar("LeftT_co", bound=ExprIR, default=ExprIR, covariant=True)
+RightT_co = TypeVar("RightT_co", bound=ExprIR, default=ExprIR, covariant=True)
+OperatorT = TypeVar("OperatorT", bound=Operator, default=Operator)
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype

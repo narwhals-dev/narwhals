@@ -12,23 +12,25 @@ from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import Constructor
 from narwhals._plan._guards import is_python_literal_type
 from narwhals._plan.exceptions import literal_type_error
-from narwhals._plan.typing import (
-    NativeSeriesT,
-    NativeSeriesT_co,
-    PythonLiteralT,
-    PythonLiteralT_co,
-)
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
 from narwhals.dtypes import Field, List, Struct, Unknown
+from narwhals.typing import PythonLiteral
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals._plan.series import Series
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, NonNestedDType, PythonLiteral
+    from narwhals.typing import IntoDType, NonNestedDType
 
 __all__ = ("Lit", "LitSeries", "lit", "lit_series")
+
+PythonLiteralT = TypeVar("PythonLiteralT", bound=PythonLiteral, default=PythonLiteral)
+PythonLiteralT_co = TypeVar(
+    "PythonLiteralT_co", bound=PythonLiteral, covariant=True, default=PythonLiteral
+)
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype

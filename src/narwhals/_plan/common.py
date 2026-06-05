@@ -8,30 +8,24 @@ from inspect import getattr_static as _getattr_static
 from io import BytesIO
 from secrets import token_hex
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._utils import qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
+from narwhals.typing import NonNestedDType
 
 if TYPE_CHECKING:
     import reprlib
     from collections.abc import Iterator
-    from typing import Any, ClassVar, Final, TypeAlias, TypeVar
+    from typing import Any, ClassVar, Final, TypeAlias
 
     from typing_extensions import TypeIs, Unpack
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import (
-        ClosedKwds,
-        ColumnNameOrSelector,
-        DTypeT,
-        NonNestedDTypeT,
-        OneOrIterable,
-        Seq,
-    )
+    from narwhals._plan.typing import ClosedKwds, ColumnNameOrSelector, OneOrIterable, Seq
     from narwhals._utils import _StoresColumns
     from narwhals.typing import FileSource
 
@@ -51,6 +45,8 @@ else:  # pragma: no cover
         return func(obj, **changes)  # type: ignore[no-any-return]
 
 
+DTypeT = TypeVar("DTypeT", bound=DType)
+NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound=NonNestedDType)
 _SENTINEL: Final = object()
 
 NW_DEV_ENV_NAME: Final = "NARWHALS_DEV_HINTS"

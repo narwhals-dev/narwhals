@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._plan._immutable import Immutable
-from narwhals._plan.typing import IRNamespaceT
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -20,6 +19,9 @@ class IRNamespace(Immutable):
     @classmethod
     def from_expr(cls, expr: Expr, /) -> Self:
         return cls(_ir=expr._ir)
+
+
+IRNamespaceT = TypeVar("IRNamespaceT", bound=IRNamespace)
 
 
 class ExprNamespace(Immutable, Generic[IRNamespaceT]):

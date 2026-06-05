@@ -1,31 +1,32 @@
 from __future__ import annotations
 
 import operator as op
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import binary_expr_length_changing_error
+from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing import Any, ClassVar, TypeAlias
+    from typing import ClassVar, TypeAlias
 
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import BinaryExpr
+    from narwhals._plan.expressions import BinaryExpr, ExprIR, SelectorIR
     from narwhals._plan.expressions.selectors import BinarySelector
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import (
-        LeftSelectorT,
-        LeftT,
-        OperatorFn,
-        RightSelectorT,
-        RightT,
-    )
     from narwhals.dtypes import DType
 
     BinaryAny: TypeAlias = BinaryExpr[Any, Any, Any]
+
+LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
+RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
+LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
+RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
+OperatorFn: TypeAlias = Callable[[Any, Any], Any]
 
 
 class Operator(Immutable):

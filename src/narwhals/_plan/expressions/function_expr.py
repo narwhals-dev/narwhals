@@ -35,15 +35,7 @@ from narwhals._plan._dispatch import FunctionExprDispatch
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import nodes
-from narwhals._plan.typing import (
-    FunctionT_co,
-    HorizontalT_co,
-    Seq,
-    Seq1,
-    Seq2,
-    Seq3,
-    StructT_co,
-)
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import unstable
 
 if TYPE_CHECKING:
@@ -55,13 +47,29 @@ if TYPE_CHECKING:
     from narwhals._plan._function import (
         BinaryFunction,
         Function,
+        HorizontalFunction,
         TernaryFunction,
         UnaryFunction,
     )
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions.functions import AsStruct, MapBatches  # noqa: F401
+    from narwhals._plan.expressions.struct import StructFunction
     from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import Seq, Seq1, Seq2, Seq3
     from narwhals.dtypes import DType, Struct
+
+FunctionT_co = TypeVar(
+    "FunctionT_co", bound="Function", default="Function", covariant=True
+)
+HorizontalT_co = TypeVar(
+    "HorizontalT_co",
+    bound="HorizontalFunction",
+    default="HorizontalFunction",
+    covariant=True,
+)
+StructT_co = TypeVar(
+    "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
+)
 
 
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):

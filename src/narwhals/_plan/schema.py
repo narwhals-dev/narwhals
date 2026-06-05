@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Iterable, Mapping
 from functools import lru_cache
 from itertools import chain
 from types import MappingProxyType
@@ -15,26 +15,19 @@ from narwhals._utils import (
     check_column_names_are_unique,
     unstable,
 )
-from narwhals.dtypes import Unknown
+from narwhals.dtypes import DType, Unknown
 
 if TYPE_CHECKING:
-    from collections.abc import ItemsView, Iterable, Iterator, KeysView, ValuesView
+    from collections.abc import ItemsView, Iterator, KeysView, ValuesView
     from typing import TypeAlias
 
     from typing_extensions import Never, Self, TypeIs
 
     from narwhals._plan.typing import Seq
-    from narwhals.dtypes import DType
     from narwhals.schema import Schema
 
 T = TypeVar("T")
-IntoSchema: TypeAlias = "Mapping[str, DType] | Iterable[tuple[str, DType]]"
-IntoFrozenSchema: TypeAlias = "IntoSchema | FrozenSchema | HasSchema"
-"""A schema to freeze, or an already frozen one.
 
-As `DType` instances (`.values()`) are hashable, we can coerce the schema
-into a cache-safe proxy structure (`FrozenSchema`).
-"""
 _ReadOnlyMapping: TypeAlias = "MappingProxyType[str, DType]"
 
 _unknown = Unknown()
@@ -407,6 +400,15 @@ Mapping.register(FrozenSchema)  # pyright: ignore[reportAttributeAccessIssue]
 class HasSchema(Protocol):
     @property
     def schema(self) -> Mapping[str, DType]: ...
+
+
+IntoSchema: TypeAlias = Mapping[str, DType] | Iterable[tuple[str, DType]]
+IntoFrozenSchema: TypeAlias = IntoSchema | FrozenSchema | HasSchema
+"""A schema to freeze, or an already frozen one.
+
+As `DType` instances (`.values()`) are hashable, we can coerce the schema
+into a cache-safe proxy structure (`FrozenSchema`).
+"""
 
 
 def has_schema(obj: Any) -> TypeIs[HasSchema]:
