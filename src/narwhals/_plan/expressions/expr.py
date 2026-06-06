@@ -70,6 +70,14 @@ class LenStar(Constructor, dispatch="Scalar", dtype=dtm.IDX_DTYPE):
 
 
 Len = LenStar
+"""Return the number of rows in the context.
+
+This is similar to `COUNT(*)` in SQL.
+
+Bug:
+    TODO @dangotbanned: Need to remove this alias.
+    Bad for the docs, but used **12** times in **9** source files.
+"""
 
 
 class Alias(NoDispatch):
@@ -135,6 +143,12 @@ class Col(Constructor, dispatch="Expr"):
 
 
 Column = Col
+"""An expression that selects exactly one column.
+
+Bug:
+    TODO @dangotbanned: Need to remove this alias.
+    Bad for the docs, but used **30** times in **11** source files.
+"""
 
 
 class Cast(ExprIR, dtype=get_dtype()):
