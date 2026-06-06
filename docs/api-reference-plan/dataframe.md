@@ -2,7 +2,6 @@
 
 ::: narwhals._plan.dataframe.DataFrame
     options:
-      show_bases: false
       inherited_members: true
       members:
         - clone
