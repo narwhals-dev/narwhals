@@ -247,27 +247,41 @@ class Filter(ExprIR, dtype=same_dtype()):
 
 
 class Over(ExprIR, dtype=same_dtype()):
-    """A fully specified `.over()`, that occurred after another expression.
+    """An expression computed over groups.
 
-    Related:
-    - https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136
-    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L835-L838
-    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
+    Note:
+        Always operates over groups, like
+        [`pl.Expr.over` (polars<1)](https://docs.pola.rs/api/python/version/0.20/reference/expressions/api/polars.Expr.over.html).
     """
 
     __slots__ = ("expr", "partition_by")
     expr: ExprIR = node(observe_scalar=False)
-    """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
+    """A function or aggregation expression."""
     partition_by: Seq[ExprIR] = nodes()
+    """Expression(s) to group by."""
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
 
 
 class OverOrdered(Over):
+    """An expression computed over ordered groups.
+
+    Note:
+        Always orders the groups, but `partition_by` is optional.
+        Typically implemented by using a single partition for all rows.
+    """
+
     __slots__ = ("order_by", "sort_options")
     order_by: Seq[ExprIR] = nodes()
+    """Expression(s) used to order rows.
+
+    Ordering is applied to each partition group before evaluating the expression.
+    """
+    # TODO @dangotbanned: Rename to `options`
+    # (had a naming collision ages ago, which was resolved)
     sort_options: SortOptions
+    """Flags defining order direction and the placement of nulls."""
 
     def __repr__(self) -> str:
         order = self.order_by
