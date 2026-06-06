@@ -187,6 +187,7 @@ show_source = false
 show_if_no_docstring = true  # remember to turn this off after listing members everywhere
 signature_crossrefs = true
 type_parameter_headings = true
+line_length = 90  # (default: 60) this matches our ruff config
 filters = [
     "!^_",
     "^__",
