@@ -141,6 +141,9 @@ features = [
     "navigation.top",
     "search.highlight",
     "toc.follow",
+    # NOTE: Fixes a bug where a `<span ...>` got injected into the `title` string?
+    # Also looks nice
+    "content.tooltips"
 ]
 
 [project.theme.font]
