@@ -164,6 +164,9 @@ toggle.name = "Switch to light mode"
 icon = "fontawesome/brands/github"
 link = "https://github.com/narwhals-dev/narwhals"
 
+[project.plugins.mkdocstrings]
+custom_templates = "docs/templates"
+
 [project.plugins.mkdocstrings.handlers.python]
 # https://mkdocstrings.github.io/usage/#cross-references-to-other-projects-inventories
 inventories = [
@@ -188,6 +191,7 @@ show_if_no_docstring = true  # remember to turn this off after listing members e
 signature_crossrefs = true
 type_parameter_headings = true
 line_length = 90  # (default: 60) this matches our ruff config
+docstring_section_style = "spacy"
 filters = [
     "!^_",
     "^__",
