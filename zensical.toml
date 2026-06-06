@@ -165,6 +165,7 @@ icon = "fontawesome/brands/github"
 link = "https://github.com/narwhals-dev/narwhals"
 
 [project.plugins.mkdocstrings]
+# - 2-column "Parameters:" table `/python/material/docstring/parameters.html.jinja`
 custom_templates = "docs/templates"
 
 [project.plugins.mkdocstrings.handlers.python]
@@ -191,7 +192,6 @@ show_if_no_docstring = true  # remember to turn this off after listing members e
 signature_crossrefs = true
 type_parameter_headings = true
 line_length = 90  # (default: 60) this matches our ruff config
-docstring_section_style = "spacy"
 filters = [
     "!^_",
     "^__",

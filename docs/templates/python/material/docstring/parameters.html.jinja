@@ -1,23 +1,19 @@
 {% extends "_base/docstring/parameters.html.jinja" %}
 
-{# Overrides [`docstring_section_style = "spacy"`]
+{# Overrides the `docstring_section_style = "table"` mkdocstrings template
 
-## Notes
-- Don't like all caps
-- types and default are both visible, with cross-refs, on the signature
+Removes "Type" and "Default" columns, which are already rendered in a richer format via the signature.
 
-[`docstring_section_style == "spacy"`]:
-https://github.com/mkdocstrings/python/blob/dc6aa93b1c956bc02904f33d1f6f635b275175d9/src/mkdocstrings_handlers/python/templates/material/_base/docstring/parameters.html.jinja#L118-L175
-
+https://github.com/mkdocstrings/python/blob/dc6aa93b1c956bc02904f33d1f6f635b275175d9/src/mkdocstrings_handlers/python/templates/material/_base/docstring/parameters.html.jinja#L21-78
 #}
-{% block spacy_style scoped %}
-{#- Block for the `spacy` section style. -#}
+
+{% block table_style scoped %}
+<p><span class="doc-section-title">{{ section.title or lang.t("Parameters:") }}</span></p>
 <table>
     <thead>
         <tr>
-            <th><span class="doc-section-title">{{ (section.title or lang.t("PARAMETER")).rstrip(":").upper() }}</span>
-            </th>
-            <th><span>{{ lang.t("DESCRIPTION") }}</span></th>
+            <th>{{ lang.t("Name") }}</th>
+            <th>{{ lang.t("Description") }}</th>
         </tr>
     </thead>
     <tbody>
@@ -40,7 +36,7 @@ https://github.com/mkdocstrings/python/blob/dc6aa93b1c956bc02904f33d1f6f635b2751
                 <code>{{ parameter.name }}</code>
                 {% endif %}
             </td>
-            <td class="doc-param-details">
+            <td>
                 <div class="doc-md-description">
                     {{ parameter.description|convert_markdown(heading_level, html_id, autoref_hook=autoref_hook) }}
                 </div>
@@ -49,4 +45,4 @@ https://github.com/mkdocstrings/python/blob/dc6aa93b1c956bc02904f33d1f6f635b2751
         {% endfor %}
     </tbody>
 </table>
-{% endblock spacy_style %}
+{% endblock table_style %}
