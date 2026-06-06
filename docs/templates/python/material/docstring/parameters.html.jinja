@@ -44,24 +44,6 @@ https://github.com/mkdocstrings/python/blob/dc6aa93b1c956bc02904f33d1f6f635b2751
                 <div class="doc-md-description">
                     {{ parameter.description|convert_markdown(heading_level, html_id, autoref_hook=autoref_hook) }}
                 </div>
-                <p>
-                    {% if parameter.annotation %}
-                    <span class="doc-param-annotation">
-                        <b>{{ lang.t("TYPE:") }}</b>
-                        {% with expression = parameter.annotation, backlink_type = "used-by" %}
-                        <code>{% include "expression.html.jinja" with context %}</code>
-                        {% endwith %}
-                    </span>
-                    {% endif %}
-                    {% if parameter.default %}
-                    <span class="doc-param-default">
-                        <b>{{ lang.t("DEFAULT:") }}</b>
-                        {% with expression = parameter.default, backlink_type = "used-by" %}
-                        <code>{% include "expression.html.jinja" with context %}</code>
-                        {% endwith %}
-                    </span>
-                    {% endif %}
-                </p>
             </td>
         </tr>
         {% endfor %}
