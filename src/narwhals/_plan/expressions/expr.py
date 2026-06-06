@@ -296,15 +296,17 @@ class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
-        """NOTE: Supported on `Logical` and `TrueDivide` operators only.
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
+        """(Partially supported).
 
-        Requires `get_supertype`:
-        - `Add`
-        - `Sub`
-        - `Multiply`
-        - `FloorDivide`
-        - `Modulus`
+        - [x] `Logical`
+        - [x] `TrueDivide`
+        - [ ] Requires [`get_supertype` (#3396)](https://github.com/narwhals-dev/narwhals/pull/3396)
+            - [ ] `Add`
+            - [ ] `Sub`
+            - [ ] `Multiply`
+            - [ ] `FloorDivide`
+            - [ ] `Modulus`
         """
         return self.op.resolve_dtype(self, schema)
 

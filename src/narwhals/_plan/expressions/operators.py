@@ -71,6 +71,7 @@ class Operator(Immutable):
         """Apply binary operator to `left`, `right` operands."""
         return self.__class__._func(lhs, rhs)
 
+    # TODO @dangotbanned: Use `LazyFrame.filter` to cover `Logical`
     def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:
         return self.__expr_ir_dtype__(node, schema)  # pragma: no cover
 
@@ -100,7 +101,7 @@ class ExclusiveOr(SelectorOperator, func=op.xor, symbol="^", dtype=dtm.BOOL): ..
 # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L475-L766
 class Arithmetic(Operator, func=None): ...
 class TrueDivide(Arithmetic, func=op.truediv, symbol="/"):
-    def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:  # pragma: no cover
+    def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:
         left, right = node.left.resolve_dtype(schema), node.right.resolve_dtype(schema)
         return dtm.truediv_dtype(left, right)
 class Add(Arithmetic, func=op.add, symbol="+"): ...

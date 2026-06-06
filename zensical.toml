@@ -223,3 +223,5 @@ generic = true
 # https://mkdocstrings.github.io/recipes/#automatic-highlighting-for-indented-code-blocks-in-docstrings
 pygments_lang_class = true
 default_lang = "python"
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
