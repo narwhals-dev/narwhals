@@ -333,13 +333,27 @@ class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
 
 # TODO @dangotbanned: `get_supertype`, `nw.Null`
 class TernaryExpr(ExprIR):
-    """When-Then-Otherwise."""
+    """A `when-then-otherwise` expression.
+
+    Represents reaching a *"finished"* state via the `(Chained){When,Then}` builders.
+
+    The `Chained*` variants produce an [arbitrarily nested] `TernaryExpr`.
+
+    [arbitrarily nested]: https://github.com/pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/crates/polars-plan/src/dsl/arity.rs#L90-L111
+    """
 
     __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
-    # `truthy` is defined first because the root is from `when(...).then(<here>)`
+    # `truthy` is defined first to make it the root
     truthy: ExprIR = node()
+    """The *then* expression.
+
+    Note:
+        The output name is taken from `truthy`.
+    """
     predicate: ExprIR = node()
+    """The *when* expression."""
     falsy: ExprIR = node()
+    """The *otherwise* expression."""
 
     def __repr__(self) -> str:
         return (
