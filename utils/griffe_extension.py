@@ -20,7 +20,7 @@ import pathlib
 
 # ruff: noqa: DTZ005, G004
 from functools import cache
-from typing import TYPE_CHECKING, Any, Final, Protocol, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeAlias, cast
 
 import griffe
 from griffe import Attribute, Class, ExprName, Function, Module, Parameter, Parameters
@@ -54,6 +54,8 @@ positional_or_keyword: Final = griffe.ParameterKind.positional_or_keyword
 keyword_only: Final = griffe.ParameterKind.keyword_only
 """All fields are keyword-only."""
 
+Member: TypeAlias = griffe.Object | griffe.Alias
+
 
 class PEP681Extension(griffe.Extension):
     """An extension to support `@dataclass_transform`.
@@ -72,26 +74,25 @@ class PEP681Extension(griffe.Extension):
         logger.info("Finished: %r", path)
 
 
-def _apply_recursively(
-    mod_cls: griffe.Object | griffe.Alias, processed: set[str]
-) -> None:
-    """`griffe._internal.extensions.dataclasses.__apply_recursively`.
+def iter_members(obj: griffe.Object) -> Iterator[Member]:
+    yield from obj.members.values()
 
-    `processed` means **seen**.
-    """
-    if mod_cls.canonical_path in processed:
+
+def _apply_recursively(mod_cls: Member, seen: set[str]) -> None:
+    """`griffe._internal.extensions.dataclasses._apply_recursively`."""
+    if mod_cls.canonical_path in seen:
         return
-    processed.add(mod_cls.canonical_path)
+    seen.add(mod_cls.canonical_path)
     if isinstance(mod_cls, Class):
         if "__init__" not in mod_cls.members:
             _set_dataclass_init(mod_cls)
-        for member in mod_cls.members.values():
+        for member in iter_members(mod_cls):
             if not member.is_alias and member.is_class:
-                _apply_recursively(member, processed)
+                _apply_recursively(member, seen)
     elif isinstance(mod_cls, Module):
-        for member in mod_cls.members.values():
+        for member in iter_members(mod_cls):
             if not member.is_alias and (member.is_module or member.is_class):
-                _apply_recursively(member, processed)
+                _apply_recursively(member, seen)
 
 
 def _set_dataclass_init(class_: Class) -> None:
@@ -156,7 +157,7 @@ def _dataclass_parameters(class_: Class) -> tuple[Parameter, ...]:
 
 
 def iter_dataclass_parameters(cls: Class) -> Iterator[Parameter]:
-    members = cast("Iterable[Attribute]", cls.members.values())
+    members = cast("Iterable[Attribute]", iter_members(cls))
     for member in members:
         if member.is_attribute and is_dataclass_field(member):
             yield Parameter(
