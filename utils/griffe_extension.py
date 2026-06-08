@@ -23,7 +23,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Final, Protocol, cast
 
 import griffe
-from griffe import Parameter
+from griffe import Attribute, Class, ExprName, Function, Module, Parameter, Parameters
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -65,18 +65,14 @@ class PEP681Extension(griffe.Extension):
     def __init__(self) -> None:
         super().__init__()
 
-    def on_package(
-        self, *, pkg: griffe.Module, loader: griffe.GriffeLoader, **kwargs: Any
-    ) -> None:
+    def on_package(self, *, pkg: Module, **kwargs: Any) -> None:
         path = pkg.canonical_path
         logger.info("Starting: %r", path)
         _apply_recursively(pkg, set())
         logger.info("Finished: %r", path)
 
 
-def _apply_recursively(
-    mod_cls: griffe.Module | griffe.Class, processed: set[str]
-) -> None:
+def _apply_recursively(mod_cls: Module | Class, processed: set[str]) -> None:
     """`griffe._internal.extensions.dataclasses.__apply_recursively`.
 
     `processed` means **seen**.
@@ -84,22 +80,22 @@ def _apply_recursively(
     if mod_cls.canonical_path in processed:
         return
     processed.add(mod_cls.canonical_path)
-    if isinstance(mod_cls, griffe.Class):
+    if isinstance(mod_cls, Class):
         if "__init__" not in mod_cls.members:
             _set_dataclass_init(mod_cls)
         for member in mod_cls.members.values():
             if not member.is_alias and member.is_class:
                 _apply_recursively(member, processed)  # pyright: ignore[reportArgumentType]
-    elif isinstance(mod_cls, griffe.Module):
+    elif isinstance(mod_cls, Module):
         for member in mod_cls.members.values():
             if not member.is_alias and (member.is_module or member.is_class):
                 _apply_recursively(member, processed)  # pyright: ignore[reportArgumentType]
 
 
-def _set_dataclass_init(class_: griffe.Class) -> None:
+def _set_dataclass_init(class_: Class) -> None:
     """`griffe._internal.extensions.dataclasses._set_dataclass_init`."""
     # Retrieve parameters from all parent dataclasses.
-    parameters: list[griffe.Parameter] = []
+    parameters: list[Parameter] = []
     for parent in reversed(class_.mro()):
         if inherits_immutable(parent):
             parameters.extend(_dataclass_parameters(parent))
@@ -126,16 +122,16 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
     _logger(f"|   {init.signature(name=class_.name + '.__init__')}")
 
 
-def init_fn(cls: griffe.Class, parameters: Iterable[griffe.Parameter]) -> griffe.Function:
-    self = griffe.Parameter("self", kind=positional_or_keyword)
-    p = griffe.Parameters(self, *parameters)
-    return griffe.Function(
+def init_fn(cls: Class, parameters: Iterable[Parameter]) -> Function:
+    self = Parameter("self", kind=positional_or_keyword)
+    p = Parameters(self, *parameters)
+    return Function(
         "__init__", lineno=0, endlineno=0, parent=cls, parameters=p, returns="None"
     )
 
 
 @cache
-def inherits_immutable(cls: griffe.Class) -> bool:
+def inherits_immutable(cls: Class) -> bool:
     root = CANONICAL_PATH_IMMUTABLE
     if any(
         (base if isinstance(base, str) else base.canonical_path) == root
@@ -151,14 +147,14 @@ def inherits_immutable(cls: griffe.Class) -> bool:
 
 # TODO @dangotbanned: `ExprIR` is showing `node(s)` as a default
 @cache
-def _dataclass_parameters(class_: griffe.Class) -> tuple[Parameter, ...]:
+def _dataclass_parameters(class_: Class) -> tuple[Parameter, ...]:
     if class_.name == NEEDS_FIX and logger.isEnabledFor(logging.DEBUG):
         write_griffe(class_)
     return tuple(iter_dataclass_parameters(class_))
 
 
-def iter_dataclass_parameters(cls: griffe.Class) -> Iterator[Parameter]:
-    members = cast("Iterable[griffe.Attribute]", cls.members.values())
+def iter_dataclass_parameters(cls: Class) -> Iterator[Parameter]:
+    members = cast("Iterable[Attribute]", cls.members.values())
     for member in members:
         if member.is_attribute and is_dataclass_field(member):
             yield Parameter(
@@ -170,7 +166,7 @@ def iter_dataclass_parameters(cls: griffe.Class) -> Iterator[Parameter]:
             )
 
 
-def is_dataclass_field(member: griffe.Attribute) -> bool:
+def is_dataclass_field(member: Attribute) -> bool:
     """Fixes logic from upstream inference of `ClassVar`.
 
     ([mkdocstrings/griffe#253]) handled the `ClassVar[<type>]` case, but following ([python/typing#1931])
@@ -191,7 +187,7 @@ def is_dataclass_field(member: griffe.Attribute) -> bool:
         "property" in labels
         or ("class-attribute" in labels and "instance-attribute" not in labels)
         or (
-            isinstance(member.annotation, griffe.ExprName)
+            isinstance(member.annotation, ExprName)
             and "ClassVar" in member.annotation.name
         )
     )
