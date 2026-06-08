@@ -61,7 +61,7 @@ class PEP681Extension(griffe.Extension):
     """An extension to support `@dataclass_transform`.
 
     Important:
-        Worked backwords from [`extensions/dataclasses.py`](https://github.com/mkdocstrings/griffe/blob/5dc97b78f318ac97016fbaee83a574ff15516f58/packages/griffelib/src/griffe/_internal/extensions/dataclasses.py)
+        Worked backwards from [`extensions/dataclasses.py`](https://github.com/mkdocstrings/griffe/blob/5dc97b78f318ac97016fbaee83a574ff15516f58/packages/griffelib/src/griffe/_internal/extensions/dataclasses.py)
     """
 
     def __init__(self) -> None:
