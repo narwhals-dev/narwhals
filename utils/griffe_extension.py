@@ -14,16 +14,19 @@ Run with:
 
 from __future__ import annotations
 
+# ruff: noqa: DTZ005
+import datetime as dt
+import pathlib
 from functools import cache
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import griffe
 
 if TYPE_CHECKING:
     import logging
 
+    from narwhals.typing import FileSource
 
-if TYPE_CHECKING:
     logger = logging.getLogger(__name__)
 else:
     # NOTE: griff's logger has a `__getattr__`
@@ -161,6 +164,9 @@ def canonical_path(obj: str | griffe.Expr) -> str:
 @cache
 def _dataclass_parameters(class_: griffe.Class) -> list[griffe.Parameter]:
     # Iterate on current attributes to find parameters.
+    if class_.name == NEEDS_FIX:
+        write_griffe(class_)
+
     parameters = []
     for member in class_.members.values():
         if member.is_attribute:
@@ -224,3 +230,37 @@ def _reorder_parameters(parameters: list[griffe.Parameter]) -> list[griffe.Param
         else:
             pos_kw.append(param)
     return pos_only + pos_kw + kw_only
+
+
+class GriffeExportable(Protocol):
+    def as_json(self, **kwds: Any) -> str: ...
+
+
+def write_griffe(
+    obj: GriffeExportable, file: FileSource | None = None, **kwds: Any
+) -> None:
+    """Export a `griffe` object as json.
+
+    This is a quick debugging tool to help see what a specific slice of the ast look like.
+
+    Arguments:
+        obj: An object from `griffe` that supports `as_json`.
+        file: File path to write to.
+            By default, writes to the cwd using a best-effort name, followed by a timestamp.
+        **kwds: Arguments forwarded to `json.dumps`
+    """
+    serde = obj.as_json(**kwds)
+    if file is None:
+        if (
+            name := getattr(
+                obj, "canonical_path", getattr(obj, "path", getattr(obj, "name", None))
+            )
+        ) is None:
+            name = type(obj).__name__
+        now = dt.datetime.now(tz=None).isoformat(timespec="seconds").replace(":", "-")
+        file = f"{name.removeprefix(CANONICAL_PATH_PLAN + '.')}_{now}.json"
+
+    path = pathlib.Path(file)
+    path.touch()
+    path.write_text(serde, "utf8")
+    logger.info(f"Exported: {path.as_posix()}")  # noqa: G004
