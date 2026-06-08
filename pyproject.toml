@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.22.0"
+version = "2.22.1"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -405,6 +405,7 @@ filterwarnings = [
   # raised internally by Dask
   "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
   "ignore:.*Downcasting behavior in Series and DataFrame methods 'where', 'mask', and 'clip' is deprecated.*:FutureWarning:dask",
+  "ignore:.*inplace keyword .* is deprecated*:Warning:dask",
 
   # raise internally by polars
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
