@@ -140,7 +140,7 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
                 kind=griffe.ParameterKind.positional_or_keyword,
                 default=None,
             ),
-            *_reorder_parameters(parameters),
+            *parameters,
         ),
         returns="None",
     )
@@ -215,24 +215,6 @@ def is_dataclass_field(member: griffe.Attribute) -> bool:
             and "ClassVar" in member.annotation.name
         )
     )
-
-
-def _reorder_parameters(parameters: list[griffe.Parameter]) -> list[griffe.Parameter]:
-    # De-duplicate, overwriting previous parameters.
-    params_dict = {param.name: param for param in parameters}
-
-    # Re-order, putting positional-only in front and keyword-only at the end.
-    pos_only = []
-    pos_kw = []
-    kw_only = []
-    for param in params_dict.values():
-        if param.kind is griffe.ParameterKind.positional_only:
-            pos_only.append(param)
-        elif param.kind is griffe.ParameterKind.keyword_only:
-            kw_only.append(param)
-        else:
-            pos_kw.append(param)
-    return pos_only + pos_kw + kw_only
 
 
 class GriffeExportable(Protocol):
