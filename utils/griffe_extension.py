@@ -95,20 +95,6 @@ def _apply_recursively(
                 _apply_recursively(member, processed)  # pyright: ignore[reportArgumentType]
 
 
-def relative_path(cls: griffe.Object | griffe.Expr) -> str:
-    """Strip the `narwhals._plan` prefix, for logging."""
-    return _relative_path(cls.canonical_path)
-
-
-@cache
-def _relative_path(path: str) -> str:
-    r = path.removeprefix(CANONICAL_PATH_PLAN)
-    if r == path:
-        msg = f"Expected all classes that reach here to start with {CANONICAL_PATH_PLAN!r}\nGot: {path!r}"
-        raise NotImplementedError(msg)
-    return r
-
-
 def _set_dataclass_init(class_: griffe.Class) -> None:
     """`griffe._internal.extensions.dataclasses._set_dataclass_init`."""
     # Retrieve parameters from all parent dataclasses.
@@ -122,7 +108,7 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
         return
 
     _logger = logger.info if class_.name == NEEDS_FIX else logger.debug
-    _logger("Handling: %r", relative_path(class_))
+    _logger("Handling: %r", class_.canonical_path.removeprefix(CANONICAL_PATH_PLAN))
 
     # Add current class parameters.
     parameters.extend(_dataclass_parameters(class_))
