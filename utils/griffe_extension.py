@@ -175,21 +175,13 @@ def is_dataclass_field(member: Attribute) -> bool:
     [mkdocstrings/griffe#253]: https://github.com/mkdocstrings/griffe/pull/253
     [python/typing#1931]: https://github.com/python/typing/pull/1931
     """
-    # All dataclass parameters have annotations.
-    if member.annotation is None:
+    if (annotation := member.annotation) is None:
         return False
-    # Attributes that have labels for these characteristics are not class parameters:
-    # - @property
-    # - @cached_property
-    # - ClassVar annotation
     labels = member.labels
     return not (
         "property" in labels
         or ("class-attribute" in labels and "instance-attribute" not in labels)
-        or (
-            isinstance(member.annotation, ExprName)
-            and "ClassVar" in member.annotation.name
-        )
+        or (isinstance(annotation, ExprName) and "ClassVar" in annotation.name)
     )
 
 
