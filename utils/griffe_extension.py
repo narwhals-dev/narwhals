@@ -72,7 +72,9 @@ class PEP681Extension(griffe.Extension):
         logger.info("Finished: %r", path)
 
 
-def _apply_recursively(mod_cls: Module | Class, processed: set[str]) -> None:
+def _apply_recursively(
+    mod_cls: griffe.Object | griffe.Alias, processed: set[str]
+) -> None:
     """`griffe._internal.extensions.dataclasses.__apply_recursively`.
 
     `processed` means **seen**.
@@ -85,11 +87,11 @@ def _apply_recursively(mod_cls: Module | Class, processed: set[str]) -> None:
             _set_dataclass_init(mod_cls)
         for member in mod_cls.members.values():
             if not member.is_alias and member.is_class:
-                _apply_recursively(member, processed)  # pyright: ignore[reportArgumentType]
+                _apply_recursively(member, processed)
     elif isinstance(mod_cls, Module):
         for member in mod_cls.members.values():
             if not member.is_alias and (member.is_module or member.is_class):
-                _apply_recursively(member, processed)  # pyright: ignore[reportArgumentType]
+                _apply_recursively(member, processed)
 
 
 def _set_dataclass_init(class_: Class) -> None:
