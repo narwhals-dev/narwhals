@@ -35,6 +35,15 @@ else:
 NEEDS_FIX = "IRDateTimeNamespace"
 CANONICAL_PATH_PLAN = "narwhals._plan"
 CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
+"""The metaclass of `Immutable` is decorated with `@dataclass_transform`.
+
+- The simple check is to see if `Immutable` is in our mro.
+- A more complex alternative would be using [`griffe.get_class_keyword`] to find `metaclass=ImmutableMeta`
+    - Would make sense here if I'd used any variations other besides
+      `@dataclass_transform(kw_only_default=True, frozen_default=True)`
+
+[`griffe.get_class_keyword`]: https://mkdocstrings.github.io/griffe/reference/api/expressions/#griffe.get_class_keyword
+"""
 
 
 class PEP681Extension(griffe.Extension):
@@ -141,18 +150,17 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
 
 @cache
 def inherits_immutable(cls: griffe.Class) -> bool:
-    # like `_dataclass_decorator` / `_inherits_pydantic`
-    if any(canonical_path(base) == CANONICAL_PATH_IMMUTABLE for base in cls.bases):
+    root = CANONICAL_PATH_IMMUTABLE
+    if any(
+        (base if isinstance(base, str) else base.canonical_path) == root
+        for base in cls.bases
+    ):
         return True
     return any(
         inherits_immutable(parent)
         for parent in cls.mro()
         if parent.canonical_path.startswith(CANONICAL_PATH_PLAN)
     )
-
-
-def canonical_path(obj: str | griffe.Expr) -> str:
-    return obj.canonical_path if isinstance(obj, griffe.Expr) else obj
 
 
 # TODO @dangotbanned: `ExprIR` is showing `node(s)` as a default
