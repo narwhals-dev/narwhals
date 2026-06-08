@@ -30,7 +30,9 @@ else:
     logger = griffe.get_logger(__name__)
 
 
-GriffeAny: TypeAlias = griffe.Object | griffe.Expr
+NEEDS_FIX = "IRDateTimeNamespace"
+CANONICAL_PATH_PLAN = "narwhals._plan"
+CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
 
 
 class PEP681Extension(griffe.Extension):
@@ -50,10 +52,6 @@ class PEP681Extension(griffe.Extension):
         logger.info("Starting: %r", path)
         _apply_recursively(pkg, set())
         logger.info("Finished: %r", path)
-
-
-CANONICAL_PATH_PLAN = "narwhals._plan"
-CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
 
 
 def _apply_recursively(
@@ -78,7 +76,7 @@ def _apply_recursively(
                 _apply_recursively(member, processed)  # pyright: ignore[reportArgumentType]
 
 
-def relative_path(cls: GriffeAny) -> str:
+def relative_path(cls: griffe.Object | griffe.Expr) -> str:
     """Strip the `narwhals._plan` prefix, for logging."""
     return _relative_path(cls.canonical_path)
 
@@ -108,16 +106,18 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
     if not inherits_immutable(class_):
         return
 
-    logger.info("Handling `Immutable` child: %r", relative_path(class_))
+    _logger = logger.info if class_.name == NEEDS_FIX else logger.debug
+
+    _logger("Handling: %r", relative_path(class_))
 
     # Add current class parameters.
     parameters.extend(_dataclass_parameters(class_))
     if not parameters:
-        logger.info("|   Skipped (no params)")
+        _logger("|   Skipped (no params)")
         return
 
-    logger.info(
-        f"|   Parameters(*, {', '.join(f'{p.name}: {p.annotation}' for p in parameters)})"  # noqa: G004
+    _logger(
+        f"|   Parameters(*, {', '.join(f'{p.name}: {p.annotation}' for p in parameters)})"
     )
 
     # Create `__init__` method with re-ordered parameters.
@@ -138,9 +138,7 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
         returns="None",
     )
     class_.set_member("__init__", init)
-    logger.info(
-        f"|   {init.signature(name=class_.name + '.__init__')}"  # noqa: G004
-    )
+    _logger(f"|   {init.signature(name=class_.name + '.__init__')}")
 
 
 @cache
@@ -159,15 +157,7 @@ def canonical_path(obj: str | griffe.Expr) -> str:
     return obj.canonical_path if isinstance(obj, griffe.Expr) else obj
 
 
-# TODO @dangotbanned: Fix `ClassVar` broken for:
-#   - `IRDateTimeNamespace`
-#   - `IRStringNamespace`
-#   - `IRListNamespace`
-#   - `IRCatNamespace`
-#   - `__function_parameters__: ClassVar`
 # TODO @dangotbanned: `ExprIR` is showing `node(s)` as a default
-# TODO @dangotbanned: Skip adding an `__init__` when there are no parameters
-#   - Loads of functions like that
 @cache
 def _dataclass_parameters(class_: griffe.Class) -> list[griffe.Parameter]:
     # Iterate on current attributes to find parameters.
@@ -176,37 +166,46 @@ def _dataclass_parameters(class_: griffe.Class) -> list[griffe.Parameter]:
         if member.is_attribute:
             member = cast("griffe.Attribute", member)
 
-            # All dataclass parameters have annotations.
-            if member.annotation is None:
-                continue
-
-            # Attributes that have labels for these characteristics are
-            # not class parameters:
-            # - @property
-            # - @cached_property
-            # - ClassVar annotation
-            if "property" in member.labels or (
-                # TODO: It is better to explicitly check for `ClassVar`, but  # noqa: TD002
-                # `Visitor.handle_attribute` unwraps it from the annotation.
-                # Maybe create `internal_labels` and store "classvar" in there.
-                "class-attribute" in member.labels
-                and "instance-attribute" not in member.labels
-            ):
-                continue
-
-            # Add parameter to the list.
-            parameters.append(
-                griffe.Parameter(
-                    member.name,
-                    annotation=member.annotation,
-                    # All parameters marked as keyword-only.
-                    kind=griffe.ParameterKind.keyword_only,
-                    default=member.value,
-                    docstring=member.docstring,
+            if is_dataclass_field(member):
+                parameters.append(
+                    griffe.Parameter(
+                        member.name,
+                        annotation=member.annotation,
+                        # All parameters marked as keyword-only.
+                        kind=griffe.ParameterKind.keyword_only,
+                        default=member.value,
+                        docstring=member.docstring,
+                    )
                 )
-            )
 
     return parameters
+
+
+def is_dataclass_field(member: griffe.Attribute) -> bool:
+    """Fixes logic from upstream inference of `ClassVar`.
+
+    ([mkdocstrings/griffe#253]) handled the `ClassVar[<type>]` case, but following ([python/typing#1931])
+    we can write a "bare" `ClassVar` too.
+
+    [mkdocstrings/griffe#253]: https://github.com/mkdocstrings/griffe/pull/253
+    [python/typing#1931]: https://github.com/python/typing/pull/1931
+    """
+    # All dataclass parameters have annotations.
+    if member.annotation is None:
+        return False
+    # Attributes that have labels for these characteristics are not class parameters:
+    # - @property
+    # - @cached_property
+    # - ClassVar annotation
+    labels = member.labels
+    return not (
+        "property" in labels
+        or ("class-attribute" in labels and "instance-attribute" not in labels)
+        or (
+            isinstance(member.annotation, griffe.ExprName)
+            and "ClassVar" in member.annotation.name
+        )
+    )
 
 
 def _reorder_parameters(parameters: list[griffe.Parameter]) -> list[griffe.Parameter]:
