@@ -23,9 +23,10 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Final, Protocol, cast
 
 import griffe
+from griffe import Parameter
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
 
     from narwhals.typing import FileSource
 
@@ -150,28 +151,23 @@ def inherits_immutable(cls: griffe.Class) -> bool:
 
 # TODO @dangotbanned: `ExprIR` is showing `node(s)` as a default
 @cache
-def _dataclass_parameters(class_: griffe.Class) -> list[griffe.Parameter]:
-    # Iterate on current attributes to find parameters.
+def _dataclass_parameters(class_: griffe.Class) -> tuple[Parameter, ...]:
     if class_.name == NEEDS_FIX and logger.isEnabledFor(logging.DEBUG):
         write_griffe(class_)
+    return tuple(iter_dataclass_parameters(class_))
 
-    parameters = []
-    for member in class_.members.values():
-        if member.is_attribute:
-            member = cast("griffe.Attribute", member)
 
-            if is_dataclass_field(member):
-                parameters.append(
-                    griffe.Parameter(
-                        member.name,
-                        annotation=member.annotation,
-                        kind=keyword_only,
-                        default=member.value,
-                        docstring=member.docstring,
-                    )
-                )
-
-    return parameters
+def iter_dataclass_parameters(cls: griffe.Class) -> Iterator[Parameter]:
+    members = cast("Iterable[griffe.Attribute]", cls.members.values())
+    for member in members:
+        if member.is_attribute and is_dataclass_field(member):
+            yield Parameter(
+                member.name,
+                annotation=member.annotation,
+                kind=keyword_only,
+                default=member.value,
+                docstring=member.docstring,
+            )
 
 
 def is_dataclass_field(member: griffe.Attribute) -> bool:
