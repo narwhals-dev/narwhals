@@ -199,6 +199,7 @@ filters = [
     # https://mkdocstrings.github.io/python/usage/configuration/members/#filters
     "!^_+(repr|slots|all)"
 ]
+extensions = ["utils/griffe_extension.py"]
 
 
 [project.markdown_extensions.admonition]
