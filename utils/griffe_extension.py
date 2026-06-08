@@ -36,7 +36,7 @@ else:
     logger = griffe.get_logger(__name__)
 
 
-NEEDS_FIX = "IRDateTimeNamespace"
+NEEDS_FIX = "FrozenSchema"
 CANONICAL_PATH_PLAN = "narwhals._plan"
 CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
 """The metaclass of `Immutable` is decorated with `@dataclass_transform`.
@@ -148,7 +148,6 @@ def inherits_immutable(cls: Class) -> bool:
     )
 
 
-# TODO @dangotbanned: `ExprIR` is showing `node(s)` as a default
 @cache
 def _dataclass_parameters(class_: Class) -> tuple[Parameter, ...]:
     if class_.name == NEEDS_FIX and logger.isEnabledFor(logging.DEBUG):
@@ -164,7 +163,6 @@ def iter_dataclass_parameters(cls: Class) -> Iterator[Parameter]:
                 member.name,
                 annotation=member.annotation,
                 kind=keyword_only,
-                default=member.value,
                 docstring=member.docstring,
             )
 
