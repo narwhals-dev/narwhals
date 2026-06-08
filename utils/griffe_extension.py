@@ -100,12 +100,8 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
         mro = class_.mro()
     except ValueError:
         mro = ()
-    msg = "Found `Immutable`: "
     for parent in reversed(mro):
         if inherits_immutable(parent):
-            s_child = relative_path(class_)
-            logger.debug("%s%r | (parent: %r)", msg, s_child, parent.name)
-
             parameters.extend(_dataclass_parameters(parent))
             class_.labels.add("dataclass")
 
