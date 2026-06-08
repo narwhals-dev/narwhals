@@ -14,16 +14,19 @@ Run with:
 
 from __future__ import annotations
 
-# ruff: noqa: DTZ005, G004
 import datetime as dt
 import logging
 import pathlib
+
+# ruff: noqa: DTZ005, G004
 from functools import cache
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Final, Protocol, cast
 
 import griffe
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from narwhals.typing import FileSource
 
     logger = logging.getLogger(__name__)
@@ -44,6 +47,11 @@ CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
 
 [`griffe.get_class_keyword`]: https://mkdocstrings.github.io/griffe/reference/api/expressions/#griffe.get_class_keyword
 """
+
+positional_or_keyword: Final = griffe.ParameterKind.positional_or_keyword
+"""`self`."""
+keyword_only: Final = griffe.ParameterKind.keyword_only
+"""All fields are keyword-only."""
 
 
 class PEP681Extension(griffe.Extension):
@@ -114,7 +122,6 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
         return
 
     _logger = logger.info if class_.name == NEEDS_FIX else logger.debug
-
     _logger("Handling: %r", relative_path(class_))
 
     # Add current class parameters.
@@ -127,25 +134,17 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
         f"|   Parameters(*, {', '.join(f'{p.name}: {p.annotation}' for p in parameters)})"
     )
 
-    # Create `__init__` method with re-ordered parameters.
-    init = griffe.Function(
-        "__init__",
-        lineno=0,
-        endlineno=0,
-        parent=class_,
-        parameters=griffe.Parameters(
-            griffe.Parameter(
-                name="self",
-                annotation=None,
-                kind=griffe.ParameterKind.positional_or_keyword,
-                default=None,
-            ),
-            *parameters,
-        ),
-        returns="None",
-    )
+    init = init_fn(class_, parameters)
     class_.set_member("__init__", init)
     _logger(f"|   {init.signature(name=class_.name + '.__init__')}")
+
+
+def init_fn(cls: griffe.Class, parameters: Iterable[griffe.Parameter]) -> griffe.Function:
+    self = griffe.Parameter("self", kind=positional_or_keyword)
+    p = griffe.Parameters(self, *parameters)
+    return griffe.Function(
+        "__init__", lineno=0, endlineno=0, parent=cls, parameters=p, returns="None"
+    )
 
 
 @cache
@@ -180,8 +179,7 @@ def _dataclass_parameters(class_: griffe.Class) -> list[griffe.Parameter]:
                     griffe.Parameter(
                         member.name,
                         annotation=member.annotation,
-                        # All parameters marked as keyword-only.
-                        kind=griffe.ParameterKind.keyword_only,
+                        kind=keyword_only,
                         default=member.value,
                         docstring=member.docstring,
                     )
