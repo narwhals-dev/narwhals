@@ -1,5 +1,3 @@
-ci:
-  autoupdate_schedule: monthly
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
@@ -14,6 +12,10 @@ repos:
       name: check-docstrings
       alias: check-docstrings
       entry: python utils/check_docstrings.py
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: 0.11.15
+  hooks:
+    - id: uv-lock
 - repo: https://github.com/codespell-project/codespell
   rev: 'v2.4.2'
   hooks:
@@ -38,13 +40,13 @@ repos:
             (?x)^(
                 tests/.*|
                 # TODO: gradually enable
-                narwhals/dependencies\.py|
+                src/narwhals/dependencies\.py|
                 # Private, so less urgent to document too well
-                narwhals/_.*|
+                src/narwhals/_.*|
                 # Internal use only, less urgent
                 ^utils/.*|
                 # Soft-deprecated, so less crucial to document so carefully
-                narwhals/stable/v1/.*
+                src/narwhals/stable/v1/.*
             )$
         # Keep in sync with `flake8-typing-imports` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
@@ -57,33 +59,34 @@ repos:
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
   hooks:
+    # `language: python` runs in an isolated venv.
+    # The scripts that need `narwhals` add `src/` to `sys.path` themselves.
     - id: check-api-reference
       name: check-api-reference
       pass_filenames: false
-      entry: python -m utils.check_api_reference
-      language: python
-      additional_dependencies: [polars]
+      entry: uv run --extra polars utils/check_api_reference.py
+      language: system
     - id: sort-api-reference
       name: sort-api-reference
       pass_filenames: false
-      entry: python -m utils.sort_api_reference
-      language: python
+      entry: uv run utils/sort_api_reference.py
+      language: system
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false
-      entry: python -m utils.check_slotted_classes
-      language: python
+      entry: uv run utils/check_slotted_classes.py
+      language: system
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
-      entry: python utils/import_check.py
-      language: python
-      files: ^narwhals/
-      exclude: ^narwhals/dependencies\.py
+      entry: uv run utils/import_check.py
+      language: system
+      files: ^src/narwhals/
+      exclude: ^src/narwhals/dependencies\.py
     - id: self-self
       name: don't annotate `self` argument using `Self`
       entry: "self: Self"
       language: pygrep
-      files: ^narwhals/
+      files: ^src/narwhals/
     - id: dtypes-import
       name: don't import from narwhals.dtypes (use `Version.dtypes` instead)
       entry: |
@@ -95,14 +98,14 @@ repos:
               ((Datetime|Duration|Enum)(,\ )?)+
               ((,\ )?DType)?
       language: pygrep
-      files: ^narwhals/
+      files: ^src/narwhals/
       exclude: |
         (?x)
           ^(
-            narwhals/_utils\.py|
-            narwhals/stable/v./_?dtypes.py|
-            narwhals/.*__init__.py|
-            narwhals/.*typing\.py
+            src/narwhals/_utils\.py|
+            src/narwhals/stable/v./_?dtypes.py|
+            src/narwhals/.*__init__.py|
+            src/narwhals/.*typing\.py
           )
     - id: pull-request-target
       name: don't use `pull_request_target`
@@ -123,7 +126,7 @@ repos:
       exclude: |
         (?x)
           ^(tests/utils\.py)
-          |^(test_plugin/)
+          |^(packages/test_plugin/)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$

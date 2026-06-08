@@ -3,9 +3,9 @@ name: PyTest PySpark constructor
 on:
   pull_request:
     paths:
-      - narwhals/_expression_parsing.py
-      - narwhals/_spark_like/**
-      - narwhals/_sql/**
+      - src/narwhals/_expression_parsing.py
+      - src/narwhals/_spark_like/**
+      - src/narwhals/_sql/**
       - tests/*scan*.py
       - tests/frame/*sink*.py
   workflow_call:
@@ -15,7 +15,8 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -29,25 +30,16 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pyspark-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group core-tests
-      - name: install pyspark
-        run: uv pip install -e ".[pyspark]"
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors pyspark
-
+        run: make run-ci DEPS="--group core-tests --extra pyspark --extra pandas" CMD="pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors=pyspark"
 
   pytest-pyspark-min-version-constructor:
     if: github.head_ref != 'bump-version'
@@ -57,24 +49,16 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pyspark-min-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group core-tests --system
-      - name: install pyspark (min version)
-        run: uv pip install "pyspark==3.5.0" --system
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors pyspark
+        run: make run-ci DEPS="--group min-pyspark-version --extra pandas" CMD="pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors=pyspark"
 
   pytest-pyspark-connect-constructor:
     if: github.head_ref != 'bump-version'
@@ -86,16 +70,14 @@ jobs:
       SPARK_VERSION: 4.1.0
       SPARK_PORT: 15002
       SPARK_CONNECT: true
+      SPARK_HOME: ""
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
-
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pyspark-connect-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
@@ -106,11 +88,14 @@ jobs:
           distribution: zulu
           java-version: 17
 
+      - name: Create venv
+        run: uv venv --python ${{ matrix.python-version }}
+
       - name: install-reqs
         # temporary pin to get CI green
-        run: uv pip install -e . --group core-tests --group extra "pyarrow<22.0"
+        run: uv pip install -e ".[pandas]" --group core-tests --group extra "pyarrow<22.0"
       - name: install pyspark
-        run: echo "setuptools<78" | uv pip install -e . "pyspark[connect]==${SPARK_VERSION}"
+        run: uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" "setuptools<78"
       - name: show-deps
         run: uv pip freeze
 
@@ -141,8 +126,8 @@ jobs:
           echo "Spark Connect server started"
 
       - name: Run pytest
-        run: pytest tests --cov=narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+        run: uv run --no-sync pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
 
       - name: Stop Spark Connect server
-        if: always()
+        if: always() && env.SPARK_HOME != ''
         run: $SPARK_HOME/sbin/stop-connect-server.sh

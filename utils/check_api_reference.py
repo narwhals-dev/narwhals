@@ -111,7 +111,7 @@ SERIES_ONLY_METHODS = {
 }
 DIR_API_REF = Path("docs/api-reference")
 
-files = {fp.stem for fp in Path("narwhals").iterdir()}
+files = {fp.stem for fp in Path("src/narwhals").iterdir()}
 
 # Top level functions
 top_level_functions = [
