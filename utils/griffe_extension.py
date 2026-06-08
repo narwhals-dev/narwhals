@@ -16,6 +16,7 @@ from __future__ import annotations
 
 # ruff: noqa: DTZ005
 import datetime as dt
+import logging
 import pathlib
 from functools import cache
 from typing import TYPE_CHECKING, Any, Protocol, cast
@@ -23,8 +24,6 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 import griffe
 
 if TYPE_CHECKING:
-    import logging
-
     from narwhals.typing import FileSource
 
     logger = logging.getLogger(__name__)
@@ -164,7 +163,7 @@ def canonical_path(obj: str | griffe.Expr) -> str:
 @cache
 def _dataclass_parameters(class_: griffe.Class) -> list[griffe.Parameter]:
     # Iterate on current attributes to find parameters.
-    if class_.name == NEEDS_FIX:
+    if class_.name == NEEDS_FIX and logger.isEnabledFor(logging.DEBUG):
         write_griffe(class_)
 
     parameters = []
