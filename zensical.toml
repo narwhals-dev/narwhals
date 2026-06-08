@@ -200,7 +200,7 @@ filters = [
     "!^_+(repr|slots|all)"
 ]
 extensions = ["utils/griffe_extension.py"]
-
+merge_init_into_class = true
 
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.md_in_html]
