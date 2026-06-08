@@ -14,7 +14,7 @@ Run with:
 
 from __future__ import annotations
 
-# ruff: noqa: DTZ005
+# ruff: noqa: DTZ005, G004
 import datetime as dt
 import logging
 import pathlib
@@ -266,4 +266,4 @@ def write_griffe(
     path = pathlib.Path(file)
     path.touch()
     path.write_text(serde, "utf8")
-    logger.info(f"Exported: {path.as_posix()}")  # noqa: G004
+    logger.info(f"Exported: {path.as_posix()}")
