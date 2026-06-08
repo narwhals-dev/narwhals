@@ -112,13 +112,16 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
     if not inherits_immutable(class_):
         return
 
-    logger.debug("Handling `Immutable` child: %s", relative_path(class_))
+    logger.info("Handling `Immutable` child: %r", relative_path(class_))
 
     # Add current class parameters.
     parameters.extend(_dataclass_parameters(class_))
+    if not parameters:
+        logger.info("|   Skipped (no params)")
+        return
 
-    logger.debug(
-        f"    Parameters(*, {', '.join(f'{p.name}: {p.annotation}' for p in parameters)})"  # noqa: G004
+    logger.info(
+        f"|   Parameters(*, {', '.join(f'{p.name}: {p.annotation}' for p in parameters)})"  # noqa: G004
     )
 
     # Create `__init__` method with re-ordered parameters.
@@ -139,8 +142,8 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
         returns="None",
     )
     class_.set_member("__init__", init)
-    logger.debug(
-        f"Finished:\n    {init.signature(name=relative_path(class_) + '.__init__')}"  # noqa: G004
+    logger.info(
+        f"|   {init.signature(name=class_.name + '.__init__')}"  # noqa: G004
     )
 
 
