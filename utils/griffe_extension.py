@@ -96,11 +96,7 @@ def _set_dataclass_init(class_: griffe.Class) -> None:
     """`griffe._internal.extensions.dataclasses._set_dataclass_init`."""
     # Retrieve parameters from all parent dataclasses.
     parameters: list[griffe.Parameter] = []
-    try:
-        mro = class_.mro()
-    except ValueError:
-        mro = ()
-    for parent in reversed(mro):
+    for parent in reversed(class_.mro()):
         if inherits_immutable(parent):
             parameters.extend(_dataclass_parameters(parent))
             class_.labels.add("dataclass")
