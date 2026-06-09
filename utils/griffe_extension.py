@@ -20,6 +20,7 @@ import pathlib
 
 # ruff: noqa: DTZ005, G004
 from functools import cache
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Protocol, TypeAlias, cast
 
 import griffe
@@ -36,7 +37,7 @@ else:
     logger = griffe.get_logger(__name__)
 
 
-NEEDS_FIX = "FrozenSchema"
+NEEDS_FIX = "OverOrdered"
 CANONICAL_PATH_PLAN = "narwhals._plan"
 CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
 """The metaclass of `Immutable` is decorated with `@dataclass_transform`.
@@ -55,6 +56,69 @@ keyword_only: Final = griffe.ParameterKind.keyword_only
 """All fields are keyword-only."""
 
 Member: TypeAlias = griffe.Object | griffe.Alias
+
+HERE: Path = Path(__file__)
+REPO_ROOT = HERE.parent.parent
+HELP_ME = "https://mkdocstrings.github.io/griffe/guide/users/extending/#using-extensions"
+
+ISSUE_320 = "https://github.com/mkdocstrings/griffe/issues/320"
+
+
+class NewAsInitExtension(griffe.Extension):
+    """Patch to fix [mkdocstrings/griffe#320](https://github.com/mkdocstrings/griffe/issues/320)."""
+
+    def __init__(self, *, paths: list[str] | tuple[str, ...] = ()) -> None:
+        super().__init__()
+        if not (isinstance(paths, (list, tuple)) and paths and isinstance(paths[0], str)):
+            raise self._generate_error(paths)
+
+        self.paths: frozenset[str] = frozenset(paths)
+
+    # TODO @dangotbanned: This works, but the hook is after `mkdocstrings` warns about the docstring issue
+    # Maybe use `on_class_instance`?
+    def on_class(self, *, cls: Class, loader: griffe.GriffeLoader, **kwargs: Any) -> None:
+        super().on_class(cls=cls, loader=loader, **kwargs)
+        # NOTE: Think this is as atomic as we can get?
+        paths = self.paths
+        if (not paths) or cls.path not in paths:
+            return
+        self.paths = self.paths.difference({cls.path})
+        logger.info("NewAsInitExtension: Visting %r", cls.path)
+        if "__init__" in cls.members:
+            msg = f"Classes that define both `__new__` and `__init__` are not yet supported,\n see: {ISSUE_320}"
+            raise NotImplementedError(msg)
+        converted = self._convert_new_to_init(cls.get_member("__new__"))
+        cls.del_member("__new__")
+        cls.set_member("__init__", converted)
+        logger.info("NewAsInitExtension: Finished %r", cls.path)
+
+    def _convert_new_to_init(self, method: Function) -> Function:
+        cls = method.parent
+        if not isinstance(cls, Class):
+            raise TypeError(cls)
+        if _returns := method.returns:
+            # TODO @dangotbanned: Check if this matches parent?
+            # If `__new__` was used to do something like `pathlib.Path`,
+            # this extension wouldn't be what you want.
+            ...
+        # skip `cls`
+        it = iter(method.parameters)
+        next(it)
+        return init_fn(cls, it)
+
+    def _generate_error(self, paths: Any) -> TypeError:
+        name = type(self).__name__
+        extension_module = HERE.relative_to(REPO_ROOT).as_posix()
+        extension_name = f"{extension_module}:{name}"
+        lb, rb = "{", "}"
+        msg = (
+            f"{name!r} requires a list of qualified type names as paths,\nbut got `paths = {paths!r}`.\n\n"
+            f"Hint: Try this incantation in `zensical.toml` instead?:\n"
+            f'    {lb} "{extension_name}" = {lb} paths = ["narwhals.path.to.thing"] {rb} {rb}\n'
+            f"See also:\n"
+            f"    {HELP_ME}"
+        )
+        return TypeError(msg)
 
 
 class PEP681Extension(griffe.Extension):
@@ -95,6 +159,9 @@ def _apply_recursively(mod_cls: Member, seen: set[str]) -> None:
                 _apply_recursively(member, seen)
 
 
+# TODO @dangotbanned: the cases with `Parameter.default is None` (node(s)) still need labels fixed
+# Bad: `class-attribute`, `instance-attribute`
+# Good: `instance-attribute`
 def _set_dataclass_init(class_: Class) -> None:
     """`griffe._internal.extensions.dataclasses._set_dataclass_init`."""
     # Retrieve parameters from all parent dataclasses.

@@ -199,10 +199,10 @@ filters = [
     # https://mkdocstrings.github.io/python/usage/configuration/members/#filters
     "!^_+(repr|slots|all)"
 ]
-extensions = ["utils/griffe_extension.py"]
-
-# NOTE: `FrozenSchema.__new__` isn't supported for this
-# https://github.com/mkdocstrings/griffe/issues/320
+extensions = [
+    { "utils/griffe_extension.py:NewAsInitExtension" = { paths = ["narwhals._plan.schema.FrozenSchema"] } }, 
+    "utils/griffe_extension.py:PEP681Extension",
+]
 merge_init_into_class = true
 
 [project.markdown_extensions.admonition]
