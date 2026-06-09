@@ -243,6 +243,13 @@ def test_subtract_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_xor_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(ncs.boolean() ^ nw.col("d"))
+    expected = {"d": [False, False, False]}
+    assert_equal_data(result, expected)
+
+
 def test_set_ops_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises((NotImplementedError, ValueError)):
@@ -259,11 +266,6 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         match=re.escape("unsupported operand type(s) for op: ('Selector' + 'Selector')"),
     ):
         df.select(ncs.boolean() + ncs.numeric())
-
-    with pytest.raises(
-        TypeError, match=re.escape("unsupported operand type(s) for op: ('Selector' ^ ")
-    ):
-        df.select(ncs.boolean() ^ 1)
 
 
 @pytest.mark.skipif(is_windows(), reason="windows is what it is")

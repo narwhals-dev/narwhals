@@ -67,10 +67,9 @@ class Selector(Expr):
                     allow_multi_output=True,
                 )
             )
-        msg = (
-            f"unsupported operand type(s) for op: ('Selector' ^ '{type(other).__name__}')"
+        return self._to_expr()._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "__xor__", exprs=(other,), str_as_lit=True)
         )
-        raise TypeError(msg)
 
     def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError

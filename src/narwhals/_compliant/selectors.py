@@ -310,7 +310,7 @@ class CompliantSelector(
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() & other
 
-    @overload
+    @overload  # type: ignore[override]
     def __xor__(self, other: Self) -> Self: ...
     @overload
     def __xor__(
@@ -344,10 +344,7 @@ class CompliantSelector(
                 ]
 
             return self.selectors._selector.from_callables(series, names, context=self)
-        # The narwhals-level Selector.__xor__ rejects non-selectors before reaching
-        # here, so this branch is a defensive guard only.
-        msg = f"unsupported operand type(s) for op: ('Selector' ^ '{type(other).__name__}')"  # pragma: no cover
-        raise TypeError(msg)  # pragma: no cover
+        return self._to_expr() ^ other
 
     def __invert__(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self.selectors.all() - self

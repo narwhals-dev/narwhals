@@ -274,6 +274,12 @@ class PolarsExpr:
 
     def __xor__(self, other: PolarsExpr) -> Self:
         other_native = extract_native(other)
+        if pl.selectors.is_selector(self.native) and not pl.selectors.is_selector(
+            other_native
+        ):
+            # Polars coerces the right operand to a selector and takes the
+            # set difference; degrade to expressions for an elementwise xor.
+            return self._with_native(self.native.as_expr().__xor__(other_native))
         if self._backend_version < (1,):  # pragma: no cover
             # Polars added Selector.__xor__ in 1.0.0; emulate via set ops.
             selector_cls = getattr(pl.selectors, "_selector_proxy_", None)
