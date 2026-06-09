@@ -194,7 +194,8 @@ class SortBy(ExprIR, dtype=same_dtype()):
 
     For SQL-like backends, there will be limitations on where `sort_by` is valid.
 
-    The simplest case represents the [`ORDER BY` Clause in Aggregate Functions]:
+    The simplest case represents the
+    [`ORDER BY` Clause in Aggregate Functions](https://duckdb.org/docs/current/sql/functions/aggregates#order-by-clause-in-aggregate-functions):
 
         # defaults to `descending=False, nulls_last=False`
         nw.col("a").sort_by("b").first()
@@ -202,8 +203,6 @@ class SortBy(ExprIR, dtype=same_dtype()):
     Which can be translated to:
 
         first("a", ORDER BY "b" ASC NULLS FIRST)
-
-    [`ORDER BY` Clause in Aggregate Functions]: https://duckdb.org/docs/current/sql/functions/aggregates#order-by-clause-in-aggregate-functions
     """
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
