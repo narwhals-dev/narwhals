@@ -177,15 +177,14 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
     """Callable defining how a `DType` is derived when `resolve_dtype` is called.
 
-    If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
+    If the logic fits an existing pattern, use the `dtype` **parameter**
+    [when subclassing](https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__):
 
         class Slice(ExprIR, dtype=ResolveDType.expr_ir.same_dtype()):
             __slots__ = ("expr", "length", "offset")
             expr: ExprIR = node()
             offset: int
             length: int | None
-
-    See `IntoResolveDType` and `ResolveDType` for more examples.
 
     If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
 
@@ -202,7 +201,9 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
                 inner = dtype.inner
                 return inner if not isinstance(inner, type) else inner()
 
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    See Also:
+        - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
+        - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
     """
 
     def __init_subclass__(
@@ -344,10 +345,11 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             >>> (column.first() + length)._ir.is_scalar()
             True
 
-        ## Notes
-        Subclasses should override in 2 cases:
-        1. They are unconditionally scalar (`Len`, `AggExpr`)
-        2. They answer the question using non-node fields (`FunctionExpr.function`)
+        Notes:
+            Subclasses should override in 2 cases:
+
+            1. They are unconditionally scalar (`Len`, `AggExpr`)
+            2. They answer the question using non-node fields (`FunctionExpr.function`)
         """
         return self.__expr_ir_nodes__.is_scalar(self)
 
@@ -386,9 +388,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             Use `NamedIR.map_ir` if `function` requires selector expansion.
 
         Returns:
-            Either
-            - A new `ExprIR`, with any changes made as a result of `function`
-            - The same `ExprIR` (by identity)
+            Either a new `ExprIR`, with any changes made as a result of `function`.
+            Or the same `ExprIR` (by identity).
 
         Examples:
             >>> import narwhals._plan as nw
@@ -428,11 +429,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             [([(col('a')) + (col('b'))]) + (col('c'))].alias('sum')
 
         Notes:
-            - The name `map_ir` is a nod to [`plans::iterator::Expr.map_expr`]
-            - The iteration pattern is adapted from [`plans::iterator::!push_expr`]
-
-        [`plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L166-L169
-        [`plans::iterator::!push_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L10-L124
+            - The name `map_ir` is a nod to [`plans::iterator::Expr.map_expr`]( https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L166-L169)
+            - The iteration pattern is adapted from [`plans::iterator::!push_expr`](https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L10-L124)
         """
         return self.__expr_ir_nodes__.map_ir(self, function)
 
