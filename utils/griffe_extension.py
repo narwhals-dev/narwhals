@@ -14,6 +14,8 @@ Run with:
 
 from __future__ import annotations
 
+import ast
+import copy
 import datetime as dt
 import logging
 import pathlib
@@ -27,6 +29,7 @@ import griffe
 from griffe import Attribute, Class, ExprName, Function, Module, Parameter, Parameters
 
 if TYPE_CHECKING:
+    from ast import AST
     from collections.abc import Iterable, Iterator
 
     from narwhals.typing import FileSource
@@ -60,12 +63,37 @@ Member: TypeAlias = griffe.Object | griffe.Alias
 HERE: Path = Path(__file__)
 REPO_ROOT = HERE.parent.parent
 HELP_ME = "https://mkdocstrings.github.io/griffe/guide/users/extending/#using-extensions"
-
 ISSUE_320 = "https://github.com/mkdocstrings/griffe/issues/320"
 
 
 class NewAsInitExtension(griffe.Extension):
-    """Patch to fix [mkdocstrings/griffe#320](https://github.com/mkdocstrings/griffe/issues/320)."""
+    """Patch to fix [mkdocstrings/griffe#320](https://github.com/mkdocstrings/griffe/issues/320).
+
+    Warning:
+        This was a huge timesink!
+
+    The end result allows `__new__` to be used like `__init__` and get merged into the class docstring.
+
+    For `FrozenSchema`, that gives us this
+
+    ## FrozenSchema
+
+
+    ```py
+    FrozenSchema(iterable: IntoFrozenSchema = (), /, **named: DType)
+    ```
+
+    Bases: `_BaseSchema`
+
+    *summary ...*
+
+    **Parameters:**
+
+    | Name       | Description |
+    |------------|-------------|
+    | `iterable` | ...         |
+    | `**schema` | ...         |
+    """
 
     def __init__(self, *, paths: list[str] | tuple[str, ...] = ()) -> None:
         super().__init__()
@@ -73,38 +101,78 @@ class NewAsInitExtension(griffe.Extension):
             raise self._generate_error(paths)
 
         self.paths: frozenset[str] = frozenset(paths)
+        self._name_class = [p.rsplit(".", 1)[-1] for p in self.paths]
+        self._name_module = [p.rsplit(".", 1)[0] for p in self.paths]
+        self._orig_parser: Any
+        self._orig_parser_options: Any
 
-    # TODO @dangotbanned: This works, but the hook is after `mkdocstrings` warns about the docstring issue
-    # Maybe use `on_class_instance`?
-    def on_class(self, *, cls: Class, loader: griffe.GriffeLoader, **kwargs: Any) -> None:
-        super().on_class(cls=cls, loader=loader, **kwargs)
-        # NOTE: Think this is as atomic as we can get?
-        paths = self.paths
-        if (not paths) or cls.path not in paths:
+    def on_class_node(
+        self,
+        *,
+        node: AST | griffe.ObjectNode | ast.ClassDef,
+        agent: griffe.Visitor | griffe.Inspector,
+        **kwargs: Any,
+    ) -> None:
+        # NOTE: Took an entire day to work this disaster out
+        # The warnings are false positives, as the parameters refer to arguments to `__new__`
+        # https://github.com/mkdocstrings/griffe/blob/5dc97b78f318ac97016fbaee83a574ff15516f58/packages/griffelib/src/griffe/_internal/docstrings/google.py#L237-L244
+        if not self.paths:
             return
+        if (
+            isinstance(node, ast.ClassDef)
+            and (name := node.name) in self._name_class
+            and isinstance(agent.current, Module)
+            and (module := agent.current.canonical_path) in self._name_module
+            and f"{module}.{name}" in self.paths
+        ):
+            logger.info(
+                f"NewAsInitExtension: Disabling class docstring warnings for '{module}.{name}'"
+            )
+            self._orig_parser = copy.deepcopy(agent.docstring_parser)
+            self._orig_parser_options = copy.deepcopy(agent.docstring_options)
+            agent.docstring_parser = "google"
+            agent.docstring_options = {
+                "warnings": False,
+                "warn_unknown_params": False,
+                "warn_missing_types": False,
+            }
+            self._name_class.remove(name)
+            self._name_module.remove(module)
+
+    def on_class_members(
+        self,
+        *,
+        node: AST | griffe.ObjectNode,
+        cls: Class,
+        agent: griffe.Visitor | griffe.Inspector,
+        **kwargs: Any,
+    ) -> None:
+        if not ((paths := self.paths) and cls.path in paths):
+            return
+        agent.docstring_parser = self._orig_parser
+        agent.docstring_options = self._orig_parser_options
+        logger.info("NewAsInitExtension: Restored class docstring warnings")
         self.paths = self.paths.difference({cls.path})
         logger.info("NewAsInitExtension: Visting %r", cls.path)
+        self._convert_new_to_init(self._reject_unsupported(cls))
+        logger.info("NewAsInitExtension: Finished %r", cls.path)
+
+    def _reject_unsupported(self, cls: Class) -> Class:
         if "__init__" in cls.members:
             msg = f"Classes that define both `__new__` and `__init__` are not yet supported,\n see: {ISSUE_320}"
             raise NotImplementedError(msg)
-        converted = self._convert_new_to_init(cls.get_member("__new__"))
+        return cls
+
+    def _convert_new_to_init(self, cls: Class) -> Class:
+        """The meat of the extension is this simple fix."""
+        method: Function = cls.get_member("__new__")
+        params = iter(method.parameters)
+        # skip `cls` parameter
+        next(params)
+        converted = init_fn(cls, params)
         cls.del_member("__new__")
         cls.set_member("__init__", converted)
-        logger.info("NewAsInitExtension: Finished %r", cls.path)
-
-    def _convert_new_to_init(self, method: Function) -> Function:
-        cls = method.parent
-        if not isinstance(cls, Class):
-            raise TypeError(cls)
-        if _returns := method.returns:
-            # TODO @dangotbanned: Check if this matches parent?
-            # If `__new__` was used to do something like `pathlib.Path`,
-            # this extension wouldn't be what you want.
-            ...
-        # skip `cls`
-        it = iter(method.parameters)
-        next(it)
-        return init_fn(cls, it)
+        return cls
 
     def _generate_error(self, paths: Any) -> TypeError:
         name = type(self).__name__
