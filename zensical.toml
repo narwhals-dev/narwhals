@@ -230,3 +230,4 @@ pygments_lang_class = true
 default_lang = "python"
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
+[project.markdown_extensions.footnotes]
