@@ -1,5 +1,6 @@
 """Traversal of `ExprIR`, maybe `*Plan` eventually too.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 There's a couple *big ideas* in here, but they could broadly fit into:
 
@@ -10,6 +11,7 @@ With a helping hand from [field specifiers] ([PEP 681]), all expressions can be 
 
 [Field specifiers]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
 [PEP 681]: https://peps.python.org/pep-0681/#field-specifiers
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations

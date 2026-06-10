@@ -1,5 +1,6 @@
 """`FunctionExpr` and friends.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 The default for implementing new expressions should be to add a new `Function`.
 It becomes an `ExprIR` when wrapping it via `FunctionExpr`.
@@ -22,6 +23,7 @@ Tip:
     If it doesn't look like one of those, it is probably a function
 
 [the remaining variants]: https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/crates/polars-plan/src/dsl/expr/mod.rs#L98-L224
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations

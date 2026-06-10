@@ -1,9 +1,11 @@
 """Where the base `Function` lives.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 The design was adapted from an *older* version of (rust) polars.
 
-[`dsl::function_expr::FunctionExpr`] became `Function`
+[`dsl::function_expr::FunctionExpr`](https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L121-L1402)
+is roughly equivalent to  `Function`:
 
 ```rust
 pub enum Expr {                    // class ExprIR: ...
@@ -18,19 +20,18 @@ pub enum Expr {                    // class ExprIR: ...
 ```
 
 This *fleeting* version was bookended by 2 PRs landing a couple months apart:
-- [refactor: Separate `FunctionOptions` from DSL calls]
-- [refactor: Separate `FunctionExpr` and `IRFunctionExpr`]
+
+- [refactor: Separate `FunctionOptions` from DSL calls](https://github.com/pola-rs/polars/pull/22133)
+- [refactor: Separate `FunctionExpr` and `IRFunctionExpr`](https://github.com/pola-rs/polars/pull/23140)
 
 Interestingly, that meant:
-- we got all the definitions of [`FunctionOptions`]
+
+- we got all the definitions of [`FunctionOptions`](https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/options.rs#L54-L281)
 - but didn't need to introduce [another layer] to access them at their [new home]
 
-[`dsl::function_expr::FunctionExpr`]: https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L121-L1402
-[refactor: Separate `FunctionOptions` from DSL calls]: https://github.com/pola-rs/polars/pull/22133
-[refactor: Separate `FunctionExpr` and `IRFunctionExpr`]: https://github.com/pola-rs/polars/pull/23140
-[`FunctionOptions`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/options.rs#L54-L281
 [new home]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/mod.rs#L994-L1238
 [another layer]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/mod.rs#L258-L267
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations

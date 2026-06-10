@@ -23,14 +23,16 @@ import pathlib
 # ruff: noqa: DTZ005, G004
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Protocol, TypeAlias, cast
 
 import griffe
 from griffe import Attribute, Class, ExprName, Function, Module, Parameter, Parameters
 
 if TYPE_CHECKING:
     from ast import AST
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable, Iterator, Mapping
+
+    from typing_extensions import LiteralString
 
     from narwhals.typing import FileSource
 
@@ -38,6 +40,9 @@ if TYPE_CHECKING:
 else:
     # NOTE: griff's logger has a `__getattr__`
     logger = griffe.get_logger(__name__)
+
+
+__all__ = ("NewAsInitExtension", "PEP681Extension")
 
 
 NEEDS_FIX = "OverOrdered"
@@ -64,6 +69,137 @@ HERE: Path = Path(__file__)
 REPO_ROOT = HERE.parent.parent
 HELP_ME = "https://mkdocstrings.github.io/griffe/guide/users/extending/#using-extensions"
 ISSUE_320 = "https://github.com/mkdocstrings/griffe/issues/320"
+
+
+class ImplNotesExtension(griffe.Extension):
+    """Module doc transformer.
+
+    ## Examples
+    Takes a docstring like:
+    ```md
+    ...
+
+    <!--BEGIN: IMPL NOTES-->
+    ## Implementation Notes
+    super important blabbing
+    ...
+    <!--END: IMPL NOTES-->
+    ```
+
+    And outputs:
+    ```md
+    ...
+
+    ??? "Implementation Notes"
+
+        super important blabbing
+        ...
+    ```
+
+    ## Why?
+    - Some private modules that have more to say use a `## Implementation Notes` section.
+    - This is useful information, but becomes too visible in the API reference
+        - The modules are private and docstrings are collapsible - so it isn't an issue in the source
+    - Therefore, this takes those docstrings and puts them in a [collapsible block](https://zensical.org/docs/authoring/admonitions/#collapsible-blocks)
+        - Using html comments in the source, which are unseen when rendered in an IDE
+    """
+
+    MARKER_BEGIN: ClassVar = "<!--BEGIN: IMPL NOTES-->"
+    MARKER_END: ClassVar = "<!--END: IMPL NOTES-->"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._seen: set[str] = set()
+
+    def _validate_directive(self, doc: str, canonical_path: str) -> None:
+        if self.MARKER_END not in doc:
+            msg = f"Found begin marker:\n{self.MARKER_BEGIN}\n for {canonical_path!r},\nbut it was not closed with a:\n{self.MARKER_END}"
+            raise ValueError(msg)
+        if doc.count(self.MARKER_BEGIN) != 1:
+            msg = f"Found multiple begin markers:\n{self.MARKER_BEGIN}\n for {canonical_path!r},\nbut only 1 is supported"
+            raise NotImplementedError(msg)
+
+    def on_module_instance(
+        self,
+        *,
+        node: ast.AST | griffe.ObjectNode,
+        mod: Module,
+        agent: griffe.Visitor | griffe.Inspector,
+        **kwargs: Any,
+    ) -> None:
+        if (docstring := mod.docstring) is None or (
+            (path := mod.canonical_path) in self._seen
+        ):
+            return
+        self._seen.add(path)
+        if self.MARKER_BEGIN not in docstring.value:
+            return
+
+        self._validate_directive(docstring.value, path)
+        logger.info(
+            "%s: Starting docstring directive replacement for %r",
+            type(self).__name__,
+            path,
+        )
+
+        lines = docstring.lines
+        idx_begin = lines.index(self.MARKER_BEGIN)
+        idx_end = lines.index(self.MARKER_END, idx_begin)
+        replaced = copy.deepcopy(lines)
+        # kinda wild that you can do this with a `list`
+        replaced[idx_begin : idx_end + 1] = admonition(
+            content=lines[(idx_begin + 2) : idx_end],
+            title=lines[idx_begin + 1].lstrip("# "),
+            collapse="collapsed",
+        )
+
+        docstring.value = "\n".join(replaced)
+        logger.info(
+            "%s: Finished docstring directive replacement for %r",
+            type(self).__name__,
+            path,
+        )
+
+
+AdmonitionKind: TypeAlias = Literal[
+    "note",
+    "abstract",
+    "info",
+    "tip",
+    "success",
+    "question",
+    "warning",
+    "failure",
+    "danger",
+    "bug",
+    "example",
+    "quote",
+]
+"""https://zensical.org/docs/authoring/admonitions/#supported-types"""
+
+Collapse: TypeAlias = Literal["never", "collapsed", "expanded"]
+"""https://zensical.org/docs/authoring/admonitions/#collapsible-blocks"""
+
+
+_COLLAPSE_SYNTAX: Mapping[Collapse, LiteralString] = {
+    "never": "!!!",
+    "collapsed": "???",
+    "expanded": "???+",
+}
+
+
+def admonition(
+    content: list[str],
+    kind: AdmonitionKind = "note",
+    title: str = "",
+    *,
+    collapse: Collapse = "never",
+) -> tuple[str, ...]:
+    start_block = f"{_COLLAPSE_SYNTAX[collapse]} {kind}"
+    if title:
+        start_block = f'{start_block} "{title}"'
+    indent = " " * 4
+    return start_block, *(indent + s for s in content), ""
 
 
 class NewAsInitExtension(griffe.Extension):

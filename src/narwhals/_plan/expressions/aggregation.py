@@ -1,5 +1,6 @@
 """Aggregation expressions.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 Adapted from [`dsl::expr::AggExpr`](https://github.com/pola-rs/polars/blob/2b825ad7933e4b7ca88556f67f4323caaaa40644/crates/polars-plan/src/dsl/expr/mod.rs#L23-L61),
 extended with `Arg{Min,Max}`.
@@ -15,6 +16,7 @@ In the future it might make sense to deviate from polars and move them here ([(#
 
 [upstream]: https://github.com/pola-rs/polars/blob/2b825ad7933e4b7ca88556f67f4323caaaa40644/crates/polars-plan/src/dsl/function_expr/mod.rs#L165-L166
 [(#3353 (comment))]: https://github.com/narwhals-dev/narwhals/pull/3353#discussion_r2622679274
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations

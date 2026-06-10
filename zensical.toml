@@ -200,6 +200,7 @@ filters = [
     "!^_+(repr|slots|all)"
 ]
 extensions = [
+    "utils/griffe_extension.py:ImplNotesExtension",
     { "utils/griffe_extension.py:NewAsInitExtension" = { paths = ["narwhals._plan.schema.FrozenSchema"] } }, 
     "utils/griffe_extension.py:PEP681Extension",
 ]

@@ -1,5 +1,6 @@
 """Home to `FunctionFlags`.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 - Adapted from [`plans::options::FunctionFlags`] and folds the outer struct [`FunctionOptions`] into a single enum
 - [`INPUT_WILDCARD_EXPANSION`] removal
@@ -16,6 +17,7 @@
 [1]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L263-L265
 [2]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/options.rs#L174
 [3]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-core/src/utils/supertype.rs#L101-L138
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations

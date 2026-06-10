@@ -1,5 +1,6 @@
 """Making the connection between `CompliantColumn` and `ExprIR`.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 An earlier version implemented `Dispatch.__call__` using the descriptor protocol,
 to make the signature more convenient for the caller:
@@ -11,6 +12,7 @@ to make the signature more convenient for the caller:
 
 However, it required creating an additional function per-call - which was
 considered a bad tradeoff (performance & complexity) for syntax sugar.
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations

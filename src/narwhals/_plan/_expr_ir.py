@@ -1,5 +1,6 @@
 """Core expression intermediate representations.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 The design is *based on* (rust) polars, with *deviations* where:
 - `rust != python`
@@ -35,6 +36,7 @@ You could think of these sharing a role in lowering an IR:
 [algebraic data types]: https://github.com/jspahrsummers/adt
 [`plans::expr_ir::ExprIR`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/expr_ir.rs#L63-L74
 [`plans::aexpr::AExpr`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/aexpr/mod.rs#L179-L269
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations
