@@ -23,7 +23,7 @@ import pathlib
 # ruff: noqa: DTZ005, G004
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, Protocol, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeAlias, cast
 
 import griffe
 from griffe import Attribute, Class, ExprName, Function, Module, Parameter, Parameters
@@ -104,19 +104,18 @@ class ImplNotesExtension(griffe.Extension):
         - Using html comments in the source, which are unseen when rendered in an IDE
     """
 
-    MARKER_BEGIN: ClassVar = "<!--BEGIN: IMPL NOTES-->"
-    MARKER_END: ClassVar = "<!--END: IMPL NOTES-->"
-
-    def __init__(self) -> None:
+    def __init__(self, *, begin: str, end: str) -> None:
         super().__init__()
+        self._marker_begin: str = begin
+        self._marker_end: str = end
         self._seen: set[str] = set()
 
     def _validate_directive(self, doc: str, canonical_path: str) -> None:
-        if self.MARKER_END not in doc:
-            msg = f"Found begin marker:\n{self.MARKER_BEGIN}\n for {canonical_path!r},\nbut it was not closed with a:\n{self.MARKER_END}"
+        if self._marker_end not in doc:
+            msg = f"Found begin marker:\n{self._marker_begin}\n for {canonical_path!r},\nbut it was not closed with a:\n{self._marker_end}"
             raise ValueError(msg)
-        if doc.count(self.MARKER_BEGIN) != 1:
-            msg = f"Found multiple begin markers:\n{self.MARKER_BEGIN}\n for {canonical_path!r},\nbut only 1 is supported"
+        if doc.count(self._marker_begin) != 1:
+            msg = f"Found multiple begin markers:\n{self._marker_begin}\n for {canonical_path!r},\nbut only 1 is supported"
             raise NotImplementedError(msg)
 
     def on_module_instance(
@@ -132,7 +131,7 @@ class ImplNotesExtension(griffe.Extension):
         ):
             return
         self._seen.add(path)
-        if self.MARKER_BEGIN not in docstring.value:
+        if self._marker_begin not in docstring.value:
             return
 
         self._validate_directive(docstring.value, path)
@@ -143,8 +142,8 @@ class ImplNotesExtension(griffe.Extension):
         )
 
         lines = docstring.lines
-        idx_begin = lines.index(self.MARKER_BEGIN)
-        idx_end = lines.index(self.MARKER_END, idx_begin)
+        idx_begin = lines.index(self._marker_begin)
+        idx_end = lines.index(self._marker_end, idx_begin)
         replaced = copy.deepcopy(lines)
         # kinda wild that you can do this with a `list`
         replaced[idx_begin : idx_end + 1] = admonition(

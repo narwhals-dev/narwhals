@@ -200,9 +200,9 @@ filters = [
     "!^_+(repr|slots|all)"
 ]
 extensions = [
-    "utils/griffe_extension.py:ImplNotesExtension",
-    { "utils/griffe_extension.py:NewAsInitExtension" = { paths = ["narwhals._plan.schema.FrozenSchema"] } }, 
-    "utils/griffe_extension.py:PEP681Extension",
+  { "utils/griffe_extension.py:ImplNotesExtension" = { begin = "<!--BEGIN: IMPL NOTES-->", end = "<!--END: IMPL NOTES-->" } },
+  { "utils/griffe_extension.py:NewAsInitExtension" = { paths = ["narwhals._plan.schema.FrozenSchema"] } },
+  "utils/griffe_extension.py:PEP681Extension",
 ]
 merge_init_into_class = true
 
