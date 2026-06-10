@@ -12,10 +12,23 @@ somewhere less private
         - ImmutableMeta
         - ExprIRMeta
 
-::: narwhals._plan._immutable
+::: narwhals._plan._immutable.Immutable
     options:
+      show_root_heading: true
+      show_root_full_path: false
       members:
-        - Immutable
+        - __immutable_keys__
+        - __immutable_values__
+        - __immutable_items__
+        - __immutable_hash__
+        - __copy__
+        - __deepcopy__
+        - __eq__
+        - __hash__
+        - __init__
+        -  __replace__
+        - __str__
+        - to_dict
 
 ::: narwhals._plan._nodes
     options:
