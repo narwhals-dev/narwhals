@@ -44,6 +44,7 @@ from narwhals._plan._dispatch import FunctionDispatch
 from narwhals._plan._dtype import IntoResolveDType, ResolveDType
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._immutable import Immutable
+from narwhals._utils import unstable
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
@@ -64,45 +65,46 @@ ELEMENTWISE = FunctionFlags.ELEMENTWISE
 class Function(Immutable):
     r"""A general transformation applied to an expression.
 
-    A `Function` is distinct from an expression but appears in many of them as:
-
-        FunctionExpr[Function]
+    A `Function` is distinct from an expression but appears *in* many of them as
+    [`FunctionExpr[Function]`][narwhals._plan.expressions.function_expr.FunctionExpr].
 
     **Instances** capture non-expression arguments to `Expr` methods:
 
-    >>> import narwhals._plan as nw
-    >>> from narwhals._plan import expressions as ir
-    >>> from narwhals._plan.expressions import functions as F
+        >>> import narwhals._plan as nw
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan.expressions import functions as F
+        >>> expr = nw.col("a").shift(2)
+        >>> expr_ir = expr._ir
+        >>> isinstance(expr_ir, ir.FunctionExpr)
+        True
 
-    >>> expr = nw.col("a").shift(2)
-    >>> expr_ir = expr._ir
-    >>> isinstance(expr_ir, ir.FunctionExpr)
-    True
-
-    >>> print(f"Function(args) : {expr_ir.function}\nExprIR args(s): {expr_ir.args[0]}")
-    Function(args) : Shift(n=2)
-    ExprIR args(s): Col(name='a')
+        >>> print(
+        ...     f"Function(args) : {expr_ir.function}\nExprIR args(s): {expr_ir.args[0]}"
+        ... )
+        Function(args) : Shift(n=2)
+        ExprIR args(s): Col(name='a')
 
     Whereas **classes** encode most of the details, like...
 
     What do we require of the expression argument(s)?
-    >>> F.Shift.__function_parameters__
-    Unary(DEFAULT)
+
+        >>> F.Shift.__function_parameters__
+        Unary(DEFAULT)
 
     What properties does the function have?
-    >>> F.Shift.__function_flags__
-    <FunctionFlags.LENGTH_PRESERVING: 4>
+
+        >>> F.Shift.__function_flags__
+        <FunctionFlags.LENGTH_PRESERVING: 4>
 
     Which `CompliantExpr` method to call?
-    >>> F.Shift.__expr_ir_dispatch__
-    Dispatch<shift>
+
+        >>> F.Shift.__expr_ir_dispatch__
+        Dispatch<shift>
 
     Does it transform the datatype?
-    >>> F.Shift.__expr_ir_dtype__
-    function.same_dtype()
 
-    See Also:
-        `narwhals._plan._function.py` doc for implementation notes
+        >>> F.Shift.__expr_ir_dtype__
+        function.same_dtype()
     """
 
     __function_parameters__: ClassVar[params.Parameters]
@@ -125,13 +127,14 @@ class Function(Immutable):
     And that's the main nugget we can use to answer the question:
     > Is this function valid *here*?
 
-    See `FunctionFlags` for examples.
-
     To customize the behavior, use the `flags` **parameter** [when subclassing]:
 
         class FillNull(Function, flags=FunctionFlags.ELEMENTWISE): ...
 
     [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+
+    See Also:
+        [`FunctionFlags`][narwhals._plan._flags.FunctionFlags]
     """
 
     __expr_ir_dispatch__: ClassVar[FunctionDispatch[FunctionExpr[Self]]] = (
@@ -139,29 +142,29 @@ class Function(Immutable):
     )
     """Callable that dispatches to the appropriate compliant-level method.
 
-    See `DispatcherOptions` for examples.
-
     To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
 
         class CategoricalFunction(Function, dispatch=DispatcherOptions(accessor_name="cat")): ...
 
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+
     Notes:
         Each class has their own `FunctionDispatch` instance, and inheritance is only on the `options` property.
 
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    See Also:
+        [`DispatcherOptions`][narwhals._plan._dispatch.DispatcherOptions]
     """
 
     __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
     """Callable defining how a `DType` is derived when `resolve_dtype` is called.
 
-    If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
+    If the logic fits an existing pattern, use the `dtype` **parameter**
+    [when subclassing](https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__):
 
         class FillNullWithStrategy(Function, dtype=ResolveDType.function.same_dtype()):
             __slots__ = ("limit", "strategy")
             strategy: FillNullStrategy
             limit: int | None
-
-    See `IntoResolveDType` and `ResolveDType` for more examples.
 
     If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
 
@@ -173,7 +176,9 @@ class Function(Immutable):
                         return exp
                 return base
 
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    See Also:
+        - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
+        - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
     """
 
     def is_elementwise(self) -> bool:
@@ -207,10 +212,12 @@ class Function(Immutable):
     ) -> None:
         """Hook to [customize a new subclass] of `Function`.
 
+        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+
         All parameters are optional and will be inherited when not provided to `__init_subclass__`.
 
         Arguments:
-            dispatch: Defines how to build a `FunctionDispatch.
+            dispatch: Defines how to build a `FunctionDispatch`.
                 Stored in `__expr_ir_dispatch__.options`.
 
                 *"skip"* can be used for mixins that add anything unrelated to `dispatch`.
@@ -218,16 +225,12 @@ class Function(Immutable):
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 
-                See `IntoResolveDType` and `ResolveDType` for usage.
-
-                **Warning**: This functionality is considered **unstable**.
-                Full support depends on [#3396].
-
             flags: Defines how a function transforms the shape of it's input.
                 Stored in `__function_flags__`.
 
-        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+        See Also:
+            - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
+            - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
         """
         super().__init_subclass__(**_)
         if flags is not None:
@@ -252,12 +255,17 @@ class Function(Immutable):
             return f"{first!r}.{self!r}({rest!r})"
         return f"{first!r}.{self!r}()"
 
+    @unstable
     def resolve_dtype(self, node: FunctionExpr[Any], schema: FrozenSchema, /) -> DType:
         """Get the data type of an expanded expression.
 
         Arguments:
             node: The expanded expression, wrapping this function.
             schema: The same schema used to project `node`.
+
+        Warning:
+            This functionality is considered **unstable**.
+            Full support depends on [#3396](https://github.com/narwhals-dev/narwhals/pull/3396).
         """
         return self.__expr_ir_dtype__(node, schema)
 
