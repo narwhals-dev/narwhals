@@ -201,24 +201,27 @@ class All(RootSelector):
 
     ## Examples
     Represents both variants of `all()`:
-    >>> import narwhals._plan as nw
-    >>> import narwhals._plan.selectors as ncs
-    >>> expr = nw.all()
-    >>> expr._ir
-    ncs.all()
-    >>> selector = ncs.all()
-    >>> selector._ir
-    ncs.all()
+
+        >>> import narwhals._plan as nw
+        >>> import narwhals._plan.selectors as ncs
+        >>> expr = nw.all()
+        >>> expr._ir
+        ncs.all()
+        >>> selector = ncs.all()
+        >>> selector._ir
+        ncs.all()
 
     While they are *internally* identical:
-    >>> expr._ir == selector._ir
-    True
+
+        >>> expr._ir == selector._ir
+        True
 
     The *outer* container defines binary operator behavior:
-    >>> not isinstance(expr, nw.Selector)
-    True
-    >>> isinstance(selector, nw.Selector)
-    True
+
+        >>> not isinstance(expr, nw.Selector)
+        True
+        >>> isinstance(selector, nw.Selector)
+        True
     """
 
     def to_dtype_selector(self) -> AllDType:

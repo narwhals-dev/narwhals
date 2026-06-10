@@ -801,15 +801,16 @@ class SelectorIR(NoDispatch):
     def iter_expand_selector(
         self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
-        """Yield column names that match the selector in schema order [^1].
+        """Yield column names that match the selector in schema order.
 
         Arguments:
             schema: Target scope to expand the selector in.
             ignored_columns: Names of `group_by` key columns.
-                These columns will be excluded [^1] from the result.
+                These columns will be excluded from the result.
 
-        Notes:
-            [^1]: Except `ByName`, `ByIndex`.
+        Important:
+            [`ByName`][narwhals._plan.expressions.selectors.ByName] and
+            [`ByIndex`][narwhals._plan.expressions.selectors.ByIndex] have unique behavior.
 
         Examples:
             >>> import narwhals as nw
