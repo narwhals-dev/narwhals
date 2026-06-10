@@ -692,6 +692,13 @@ jobs:
           uv pip uninstall narwhals
           uv pip install -e .
       - name: Run tests
+        # Based on https://github.com/scikit-learn/scikit-learn/pull/31127#issuecomment-4425039398
         run: |
           cd scikit-learn
-          pytest --numprocesses=logical
+          tests=(
+            sklearn/utils/tests/test_indexing.py
+            sklearn/utils/tests/test_validation.py
+            sklearn/compose/tests/test_column_transformer.py
+            sklearn/ensemble/_hist_gradient_boosting/tests/test_gradient_boosting.py
+          )
+          pytest "${tests[@]}"
