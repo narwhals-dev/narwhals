@@ -2,6 +2,10 @@ name: PyTest Modin constructor
 
 on:
   pull_request:
+    paths:
+      - src/narwhals/_expression_parsing.py
+      - src/narwhals/_pandas_like/**
+      - tests/**
   workflow_call:
 
 env:

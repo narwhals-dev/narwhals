@@ -2,6 +2,8 @@ name: Min, old, and nightly versions
 
 on:
   pull_request:
+    paths:
+      - "**.py"
 
 env:
   PY_COLORS: 1

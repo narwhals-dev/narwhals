@@ -2,6 +2,11 @@ name: PyTest Ibis constructor
 
 on:
   pull_request:
+    paths:
+      - src/narwhals/_expression_parsing.py
+      - src/narwhals/_ibis/**
+      - src/narwhals/_sql/**      
+      - tests/**
   workflow_call:
 
 env:

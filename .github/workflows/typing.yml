@@ -2,6 +2,8 @@ name: Type checking
 
 on:
   pull_request:
+    paths:
+      - "**.py"
   workflow_call:
 
 env:

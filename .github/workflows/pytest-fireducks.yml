@@ -2,6 +2,9 @@ name: PyTest FireDucks
 
 on:
   pull_request:
+    paths:
+      - src/**
+      - tests/**
   workflow_call:
 
 env:

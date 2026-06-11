@@ -2,6 +2,8 @@ name: Tests for TPCH Queries
 
 on:
   pull_request:
+    paths:
+      - "**.py"
 
 env:
   PY_COLORS: 1

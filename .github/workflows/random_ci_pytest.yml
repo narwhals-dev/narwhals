@@ -2,6 +2,8 @@ name: Random Versions
 
 on:
   pull_request:
+    paths:
+      - "**.py"
 
 env:
   PY_COLORS: 1
