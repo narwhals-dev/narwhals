@@ -188,6 +188,7 @@ members_order = "alphabetical"
 separate_signature = true
 show_signature_annotations = true
 show_source = false
+docstring_options.trim_doctest_flags = true
 show_if_no_docstring = true  # remember to turn this off after listing members everywhere
 signature_crossrefs = true
 type_parameter_headings = true
