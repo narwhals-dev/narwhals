@@ -68,37 +68,40 @@ _NODES_NAME: Final = "__expr_ir_nodes__"
 
 
 class SlottedMeta(type):
-    """Metaclass ensuring [`__slots__`] are always defined.
+    """Metaclass ensuring `__slots__` are always defined.
 
     Consider using this metaclass if you have something like:
-    >>> class Base:
-    ...     __slots__ = ("a", "b")
-    ...     a: int
-    ...     b: int
-    >>> class Sub1(Base):
-    ...     __slots__ = ()
-    >>> class Sub2(Base):
-    ...     __slots__ = ("c",)
-    ...     c: int
-    >>> class Sub21(Sub2):
-    ...     __slots__ = ()
 
-    But you'd prefer to write this:
-    >>> class Base(metaclass=SlottedMeta):
-    ...     __slots__ = ("a", "b")
-    ...     a: int
-    ...     b: int
-    >>> class Sub1(Base): ...
-    >>> class Sub2(Base):
-    ...     __slots__ = ("c",)
-    ...     c: int
-    >>> class Sub21(Sub2): ...
+        >>> class Base:
+        ...     __slots__ = ("a", "b")
+        ...     a: int
+        ...     b: int
+        >>> class Sub1(Base):
+        ...     __slots__ = ()
+        >>> class Sub2(Base):
+        ...     __slots__ = ("c",)
+        ...     c: int
+        >>> class Sub21(Sub2):
+        ...     __slots__ = ()
+
+    But you'd like empty [`__slots__`](https://docs.python.org/3/reference/datamodel.html#object.__slots__)
+    to be declared for you:
+
+        >>> class Base(metaclass=SlottedMeta):
+        ...     __slots__ = ("a", "b")
+        ...     a: int
+        ...     b: int
+        >>> class Sub1(Base): ...
+        >>> class Sub2(Base):
+        ...     __slots__ = ("c",)
+        ...     c: int
+        >>> class Sub21(Sub2): ...
 
     And still [avoid these issues]:
-    >>> any(hasattr(tp(), "__dict__") for tp in (Base, Sub1, Sub2, Sub21))
-    False
 
-    [`__slots__`]: https://docs.python.org/3/reference/datamodel.html#object.__slots__
+        >>> any(hasattr(tp(), "__dict__") for tp in (Base, Sub1, Sub2, Sub21))
+        False
+
     [avoid these issues]: https://dev.arie.bovenberg.net/blog/finding-broken-slots-in-popular-python-libraries/
     """
 
@@ -120,17 +123,24 @@ class ImmutableMeta(SlottedMeta):
 
     We do two things here ...
 
-    ## 1. Introduce [`@dataclass_transform`]
-    This let's type checkers understand what subclasses of `Immutable` can (and can't!) do.
+    ## 1. Introduce [`typing.dataclass_transform`][]
+    That helps a type checker understand what subclasses of `Immutable` can[^1] do.
 
-    Note that subclasses of `ImmutableMeta` must repeat the decorator, even if it uses
-    the same arguments.
+    Note:
+        Subclasses of `ImmutableMeta` must repeat the decorator, even if it uses the same arguments.
 
     ## 2. Track what is a *"field"*
     The rest is some housekeeping of `__slots__` -> `__immutable_keys__`, which avoids needing
-    to inspect `__annotations__` for field names.
+    to inspect `__annotations__` for field names[^2].
 
-    [`@dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#the-dataclass-transform-decorator
+    [^1]: And can't
+
+    [^2]: Which is common in most other `@dataclass`-likes.
+
+    [`typing.dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#the-dataclass-transform-decorator
+
+    See Also:
+        [`Immutable`][narwhals._plan._immutable.Immutable]
     """
 
     def __new__(
@@ -160,15 +170,17 @@ class ImmutableMeta(SlottedMeta):
 class ExprIRMeta(ImmutableMeta):
     """Metaclass for `ExprIR`.
 
-    ## Important
-    `ExprIRMeta` is intended to work within the following (narrow) constraints:
-    - It is the [most derived metaclass]
-      - You can use `Generic`, but cannot use `Protocol`
-    - It is used as the `metaclass` hint for a single base class (`ExprIR`), which all other
-      callers of `ExprIRMeta.__new__` inherit from
-    - Only the types returned by `field_specifiers` may be present in both `__slots__` and `namespace`
+    Important:
+        `ExprIRMeta` is intended to work within the following (*narrow*) constraints:
 
-    [most derived metaclass]: https://docs.python.org/3/reference/datamodel.html#determining-the-appropriate-metaclass
+        - It is the [most derived metaclass](https://docs.python.org/3/reference/datamodel.html#determining-the-appropriate-metaclass)
+            - You can use [`typing.Generic`][], but cannot use [`typing.Protocol`][].
+        - It is used as the `metaclass` hint for a single base class (`ExprIR`), which all other
+          callers of `ExprIRMeta.__new__` inherit from
+        - Only the types returned by `field_specifiers` may be present in both `__slots__` and `namespace`
+
+    See Also:
+        [`ExprIR`][narwhals._plan.expressions.ExprIR]
     """
 
     if TYPE_CHECKING:
