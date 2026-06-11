@@ -231,3 +231,8 @@ default_lang = "python"
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 [project.markdown_extensions.footnotes]
+[project.markdown_extensions.zensical.extensions.preview]
+# https://zensical.org/docs/setup/navigation/#automatic-previews
+configurations = [
+    { targets.include = ["api-reference-plan/**/*.md"] }
+]
