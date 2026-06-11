@@ -52,127 +52,139 @@ class FunctionFlags(enum.Flag):
 
     ## Examples
     Canonical members are returned on iteration:
-    >>> AGGREGATION, ROW_SEPARABLE, LENGTH_PRESERVING = FunctionFlags
+
+        >>> AGGREGATION, ROW_SEPARABLE, LENGTH_PRESERVING = FunctionFlags
 
     Members can be compared by identity:
-    >>> AGGREGATION is FunctionFlags.AGGREGATION
-    True
-    >>> ROW_SEPARABLE is FunctionFlags.ROW_SEPARABLE
-    True
-    >>> LENGTH_PRESERVING is FunctionFlags.LENGTH_PRESERVING
-    True
+
+        >>> AGGREGATION is FunctionFlags.AGGREGATION
+        True
+        >>> ROW_SEPARABLE is FunctionFlags.ROW_SEPARABLE
+        True
+        >>> LENGTH_PRESERVING is FunctionFlags.LENGTH_PRESERVING
+        True
 
     Aliases can use containment for members they are composed of:
-    >>> ELEMENTWISE = FunctionFlags.ELEMENTWISE
-    >>> LENGTH_PRESERVING in ELEMENTWISE
-    True
-    >>> ROW_SEPARABLE in ELEMENTWISE
-    True
+
+        >>> ELEMENTWISE = FunctionFlags.ELEMENTWISE
+        >>> LENGTH_PRESERVING in ELEMENTWISE
+        True
+        >>> ROW_SEPARABLE in ELEMENTWISE
+        True
 
     That relationship goes in a single direction:
-    >>> ELEMENTWISE in LENGTH_PRESERVING
-    False
-    >>> ELEMENTWISE in ROW_SEPARABLE
-    False
+
+        >>> ELEMENTWISE in LENGTH_PRESERVING
+        False
+        >>> ELEMENTWISE in ROW_SEPARABLE
+        False
 
     Recomposing an alias still has the same identity:
-    >>> (LENGTH_PRESERVING | ROW_SEPARABLE) is FunctionFlags.ELEMENTWISE
-    True
+
+        >>> (LENGTH_PRESERVING | ROW_SEPARABLE) is FunctionFlags.ELEMENTWISE
+        True
 
     Not all aliases are valid:
-    >>> LENGTH_PRESERVING | AGGREGATION
-    Traceback (most recent call last):
-    TypeError: A function cannot both return a scalar and preserve length, they are mutually exclusive.
+
+        >>> LENGTH_PRESERVING | AGGREGATION
+        Traceback (most recent call last):
+        TypeError: A function cannot both return a scalar and preserve length, they are mutually exclusive.
     """
 
     DEFAULT = 0
     """No flags set.
 
     Takes on the identity of other flags when combined:
-    >>> FunctionFlags.DEFAULT | FunctionFlags.AGGREGATION
-    <FunctionFlags.AGGREGATION: 1>
+
+        >>> FunctionFlags.DEFAULT | FunctionFlags.AGGREGATION
+        <FunctionFlags.AGGREGATION: 1>
     """
 
     AGGREGATION = _V_AGGREGATION
     """Always returns a scalar and supports broadcasting.
 
-    Mutually exclusive with `LENGTH_PRESERVING`.
+    Mutually exclusive with `LENGTH_PRESERVING`:
 
-    ## Examples
-    >>> import narwhals._plan as nw
-    >>> def show(frame: nw.DataFrame) -> None:
-    ...     print(frame.to_polars())
-    >>> data = {"a": [1, None], "b": [1, 2]}
-    >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
-    >>> show(df)
-    shape: (2, 2)
-    ┌──────┬─────┐
-    │ a    ┆ b   │
-    │ ---  ┆ --- │
-    │ i64  ┆ i64 │
-    ╞══════╪═════╡
-    │ 1    ┆ 1   │
-    │ null ┆ 2   │
-    └──────┴─────┘
+        >>> import narwhals._plan as nw
+        >>> def show(frame: nw.DataFrame) -> None:
+        ...     print(frame.to_polars())
+        >>> data = {"a": [1, None], "b": [1, 2]}
+        >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
+        >>> show(df)
+        shape: (2, 2)
+        ┌──────┬─────┐
+        │ a    ┆ b   │
+        │ ---  ┆ --- │
+        │ i64  ┆ i64 │
+        ╞══════╪═════╡
+        │ 1    ┆ 1   │
+        │ null ┆ 2   │
+        └──────┴─────┘
 
     These expressions each use a different kind of function:
-    >>> aggregation = nw.col("a").null_count().alias("c")
-    >>> aggregation._ir.is_scalar()
-    True
-    >>> row_separable = nw.col("a").drop_nulls().alias("c")
-    >>> row_separable._ir.is_scalar()
-    False
+
+        >>> aggregation = nw.col("a").null_count().alias("c")
+        >>> aggregation._ir.is_scalar()
+        True
+        >>> row_separable = nw.col("a").drop_nulls().alias("c")
+        >>> row_separable._ir.is_scalar()
+        False
 
     But in an isolated `select` context, that detail isn't always visible:
-    >>> show(df.select(aggregation))
-    shape: (1, 1)
-    ┌─────┐
-    │ c   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 1   │
-    └─────┘
+
+        >>> show(df.select(aggregation))
+        shape: (1, 1)
+        ┌─────┐
+        │ c   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        └─────┘
 
     Since they return the same result *for this dataset*:
-    >>> show(df.select(row_separable))
-    shape: (1, 1)
-    ┌─────┐
-    │ c   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 1   │
-    └─────┘
+
+        >>> show(df.select(row_separable))
+        shape: (1, 1)
+        ┌─────┐
+        │ c   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        └─────┘
 
     Aggregation functions support broadcasting, because we know they **always return a scalar**:
-    >>> show(df.with_columns(aggregation))
-    shape: (2, 3)
-    ┌──────┬─────┬─────┐
-    │ a    ┆ b   ┆ c   │
-    │ ---  ┆ --- ┆ --- │
-    │ i64  ┆ i64 ┆ i64 │
-    ╞══════╪═════╪═════╡
-    │ 1    ┆ 1   ┆ 1   │
-    │ null ┆ 2   ┆ 1   │
-    └──────┴─────┴─────┘
+
+        >>> show(df.with_columns(aggregation))
+        shape: (2, 3)
+        ┌──────┬─────┬─────┐
+        │ a    ┆ b   ┆ c   │
+        │ ---  ┆ --- ┆ --- │
+        │ i64  ┆ i64 ┆ i64 │
+        ╞══════╪═════╪═════╡
+        │ 1    ┆ 1   ┆ 1   │
+        │ null ┆ 2   ┆ 1   │
+        └──────┴─────┴─────┘
 
     Whereas row-separable functions do not support broadcasting:
-    >>> show(df.with_columns(row_separable))
-    Traceback (most recent call last):
-    narwhals.exceptions.ShapeError: Series c, length 1 doesn't match the DataFrame height of 2...
+
+        >>> show(df.with_columns(row_separable))
+        Traceback (most recent call last):
+        narwhals.exceptions.ShapeError: Series c, length 1 doesn't match the DataFrame height of 2...
 
     Because returning a single value is data-dependent:
-    >>> show(df.select(nw.col("b").drop_nulls()))
-    shape: (2, 1)
-    ┌─────┐
-    │ b   │
-    │ --- │
-    │ i64 │
-    ╞═════╡
-    │ 1   │
-    │ 2   │
-    └─────┘
+
+        >>> show(df.select(nw.col("b").drop_nulls()))
+        shape: (2, 1)
+        ┌─────┐
+        │ b   │
+        │ --- │
+        │ i64 │
+        ╞═════╡
+        │ 1   │
+        │ 2   │
+        └─────┘
     """
 
     ROW_SEPARABLE = 1 << 1
