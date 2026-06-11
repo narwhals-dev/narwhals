@@ -73,7 +73,8 @@ def node(*, observe_scalar: bool = True) -> Any:
             The result is a logical AND over observed nodes.
 
     Examples:
-        If an expression contains another expression, we mark the field with a [field specifier]:
+        If an expression contains another expression, we mark the field with a
+        [field specifier](https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers):
         >>> from narwhals._plan import expressions as ir
         >>> class Alias(ir.ExprIR):
         ...     __slots__ = ("expr", "name")
@@ -121,52 +122,53 @@ def node(*, observe_scalar: bool = True) -> Any:
 def nodes() -> Any:
     """Declare that a field stores multiple nodes.
 
-    Unlike `node`, these are never used for `is_scalar()`.
+    Unlike [`node(...)`][narwhals._plan._nodes.node], these are never used for `is_scalar()`.
 
     ## Examples
     If an expression accepts a variable number of expressions, we mark the variadic field(s)
-    with a [field specifier]:
+    with a [field specifier](https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers):
 
-    >>> from narwhals._plan import expressions as ir
-    >>> from narwhals._plan.typing import Seq
-    >>> class Over(ir.ExprIR):
-    ...     __slots__ = ("expr", "partition_by")
-    ...     expr: ir.ExprIR = node(observe_scalar=False)
-    ...     partition_by: Seq[ir.ExprIR] = nodes()
-    ...
-    ...     def __repr__(self) -> str:
-    ...         return f"{self.expr!r}.over({list(self.partition_by)!r})"
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan.typing import Seq
+        >>> class Over(ir.ExprIR):
+        ...     __slots__ = ("expr", "partition_by")
+        ...     expr: ir.ExprIR = node(observe_scalar=False)
+        ...     partition_by: Seq[ir.ExprIR] = nodes()
+        ...
+        ...     def __repr__(self) -> str:
+        ...         return f"{self.expr!r}.over({list(self.partition_by)!r})"
 
     Which populates `__expr_ir_nodes__` at the class-level:
-    >>> Over.__expr_ir_nodes__
-    ExprTraverser[2]
-        expr: ExprIR = node(observe_scalar=False)
-        partition_by: Seq[ExprIR] = nodes()
+
+        >>> Over.__expr_ir_nodes__
+        ExprTraverser[2]
+            expr: ExprIR = node(observe_scalar=False)
+            partition_by: Seq[ExprIR] = nodes()
 
     An instance can use the field as normal:
-    >>> from narwhals._plan.expressions.aggregation import First
-    >>> root = First(expr=ir.col("a"))
-    >>> variadic = tuple(ir.col(s) for s in "bcdef")
-    >>> over = Over(expr=root, partition_by=variadic)
-    >>> over
-    col('a').first().over([col('b'), col('c'), col('d'), col('e'), col('f')])
 
-    >>> over.partition_by
-    (col('b'), col('c'), col('d'), col('e'), col('f'))
+        >>> from narwhals._plan.expressions.aggregation import First
+        >>> root = First(expr=ir.col("a"))
+        >>> variadic = tuple(ir.col(s) for s in "bcdef")
+        >>> over = Over(expr=root, partition_by=variadic)
+        >>> over
+        col('a').first().over([col('b'), col('c'), col('d'), col('e'), col('f')])
+
+        >>> over.partition_by
+        (col('b'), col('c'), col('d'), col('e'), col('f'))
 
     But the field is understood as being traversable:
-    >>> it = over.iter_right()
-    >>> next(it) is over
-    True
-    >>> next(it) == ir.col("f")
-    True
-    >>> e, d, c, b, *rest = it
-    >>> e, d, c, b
-    (col('e'), col('d'), col('c'), col('b'))
-    >>> rest == list(over.expr.iter_right())
-    True
 
-    [field specifier]: https://typing.python.org/en/latest/spec/dataclasses.html#field-specifiers
+        >>> it = over.iter_right()
+        >>> next(it) is over
+        True
+        >>> next(it) == ir.col("f")
+        True
+        >>> e, d, c, b, *rest = it
+        >>> e, d, c, b
+        (col('e'), col('d'), col('c'), col('b'))
+        >>> rest == list(over.expr.iter_right())
+        True
     """
     return MultipleExpr()
 
@@ -207,12 +209,10 @@ class Node(Protocol[NodeT, Get]):
             name: The name used in the assignment of the class body.
 
         Notes:
-            Serves a similar purpose to [`__set_name__`], but:
-            - Is called at an [earlier stage] in class creation
-            - Points at an instance slot (for data)
+            Serves a similar purpose to [`__set_name__`](https://docs.python.org/3/reference/datamodel.html#object.__set_name__), but:
 
-        [`__set_name__`]: https://docs.python.org/3/reference/datamodel.html#object.__set_name__
-        [earlier stage]: https://docs.python.org/3/reference/datamodel.html#class-object-creation
+            - Is called at an [earlier stage](https://docs.python.org/3/reference/datamodel.html#class-object-creation) in class creation
+            - Points at an instance slot (for data)
         """
         self.name = name
         return self
@@ -234,7 +234,11 @@ class Node(Protocol[NodeT, Get]):
 
 
 class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
-    """Extensions to `Node` for `ExprIR`."""
+    """Extensions to `Node` for `ExprIR`.
+
+    See Also:
+        [`ExprIR`][narwhals._plan.expressions.ExprIR]
+    """
 
     __slots__ = ()
 
@@ -246,7 +250,8 @@ class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
     def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]:
         """Follow the **left-hand-side** of the graph until we can derive an output name.
 
-        See `ExprIR.iter_output_name` for examples.
+        See Also:
+            [`ExprIR.iter_output_name`][narwhals._plan.expressions.ExprIR.iter_output_name]
         """
         ...
 
@@ -254,84 +259,96 @@ class ExprNode(Node["ExprIR", Get], Protocol[Get, IsScalarT]):
         """Yield the expression(s) that the current node expands into.
 
         Exposes expansion - *without constraints* - as a building block for `expand_as_*`.
+
+        See Also:
+            - [`expand_as_first_child`][narwhals._plan._nodes.ExprNode.expand_as_first_child]
+            - [`expand_as_next_sibling`][narwhals._plan._nodes.ExprNode.expand_as_next_sibling]
         """
         ...
 
+    # TODO @dangotbanned: Add arguments descriptions
     def expand_as_first_child(self, instance: ExprIR, ctx: Expander, /) -> Iterator[Get]:
         """Expand the first field in an expression.
 
-        Note:
-            Related to `expand_as_next_sibling`, see [first child-next sibling].
+        Arguments:
+            instance: _description_
+            ctx: _description_
 
-        ## Examples
-        >>> import narwhals as nw
-        >>> import narwhals._plan as nwp
-        >>> import narwhals._plan.selectors as ncs
-        >>> from tests.plan.utils import Frame
-        >>> schema = {"a": nw.Int64(), "b": nw.Float64(), "c": nw.Int64()}
-        >>> df = Frame.from_mapping(schema)
+        Examples:
+            >>> import narwhals as nw
+            >>> import narwhals._plan as nwp
+            >>> import narwhals._plan.selectors as ncs
+            >>> from tests.plan.utils import Frame
+            >>> schema = {"a": nw.Int64(), "b": nw.Float64(), "c": nw.Int64()}
+            >>> df = Frame.from_mapping(schema)
 
-        When the first field is a `node()`, multiple inputs expand into multiple outputs:
-        >>> list(df.project(ncs.float().sum()))
-        [b=col('b').sum()]
-        >>> list(df.project(ncs.integer().sum()))
-        [a=col('a').sum(), c=col('c').sum()]
+            When the first field is a `node()`, multiple inputs expand into multiple outputs:
+            >>> list(df.project(ncs.float().sum()))
+            [b=col('b').sum()]
+            >>> list(df.project(ncs.integer().sum()))
+            [a=col('a').sum(), c=col('c').sum()]
 
-        Whereas `nodes()` expands within container they describe, reducing to a single output:
-        >>> list(df.project(nwp.sum_horizontal(ncs.float(), ncs.integer())))
-        [b=col('b').sum_horizontal([col('a'), col('c')])]
+            Whereas `nodes()` expands within container they describe, reducing to a single output:
+            >>> list(df.project(nwp.sum_horizontal(ncs.float(), ncs.integer())))
+            [b=col('b').sum_horizontal([col('a'), col('c')])]
 
-        [first child-next sibling]: https://xlinux.nist.gov/dads/HTML/binaryTreeRepofTree.html
+        See Also:
+            - [`expand_as_next_sibling`][narwhals._plan._nodes.ExprNode.expand_as_next_sibling]
+            - [first child-next sibling](https://xlinux.nist.gov/dads/HTML/binaryTreeRepofTree.html)
         """
         ...
 
+    # TODO @dangotbanned: Add arguments descriptions
     def expand_as_next_sibling(self, instance: ExprIR, ctx: Expander, /) -> Get:
         r"""Expand a field in an expression (excluding the first).
 
-        Note:
-            Related to `expand_as_first_child`, see [first child-next sibling].
+        Arguments:
+            instance: _description_
+            ctx: _description_
 
-        ## Examples
-        >>> import narwhals as nw
-        >>> import narwhals._plan as nwp
-        >>> import narwhals._plan.selectors as ncs
-        >>> from tests.plan.utils import Frame
-        >>> i64 = nw.Int64()
-        >>> schema = {"a": i64, "b": nw.Float64(), "c": i64, "d": nw.String()}
-        >>> df = Frame.from_mapping(schema)
-        >>> a = nwp.col("a")
+        Examples:
+            >>> import narwhals as nw
+            >>> import narwhals._plan as nwp
+            >>> import narwhals._plan.selectors as ncs
+            >>> from tests.plan.utils import Frame
+            >>> i64 = nw.Int64()
+            >>> schema = {"a": i64, "b": nw.Float64(), "c": i64, "d": nw.String()}
+            >>> df = Frame.from_mapping(schema)
+            >>> a = nwp.col("a")
 
-        A `node()` supports selectors in this position *iff* they select a single column:
-        >>> list(df.project(a.filter(ncs.float())))
-        [a=col('a').filter(col('b'))]
+            A `node()` supports selectors in this position *iff* they select a single column:
+            >>> list(df.project(a.filter(ncs.float())))
+            [a=col('a').filter(col('b'))]
 
-        >>> list(df.project(a.filter(ncs.integer())))
-        Traceback (most recent call last):
-        narwhals.exceptions.MultiOutputExpressionError: ...
-        Got `col('a').filter(ncs.integer())`, but `ncs.integer()` expanded into 2 outputs:
-          col('a')
-          col('c')
+            >>> list(df.project(a.filter(ncs.integer())))
+            Traceback (most recent call last):
+            narwhals.exceptions.MultiOutputExpressionError: ...
+            Got `col('a').filter(ncs.integer())`, but `ncs.integer()` expanded into 2 outputs:
+              col('a')
+              col('c')
 
-        Whereas `nodes()` expand within the container they describe:
-        >>> agg = nwp.col("a").first()
-        >>> floats, ints = ncs.float(), ncs.integer()
-        >>> expanded = df.project(
-        ...     agg.over(floats).alias("p1"),
-        ...     agg.over(floats, ints).alias("p3"),
-        ...     agg.over(floats, ints, order_by=[ncs.string(), "a"]).alias("p3_o2"),
-        ... )
-        >>> print(*map(repr, expanded), sep="\n")
-        p1=col('a').first().over([col('b')])
-        p3=col('a').first().over([col('b'), col('a'), col('c')])
-        p3_o2=col('a').first().over(partition_by=[col('b'), col('a'), col('c')], order_by=[col('d'), col('a')])
+            Whereas `nodes()` expand within the container they describe:
+            >>> agg = nwp.col("a").first()
+            >>> floats, ints = ncs.float(), ncs.integer()
+            >>> expanded = df.project(
+            ...     agg.over(floats).alias("p1"),
+            ...     agg.over(floats, ints).alias("p3"),
+            ...     agg.over(floats, ints, order_by=[ncs.string(), "a"]).alias("p3_o2"),
+            ... )
+            >>> print(*map(repr, expanded), sep="\n")
+            p1=col('a').first().over([col('b')])
+            p3=col('a').first().over([col('b'), col('a'), col('c')])
+            p3_o2=col('a').first().over(partition_by=[col('b'), col('a'), col('c')], order_by=[col('d'), col('a')])
 
-        [first child-next sibling]: https://xlinux.nist.gov/dads/HTML/binaryTreeRepofTree.html
+        See Also:
+            - [`expand_as_first_child`][narwhals._plan._nodes.ExprNode.expand_as_first_child]
+            - [first child-next sibling](https://xlinux.nist.gov/dads/HTML/binaryTreeRepofTree.html)
         """
         ...
 
 
 class SingleExpr(ExprNode["ExprIR", IsScalarT]):
-    """Representation for `node(...)`."""
+    """Representation for [`node(...)`][narwhals._plan._nodes.node]."""
 
     __slots__ = ("_observe_scalar",)
     _observe_scalar: IsScalarT
@@ -378,7 +395,7 @@ class SingleExpr(ExprNode["ExprIR", IsScalarT]):
 
 
 class MultipleExpr(ExprNode["Seq[ExprIR]", Literal[IsScalar.SKIP]]):
-    """Representation for `nodes()`."""
+    """Representation for [`nodes()`][narwhals._plan._nodes.nodes]."""
 
     __slots__ = ()
 
@@ -436,8 +453,9 @@ class ExprTraverser:
 
     ## Notes
     - Methods *accepting* an `instance` correspond to those in `ExprIR` with the same name
-    - The rest expose a subset of `Sequence[ExprNode]`
-        - Excluding the `value`-based methods
+    - The rest expose a subset of `Sequence[ExprNode]` [^1]
+
+    [^1]: Excludes the [`value`-based methods](https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence)
     """
 
     __slots__ = ("_names", "_nodes")
@@ -467,7 +485,8 @@ class ExprTraverser:
 
         Arguments:
             nodes: New nodes extracted from a subclass `__dict__`.
-                - The order of the current (parent) nodes is preserved.
+
+                - The order of parent node (self) are preserved.
                 - `nodes` follow immediately after
         """
         return ExprTraverser((*self, *nodes))
@@ -488,7 +507,8 @@ class ExprTraverser:
     def iter_output_name(self, instance: ExprIR, /) -> Iterator[ExprIR]:
         """Follow the **left-hand-side** of the graph until we can derive an output name.
 
-        See `ExprIR.iter_output_name` for examples.
+        See Also:
+            [`ExprIR.iter_output_name`][narwhals._plan.expressions.ExprIR.iter_output_name]
         """
         if self:
             yield from self[0].iter_output_name(instance)
@@ -513,8 +533,8 @@ class ExprTraverser:
             - Selectors expand into `Col`(s), and then follow the above
 
         See Also:
-            `ExprNode.expand_as_first_child`
-            `ExprNode.expand_as_next_sibling`
+            - [`ExprNode.expand_as_first_child`][narwhals._plan._nodes.ExprNode.expand_as_first_child]
+            - [`ExprNode.expand_as_next_sibling`][narwhals._plan._nodes.ExprNode.expand_as_next_sibling]
         """
         if not self:
             yield instance
@@ -544,8 +564,8 @@ class ExprTraverser:
             ctx: The expansion context to resolve the operation in.
 
         Important:
-            Adapted from [upstream].
-            The algorithm is similar to [`more_itertools.zip_broadcast`].
+            - Adapted from [upstream](https://github.com/pola-rs/polars/blob/bb93ba8e67a1f38951506ce044245560009fe55a/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L129-L197).
+            - The algorithm is similar to [`more_itertools.zip_broadcast`](https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.zip_broadcast).
 
         Examples:
             >>> import narwhals._plan as nw
@@ -562,7 +582,9 @@ class ExprTraverser:
             >>> ctx = Expander(schema)
             >>> df = Frame.from_mapping(schema)
 
-            Combination expansion is used for `BinaryExpr` and `TernaryExpr` [^1].
+            Combination expansion is used for *only* `BinaryExpr` and `TernaryExpr` [^1].
+
+            [^1]: `polars` *also* uses this strategy for `over`, `sort_by`, `filter` + others.
 
             Selectors are supported in each position, with nothing fancy on single-outputs:
             >>> singles = (nw.when(ncs.first()).then(ncs.last()).otherwise(nw.nth(2)))._ir
@@ -609,7 +631,9 @@ class ExprTraverser:
             .when(col('a')).then(col('d')).otherwise(col('f').min())
             .when(col('e')).then(col('f')).otherwise(col('f').min())
 
-            [`fill_nan`] makes good use of that under-the-covers:
+            [fill_nan]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/mod.rs#L908-L916
+
+            [fill_nan] makes good use of that under-the-covers:
             >>> zip_broadcast_2 = ncs.float().fill_nan(0.0)._ir
             >>> zip_broadcast_2
             .when([(ncs.float().is_not_nan()) | (ncs.float().is_null())]).then(ncs.float()).otherwise(lit(0.0))
@@ -623,15 +647,9 @@ class ExprTraverser:
             Traceback (most recent call last):
             MultiOutputExpressionError: Cannot combine selectors that produce a different number of columns (2 != 2 != 6).
 
-        [^1]: `polars` uses this strategy for `over`, `sort_by`, `filter` + others.
-
-              Not convinced that those are intuitive (see [polars#25022], [polars#25317]).
-
-        [upstream]: https://github.com/pola-rs/polars/blob/bb93ba8e67a1f38951506ce044245560009fe55a/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs#L129-L197
-        [polars#25022]: https://github.com/pola-rs/polars/issues/25022
-        [polars#25317]: https://github.com/pola-rs/polars/issues/25317
-        [`more_itertools.zip_broadcast`]: https://more-itertools.readthedocs.io/en/stable/api.html#more_itertools.zip_broadcast
-        [`fill_nan`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/mod.rs#L908-L916
+        See Also:
+            - [pola-rs/polars#25022](https://github.com/pola-rs/polars/issues/25022)
+            - [pola-rs/polars#25317](https://github.com/pola-rs/polars/issues/25317)
         """
         if not instance.meta.has_multiple_outputs():
             changes = {e.name: next(e.iter_expand(instance, ctx)) for e in self}
