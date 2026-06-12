@@ -58,10 +58,7 @@ FunctionT_co = TypeVar(
     "FunctionT_co", bound="_f.Function", default="_f.Function", covariant=True
 )
 HorizontalT_co = TypeVar(
-    "HorizontalT_co",
-    bound="_f.HorizontalFunction",
-    default="_f.HorizontalFunction",
-    covariant=True,
+    "HorizontalT_co", bound="_f.Horizontal", default="_f.Horizontal", covariant=True
 )
 StructT_co = TypeVar(
     "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
@@ -201,7 +198,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(args=(root, *children))
 
     def dispatch_arg(
-        self: FunctionExpr[_f.UnaryFunction],
+        self: FunctionExpr[_f.Unary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
@@ -224,21 +221,21 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 
     @overload
     def dispatch_args(
-        self: FunctionExpr[_f.UnaryFunction],
+        self: FunctionExpr[_f.Unary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq1[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[_f.BinaryFunction],
+        self: FunctionExpr[_f.Binary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq2[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[_f.TernaryFunction],
+        self: FunctionExpr[_f.Ternary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,

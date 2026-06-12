@@ -58,14 +58,14 @@ if TYPE_CHECKING:
 
 __all__ = (
     "Aggregation",
-    "BinaryFunction",
+    "Binary",
     "Elementwise",
     "Function",
-    "HorizontalFunction",
+    "Horizontal",
     "LengthPreserving",
     "RowSeparable",
-    "TernaryFunction",
-    "UnaryFunction",
+    "Ternary",
+    "Unary",
 )
 
 
@@ -295,10 +295,13 @@ class LengthPreserving(Function, dispatch="skip"):
     )
 
 
-class HorizontalFunction(Elementwise):
-    """Transformations *across* columns.
+class Horizontal(Elementwise):
+    """An elementwise function that takes a variable number of expression arguments.
 
-    Special cases of [fold] or [reduce].
+    Notes:
+        - Operates *across* columns.
+        - Special cases of [fold](https://docs.pola.rs/user-guide/expressions/folds/) or
+          [reduce](https://mathspp.com/blog/pydonts/the-power-of-reduce).
 
     [fold]: https://docs.pola.rs/user-guide/expressions/folds/
     [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
@@ -311,18 +314,21 @@ class HorizontalFunction(Elementwise):
         return _import_horizontal_expr()
 
 
-# TODO @dangotbanned: Rename to `Unary`
-class UnaryFunction(Function, dispatch="skip"):
+class Unary(Function, dispatch="skip"):
+    """A function that takes one expression argument."""
+
     __function_parameters__: ClassVar[params.Unary] = params.Unary()
 
 
-# TODO @dangotbanned: Rename to `Binary`
-class BinaryFunction(Function, dispatch="skip"):
+class Binary(Function, dispatch="skip"):
+    """A function that takes two expression arguments."""
+
     __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
 
-# TODO @dangotbanned: Rename to `Ternary`
-class TernaryFunction(Function, dispatch="skip"):
+class Ternary(Function, dispatch="skip"):
+    """A function that takes three expression arguments."""
+
     __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
 
 

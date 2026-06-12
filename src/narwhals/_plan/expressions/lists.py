@@ -25,7 +25,7 @@ same_dtype = ResolveDType.function.same_dtype
 
 # fmt: off
 class ListFunction(_f.Elementwise, dispatch=DispatcherOptions(accessor_name="list")): ...
-class _ListUnary(_f.UnaryFunction, ListFunction): ...
+class _ListUnary(_f.Unary, ListFunction): ...
 class _ListInner(_ListUnary):
     def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:
         return dtm.inner_dtype(node.args[0].resolve_dtype(schema), repr(self))  # pragma: no cover
@@ -34,7 +34,7 @@ class Join(_ListUnary, dtype=map_first(dtm.list_join_dtype)):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-class Contains(_f.BinaryFunction, ListFunction, dtype=dtm.BOOL):
+class Contains(_f.Binary, ListFunction, dtype=dtm.BOOL):
     __function_parameters__: ClassVar = params.Binary(right=params.SCALAR)
 class Any(_ListUnary, dtype=dtm.BOOL): ...
 class All(_ListUnary, dtype=dtm.BOOL): ...

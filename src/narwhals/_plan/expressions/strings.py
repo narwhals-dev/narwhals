@@ -15,12 +15,12 @@ renamed = DispatcherOptions.renamed
 
 # fmt: off
 class StringFunction(_f.Elementwise, dispatch=DispatcherOptions(accessor_name="str")): ...
-class _StringUnary(_f.UnaryFunction, StringFunction): ...
+class _StringUnary(_f.Unary, StringFunction): ...
 class LenChars(_StringUnary, dtype=dtm.U32): ...
 class ToLowercase(_StringUnary, dtype=same_dtype()): ...
 class ToUppercase(_StringUnary, dtype=same_dtype()): ...
 class ToTitlecase(_StringUnary, dtype=same_dtype()): ...
-class ConcatStr(_f.HorizontalFunction, StringFunction, dispatch=DispatcherOptions(), dtype=dtm.STR):
+class ConcatStr(_f.Horizontal, StringFunction, dispatch=DispatcherOptions(), dtype=dtm.STR):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
@@ -31,12 +31,12 @@ class Contains(_StringUnary, dtype=dtm.BOOL):
 class EndsWith(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("suffix",)
     suffix: str
-class Replace(_f.BinaryFunction, StringFunction, dtype=same_dtype()):
+class Replace(_f.Binary, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "n", "pattern")
     pattern: str
     literal: bool
     n: int
-class ReplaceAll(_f.BinaryFunction, StringFunction, dtype=same_dtype()):
+class ReplaceAll(_f.Binary, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool

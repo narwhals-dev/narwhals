@@ -9,7 +9,6 @@ https://github.com/narwhals-dev/narwhals/blob/d58d05a9b1435f01d3497571f1869bf6e8
 ::: narwhals._plan._function
     options:
       members_order: source
-      members: public
 
 
 ::: narwhals._plan.expressions.functions

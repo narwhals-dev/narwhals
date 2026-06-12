@@ -26,8 +26,8 @@ renamed = DispatcherOptions.renamed
 
 # fmt: off
 class BooleanFunction(_f.Function, dtype=dtm.BOOL): ...
-class _BooleanUnary(_f.UnaryFunction, BooleanFunction): ...
-class _HorizontalBoolean(_f.HorizontalFunction, BooleanFunction, dtype=dtm.BOOL):
+class _BooleanUnary(_f.Unary, BooleanFunction): ...
+class _HorizontalBoolean(_f.Horizontal, BooleanFunction, dtype=dtm.BOOL):
     __slots__ = ("ignore_nulls",)
     ignore_nulls: bool
 class All(_BooleanUnary, _f.Aggregation): ...
@@ -45,7 +45,7 @@ class IsNotNull(_BooleanUnary, _f.Elementwise): ...
 class IsUnique(_BooleanUnary, _f.LengthPreserving): ...
 class Not(_BooleanUnary, _f.Elementwise, dispatch=renamed("not_"), dtype=map_first(lambda dtype: dtype if dtype.is_integer() else dtm.BOOL)): ...
 # fmt: on
-class IsBetween(_f.TernaryFunction, BooleanFunction, _f.Elementwise):
+class IsBetween(_f.Ternary, BooleanFunction, _f.Elementwise):
     __slots__ = ("closed",)
     closed: ClosedInterval
 
@@ -79,7 +79,7 @@ class IsInSeries(_BooleanUnary, _f.Elementwise, Generic[NativeSeriesT_co]):
         return IsInSeries(other=lit_series(other))
 
 
-class IsInExpr(_f.BinaryFunction, BooleanFunction, _f.Elementwise):
+class IsInExpr(_f.Binary, BooleanFunction, _f.Elementwise):
     # NOTE: *Consider* restricting to non-equal types (https://github.com/pola-rs/polars/pull/22178)
     def __repr__(self) -> str:
         return "is_in"

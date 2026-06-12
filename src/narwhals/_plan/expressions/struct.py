@@ -34,9 +34,7 @@ class StructFunction(_f.Function, dispatch=DispatcherOptions(accessor_name="stru
         raise NotImplementedError(msg)
 
 
-class FieldByName(
-    _f.UnaryFunction, StructFunction, _f.Elementwise, dispatch=renamed("field")
-):
+class FieldByName(_f.Unary, StructFunction, _f.Elementwise, dispatch=renamed("field")):
     __slots__ = ("name",)
     name: str
 

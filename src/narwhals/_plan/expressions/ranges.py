@@ -22,7 +22,7 @@ get_dtype = ResolveDType.get_dtype
 map_all = ResolveDType.function.map_all
 
 
-class RangeFunction(_f.BinaryFunction, Generic[T_co]):
+class RangeFunction(_f.Binary, Generic[T_co]):
     __function_parameters__: ClassVar = params.Binary(params.SCALAR, params.SCALAR)
 
     @classmethod
