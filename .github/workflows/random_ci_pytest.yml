@@ -6,6 +6,8 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -19,25 +21,20 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: pytest-random-ci-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: generate-random-versions
-        run: python utils/generate_random_versions.py
-      - name: install-random-versions
-        run: uv pip install -r random-requirements.txt --system
-      - name: install-narwhals
-        run: uv pip install -e . --group tests --system
-      - name: show versions
-        run: uv pip freeze
-      - name: Run pytest
+      - name: Generate random versions
+        run: uv run --no-project python utils/generate_random_versions.py
+      - name: Show dependencies
+        run: uv pip compile random-requirements.txt --group tests --group plugins
+      - name: Run pytest with random versions
         run: |
-            pytest tests --cov=narwhals --cov=tests --cov-fail-under=75 \
-            --constructors=pandas,pyarrow,polars[eager],polars[lazy]
+          uv run --group tests --group plugins --with-requirements random-requirements.txt \
+          pytest tests --cov=src --cov=tests --cov-fail-under=75 \
+          --constructors="pandas,pyarrow,polars[eager],polars[lazy]"

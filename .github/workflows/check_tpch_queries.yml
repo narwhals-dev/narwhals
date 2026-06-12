@@ -5,7 +5,8 @@ on:
 
 env:
   PY_COLORS: 1
-  UV_SYSTEM_PYTHON: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
@@ -19,19 +20,15 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: local-install
-        run: uv pip install -U -e ".[dask]" --group core-tests
       - name: generate-data
-        run: cd tpch && python generate_data.py --debug
-      - name: tpch-tests 
-        run: cd tpch && pytest tests
+        run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="--module tpch.generate_data --debug"
+      - name: tpch-tests
+        run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="pytest tpch/tests"
