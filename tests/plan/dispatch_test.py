@@ -215,10 +215,10 @@ def test_sharing_expr_ir() -> None:
 
 
 def test_multiple_inheritance_function() -> None:
-    ELEMENTWISE = FunctionFlags.ELEMENTWISE  # noqa: N806
     ACCESSOR_BIN = DispatcherOptions(accessor_name="bin")  # noqa: N806
 
-    class ConfiguredFlagsSkip(ir.Function, dispatch="skip", flags=ELEMENTWISE): ...
+    class ConfiguredFlagsSkip(ir.Function, dispatch="skip"):
+        __function_flags__ = FunctionFlags.ELEMENTWISE
 
     class ConfiguredDispatch(ir.Function, dispatch=ACCESSOR_BIN): ...
 
