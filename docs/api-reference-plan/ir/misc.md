@@ -47,6 +47,11 @@ somewhere less private
       members:
         - FunctionFlags
 
+<!-- 
+TODO @dangotbanned: Fix formatting
+TODO @dangotbanned: Docs contain an idea for rewriting them ffs
+-->
+
 ::: narwhals._plan._dispatch
     options:
       members_order: source
@@ -60,6 +65,9 @@ somewhere less private
           - NoDispatch
           - get_dispatch_name
 
+<!-- 
+TODO @dangotbanned: Fix formatting
+-->
 
 ::: narwhals._plan._dtype
     options:
@@ -79,6 +87,11 @@ somewhere less private
           - IntoResolveDType
           - Visitor
 
+<!-- 
+TODO @dangotbanned: Module doc was due to be deleted, has bad formatting too
+TODO @dangotbanned: Fix `Expander`
+TODO @dangotbanned: Fix `prepare_projection`
+-->
 
 ::: narwhals._plan._expansion
     options:
@@ -87,6 +100,10 @@ somewhere less private
         - expand_selectors
         - parse_expand_selectors
         - Expander
+
+<!-- 
+TODO @dangotbanned: Fix formatting
+-->
 
 ::: narwhals._plan._parameters
     options:
@@ -99,12 +116,19 @@ somewhere less private
         - Constraint
         - Arity
 
+<!-- 
+TODO @dangotbanned: Fix formatting `closed_kwds` lists
+-->
 
 ::: narwhals._plan.common
     options:
       members:
         - temp
         - closed_kwds
+
+<!-- 
+TODO @dangotbanned: Fix formatting `EWMOptions`, `VConcatOptions`
+-->
 
 
 ::: narwhals._plan.options
@@ -124,6 +148,10 @@ somewhere less private
         - JoinAsofOptions
         - UnpivotOptions
 
+<!-- 
+TODO @dangotbanned: Fix formatting `FrozenSchema` links
+-->
+
 ::: narwhals._plan.schema
     options:
       members:
@@ -132,6 +160,9 @@ somewhere less private
         - IntoFrozenSchema
         - HasSchema
 
+<!-- 
+TODO @dangotbanned: Fix formatting `Plugin`
+-->
 
 ::: narwhals._plan.plugins
     options:
@@ -140,6 +171,11 @@ somewhere less private
         - Plugin
         - manager
         - load_plugin
+
+
+<!-- 
+TODO @dangotbanned: Remove misc notes
+-->
 
 ::: narwhals._plan.plugins._manager
     options:

@@ -206,6 +206,8 @@ extensions = [
   "utils/griffe_extension.py:PEP681Extension",
 ]
 merge_init_into_class = true
+# TODO @dangotbanned: Major need for user guide
+# https://zensical.org/docs/setup/extensions/python-markdown-extensions/#snippets
 
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.md_in_html]
