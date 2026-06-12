@@ -5,23 +5,21 @@ from typing import ClassVar
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._function import (
     BinaryFunction,
-    Function,
+    Elementwise,
     HorizontalFunction,
     UnaryFunction,
 )
 from narwhals._plan.expressions.namespace import IRNamespace
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-ELEMENTWISE = FunctionFlags.ELEMENTWISE
 same_dtype = ResolveDType.function.same_dtype
 renamed = DispatcherOptions.renamed
 
 
 # fmt: off
-class StringFunction(Function, dispatch=DispatcherOptions(accessor_name="str"), flags=ELEMENTWISE): ...
+class StringFunction(Elementwise, dispatch=DispatcherOptions(accessor_name="str")): ...
 class _StringUnary(UnaryFunction, StringFunction): ...
 class LenChars(_StringUnary, dtype=dtm.U32): ...
 class ToLowercase(_StringUnary, dtype=same_dtype()): ...
