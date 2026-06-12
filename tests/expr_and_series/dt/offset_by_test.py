@@ -142,14 +142,14 @@ def test_offset_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
+        x in str(constructor) for x in ("dask", "pyarrow")
     ):
         request.applymarker(pytest.mark.xfail())
     if "ns" in by and any(
         x in str(constructor) for x in ("dask", "pyspark", "ibis", "cudf", "duckdb")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
 
     df = nw.from_native(constructor(data))
@@ -267,7 +267,7 @@ def test_offset_by_date_pandas() -> None:
 
 
 def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("dask", "ibis")):
+    if any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

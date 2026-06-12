@@ -11,7 +11,6 @@ from narwhals._utils import Version, isinstance_or_issubclass
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-    from datetime import timedelta
     from typing import TypeAlias
 
     import ibis.expr.types as ir
@@ -266,10 +265,6 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType
         raise NotImplementedError(msg)
     msg = f"Unknown dtype: {dtype}"  # pragma: no cover
     raise AssertionError(msg)
-
-
-def timedelta_to_ibis_interval(td: timedelta) -> ibis.expr.types.temporal.IntervalScalar:
-    return ibis.interval(days=td.days, seconds=td.seconds, microseconds=td.microseconds)
 
 
 _BINARY_OPS = {

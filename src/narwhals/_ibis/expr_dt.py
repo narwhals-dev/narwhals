@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import ibis
+
 from narwhals._duration import Interval
-from narwhals._ibis.utils import (
-    UNITS_DICT_BUCKET,
-    UNITS_DICT_TRUNCATE,
-    timedelta_to_ibis_interval,
-)
+from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
@@ -63,10 +61,10 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
     def offset_by(self, by: str) -> IbisExpr:
         interval = Interval.parse_no_constraints(by)
         unit = interval.unit
-        if unit in {"y", "q", "mo", "d", "ns"}:
-            msg = f"Offsetting by {unit} is not yet supported for ibis."
+        if unit == "ns":
+            msg = "Offsetting by nanoseconds is not yet supported for ibis."
             raise NotImplementedError(msg)
-        offset = timedelta_to_ibis_interval(interval.to_timedelta())
+        offset = ibis.interval(**{UNITS_DICT_BUCKET[unit]: interval.multiple})
         return self.compliant._with_callable(lambda expr: expr.add(offset))
 
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
