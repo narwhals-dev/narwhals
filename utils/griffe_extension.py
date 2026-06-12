@@ -288,7 +288,7 @@ class NewAsInitExtension(griffe.Extension):
         agent.docstring_options = self._orig_parser_options
         logger.info("NewAsInitExtension: Restored class docstring warnings")
         self.paths = self.paths.difference({cls.path})
-        logger.info("NewAsInitExtension: Visting %r", cls.path)
+        logger.info("NewAsInitExtension: Visiting %r", cls.path)
         self._convert_new_to_init(self._reject_unsupported(cls))
         logger.info("NewAsInitExtension: Finished %r", cls.path)
 

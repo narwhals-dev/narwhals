@@ -316,7 +316,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
     def flags(self) -> FunctionFlags:
         # NOTE: Why another `FunctionExpr` subclass?
         # - Every other `Function` has it's flags defined in `type[Function].__dict__`
-        # - `MapBatches` haccepts these hints from the caller and stores on the instance
+        # - `MapBatches` accepts these hints from the caller and stores on the instance
         #   so a common property at a higher level avoids a `__slots__` conflict
         return self.function.flags
 
