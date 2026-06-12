@@ -264,10 +264,9 @@ class SparkLikeNamespace(
                 return [F.covar_samp(a_, b_)]
             is_valid = a_.isNotNull() & b_.isNotNull()
             n_samples = F.sum(F.when(is_valid, F.lit(1)).otherwise(F.lit(0)))
-            return [
-                F.covar_samp(a_, b_)
-                * ((n_samples - F.lit(1)) / (n_samples - F.lit(ddof)))
-            ]
+            denominator = n_samples - F.lit(ddof)
+            rescaled = F.covar_samp(a_, b_) * ((n_samples - F.lit(1)) / denominator)
+            return [F.when(denominator == F.lit(0), F.lit(None)).otherwise(rescaled)]
 
         return self._expr(
             call=func,
