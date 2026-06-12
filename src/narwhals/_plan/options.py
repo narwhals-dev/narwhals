@@ -190,19 +190,13 @@ class UniqueOptions(Immutable):
 class VConcatOptions(Immutable):
     __slots__ = ("diagonal", "maintain_order", "to_supertypes")
     diagonal: bool
-    """True for `how="diagonal"`"""
+    """True for `how="diagonal"`."""
 
     to_supertypes: bool
-    """True for [`"*_relaxed"` variants]
-
-    [`"*_relaxed"` variants]: https://github.com/narwhals-dev/narwhals/pull/3191#issuecomment-3389117044
-    """
+    """True for [`"*_relaxed"` variants](https://github.com/narwhals-dev/narwhals/pull/3191#issuecomment-3389117044)."""
 
     maintain_order: bool
-    """True when using `concat`, False when using [`union`].
-
-    [`union`]: https://github.com/pola-rs/polars/pull/24298
-    """
+    """True when using `concat`, False when using [`union`](https://github.com/pola-rs/polars/pull/24298)."""
 
     @staticmethod
     def from_how(

@@ -119,10 +119,6 @@ TODO @dangotbanned: Fix `prepare_projection`
         - temp
         - closed_kwds
 
-<!-- 
-TODO @dangotbanned: Fix formatting `EWMOptions`, `VConcatOptions`
--->
-
 
 ::: narwhals._plan.options
     options:
