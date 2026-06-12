@@ -266,6 +266,29 @@ def test_offset_by_date_pandas() -> None:
     assert_equal_data(result, expected)
 
 
+def test_offset_by_tz_aware_calendar_raises_ibis() -> None:  # pragma: no cover
+    # Ibis stores tz-aware data as UTC, so calendar offsets would diverge from
+    # other backends across DST transitions; they should raise (see #3681).
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
+    import ibis
+    import polars as pl
+
+    con = ibis.duckdb.connect()
+    tbl = con.create_table(
+        "offset_by_tz",
+        pl.LazyFrame({"a": [datetime(2020, 10, 25)]}).with_columns(
+            pl.col("a").dt.replace_time_zone("Europe/Amsterdam")
+        ),
+    )
+    df = nw.from_native(tbl)
+    for by in ("1d", "3mo", "2q", "1y"):
+        with pytest.raises(NotImplementedError, match="daylight saving"):
+            df.select(nw.col("a").dt.offset_by(by)).to_native().execute()
+    # Pure-duration units are unambiguous and remain supported.
+    df.select(nw.col("a").dt.offset_by("7h")).to_native().execute()
+
+
 def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())

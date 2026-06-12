@@ -60,12 +60,28 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
 
     def offset_by(self, by: str) -> IbisExpr:
         interval = Interval.parse_no_constraints(by)
-        unit = interval.unit
+        multiple, unit = interval.multiple, interval.unit
         if unit == "ns":
             msg = "Offsetting by nanoseconds is not yet supported for ibis."
             raise NotImplementedError(msg)
-        offset = ibis.interval(**{UNITS_DICT_BUCKET[unit]: interval.multiple})
-        return self.compliant._with_callable(lambda expr: expr.add(offset))
+        offset = ibis.interval(**{UNITS_DICT_BUCKET[unit]: multiple})
+
+        def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
+            # Ibis stores timezone-aware data as UTC, so calendar offsets are
+            # applied to the underlying instant rather than wall-clock time.
+            # The result would differ from other backends across a DST
+            # transition, so refuse it rather than return a surprising value.
+            tz = getattr(expr.type(), "timezone", None)
+            if unit in {"y", "q", "mo", "d"} and tz is not None:
+                msg = (
+                    f"Offsetting timezone-aware data by {unit} is not supported "
+                    "for ibis, as the result would be incorrect across daylight "
+                    "saving time transitions."
+                )
+                raise NotImplementedError(msg)
+            return expr.add(offset)
+
+        return self.compliant._with_callable(fn)
 
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
