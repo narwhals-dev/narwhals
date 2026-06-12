@@ -107,7 +107,7 @@ def test_pyarrow_string_type(
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < (2, 2), reason='"add" was not implemented yet for large-string'
+    PANDAS_VERSION < (2, 3), reason='"add" was not implemented yet for large-string'
 )
 def test_concat_str_with_large_string() -> None:
     # https://github.com/pandas-dev/pandas/issues/64393

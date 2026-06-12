@@ -104,10 +104,12 @@ They differ by checking **all** native types/protocols in a single-call and usin
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable, Collection, Iterable, Sized
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from narwhals.dependencies import (
+    IMPORT_HOOKS,
     get_cudf,
     get_modin,
     get_pandas,
@@ -402,7 +404,13 @@ is_native_ibis = cast("_Guard[NativeIbis]", is_ibis_table)
 
 
 def is_native_pandas(obj: Any) -> TypeIs[NativePandas]:
-    return (pd := get_pandas()) is not None and isinstance(obj, (pd.DataFrame, pd.Series))
+    return (
+        (pd := get_pandas()) is not None and isinstance(obj, (pd.DataFrame, pd.Series))
+    ) or any(
+        (mod := sys.modules.get(module_name, None)) is not None
+        and isinstance(obj, (mod.pandas.DataFrame, mod.pandas.Series))
+        for module_name in IMPORT_HOOKS
+    )
 
 
 def is_native_modin(obj: Any) -> TypeIs[NativeModin]:

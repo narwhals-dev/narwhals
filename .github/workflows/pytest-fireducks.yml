@@ -1,4 +1,4 @@
-name: Pre-commit hooks
+name: PyTest FireDucks
 
 on:
   pull_request:
@@ -6,24 +6,24 @@ on:
 
 env:
   PY_COLORS: 1
+  UV_LOCKED: 0
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
 
 jobs:
-  prek:
+  pytest-fireducks:
     if: github.head_ref != 'bump-version'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.12"
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: "3.13"
           enable-cache: "true"
-          cache-suffix: pre-commit-hooks
+          cache-suffix: fireducks-3.13
           cache-dependency-glob: "pyproject.toml"
-      - name: Run prek
-        run: uvx prek run --all-files --show-diff-on-failure --color=always
+      - name: Run pytest
+        run: make run-ci DEPS="--group core-tests --extra pandas" RUN_ONLY="--with fireducks --with 'pandas>2.2.0'" CMD="python -m fireducks.pandas --hook-import-module -m pytest tests/fireducks_test.py"
