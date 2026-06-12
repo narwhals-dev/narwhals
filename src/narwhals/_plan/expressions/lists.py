@@ -6,8 +6,7 @@ import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan import _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import BinaryFunction, Function, UnaryFunction
+from narwhals._plan._function import BinaryFunction, Elementwise, UnaryFunction
 from narwhals._plan.expressions.namespace import IRNamespace
 
 if TYPE_CHECKING:
@@ -21,13 +20,12 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-ELEMENTWISE = FunctionFlags.ELEMENTWISE
 map_first = ResolveDType.function.map_first
 same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
-class ListFunction(Function, dispatch=DispatcherOptions(accessor_name="list"), flags=ELEMENTWISE): ...
+class ListFunction(Elementwise, dispatch=DispatcherOptions(accessor_name="list")): ...
 class _ListUnary(UnaryFunction, ListFunction): ...
 class _ListInner(_ListUnary):
     def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:
