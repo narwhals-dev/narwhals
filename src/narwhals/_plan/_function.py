@@ -58,9 +58,6 @@ if TYPE_CHECKING:
 
 __all__ = ("Function", "HorizontalFunction")
 
-# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-ELEMENTWISE = FunctionFlags.ELEMENTWISE
-
 
 class Function(Immutable):
     r"""A general transformation applied to an expression.
@@ -276,7 +273,31 @@ class Function(Immutable):
         return node
 
 
-class HorizontalFunction(Function, flags=ELEMENTWISE):
+class Elementwise(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.ELEMENTWISE]] = (
+        FunctionFlags.ELEMENTWISE
+    )
+
+
+class Aggregation(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.AGGREGATION]] = (
+        FunctionFlags.AGGREGATION
+    )
+
+
+class RowSeparable(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.ROW_SEPARABLE]] = (
+        FunctionFlags.ROW_SEPARABLE
+    )
+
+
+class LengthPreserving(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.LENGTH_PRESERVING]] = (
+        FunctionFlags.LENGTH_PRESERVING
+    )
+
+
+class HorizontalFunction(Elementwise):
     """Transformations *across* columns.
 
     Special cases of [fold] or [reduce].
@@ -292,14 +313,17 @@ class HorizontalFunction(Function, flags=ELEMENTWISE):
         return _import_horizontal_expr()
 
 
+# TODO @dangotbanned: Rename to `Unary`
 class UnaryFunction(Function, dispatch="skip"):
     __function_parameters__: ClassVar[params.Unary] = params.Unary()
 
 
+# TODO @dangotbanned: Rename to `Binary`
 class BinaryFunction(Function, dispatch="skip"):
     __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
 
+# TODO @dangotbanned: Rename to `Ternary`
 class TernaryFunction(Function, dispatch="skip"):
     __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
 
