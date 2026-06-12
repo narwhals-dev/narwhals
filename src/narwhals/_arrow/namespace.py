@@ -306,3 +306,32 @@ class ArrowNamespace(
             alias_output_names=combine_alias_output_names(a, b),
             context=self,
         )
+
+    def cov(self, a: ArrowExpr, b: ArrowExpr, *, ddof: int) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            arr1 = a_series.native
+            arr2 = df._evaluate_single_output_expr(b).native
+            valid = pc.and_(pc.is_valid(arr1), pc.is_valid(arr2))
+            arr1 = pc.filter(arr1, valid)
+            arr2 = pc.filter(arr2, valid)
+            mean1 = pc.mean(arr1)
+            mean2 = pc.mean(arr2)
+
+            dev1 = pc.subtract(arr1, mean1)
+            dev2 = pc.subtract(arr2, mean2)
+            numerator = pc.sum(pc.multiply(dev1, dev2))
+            denominator = pc.subtract(pc.count(arr1), pa.scalar(ddof))
+            covariance = pc.divide(numerator, denominator)
+            return [
+                ArrowSeries.from_iterable(
+                    data=[covariance], name=a_series.name, context=self
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )

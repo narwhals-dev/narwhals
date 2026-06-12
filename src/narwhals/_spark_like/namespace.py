@@ -253,6 +253,30 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
+    def cov(self, a: SparkLikeExpr, b: SparkLikeExpr, *, ddof: int) -> SparkLikeExpr:
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            F = self._F
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            if ddof == 0:
+                return [F.covar_pop(a_, b_)]
+            if ddof == 1:
+                return [F.covar_samp(a_, b_)]
+            is_valid = a_.isNotNull() & b_.isNotNull()
+            n_samples = F.sum(F.when(is_valid, F.lit(1)).otherwise(F.lit(0)))
+            return [
+                F.covar_samp(a_, b_)
+                * ((n_samples - F.lit(1)) / (n_samples - F.lit(ddof)))
+            ]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
     def struct(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         version = self._version
 

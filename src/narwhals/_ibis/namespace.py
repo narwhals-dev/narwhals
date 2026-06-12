@@ -169,6 +169,24 @@ class IbisNamespace(
             version=self._version,
         )
 
+    def cov(self, a: IbisExpr, b: IbisExpr, *, ddof: int) -> IbisExpr:
+        def func(_df: IbisLazyFrame) -> list[ir.Value]:
+            a_ = cast("ir.NumericColumn", _df._evaluate_single_output_expr(a))
+            b_ = cast("ir.NumericColumn", _df._evaluate_single_output_expr(b))
+            if ddof == 0:
+                return [a_.cov(b_, how="pop")]
+            if ddof == 1:
+                return [a_.cov(b_, how="sample")]
+            n_samples = a_.count(where=a_.notnull() & b_.notnull())
+            return [a_.cov(b_, how="sample") * ((n_samples - 1) / (n_samples - ddof))]
+
+        return self._expr(
+            func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
     def struct(self, *exprs: IbisExpr) -> IbisExpr:
         version = self._version
 

@@ -432,6 +432,22 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def cov(self, a: PandasLikeExpr, b: PandasLikeExpr, *, ddof: int) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            b_series = df._evaluate_single_output_expr(b)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=RuntimeWarning)
+                cov = a_series.native.cov(b_series.native, ddof=ddof)
+            return [self._series.from_iterable([cov], name=a_series.name, context=self)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )
+
 
 class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
     @overload

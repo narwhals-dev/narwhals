@@ -23,9 +23,11 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation, is_nested_literal, not_implemented
+from narwhals.dependencies import get_dask
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
+    from typing import Any
 
     import dask.dataframe.dask_expr as dx
 
@@ -331,6 +333,34 @@ class DaskNamespace(
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
             return [a_.corr(b_, method=method).to_series()]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
+    def cov(self, a: DaskExpr, b: DaskExpr, *, ddof: int) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            if ddof == 1:
+                return [a_.cov(b_).to_series()]
+
+            def _adjust_cov(cov: float, n: int) -> pd.Series[Any]:
+                if ddof == 0 and n == 1:
+                    value = 0.0
+                else:
+                    value = float("nan") if n == ddof else cov * (n - 1) / (n - ddof)
+                return pd.Series([value], name=a_.name)
+
+            valid = ~a_.isna() & ~b_.isna()
+            dask = get_dask()
+            assert dask is not None  # noqa: S101
+            delayed = dask.delayed(_adjust_cov)(a_.cov(b_), valid.sum())
+            meta = pd.Series([], dtype="float64", name=a_.name)
+            return [dd.from_delayed([delayed], meta=meta)]
 
         return self._expr(
             call=func,

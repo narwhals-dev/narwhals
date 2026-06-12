@@ -187,6 +187,27 @@ class DuckDBNamespace(
             version=self._version,
         )
 
+    def cov(self, a: DuckDBExpr, b: DuckDBExpr, *, ddof: int) -> DuckDBExpr:
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            if ddof == 0:
+                return [F("covar_pop", a_, b_)]
+            if ddof == 1:
+                return [F("covar_samp", a_, b_)]
+            is_valid = (a_.isnotnull() & b_.isnotnull()).cast(duckdb_dtypes.BIGINT)
+            n_samples = F("sum", is_valid)
+            return [
+                F("covar_samp", a_, b_) * ((n_samples - lit(1)) / (n_samples - lit(ddof)))
+            ]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
     @requires.backend_version((1, 3))
     def struct(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         version = self._version
