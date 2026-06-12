@@ -171,7 +171,7 @@ def test_timestamp_dates(
     dates = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     if "dask" in str(constructor):
         df = nw.from_native(
-            constructor(dates).astype({"a": "timestamp[ns][pyarrow]"})  # type: ignore[union-attr]
+            constructor(dates).astype({"a": "timestamp[ns][pyarrow]"})  # type: ignore[attr-defined]
         )
     else:
         df = nw.from_native(constructor(dates))

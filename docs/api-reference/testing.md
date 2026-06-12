@@ -46,7 +46,6 @@ The plugin auto-loads as soon as you `pip install narwhals`. Just write a test:
 ```python
 from typing import TYPE_CHECKING
 
-import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 
 if TYPE_CHECKING:
@@ -55,13 +54,13 @@ if TYPE_CHECKING:
 
 def test_shape(nw_dataframe: DataFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    df = nw_dataframe(data, namespace=nw)
+    df = nw_dataframe(data)  # wraps with the main `narwhals` namespace by default
     assert df.shape == (3, 1)
 
 
 def test_laziness(nw_lazyframe: LazyFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    lf = nw_lazyframe(data, namespace=nw_v2)
+    lf = nw_lazyframe(data, namespace=nw_v2)  # opt in to a stable namespace
     assert isinstance(lf, nw_v2.LazyFrame)
 ```
 

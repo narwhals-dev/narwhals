@@ -56,7 +56,7 @@ def test_with_row_index_lazy_exception(constructor: Constructor) -> None:
     msg = r"(LazyFrame\.)?with_row_index\(\) missing 1 required keyword-only argument: 'order_by'$"
     if isinstance(frame, nw.LazyFrame):
         with pytest.raises(TypeError, match=msg):
-            frame.with_row_index()  # type: ignore[call-arg]
+            frame.with_row_index()  # pyright: ignore[reportCallIssue]  # pyrefly: ignore[missing-argument]
     else:
         result = frame.with_row_index()
         assert_equal_data(result, {"index": [0, 1], **data})

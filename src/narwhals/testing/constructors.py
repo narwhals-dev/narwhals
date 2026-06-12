@@ -171,7 +171,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self: frame_constructor[IntoDataFrameT],
         obj: Data,
         /,
-        namespace: NarwhalsNamespace,
+        namespace: NarwhalsNamespace | None = ...,
         **kwds: Any,
     ) -> DataFrame[IntoDataFrameT]: ...
     @overload
@@ -179,7 +179,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self: frame_constructor[IntoLazyFrameT],
         obj: Data,
         /,
-        namespace: NarwhalsNamespace,
+        namespace: NarwhalsNamespace | None = ...,
         **kwds: Any,
     ) -> LazyFrame[IntoLazyFrameT]: ...
     @overload
@@ -187,12 +187,12 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self: frame_constructor[IntoFrame],
         obj: Data,
         /,
-        namespace: NarwhalsNamespace,
+        namespace: NarwhalsNamespace | None = ...,
         **kwds: Any,
     ) -> DataFrame[IntoDataFrame] | LazyFrame[IntoLazyFrame]: ...
 
     def __call__(
-        self, obj: Data, /, namespace: NarwhalsNamespace, **kwds: Any
+        self, obj: Data, /, namespace: NarwhalsNamespace | None = None, **kwds: Any
     ) -> DataFrame[Any] | LazyFrame[Any]:
         """Build a native frame and wrap it with `namespace.from_native`.
 
@@ -200,8 +200,13 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
             obj: Column-oriented mapping passed to the wrapped builder.
             namespace: A narwhals namespace (e.g. `narwhals`, `narwhals.stable.v1`)
                 whose `from_native` performs the wrapping.
+                Defaults to the main `narwhals` namespace.
             **kwds: Forwarded to the wrapped builder.
         """
+        if namespace is None:
+            import narwhals
+
+            namespace = narwhals
         native = self.func(obj, **kwds)
         return namespace.from_native(native)  # type: ignore[no-any-return]
 

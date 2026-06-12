@@ -13,14 +13,14 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version
 from narwhals.dependencies import get_pandas
-from narwhals.translate import from_native
 
 # TODO(FBruzzesi): Replace these aliases once all the test suite migrates to *FrameConstructor's
-from tests.conftest import (
-    _PatchedDataFrameConstructor as ConstructorEager,
-    _PatchedDataFrameConstructor as ConstructorPandasLike,
-    _PatchedFrameConstructor as Constructor,
+from narwhals.testing.typing import (
+    DataFrameConstructor as ConstructorEager,
+    DataFrameConstructor as ConstructorPandasLike,
+    FrameConstructor as Constructor,
 )
+from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -17,15 +17,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from narwhals._typing import EagerAllowed
-    from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.testing.constructors import frame_constructor
-    from narwhals.testing.typing import (
-        Data,
-        DataFrameConstructor,
-        FrameConstructor,
-        NarwhalsNamespace,
-    )
-    from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame, NonNestedDType
+    from narwhals.testing.typing import DataFrameConstructor, FrameConstructor
+    from narwhals.typing import NonNestedDType
     from tests.utils import NestedOrEnumDType
 
 
@@ -123,68 +116,28 @@ def nested_dtype(request: pytest.FixtureRequest) -> NestedOrEnumDType:
     return dtype
 
 
-# The following fixtures are aliases of those registered in `narwhals/testing/pytest_plugin.py`,
-# wrapped so that calling them without an explicit `namespace` defaults to the main
-# `narwhals` namespace. Tests can still pass `nw_v1` / `nw_v2` explicitly to opt in
-# to a stable namespace; the legacy pattern `nw.from_native(constructor(data))` keeps
-# working because `nw.from_native` is idempotent on narwhals objects.
-# TODO(FBruzzesi): Drop these aliases once every test calls `nw_frame` / `nw_dataframe`
-# directly with an explicit namespace.
-
-
-class _PatchedFrameConstructor:
-    """Proxy over a `frame_constructor` defaulting `namespace` to `narwhals`.
-
-    Delegates attribute access, `str()`, and `repr()` to the wrapped instance
-    so that test helpers (e.g. `constructor.nan_is_null`, `"pandas" in str(constructor)`)
-    keep working unchanged.
-    """
-
-    __slots__ = ("_inner",)
-
-    def __init__(self, inner: frame_constructor[IntoFrame]) -> None:
-        self._inner = inner
-
-    def __call__(
-        self, obj: Data, /, namespace: NarwhalsNamespace = nw, **kwds: Any
-    ) -> DataFrame[IntoDataFrame] | LazyFrame[IntoLazyFrame]:
-        # NOTE: mypy resolves `self._inner(...)` to `DataFrame[IntoFrame]`, hence the cast.
-        return cast(
-            "DataFrame[IntoDataFrame] | LazyFrame[IntoLazyFrame]",
-            self._inner(obj, namespace=namespace, **kwds),
-        )
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._inner, name)
-
-    def __str__(self) -> str:
-        return str(self._inner)
-
-    def __repr__(self) -> str:
-        return repr(self._inner)
-
-
-class _PatchedDataFrameConstructor(_PatchedFrameConstructor):
-    def __call__(
-        self, obj: Data, /, namespace: NarwhalsNamespace = nw, **kwds: Any
-    ) -> DataFrame[IntoDataFrame]:
-        return cast(
-            "DataFrame[IntoDataFrame]", self._inner(obj, namespace=namespace, **kwds)
-        )
+# The following fixtures are short-name aliases of those registered in
+# `narwhals/testing/pytest_plugin.py`. Calling a constructor without an explicit
+# `namespace` defaults to the main `narwhals` namespace; tests can still pass
+# `nw_v1` / `nw_v2` explicitly to opt in to a stable namespace. The legacy pattern
+# `nw.from_native(constructor(data))` keeps working because `nw.from_native` is
+# idempotent on narwhals objects.
+# TODO(FBruzzesi): Drop these aliases once every test requests `nw_frame` /
+# `nw_dataframe` / `nw_pandas_like_frame` directly.
 
 
 @pytest.fixture
-def constructor(nw_frame: FrameConstructor) -> _PatchedFrameConstructor:
-    return _PatchedFrameConstructor(nw_frame)
+def constructor(nw_frame: FrameConstructor) -> FrameConstructor:
+    return nw_frame
 
 
 @pytest.fixture
-def constructor_eager(nw_dataframe: DataFrameConstructor) -> _PatchedDataFrameConstructor:
-    return _PatchedDataFrameConstructor(nw_dataframe)
+def constructor_eager(nw_dataframe: DataFrameConstructor) -> DataFrameConstructor:
+    return nw_dataframe
 
 
 @pytest.fixture
 def constructor_pandas_like(
     nw_pandas_like_frame: DataFrameConstructor,
-) -> _PatchedDataFrameConstructor:
-    return _PatchedDataFrameConstructor(nw_pandas_like_frame)
+) -> DataFrameConstructor:
+    return nw_pandas_like_frame
