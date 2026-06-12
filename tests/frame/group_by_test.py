@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import os
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -27,8 +26,6 @@ if TYPE_CHECKING:
 
 
 data: Mapping[str, Any] = {"a": [1, 1, 3], "b": [4, 4, 6], "c": [7.0, 8.0, 9.0]}
-
-POLARS_COLLECT_STREAMING_ENGINE = os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None)
 
 
 def test_group_by_complex() -> None:
@@ -84,7 +81,7 @@ def test_group_by_iter(constructor_eager: ConstructorEager) -> None:
             assert isinstance(sub_df, nw.DataFrame)
         keys.append(key)
     assert sorted(keys) == sorted(expected_keys)
-    expected_keys = [(1, 4), (3, 6)]  # type: ignore[list-item]
+    expected_keys = [(1, 4), (3, 6)]
     keys = []
     for key, _ in df.group_by("a", "b"):
         keys.append(key)
