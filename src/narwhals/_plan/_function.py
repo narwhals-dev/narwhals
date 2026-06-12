@@ -134,12 +134,6 @@ class Function(Immutable):
     And that's the main nugget we can use to answer the question:
     > Is this function valid *here*?
 
-    To customize the behavior, use the `flags` **parameter** [when subclassing]:
-
-        class FillNull(Function, flags=FunctionFlags.ELEMENTWISE): ...
-
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-
     See Also:
         [`FunctionFlags`][narwhals._plan._flags.FunctionFlags]
     """
@@ -214,7 +208,6 @@ class Function(Immutable):
         *,
         dispatch: DispatcherOptions | Literal["skip"] | None = None,
         dtype: IntoResolveDType[Self] | None = None,
-        flags: FunctionFlags | None = None,
         **_: Any,
     ) -> None:
         """Hook to [customize a new subclass] of `Function`.
@@ -232,16 +225,11 @@ class Function(Immutable):
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 
-            flags: Defines how a function transforms the shape of it's input.
-                Stored in `__function_flags__`.
-
         See Also:
             - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
             - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
         """
         super().__init_subclass__(**_)
-        if flags is not None:
-            cls.__function_flags__ = flags
         if dispatch != "skip":
             cls.__expr_ir_dispatch__ = FunctionDispatch.from_type(cls, dispatch)
         if dtype is not None:
