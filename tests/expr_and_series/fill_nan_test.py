@@ -23,8 +23,7 @@ def test_fill_nan(request: pytest.FixtureRequest, constructor: Constructor) -> N
     assert_equal_data(result, expected)
     assert result.lazy().collect()["float_na"].null_count() == 2
     result = df.select(nw.all().fill_nan(3.0))
-    if not constructor.is_nullable:
-        # no nan vs null distinction
+    if constructor.nan_is_null:
         expected = {"float": [-1.0, 1.0, 3.0], "float_na": [3.0, 1.0, 3.0]}
         assert result.lazy().collect()["float_na"].null_count() == 0
     elif "pandas" in str(constructor) and PANDAS_VERSION >= (3,):
@@ -42,8 +41,7 @@ def test_fill_nan_series(constructor_eager: ConstructorEager) -> None:
         "float_na"
     ]
     result = s.fill_nan(999)
-    if not constructor_eager.is_nullable:
-        # no nan vs null distinction
+    if constructor_eager.nan_is_null:
         assert_equal_data({"a": result}, {"a": [999.0, 1.0, 999.0]})
     elif "pandas" in str(constructor_eager) and PANDAS_VERSION >= (3,):
         assert_equal_data({"a": result}, {"a": [None, 1.0, None]})

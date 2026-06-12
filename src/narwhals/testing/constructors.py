@@ -106,7 +106,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         implementation: Implementation,
         requirements: tuple[str, ...] = (),
         is_eager: bool = False,
-        is_nullable: bool = True,
+        nan_is_null: bool = False,
         needs_gpu: bool = False,
         default_include: bool = True,
     ) -> None:
@@ -115,7 +115,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         self.implementation = implementation
         self.requirements = requirements
         self.is_eager = is_eager
-        self.is_nullable = is_nullable
+        self.nan_is_null = nan_is_null
         self.needs_gpu = needs_gpu
         self.default_include = default_include
 
@@ -127,7 +127,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         implementation: Implementation,
         requirements: tuple[str, ...] = (),
         is_eager: bool = False,
-        is_nullable: bool = True,
+        nan_is_null: bool = False,
         needs_gpu: bool = False,
         default_include: bool = True,
     ) -> Callable[[Callable[Concatenate[Data, ...], R]], frame_constructor[R]]:
@@ -139,7 +139,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
             requirements: Package names that must be importable for this constructor
                 to be available (checked via `importlib.util.find_spec`).
             is_eager: Whether the backend returns an eager dataframe.
-            is_nullable: Whether the backend has native null support.
+            nan_is_null: Whether floating-point NaN values are considered null.
             needs_gpu: Whether the backend requires GPU hardware.
             default_include: Whether this backend is included by default when running
                 `--all-nw-backends`. Set to `False` for backends that require
@@ -157,7 +157,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
                 implementation=implementation,
                 requirements=requirements,
                 is_eager=is_eager,
-                is_nullable=is_nullable,
+                nan_is_null=nan_is_null,
                 needs_gpu=needs_gpu,
                 default_include=default_include,
             )
@@ -310,7 +310,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
     implementation=Implementation.PANDAS,
     requirements=("pandas",),
     is_eager=True,
-    is_nullable=False,
+    nan_is_null=True,
 )
 def pandas_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
     import pandas as pd
@@ -359,7 +359,7 @@ def pyarrow_table_constructor(obj: Data, /, **kwds: Any) -> pa.Table:
     implementation=Implementation.MODIN,
     requirements=("modin",),
     is_eager=True,
-    is_nullable=False,
+    nan_is_null=True,
     default_include=False,
 )
 def modin_constructor(obj: Data, /, **kwds: Any) -> IntoDataFrame:  # pragma: no cover
@@ -427,7 +427,7 @@ def polars_lazy_constructor(obj: Data, /, **kwds: Any) -> pl.LazyFrame:
     name="dask",
     implementation=Implementation.DASK,
     requirements=("dask",),
-    is_nullable=False,
+    nan_is_null=True,
 )
 def dask_lazy_p2_constructor(
     obj: Data, /, npartitions: int = 2, **kwds: Any

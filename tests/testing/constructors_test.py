@@ -53,7 +53,7 @@ _IS_PROPERTY_CASES: list[tuple[PropertyName, TrueNames, FalseNames]] = [
     ("is_spark_like", {"pyspark", "sqlframe", "pyspark[connect]"}, {"pandas"}),
     ("is_lazy", {"polars[lazy]", "dask", "duckdb"}, {"pandas"}),
     ("needs_pyarrow", {"pyarrow", "duckdb", "ibis"}, {"pandas"}),
-    ("is_nullable", {"polars[eager]"}, {"pandas", "modin", "dask"}),
+    ("nan_is_null", {"pandas", "modin", "dask"}, {"polars[eager]"}),
 ]
 
 

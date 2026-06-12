@@ -20,7 +20,7 @@ def test_nan(constructor: Constructor) -> None:
     )
 
     expected: dict[str, list[Any]]
-    if not constructor.is_nullable:
+    if constructor.nan_is_null:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],
@@ -57,7 +57,7 @@ def test_nan_series(constructor_eager: ConstructorEager) -> None:
         "float_na": df["float_na"].is_nan(),
     }
     expected: dict[str, list[Any]]
-    if not constructor_eager.is_nullable:
+    if constructor_eager.nan_is_null:
         # Null values are coerced to NaN for non-nullable datatypes
         expected = {
             "int": [False, False, True],

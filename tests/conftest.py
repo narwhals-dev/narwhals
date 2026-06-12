@@ -136,7 +136,7 @@ class _PatchedFrameConstructor:
     """Proxy over a `frame_constructor` defaulting `namespace` to `narwhals`.
 
     Delegates attribute access, `str()`, and `repr()` to the wrapped instance
-    so that test helpers (e.g. `constructor.is_nullable`, `"pandas" in str(constructor)`)
+    so that test helpers (e.g. `constructor.nan_is_null`, `"pandas" in str(constructor)`)
     keep working unchanged.
     """
 
