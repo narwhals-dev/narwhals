@@ -4,7 +4,7 @@ import operator
 import warnings
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
@@ -436,10 +436,20 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
+            _df = self._concat_horizontal([a_series.native, b_series.native])
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=RuntimeWarning)
-                cov = a_series.native.cov(b_series.native, ddof=ddof)
-            return [self._series.from_iterable([cov], name=a_series.name, context=self)]
+                cov = _df.cov(ddof=ddof).iloc[0, [1]]  # type: ignore[union-attr]
+            n = cast("Incomplete", _df).count(axis=1).eq(2).sum()
+            if ddof == 0 and n == 1:
+                cov.iloc[0] = 0.0
+            elif n - ddof <= 0:
+                cov.iloc[0] = float("nan")
+            return [
+                PandasLikeSeries(
+                    cov, implementation=self._implementation, version=self._version
+                )
+            ]
 
         return self._expr._from_callable(
             func=func,
