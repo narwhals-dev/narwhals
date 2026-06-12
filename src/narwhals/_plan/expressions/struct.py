@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from narwhals._plan import _function as _f
 from narwhals._plan._dispatch import DispatcherOptions
-from narwhals._plan._function import Elementwise, Function, UnaryFunction
 from narwhals._plan.common import into_dtype
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._utils import Version
@@ -21,7 +21,7 @@ STRUCT = Version.MAIN.dtypes.Struct
 renamed = DispatcherOptions.renamed
 
 
-class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct")):
+class StructFunction(_f.Function, dispatch=DispatcherOptions(accessor_name="struct")):
     @classmethod
     def __function_expr__(cls) -> type[FromStructExpr[Any]]:
         from narwhals._plan.expressions import FromStructExpr
@@ -34,7 +34,9 @@ class StructFunction(Function, dispatch=DispatcherOptions(accessor_name="struct"
         raise NotImplementedError(msg)
 
 
-class FieldByName(UnaryFunction, StructFunction, Elementwise, dispatch=renamed("field")):
+class FieldByName(
+    _f.UnaryFunction, StructFunction, _f.Elementwise, dispatch=renamed("field")
+):
     __slots__ = ("name",)
     name: str
 

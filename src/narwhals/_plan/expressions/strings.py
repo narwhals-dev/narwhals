@@ -3,14 +3,9 @@ from __future__ import annotations
 from typing import ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _function as _f
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._function import (
-    BinaryFunction,
-    Elementwise,
-    HorizontalFunction,
-    UnaryFunction,
-)
 from narwhals._plan.expressions.namespace import IRNamespace
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
@@ -19,13 +14,13 @@ renamed = DispatcherOptions.renamed
 
 
 # fmt: off
-class StringFunction(Elementwise, dispatch=DispatcherOptions(accessor_name="str")): ...
-class _StringUnary(UnaryFunction, StringFunction): ...
+class StringFunction(_f.Elementwise, dispatch=DispatcherOptions(accessor_name="str")): ...
+class _StringUnary(_f.UnaryFunction, StringFunction): ...
 class LenChars(_StringUnary, dtype=dtm.U32): ...
 class ToLowercase(_StringUnary, dtype=same_dtype()): ...
 class ToUppercase(_StringUnary, dtype=same_dtype()): ...
 class ToTitlecase(_StringUnary, dtype=same_dtype()): ...
-class ConcatStr(HorizontalFunction, StringFunction, dispatch=DispatcherOptions(), dtype=dtm.STR):
+class ConcatStr(_f.HorizontalFunction, StringFunction, dispatch=DispatcherOptions(), dtype=dtm.STR):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
@@ -36,12 +31,12 @@ class Contains(_StringUnary, dtype=dtm.BOOL):
 class EndsWith(_StringUnary, dtype=dtm.BOOL):
     __slots__ = ("suffix",)
     suffix: str
-class Replace(BinaryFunction, StringFunction, dtype=same_dtype()):
+class Replace(_f.BinaryFunction, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "n", "pattern")
     pattern: str
     literal: bool
     n: int
-class ReplaceAll(BinaryFunction, StringFunction, dtype=same_dtype()):
+class ReplaceAll(_f.BinaryFunction, StringFunction, dtype=same_dtype()):
     __slots__ = ("literal", "pattern")
     pattern: str
     literal: bool

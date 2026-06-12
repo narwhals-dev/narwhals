@@ -9,19 +9,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import narwhals._plan.dtypes_mapper as dtm
+from narwhals._plan import _function as _f
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import (
-    Aggregation,
-    BinaryFunction,
-    Elementwise,
-    Function,
-    HorizontalFunction,
-    LengthPreserving,
-    RowSeparable,
-    TernaryFunction,
-    UnaryFunction,
-)
 from narwhals._plan.exceptions import duplicate_names_error, hist_bins_monotonic_error
 
 if TYPE_CHECKING:
@@ -53,22 +43,22 @@ same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
-class _UnarySameDType(UnaryFunction, dtype=same_dtype()): ...
-class Abs(_UnarySameDType, Elementwise): ...
-class NullCount(UnaryFunction, Aggregation, dtype=dtm.IDX_DTYPE): ...
-class Exp(UnaryFunction, Elementwise, dtype=map_first(dtm.float_dtype)): ...
-class Sqrt(UnaryFunction, Elementwise, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
-class Ceil(_UnarySameDType, Elementwise): ...
-class Floor(_UnarySameDType, Elementwise): ...
-class DropNulls(_UnarySameDType, RowSeparable): ...
+class _UnarySameDType(_f.UnaryFunction, dtype=same_dtype()): ...
+class Abs(_UnarySameDType, _f.Elementwise): ...
+class NullCount(_f.UnaryFunction, _f.Aggregation, dtype=dtm.IDX_DTYPE): ...
+class Exp(_f.UnaryFunction, _f.Elementwise, dtype=map_first(dtm.float_dtype)): ...
+class Sqrt(_f.UnaryFunction, _f.Elementwise, dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal)): ...
+class Ceil(_UnarySameDType, _f.Elementwise): ...
+class Floor(_UnarySameDType, _f.Elementwise): ...
+class DropNulls(_UnarySameDType, _f.RowSeparable): ...
 class ModeAll(_UnarySameDType): ...
-class ModeAny(_UnarySameDType, Aggregation): ...
-class Kurtosis(UnaryFunction, Aggregation, dtype=dtm.F64): ...
-class Skew(UnaryFunction, Aggregation, dtype=dtm.F64): ...
-class Clip(TernaryFunction, Elementwise, dtype=same_dtype()): ...
-class ClipLower(BinaryFunction, Elementwise, dtype=same_dtype()): ...
-class ClipUpper(BinaryFunction, Elementwise, dtype=same_dtype()): ...
-class CumAgg(UnaryFunction, LengthPreserving):
+class ModeAny(_UnarySameDType, _f.Aggregation): ...
+class Kurtosis(_f.UnaryFunction, _f.Aggregation, dtype=dtm.F64): ...
+class Skew(_f.UnaryFunction, _f.Aggregation, dtype=dtm.F64): ...
+class Clip(_f.TernaryFunction, _f.Elementwise, dtype=same_dtype()): ...
+class ClipLower(_f.BinaryFunction, _f.Elementwise, dtype=same_dtype()): ...
+class ClipUpper(_f.BinaryFunction, _f.Elementwise, dtype=same_dtype()): ...
+class CumAgg(_f.UnaryFunction, _f.LengthPreserving):
     __slots__ = ("reverse",)
     reverse: bool
 class CumCount(CumAgg, dtype=dtm.IDX_DTYPE): ...
@@ -76,7 +66,7 @@ class CumMin(CumAgg, dtype=same_dtype()): ...
 class CumMax(CumAgg, dtype=same_dtype()): ...
 class CumProd(CumAgg, dtype=map_first(dtm.cum_prod_dtype)): ...
 class CumSum(CumAgg, dtype=map_first(dtm.cum_sum_dtype)): ...
-class RollingWindow(UnaryFunction, LengthPreserving):
+class RollingWindow(_f.UnaryFunction, _f.LengthPreserving):
     __slots__ = ("options",)
     options: RollingOptions
 class RollingSum(RollingWindow, dtype=map_first(dtm.sum_dtype)): ...
@@ -85,19 +75,19 @@ class _RollingVarStd(RollingWindow):
     options: RollingVarOptions
 class RollingVar(_RollingVarStd, dtype=map_first(dtm.var_dtype)): ...
 class RollingStd(_RollingVarStd, dtype=map_first(dtm.moment_dtype)): ...
-class Diff(UnaryFunction, LengthPreserving, dtype=map_first(dtm.diff_dtype)): ...
+class Diff(_f.UnaryFunction, _f.LengthPreserving, dtype=map_first(dtm.diff_dtype)): ...
 class Unique(_UnarySameDType): ...
 # TODO @dangotbanned: `map_to_supertype` (`*Horizontal`)
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L45
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L402-L420
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L410-L420
 # - https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L806-L830
-class SumHorizontal(HorizontalFunction): ...
-class MinHorizontal(HorizontalFunction): ...
-class MaxHorizontal(HorizontalFunction): ...
-class Coalesce(HorizontalFunction): ...
+class SumHorizontal(_f.HorizontalFunction): ...
+class MinHorizontal(_f.HorizontalFunction): ...
+class MaxHorizontal(_f.HorizontalFunction): ...
+class Coalesce(_f.HorizontalFunction): ...
 # fmt: on
-class MeanHorizontal(HorizontalFunction):
+class MeanHorizontal(_f.HorizontalFunction):
     # TODO @dangotbanned: `map_to_supertype`
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
@@ -111,7 +101,7 @@ class MeanHorizontal(HorizontalFunction):
         return dtm.F64
 
 
-class AsStruct(HorizontalFunction):
+class AsStruct(_f.HorizontalFunction):
     def __repr__(self) -> str:
         return "struct"
 
@@ -141,7 +131,7 @@ class AsStruct(HorizontalFunction):
 
 
 class Hist(
-    UnaryFunction,
+    _f.UnaryFunction,
     # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L220-L243
     dtype=lambda f: (
         dtm.Struct({"breakpoint": dtm.F64, "count": dtm.IDX_DTYPE})
@@ -192,12 +182,12 @@ class HistBinCount(Hist):
     bin_count: int
 
 
-class Log(UnaryFunction, Elementwise, dtype=map_first(dtm.float_dtype)):
+class Log(_f.UnaryFunction, _f.Elementwise, dtype=map_first(dtm.float_dtype)):
     __slots__ = ("base",)
     base: float
 
 
-class Pow(BinaryFunction, Elementwise):
+class Pow(_f.BinaryFunction, _f.Elementwise):
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
     ) -> DType:  # pragma: no cover
@@ -207,7 +197,7 @@ class Pow(BinaryFunction, Elementwise):
         return base
 
 
-class FillNull(BinaryFunction, Elementwise):
+class FillNull(_f.BinaryFunction, _f.Elementwise):
     # TODO @dangotbanned: `map_to_supertype`
     def resolve_dtype(
         self, node: FunctionExpr[Self], schema: FrozenSchema, /
@@ -226,27 +216,27 @@ class FillNullWithStrategy(_UnarySameDType):
     limit: int | None
 
 
-class Shift(_UnarySameDType, LengthPreserving):
+class Shift(_UnarySameDType, _f.LengthPreserving):
     __slots__ = ("n",)
     n: int
 
 
 class Rank(
-    UnaryFunction,
+    _f.UnaryFunction,
     dtype=lambda f: dtm.F64 if f.options.method == "average" else dtm.IDX_DTYPE,
 ):
     __slots__ = ("options",)
     options: RankOptions
 
 
-class Round(_UnarySameDType, Elementwise):
+class Round(_UnarySameDType, _f.Elementwise):
     __slots__ = ("decimals",)
     decimals: int
 
 
 class EwmMean(
-    UnaryFunction,
-    LengthPreserving,
+    _f.UnaryFunction,
+    _f.LengthPreserving,
     dtype=map_first(dtm.numeric_to_float_dtype_coerce_decimal),
 ):
     __slots__ = ("options",)
@@ -278,14 +268,16 @@ def _replace_strict_dtype(
     raise NotImplementedError(msg)
 
 
-class ReplaceStrict(UnaryFunction, Elementwise, dtype=_replace_strict_dtype):
+class ReplaceStrict(_f.UnaryFunction, _f.Elementwise, dtype=_replace_strict_dtype):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
     return_dtype: DType | None
 
 
-class ReplaceStrictDefault(BinaryFunction, Elementwise, dtype=_replace_strict_dtype):
+class ReplaceStrictDefault(
+    _f.BinaryFunction, _f.Elementwise, dtype=_replace_strict_dtype
+):
     __slots__ = ("new", "old", "return_dtype")
     old: Seq[Any]
     new: Seq[Any]
@@ -298,7 +290,7 @@ class GatherEvery(_UnarySameDType):
     offset: int
 
 
-class MapBatches(UnaryFunction):
+class MapBatches(_f.UnaryFunction):
     __slots__ = ("flags", "function", "return_dtype")
     function: ct.MapBatchesFn
     return_dtype: DType | None
@@ -312,7 +304,7 @@ class MapBatches(UnaryFunction):
         is_elementwise: bool,
         returns_scalar: bool,
     ) -> MapBatches:
-        flags = Function.__function_flags__
+        flags = FunctionFlags.DEFAULT
         if is_elementwise:
             flags |= FunctionFlags.ELEMENTWISE
         if returns_scalar:

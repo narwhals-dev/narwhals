@@ -45,14 +45,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._plan import _function as _f
     from narwhals._plan._expansion import Expander
-    from narwhals._plan._function import (
-        BinaryFunction,
-        Function,
-        HorizontalFunction,
-        TernaryFunction,
-        UnaryFunction,
-    )
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions.functions import AsStruct, MapBatches  # noqa: F401
     from narwhals._plan.expressions.struct import StructFunction
@@ -61,12 +55,12 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType, Struct
 
 FunctionT_co = TypeVar(
-    "FunctionT_co", bound="Function", default="Function", covariant=True
+    "FunctionT_co", bound="_f.Function", default="_f.Function", covariant=True
 )
 HorizontalT_co = TypeVar(
     "HorizontalT_co",
-    bound="HorizontalFunction",
-    default="HorizontalFunction",
+    bound="_f.HorizontalFunction",
+    default="_f.HorizontalFunction",
     covariant=True,
 )
 StructT_co = TypeVar(
@@ -207,7 +201,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(args=(root, *children))
 
     def dispatch_arg(
-        self: FunctionExpr[UnaryFunction],
+        self: FunctionExpr[_f.UnaryFunction],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
@@ -230,28 +224,28 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 
     @overload
     def dispatch_args(
-        self: FunctionExpr[UnaryFunction],
+        self: FunctionExpr[_f.UnaryFunction],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq1[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[BinaryFunction],
+        self: FunctionExpr[_f.BinaryFunction],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq2[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[TernaryFunction],
+        self: FunctionExpr[_f.TernaryFunction],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq3[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[Function],
+        self: FunctionExpr[_f.Function],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,

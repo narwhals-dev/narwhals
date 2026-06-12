@@ -3,10 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 import narwhals._plan.dtypes_mapper as dtm
-from narwhals._plan import _parameters as params
+from narwhals._plan import _function as _f, _parameters as params
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._function import BinaryFunction, Elementwise, UnaryFunction
 from narwhals._plan.expressions.namespace import IRNamespace
 
 if TYPE_CHECKING:
@@ -25,8 +24,8 @@ same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
-class ListFunction(Elementwise, dispatch=DispatcherOptions(accessor_name="list")): ...
-class _ListUnary(UnaryFunction, ListFunction): ...
+class ListFunction(_f.Elementwise, dispatch=DispatcherOptions(accessor_name="list")): ...
+class _ListUnary(_f.UnaryFunction, ListFunction): ...
 class _ListInner(_ListUnary):
     def resolve_dtype(self, node: FExpr[Self], schema: FrozenSchema, /) -> DType:
         return dtm.inner_dtype(node.args[0].resolve_dtype(schema), repr(self))  # pragma: no cover
@@ -35,7 +34,7 @@ class Join(_ListUnary, dtype=map_first(dtm.list_join_dtype)):
     __slots__ = ("ignore_nulls", "separator")
     separator: str
     ignore_nulls: bool
-class Contains(BinaryFunction, ListFunction, dtype=dtm.BOOL):
+class Contains(_f.BinaryFunction, ListFunction, dtype=dtm.BOOL):
     __function_parameters__: ClassVar = params.Binary(right=params.SCALAR)
 class Any(_ListUnary, dtype=dtm.BOOL): ...
 class All(_ListUnary, dtype=dtm.BOOL): ...
