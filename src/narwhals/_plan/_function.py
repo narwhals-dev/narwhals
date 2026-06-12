@@ -56,7 +56,17 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
 
-__all__ = ("Function", "HorizontalFunction")
+__all__ = (
+    "Aggregation",
+    "BinaryFunction",
+    "Elementwise",
+    "Function",
+    "HorizontalFunction",
+    "LengthPreserving",
+    "RowSeparable",
+    "TernaryFunction",
+    "UnaryFunction",
+)
 
 
 class Function(Immutable):
