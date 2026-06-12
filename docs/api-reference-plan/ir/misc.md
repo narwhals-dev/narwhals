@@ -101,9 +101,6 @@ TODO @dangotbanned: Fix `prepare_projection`
         - parse_expand_selectors
         - Expander
 
-<!-- 
-TODO @dangotbanned: Fix formatting
--->
 
 ::: narwhals._plan._parameters
     options:
