@@ -358,10 +358,8 @@ def closed_kwds(
         >>> f = closed_kwds(a={"mutable": [1, 2, 3]}, b=[4, 5, 6])
         >>> hash(f) == hash(f)
         True
-
         >>> f == f
         True
-
         >>> f()
         mappingproxy({'a': {'mutable': [1, 2, 3]}, 'b': [4, 5, 6]})
 
@@ -381,8 +379,9 @@ def closed_kwds(
         ...     print("Second result   :", function())
 
         `"zero_copy"` may be reasonable if any of these apply:
+
         - all arguments are immutable
-        - their types do not support `copy.deepcopy`
+        - their types do not support [`copy.deepcopy`][]
         - making a single copy would be prohibitive
 
         >>> show_mutation("zero_copy", [1])
@@ -392,6 +391,7 @@ def closed_kwds(
         Second result   : {'a': 'dog', 'b': [1, 2, 3]}
 
         `"single_copy"` provides some extra safety and should be considered if:
+
         - at least one argument may be mutable
         - the returned function will only be called once
         - the result of the function will not be mutated
@@ -403,10 +403,11 @@ def closed_kwds(
         Second result   : {'a': 'dog', 'b': [1, 3]}
 
         `"reusable"` is both the safest and most expensive strategy, consider if:
+
         - both mutable arguments and updates to them are expected
         - the returned function will be called multiple times, and each should
             be isolated from previous calls
-        - the cost of `copy.deepcopy`(s) is small/irrelevant
+        - the cost of [`copy.deepcopy`][](s) is small/irrelevant
 
         >>> show_mutation("reusable", [1])
         First result    : {'a': 'dog', 'b': [1]}

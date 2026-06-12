@@ -113,10 +113,6 @@ TODO @dangotbanned: Fix `prepare_projection`
         - Constraint
         - Arity
 
-<!-- 
-TODO @dangotbanned: Fix formatting `closed_kwds` lists
--->
-
 ::: narwhals._plan.common
     options:
       members:
