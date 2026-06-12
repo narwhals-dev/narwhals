@@ -189,7 +189,7 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
         /,
         namespace: NarwhalsNamespace,
         **kwds: Any,
-    ) -> DataFrame[Any] | LazyFrame[Any]: ...
+    ) -> DataFrame[IntoDataFrame] | LazyFrame[IntoLazyFrame]: ...
 
     def __call__(
         self, obj: Data, /, namespace: NarwhalsNamespace, **kwds: Any

@@ -42,7 +42,9 @@ class DictLazyFrame:  # pragma: no cover
 def test_is_into_lazyframe(constructor: Constructor) -> None:
     native_frame = constructor(data).to_native()
     nw_frame = nw.from_native(native_frame)
-    nw_v1_frame = nw_v1.from_native(native_frame)
+    # NOTE: `type-var` because v1 `from_native` typing does not admit `NativeIbis`,
+    # which `IntoLazyFrame` (hence the constructor return) includes.
+    nw_v1_frame = nw_v1.from_native(native_frame)  # type: ignore[type-var]
     nw_v2_frame = nw_v2.from_native(native_frame)
 
     result = not any(x in str(constructor) for x in EAGER_CONSTRUCTOR_NAMES)

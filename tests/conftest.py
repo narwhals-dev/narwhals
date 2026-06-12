@@ -25,7 +25,7 @@ if TYPE_CHECKING:
         FrameConstructor,
         NarwhalsNamespace,
     )
-    from narwhals.typing import IntoFrame, NonNestedDType
+    from narwhals.typing import IntoDataFrame, IntoFrame, IntoLazyFrame, NonNestedDType
     from tests.utils import NestedOrEnumDType
 
 
@@ -147,8 +147,12 @@ class _PatchedFrameConstructor:
 
     def __call__(
         self, obj: Data, /, namespace: NarwhalsNamespace = nw, **kwds: Any
-    ) -> DataFrame[Any] | LazyFrame[Any]:
-        return self._inner(obj, namespace=namespace, **kwds)
+    ) -> DataFrame[IntoDataFrame] | LazyFrame[IntoLazyFrame]:
+        # NOTE: mypy resolves `self._inner(...)` to `DataFrame[IntoFrame]`, hence the cast.
+        return cast(
+            "DataFrame[IntoDataFrame] | LazyFrame[IntoLazyFrame]",
+            self._inner(obj, namespace=namespace, **kwds),
+        )
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._inner, name)
@@ -163,8 +167,10 @@ class _PatchedFrameConstructor:
 class _PatchedDataFrameConstructor(_PatchedFrameConstructor):
     def __call__(
         self, obj: Data, /, namespace: NarwhalsNamespace = nw, **kwds: Any
-    ) -> DataFrame[Any]:
-        return cast("DataFrame[Any]", self._inner(obj, namespace=namespace, **kwds))
+    ) -> DataFrame[IntoDataFrame]:
+        return cast(
+            "DataFrame[IntoDataFrame]", self._inner(obj, namespace=namespace, **kwds)
+        )
 
 
 @pytest.fixture

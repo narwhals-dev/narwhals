@@ -581,7 +581,9 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).to_native().dtypes.to_dict()  # type: ignore[no-any-return]
+    # NOTE: `attr-defined` because the `IntoDataFrame` protocol does not declare `.dtypes`.
+    # At runtime the constructor is guaranteed to be pandas-like.
+    return constructor_pandas_like(data).to_native().dtypes.to_dict()  # type: ignore[attr-defined, no-any-return]
 
 
 @pytest.fixture
@@ -606,7 +608,8 @@ def origin_pandas_like_pyarrow(
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )
-    return df_nw.to_native().dtypes.to_dict()  # type: ignore[no-any-return]
+    # NOTE: `attr-defined` for the same reason as `origin_pandas_like` above.
+    return df_nw.to_native().dtypes.to_dict()  # type: ignore[attr-defined, no-any-return]
 
 
 def test_schema_from_polars(
