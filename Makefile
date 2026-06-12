@@ -3,6 +3,14 @@
 
 .DEFAULT_GOAL := help
 
+# coverage's execv/fork patches raise on Windows; collapse them to `subprocess`
+# there (coverage dedupes) and keep the default values elsewhere.
+# See `tool.coverage.run.patch` in pyproject.toml.
+ifeq ($(OS),Windows_NT)
+export COVERAGE_PATCH_EXECV ?= subprocess
+export COVERAGE_PATCH_FORK ?= subprocess
+endif
+
 .PHONY: help
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m"

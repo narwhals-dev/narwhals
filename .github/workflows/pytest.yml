@@ -33,11 +33,6 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
         shell: bash
-        env:
-          # coverage's execv/fork patches raise on Windows; collapse to `subprocess`
-          # there (coverage dedupes) and keep the default values on Linux.
-          COVERAGE_PATCH_EXECV: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'execv' }}
-          COVERAGE_PATCH_FORK: ${{ matrix.os == 'windows-latest' && 'subprocess' || 'fork' }}
         run: make run-ci-coverage DEPS="--group tests --group plugins --extra pandas --extra polars --extra pyarrow" FAIL_UNDER="75" CMD="pytest tests --nw-backends=pandas,pyarrow,polars[eager],polars[lazy]"
 
   pytest-windows:
@@ -47,11 +42,6 @@ jobs:
         python-version: ["3.10", "3.13"]
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      # coverage's execv/fork patches raise on Windows; collapse them to `subprocess`
-      # in the pyproject `patch` list (coverage dedupes).
-      COVERAGE_PATCH_EXECV: subprocess
-      COVERAGE_PATCH_FORK: subprocess
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Install uv
