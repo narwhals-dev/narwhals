@@ -7,7 +7,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 
-data: dict[str, list[Any]] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
+data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
 
 class InterchangeDataFrame:

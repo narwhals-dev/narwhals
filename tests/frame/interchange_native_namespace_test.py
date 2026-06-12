@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals.stable.v1 as nw_v1
@@ -9,7 +7,7 @@ import narwhals.stable.v1 as nw_v1
 pytest.importorskip("polars")
 import polars as pl
 
-data: dict[str, list[Any]] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
 
 def test_interchange() -> None:

@@ -8,7 +8,7 @@ from narwhals._typing_compat import TypeVar
 if TYPE_CHECKING:
     from typing import TypeAlias
 
-    from narwhals._native import NativeDataFrame, NativeDuckDB, NativeLazyFrame
+    from narwhals._native import NativeDataFrame, NativeLazyFrame
     from narwhals.stable.v1 import DataFrame, Expr, LazyFrame, Series
 
     class DataFrameLike(Protocol):
