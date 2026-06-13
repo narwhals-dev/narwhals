@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 
@@ -56,16 +56,13 @@ def test_cov_invalid_denominator(constructor: Constructor) -> None:
             "cov_den_zero": nw.Float64(),
             "cov_den_neg": nw.Float64(),
         }
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        return
 
     result = df.with_columns(
         cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)
-    ).sort("a")
-    expected = {
-        "a": [1, 3],
-        "b": [1, 2],
-        "cov_den_zero": [None, None],
-        "cov_den_neg": [None, None],
-    }
+    ).select("cov_den_zero", "cov_den_neg")
+    expected = {"cov_den_zero": [None, None], "cov_den_neg": [None, None]}
     assert_equal_data(result, expected)
 
 

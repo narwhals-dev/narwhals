@@ -34,7 +34,6 @@ class PolarsNamespace:
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
     corr: Method[PolarsExpr]
-    cov: Method[PolarsExpr]
 
     _implementation: Implementation = Implementation.POLARS
     _version: Version
@@ -122,6 +121,17 @@ class PolarsNamespace:
         if self._backend_version < (0, 20, 5):
             return self._expr(pl.count().alias("len"), self._version)
         return self._expr(pl.len(), self._version)
+
+    def cov(self, a: PolarsExpr, b: PolarsExpr, *, ddof: int) -> PolarsExpr:
+        native = pl.cov(a.native, b.native, ddof=ddof)
+        n_samples = (a.native.is_not_null() & b.native.is_not_null()).sum()
+        result = (
+            pl.when(n_samples <= pl.lit(ddof))
+            .then(pl.lit(None, dtype=pl.Float64))
+            .otherwise(native)
+            .alias(native.meta.output_name())
+        )
+        return self._expr(result, self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
         it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
