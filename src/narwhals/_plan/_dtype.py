@@ -1,78 +1,23 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol
 
 from narwhals._plan._guards import is_binary_expr, is_function_expr
 from narwhals._plan._meta import SlottedMeta
 from narwhals._typing_compat import TypeVar
+from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
     from typing import TypeAlias
 
     from typing_extensions import Self, TypeIs
 
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
 
-
-# NOTE: `Col` is the exception, which uses `schema[self.name]` and so it is manually defined
-# rather than accepting 2 arguments here and ignoring in all other cases
-T = TypeVar("T")
-Visitor: TypeAlias = "Callable[[T], DType]"
-"""A function requiring a single argument to derive the resolved `DType`."""
-
-# TODO @dangotbanned: (HIGH PRIORITY) Comment explaining what rules are being followed to get markdown happy everywhere
-# https://facelessuser.github.io/pymdown-extensions/extensions/superfences/
-IntoResolveDType: TypeAlias = "DType | ResolveDType[Any] | Callable[[T], DType]"
-"""Anything that can be converted into a `ResolveDType`.
-
-When passed as `__init_subclass__(dtype=...)`, any of the following forms are accepted:
-
-1. An existing instance of `ResolveDType`
-
-    ```
-    ResolveDType.get_dtype()
-    ResolveDType.expr_ir.same_dtype()
-    ResolveDType.function.map_first(lambda dtype: dtype if dtype.is_integer() else Boolean())
-    ```
-
-2. A constant `DType`
-
-    ```
-    UInt32()
-    String()
-    Float64()
-    ```
-
-    Which is equivalent to
-
-    ```
-    dtype=ResolveDType.just_dtype(dtype)
-    ```
-
-3. A visitor function, that will be called on an instance of the enclosing class
-
-    ```
-    lambda hist: (
-        Struct({"breakpoint": Float64(), "count": Int64()})
-        if hist.include_breakpoint
-        else Int64()
-    )
-    lambda rank: Float64() if rank.options.method == "average" else Int64()
-    ```
-
-    Which is equivalent to either [^1]
-
-    ```
-    dtype=ResolveDType.function.visitor(dtype)
-    dtype=ResolveDType.expr_ir.visitor(dtype)
-    ```
-
-    [^1]: Depending on the base class
-"""
 
 # fmt: off
 # NOTE: Structural typing to prevent cycles
@@ -353,3 +298,60 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
 
 def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
     return is_function_expr(node)
+
+
+# NOTE: `Col` is the exception, which uses `schema[self.name]` and so it is manually defined
+# rather than accepting 2 arguments here and ignoring in all other cases
+T = TypeVar("T")
+Visitor: TypeAlias = Callable[[T], DType]
+"""A function requiring a single argument to derive the resolved `DType`."""
+
+# TODO @dangotbanned: (HIGH PRIORITY) Comment explaining what rules are being followed to get markdown happy everywhere
+# https://facelessuser.github.io/pymdown-extensions/extensions/superfences/
+IntoResolveDType: TypeAlias = DType | ResolveDType[Any] | Visitor[T]
+"""Anything that can be converted into a `ResolveDType`.
+
+When passed as `__init_subclass__(dtype=...)`, any of the following forms are accepted:
+
+1. An existing instance of `ResolveDType`
+
+    ```
+    ResolveDType.get_dtype()
+    ResolveDType.expr_ir.same_dtype()
+    ResolveDType.function.map_first(lambda dtype: dtype if dtype.is_integer() else Boolean())
+    ```
+
+2. A constant `DType`
+
+    ```
+    UInt32()
+    String()
+    Float64()
+    ```
+
+    Which is equivalent to
+
+    ```
+    dtype=ResolveDType.just_dtype(dtype)
+    ```
+
+3. A visitor function, that will be called on an instance of the enclosing class
+
+    ```
+    lambda hist: (
+        Struct({"breakpoint": Float64(), "count": Int64()})
+        if hist.include_breakpoint
+        else Int64()
+    )
+    lambda rank: Float64() if rank.options.method == "average" else Int64()
+    ```
+
+    Which is equivalent to either [^1]
+
+    ```
+    dtype=ResolveDType.function.visitor(dtype)
+    dtype=ResolveDType.expr_ir.visitor(dtype)
+    ```
+
+    [^1]: Depending on the base class
+"""
