@@ -128,6 +128,9 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
     Warning:
         By default, this operation is unsupported and when called `ResolveDType` will raise an
         appropriate error.
+
+    See Also:
+        [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
     """
 
     __slots__ = ()
@@ -321,7 +324,7 @@ IntoResolveDType: TypeAlias = DType | ResolveDType[Any] | Visitor[T]
 
 When passed as `__init_subclass__(dtype=...)`, any of the following forms are accepted:
 
-1. An existing instance of `ResolveDType`
+1. An existing instance of [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
 
     ```
     ResolveDType.get_dtype()
@@ -329,7 +332,7 @@ When passed as `__init_subclass__(dtype=...)`, any of the following forms are ac
     ResolveDType.function.map_first(lambda dtype: dtype if dtype.is_integer() else Boolean())
     ```
 
-2. A constant `DType`
+2. A constant [`DType`][narwhals.dtypes]
 
     ```
     UInt32()
@@ -362,4 +365,8 @@ When passed as `__init_subclass__(dtype=...)`, any of the following forms are ac
     ```
 
     [^1]: Depending on the base class
+
+See Also:
+    - [`ExprIR.__init_subclass__`][narwhals._plan.expressions.ExprIR.__init_subclass__]
+    - [`Function.__init_subclass__`][narwhals._plan._function.Function.__init_subclass__]
 """
