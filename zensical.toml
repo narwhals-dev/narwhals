@@ -99,6 +99,7 @@ nav = [
         ]},
         "api-reference-plan/selectors.md", 
         "api-reference-plan/series.md", 
+        "api-reference-plan/plugins.md", 
         { "IR" = [
             "api-reference-plan/ir/index.md",
             { "ExprIR" = [
