@@ -87,11 +87,6 @@ TODO @dangotbanned: Fix formatting
           - IntoResolveDType
           - Visitor
 
-<!-- 
-TODO @dangotbanned: Module doc was due to be deleted, has bad formatting too
-TODO @dangotbanned: Fix `Expander`
-TODO @dangotbanned: Fix `prepare_projection`
--->
 
 ::: narwhals._plan._expansion
     options:

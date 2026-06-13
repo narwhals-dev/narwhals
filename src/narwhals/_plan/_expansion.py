@@ -70,13 +70,15 @@ def prepare_projection(
 
     Entry-point for a [projection context], which will execute the resolved expressions.
 
+    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
+
     Arguments:
         exprs: Expressions to project.
         ignored: Names of `group_by` key columns.
-            Required for projecting aggregations in `group_by`.
-        schema: Scope to expand selectors, validate selections and resolve renaming operations.
 
-    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
+            Required when projecting aggregations in `group_by`.
+
+        schema: Scope to expand selectors, validate selections and resolve renaming operations.
     """
     expander = Expander(schema, ignored)
     projected, _ = expander.prepare_projection(exprs)
@@ -92,14 +94,18 @@ def expand_selectors(
 ) -> OutputNames:
     """Expand selectors into the column names that match.
 
-    Provides selector-support (widely) across frame-level APIs, where the full scope of
-    `prepare_projection` is not required.
+    Provides selector-support (widely) across frame-level APIs.
 
     Arguments:
         selectors: Exclusively selector-only input.
         schema: Scope to expand selectors in.
         require_any: If True (default) raise if the entire expansion selected zero columns.
             If False, we can always defer iterator collection until finishing expansion.
+
+    Tip:
+        As this is cheaper, prefer it to [`prepare_projection`][narwhals._plan._expansion.prepare_projection] when
+        all you need is fancy selection.
+
     """
     return Expander(schema).expand_selectors(selectors, require_any=require_any)
 
@@ -147,9 +153,7 @@ class Expander:
         ignored: Names of `group_by` key columns.
 
     Important:
-        Adapted from [upstream].
-
-    [upstream]: https://github.com/pola-rs/polars/blob/3291151b5a0e6fa82658cbad5f9b9c6aec3905a6/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs
+        Adapted from [upstream](https://github.com/pola-rs/polars/blob/3291151b5a0e6fa82658cbad5f9b9c6aec3905a6/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs).
     """
 
     __slots__ = ("ignored", "schema")
