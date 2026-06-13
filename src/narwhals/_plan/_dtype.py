@@ -1,3 +1,16 @@
+"""Sugar for writing `resolve_dtype` methods.
+
+<!--BEGIN: IMPL NOTES-->
+## Implementation Notes
+`ResolveDType` constructors are based on patterns observed in a few places upstream:
+
+- [`AExpr.to_field_impl`](https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L877)
+- [`IRFunctionExpr.get_field`](https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rsL6-L463)
+- [`FieldsMapper`](https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L476-L838)
+
+<!--END: IMPL NOTES-->
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
