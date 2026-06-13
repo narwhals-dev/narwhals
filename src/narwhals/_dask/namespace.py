@@ -23,11 +23,9 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation, is_nested_literal, not_implemented
-from narwhals.dependencies import get_dask
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
-    from typing import Any
 
     import dask.dataframe.dask_expr as dx
 
@@ -345,22 +343,18 @@ class DaskNamespace(
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
+            # `Series.cov` is sample covariance (ddof=1); rescale it by
+            # (n - 1) / (n - ddof) for other ddof values.
+            cov_samp = a_.cov(b_).to_series()
             if ddof == 1:
-                return [a_.cov(b_).to_series()]
+                return [cov_samp]
 
-            def _adjust_cov(cov: float, n: int) -> pd.Series[Any]:
-                if ddof == 0 and n == 1:
-                    value = 0.0
-                else:
-                    value = float("nan") if n - ddof <= 0 else cov * (n - 1) / (n - ddof)
-                return pd.Series([value], name=a_.name)
-
-            valid = ~a_.isna() & ~b_.isna()
-            dask = get_dask()
-            assert dask is not None  # noqa: S101
-            delayed = dask.delayed(_adjust_cov)(a_.cov(b_), valid.sum())
-            meta = pd.Series([], dtype="float64", name=a_.name)
-            return [dd.from_delayed([delayed], meta=meta)]
+            n_samples = (~a_.isna() & ~b_.isna()).sum().to_series()
+            denominator = n_samples - ddof
+            result = cov_samp * (n_samples - 1) / denominator.where(denominator > 0)
+            if ddof == 0:
+                result = result.where(n_samples != 1, 0.0)
+            return [result.rename(a_.name)]
 
         return self._expr(
             call=func,

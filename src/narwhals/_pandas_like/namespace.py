@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import TypeAlias
 
+    import pandas as pd
+
     from narwhals._utils import Implementation, Version
     from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
 
@@ -436,19 +438,19 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = self._concat_horizontal([a_series.native, b_series.native])
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=RuntimeWarning)
-                cov = _df.cov(ddof=ddof).iloc[0, [1]]  # type: ignore[union-attr]
-            n = cast("Incomplete", _df).count(axis=1).eq(2).sum()
+            _df = cast(
+                "pd.DataFrame",
+                self._concat_horizontal([a_series.native, b_series.native]),
+            )
+            n = _df.count(axis=1).eq(2).sum()
             if ddof == 0 and n == 1:
-                cov.iloc[0] = 0.0
+                value = 0.0
             elif n - ddof <= 0:
-                cov.iloc[0] = float("nan")
+                value = float("nan")
+            else:
+                value = _df.cov(ddof=ddof).iloc[0, 1]
             return [
-                PandasLikeSeries(
-                    cov, implementation=self._implementation, version=self._version
-                )
+                PandasLikeSeries.from_iterable([value], context=self, name=a_series.name)
             ]
 
         return self._expr._from_callable(
