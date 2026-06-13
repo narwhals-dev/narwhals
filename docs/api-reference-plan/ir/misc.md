@@ -47,10 +47,6 @@ somewhere less private
       members:
         - FunctionFlags
 
-<!-- 
-TODO @dangotbanned: Fix formatting
-TODO @dangotbanned: Docs contain an idea for rewriting them ffs
--->
 
 ::: narwhals._plan._dispatch
     options:
