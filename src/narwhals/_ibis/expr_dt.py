@@ -64,7 +64,8 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
         if unit == "ns":
             msg = "Offsetting by nanoseconds is not yet supported for ibis."
             raise NotImplementedError(msg)
-        offset = ibis.interval(**{UNITS_DICT_BUCKET[unit]: multiple})
+        kwds: dict[BucketUnit, Any] = {UNITS_DICT_BUCKET[unit]: multiple}
+        offset = ibis.interval(**kwds)
 
         def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
             # Ibis stores timezone-aware data as UTC, so calendar offsets are
