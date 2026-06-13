@@ -137,9 +137,6 @@ TODO @dangotbanned: Fix `prepare_projection`
         - JoinAsofOptions
         - UnpivotOptions
 
-<!-- 
-TODO @dangotbanned: Fix formatting `FrozenSchema` links
--->
 
 ::: narwhals._plan.schema
     options:
