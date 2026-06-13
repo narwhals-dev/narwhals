@@ -66,28 +66,26 @@ class Bind(Protocol[Expr_contra]):
 Bound: TypeAlias = "Callable[[Expr, ct.FrameAny, str], ct.E | ct.SC]"
 
 
-# TODO @dangotbanned: Pick a focus for the docstring and start again
 class Dispatch(Generic[Expr]):
     """Dispatch an expression to the compliant-level.
 
-    Translates `ExprIR` and `Function` definitions into error-wrapped method calls, and stores in ``__expr_ir_dispatch__`.
+    Translates `ExprIR` and `Function` definitions into error-wrapped method calls.
 
-    By default, we dispatch to the compliant-level by calling a method that is the
-    **snake_case**-equivalent of the class name:
+    See Also:
+        - [`ExprIR.__expr_ir_dispatch__`][narwhals._plan.expressions.ExprIR.__expr_ir_dispatch__]
+        - [`Function.__expr_ir_dispatch__`][narwhals._plan._function.Function.__expr_ir_dispatch__]
 
-        class BinaryExpr(ExprIR): ...
+    ## Notes
+    For a given expression, we want to answer:
 
-        class CompliantExpr(Protocol):
-            def binary_expr(self, *args: Any): ...
-
-    ## Rewrite idea
-    For a given `Node`, we want to answer:
     1. What is the name of the method we need to call?
     2. Is that name an instance method or do we need to access it from somewhere else?
     3. Once we know where to look, did we actually find the method?
     4. If we found it, did calling it return a value?
 
-    If all goes well - these steps are equivalent to just calling the method directly (if we knew the name at the start).
+    If all goes well - these steps are equivalent to just calling the method directly[^1].
+
+    [^1]: if we knew the method name already
 
     If something goes wrong though - we'd like to raise a more helpful error than this:
 
