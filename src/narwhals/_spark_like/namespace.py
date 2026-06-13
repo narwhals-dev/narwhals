@@ -254,6 +254,12 @@ class SparkLikeNamespace(
         )
 
     def cov(self, a: SparkLikeExpr, b: SparkLikeExpr, *, ddof: int) -> SparkLikeExpr:
+        def _rescale_cov(covar_samp: Column, n_samples: Column) -> Column:
+            F = self._F
+            denominator = n_samples - F.lit(ddof)
+            rescaled = covar_samp * ((n_samples - F.lit(1)) / denominator)
+            return F.when(denominator <= F.lit(0), F.lit(None)).otherwise(rescaled)
+
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F
             a_ = df._evaluate_single_output_expr(a)
@@ -264,12 +270,28 @@ class SparkLikeNamespace(
                 return [F.covar_samp(a_, b_)]
             is_valid = a_.isNotNull() & b_.isNotNull()
             n_samples = F.sum(F.when(is_valid, F.lit(1)).otherwise(F.lit(0)))
-            denominator = n_samples - F.lit(ddof)
-            rescaled = F.covar_samp(a_, b_) * ((n_samples - F.lit(1)) / denominator)
-            return [F.when(denominator <= F.lit(0), F.lit(None)).otherwise(rescaled)]
+            return [_rescale_cov(F.covar_samp(a_, b_), n_samples)]
+
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: WindowInputs[Column]
+        ) -> list[Column]:
+            assert not inputs.order_by  # noqa: S101
+            F = self._F
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            window = df._Window.partitionBy(*(inputs.partition_by or [F.lit(1)]))
+            if ddof == 0:
+                return [F.covar_pop(a_, b_).over(window)]
+            if ddof == 1:
+                return [F.covar_samp(a_, b_).over(window)]
+            is_valid = a_.isNotNull() & b_.isNotNull()
+            n_samples = F.sum(F.when(is_valid, F.lit(1)).otherwise(F.lit(0))).over(window)
+            covar_samp = F.covar_samp(a_, b_).over(window)
+            return [_rescale_cov(covar_samp, n_samples)]
 
         return self._expr(
             call=func,
+            window_function=window_f,
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
