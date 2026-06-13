@@ -1,19 +1,13 @@
-# TODO @dangotbanned: (medium-priority) Module doc is a bit dated
-# - Does this still reflect current narwhals?
-# - Is this content useful to see here?
 """Expanding expressions/selectors.
 
-Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
-
-## Notes
-- Goal is to expand every selection into a named column.
-- Most will require only the column names of the schema.
+<!-- NOTE: Very dated doc that I should probably turn into a *Why?* section
 
 ## Current `narwhals`
 As of [6e57eff4f059c748cf84ddcae276a74318720b85], many of the problems
 this module would solve *currently* have solutions distributed throughout `narwhals`.
 
 Their dependencies are **quite** complex, with the main ones being:
+
 - `CompliantExpr`
   - _evaluate_output_names
     - `CompliantSelector.__(sub|or|and|invert)__`
@@ -38,6 +32,7 @@ Their dependencies are **quite** complex, with the main ones being:
 
 [polars-plan/src/plans/conversion/expr_expansion.rs]: https://github.com/pola-rs/polars/blob/df4d21c30c2b383b651e194f8263244f2afaeda3/crates/polars-plan/src/plans/conversion/expr_expansion.rs
 [6e57eff4f059c748cf84ddcae276a74318720b85]: https://github.com/narwhals-dev/narwhals/commit/6e57eff4f059c748cf84ddcae276a74318720b85
+-->
 """
 
 from __future__ import annotations
