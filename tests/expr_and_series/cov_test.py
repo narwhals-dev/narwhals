@@ -44,6 +44,31 @@ def test_cov_single_valid_pair_population(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_cov_invalid_denominator(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 3], "b": [1, 2]}))
+    result = df.select(
+        cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)
+    )
+    expected = {"cov_den_zero": [None], "cov_den_neg": [None]}
+    assert_equal_data(result, expected)
+    if result.implementation.is_pyarrow():
+        assert result.schema == {
+            "cov_den_zero": nw.Float64(),
+            "cov_den_neg": nw.Float64(),
+        }
+
+    result = df.with_columns(
+        cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)
+    ).sort("a")
+    expected = {
+        "a": [1, 3],
+        "b": [1, 2],
+        "cov_den_zero": [None, None],
+        "cov_den_neg": [None, None],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_cov_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(

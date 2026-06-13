@@ -352,7 +352,7 @@ class DaskNamespace(
                 if ddof == 0 and n == 1:
                     value = 0.0
                 else:
-                    value = float("nan") if n == ddof else cov * (n - 1) / (n - ddof)
+                    value = float("nan") if n - ddof <= 0 else cov * (n - 1) / (n - ddof)
                 return pd.Series([value], name=a_.name)
 
             valid = ~a_.isna() & ~b_.isna()

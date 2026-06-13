@@ -321,8 +321,14 @@ class ArrowNamespace(
             dev1 = pc.subtract(arr1, mean1)
             dev2 = pc.subtract(arr2, mean2)
             numerator = pc.sum(pc.multiply(dev1, dev2))
-            denominator = pc.subtract(pc.count(arr1), pa.scalar(ddof))
-            covariance = pc.divide(numerator, denominator)
+            n = pc.count(arr1).as_py()
+            if ddof == 0 and n == 1:
+                covariance = 0.0
+            elif n - ddof <= 0:
+                covariance = pa.scalar(None, type=pa.float64())
+            else:
+                denominator = pc.subtract(pa.scalar(n), pa.scalar(ddof))
+                covariance = pc.divide(numerator, denominator)
             return [
                 ArrowSeries.from_iterable(
                     data=[covariance], name=a_series.name, context=self

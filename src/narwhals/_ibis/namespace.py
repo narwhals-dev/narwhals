@@ -178,7 +178,9 @@ class IbisNamespace(
             if ddof == 1:
                 return [a_.cov(b_, how="sample")]
             n_samples = a_.count(where=a_.notnull() & b_.notnull())
-            return [a_.cov(b_, how="sample") * ((n_samples - 1) / (n_samples - ddof))]
+            denominator = n_samples - ddof
+            rescaled = a_.cov(b_, how="sample") * ((n_samples - 1) / denominator)
+            return [self._when(denominator <= lit(0), lit(None), rescaled)]
 
         return self._expr(
             func,

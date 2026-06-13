@@ -266,7 +266,7 @@ class SparkLikeNamespace(
             n_samples = F.sum(F.when(is_valid, F.lit(1)).otherwise(F.lit(0)))
             denominator = n_samples - F.lit(ddof)
             rescaled = F.covar_samp(a_, b_) * ((n_samples - F.lit(1)) / denominator)
-            return [F.when(denominator == F.lit(0), F.lit(None)).otherwise(rescaled)]
+            return [F.when(denominator <= F.lit(0), F.lit(None)).otherwise(rescaled)]
 
         return self._expr(
             call=func,

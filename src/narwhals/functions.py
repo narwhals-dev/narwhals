@@ -1316,6 +1316,11 @@ def cov(a: IntoExpr, b: IntoExpr, *, ddof: int = 1) -> Expr:
         ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
             where N represents the number of elements. By default ddof is 1.
 
+    Notes:
+        In a ``group_by().agg(...)`` context, pandas-like backends use Narwhals'
+        slow complex-aggregation path, and PyArrow does not support this complex
+        aggregation.
+
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
