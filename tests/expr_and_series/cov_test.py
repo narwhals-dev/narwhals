@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
@@ -63,6 +65,37 @@ def test_cov_invalid_denominator(constructor: Constructor) -> None:
         cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)
     ).select("cov_den_zero", "cov_den_neg")
     expected = {"cov_den_zero": [None, None], "cov_den_neg": [None, None]}
+    assert_equal_data(result, expected)
+
+
+def test_cov_over(constructor: Constructor) -> None:
+    if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
+    df = nw.from_native(
+        constructor(
+            {
+                "i": [0, 1, 2, 3, 4],
+                "g": [1, 1, 1, 2, 2],
+                "a": [1, 3, 3, 2, 4],
+                "b": [1, 2, 3, 1, 5],
+            }
+        )
+    )
+    result = (
+        df.with_columns(
+            sample=nw.cov("a", "b").over("g"),
+            population=nw.cov("a", "b", ddof=0).over("g"),
+        )
+        .sort("i")
+        .select("sample", "population")
+    )
+    expected = {
+        "sample": [1.0, 1.0, 1.0, 4.0, 4.0],
+        "population": [2 / 3, 2 / 3, 2 / 3, 2.0, 2.0],
+    }
     assert_equal_data(result, expected)
 
 
