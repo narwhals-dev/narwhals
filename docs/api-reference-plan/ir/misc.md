@@ -65,25 +65,14 @@ TODO @dangotbanned: Docs contain an idea for rewriting them ffs
           - NoDispatch
           - get_dispatch_name
 
-<!-- 
-TODO @dangotbanned: Fix formatting
--->
-
 ::: narwhals._plan._dtype
     options:
+      group_by_category: false
+      members_order: source
       members:
           - ResolveDType
           - _FunctionAccessor
           - _ExprIRAccessor
-          - GetDType
-          - JustDType
-          - ExprIRSameDType
-          - ExprIRMapFirst
-          - ExprIRVisitor
-          - FunctionVisitor
-          - FunctionSameDType
-          - FunctionMapFirst
-          - FunctionMapAll
           - IntoResolveDType
           - Visitor
 
