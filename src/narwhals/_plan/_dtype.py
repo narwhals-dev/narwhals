@@ -77,21 +77,25 @@ class _ClassAccessorDescriptor:
 class _FunctionAccessor(_ClassAccessorDescriptor):
     __slots__ = ()
 
+    # TODO @dangotbanned: docs: Improve `function.same_dtype` (examples)
     @staticmethod
     def same_dtype() -> FunctionSameDType[Any]:
         """Propagate the dtype of first function input."""
         return FunctionSameDType()
 
+    # TODO @dangotbanned: docs: Improve `function.map_first` (args, examples)
     @staticmethod
     def map_first(mapper: Visitor[DType], /) -> FunctionMapFirst[Any]:
         """Derive the dtype by calling `mapper` on the dtype of first function input."""
         return FunctionMapFirst(mapper)
 
+    # TODO @dangotbanned: docs: Improve `function.map_all` (args, examples)
     @staticmethod
     def map_all(mapper: Visitor[Iterable[DType]], /) -> FunctionMapAll[Any]:
         """Derive the dtype by calling `mapper` on the dtypes of all function inputs."""
         return FunctionMapAll(mapper)
 
+    # TODO @dangotbanned: docs: Improve `function.visitor` (args, examples)
     @staticmethod
     def visitor(visitor: Visitor[_FunctionT], /) -> FunctionVisitor[_FunctionT]:
         """Derive the dtype by calling `visitor` on an instance of `FunctionT`."""
@@ -101,16 +105,19 @@ class _FunctionAccessor(_ClassAccessorDescriptor):
 class _ExprIRAccessor(_ClassAccessorDescriptor):
     __slots__ = ()
 
+    # TODO @dangotbanned: docs: Improve `expr_ir.same_dtype` (examples)
     @staticmethod
     def same_dtype() -> ExprIRSameDType:
         """Propagate the dtype of first expression input."""
         return ExprIRSameDType()
 
+    # TODO @dangotbanned: docs: Improve `expr_ir.map_first` (args, examples)
     @staticmethod
     def map_first(mapper: Visitor[DType], /) -> ExprIRMapFirst[Any]:
         """Derive the dtype by calling `mapper` on the dtype of first expression input."""
         return ExprIRMapFirst(mapper)
 
+    # TODO @dangotbanned: docs: Improve `expr_ir.visitor` (args, examples)
     @staticmethod
     def visitor(
         visitor: Visitor[_ExprIRT], /
@@ -155,6 +162,7 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
         msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
+    # TODO @dangotbanned: docs: Improve `just_dtype` (args, examples)
     @staticmethod
     def just_dtype(dtype: DType, /) -> JustDType:
         """Always returns exactly `dtype`, disregarding any prior context.
@@ -163,14 +171,17 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
         """
         return _just_dtype(dtype)
 
+    # TODO @dangotbanned: docs: Improve `get_dtype` (examples)
     @staticmethod
     def get_dtype() -> GetDType[Any]:
         """Propagate a `dtype` attribute from the `ExprIR` or `Function` instance."""
         return GetDType()
 
+    # TODO @dangotbanned: docs: Improve `expr_ir` (examples)
     expr_ir = _ExprIRAccessor()
     """`ExprIR`-based constructors."""
 
+    # TODO @dangotbanned: docs: Improve `function` (examples)
     function = _FunctionAccessor()
     """`Function`-based constructors."""
 
