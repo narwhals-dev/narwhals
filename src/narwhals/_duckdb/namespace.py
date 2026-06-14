@@ -32,7 +32,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -189,36 +189,35 @@ class DuckDBNamespace(
         )
 
     def cov(self, a: DuckDBExpr, b: DuckDBExpr, *, ddof: int) -> DuckDBExpr:
-        def _rescale_cov(covar_samp: Expression, n_samples: Expression) -> Expression:
+        def _cov(
+            a_: Expression, b_: Expression, wrap: Callable[[Expression], Expression]
+        ) -> list[Expression]:
+            # `wrap` adds the window frame to each aggregate in a window context and
+            # is the identity otherwise. A compound expression can't be wrapped as a
+            # single window function, so each aggregate is wrapped individually.
+            if ddof == 0:
+                return [wrap(F("covar_pop", a_, b_))]
+            if ddof == 1:
+                return [wrap(F("covar_samp", a_, b_))]
+            is_valid = (a_.isnotnull() & b_.isnotnull()).cast(duckdb_dtypes.BIGINT)
+            n_samples = wrap(F("sum", is_valid))
             denominator = n_samples - lit(ddof)
-            rescaled = covar_samp * ((n_samples - lit(1)) / denominator)
-            return when(denominator <= lit(0), lit(None)).otherwise(rescaled)
+            rescaled = wrap(F("covar_samp", a_, b_)) * (
+                (n_samples - lit(1)) / denominator
+            )
+            return [when(denominator <= lit(0), lit(None)).otherwise(rescaled)]
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
-            if ddof == 0:
-                return [F("covar_pop", a_, b_)]
-            if ddof == 1:
-                return [F("covar_samp", a_, b_)]
-            is_valid = (a_.isnotnull() & b_.isnotnull()).cast(duckdb_dtypes.BIGINT)
-            n_samples = F("sum", is_valid)
-            return [_rescale_cov(F("covar_samp", a_, b_), n_samples)]
+            return _cov(a_, b_, lambda e: e)
 
         def window_f(
             df: DuckDBLazyFrame, inputs: WindowInputs[Expression]
         ) -> list[Expression]:
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
-            partition_by = inputs.partition_by
-            if ddof == 0:
-                return [window_expression(F("covar_pop", a_, b_), partition_by)]
-            if ddof == 1:
-                return [window_expression(F("covar_samp", a_, b_), partition_by)]
-            is_valid = (a_.isnotnull() & b_.isnotnull()).cast(duckdb_dtypes.BIGINT)
-            n_samples = window_expression(F("sum", is_valid), partition_by)
-            covar_samp = window_expression(F("covar_samp", a_, b_), partition_by)
-            return [_rescale_cov(covar_samp, n_samples)]
+            return _cov(a_, b_, lambda e: window_expression(e, inputs.partition_by))
 
         return self._expr(
             call=func,
