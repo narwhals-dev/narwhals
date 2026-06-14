@@ -38,6 +38,7 @@
         - first
         - floor
         - from_iterable
+        - from_native
         - from_numpy
         - gather_every
         - head

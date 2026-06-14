@@ -242,3 +242,13 @@ custom_checkbox = true
 configurations = [
     { targets.include = ["api-reference-plan/**/*.md", "plan/**/*.md"] }
 ]
+
+[project.markdown_extensions.pymdownx.saneheaders]
+# https://facelessuser.github.io/pymdown-extensions/extensions/magiclink/
+[project.markdown_extensions.pymdownx.magiclink]
+repo_url_shortener = true
+repo_url_shorthand = true
+normalize_issue_symbols = true
+hide_protocol = true
+repo = "narwhals-dev"
+user = "narwhals"
