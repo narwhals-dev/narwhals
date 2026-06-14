@@ -64,7 +64,13 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
         if unit == "ns":
             msg = "Offsetting by nanoseconds is not yet supported for ibis."
             raise NotImplementedError(msg)
-        kwds: dict[BucketUnit, Any] = {UNITS_DICT_BUCKET[unit]: multiple}
+        # `ibis.interval` does not accept `quarters` on all supported ibis
+        # versions (`truncate` avoids passing it through for the same reason),
+        # so express a quarter offset as the equivalent number of months.
+        offset_multiple, offset_unit = multiple, unit
+        if unit == "q":
+            offset_multiple, offset_unit = 3 * multiple, "mo"
+        kwds: dict[BucketUnit, Any] = {UNITS_DICT_BUCKET[offset_unit]: offset_multiple}
         offset = ibis.interval(**kwds)
 
         def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
@@ -75,9 +81,9 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
             tz = getattr(expr.type(), "timezone", None)
             if unit in {"y", "q", "mo", "d"} and tz is not None:
                 msg = (
-                    f"Offsetting timezone-aware data by {unit} is not supported "
-                    "for ibis, as the result would be incorrect across daylight "
-                    "saving time transitions."
+                    f"Offsetting timezone-aware data by {UNITS_DICT_BUCKET[unit]} is "
+                    "not supported for ibis, as the result would be incorrect across "
+                    "daylight saving time transitions."
                 )
                 raise NotImplementedError(msg)
             return expr.add(offset)
