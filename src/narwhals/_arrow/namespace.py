@@ -315,20 +315,16 @@ class ArrowNamespace(
             valid = pc.and_(pc.is_valid(arr1), pc.is_valid(arr2))
             arr1 = pc.filter(arr1, valid)
             arr2 = pc.filter(arr2, valid)
-            mean1 = pc.mean(arr1)
-            mean2 = pc.mean(arr2)
-
-            dev1 = pc.subtract(arr1, mean1)
-            dev2 = pc.subtract(arr2, mean2)
-            numerator = pc.sum(pc.multiply(dev1, dev2))
-            n = pc.count(arr1).as_py()
-            if ddof == 0 and n == 1:
-                covariance = 0.0
-            elif n - ddof <= 0:
+            n = len(arr1)
+            if n - ddof <= 0:
+                # Matches pandas/Polars. A single valid pair with ddof=0 falls
+                # through and yields 0.0, as the deviations are then zero.
                 covariance = pa.scalar(None, type=pa.float64())
             else:
-                denominator = pc.subtract(pa.scalar(n), pa.scalar(ddof))
-                covariance = pc.divide(numerator, denominator)
+                dev1 = pc.subtract(arr1, pc.mean(arr1))
+                dev2 = pc.subtract(arr2, pc.mean(arr2))
+                numerator = pc.sum(pc.multiply(dev1, dev2))
+                covariance = pc.divide(numerator, pa.scalar(n - ddof))
             return [
                 ArrowSeries.from_iterable(
                     data=[covariance], name=a_series.name, context=self
