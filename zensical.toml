@@ -144,7 +144,8 @@ features = [
     "toc.follow",
     # NOTE: Fixes a bug where a `<span ...>` got injected into the `title` string?
     # Also looks nice
-    "content.tooltips"
+    "content.tooltips", 
+    "content.footnote.tooltips",
 ]
 
 [project.theme.font]
