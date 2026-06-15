@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING, Literal, final
 
 # ruff: noqa: N806
@@ -252,9 +253,29 @@ class Immutable(metaclass=ImmutableMeta):
         else:
             raise _init_error(self, kwds)
 
-    if TYPE_CHECKING:
-        import sys
+    if sys.version_info < (3, 11):
 
+        def __getstate__(self) -> tuple[None, dict[str, Any]]:
+            # NOTE: Since the default is implemented in C, we'll take that when possible
+            # (even though it isn't an ideal shape)
+            # https://github.com/python/cpython/pull/2821
+            return None, self.to_dict()
+
+    # NOTE: feat(expr-ir): Add support for `(de)serialize`
+    # TODO @dangotbanned: Port polars tests
+    # https://github.com/pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/expr/test_serde.py
+    # https://github.com//pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/io/test_serde.py
+    def __setstate__(self, state: tuple[None, dict[str, Any]]) -> None:
+        # https://docs.python.org/3/library/pickle.html#object.__getstate__
+        # > For a class that has `__slots__` and no instance` __dict__`, the default state is
+        # > a tuple whose first item is `None` and whose second item is
+        # > a dictionary mapping slot names to slot values.
+        # > Only slots that have a value are included in the latter.
+        self__setattr__ = _OBJ_SETATTR.__get__(self)
+        for name, value in state[1].items():
+            self__setattr__(name, value)
+
+    if TYPE_CHECKING:
         if sys.version_info < (3, 13):
 
             def __replace__(self, **changes: Any) -> Self:
