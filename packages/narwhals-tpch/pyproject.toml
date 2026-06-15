@@ -9,5 +9,11 @@ requires-python = ">=3.10"
 # Runtime deps of the harness itself: data generation (duckdb) and answer comparison (polars).
 dependencies = ["narwhals[duckdb,polars]"]
 
+# This is an internal workspace-only package; it must never reach PyPI.
+# PyPI rejects any upload whose metadata carries a `Private ::` classifier,
+# so this is a hard, tooling-independent guard against accidental publishing.
+# See https://pypi.org/classifiers/
+classifiers = ["Private :: Do Not Upload"]
+
 [tool.uv.sources]
 narwhals = { workspace = true }
