@@ -222,3 +222,13 @@ def test_pickling_as_struct_11100() -> None:
     roundtrip = pickle.loads(pickle.dumps(e))
     meta_eq(roundtrip, e)
 
+
+# NOTE: Handle in `AnonymousExpr`, maybe raise a useful error for `lambda`?
+# - think that polars is rewriting them so they aren't raising
+# - 0% interest in doing that here
+# https://github.com//pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/io/test_serde.py#L99-L120
+@pytest.mark.xfail(
+    reason="TODO @dangotbanned: Cover `Expr.map_batches`", raises=NotImplementedError
+)
+def test_pickle_udf_expression() -> None:
+    raise NotImplementedError
