@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
+# ruff: noqa: S301
 import io
+import pickle
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -15,6 +18,9 @@ import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ComputeError
 
+if TYPE_CHECKING:
+    from narwhals._plan.meta import MetaNamespace
+
 XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
     reason="TODO @dangotbanned: Add `Expr.meta.serialize`",
     raises=(AttributeError, NotImplementedError),
@@ -22,6 +28,9 @@ XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
 XFAIL_NOT_IMPL_DESERDE = pytest.mark.xfail(
     reason="TODO @dangotbanned: Add `Expr.deserialize`",
     raises=(AttributeError, NotImplementedError),
+)
+XFAIL_NOT_IMPL_META_EQ = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Add `Expr.meta.__eq__`"
 )
 
 
@@ -51,7 +60,7 @@ def cases() -> pytest.MarkDecorator:
     )
 
 
-def meta_eq(left: nwp.Expr, right: nwp.Expr) -> None:  # pragma: no cover
+def meta_eq(left: nwp.Expr, right: nwp.Expr | MetaNamespace) -> None:  # pragma: no cover
     msg = "TODO @dangotbanned: Add `Expr.meta.__eq__`"
     raise NotImplementedError(msg)
     assert left.meta == right
@@ -98,3 +107,25 @@ def test_expression_json_13991() -> None:  # pragma: no cover
 
     round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # pyright: ignore[reportAttributeAccessIssue]
     meta_eq(round_tripped, expr)
+
+
+@XFAIL_NOT_IMPL_META_EQ
+def test_serde_expression_5461() -> None:  # pragma: no cover
+    e = nwp.col("a").sqrt() / nwp.col("b").alias("c")
+
+    roundtrip = pickle.loads(pickle.dumps(e))
+    meta_eq(roundtrip, e.meta)
+
+
+@XFAIL_NOT_IMPL_META_EQ
+def test_pickling_simple_expression() -> None:  # pragma: no cover
+    e = nwp.col("foo").sum()
+    roundtrip = pickle.loads(pickle.dumps(e))
+    meta_eq(roundtrip, e)
+
+
+@XFAIL_NOT_IMPL_META_EQ
+def test_pickling_as_struct_11100() -> None:  # pragma: no cover
+    e = nwp.struct("a")
+    roundtrip = pickle.loads(pickle.dumps(e))
+    meta_eq(roundtrip, e)
