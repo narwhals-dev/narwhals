@@ -54,15 +54,18 @@ if TYPE_CHECKING:
 
 def test_shape(nw_dataframe: DataFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    df = nw_dataframe(data)  # wraps with the main `narwhals` namespace by default
+    df = nw_dataframe(data)  # (1)!
     assert df.shape == (3, 1)
 
 
 def test_laziness(nw_lazyframe: LazyFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    lf = nw_lazyframe(data, namespace=nw_v2)  # opt in to a stable namespace
+    lf = nw_lazyframe(data, namespace=nw_v2)  # (2)!
     assert isinstance(lf, nw_v2.LazyFrame)
 ```
+
+1. Wraps with the main `narwhals` namespace by default
+2. Opt in to a stable namespace
 
 The fixtures are parametrised against every supported backend that is installed
 in the current environment. Filter the matrix on the command line:
@@ -85,3 +88,6 @@ pytest --all-nw-backends
         - DataFrameConstructor
         - LazyFrameConstructor
         - NarwhalsNamespace
+
+1. wraps with the main `narwhals` namespace by default
+2. opt in to a stable namespace
