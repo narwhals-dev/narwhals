@@ -18,7 +18,7 @@
     - [x] `pickle.dumps`
     - [ ] `pickle.loads`
         - Needs a custom [`__setstate__`](https://docs.python.org/3/library/pickle.html#object.__setstate__)
-        - Probably identical to [`ibis.common.bases.Slotted.__setstate__`](https://github.com/ibis-project/ibis/blob/50775279a4ba5f312202ff522bd5b0b4b9683d40/ibis/common/bases.py#L210-L212)
+        - *Quick implementation* (https://github.com/narwhals-dev/narwhals/compare/expr-ir/docs/fluff-1...expr-ir/serde-2)
 - [ ] https://github.com/narwhals-dev/narwhals/issues/3028
     - [x] [`Expr.is_not_null`][narwhals._plan.expr.Expr.is_not_nan]
     - [x] [`Expr.is_not_nan`][narwhals._plan.expr.Expr.is_not_nan]
