@@ -70,8 +70,8 @@ def meta_eq(left: nwp.Expr, right: nwp.Expr | MetaNamespace) -> None:  # pragma:
 @XFAIL_NOT_IMPL_SERDE
 @XFAIL_NOT_IMPL_DESERDE
 def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:  # pragma: no cover
-    json = expr.meta.serialize(format="binary")  # pyright: ignore[reportAttributeAccessIssue]
-    round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")  # pyright: ignore[reportAttributeAccessIssue]
+    json = expr.meta.serialize(format="binary")  # type: ignore[attr-defined]
+    round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")  # type: ignore[attr-defined]
     meta_eq(round_tripped, expr)
 
 
@@ -80,15 +80,15 @@ def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:  # pragma: no cove
 @XFAIL_NOT_IMPL_DESERDE
 def test_expr_serde_roundtrip_json(expr: nwp.Expr) -> None:  # pragma: no cover
     expr = nwp.col("foo").sum().over("bar")
-    json = expr.meta.serialize(format="json")  # pyright: ignore[reportAttributeAccessIssue]
-    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # pyright: ignore[reportAttributeAccessIssue]
+    json = expr.meta.serialize(format="json")  # type: ignore[attr-defined]
+    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[attr-defined]
     meta_eq(round_tripped, expr)
 
 
 @XFAIL_NOT_IMPL_DESERDE
 def test_expr_deserialize_file_not_found() -> None:  # pragma: no cover
     with pytest.raises(FileNotFoundError):
-        nwp.Expr.deserialize("abcdef")  # pyright: ignore[reportAttributeAccessIssue]
+        nwp.Expr.deserialize("abcdef")  # type: ignore[attr-defined]
 
 
 @XFAIL_NOT_IMPL_DESERDE
@@ -96,16 +96,16 @@ def test_expr_deserialize_invalid_json() -> None:  # pragma: no cover
     with pytest.raises(
         ComputeError, match="could not deserialize input into an expression"
     ):
-        nwp.Expr.deserialize(io.StringIO("abcdef"), format="json")  # pyright: ignore[reportAttributeAccessIssue]
+        nwp.Expr.deserialize(io.StringIO("abcdef"), format="json")  # type: ignore[attr-defined]
 
 
 @XFAIL_NOT_IMPL_SERDE
 @XFAIL_NOT_IMPL_DESERDE
 def test_expression_json_13991() -> None:  # pragma: no cover
     expr = nwp.col("foo").cast(nw.Decimal(38, 10))
-    json = expr.meta.serialize(format="json")  # pyright: ignore[reportAttributeAccessIssue]
+    json = expr.meta.serialize(format="json")  # type: ignore[attr-defined]
 
-    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # pyright: ignore[reportAttributeAccessIssue]
+    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[attr-defined]
     meta_eq(round_tripped, expr)
 
 
