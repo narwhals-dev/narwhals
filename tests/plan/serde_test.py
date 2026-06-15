@@ -17,6 +17,7 @@ import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ComputeError
+from tests.plan.utils import assert_expr_ir_equal
 
 if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
@@ -28,9 +29,6 @@ XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
 XFAIL_NOT_IMPL_DESERDE = pytest.mark.xfail(
     reason="TODO @dangotbanned: Add `Expr.deserialize`",
     raises=(AttributeError, NotImplementedError),
-)
-XFAIL_NOT_IMPL_META_EQ = pytest.mark.xfail(
-    reason="TODO @dangotbanned: Add `Expr.meta.__eq__`"
 )
 
 
@@ -60,10 +58,10 @@ def cases() -> pytest.MarkDecorator:
     )
 
 
-def meta_eq(left: nwp.Expr, right: nwp.Expr | MetaNamespace) -> None:  # pragma: no cover
-    msg = "TODO @dangotbanned: Add `Expr.meta.__eq__`"
-    raise NotImplementedError(msg)
-    assert left.meta == right
+# TODO @dangotbanned: Add `Expr.meta.__eq__`
+# See https://github.com/narwhals-dev/narwhals/blob/c3f00c85945230c945ac2eb90e4b9049949a0313/src/narwhals/_plan/meta.py#L124-L141
+def meta_eq(actual: nwp.Expr, expected: nwp.Expr | MetaNamespace) -> None:
+    assert_expr_ir_equal(actual._ir, expected._ir)
 
 
 @cases()
@@ -109,23 +107,20 @@ def test_expression_json_13991() -> None:  # pragma: no cover
     meta_eq(round_tripped, expr)
 
 
-@XFAIL_NOT_IMPL_META_EQ
-def test_serde_expression_5461() -> None:  # pragma: no cover
+def test_serde_expression_5461() -> None:
     e = nwp.col("a").sqrt() / nwp.col("b").alias("c")
 
     roundtrip = pickle.loads(pickle.dumps(e))
     meta_eq(roundtrip, e.meta)
 
 
-@XFAIL_NOT_IMPL_META_EQ
-def test_pickling_simple_expression() -> None:  # pragma: no cover
+def test_pickling_simple_expression() -> None:
     e = nwp.col("foo").sum()
     roundtrip = pickle.loads(pickle.dumps(e))
     meta_eq(roundtrip, e)
 
 
-@XFAIL_NOT_IMPL_META_EQ
-def test_pickling_as_struct_11100() -> None:  # pragma: no cover
+def test_pickling_as_struct_11100() -> None:
     e = nwp.struct("a")
     roundtrip = pickle.loads(pickle.dumps(e))
     meta_eq(roundtrip, e)
