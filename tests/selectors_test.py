@@ -111,14 +111,16 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
             for tu in time_units
         ],
         *[
-            nw.col("ts")
+            nw
+            .col("ts")
             .dt.replace_time_zone("Europe/Lisbon")
             .cast(nw.Datetime(time_zone="Europe/Lisbon", time_unit=tu))
             .alias(f"ts_lisbon_{tu}")
             for tu in time_units
         ],
         *[
-            nw.col("ts")
+            nw
+            .col("ts")
             .dt.replace_time_zone("Europe/Berlin")
             .cast(nw.Datetime(time_zone="Europe/Berlin", time_unit=tu))
             .alias(f"ts_berlin_{tu}")

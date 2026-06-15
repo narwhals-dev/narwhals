@@ -168,7 +168,8 @@ def test_left_join(  # pragma: no cover
     )
     # For PyArrow, insert an extra sort, as the order of rows isn't guaranteed
     result_pa = (
-        nw.from_native(pa.table(data_left), eager_only=True)
+        nw
+        .from_native(pa.table(data_left), eager_only=True)
         .join(
             nw.from_native(pa.table(data_right), eager_only=True),
             how="left",

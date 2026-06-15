@@ -8,12 +8,10 @@ from tests.utils import Constructor, assert_equal_data
 
 def test_format(constructor: Constructor) -> None:
     df = nw.from_native(
-        constructor(
-            {
-                "name": ["bob", "alice", "dodo"],
-                "surname": ["builder", "wonderlander", "extinct"],
-            }
-        )
+        constructor({
+            "name": ["bob", "alice", "dodo"],
+            "surname": ["builder", "wonderlander", "extinct"],
+        })
     )
     result = df.select(fmt=nw.format("hello {} {} wassup", "name", nw.col("surname")))
     expected = {
@@ -36,12 +34,10 @@ def test_format_invalid() -> None:
     import pandas as pd
 
     df = nw.from_native(
-        pd.DataFrame(
-            {
-                "name": ["bob", "alice", "dodo"],
-                "surname": ["builder", "wonderlander", "extinct"],
-            }
-        )
+        pd.DataFrame({
+            "name": ["bob", "alice", "dodo"],
+            "surname": ["builder", "wonderlander", "extinct"],
+        })
     )
     with pytest.raises(ValueError, match="Expected 2 arguments, got 1"):
         df.select(fmt=nw.format("hello {} {} wassup", "name"))

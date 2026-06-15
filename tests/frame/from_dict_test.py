@@ -33,7 +33,8 @@ def test_from_dict_without_backend(constructor: Constructor, backend: Polars) ->
     pytest.importorskip("pyarrow")
 
     df = (
-        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        nw
+        .from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .lazy()
         .collect(backend=backend)
     )
@@ -61,7 +62,8 @@ def test_from_dict_one_native_one_narwhals(
     pytest.importorskip("polars")
 
     df = (
-        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        nw
+        .from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .lazy()
         .collect(backend=backend)
     )

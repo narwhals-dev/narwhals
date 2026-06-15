@@ -116,9 +116,10 @@ def test_hist_bin(
 
     # missing/nan results
     df = nw.from_native(
-        constructor_eager(
-            {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
-        )
+        constructor_eager({
+            "has_nan": [float("nan"), *data["int"]],
+            "has_null": [None, *data["int"]],
+        })
     )
     expected_full = {"count": expected}
     if include_breakpoint:
@@ -169,9 +170,10 @@ def test_hist_count(
 
     # missing/nan results
     df = nw.from_native(
-        constructor_eager(
-            {"has_nan": [float("nan"), *data["int"]], "has_null": [None, *data["int"]]}
-        )
+        constructor_eager({
+            "has_nan": [float("nan"), *data["int"]],
+            "has_null": [None, *data["int"]],
+        })
     )
 
     for col in df.columns:
@@ -349,7 +351,8 @@ def test_hist_bin_hypotheis(
     )
     df_bins_native = constructor_eager({"bins": bin_deltas})
     bins = (
-        nw.from_native(df_bins_native, eager_only=True)
+        nw
+        .from_native(df_bins_native, eager_only=True)
         .get_column("bins")
         .cast(nw.Float64)
         .cum_sum()

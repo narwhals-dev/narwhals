@@ -41,12 +41,10 @@ kwargs_and_expected: dict[str, dict[str, Any]] = {
 
 def test_rolling_mean_expr(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        **{
-            name: nw.col("a").rolling_mean(**values["kwargs"])
-            for name, values in kwargs_and_expected.items()
-        }
-    )
+    result = df.select(**{
+        name: nw.col("a").rolling_mean(**values["kwargs"])
+        for name, values in kwargs_and_expected.items()
+    })
     expected = {name: values["expected"] for name, values in kwargs_and_expected.items()}
 
     assert_equal_data(result, expected)
@@ -58,12 +56,10 @@ def test_rolling_mean_expr(constructor_eager: ConstructorEager) -> None:
 def test_rolling_mean_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    result = df.select(
-        **{
-            name: df["a"].rolling_mean(**values["kwargs"])
-            for name, values in kwargs_and_expected.items()
-        }
-    )
+    result = df.select(**{
+        name: df["a"].rolling_mean(**values["kwargs"])
+        for name, values in kwargs_and_expected.items()
+    })
     expected = {name: values["expected"] for name, values in kwargs_and_expected.items()}
     assert_equal_data(result, expected)
 
@@ -86,7 +82,8 @@ def test_rolling_mean_hypothesis(center: bool, values: list[float]) -> None:  # 
     s[mask] = None
     df = pd.DataFrame({"a": s})
     expected = (
-        s.rolling(window=window_size, center=center, min_periods=min_samples)
+        s
+        .rolling(window=window_size, center=center, min_periods=min_samples)
         .mean()
         .to_frame("a")
     )
@@ -137,8 +134,10 @@ def test_rolling_mean_expr_lazy_grouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_mean(window_size, min_samples=min_samples, center=center)
             .over("g", order_by="b")
         )
@@ -183,8 +182,10 @@ def test_rolling_mean_expr_lazy_ungrouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_mean(window_size, min_samples=min_samples, center=center)
             .over(order_by="b")
         )
@@ -216,7 +217,8 @@ def test_scrambled_groups_over(
     df = nw.from_native(constructor(data))
     result = df.with_columns(
         nw.col("value").rolling_mean(2).over("group", order_by="time").alias("sorted"),
-        nw.col("value")
+        nw
+        .col("value")
         .rolling_mean(2)
         .over("group", order_by=["group", "time"])
         .alias("resorted"),

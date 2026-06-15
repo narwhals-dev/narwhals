@@ -43,12 +43,10 @@ kwargs_and_expected: dict[str, dict[str, Any]] = {
 
 def test_rolling_sum_expr(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
-    result = df.select(
-        **{
-            name: nw.col("a").rolling_sum(**values["kwargs"])
-            for name, values in kwargs_and_expected.items()
-        }
-    )
+    result = df.select(**{
+        name: nw.col("a").rolling_sum(**values["kwargs"])
+        for name, values in kwargs_and_expected.items()
+    })
     expected = {name: values["expected"] for name, values in kwargs_and_expected.items()}
 
     assert_equal_data(result, expected)
@@ -88,8 +86,10 @@ def test_rolling_sum_expr_lazy_ungrouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_sum(window_size, min_samples=min_samples, center=center)
             .over(order_by="b")
         )
@@ -140,8 +140,10 @@ def test_rolling_sum_expr_lazy_grouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_sum(window_size, min_samples=min_samples, center=center)
             .over("g", order_by="b")
         )
@@ -158,12 +160,10 @@ def test_rolling_sum_expr_lazy_grouped(
 def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    result = df.select(
-        **{
-            name: df["a"].rolling_sum(**values["kwargs"])
-            for name, values in kwargs_and_expected.items()
-        }
-    )
+    result = df.select(**{
+        name: df["a"].rolling_sum(**values["kwargs"])
+        for name, values in kwargs_and_expected.items()
+    })
     expected = {name: values["expected"] for name, values in kwargs_and_expected.items()}
     assert_equal_data(result, expected)
 
@@ -289,7 +289,8 @@ def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # n
     s[mask] = None
     df = pd.DataFrame({"a": s})
     expected = (
-        s.rolling(window=window_size, center=center, min_periods=min_samples)
+        s
+        .rolling(window=window_size, center=center, min_periods=min_samples)
         .sum()
         .to_frame("a")
     )

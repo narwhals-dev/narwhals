@@ -184,7 +184,8 @@ def test_is_close_expr_with_expr(
 
     x, y = nw.col("x"), nw.col("y")
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .with_columns(
             x=nw.when(x != NAN_PLACEHOLDER).then(x).otherwise(x**0.5),
             y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5),
@@ -229,7 +230,8 @@ def test_is_close_expr_with_scalar(
 
     y = nw.col("y")
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .with_columns(y=nw.when(y != NAN_PLACEHOLDER).then(y).otherwise(y**0.5))
         .with_columns(y=nw.when(y != NULL_PLACEHOLDER).then(y))
         .select(

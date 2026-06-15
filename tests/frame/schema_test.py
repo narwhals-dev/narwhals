@@ -412,30 +412,26 @@ def test_schema_to_pandas(
         pytest.skip()
     pytest.importorskip("pyarrow")
     pytest.importorskip("pandas")
-    schema = nw.Schema(
-        {
-            "a": nw.Int64(),
-            "b": nw.String(),
-            "c": nw.Boolean(),
-            "d": nw.Float64(),
-            "e": nw.Datetime("ns"),
-        }
-    )
+    schema = nw.Schema({
+        "a": nw.Int64(),
+        "b": nw.String(),
+        "c": nw.Boolean(),
+        "d": nw.Float64(),
+        "e": nw.Datetime("ns"),
+    })
     assert schema.to_pandas(dtype_backend) == expected
 
 
 def test_schema_to_pandas_strict_zip() -> None:
     pytest.importorskip("pandas")
 
-    schema = nw.Schema(
-        {
-            "a": nw.Int64(),
-            "b": nw.String(),
-            "c": nw.Boolean(),
-            "d": nw.Float64(),
-            "e": nw.Datetime("ns"),
-        }
-    )
+    schema = nw.Schema({
+        "a": nw.Int64(),
+        "b": nw.String(),
+        "c": nw.Boolean(),
+        "d": nw.Float64(),
+        "e": nw.Datetime("ns"),
+    })
     dtype_backend: list[DTypeBackend] = ["numpy_nullable", "pyarrow", None]
     tup = ("numpy_nullable", "pyarrow", None, "numpy_nullable", "pyarrow")
     suggestion = re.escape(f"({tup})")
@@ -503,30 +499,26 @@ def arrow_schema_constructor(
 
 @pytest.fixture
 def target_narwhals(time_unit: TimeUnit) -> nw.Schema:
-    return nw.Schema(
-        {
-            "a": nw.Int64(),
-            "b": nw.String(),
-            "c": nw.Boolean(),
-            "d": nw.Float64(),
-            "e": nw.Datetime(time_unit),
-            "f": nw.Date(),
-            "g": nw.Time(),
-        }
-    )
+    return nw.Schema({
+        "a": nw.Int64(),
+        "b": nw.String(),
+        "c": nw.Boolean(),
+        "d": nw.Float64(),
+        "e": nw.Datetime(time_unit),
+        "f": nw.Date(),
+        "g": nw.Time(),
+    })
 
 
 @pytest.fixture
 def target_narwhals_pandas(time_unit: TimeUnit) -> nw.Schema:
-    return nw.Schema(
-        {
-            "a": nw.Int64(),
-            "b": nw.String(),
-            "c": nw.Boolean(),
-            "d": nw.Float64(),
-            "e": nw.Datetime(time_unit),
-        }
-    )
+    return nw.Schema({
+        "a": nw.Int64(),
+        "b": nw.String(),
+        "c": nw.Boolean(),
+        "d": nw.Float64(),
+        "e": nw.Datetime(time_unit),
+    })
 
 
 @pytest.fixture
@@ -537,17 +529,15 @@ def origin_polars(
     pytest.importorskip("polars")
     import polars as pl
 
-    return polars_schema_constructor(
-        {
-            "a": pl.Int64(),
-            "b": pl.String(),
-            "c": pl.Boolean(),
-            "d": pl.Float64(),
-            "e": pl.Datetime(time_unit),
-            "f": pl.Date(),
-            "g": pl.Time(),
-        }
-    )
+    return polars_schema_constructor({
+        "a": pl.Int64(),
+        "b": pl.String(),
+        "c": pl.Boolean(),
+        "d": pl.Float64(),
+        "e": pl.Datetime(time_unit),
+        "f": pl.Date(),
+        "g": pl.Time(),
+    })
 
 
 @pytest.fixture
@@ -557,17 +547,15 @@ def origin_arrow(
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
-    return arrow_schema_constructor(
-        {
-            "a": pa.int64(),
-            "b": pa.string(),
-            "c": pa.bool_(),
-            "d": pa.float64(),
-            "e": pa.timestamp(time_unit),
-            "f": pa.date32(),
-            "g": pa.time64("ns"),
-        }
-    )
+    return arrow_schema_constructor({
+        "a": pa.int64(),
+        "b": pa.string(),
+        "c": pa.bool_(),
+        "d": pa.float64(),
+        "e": pa.timestamp(time_unit),
+        "f": pa.date32(),
+        "g": pa.time64("ns"),
+    })
 
 
 @pytest.fixture

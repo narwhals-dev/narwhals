@@ -23,7 +23,8 @@ def test_unique_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .select(nw.col("a").cast(nw.List(nw.Int32())).list.unique())
         .lazy()
         .collect()["a"]

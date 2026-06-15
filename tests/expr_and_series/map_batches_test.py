@@ -51,7 +51,8 @@ def test_map_batches_expr_scalar(
 def test_map_batches_expr_numpy_array(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     expected = df.select(
-        nw.col("a")
+        nw
+        .col("a")
         .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64())
         .sum()
     )

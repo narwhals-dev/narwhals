@@ -42,7 +42,8 @@ def test_to_time(request: pytest.FixtureRequest, constructor: Constructor) -> No
     expected = "12:34:56"
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_time(format="%H:%M:%S"))
         .collect()
@@ -87,7 +88,8 @@ def test_to_time_infer_fmt(
         )
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_time())
         .collect()

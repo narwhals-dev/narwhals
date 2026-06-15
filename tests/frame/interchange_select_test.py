@@ -25,9 +25,9 @@ class InterchangeDataFrame:
 
     def select_columns_by_name(self, columns: list[str]) -> InterchangeDataFrame:
         return InterchangeDataFrame(
-            CustomDataFrame(
-                {key: value for key, value in self._df._data.items() if key in columns}
-            )
+            CustomDataFrame({
+                key: value for key, value in self._df._data.items() if key in columns
+            })
         )
 
 

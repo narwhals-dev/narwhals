@@ -155,9 +155,11 @@ def test_pyarrow_lit_string() -> None:
         (["orca", "narwhal", "penguin"], None),
         (
             {"field_1": 42, "field_2": 1.2, "field_3": True},
-            nw.Struct(
-                {"field_1": nw.Int32(), "field_2": nw.Float64(), "field_3": nw.Boolean()}
-            ),
+            nw.Struct({
+                "field_1": nw.Int32(),
+                "field_2": nw.Float64(),
+                "field_3": nw.Boolean(),
+            }),
         ),
     ],
 )

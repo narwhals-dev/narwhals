@@ -116,7 +116,8 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
     s[mask] = None
     df = pd.DataFrame({"a": s})
     expected = (
-        s.rolling(window=window_size, center=center, min_periods=min_samples)
+        s
+        .rolling(window=window_size, center=center, min_periods=min_samples)
         .var(ddof=ddof)
         .to_frame("a")
     )
@@ -149,7 +150,8 @@ def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> Non
     s[mask] = None
     df = pd.DataFrame({"a": s})
     expected = (
-        s.rolling(window=window_size, center=center, min_periods=min_samples)
+        s
+        .rolling(window=window_size, center=center, min_periods=min_samples)
         .var(ddof=ddof)
         .to_frame("a")
     )
@@ -215,8 +217,10 @@ def test_rolling_var_expr_lazy_ungrouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
             .over(order_by="b")
         )
@@ -280,8 +284,10 @@ def test_rolling_var_expr_lazy_grouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_var(window_size, min_samples=min_samples, center=center, ddof=ddof)
             .over("g", order_by="b")
         )

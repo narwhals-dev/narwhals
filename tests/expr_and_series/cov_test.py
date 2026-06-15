@@ -75,17 +75,16 @@ def test_cov_over(constructor: Constructor) -> None:
         pytest.skip()
 
     df = nw.from_native(
-        constructor(
-            {
-                "i": [0, 1, 2, 3, 4],
-                "g": [1, 1, 1, 2, 2],
-                "a": [1, 3, 3, 2, 4],
-                "b": [1, 2, 3, 1, 5],
-            }
-        )
+        constructor({
+            "i": [0, 1, 2, 3, 4],
+            "g": [1, 1, 1, 2, 2],
+            "a": [1, 3, 3, 2, 4],
+            "b": [1, 2, 3, 1, 5],
+        })
     )
     result = (
-        df.with_columns(
+        df
+        .with_columns(
             sample=nw.cov("a", "b").over("g"),
             population=nw.cov("a", "b", ddof=0).over("g"),
         )

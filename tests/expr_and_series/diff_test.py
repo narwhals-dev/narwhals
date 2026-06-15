@@ -60,7 +60,8 @@ def test_diff_lazy_grouped(
     data = {"i": [0, 1, 2, 3, 4], "b": [1, 1, 1, 2, 2], "c": [5, 4, 3, 2, 1]}
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(c_diff=nw.col("c").diff().over("b", order_by="i"))
+        df
+        .with_columns(c_diff=nw.col("c").diff().over("b", order_by="i"))
         .filter(nw.col("i") > 0)
         .sort("i")
     )

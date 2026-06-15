@@ -56,9 +56,9 @@ def test_get_categories_pyarrow() -> None:
 
     # temporary test until we have `cast` in pyarrow - later, fuse
     # this with test above
-    table = pa.table(
-        {"a": pa.array(["a", "b", None, "d"], pa.dictionary(pa.int64(), pa.utf8()))}
-    )
+    table = pa.table({
+        "a": pa.array(["a", "b", None, "d"], pa.dictionary(pa.int64(), pa.utf8()))
+    })
     df = nw.from_native(table, eager_only=True)
     expected = {"a": ["a", "b", "d"]}
 

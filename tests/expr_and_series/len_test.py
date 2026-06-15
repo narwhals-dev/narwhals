@@ -34,7 +34,8 @@ def test_namespace_len(constructor: Constructor) -> None:
     expected = {"len": [3], "a": [3]}
     assert_equal_data(df, expected)
     df = (
-        nw.from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
+        nw
+        .from_native(constructor({"a": [1, 2, 3], "b": [4, 5, 6]}))
         .filter(nw.col("a") < 0)
         .select(nw.len(), a=nw.len())
     )

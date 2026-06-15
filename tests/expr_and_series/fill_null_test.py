@@ -137,14 +137,16 @@ def test_fill_null_strategies_with_limit_as_none(
                 "ignore", message="Falling back on a non-pyarrow code path which"
             )
             result_forward = df.with_columns(
-                nw.col("a", "b")
+                nw
+                .col("a", "b")
                 .fill_null(strategy="forward", limit=None)
                 .over(order_by="idx")
             )
             assert_equal_data(result_forward, expected_forward)
     else:
         result_forward = df.with_columns(
-            nw.col("a", "b")
+            nw
+            .col("a", "b")
             .fill_null(strategy="forward", limit=None)
             .over(order_by="idx")
         )
@@ -172,14 +174,16 @@ def test_fill_null_strategies_with_limit_as_none(
                 "ignore", message="Falling back on a non-pyarrow code path which"
             )
             result_backward = df.with_columns(
-                nw.col("a", "b")
+                nw
+                .col("a", "b")
                 .fill_null(strategy="backward", limit=None)
                 .over(order_by="idx")
             )
             assert_equal_data(result_backward, expected_backward)
     else:
         result_backward = df.with_columns(
-            nw.col("a", "b")
+            nw
+            .col("a", "b")
             .fill_null(strategy="backward", limit=None)
             .over(order_by="idx")
         )

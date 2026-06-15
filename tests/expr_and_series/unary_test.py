@@ -137,7 +137,8 @@ def test_unary_one_element(
     )
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .with_columns(nw.col("c").cast(nw.Float64))
         .select(
             a_nunique=nw.col("a").n_unique(),

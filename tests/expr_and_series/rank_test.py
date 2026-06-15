@@ -278,7 +278,8 @@ def test_lazy_rank_expr_desc(
         df = nw.from_native(constructor(data))
 
         result = (
-            df.with_columns(a=nw.col("a").rank(method=method, descending=True))
+            df
+            .with_columns(a=nw.col("a").rank(method=method, descending=True))
             .sort("i")
             .select("a")
         )
@@ -313,7 +314,8 @@ def test_rank_expr_in_over_desc(
     df = nw.from_native(constructor(data_float))
 
     result = (
-        df.with_columns(a=nw.col("a").rank(method=method, descending=True).over("b"))
+        df
+        .with_columns(a=nw.col("a").rank(method=method, descending=True).over("b"))
         .sort("i")
         .select("a")
     )
@@ -347,9 +349,11 @@ def test_rank_with_order_by(
     )
 
     df = nw.from_native(
-        constructor(
-            {"a": [1, 1, 2, 2, 3, 3], "b": [3, None, 4, 3, 5, 6], "i": list(range(6))}
-        )
+        constructor({
+            "a": [1, 1, 2, 2, 3, 3],
+            "b": [3, None, 4, 3, 5, 6],
+            "i": list(range(6)),
+        })
     )
     with context:
         result = df.with_columns(c=nw.col("a").rank("ordinal").over(order_by="b")).sort(
@@ -367,7 +371,8 @@ def test_rank_with_order_by(
         # gh 3177
         df = nw.from_native(constructor({"i": [0, 1, 2], "j": [1, 2, 1]}))
         result = (
-            df.with_columns(z=nw.col("j").rank("min").over(order_by="i"))
+            df
+            .with_columns(z=nw.col("j").rank("min").over(order_by="i"))
             .sort("i")
             .select("z")
         )
@@ -397,14 +402,12 @@ def test_rank_with_order_by_and_partition_by(
         pytest.skip(reason="too old version")
 
     df = nw.from_native(
-        constructor(
-            {
-                "a": [1, 1, 2, 2, 3, 3],
-                "b": [3, None, 4, 3, 5, 6],
-                "i": list(range(6)),
-                "g": ["x", "x", "x", "y", "y", "y"],
-            }
-        )
+        constructor({
+            "a": [1, 1, 2, 2, 3, 3],
+            "b": [3, None, 4, 3, 5, 6],
+            "i": list(range(6)),
+            "g": ["x", "x", "x", "y", "y", "y"],
+        })
     )
     context = (
         pytest.raises(NotImplementedError)

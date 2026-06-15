@@ -100,6 +100,7 @@ def test_memmap() -> None:
 
         def create_memmap_backed_data(data: T) -> T:
             return data
+
     else:
         from sklearn.utils._testing import create_memmap_backed_data
 

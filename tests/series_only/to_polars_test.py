@@ -20,7 +20,8 @@ def test_series_to_polars(constructor_eager: ConstructorEager) -> None:
     from polars.testing import assert_series_equal
 
     result = (
-        nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+        nw
+        .from_native(constructor_eager({"a": data}), eager_only=True)["a"]
         .alias("a")
         .to_polars()
     )

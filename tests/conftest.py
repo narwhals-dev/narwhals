@@ -199,7 +199,8 @@ def pyspark_lazy_constructor() -> Callable[[Data], NativePySpark]:  # pragma: no
             index_col_name = generate_temporary_column_name(n_bytes=8, columns=list(_obj))
             _obj[index_col_name] = list(range(len(_obj[next(iter(_obj))])))
             result = (
-                session.createDataFrame(
+                session
+                .createDataFrame(
                     [*zip(*_obj.values(), strict=False)], schema=[*_obj.keys()]
                 )
                 .repartition(2)

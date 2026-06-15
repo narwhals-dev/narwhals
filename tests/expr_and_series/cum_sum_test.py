@@ -51,14 +51,12 @@ def test_lazy_cum_sum_grouped(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "arg entina": [1, 2, 3],
-                "ban gkok": [1, 0, 2],
-                "i ran": [0, 1, 2],
-                "g": [1, 1, 1],
-            }
-        )
+        constructor({
+            "arg entina": [1, 2, 3],
+            "ban gkok": [1, 0, 2],
+            "i ran": [0, 1, 2],
+            "g": [1, 1, 1],
+        })
     )
     result = df.with_columns(
         nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkok")
@@ -104,14 +102,12 @@ def test_lazy_cum_sum_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "arg entina": [None, 2, 3, 1, 2, 3, 4],
-                "ban gkok": [1, -1, 3, 2, 5, 0, None],
-                "i ran": [0, 1, 2, 3, 4, 5, 6],
-                "g": [1, 1, 1, 1, 1, 1, 1],
-            }
-        )
+        constructor({
+            "arg entina": [None, 2, 3, 1, 2, 3, 4],
+            "ban gkok": [1, -1, 3, 2, 5, 0, None],
+            "i ran": [0, 1, 2, 3, 4, 5, 6],
+            "g": [1, 1, 1, 1, 1, 1, 1],
+        })
     )
     result = df.with_columns(
         nw.col("arg entina").cum_sum(reverse=reverse).over("g", order_by="ban gkok")
@@ -173,13 +169,11 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
         pytest.skip(reason="too old version")
 
     df = nw.from_native(
-        constructor(
-            {
-                "arg entina": [1, 2, 3, 1, 2, 3, 4],
-                "ban gkok": [1, -1, 3, 2, 5, 0, None],
-                "i ran": [0, 1, 2, 3, 4, 5, 6],
-            }
-        )
+        constructor({
+            "arg entina": [1, 2, 3, 1, 2, 3, 4],
+            "ban gkok": [1, -1, 3, 2, 5, 0, None],
+            "i ran": [0, 1, 2, 3, 4, 5, 6],
+        })
     ).sort("i ran")
     result = df.with_columns(
         nw.col("arg entina").cum_sum(reverse=reverse).over(order_by="ban gkok")

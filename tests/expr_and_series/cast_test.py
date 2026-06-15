@@ -107,9 +107,9 @@ def test_cast(constructor: Constructor) -> None:
     }
     cast_map = {c: t for c, t in cast_map.items() if c not in incompatible_columns}
 
-    result = df.select(
-        *[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()]
-    ).collect_schema()
+    result = df.select(*[
+        nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()
+    ]).collect_schema()
 
     for (key, ltype), rtype in zip(result.items(), cast_map.values(), strict=False):
         if "modin_constructor" in str(constructor) and key in MODIN_XFAIL_COLUMNS:
@@ -130,7 +130,8 @@ def test_cast_series(
         request.applymarker(pytest.mark.xfail)
 
     df = (
-        nw.from_native(constructor_eager(DATA))
+        nw
+        .from_native(constructor_eager(DATA))
         .select(nw.col(key).cast(value) for key, value in SCHEMA.items())
         .lazy()
         .collect()
@@ -275,9 +276,10 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    from_dtype = nw.Struct(
-        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())]
-    )
+    from_dtype = nw.Struct([
+        nw.Field("movie", nw.String()),
+        nw.Field("rating", nw.Float64()),
+    ])
 
     if "spark" in str(constructor):
         data = {"movie": ["Cars", "Toy Story"], "rating": [4.5, 4.9]}
@@ -291,9 +293,10 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         }
         dframe = nw.from_native(constructor(data)).select(nw.col("a").cast(from_dtype))
 
-    to_dtype = nw.Struct(
-        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float32())]
-    )
+    to_dtype = nw.Struct([
+        nw.Field("movie", nw.String()),
+        nw.Field("rating", nw.Float32()),
+    ])
     result = dframe.select(nw.col("a").cast(to_dtype))
     assert result.collect_schema() == {"a": to_dtype}
 

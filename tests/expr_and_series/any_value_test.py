@@ -39,7 +39,8 @@ def test_any_value_expr(
 
     # Aggregation + right broadcast
     result = (
-        df.select(nw.col("a"), nw.col("b").any_value(ignore_nulls=ignore_nulls))
+        df
+        .select(nw.col("a"), nw.col("b").any_value(ignore_nulls=ignore_nulls))
         .lazy()
         .collect()
     )
@@ -48,7 +49,8 @@ def test_any_value_expr(
 
     # Aggregation + left broadcast
     result = (
-        df.select(nw.col("a").any_value(ignore_nulls=ignore_nulls), nw.col("b"))
+        df
+        .select(nw.col("a").any_value(ignore_nulls=ignore_nulls), nw.col("b"))
         .lazy()
         .collect()
     )

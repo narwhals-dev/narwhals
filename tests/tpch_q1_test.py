@@ -50,7 +50,8 @@ def test_q1(library: str) -> None:
     if schema["l_shipdate"] != nw.Date and schema["l_shipdate"] != nw.Datetime:
         df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
     query_result = (
-        df.filter(nw.col("l_shipdate") <= var_1)
+        df
+        .filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
             disc_price=nw.col("l_extendedprice") * (1 - nw.col("l_discount")),
             charge=(
@@ -60,18 +61,16 @@ def test_q1(library: str) -> None:
             ),
         )
         .group_by(["l_returnflag", "l_linestatus"])
-        .agg(
-            [
-                nw.col("l_quantity").sum().alias("sum_qty"),
-                nw.col("l_extendedprice").sum().alias("sum_base_price"),
-                nw.col("disc_price").sum().alias("sum_disc_price"),
-                nw.col("charge").sum().alias("sum_charge"),
-                nw.col("l_quantity").mean().alias("avg_qty"),
-                nw.col("l_extendedprice").mean().alias("avg_price"),
-                nw.col("l_discount").mean().alias("avg_disc"),
-                nw.len().alias("count_order"),
-            ]
-        )
+        .agg([
+            nw.col("l_quantity").sum().alias("sum_qty"),
+            nw.col("l_extendedprice").sum().alias("sum_base_price"),
+            nw.col("disc_price").sum().alias("sum_disc_price"),
+            nw.col("charge").sum().alias("sum_charge"),
+            nw.col("l_quantity").mean().alias("avg_qty"),
+            nw.col("l_extendedprice").mean().alias("avg_price"),
+            nw.col("l_discount").mean().alias("avg_disc"),
+            nw.len().alias("count_order"),
+        ])
         .sort(["l_returnflag", "l_linestatus"])
     )
     expected = {
@@ -120,7 +119,8 @@ def test_q1_w_generic_funcs(library: str) -> None:
     df = nw.from_native(df_raw, eager_only=True)
     df = df.with_columns(nw.col("l_shipdate").str.to_datetime())
     query_result = (
-        df.filter(nw.col("l_shipdate") <= var_1)
+        df
+        .filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
             charge=(
                 nw.col("l_extendedprice")
@@ -180,7 +180,8 @@ def test_q1_w_pandas_agg_generic_path() -> None:
     var_1 = datetime(1998, 9, 2)
     df = nw.from_native(df_raw).lazy()
     query_result = (
-        df.filter(nw.col("l_shipdate") <= var_1)
+        df
+        .filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
             disc_price=nw.col("l_extendedprice") * (1 - nw.col("l_discount")),
             charge=(
@@ -190,18 +191,16 @@ def test_q1_w_pandas_agg_generic_path() -> None:
             ),
         )
         .group_by(["l_returnflag", "l_linestatus"])
-        .agg(
-            [
-                nw.sum("l_quantity").alias("sum_qty"),
-                nw.sum("l_extendedprice").alias("sum_base_price"),
-                nw.sum("disc_price").alias("sum_disc_price"),
-                nw.col("charge").sum().alias("sum_charge"),
-                nw.mean("l_quantity").alias("avg_qty"),
-                nw.mean("l_extendedprice").alias("avg_price"),
-                nw.mean("l_discount").alias("avg_disc"),
-                nw.len().alias("count_order"),
-            ]
-        )
+        .agg([
+            nw.sum("l_quantity").alias("sum_qty"),
+            nw.sum("l_extendedprice").alias("sum_base_price"),
+            nw.sum("disc_price").alias("sum_disc_price"),
+            nw.col("charge").sum().alias("sum_charge"),
+            nw.mean("l_quantity").alias("avg_qty"),
+            nw.mean("l_extendedprice").alias("avg_price"),
+            nw.mean("l_discount").alias("avg_disc"),
+            nw.len().alias("count_order"),
+        ])
         .sort(["l_returnflag", "l_linestatus"])
     )
     expected = {

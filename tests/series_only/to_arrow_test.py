@@ -34,7 +34,8 @@ def test_to_arrow_with_nulls(
 
     data = [1, 2, None]
     result = (
-        nw.from_native(constructor_eager({"a": data}), eager_only=True)["a"]
+        nw
+        .from_native(constructor_eager({"a": data}), eager_only=True)["a"]
         .cast(nw.Int64)
         .to_arrow()
     )

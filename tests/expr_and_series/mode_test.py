@@ -97,7 +97,8 @@ def test_mode_group_by_unimodal(
         request.applymarker(pytest.mark.xfail)
 
     result = (
-        df.group_by("grp")
+        df
+        .group_by("grp")
         .agg(nw.col("vals_unimodal").mode(keep="any"))
         .sort("grp")
         .lazy()
@@ -131,7 +132,8 @@ def test_mode_group_by_multimodal(
         request.applymarker(pytest.mark.xfail)
 
     result = (
-        df.group_by("grp")
+        df
+        .group_by("grp")
         .agg(nw.col(mode_col).mode(keep="any"))
         .sort("grp")
         .lazy()

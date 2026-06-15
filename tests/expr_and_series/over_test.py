@@ -120,7 +120,8 @@ def test_over_cumsum(
     }
 
     result = (
-        df.with_columns(nw.col("b", "c").cum_sum().over("a").name.suffix("_cumsum"))
+        df
+        .with_columns(nw.col("b", "c").cum_sum().over("a").name.suffix("_cumsum"))
         .sort("i")
         .drop("i")
     )
@@ -146,7 +147,8 @@ def test_over_cumcount(
     }
 
     result = (
-        df.with_columns(nw.col("b", "c").cum_count().over("a").name.suffix("_cumcount"))
+        df
+        .with_columns(nw.col("b", "c").cum_count().over("a").name.suffix("_cumcount"))
         .sort("i")
         .drop("i")
     )
@@ -172,7 +174,8 @@ def test_over_cummax(
         "c_cummax": [5, 5, 3, 3, 3],
     }
     result = (
-        df.with_columns(nw.col("b", "c").cum_max().over("a").name.suffix("_cummax"))
+        df
+        .with_columns(nw.col("b", "c").cum_max().over("a").name.suffix("_cummax"))
         .sort("i")
         .drop("i")
     )
@@ -200,7 +203,8 @@ def test_over_cummin(
     }
 
     result = (
-        df.with_columns(nw.col("b", "c").cum_min().over("a").name.suffix("_cummin"))
+        df
+        .with_columns(nw.col("b", "c").cum_min().over("a").name.suffix("_cummin"))
         .sort("i")
         .drop("i")
     )
@@ -228,7 +232,8 @@ def test_over_cumprod(
     }
 
     result = (
-        df.with_columns(nw.col("b", "c").cum_prod().over("a").name.suffix("_cumprod"))
+        df
+        .with_columns(nw.col("b", "c").cum_prod().over("a").name.suffix("_cumprod"))
         .sort("i")
         .drop("i")
     )
@@ -282,7 +287,8 @@ def test_over_anonymous_reduction(
     )
     with context:
         result = (
-            nw.from_native(df)
+            nw
+            .from_native(df)
             .with_columns(nw.all().sum().over("a").name.suffix("_sum"))
             .sort("a", "b")
         )
@@ -423,7 +429,8 @@ def test_over_without_partition_by(
 
     df = nw.from_native(constructor({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
-        df.with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))
+        df
+        .with_columns(b=nw.col("a").abs().cum_sum().over(order_by="i"))
         .sort("i")
         .select("a", "b", "i")
     )
@@ -439,7 +446,8 @@ def test_aggregation_over_without_partition_by(
 
     df = nw.from_native(constructor_eager({"a": [1, -1, 2], "i": [0, 2, 1]}))
     result = (
-        df.with_columns(b=nw.col("a").diff().sum().over(order_by="i"))
+        df
+        .with_columns(b=nw.col("a").diff().sum().over(order_by="i"))
         .sort("i")
         .select("a", "b", "i")
     )
@@ -478,7 +486,8 @@ def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest)
         native_frame = native_frame.repartition(npartitions=1)  # type: ignore[union-attr]
 
     result = (
-        nw.from_native(native_frame)
+        nw
+        .from_native(native_frame)
         .with_columns(
             quantile_over_b=quantile_expr.over("b"), quantile_global=quantile_expr
         )
@@ -504,7 +513,8 @@ def test_over_ewm_mean(
 
     ewm_expr = nw.col("a").ewm_mean(com=1)
     result = (
-        nw.from_native(constructor_eager(data))
+        nw
+        .from_native(constructor_eager(data))
         .with_columns(ewm_over_b=ewm_expr.over("b"), ewm_global=ewm_expr)
         .sort("a")
     )

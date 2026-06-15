@@ -53,13 +53,20 @@ ConstructorPandasLike: TypeAlias = Callable[[Any], "pd.DataFrame"]
 NestedOrEnumDType: TypeAlias = "nw.List | nw.Array | nw.Struct | nw.Enum"
 """`DType`s which **cannot** be used as bare types."""
 
-ID_PANDAS_LIKE = frozenset(
-    ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
-)
+ID_PANDAS_LIKE = frozenset((
+    "pandas",
+    "pandas[nullable]",
+    "pandas[pyarrow]",
+    "modin",
+    "modin[pyarrow]",
+    "cudf",
+))
 ID_CUDF = frozenset(("cudf",))
-_CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
-    ("constructor_eager", "constructor", "constructor_pandas_like")
-)
+_CONSTRUCTOR_FIXTURE_NAMES = frozenset[str]((
+    "constructor_eager",
+    "constructor",
+    "constructor_pandas_like",
+))
 
 
 def _to_comparable_list(column_values: Any) -> Any:
@@ -197,7 +204,8 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
     )
     return (
         # Don't remove pyrefly-ignore, needed in CI when pyspark is installed.
-        builder.config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
+        builder
+        .config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()

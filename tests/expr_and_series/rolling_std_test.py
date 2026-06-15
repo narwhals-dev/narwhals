@@ -212,8 +212,10 @@ def test_rolling_std_expr_lazy_ungrouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_std(window_size, min_samples=min_samples, center=center, ddof=ddof)
             .over(order_by="b")
         )
@@ -325,8 +327,10 @@ def test_rolling_std_expr_lazy_grouped(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            nw.col("a")
+        df
+        .with_columns(
+            nw
+            .col("a")
             .rolling_std(window_size, min_samples=min_samples, center=center, ddof=ddof)
             .over("g", order_by="b")
         )

@@ -158,7 +158,8 @@ def test_collect_with_kwargs(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
 
     result = (
-        df.lazy()
+        df
+        .lazy()
         .select(nw.col("a", "b").sum())
         .collect(**collect_kwargs.get(df.implementation, {}))
     )

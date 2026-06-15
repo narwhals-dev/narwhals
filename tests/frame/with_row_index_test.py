@@ -43,7 +43,8 @@ def test_with_row_index_lazy(
         pytest.skip()
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .with_row_index(name="foo bar", order_by=order_by)
         .sort("xyz")
     )

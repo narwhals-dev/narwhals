@@ -82,14 +82,16 @@ def test_dt_to_string_iso_local_datetime_series(
 ) -> None:
     df = constructor_eager({"a": [data]})
     result = (
-        nw.from_native(df, eager_only=True)["a"]
+        nw
+        .from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S.%f")
         .item(0)
     )
     assert _clean_string(str(result)) == _clean_string(expected)
 
     result = (
-        nw.from_native(df, eager_only=True)["a"]
+        nw
+        .from_native(df, eager_only=True)["a"]
         .dt.to_string("%Y-%m-%dT%H:%M:%S%.f")
         .item(0)
     )

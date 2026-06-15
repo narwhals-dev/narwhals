@@ -72,7 +72,8 @@ def test_sort_expr_args(
             pytest.skip()
         pytest.importorskip("pyarrow")
     result = nw.from_native(constructor(data)).select(
-        nw.col("a")
+        nw
+        .col("a")
         .cast(nw.List(nw.Int32()))
         .list.sort(descending=descending, nulls_last=nulls_last)
     )

@@ -385,7 +385,8 @@ def test_dtype_is_x() -> None:
     for dtype in dtypes:
         assert dtype.is_numeric() == (
             dtype
-            in is_signed_integer.union(is_unsigned_integer)
+            in is_signed_integer
+            .union(is_unsigned_integer)
             .union(is_float)
             .union(is_decimal)
         )
@@ -420,7 +421,8 @@ def test_huge_int_to_native() -> None:
         from df
                      """)
     result = (
-        nw.from_native(rel)
+        nw
+        .from_native(rel)
         .with_columns(
             a_int=nw.col("a").cast(nw.Int128()), a_unit=nw.col("a").cast(nw.UInt128())
         )

@@ -239,7 +239,8 @@ def test_when_chain_basic_two_conditions(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(10)
         .when(nw.col("a") == 2)
         .then(20)
@@ -255,7 +256,8 @@ def test_when_chain_three_conditions(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(100)
         .when(nw.col("a") == 2)
         .then(200)
@@ -273,7 +275,8 @@ def test_when_chain_multiple_conditions(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(10)
         .when(nw.col("a") == 2)
         .then(20)
@@ -304,7 +307,8 @@ def test_when_chain_first_match_wins(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, 5, 10]}))
 
     result = df.select(
-        nw.when(nw.col("a") < 5)
+        nw
+        .when(nw.col("a") < 5)
         .then(100)  # Matches 1, 2, 3
         .when(nw.col("a") < 3)
         .then(200)  # Would match 1, 2 but first condition already matched
@@ -322,7 +326,8 @@ def test_when_chain_all_conditions_false(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     result = df.select(
-        nw.when(nw.col("a") > 10)
+        nw
+        .when(nw.col("a") > 10)
         .then(10)
         .when(nw.col("a") > 20)
         .then(20)
@@ -340,7 +345,8 @@ def test_when_chain_mixed_value_types(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(nw.col("b"))  # Column reference
         .when(nw.col("a") == 2)
         .then(100)  # Scalar literal
@@ -358,7 +364,8 @@ def test_when_chain_complex_conditions(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]}))
 
     result = df.select(
-        nw.when((nw.col("a") == 1) & (nw.col("b") == 10))
+        nw
+        .when((nw.col("a") == 1) & (nw.col("b") == 10))
         .then(111)
         .when((nw.col("a") > 2) & (nw.col("b") < 40))
         .then(222)
@@ -376,7 +383,8 @@ def test_when_chain_with_nulls(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, None, 3, None, 5]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(10)
         .when(nw.col("a") == 3)
         .then(30)
@@ -402,7 +410,8 @@ def test_when_chain_expression_conditions(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3, 4, 5]}))
 
     result = df.select(
-        nw.when(nw.col("a") % 2 == 0)
+        nw
+        .when(nw.col("a") % 2 == 0)
         .then(1000)  # Even numbers
         .when(nw.col("a") % 3 == 0)
         .then(2000)  # Odd multiples of 3
@@ -424,7 +433,8 @@ def test_when_chain_value_types_string(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": ["x", "y", "z"]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(nw.lit("first"))
         .when(nw.col("a") == 2)
         .then(nw.col("b"))
@@ -440,7 +450,8 @@ def test_when_chain_value_types_float(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [1.1, 2.2, 3.3]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(10.5)
         .when(nw.col("a") == 2)
         .then(nw.col("b"))
@@ -458,7 +469,8 @@ def test_when_chain_value_types_mixed(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(nw.col("b"))
         .when(nw.col("a") == 2)
         .then(100)
@@ -476,7 +488,8 @@ def test_when_chain_with_columns(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3], "b": [10, 20, 30]}))
 
     result = df.with_columns(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(100)
         .when(nw.col("a") == 2)
         .then(200)
@@ -492,13 +505,15 @@ def test_when_chain_multiple_columns(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(10)
         .when(nw.col("a") == 2)
         .then(20)
         .otherwise(30)
         .alias("x"),
-        nw.when(nw.col("a") < 2)
+        nw
+        .when(nw.col("a") < 2)
         .then(100)
         .when(nw.col("a") < 3)
         .then(200)
@@ -539,7 +554,8 @@ def test_when_chain_conditions_on_multiple_columns(constructor: Constructor) -> 
     )
 
     result = df.select(
-        nw.when(nw.col("a") == 1)
+        nw
+        .when(nw.col("a") == 1)
         .then(nw.col("b"))
         .when(nw.col("c") > 20)
         .then(nw.col("c"))
@@ -559,7 +575,8 @@ def test_when_chain_boolean_column_condition(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [True, False, True, False], "b": [1, 2, 3, 4]}))
 
     result = df.select(
-        nw.when(nw.col("a"))
+        nw
+        .when(nw.col("a"))
         .then(100)
         .when(nw.col("b") > 2)
         .then(200)
@@ -591,7 +608,8 @@ def test_when_then_composes_with_expr_operations(constructor: Constructor) -> No
 
     result = df.select(
         (
-            nw.when(nw.col("a") < 3)
+            nw
+            .when(nw.col("a") < 3)
             .then(nw.col("a"))
             .when(nw.col("a") == 3)
             .then(10)

@@ -6,13 +6,11 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 def test_any_all(constructor: Constructor) -> None:
     df = nw.from_native(
-        constructor(
-            {
-                "a": [True, False, True],
-                "b": [True, True, True],
-                "c": [False, False, False],
-            }
-        )
+        constructor({
+            "a": [True, False, True],
+            "b": [True, True, True],
+            "c": [False, False, False],
+        })
     )
     result = df.select(nw.col("a", "b", "c").all())
     expected = {"a": [False], "b": [True], "c": [False]}
@@ -24,13 +22,11 @@ def test_any_all(constructor: Constructor) -> None:
 
 def test_any_all_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(
-        constructor_eager(
-            {
-                "a": [True, False, True],
-                "b": [True, True, True],
-                "c": [False, False, False],
-            }
-        ),
+        constructor_eager({
+            "a": [True, False, True],
+            "b": [True, True, True],
+            "c": [False, False, False],
+        }),
         eager_only=True,
     )
     result = {"a": [df["a"].all()], "b": [df["b"].all()], "c": [df["c"].all()]}

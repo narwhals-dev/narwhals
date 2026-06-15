@@ -36,7 +36,8 @@ def test_concat_str(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = (
-        df.select(
+        df
+        .select(
             "a",
             nw.concat_str(
                 [nw.col("a") * 2, "b", nw.col("c")],
@@ -49,7 +50,8 @@ def test_concat_str(
     )
     assert_equal_data(result, {"full_sentence": expected})
     result = (
-        df.select(
+        df
+        .select(
             nw.col("a").alias("a_original"),
             nw.concat_str(
                 nw.nth(0) * 2,
@@ -98,7 +100,8 @@ def test_pyarrow_string_type(
         {"store": ["foo", "bar"], "item": input_values}, schema=pa.schema(input_schema)
     )
     result = (
-        nw.from_native(df)
+        nw
+        .from_native(df)
         .with_columns(store_item=nw.concat_str("store", "item", separator="-"))
         .to_native()
         .schema

@@ -76,27 +76,27 @@ def test_cast_date_datetime_pandas() -> None:
     import pandas as pd
 
     # pandas: pyarrow date to datetime
-    dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
-        {"a": "date32[pyarrow]"}
-    )
+    dfpd = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype({
+        "a": "date32[pyarrow]"
+    })
     df = nw.from_native(dfpd)
     df = df.select(nw.col("a").cast(nw.Datetime))
     result = nw.to_native(df)
-    expected = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
-        {"a": "timestamp[us][pyarrow]"}
-    )
+    expected = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype({
+        "a": "timestamp[us][pyarrow]"
+    })
     pd.testing.assert_frame_equal(result, expected)
 
     # pandas: pyarrow datetime to date
-    dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype(
-        {"a": "timestamp[us][pyarrow]"}
-    )
+    dfpd = pd.DataFrame({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}).astype({
+        "a": "timestamp[us][pyarrow]"
+    })
     df = nw.from_native(dfpd)
     df = df.select(nw.col("a").cast(nw.Date))
     result = nw.to_native(df)
-    expected = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype(
-        {"a": "date32[pyarrow]"}
-    )
+    expected = pd.DataFrame({"a": [date(2020, 1, 1), date(2020, 1, 2)]}).astype({
+        "a": "date32[pyarrow]"
+    })
     pd.testing.assert_frame_equal(result, expected)
     assert df.schema == {"a": nw.Date}
 

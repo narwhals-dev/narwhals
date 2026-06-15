@@ -108,18 +108,17 @@ def test_first_last_expr_over_order_by(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     frame = nw.from_native(
-        constructor(
-            {
-                "a": [1, 1, 2],
-                "b": [4, 5, 6],
-                "c": [None, 7, 8],
-                "d": ["x", "y", "z"],
-                "i": [None, 2, 1],
-            }
-        )
+        constructor({
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "c": [None, 7, 8],
+            "d": ["x", "y", "z"],
+            "i": [None, 2, 1],
+        })
     )
     result = frame.with_columns(
-        nw.col("b", "c", "d")
+        nw
+        .col("b", "c", "d")
         .first()
         .over(order_by="i")
         .name.suffix("_first_ordered_over"),
@@ -167,9 +166,12 @@ def test_first_expr_over_order_by_partition_by(
         request.applymarker(pytest.mark.xfail)
 
     frame = nw.from_native(
-        constructor(
-            {"a": [1, 1, 2], "b": [4, 5, 6], "c": [None, 7, 8], "i": [1, None, 2]}
-        )
+        constructor({
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "c": [None, 7, 8],
+            "i": [1, None, 2],
+        })
     )
     result = frame.with_columns(
         nw.col("b", "c").first().over("a", order_by="i").name.suffix("_first"),
@@ -208,7 +210,8 @@ def test_first_expr_in_group_by(
     }
     df = nw.from_native(constructor(data))
     result = (
-        df.group_by("grp")
+        df
+        .group_by("grp")
         .agg(
             nw.col("a", "b", "c").first(order_by="idx").name.suffix("_first"),
             nw.col("a", "b", "c").last(order_by="idx").name.suffix("_last"),
@@ -226,7 +229,8 @@ def test_first_expr_in_group_by(
     }
     assert_equal_data(result, expected)
     result = (
-        df.group_by("grp")
+        df
+        .group_by("grp")
         .agg(
             nw.col("a", "b", "c").first(order_by=["idx", "idx2"]).name.suffix("_first"),
             nw.col("a", "b", "c").last(order_by=["idx", "idx2"]).name.suffix("_last"),
@@ -325,19 +329,18 @@ def test_first_last_different_orders(
         else does_not_raise()
     )
     frame = nw.from_native(
-        constructor(
-            {
-                "a": [1, 1, 2],
-                "b": [4, 5, 6],
-                "c": [None, 7, 8],
-                "i_0": [1, None, 2],
-                "i_1": [2, None, 1],
-            }
-        )
+        constructor({
+            "a": [1, 1, 2],
+            "b": [4, 5, 6],
+            "c": [None, 7, 8],
+            "i_0": [1, None, 2],
+            "i_1": [2, None, 1],
+        })
     )
     with context:
         result = (
-            frame.group_by("a")
+            frame
+            .group_by("a")
             .agg(
                 nw.col("b", "c").first(order_by="i_0").name.suffix("_first_i_0"),
                 nw.col("b", "c").first(order_by="i_1").name.suffix("_first_i_1"),

@@ -582,30 +582,26 @@ def test_joinasof_time(
     if PANDAS_VERSION < (2, 1) and ("pandas_pyarrow" in str(constructor)):
         request.applymarker(pytest.mark.xfail)
     df = from_native_lazy(
-        constructor(
-            {
-                "datetime": [
-                    datetime(2016, 3, 1),
-                    datetime(2018, 8, 1),
-                    datetime(2019, 1, 1),
-                ],
-                "population": [82.19, 82.66, 83.12],
-            }
-        )
+        constructor({
+            "datetime": [
+                datetime(2016, 3, 1),
+                datetime(2018, 8, 1),
+                datetime(2019, 1, 1),
+            ],
+            "population": [82.19, 82.66, 83.12],
+        })
     ).sort("datetime")
     df_right = from_native_lazy(
-        constructor(
-            {
-                "datetime": [
-                    datetime(2016, 1, 1),
-                    datetime(2017, 1, 1),
-                    datetime(2018, 1, 1),
-                    datetime(2019, 1, 1),
-                    datetime(2020, 1, 1),
-                ],
-                "gdp": [4164, 4411, 4566, 4696, 4827],
-            }
-        )
+        constructor({
+            "datetime": [
+                datetime(2016, 1, 1),
+                datetime(2017, 1, 1),
+                datetime(2018, 1, 1),
+                datetime(2019, 1, 1),
+                datetime(2020, 1, 1),
+            ],
+            "gdp": [4164, 4411, 4566, 4696, 4827],
+        })
     ).sort("datetime")
     result = df.join_asof(
         df_right, left_on="datetime", right_on="datetime", strategy=strategy
@@ -623,18 +619,18 @@ def test_joinasof_by(constructor: Constructor, request: pytest.FixtureRequest) -
     ):
         request.applymarker(pytest.mark.xfail)
     df = from_native_lazy(
-        constructor(
-            {
-                "antananarivo": [1, 5, 7, 10],
-                "bob": ["D", "D", "C", "A"],
-                "c": [9, 2, 1, 1],
-            }
-        )
+        constructor({
+            "antananarivo": [1, 5, 7, 10],
+            "bob": ["D", "D", "C", "A"],
+            "c": [9, 2, 1, 1],
+        })
     ).sort("antananarivo")
     df_right = from_native_lazy(
-        constructor(
-            {"antananarivo": [1, 4, 5, 8], "bob": ["D", "D", "A", "F"], "d": [1, 3, 4, 1]}
-        )
+        constructor({
+            "antananarivo": [1, 4, 5, 8],
+            "bob": ["D", "D", "A", "F"],
+            "d": [1, 3, 4, 1],
+        })
     ).sort("antananarivo")
     result = df.join_asof(df_right, on="antananarivo", by_left="bob", by_right="bob")
     result_by = df.join_asof(df_right, on="antananarivo", by="bob")

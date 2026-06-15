@@ -44,7 +44,8 @@ def test_ew_mean(
     df = nw.from_native(constructor_eager(data))
 
     expr = (
-        nw.col("close")
+        nw
+        .col("close")
         .ewm_mean(alpha=0.03)
         .over(order_by="time")
         .round(2)

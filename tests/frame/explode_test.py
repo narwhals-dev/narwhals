@@ -44,7 +44,8 @@ def test_explode_single_col(
         pytest.importorskip("pyarrow")
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
         .explode(column)
         .select("a", column)
@@ -96,7 +97,8 @@ def test_explode_multiple_cols(
         pytest.importorskip("pyarrow")
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .with_columns(nw.col(column, *more_columns).cast(nw.List(nw.Int32())))
         .explode(column, *more_columns)
         .select("a", column, *more_columns)
@@ -121,7 +123,8 @@ def test_explode_shape_error(
         match=r".*exploded columns (must )?have matching element counts",
     ):
         _ = (
-            nw.from_native(constructor(data))
+            nw
+            .from_native(constructor(data))
             .lazy()
             .with_columns(nw.col("l1", "l2", "l3").cast(nw.List(nw.Int32())))
             .explode("l1", "l3")

@@ -130,7 +130,8 @@ def test_timestamp_datetimes_tz_aware(
     df = nw.from_native(constructor(datetimes))
     dtype = nw.Datetime(time_unit_compat(original_time_unit, request))
     result = df.select(
-        nw.col("a")
+        nw
+        .col("a")
         .cast(dtype)
         .dt.replace_time_zone("UTC")
         .dt.convert_time_zone("Asia/Kathmandu")

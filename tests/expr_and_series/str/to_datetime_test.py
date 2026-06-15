@@ -30,7 +30,8 @@ def test_to_datetime(constructor: Constructor) -> None:
         expected = "2020-01-01 12:34:56"
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S"))
     )
@@ -100,7 +101,8 @@ def test_to_datetime_infer_fmt(
         expected = expected_pyspark
 
     result = (
-        nw.from_native(constructor(data))
+        nw
+        .from_native(constructor(data))
         .lazy()
         .select(b=nw.col("a").str.to_datetime())
         .collect()

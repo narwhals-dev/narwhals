@@ -30,7 +30,8 @@ expected = {
 def test_filter_is_between(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     result = (
-        df.select(nw.col(["flight_date", "tail_number", "dep_time", "dep_delay"]))
+        df
+        .select(nw.col(["flight_date", "tail_number", "dep_time", "dep_delay"]))
         .drop_nulls()
         .filter(nw.col("dep_delay").is_between(5, 50, closed="none"))
     )

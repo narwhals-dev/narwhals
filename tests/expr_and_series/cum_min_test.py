@@ -103,14 +103,12 @@ def test_lazy_cum_min_ordered_by_nulls(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(
-        constructor(
-            {
-                "a": [1, 2, 3, None, 2, 3, 4],
-                "b": [1, -1, 3, 2, 5, 0, None],
-                "i": [0, 1, 2, 3, 4, 5, 6],
-                "g": [1, 1, 1, 1, 1, 1, 1],
-            }
-        )
+        constructor({
+            "a": [1, 2, 3, None, 2, 3, 4],
+            "b": [1, -1, 3, 2, 5, 0, None],
+            "i": [0, 1, 2, 3, 4, 5, 6],
+            "g": [1, 1, 1, 1, 1, 1, 1],
+        })
     )
     result = df.with_columns(
         nw.col("a").cum_min(reverse=reverse).over("g", order_by="b")
@@ -174,13 +172,11 @@ def test_lazy_cum_min_ungrouped_ordered_by_nulls(
     ):
         pytest.skip(reason="too old version")
     df = nw.from_native(
-        constructor(
-            {
-                "a": [1, 2, 3, 1, 2, 3, 4],
-                "b": [1, -1, 3, 2, 5, 0, None],
-                "i": [0, 1, 2, 3, 4, 5, 6],
-            }
-        )
+        constructor({
+            "a": [1, 2, 3, 1, 2, 3, 4],
+            "b": [1, -1, 3, 2, 5, 0, None],
+            "i": [0, 1, 2, 3, 4, 5, 6],
+        })
     ).sort("i")
     result = df.with_columns(
         nw.col("a").cum_min(reverse=reverse).over(order_by="b")
