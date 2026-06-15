@@ -501,15 +501,13 @@ class ExprStringNamespace(Generic[ExprT]):
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "quotes": [
-            ...             "'e.t. phone home'",
-            ...             "you talkin' to me?",
-            ...             "to infinity,and BEYOND!",
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "quotes": [
+            ...         "'e.t. phone home'",
+            ...         "you talkin' to me?",
+            ...         "to infinity,and BEYOND!",
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(quotes_title=nw.col("quotes").str.to_titlecase())
             ┌─────────────────────────────────────────────────────┐

@@ -25,9 +25,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"a": [datetime(2012, 1, 7, 10), datetime(2027, 12, 13)]}
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [datetime(2012, 1, 7, 10), datetime(2027, 12, 13)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").dt.date()).to_native()
             shape: (2, 1)
@@ -51,9 +51,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": [datetime(1978, 6, 1), datetime(2065, 1, 1)]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [datetime(1978, 6, 1), datetime(2065, 1, 1)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(nw.col("a").dt.year().alias("year"))
             ┌──────────────────┐
@@ -117,9 +117,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"a": [datetime(1978, 1, 1, 1), datetime(2065, 1, 1, 10)]}
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [datetime(1978, 1, 1, 1), datetime(2065, 1, 1, 10)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(nw.col("a").dt.hour().alias("hour"))
             ┌──────────────────────────────┐
@@ -147,9 +147,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": [datetime(1978, 1, 1, 1, 1), datetime(2065, 1, 1, 10, 20)]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [datetime(1978, 1, 1, 1, 1), datetime(2065, 1, 1, 10, 20)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(nw.col("a").dt.minute().alias("minute")).to_native()
                                 a  minute
@@ -165,14 +165,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "a": [
-            ...             datetime(1978, 1, 1, 1, 1, 1),
-            ...             datetime(2065, 1, 1, 10, 20, 30),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({
+            ...     "a": [datetime(1978, 1, 1, 1, 1, 1), datetime(2065, 1, 1, 10, 20, 30)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(nw.col("a").dt.second().alias("second")).to_native()
             pyarrow.Table
@@ -191,14 +186,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "a": [
-            ...             datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...             datetime(2065, 1, 1, 10, 20, 30, 67000),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({
+            ...     "a": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     nw.col("a").dt.millisecond().alias("millisecond")
@@ -219,14 +212,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "a": [
-            ...             datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...             datetime(2065, 1, 1, 10, 20, 30, 67000),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({
+            ...     "a": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     nw.col("a").dt.microsecond().alias("microsecond")
@@ -247,14 +238,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "a": [
-            ...             datetime(1978, 1, 1, 1, 1, 1, 0),
-            ...             datetime(2065, 1, 1, 10, 20, 30, 67000),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({
+            ...     "a": [
+            ...         datetime(1978, 1, 1, 1, 1, 1, 0),
+            ...         datetime(2065, 1, 1, 10, 20, 30, 67000),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     nw.col("a").dt.nanosecond().alias("nanosecond")
@@ -275,9 +264,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_ordinal_day=nw.col("a").dt.ordinal_day())
             ┌───────────────────────────┐
@@ -299,9 +288,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_week_day=nw.col("a").dt.weekday())
             ┌────────────────────────┐
@@ -326,9 +315,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"a": [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]}
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     a_total_minutes=nw.col("a").dt.total_minutes()
@@ -357,9 +346,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]}
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [timedelta(seconds=10), timedelta(seconds=20, milliseconds=40)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     a_total_seconds=nw.col("a").dt.total_seconds()
@@ -388,14 +377,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "a": [
-            ...             timedelta(milliseconds=10),
-            ...             timedelta(milliseconds=20, microseconds=40),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [
+            ...         timedelta(milliseconds=10),
+            ...         timedelta(milliseconds=20, microseconds=40),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     a_total_milliseconds=nw.col("a").dt.total_milliseconds()
@@ -426,14 +413,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import timedelta
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> df_native = pa.table(
-            ...     {
-            ...         "a": [
-            ...             timedelta(microseconds=10),
-            ...             timedelta(milliseconds=1, microseconds=200),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pa.table({
+            ...     "a": [
+            ...         timedelta(microseconds=10),
+            ...         timedelta(milliseconds=1, microseconds=200),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     a_total_microseconds=nw.col("a").dt.total_microseconds()
@@ -461,16 +446,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import timedelta
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "a": pd.to_datetime(
-            ...             [
-            ...                 "2024-01-01 00:00:00.000000001",
-            ...                 "2024-01-01 00:00:00.000000002",
-            ...             ]
-            ...         )
-            ...     }
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": pd.to_datetime([
+            ...         "2024-01-01 00:00:00.000000001",
+            ...         "2024-01-01 00:00:00.000000002",
+            ...     ])
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     a_diff_total_nanoseconds=nw.col("a").diff().dt.total_nanoseconds()
@@ -524,9 +505,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"a": [datetime(2020, 3, 1), datetime(2020, 5, 1)]}
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [datetime(2020, 3, 1), datetime(2020, 5, 1)]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").dt.to_string("%Y/%m/%d %H:%M:%S"))
             ┌───────────────────────┐
@@ -557,14 +538,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime, timezone
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "a": [
-            ...             datetime(2024, 1, 1, tzinfo=timezone.utc),
-            ...             datetime(2024, 1, 2, tzinfo=timezone.utc),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").dt.replace_time_zone("Asia/Kathmandu")).to_native()
                                       a
@@ -588,14 +567,12 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             >>> from datetime import datetime, timezone
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "a": [
-            ...             datetime(2024, 1, 1, tzinfo=timezone.utc),
-            ...             datetime(2024, 1, 2, tzinfo=timezone.utc),
-            ...         ]
-            ...     }
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [
+            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ...     ]
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a").dt.convert_time_zone("Asia/Kathmandu")).to_native()
                                       a

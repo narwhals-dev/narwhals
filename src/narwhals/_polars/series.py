@@ -54,92 +54,90 @@ if TYPE_CHECKING:
 Incomplete: TypeAlias = Any
 
 # Series methods where PolarsSeries just defers to Polars.Series directly.
-INHERITED_METHODS = frozenset(
-    [
-        "__add__",
-        "__and__",
-        "__floordiv__",
-        "__invert__",
-        "__iter__",
-        "__mod__",
-        "__mul__",
-        "__neg__",
-        "__or__",
-        "__pow__",
-        "__radd__",
-        "__rand__",
-        "__rfloordiv__",
-        "__rmod__",
-        "__rmul__",
-        "__ror__",
-        "__rsub__",
-        "__rtruediv__",
-        "__sub__",
-        "__truediv__",
-        "abs",
-        "all",
-        "any",
-        "arg_max",
-        "arg_min",
-        "arg_true",
-        "ceil",
-        "clip",
-        "cos",
-        "count",
-        "cum_max",
-        "cum_min",
-        "cum_prod",
-        "cum_sum",
-        "diff",
-        "drop_nulls",
-        "exp",
-        "fill_null",
-        "fill_nan",
-        "filter",
-        "floor",
-        "gather_every",
-        "head",
-        "is_between",
-        "is_close",
-        "is_duplicated",
-        "is_empty",
-        "is_finite",
-        "is_first_distinct",
-        "is_in",
-        "is_last_distinct",
-        "is_null",
-        "is_sorted",
-        "is_unique",
-        "item",
-        "kurtosis",
-        "len",
-        "log",
-        "max",
-        "mean",
-        "min",
-        "mode",
-        "n_unique",
-        "null_count",
-        "quantile",
-        "rank",
-        "round",
-        "sample",
-        "shift",
-        "sin",
-        "skew",
-        "sqrt",
-        "std",
-        "sum",
-        "tail",
-        "to_arrow",
-        "to_frame",
-        "to_list",
-        "to_pandas",
-        "unique",
-        "var",
-        "zip_with",
-    ]
-)
+INHERITED_METHODS = frozenset([
+    "__add__",
+    "__and__",
+    "__floordiv__",
+    "__invert__",
+    "__iter__",
+    "__mod__",
+    "__mul__",
+    "__neg__",
+    "__or__",
+    "__pow__",
+    "__radd__",
+    "__rand__",
+    "__rfloordiv__",
+    "__rmod__",
+    "__rmul__",
+    "__ror__",
+    "__rsub__",
+    "__rtruediv__",
+    "__sub__",
+    "__truediv__",
+    "abs",
+    "all",
+    "any",
+    "arg_max",
+    "arg_min",
+    "arg_true",
+    "ceil",
+    "clip",
+    "cos",
+    "count",
+    "cum_max",
+    "cum_min",
+    "cum_prod",
+    "cum_sum",
+    "diff",
+    "drop_nulls",
+    "exp",
+    "fill_null",
+    "fill_nan",
+    "filter",
+    "floor",
+    "gather_every",
+    "head",
+    "is_between",
+    "is_close",
+    "is_duplicated",
+    "is_empty",
+    "is_finite",
+    "is_first_distinct",
+    "is_in",
+    "is_last_distinct",
+    "is_null",
+    "is_sorted",
+    "is_unique",
+    "item",
+    "kurtosis",
+    "len",
+    "log",
+    "max",
+    "mean",
+    "min",
+    "mode",
+    "n_unique",
+    "null_count",
+    "quantile",
+    "rank",
+    "round",
+    "sample",
+    "shift",
+    "sin",
+    "skew",
+    "sqrt",
+    "std",
+    "sum",
+    "tail",
+    "to_arrow",
+    "to_frame",
+    "to_list",
+    "to_pandas",
+    "unique",
+    "var",
+    "zip_with",
+])
 
 
 class PolarsSeries:
@@ -262,7 +260,8 @@ class PolarsSeries:
             name = self.name
             ns = self.__narwhals_namespace__()
             return (
-                self.to_frame()
+                self
+                .to_frame()
                 .select((ns.col(name).__rfloordiv__(other)).alias(name))
                 .get_column(name)
             )
@@ -517,14 +516,12 @@ class PolarsSeries:
         if self._backend_version < (1, 0, 0):
             value_name_ = name or ("proportion" if normalize else "count")
 
-            result = self.native.value_counts(sort=sort, parallel=parallel).select(
-                **{
-                    (self.native.name): pl.col(self.native.name),
-                    value_name_: pl.col("count") / pl.sum("count")
-                    if normalize
-                    else pl.col("count"),
-                }
-            )
+            result = self.native.value_counts(sort=sort, parallel=parallel).select(**{
+                (self.native.name): pl.col(self.native.name),
+                value_name_: pl.col("count") / pl.sum("count")
+                if normalize
+                else pl.col("count"),
+            })
         else:
             result = self.native.value_counts(
                 sort=sort, parallel=parallel, name=name, normalize=normalize
@@ -552,7 +549,8 @@ class PolarsSeries:
         elif self.native.is_empty():
             if include_breakpoint:
                 native = (
-                    pl.Series(bins[1:])
+                    pl
+                    .Series(bins[1:])
                     .to_frame("breakpoint")
                     .with_columns(count=pl.lit(0, pl.Int64))
                 )
@@ -647,7 +645,8 @@ class PolarsSeries:
             # polars<1.27 makes the lowest bin a left/right closed interval
             if BACKEND_VERSION < (1, 27):
                 df = (
-                    df.slice(0, 1)
+                    df
+                    .slice(0, 1)
                     .with_columns(pl.col("count") + ((pl.lit(series) == bins[0]).sum()))
                     .vstack(df.slice(1))
                 )

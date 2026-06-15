@@ -523,7 +523,8 @@ class Expr:
             >>> df_native = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
-            ...     nw.col("a", "b")
+            ...     nw
+            ...     .col("a", "b")
             ...     .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64)
             ...     .name.suffix("_mapped")
             ... )
@@ -1019,9 +1020,10 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": [2, 3, 4, 5, 6, 7], "b": [10, 11, 12, 13, 14, 15]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [2, 3, 4, 5, 6, 7],
+            ...     "b": [10, 11, 12, 13, 14, 15],
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(
             ...     nw.col("a").filter(nw.col("a") > 4),
@@ -1125,13 +1127,11 @@ class Expr:
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {
-            ...         "a": [2, None, None, 3],
-            ...         "b": [2.0, float("nan"), float("nan"), 3.0],
-            ...         "c": [1, 2, 3, 4],
-            ...     }
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "a": [2, None, None, 3],
+            ...     "b": [2.0, float("nan"), float("nan"), 3.0],
+            ...     "c": [1, 2, 3, 4],
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(
             ...     nw.col("a", "b").fill_null(0).name.suffix("_filled"),
@@ -1157,7 +1157,8 @@ class Expr:
 
             >>> df.select(
             ...     nw.col("a", "b"),
-            ...     nw.col("a", "b")
+            ...     nw
+            ...     .col("a", "b")
             ...     .fill_null(strategy="forward", limit=1)
             ...     .name.suffix("_nulls_forward_filled"),
             ... )
@@ -1399,9 +1400,10 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": [1, 2, None, 1], "b": ["a", None, "b", None]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": [1, 2, None, 1],
+            ...     "b": ["a", None, "b", None],
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.all().null_count())
             ┌──────────────────┐
@@ -1486,9 +1488,10 @@ class Expr:
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": list(range(50)), "b": list(range(50, 100))}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": list(range(50)),
+            ...     "b": list(range(50, 100)),
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.select(nw.col("a", "b").quantile(0.5, interpolation="linear"))
             ┌──────────────────┐

@@ -1527,7 +1527,8 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         >>> data = {"a": [1, 2, 3], "b": [5, 10, 15]}
         >>> df_native = pd.DataFrame(data)
         >>> nw.from_native(df_native).with_columns(
-        ...     nw.when(nw.col("a") < 2)
+        ...     nw
+        ...     .when(nw.col("a") < 2)
         ...     .then(5)
         ...     .when(nw.col("a") < 3)
         ...     .then(6)

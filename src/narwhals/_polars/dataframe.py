@@ -74,34 +74,32 @@ Where `R` is the return type.
 """
 
 # DataFrame methods where PolarsDataFrame just defers to Polars.DataFrame directly.
-INHERITED_METHODS = frozenset(
-    [
-        "clone",
-        "drop_nulls",
-        "estimated_size",
-        "explode",
-        "filter",
-        "gather_every",
-        "head",
-        "is_unique",
-        "item",
-        "iter_rows",
-        "join_asof",
-        "rename",
-        "row",
-        "rows",
-        "sample",
-        "select",
-        "sink_parquet",
-        "sort",
-        "tail",
-        "to_arrow",
-        "to_pandas",
-        "with_columns",
-        "write_csv",
-        "write_parquet",
-    ]
-)
+INHERITED_METHODS = frozenset([
+    "clone",
+    "drop_nulls",
+    "estimated_size",
+    "explode",
+    "filter",
+    "gather_every",
+    "head",
+    "is_unique",
+    "item",
+    "iter_rows",
+    "join_asof",
+    "rename",
+    "row",
+    "rows",
+    "sample",
+    "select",
+    "sink_parquet",
+    "sort",
+    "tail",
+    "to_arrow",
+    "to_pandas",
+    "with_columns",
+    "write_csv",
+    "write_parquet",
+])
 
 NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
@@ -192,7 +190,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         if order_by and maintain_order:
             token = generate_temporary_column_name(8, self.columns, prefix="row_index_")
             res = (
-                self.native.with_row_index(token)
+                self.native
+                .with_row_index(token)
                 .sort(order_by, nulls_last=False)
                 .unique(subset or self.columns, keep=keep)
                 .sort(token)

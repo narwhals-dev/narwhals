@@ -502,7 +502,8 @@ class Datetime(TemporalType, metaclass=_DatetimeMeta):
         >>> import polars as pl
         >>> import narwhals as nw
         >>> s_native = (
-        ...     pl.Series([datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)])
+        ...     pl
+        ...     .Series([datetime(2024, 12, 9) + timedelta(days=n) for n in range(5)])
         ...     .cast(pl.Datetime("ms"))
         ...     .dt.replace_time_zone("Africa/Accra")
         ... )
@@ -785,9 +786,9 @@ class Struct(NestedType):
     Examples:
        >>> import pyarrow as pa
        >>> import narwhals as nw
-       >>> s_native = pa.chunked_array(
-       ...     [[{"a": 1, "b": ["narwhal", "beluga"]}, {"a": 2, "b": ["orca"]}]]
-       ... )
+       >>> s_native = pa.chunked_array([
+       ...     [{"a": 1, "b": ["narwhal", "beluga"]}, {"a": 2, "b": ["orca"]}]
+       ... ])
        >>> nw.from_native(s_native, series_only=True).dtype
        Struct({'a': Int64, 'b': List(String)})
     """
@@ -991,9 +992,9 @@ class Date(TemporalType):
         >>> from datetime import date, timedelta
         >>> import pyarrow as pa
         >>> import narwhals as nw
-        >>> s_native = pa.chunked_array(
-        ...     [[date(2024, 12, 1) + timedelta(days=d) for d in range(4)]]
-        ... )
+        >>> s_native = pa.chunked_array([
+        ...     [date(2024, 12, 1) + timedelta(days=d) for d in range(4)]
+        ... ])
         >>> nw.from_native(s_native, series_only=True).dtype
         Date
     """

@@ -362,7 +362,8 @@ class DaskLazyFrame(
             n_bytes=8, columns=(*self.columns, *other.columns), prefix="cross_join_key_"
         )
         return (
-            self.native.assign(**{key_token: 0})
+            self.native
+            .assign(**{key_token: 0})
             .merge(
                 other.native.assign(**{key_token: 0}),
                 how="inner",
@@ -509,7 +510,8 @@ class DaskLazyFrame(
         n_expr = plx.lit(n, dtype=None).broadcast()
         zero_expr = plx.lit(0, dtype=None).broadcast()
         return (
-            self.with_row_index(row_index_token, order_by=None)
+            self
+            .with_row_index(row_index_token, order_by=None)
             .filter(
                 (plx.col(row_index_token) >= offset_expr)
                 & ((plx.col(row_index_token) - offset_expr) % n_expr == zero_expr)

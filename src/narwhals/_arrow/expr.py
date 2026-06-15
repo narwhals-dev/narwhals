@@ -207,7 +207,8 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
                     indices = plx._series.from_native(
                         (
-                            tbl_native.column(col_name)
+                            tbl_native
+                            .column(col_name)
                             .dictionary_encode("encode")
                             .combine_chunks()
                             .indices  # type: ignore[attr-defined]

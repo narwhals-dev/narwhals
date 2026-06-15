@@ -446,15 +446,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pa.chunked_array(
-            ...     [
-            ...         [
-            ...             "'e.t. phone home'",
-            ...             "you talkin' to me?",
-            ...             "to infinity,and BEYOND!",
-            ...         ]
-            ...     ]
-            ... )
+            >>> s_native = pa.chunked_array([
+            ...     ["'e.t. phone home'", "you talkin' to me?", "to infinity,and BEYOND!"]
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.str.to_titlecase().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>

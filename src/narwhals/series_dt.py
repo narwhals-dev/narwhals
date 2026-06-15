@@ -22,9 +22,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [datetime(2012, 1, 7, 10, 20), datetime(2023, 3, 10, 11, 32)]
-            ... ).convert_dtypes(dtype_backend="pyarrow")
+            >>> s_native = pd.Series([
+            ...     datetime(2012, 1, 7, 10, 20),
+            ...     datetime(2023, 3, 10, 11, 32),
+            ... ]).convert_dtypes(dtype_backend="pyarrow")
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.date().to_native()
             0    2012-01-07
@@ -84,9 +85,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pa.chunked_array(
-            ...     [[datetime(2022, 1, 1), datetime(2022, 1, 5)]]
-            ... )
+            >>> s_native = pa.chunked_array([
+            ...     [datetime(2022, 1, 1), datetime(2022, 1, 5)]
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.day().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
@@ -108,9 +109,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pa.chunked_array(
-            ...     [[datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]]
-            ... )
+            >>> s_native = pa.chunked_array([
+            ...     [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.hour().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
@@ -132,9 +133,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [datetime(2022, 1, 1, 5, 3), datetime(2022, 1, 5, 9, 12)]
-            ... )
+            >>> s_native = pd.Series([
+            ...     datetime(2022, 1, 1, 5, 3),
+            ...     datetime(2022, 1, 5, 9, 12),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.minute().to_native()
             0     3
@@ -152,9 +154,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [datetime(2022, 1, 1, 5, 3, 10), datetime(2022, 1, 5, 9, 12, 4)]
-            ... )
+            >>> s_native = pd.Series([
+            ...     datetime(2022, 1, 1, 5, 3, 10),
+            ...     datetime(2022, 1, 5, 9, 12, 4),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.second().to_native()
             0    10
@@ -172,12 +175,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [
-            ...         datetime(2022, 1, 1, 5, 3, 7, 400000),
-            ...         datetime(2022, 1, 1, 5, 3, 7, 0),
-            ...     ]
-            ... )
+            >>> s_native = pd.Series([
+            ...     datetime(2022, 1, 1, 5, 3, 7, 400000),
+            ...     datetime(2022, 1, 1, 5, 3, 7, 0),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.millisecond().alias("datetime").to_native()
             0    400
@@ -195,12 +196,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [
-            ...         datetime(2022, 1, 1, 5, 3, 7, 400000),
-            ...         datetime(2022, 1, 1, 5, 3, 7, 0),
-            ...     ]
-            ... )
+            >>> s_native = pd.Series([
+            ...     datetime(2022, 1, 1, 5, 3, 7, 400000),
+            ...     datetime(2022, 1, 1, 5, 3, 7, 0),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.microsecond().alias("datetime").to_native()
             0    400000
@@ -218,12 +217,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [
-            ...         datetime(2022, 1, 1, 5, 3, 7, 400000),
-            ...         datetime(2022, 1, 1, 5, 3, 7, 0),
-            ...     ]
-            ... )
+            >>> s_native = pd.Series([
+            ...     datetime(2022, 1, 1, 5, 3, 7, 400000),
+            ...     datetime(2022, 1, 1, 5, 3, 7, 0),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.nanosecond().alias("datetime").to_native()
             0    400000000
@@ -241,9 +238,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pa.chunked_array(
-            ...     [[datetime(2020, 1, 1), datetime(2020, 8, 3)]]
-            ... )
+            >>> s_native = pa.chunked_array([
+            ...     [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.ordinal_day().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
@@ -267,9 +264,9 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import pyarrow as pa
             >>> import narwhals as nw
-            >>> s_native = pa.chunked_array(
-            ...     [[datetime(2020, 1, 1), datetime(2020, 8, 3)]]
-            ... )
+            >>> s_native = pa.chunked_array([
+            ...     [datetime(2020, 1, 1), datetime(2020, 8, 3)]
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.weekday().to_native()  # doctest: +ELLIPSIS
             <pyarrow.lib.ChunkedArray object at ...>
@@ -296,9 +293,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]
-            ... )
+            >>> s_native = pl.Series([
+            ...     timedelta(minutes=10),
+            ...     timedelta(minutes=20, seconds=40),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.total_minutes().to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
@@ -324,9 +322,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     [timedelta(minutes=10), timedelta(minutes=20, seconds=40)]
-            ... )
+            >>> s_native = pl.Series([
+            ...     timedelta(minutes=10),
+            ...     timedelta(minutes=20, seconds=40),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.total_seconds().to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
@@ -352,12 +351,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     [
-            ...         timedelta(milliseconds=10),
-            ...         timedelta(milliseconds=20, microseconds=40),
-            ...     ]
-            ... )
+            >>> s_native = pl.Series([
+            ...     timedelta(milliseconds=10),
+            ...     timedelta(milliseconds=20, microseconds=40),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.total_milliseconds().to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
@@ -383,12 +380,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import timedelta
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     [
-            ...         timedelta(microseconds=10),
-            ...         timedelta(milliseconds=1, microseconds=200),
-            ...     ]
-            ... )
+            >>> s_native = pl.Series([
+            ...     timedelta(microseconds=10),
+            ...     timedelta(milliseconds=1, microseconds=200),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.total_microseconds().to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
@@ -414,9 +409,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     ["2024-01-01 00:00:00.000000001", "2024-01-01 00:00:00.000000002"]
-            ... ).str.to_datetime(time_unit="ns")
+            >>> s_native = pl.Series([
+            ...     "2024-01-01 00:00:00.000000001",
+            ...     "2024-01-01 00:00:00.000000002",
+            ... ]).str.to_datetime(time_unit="ns")
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.diff().dt.total_nanoseconds().to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (2,)
@@ -496,12 +492,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime, timezone
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     [
-            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
-            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
-            ...     ]
-            ... )
+            >>> s_native = pl.Series([
+            ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.replace_time_zone(
             ...     "Asia/Kathmandu"
@@ -530,12 +524,10 @@ class SeriesDateTimeNamespace(Generic[SeriesT]):
             >>> from datetime import datetime, timezone
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> s_native = pd.Series(
-            ...     [
-            ...         datetime(2024, 1, 1, tzinfo=timezone.utc),
-            ...         datetime(2024, 1, 2, tzinfo=timezone.utc),
-            ...     ]
-            ... )
+            >>> s_native = pd.Series([
+            ...     datetime(2024, 1, 1, tzinfo=timezone.utc),
+            ...     datetime(2024, 1, 2, tzinfo=timezone.utc),
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.dt.convert_time_zone("Asia/Kathmandu").to_native()
             0   2024-01-01 05:45:00+05:45

@@ -18,9 +18,10 @@ class SeriesStructNamespace(Generic[SeriesT]):
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> s_native = pl.Series(
-            ...     [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]
-            ... )
+            >>> s_native = pl.Series([
+            ...     {"id": "0", "name": "john"},
+            ...     {"id": "1", "name": "jane"},
+            ... ])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.struct.field("name").to_list()
             ['john', 'jane']

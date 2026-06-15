@@ -511,7 +511,8 @@ class DaskExpr(
             _name = expr.name
             group_by_kwargs = make_group_by_kwargs(drop_null_keys=False)
             return (
-                expr.to_frame()
+                expr
+                .to_frame()
                 .groupby(_name, **group_by_kwargs)
                 .transform("size", meta=(_name, int))
                 == 1

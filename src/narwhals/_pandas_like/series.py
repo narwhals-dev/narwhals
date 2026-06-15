@@ -714,7 +714,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             unmatched_mask = native.notna() & (~was_matched)
             if unmatched_mask.any():
                 unmatched_values = (
-                    self._with_native(native[unmatched_mask])
+                    self
+                    ._with_native(native[unmatched_mask])
                     .unique(maintain_order=False)
                     .to_list()
                 )
@@ -1059,12 +1060,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             mask_name = f"{name}_is_null"
             plx = self.__narwhals_namespace__()
             df = (
-                self.to_frame()
+                self
+                .to_frame()
                 .with_columns(plx._expr._from_series(null_mask).alias(mask_name))
                 .native
             )
             return self._with_native(
-                df.groupby(mask_name)
+                df
+                .groupby(mask_name)
                 .rank(
                     method=pd_method,
                     na_option="keep",
@@ -1083,7 +1086,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         return (
-            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)
+            _PandasHist
+            .from_series(self, include_breakpoint=include_breakpoint)
             .with_bins(bins)
             .to_frame()
         )
@@ -1092,7 +1096,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         return (
-            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)
+            _PandasHist
+            .from_series(self, include_breakpoint=include_breakpoint)
             .with_bin_count(bin_count)
             .to_frame()
         )

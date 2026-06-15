@@ -343,7 +343,8 @@ class IbisLazyFrame(
         else:
             expr = ibis.row_number().over(window) + lit(1)
         df = (
-            self.native.mutate(**{tmp_name: expr})
+            self.native
+            .mutate(**{tmp_name: expr})
             .filter(ibis._[tmp_name] == lit(1))
             .drop(tmp_name)
         )

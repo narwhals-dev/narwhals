@@ -73,30 +73,28 @@ if TYPE_CHECKING:
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
 
 
-CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
-    [
-        np.dtype("float64"),
-        np.dtype("float32"),
-        np.dtype("int64"),
-        np.dtype("int32"),
-        np.dtype("int16"),
-        np.dtype("int8"),
-        np.dtype("uint64"),
-        np.dtype("uint32"),
-        np.dtype("uint16"),
-        np.dtype("uint8"),
-        np.dtype("bool"),
-        np.dtype("datetime64[s]"),
-        np.dtype("datetime64[ms]"),
-        np.dtype("datetime64[us]"),
-        np.dtype("datetime64[ns]"),
-        np.dtype("timedelta64[s]"),
-        np.dtype("timedelta64[ms]"),
-        np.dtype("timedelta64[us]"),
-        np.dtype("timedelta64[ns]"),
-        np.dtype("object"),
-    ]
-)
+CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset([
+    np.dtype("float64"),
+    np.dtype("float32"),
+    np.dtype("int64"),
+    np.dtype("int32"),
+    np.dtype("int16"),
+    np.dtype("int8"),
+    np.dtype("uint64"),
+    np.dtype("uint32"),
+    np.dtype("uint16"),
+    np.dtype("uint8"),
+    np.dtype("bool"),
+    np.dtype("datetime64[s]"),
+    np.dtype("datetime64[ms]"),
+    np.dtype("datetime64[us]"),
+    np.dtype("datetime64[ns]"),
+    np.dtype("timedelta64[s]"),
+    np.dtype("timedelta64[ms]"),
+    np.dtype("timedelta64[us]"),
+    np.dtype("timedelta64[ns]"),
+    np.dtype("object"),
+])
 
 
 class PandasLikeDataFrame(
@@ -667,9 +665,11 @@ class PandasLikeDataFrame(
             suffixes=("", suffix),
         )
 
-        return ns._concat_diagonal(
-            [join_result, self_native[left_null_mask], right_null_rows]
-        )
+        return ns._concat_diagonal([
+            join_result,
+            self_native[left_null_mask],
+            right_null_rows,
+        ])
 
     def _join_cross(self, other: Self, *, suffix: str) -> pd.DataFrame:
         impl = self._implementation
@@ -850,7 +850,8 @@ class PandasLikeDataFrame(
         if order_by and maintain_order:
             token = generate_temporary_column_name(8, self.columns)
             res = (
-                self.with_row_index(token, order_by=None)
+                self
+                .with_row_index(token, order_by=None)
                 .sort(*order_by, nulls_last=False, descending=False)
                 .native.drop_duplicates(subset or self.columns, keep=mapped_keep)
                 .sort_values(token)
@@ -970,7 +971,8 @@ class PandasLikeDataFrame(
         ]
         if to_convert:
             df = self.with_columns(
-                self.__narwhals_namespace__()
+                self
+                .__narwhals_namespace__()
                 .col(*to_convert)
                 .dt.convert_time_zone("UTC")
                 .dt.replace_time_zone(None)
@@ -987,12 +989,10 @@ class PandasLikeDataFrame(
         # returns Object) then we just call `to_numpy()` on the DataFrame.
         for col_dtype in native_dtypes:
             if str(col_dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-                arr: Any = np.hstack(
-                    [
-                        self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
-                        for col in self.columns
-                    ]
-                )
+                arr: Any = np.hstack([
+                    self.get_column(col).to_numpy(copy=copy, dtype=None)[:, None]
+                    for col in self.columns
+                ])
                 return arr
         return df.to_numpy(copy=copy)
 
@@ -1144,7 +1144,8 @@ class PandasLikeDataFrame(
             return self.native.pivot(columns=on, index=index, values=values)
         if aggregate_function == "len":
             return (
-                self.native.groupby([*on, *index], as_index=False)
+                self.native
+                .groupby([*on, *index], as_index=False)
                 .agg(dict.fromkeys(values, "size"))
                 .pivot(columns=on, index=index, values=values)
             )
@@ -1171,7 +1172,8 @@ class PandasLikeDataFrame(
         # Select the columns in the right order
         uniques = (
             (
-                self.get_column(col)
+                self
+                .get_column(col)
                 .unique()
                 .sort(descending=False, nulls_last=False)
                 .to_list()

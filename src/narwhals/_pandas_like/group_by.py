@@ -122,9 +122,9 @@ class AggExpr:
         elif self.is_len():
             result_single = grouped.size()
             ns = group_by.compliant.__narwhals_namespace__()
-            result = ns._concat_horizontal(
-                [ns.from_native(result_single).alias(name).native for name in names]
-            )
+            result = ns._concat_horizontal([
+                ns.from_native(result_single).alias(name).native for name in names
+            ])
         elif self.is_mode():
             compliant = group_by.compliant
             node_kwargs = group_by._kwargs(self.expr)
@@ -143,18 +143,17 @@ class AggExpr:
             # Implementation based on the following suggestion:
             # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
             ns = compliant.__narwhals_namespace__()
-            result = ns._concat_horizontal(
-                [
-                    native.groupby([*keys, col], **kwargs)
-                    .size()
-                    .sort_values(ascending=False)
-                    .reset_index(col)
-                    .groupby(keys, **kwargs)[col]
-                    .head(1)
-                    .sort_index()
-                    for col in cols
-                ]
-            )
+            result = ns._concat_horizontal([
+                native
+                .groupby([*keys, col], **kwargs)
+                .size()
+                .sort_values(ascending=False)
+                .reset_index(col)
+                .groupby(keys, **kwargs)[col]
+                .head(1)
+                .sort_index()
+                for col in cols
+            ])
         elif self.is_last() or self.is_first() or self.is_any_value():
             result = self.native_agg()(grouped[[*group_by._keys, *names]])
             impl = group_by.compliant._implementation
@@ -331,7 +330,8 @@ class PandasLikeGroupBy(
         """
         new_names = chain.from_iterable(e.aliases for e in agg_exprs)
         return (
-            self.compliant._with_native(df, validate_column_names=False)
+            self.compliant
+            ._with_native(df, validate_column_names=False)
             .simple_select(*self._keys, *new_names)
             .rename(dict(zip(self._keys, self._output_key_names, strict=False)))
         )

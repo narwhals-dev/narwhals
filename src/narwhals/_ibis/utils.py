@@ -169,12 +169,10 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
             )
         return dtypes.List(native_to_narwhals_dtype(ibis_dtype.value_type, version))
     if is_struct(ibis_dtype):
-        return dtypes.Struct(
-            [
-                dtypes.Field(name, native_to_narwhals_dtype(dtype, version))
-                for name, dtype in ibis_dtype.items()
-            ]
-        )
+        return dtypes.Struct([
+            dtypes.Field(name, native_to_narwhals_dtype(dtype, version))
+            for name, dtype in ibis_dtype.items()
+        ])
     if is_decimal(ibis_dtype):
         # Same default as in ibis.Decimal.{to_polars, to_pyarrow}
         # https://github.com/ibis-project/ibis/blob/5028d8e5e1921d5de48f59fad48b86c0de541b0d/ibis/formats/polars.py#L82-L86

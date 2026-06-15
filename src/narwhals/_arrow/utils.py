@@ -49,6 +49,7 @@ if TYPE_CHECKING:
         options: Any = None,
         memory_pool: Any = None,
     ) -> ChunkedArrayStructArray: ...
+
 else:
     from pyarrow.compute import extract_regex
     from pyarrow.types import (
@@ -172,15 +173,13 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
     if pa.types.is_dictionary(dtype):
         return dtypes.Categorical()
     if pa.types.is_struct(dtype):
-        return dtypes.Struct(
-            [
-                dtypes.Field(
-                    dtype.field(i).name,
-                    native_to_narwhals_dtype(dtype.field(i).type, version),
-                )
-                for i in range(dtype.num_fields)
-            ]
-        )
+        return dtypes.Struct([
+            dtypes.Field(
+                dtype.field(i).name,
+                native_to_narwhals_dtype(dtype.field(i).type, version),
+            )
+            for i in range(dtype.num_fields)
+        ])
     if is_list(dtype) or is_large_list(dtype):
         return dtypes.List(native_to_narwhals_dtype(dtype.value_type, version))
     if is_fixed_size_list(dtype):
@@ -231,12 +230,10 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
     if isinstance_or_issubclass(dtype, dtypes.List):
         return pa.list_(value_type=narwhals_to_native_dtype(dtype.inner, version=version))
     if isinstance_or_issubclass(dtype, dtypes.Struct):
-        return pa.struct(
-            [
-                (field.name, narwhals_to_native_dtype(field.dtype, version=version))
-                for field in dtype.fields
-            ]
-        )
+        return pa.struct([
+            (field.name, narwhals_to_native_dtype(field.dtype, version=version))
+            for field in dtype.fields
+        ])
     if isinstance_or_issubclass(dtype, dtypes.Array):
         inner = narwhals_to_native_dtype(dtype.inner, version=version)
         list_size = dtype.size
@@ -510,7 +507,8 @@ def list_agg(
         else ("values", func)
     )
     agg = pa.array(
-        pa.Table.from_arrays(
+        pa.Table
+        .from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
             names=["values", "offsets"],
         )
@@ -525,15 +523,13 @@ def list_agg(
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
     else:
         base_array = pa.repeat(lit_(None, type=agg.type), len(array))
-    return pa.chunked_array(
-        [
-            pc.replace_with_mask(
-                base_array,
-                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
-                agg,
-            )
-        ]
-    )
+    return pa.chunked_array([
+        pc.replace_with_mask(
+            base_array,
+            non_empty_mask.fill_null(False),  # type: ignore[arg-type]
+            agg,
+        )
+    ])
 
 
 def list_sort(

@@ -437,7 +437,8 @@ class PolarsExprStringNamespace(
 
         if BACKEND_VERSION < (1, 35):
             native_result = (
-                native_expr.str.to_lowercase()
+                native_expr.str
+                .to_lowercase()
                 .str.extract_all(r"[a-z]*[^a-z]*")
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
@@ -458,9 +459,11 @@ class PolarsExprStringNamespace(
             plus = "+"
             starts_with_plus = self.native.str.starts_with(plus)
             native_result = (
-                pl.when(starts_with_plus & less_than_width)
+                pl
+                .when(starts_with_plus & less_than_width)
                 .then(
-                    self.native.str.slice(1, length)
+                    self.native.str
+                    .slice(1, length)
                     .str.zfill(width - 1)
                     .str.pad_start(width, plus)
                 )

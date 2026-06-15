@@ -52,17 +52,22 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         "first": "min",
         "last": "max",
     }
-    _OPTION_COUNT_ALL: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
-        ("len", "n_unique")
-    )
+    _OPTION_COUNT_ALL: ClassVar[frozenset[NarwhalsAggregation]] = frozenset((
+        "len",
+        "n_unique",
+    ))
     _OPTION_COUNT_VALID: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("count",))
-    _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
-        ("first", "last", "any_value")
-    )
+    _OPTION_ORDERED: ClassVar[frozenset[NarwhalsAggregation]] = frozenset((
+        "first",
+        "last",
+        "any_value",
+    ))
     _OPTION_VARIANCE: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(("std", "var"))
-    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset(
-        ("any", "all", "sum")
-    )
+    _OPTION_SCALAR: ClassVar[frozenset[NarwhalsAggregation]] = frozenset((
+        "any",
+        "all",
+        "sum",
+    ))
 
     def __init__(
         self,
@@ -157,12 +162,12 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
 
             function_name, option = self._configure_agg(expr)
             new_column_names.extend(aliases)
-            expected_pyarrow_column_names.extend(
-                [f"{output_name}_{function_name}" for output_name in output_names]
-            )
-            aggs.extend(
-                [(output_name, function_name, option) for output_name in output_names]
-            )
+            expected_pyarrow_column_names.extend([
+                f"{output_name}_{function_name}" for output_name in output_names
+            ])
+            aggs.extend([
+                (output_name, function_name, option) for output_name in output_names
+            ])
 
         result_simple = grouped.aggregate(aggs)
 

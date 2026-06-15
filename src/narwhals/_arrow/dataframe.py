@@ -140,17 +140,15 @@ class ArrowDataFrame(
         if context._implementation._backend_version() < (14,):
             msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
             raise NotImplementedError(msg)
-        res = pa.table(
-            {
-                name: pa.chunked_array(  # type: ignore[misc]
-                    [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
-                    if nw_dtype is not None
-                    else None,
-                )
-                for name, nw_dtype in schema.items()
-            }
-        )
+        res = pa.table({
+            name: pa.chunked_array(  # type: ignore[misc]
+                [data[name] if data else []],
+                type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                if nw_dtype is not None
+                else None,
+            )
+            for name, nw_dtype in schema.items()
+        })
         return cls.from_native(pa.table(res), context=context)
 
     @classmethod
@@ -438,7 +436,8 @@ class ArrowDataFrame(
             )
 
             return self._with_native(
-                self.with_columns(plx.lit(0, None).alias(key_token).broadcast())
+                self
+                .with_columns(plx.lit(0, None).alias(key_token).broadcast())
                 .native.join(
                     other.with_columns(
                         plx.lit(0, None).alias(key_token).broadcast()
@@ -727,7 +726,8 @@ class ArrowDataFrame(
         col_token = generate_temporary_column_name(n_bytes=8, columns=self.columns)
         row_index = pa.array(np.arange(len(self)))
         keep_idx = (
-            self.native.append_column(col_token, row_index)
+            self.native
+            .append_column(col_token, row_index)
             .group_by(self.columns)
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
@@ -765,7 +765,8 @@ class ArrowDataFrame(
                     n_bytes=8, columns=[*self.columns, col_token]
                 )
                 df = (
-                    self.with_row_index(idx_token, order_by=None)
+                    self
+                    .with_row_index(idx_token, order_by=None)
                     .sort(*order_by, nulls_last=False, descending=False)
                     .unique(subset=subset, keep=keep, maintain_order=False, order_by=None)
                 )
@@ -777,7 +778,8 @@ class ArrowDataFrame(
             else:
                 native = self.native
             keep_idx_native = (
-                native.append_column(col_token, pa.array(np.arange(len(self))))
+                native
+                .append_column(col_token, pa.array(np.arange(len(self))))
                 .group_by(subset)
                 .aggregate([(col_token, agg_func)])
                 .column(f"{col_token}_{agg_func}")

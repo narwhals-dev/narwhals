@@ -706,7 +706,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         row_number = pa.array(np.arange(len(self)))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         first_distinct_index = (
-            pa.Table.from_arrays([self.native], names=[self.name])
+            pa.Table
+            .from_arrays([self.native], names=[self.name])
             .append_column(col_token, row_number)
             .group_by(self.name)
             .aggregate([(col_token, "min")])
@@ -721,7 +722,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         row_number = pa.array(np.arange(len(self)))
         col_token = generate_temporary_column_name(n_bytes=8, columns=[self.name])
         last_distinct_index = (
-            pa.Table.from_arrays([self.native], names=[self.name])
+            pa.Table
+            .from_arrays([self.native], names=[self.name])
             .append_column(col_token, row_number)
             .group_by(self.name)
             .aggregate([(col_token, "max")])
@@ -770,7 +772,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 pc.any(unmatched_mask, min_count=0), return_py_scalar=True
             ):
                 unmatched_values = (
-                    self.filter(self._with_native(unmatched_mask))
+                    self
+                    .filter(self._with_native(unmatched_mask))
                     .unique(maintain_order=False)
                     .to_list()
                 )
@@ -1036,7 +1039,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            _ArrowHist
+            .from_series(self, include_breakpoint=include_breakpoint)
             .with_bins(bins)
             .to_frame()
         )
@@ -1045,7 +1049,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            _ArrowHist
+            .from_series(self, include_breakpoint=include_breakpoint)
             .with_bin_count(bin_count)
             .to_frame()
         )

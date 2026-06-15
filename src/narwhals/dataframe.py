@@ -876,9 +876,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... })
 
             Calling `to_native` on a Narwhals DataFrame returns the native object:
 
@@ -896,9 +898,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame(
-            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            ... )
+            >>> df_native = pl.DataFrame({
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.to_pandas()
                foo  bar ham
@@ -945,9 +949,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"foo": [1, 2, 3], "bar": [6.0, 7.0, 8.0], "ham": ["a", "b", "c"]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6.0, 7.0, 8.0],
+            ...     "ham": ["a", "b", "c"],
+            ... })
             >>> df = nw.from_native(df_native)
             >>> df.write_csv()  # doctest: +SKIP
             'foo,bar,ham\n1,6.0,a\n2,7.0,b\n3,8.0,c\n'
@@ -1259,9 +1265,9 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1, 2], "ba": [4, 5]})
             >>> nw.from_native(df_native).pipe(
-            ...     lambda _df: _df.select(
-            ...         [x for x in _df.columns if len(x) == 1]
-            ...     ).to_native()
+            ...     lambda _df: _df.select([
+            ...         x for x in _df.columns if len(x) == 1
+            ...     ]).to_native()
             ... )
                a
             0  1
@@ -1494,7 +1500,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             >>> import narwhals as nw
             >>> df_native = pd.DataFrame({"a": [1, 2], "b": [0.5, 4.0]})
             >>> (
-            ...     nw.from_native(df_native)
+            ...     nw
+            ...     .from_native(df_native)
             ...     .with_columns((nw.col("a") * 2).alias("a*2"))
             ...     .to_native()
             ... )
@@ -1604,9 +1611,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"foo": [1, 2], "bar": [6.0, 7.0], "ham": ["a", "b"]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "foo": [1, 2],
+            ...     "bar": [6.0, 7.0],
+            ...     "ham": ["a", "b"],
+            ... })
             >>> nw.from_native(df_native).drop("ham").to_native()
                foo  bar
             0    1  6.0
@@ -1641,9 +1650,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"foo": [1, 2], "bar": ["a", "a"], "ham": ["b", "b"]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "foo": [1, 2],
+            ...     "bar": ["a", "a"],
+            ...     "ham": ["b", "b"],
+            ... })
             >>> nw.from_native(df_native).unique(["bar", "ham"]).to_native()
                foo bar ham
             0    1   a   b
@@ -1676,9 +1687,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"foo": [1, 2, 3], "bar": [6, 7, 8], "ham": ["a", "b", "c"]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "foo": [1, 2, 3],
+            ...     "bar": [6, 7, 8],
+            ...     "ham": ["a", "b", "c"],
+            ... })
 
             Filter on one condition
 
@@ -1741,13 +1754,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... })
 
             Group by one column and compute the sum of another column
 
@@ -1762,7 +1773,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             Group by multiple columns and compute the max of another column
 
             >>> (
-            ...     nw.from_native(df_native, eager_only=True)
+            ...     nw
+            ...     .from_native(df_native, eager_only=True)
             ...     .group_by(["a", "b"])
             ...     .agg(nw.max("c"))
             ...     .sort("a", "b")
@@ -1835,9 +1847,11 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"foo": [2, 1], "bar": [6.0, 7.0], "ham": ["a", "b"]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "foo": [2, 1],
+            ...     "bar": [6.0, 7.0],
+            ...     "ham": ["a", "b"],
+            ... })
             >>> nw.from_native(df_native).sort("foo")
             ┌──────────────────┐
             |Narwhals DataFrame|
@@ -1867,9 +1881,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {"a": ["a", "b", "a", "b", None, "c"], "b": [2, 1, 1, 3, 2, 1]}
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": ["a", "b", "a", "b", None, "c"],
+            ...     "b": [2, 1, 1, 3, 2, 1],
+            ... })
             >>> nw.from_native(df_native).top_k(4, by=["b", "a"])
             ┌──────────────────┐
             |Narwhals DataFrame|

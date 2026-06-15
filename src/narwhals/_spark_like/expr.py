@@ -348,7 +348,8 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
                     end = self._Window.unboundedFollowing if limit is None else limit
                 return [
                     fn(expr, ignoreNulls=True).over(
-                        self.partition_by(*inputs.partition_by)
+                        self
+                        .partition_by(*inputs.partition_by)
                         .orderBy(*self._sort(*inputs.order_by))
                         .rowsBetween(start, end)
                     )

@@ -262,7 +262,8 @@ class PandasLikeSeriesDateTimeNamespace(
             compliant = self.compliant
             ca = pa.chunked_array([compliant.to_arrow()])  # type: ignore[arg-type]
             result = (
-                compliant._version.namespace.from_backend("pyarrow")
+                compliant._version.namespace
+                .from_backend("pyarrow")
                 .compliant.from_native(ca)
                 .dt.offset_by(by)
                 .native

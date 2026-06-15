@@ -46,13 +46,11 @@ class GroupBy(Generic[DataFrameT]):
 
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
+            >>> df_native = pd.DataFrame({
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... })
             >>> df = nw.from_native(df_native)
             >>>
             >>> df.group_by("a").agg(nw.col("b").sum()).sort("a")
@@ -120,13 +118,11 @@ class LazyGroupBy(Generic[LazyFrameT]):
             >>> import polars as pl
             >>> import narwhals as nw
             >>> from narwhals.typing import IntoFrameT
-            >>> lf_native = pl.LazyFrame(
-            ...     {
-            ...         "a": ["a", "b", "a", "b", "c"],
-            ...         "b": [1, 2, 1, 3, 3],
-            ...         "c": [5, 4, 3, 2, 1],
-            ...     }
-            ... )
+            >>> lf_native = pl.LazyFrame({
+            ...     "a": ["a", "b", "a", "b", "c"],
+            ...     "b": [1, 2, 1, 3, 3],
+            ...     "c": [5, 4, 3, 2, 1],
+            ... })
             >>> lf = nw.from_native(lf_native)
             >>>
             >>> nw.to_native(lf.group_by("a").agg(nw.col("b").sum()).sort("a")).collect()

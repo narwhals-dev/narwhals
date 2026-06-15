@@ -158,15 +158,13 @@ def native_to_narwhals_dtype(
 
     if duckdb_dtype_id == "struct":
         children: list[tuple[Incomplete, Incomplete]] = duckdb_dtype.children
-        return dtypes.Struct(
-            [
-                dtypes.Field(
-                    name=child[0],
-                    dtype=native_to_narwhals_dtype(child[1], version, deferred_time_zone),
-                )
-                for child in children
-            ]
-        )
+        return dtypes.Struct([
+            dtypes.Field(
+                name=child[0],
+                dtype=native_to_narwhals_dtype(child[1], version, deferred_time_zone),
+            )
+            for child in children
+        ])
 
     if duckdb_dtype_id == "array":
         child: Incomplete

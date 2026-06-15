@@ -1069,12 +1069,10 @@ def maybe_convert_dtypes(
         >>> import polars as pl
         >>> import narwhals as nw
         >>> import numpy as np
-        >>> df_pd = pd.DataFrame(
-        ...     {
-        ...         "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
-        ...         "b": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
-        ...     }
-        ... )
+        >>> df_pd = pd.DataFrame({
+        ...     "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        ...     "b": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        ... })
         >>> df = nw.from_native(df_pd)
         >>> nw.to_native(
         ...     nw.maybe_convert_dtypes(df)
@@ -2085,6 +2083,7 @@ if sys.platform != "win32":
 
     def normalize_path(source: FileSource, /) -> str:
         return source if isinstance(source, str) else str(Path(source))
+
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:

@@ -103,9 +103,11 @@ def matches(pattern: str) -> Selector:
         >>> import pandas as pd
         >>> import narwhals as nw
         >>> import narwhals.selectors as ncs
-        >>> df_native = pd.DataFrame(
-        ...     {"bar": [123, 456], "baz": [2.0, 5.5], "zap": [0, 1]}
-        ... )
+        >>> df_native = pd.DataFrame({
+        ...     "bar": [123, 456],
+        ...     "baz": [2.0, 5.5],
+        ...     "zap": [0, 1],
+        ... })
         >>> df = nw.from_native(df_native)
 
         Let's select column names containing an 'a', preceded by a character that is not 'z':

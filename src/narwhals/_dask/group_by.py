@@ -111,7 +111,8 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
         if not exprs:
             # No aggregation provided
             return (
-                self.compliant.simple_select(*self._keys)
+                self.compliant
+                .simple_select(*self._keys)
                 .unique(self._keys, keep="any", order_by=None)
                 .rename(dict(zip(self._keys, self._output_key_names, strict=False)))
             )

@@ -289,7 +289,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
         real_native_object = native_object.to_native()
         return (
-            version.namespace.from_native_object(real_native_object)
+            version.namespace
+            .from_native_object(real_native_object)
             .compliant.from_native(real_native_object)
             .to_narwhals()
         )
@@ -299,7 +300,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
 
         real_native_object = native_object.to_native()
         return (
-            version.namespace.from_native_object(real_native_object)
+            version.namespace
+            .from_native_object(real_native_object)
             .compliant.from_native(real_native_object)
             .to_narwhals()
         )
@@ -347,7 +349,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return (
-            version.namespace.from_native_object(native_object)
+            version.namespace
+            .from_native_object(native_object)
             .compliant.from_native(native_object)
             .to_narwhals()
         )
@@ -366,7 +369,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return (
-            version.namespace.from_native_object(native_object)
+            version.namespace
+            .from_native_object(native_object)
             .compliant.from_native(native_object)
             .to_narwhals()
         )
@@ -385,7 +389,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return (
-            version.namespace.from_native_object(native_object)
+            version.namespace
+            .from_native_object(native_object)
             .compliant.from_native(native_object)
             .to_narwhals()
         )
@@ -409,7 +414,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             msg = "Please install dask-expr"
             raise ImportError(msg)
         return (
-            version.namespace.from_backend(Implementation.DASK)
+            version.namespace
+            .from_backend(Implementation.DASK)
             .compliant.from_native(native_object)
             .to_narwhals()
         )
@@ -422,7 +428,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return (
-            version.namespace.from_native_object(native_object)
+            version.namespace
+            .from_native_object(native_object)
             .compliant.from_native(native_object)
             .to_narwhals()
         )
@@ -435,7 +442,8 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 raise TypeError(msg)
             return native_object
         return (
-            version.namespace.from_native_object(native_object)
+            version.namespace
+            .from_native_object(native_object)
             .compliant.from_native(native_object)
             .to_narwhals()
         )

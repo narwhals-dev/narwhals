@@ -314,7 +314,8 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 columns = list(set(partition_by).union(aliases).union(order_by))
                 token = generate_temporary_column_name(8, columns)
                 df = (
-                    df.simple_select(*columns)
+                    df
+                    .simple_select(*columns)
                     .with_row_index(token, order_by=None)
                     .sort(
                         *partition_by, *order_by, descending=reverse, nulls_last=reverse

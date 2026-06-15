@@ -292,7 +292,8 @@ def true_divide(F: ModuleType, left: Column, right: Column) -> Column:
 
     safe_case = divide(left, right)  # Dividend is not zero
     unsafe_case = (  # Dividend is zero, the result depends on the numerator
-        F.when(left == zero, F.lit(float("nan")))
+        F
+        .when(left == zero, F.lit(float("nan")))
         .when(left > zero, F.lit(float("inf")))
         .when(left < zero, F.lit(float("-inf")))
     )

@@ -359,9 +359,9 @@ class SparkLikeLazyFrame(
             colname: mapping.get(colname, colname) for colname in self.columns
         }
         return self._with_native(
-            self.native.select(
-                [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
-            )
+            self.native.select([
+                self._F.col(old).alias(new) for old, new in rename_mapping.items()
+            ])
         )
 
     def unique(
@@ -387,7 +387,8 @@ class SparkLikeLazyFrame(
         else:
             expr = self._F.row_number().over(window)
         df = (
-            self.native.withColumn(tmp_name, expr)
+            self.native
+            .withColumn(tmp_name, expr)
             .filter(self._F.col(tmp_name) == self._F.lit(1))
             .drop(tmp_name)
         )
@@ -424,9 +425,9 @@ class SparkLikeLazyFrame(
                 for colname in right_cols_to_rename
             },
         }
-        other_native = other.native.select(
-            [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
-        )
+        other_native = other.native.select([
+            self._F.col(old).alias(new) for old, new in rename_mapping.items()
+        ])
 
         # If how in {"semi", "anti"}, then resulting columns are same as left columns
         # Otherwise, we add the right columns with the new mapping, while keeping the
@@ -488,14 +489,12 @@ class SparkLikeLazyFrame(
 
         if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
             return self._with_native(
-                self.native.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != columns[0]
-                        else self._F.explode_outer(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                )
+                self.native.select(*[
+                    self._F.col(col_name).alias(col_name)
+                    if col_name != columns[0]
+                    else self._F.explode_outer(col_name).alias(col_name)
+                    for col_name in column_names
+                ])
             )
         if self._implementation.is_sqlframe():
             # Not every sqlframe dialect supports `explode_outer` function
@@ -508,22 +507,18 @@ class SparkLikeLazyFrame(
                 return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
 
             return self._with_native(
-                self.native.select(
-                    *[
+                self.native.select(*[
+                    self._F.col(col_name).alias(col_name)
+                    if col_name != columns[0]
+                    else self._F.explode(col_name).alias(col_name)
+                    for col_name in column_names
+                ]).union(
+                    self.native.filter(null_condition(columns[0])).select(*[
                         self._F.col(col_name).alias(col_name)
                         if col_name != columns[0]
-                        else self._F.explode(col_name).alias(col_name)
+                        else self._F.lit(None).alias(col_name)
                         for col_name in column_names
-                    ]
-                ).union(
-                    self.native.filter(null_condition(columns[0])).select(
-                        *[
-                            self._F.col(col_name).alias(col_name)
-                            if col_name != columns[0]
-                            else self._F.lit(None).alias(col_name)
-                            for col_name in column_names
-                        ]
-                    )
+                    ])
                 )
             )
         msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
