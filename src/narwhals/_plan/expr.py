@@ -26,7 +26,7 @@ from narwhals._plan.options import (
     rolling_options,
 )
 from narwhals._typing_compat import deprecated
-from narwhals._utils import Version, no_default, not_implemented
+from narwhals._utils import Version, no_default, not_implemented, unstable
 from narwhals.exceptions import ComputeError
 
 if TYPE_CHECKING:
@@ -38,7 +38,14 @@ if TYPE_CHECKING:
     from narwhals._plan._function import Unary
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
+    from narwhals._plan.typing import (
+        IntoExpr,
+        IntoExprColumn,
+        OneOrIterable,
+        Seq,
+        SerdeFormat,
+        SerdeSource,
+    )
     from narwhals._typing import NoDefault
     from narwhals.typing import (
         ClosedInterval,
@@ -109,6 +116,30 @@ class Expr:
         #    (next best is this boi)
         # [`pl.Expr.meta.as_expression`]: https://github.com/pola-rs/polars/blob/py-1.39.3/py-polars/src/polars/expr/meta.py#L284-L286
         return self
+
+    # TODO @dangotbanned: Add examples after `Expr.meta.serialize`
+    @classmethod
+    @unstable
+    def deserialize(cls, source: SerdeSource, *, format: SerdeFormat = "binary") -> Self:
+        """Read a serialized expression from a file.
+
+        Arguments:
+            source: Path to a file or a file-like object.
+                By file-like object, we refer to objects that have a `read()` method,
+                such as a file handler (e.g. via builtin [`open`][] function) or [`io.BytesIO`][]).
+
+            format: The format with which the Expr was serialized. Options:
+
+                - `"binary"`: Deserialize from bytes (default).
+                - `"json"`: Deserialize from string.
+
+        Warning:
+            This function uses [`pickle`][] and as such inherits the security implications.
+            Deserializing can execute arbitrary code, so it should only be attempted on trusted data.
+        """
+        from narwhals._plan.io import serde
+
+        return serde.deserialize(cls, source, format=format)
 
     @property
     def version(self) -> Version:

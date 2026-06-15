@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import os
+import sys
 import types
 from collections.abc import Callable, Container, Iterable
-from typing import TYPE_CHECKING, Any, Literal
+from io import BytesIO
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
 from narwhals._typing import LazyOnly, PandasLike, _EagerAllowedImpl, _LazyAllowedImpl
@@ -25,6 +28,18 @@ if TYPE_CHECKING:
     from narwhals._plan.selectors import Selector
     from narwhals._plan.series import Series
     from narwhals.typing import NonNestedLiteral, PythonLiteral
+
+
+if sys.version_info >= (3, 12):
+    from collections.abc import Buffer as ReadableBuffer
+else:
+
+    class ReadableBuffer(Protocol):
+        # https://github.com/python/typeshed/blob/abbf4372552d78cdd4514db2a2d855658c1a98a5/stdlib/_typeshed/__init__.pyi#L305-L306
+        # https://github.com/python/typeshed/blob/abbf4372552d78cdd4514db2a2d855658c1a98a5/stdlib/_pickle.pyi#L41-L42
+        # https://github.com/python/typeshed/blob/abbf4372552d78cdd4514db2a2d855658c1a98a5/stdlib/typing_extensions.pyi#L380-L387
+        def __buffer__(self, flags: int, /) -> memoryview: ...
+
 
 __all__ = (
     "ColumnNameOrSelector",
@@ -179,3 +194,24 @@ Tip:
 """
 
 VersionName: TypeAlias = Literal["MAIN", "V1", "V2"]
+
+
+# `narwhals.typing.FileSource` uses a forward reference, which breaks cross-refs in the docs
+FileSource: TypeAlias = str | os.PathLike[str]
+"""Path to a file.
+
+Either a string or an object that implements [`__fspath__`], such as [`pathlib.Path`].
+
+[`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
+[`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
+"""
+SerdeFormat: TypeAlias = Literal["binary", "json"]
+SerdeSource: TypeAlias = FileSource | ReadableBuffer | BytesIO
+"""Path to a file or a file-like object.
+
+By file-like object, we refer to objects that have a `read()` method,
+such as a file handler (e.g. via builtin [`open`][] function) or [`io.BytesIO`][]).
+"""
+
+SerdeSink: TypeAlias = FileSource | BytesIO
+"""File path to which the result should be written."""

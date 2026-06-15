@@ -26,9 +26,9 @@ XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
     reason="TODO @dangotbanned: Add `Expr.meta.serialize`",
     raises=(AttributeError, NotImplementedError),
 )
-XFAIL_NOT_IMPL_DESERDE = pytest.mark.xfail(
-    reason="TODO @dangotbanned: Add `Expr.deserialize`",
-    raises=(AttributeError, NotImplementedError),
+XFAIL_NOT_IMPL_JSON = pytest.mark.xfail(
+    reason="`deserialize(format='json')` is not yet implemented",
+    raises=(NotImplementedError),
 )
 
 
@@ -66,44 +66,40 @@ def meta_eq(actual: nwp.Expr, expected: nwp.Expr | MetaNamespace) -> None:
 
 @cases()
 @XFAIL_NOT_IMPL_SERDE
-@XFAIL_NOT_IMPL_DESERDE
 def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:  # pragma: no cover
     json = expr.meta.serialize(format="binary")  # type: ignore[attr-defined]
-    round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")  # type: ignore[attr-defined]
+    round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")
     meta_eq(round_tripped, expr)
 
 
 @cases()
 @XFAIL_NOT_IMPL_SERDE
-@XFAIL_NOT_IMPL_DESERDE
 def test_expr_serde_roundtrip_json(expr: nwp.Expr) -> None:  # pragma: no cover
     expr = nwp.col("foo").sum().over("bar")
     json = expr.meta.serialize(format="json")  # type: ignore[attr-defined]
-    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[attr-defined]
+    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[arg-type]
     meta_eq(round_tripped, expr)
 
 
-@XFAIL_NOT_IMPL_DESERDE
-def test_expr_deserialize_file_not_found() -> None:  # pragma: no cover
+def test_expr_deserialize_file_not_found() -> None:
     with pytest.raises(FileNotFoundError):
-        nwp.Expr.deserialize("abcdef")  # type: ignore[attr-defined]
+        nwp.Expr.deserialize("abcdef")
 
 
-@XFAIL_NOT_IMPL_DESERDE
-def test_expr_deserialize_invalid_json() -> None:  # pragma: no cover
+@XFAIL_NOT_IMPL_JSON
+def test_expr_deserialize_invalid_json() -> None:
     with pytest.raises(
         ComputeError, match="could not deserialize input into an expression"
     ):
-        nwp.Expr.deserialize(io.StringIO("abcdef"), format="json")  # type: ignore[attr-defined]
+        nwp.Expr.deserialize(io.StringIO("abcdef"), format="json")  # type: ignore[arg-type]
 
 
 @XFAIL_NOT_IMPL_SERDE
-@XFAIL_NOT_IMPL_DESERDE
 def test_expression_json_13991() -> None:  # pragma: no cover
     expr = nwp.col("foo").cast(nw.Decimal(38, 10))
     json = expr.meta.serialize(format="json")  # type: ignore[attr-defined]
 
-    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[attr-defined]
+    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[arg-type]
     meta_eq(round_tripped, expr)
 
 
