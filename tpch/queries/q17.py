@@ -13,13 +13,15 @@ def query(lineitem_ds: FrameT, part_ds: FrameT) -> FrameT:
     var2 = "MED BOX"
 
     query1 = (
-        part_ds.filter(nw.col("p_brand") == var1)
+        part_ds
+        .filter(nw.col("p_brand") == var1)
         .filter(nw.col("p_container") == var2)
         .join(lineitem_ds, how="left", left_on="p_partkey", right_on="l_partkey")
     )
 
     return (
-        query1.with_columns(l_quantity_times_point_2=nw.col("l_quantity") * 0.2)
+        query1
+        .with_columns(l_quantity_times_point_2=nw.col("l_quantity") * 0.2)
         .group_by("p_partkey")
         .agg(nw.col("l_quantity_times_point_2").mean().alias("avg_quantity"))
         .select(nw.col("p_partkey").alias("key"), nw.col("avg_quantity"))

@@ -17,7 +17,8 @@ def query(
     supplier_ds: FrameT,
 ) -> FrameT:
     return (
-        part_ds.join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
+        part_ds
+        .join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
         .join(
             lineitem_ds,

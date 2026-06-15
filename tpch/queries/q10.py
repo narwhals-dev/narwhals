@@ -16,7 +16,8 @@ def query(
     var2 = datetime(1994, 1, 1)
 
     return (
-        customer_ds.join(orders_ds, left_on="c_custkey", right_on="o_custkey")
+        customer_ds
+        .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .join(lineitem_ds, left_on="o_orderkey", right_on="l_orderkey")
         .join(nation_ds, left_on="c_nationkey", right_on="n_nationkey")
         .filter(nw.col("o_orderdate").is_between(var1, var2, closed="left"))

@@ -10,7 +10,8 @@ if TYPE_CHECKING:
 
 def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     q1 = (
-        customer_ds.with_columns(nw.col("c_phone").str.slice(0, 2).alias("cntrycode"))
+        customer_ds
+        .with_columns(nw.col("c_phone").str.slice(0, 2).alias("cntrycode"))
         .filter(nw.col("cntrycode").str.contains("13|31|23|29|30|18|17"))
         .select("c_acctbal", "c_custkey", nw.col("cntrycode").cast(nw.Int64()))
     )
@@ -20,13 +21,15 @@ def query(customer_ds: FrameT, orders_ds: FrameT) -> FrameT:
     )
 
     q3 = (
-        orders_ds.select("o_custkey")
+        orders_ds
+        .select("o_custkey")
         .unique("o_custkey")
         .with_columns(nw.col("o_custkey").alias("c_custkey"))
     )
 
     return (
-        q1.join(q3, left_on="c_custkey", right_on="c_custkey", how="left")  # pyright: ignore[reportArgumentType]
+        q1
+        .join(q3, left_on="c_custkey", right_on="c_custkey", how="left")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("o_custkey").is_null())
         .join(q2, how="cross")  # pyright: ignore[reportArgumentType]
         .filter(nw.col("c_acctbal") > nw.col("avg_acctbal"))

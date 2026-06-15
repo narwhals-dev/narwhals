@@ -14,7 +14,8 @@ def query(line_item_ds: FrameT, orders_ds: FrameT) -> FrameT:
     var_2 = datetime(1993, 10, 1)
 
     return (
-        line_item_ds.join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
+        line_item_ds
+        .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
         .filter(
             nw.col("o_orderdate").is_between(var_1, var_2, closed="left"),
             nw.col("l_commitdate") < nw.col("l_receiptdate"),

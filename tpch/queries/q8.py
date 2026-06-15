@@ -28,7 +28,8 @@ def query(
     n2 = nation_ds.select("n_nationkey", "n_name")
 
     return (
-        part_ds.join(line_item_ds, left_on="p_partkey", right_on="l_partkey")
+        part_ds
+        .join(line_item_ds, left_on="p_partkey", right_on="l_partkey")
         .join(supplier_ds, left_on="l_suppkey", right_on="s_suppkey")
         .join(orders_ds, left_on="l_orderkey", right_on="o_orderkey")
         .join(customer_ds, left_on="o_custkey", right_on="c_custkey")
@@ -44,7 +45,8 @@ def query(
             nw.col("n_name").alias("nation"),
         )
         .with_columns(
-            nw.when(nw.col("nation") == nation)
+            nw
+            .when(nw.col("nation") == nation)
             .then(nw.col("volume"))
             .otherwise(0)
             .alias("_tmp")

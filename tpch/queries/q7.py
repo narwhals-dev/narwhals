@@ -23,7 +23,8 @@ def query(
     var_2 = datetime(1996, 12, 31)
 
     df1 = (
-        customer_ds.join(n1, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
+        customer_ds
+        .join(n1, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .rename({"n_name": "cust_nation"})
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
@@ -33,7 +34,8 @@ def query(
     )
 
     df2 = (
-        customer_ds.join(n2, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
+        customer_ds
+        .join(n2, left_on="c_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .rename({"n_name": "cust_nation"})
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")
@@ -43,7 +45,8 @@ def query(
     )
 
     return (
-        nw.concat([df1, df2])
+        nw
+        .concat([df1, df2])
         .filter(nw.col("l_shipdate").is_between(var_1, var_2))
         .with_columns(
             (nw.col("l_extendedprice") * (1 - nw.col("l_discount"))).alias("volume")

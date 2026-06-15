@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 def query(lineitem: FrameT) -> FrameT:
     var_1 = datetime(1998, 9, 2)
     return (
-        lineitem.filter(nw.col("l_shipdate") <= var_1)
+        lineitem
+        .filter(nw.col("l_shipdate") <= var_1)
         .with_columns(
             disc_price=nw.col("l_extendedprice") * (1 - nw.col("l_discount")),
             charge=(

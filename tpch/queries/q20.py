@@ -22,7 +22,8 @@ def query(
     var4 = "forest"
 
     query1 = (
-        lineitem_ds.filter(nw.col("l_shipdate").is_between(var1, var2, closed="left"))
+        lineitem_ds
+        .filter(nw.col("l_shipdate").is_between(var1, var2, closed="left"))
         .group_by("l_partkey", "l_suppkey")
         .agg((nw.col("l_quantity").sum()).alias("sum_quantity"))
         .with_columns(sum_quantity=nw.col("sum_quantity") * 0.5)
@@ -31,7 +32,8 @@ def query(
     query3 = supplier_ds.join(query2, left_on="s_nationkey", right_on="n_nationkey")  # pyright: ignore[reportArgumentType]
 
     return (
-        part_ds.filter(nw.col("p_name").str.starts_with(var4))
+        part_ds
+        .filter(nw.col("p_name").str.starts_with(var4))
         .select("p_partkey")
         .unique("p_partkey")
         .join(partsupp_ds, left_on="p_partkey", right_on="ps_partkey")

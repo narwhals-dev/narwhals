@@ -22,7 +22,8 @@ def query(
     var_3 = datetime(1995, 1, 1)
 
     return (
-        region_ds.join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
+        region_ds
+        .join(nation_ds, left_on="r_regionkey", right_on="n_regionkey")
         .join(customer_ds, left_on="n_nationkey", right_on="c_nationkey")
         .join(orders_ds, left_on="c_custkey", right_on="o_custkey")
         .join(line_item_ds, left_on="o_orderkey", right_on="l_orderkey")

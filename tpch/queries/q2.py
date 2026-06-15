@@ -20,7 +20,8 @@ def query(
     var_3 = "EUROPE"
 
     result_q2 = (
-        part_ds.join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")
+        part_ds
+        .join(part_supp_ds, left_on="p_partkey", right_on="ps_partkey")
         .join(supplier_ds, left_on="ps_suppkey", right_on="s_suppkey")
         .join(nation_ds, left_on="s_nationkey", right_on="n_nationkey")
         .join(region_ds, left_on="n_regionkey", right_on="r_regionkey")
@@ -43,7 +44,8 @@ def query(
     ]
 
     return (
-        result_q2.group_by("p_partkey")
+        result_q2
+        .group_by("p_partkey")
         .agg(nw.col("ps_supplycost").min().alias("ps_supplycost"))
         .join(
             result_q2,  # pyright: ignore[reportArgumentType]

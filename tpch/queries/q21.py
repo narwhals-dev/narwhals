@@ -12,7 +12,8 @@ def query(lineitem: FrameT, nation: FrameT, orders: FrameT, supplier: FrameT) ->
     var1 = "SAUDI ARABIA"
 
     q1 = (
-        lineitem.group_by("l_orderkey")
+        lineitem
+        .group_by("l_orderkey")
         .agg(nw.len().alias("n_supp_by_order"))
         .filter(nw.col("n_supp_by_order") > 1)
         .join(
@@ -23,7 +24,8 @@ def query(lineitem: FrameT, nation: FrameT, orders: FrameT, supplier: FrameT) ->
     )
 
     return (
-        q1.group_by("l_orderkey")
+        q1
+        .group_by("l_orderkey")
         .agg(nw.len().alias("n_supp_by_order"))
         .join(
             q1,  # pyright: ignore[reportArgumentType]
