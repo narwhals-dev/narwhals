@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         IntoPandasSchema,
         IntoPolarsSchema,
     )
-    from tests.utils import Constructor, ConstructorEager, ConstructorPandasLike
+    from tests.utils import Constructor, ConstructorEager, PandasConstructor
 
     TimeUnit: TypeAlias = Literal["ns", "us"]
 
@@ -571,9 +571,7 @@ def origin_arrow(
 
 
 @pytest.fixture
-def origin_pandas_like(
-    constructor_pandas_like: ConstructorPandasLike,
-) -> IntoPandasSchema:
+def origin_pandas_like(constructor_pandas_like: PandasConstructor) -> IntoPandasSchema:
     data: dict[str, Any] = {
         "a": [2, 1],
         "b": ["hello", "hi"],
@@ -581,14 +579,12 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    # NOTE: `attr-defined` because the `IntoDataFrame` protocol does not declare `.dtypes`.
-    # At runtime the constructor is guaranteed to be pandas-like.
-    return constructor_pandas_like(data).to_native().dtypes.to_dict()  # type: ignore[attr-defined, no-any-return]
+    return constructor_pandas_like(data).to_native().dtypes.to_dict()
 
 
 @pytest.fixture
 def origin_pandas_like_pyarrow(
-    constructor_pandas_like: ConstructorPandasLike,
+    constructor_pandas_like: PandasConstructor,
 ) -> IntoPandasSchema:
     if PANDAS_VERSION < (1, 5):
         pytest.skip(reason="pandas too old for `pyarrow`")
@@ -608,8 +604,7 @@ def origin_pandas_like_pyarrow(
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )
-    # NOTE: `attr-defined` for the same reason as `origin_pandas_like` above.
-    return df_nw.to_native().dtypes.to_dict()  # type: ignore[attr-defined, no-any-return]
+    return df_nw.to_native().dtypes.to_dict()
 
 
 def test_schema_from_polars(

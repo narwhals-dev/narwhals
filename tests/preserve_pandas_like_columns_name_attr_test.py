@@ -7,11 +7,11 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from tests.utils import PandasConstructor
 
 
 def test_ops_preserve_column_index_name(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: PandasConstructor, request: pytest.FixtureRequest
 ) -> None:
     if not any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
         pytest.skip(
@@ -22,9 +22,6 @@ def test_ops_preserve_column_index_name(
         request.applymarker(pytest.mark.xfail)
 
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
-    # NOTE: the pandas-like-only `.columns.name` accesses below go unchecked because
-    # `.columns` is loosely typed on the native protocols (`main` typed `constructor`
-    # as `Callable[..., pd.DataFrame]` in this test).
     df_native = constructor(data).to_native()
     df_native.columns.name = "foo"
 
