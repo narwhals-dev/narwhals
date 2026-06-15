@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from narwhals._plan.typing import ReadableBuffer
+    from _typeshed import ReadableBuffer
 
 
 class MockPickleRW:
