@@ -1,0 +1,100 @@
+"""Adapted from upstream tests.
+
+- https://github.com/pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/expr/test_serde.py
+- https://github.com//pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/io/test_serde.py
+"""
+
+from __future__ import annotations
+
+import io
+
+import pytest
+
+import narwhals as nw
+import narwhals._plan as nwp
+import narwhals._plan.selectors as ncs
+from narwhals.exceptions import ComputeError
+
+XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Add `Expr.meta.serialize`",
+    raises=(AttributeError, NotImplementedError),
+)
+XFAIL_NOT_IMPL_DESERDE = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Add `Expr.deserialize`",
+    raises=(AttributeError, NotImplementedError),
+)
+
+
+def cases() -> pytest.MarkDecorator:
+    """Split out to get unique instances for the 2x shared tests.
+
+    Same cases are duplicated upstream
+    - https://github.com/pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/expr/test_serde.py#L9-L18
+    - https://github.com/pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/py-polars/tests/unit/expr/test_serde.py#L25-L34
+    """
+    return pytest.mark.parametrize(
+        "expr",
+        [
+            nwp.col("foo").sum().over("bar"),
+            nwp.col("foo").sum().over("bar", order_by=ncs.string()),
+            nwp.col("foo").replace_strict({3: 1}, return_dtype=nw.UInt32),
+            nwp.col("foo").replace_strict(
+                [5, 6, 7], [8, 9, 10], default=nwp.nth(-1).last()
+            ),
+            nwp.col("foo").rolling_var(window_size=4, ddof=2),
+            nwp.col("foo").rolling_mean(window_size=2),
+            nwp.col("foo").sort_by(
+                "bar", descending=[False, True], nulls_last=[True, False]
+            ),
+            nwp.col("foo").ewm_mean(alpha=0.5, min_samples=2, ignore_nulls=True),
+        ],
+    )
+
+
+def meta_eq(left: nwp.Expr, right: nwp.Expr) -> None:  # pragma: no cover
+    msg = "TODO @dangotbanned: Add `Expr.meta.__eq__`"
+    raise NotImplementedError(msg)
+    assert left.meta == right
+
+
+@cases()
+@XFAIL_NOT_IMPL_SERDE
+@XFAIL_NOT_IMPL_DESERDE
+def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:  # pragma: no cover
+    json = expr.meta.serialize(format="binary")  # pyright: ignore[reportAttributeAccessIssue]
+    round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")  # pyright: ignore[reportAttributeAccessIssue]
+    meta_eq(round_tripped, expr)
+
+
+@cases()
+@XFAIL_NOT_IMPL_SERDE
+@XFAIL_NOT_IMPL_DESERDE
+def test_expr_serde_roundtrip_json(expr: nwp.Expr) -> None:  # pragma: no cover
+    expr = nwp.col("foo").sum().over("bar")
+    json = expr.meta.serialize(format="json")  # pyright: ignore[reportAttributeAccessIssue]
+    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # pyright: ignore[reportAttributeAccessIssue]
+    meta_eq(round_tripped, expr)
+
+
+@XFAIL_NOT_IMPL_DESERDE
+def test_expr_deserialize_file_not_found() -> None:  # pragma: no cover
+    with pytest.raises(FileNotFoundError):
+        nwp.Expr.deserialize("abcdef")  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@XFAIL_NOT_IMPL_DESERDE
+def test_expr_deserialize_invalid_json() -> None:  # pragma: no cover
+    with pytest.raises(
+        ComputeError, match="could not deserialize input into an expression"
+    ):
+        nwp.Expr.deserialize(io.StringIO("abcdef"), format="json")  # pyright: ignore[reportAttributeAccessIssue]
+
+
+@XFAIL_NOT_IMPL_SERDE
+@XFAIL_NOT_IMPL_DESERDE
+def test_expression_json_13991() -> None:  # pragma: no cover
+    expr = nwp.col("foo").cast(nw.Decimal(38, 10))
+    json = expr.meta.serialize(format="json")  # pyright: ignore[reportAttributeAccessIssue]
+
+    round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # pyright: ignore[reportAttributeAccessIssue]
+    meta_eq(round_tripped, expr)
