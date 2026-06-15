@@ -1,4 +1,4 @@
-name: PyTest Modin constructor
+name: PyTest FireDucks
 
 on:
   pull_request:
@@ -6,29 +6,24 @@ on:
 
 env:
   PY_COLORS: 1
-  PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_LOCKED: 1
+  UV_LOCKED: 0
   UV_NO_DEV: 1
 
 permissions:
   contents: read
 
 jobs:
-  pytest-modin-constructor:
+  pytest-fireducks:
     if: github.head_ref != 'bump-version'
-    strategy:
-      matrix:
-        python-version: ["3.13"]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
           enable-cache: "true"
-          cache-suffix: modin-${{ matrix.python-version }}
+          cache-suffix: fireducks-3.13
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--group core-tests --extra modin" CMD="pytest tests --constructors=modin[pyarrow]"
+        run: make run-ci DEPS="--group core-tests --extra pandas" RUN_ONLY="--with fireducks --with 'pandas>2.2.0'" CMD="python -m fireducks.pandas --hook-import-module -m pytest tests/fireducks_test.py"

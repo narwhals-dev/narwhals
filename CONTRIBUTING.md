@@ -12,9 +12,9 @@ If you've got experience with open source contributions, the following instructi
 - `git remote rename origin upstream`
 - `git remote add origin <your fork goes here>`
 - `uv sync --group local-dev` (creates `.venv` and installs project + dev deps)
-- Install pre-commit as a git hook: `uv run pre-commit install`
+- Install prek as a git hook: `uv run prek install`
 - To run tests: `uv run pytest`
-- To run all linting checks: `uv run pre-commit run --all-files`
+- To run all linting checks: `make lint`
 - To run static typing checks: `make typing`
 
 For more detailed and beginner-friendly instructions, see below!
@@ -128,13 +128,12 @@ You then have two options to run commands inside the project environment:
 - **Recommended:** prefix commands with `uv run` (e.g. `uv run pytest`). `uv` will re-sync the environment if needed.
 - Activate the venv (`. .venv/bin/activate` on Linux/macOS, `.\.venv\Scripts\activate` on Windows) and run commands directly (e.g. `pytest`).
 
+The pre commit tool ([`prek`](https://prek.j178.dev/)) is installed as part of the `local-dev` dependency group.
+Run `uv run prek install` to install prek as a git hook.
 
-The `pre-commit` tool is installed as part of the `local-dev` dependency group.
-Run `uv run pre-commit install` to install pre-commit as a git hook.
 This will automatically format and lint your code before each commit, and it will block the commit if any issues are found.
 
-
-Static typing is run separately from `pre-commit`, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing` (which itself invokes `uv run --group typing ...` under the hood).
+Static typing is run separately from `prek` pre commit hooks, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing` (which itself invokes `uv run --group typing ...` under the hood).
 
 ### 6. Working on your issue
 

@@ -49,6 +49,12 @@ jobs:
     permissions:
       contents: read
 
+  pytest-fireducks:
+    name: PyTest Fireducks
+    uses: ./.github/workflows/pytest-fireducks.yml
+    permissions:
+      contents: read
+
   typing:
     name: Type checking
     uses: ./.github/workflows/typing.yml
@@ -58,12 +64,26 @@ jobs:
   downstream-tests:
     name: Downstream tests
     uses: ./.github/workflows/downstream_tests.yml
+    with:
+      skip-fairlearn: true
     permissions:
       contents: read
 
   check-docs-build:
     name: Check docs build
     uses: ./.github/workflows/check_docs_build.yml
+    permissions:
+      contents: read
+
+  pre-commit-hooks:
+    name: Pre-commit hooks
+    uses: ./.github/workflows/pre-commit-hooks.yml
+    permissions:
+      contents: read
+
+  test-sdist:
+    name: Test sdist
+    uses: ./.github/workflows/test_sdist.yml
     permissions:
       contents: read
 
@@ -77,12 +97,14 @@ jobs:
       - typing
       - downstream-tests
       - check-docs-build
+      - pre-commit-hooks
+      - test-sdist
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
     - name: Install uv

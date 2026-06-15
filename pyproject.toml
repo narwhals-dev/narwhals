@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.21.2"
+version = "2.22.1"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -80,8 +80,15 @@ tests = [
   "pytest-randomly",
   "pytest-xdist",
   "hypothesis>=6.0.0",
-  {include-group = "plugins"},
 ]
+# NOTE: `plugins` is deliberately NOT included within `tests`.
+# `test-plugin` is a workspace member, so pulling it into `tests` makes the group unresolvable
+# outside the workspace (e.g. `pip install --group tests` from an unpacked sdist,
+# as hit by downstream packagers). `tests/plugins_test.py` uses `importorskip`,
+# so it skips gracefully when the plugin is absent.
+# CI jobs that measure `tests/` coverage add `--group plugins` explicitly.
+# See https://github.com/narwhals-dev/narwhals/pull/3664 and https://github.com/narwhals-dev/narwhals/pull/3665
+
 extra = [  # heavier dependencies we don't necessarily need in every testing job
   "scikit-learn",
 ]
@@ -111,7 +118,7 @@ docs = [
   "zensical>=0.0.38"
 ]
 dev = [
-  "pre-commit",
+  "prek",
   "ruff",
   {include-group = "tests"},
 ]
@@ -179,13 +186,12 @@ min-pyspark-version = [
 ]
 
 [tool.uv.build-backend]
-source-include = [
-  "src/*",
-  "tests/*",
-]
-wheel-include = [
-  "src/*",
-]
+# The `src/narwhals` module, pyproject.toml, README and LICENSE are shipped by
+# default. We only need to add `tests/` to the sdist; `/**` recurses into
+# subdirectories (a bare `*` would not, dropping e.g. `tests/data/`).
+# See: https://docs.astral.sh/uv/reference/settings/#build-backend_source-exclude
+# > Glob expressions which files and directories to additionally include in the source distribution.
+source-include = ["tests/**"]
 
 [tool.uv]
 # NOTE: When updating these conflicts, every entry in a single inner list is
@@ -393,6 +399,7 @@ filterwarnings = [
   # raised internally by Dask
   "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
   "ignore:.*Downcasting behavior in Series and DataFrame methods 'where', 'mask', and 'clip' is deprecated.*:FutureWarning:dask",
+  "ignore:.*inplace keyword .* is deprecated*:Warning:dask",
 
   # raise internally by polars
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"

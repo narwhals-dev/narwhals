@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from narwhals._utils import Version, parse_version
+from narwhals._utils import Version, _hasattr_static, parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -156,4 +156,4 @@ class InterchangeFrame:
 
 
 def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
-    return hasattr(obj, "__dataframe__")
+    return _hasattr_static(obj, "__dataframe__")

@@ -69,6 +69,42 @@ Specify one or more extras in square brackets, for example:
     poetry add "narwhals[polars,pyarrow]"
     ```
 
+!!! warning "Library authors: prefer keeping backends out of your direct dependencies"
+
+    `uv add "narwhals[polars,pyarrow]"` adds the extras to `[project.dependencies]`.
+
+    If you publish your project, **every consumer is then forced to install polars and
+    pyarrow**, which defeats Narwhals' "support all, depend on none" design.
+
+    If you're building a library (rather than an application), keep `narwhals` as your
+    runtime dependency and pin the backends only for development:
+
+    === "uv"
+
+        ```terminal
+        uv add narwhals
+        uv add --group dev "narwhals[polars,pyarrow]"
+        ```
+
+    === "Poetry"
+
+        ```terminal
+        poetry add narwhals
+        poetry add --group dev "narwhals[polars,pyarrow]"
+        ```
+
+    Dependency groups are not shipped in your distribution metadata, so consumers
+    receive only `narwhals` and bring their own backend.
+
+    Alternatively, re-expose the backends as your library's **own optional extras**, so
+    consumers opt in explicitly (e.g. `pip install your-library[polars]`):
+
+    ```toml
+    [project.optional-dependencies]
+    polars = ["narwhals[polars]"]
+    pyarrow = ["narwhals[pyarrow]"]
+    ```
+
 ### Verifying the installation
 
 To verify the installation, start the Python REPL and execute:

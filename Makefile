@@ -10,8 +10,8 @@ help:  ## Display this help screen
 
 .PHONY: lint
 lint: ## Run code formatting and linting via ruff
-	pre-commit run ruff-format --all-files
-	pre-commit run ruff-check --all-files
+	prek run ruff-format --all-files
+	prek run ruff-check --all-files
 
 .PHONY: typing
 typing: ## Run type checkers
