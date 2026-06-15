@@ -140,3 +140,22 @@ def test_corr_over(constructor: Constructor) -> None:
     # g=1: corr([1,3,3], [1,2,3]) = sqrt(3)/2; g=2: two points are perfectly correlated.
     expected = {"corr": [3**0.5 / 2, 3**0.5 / 2, 3**0.5 / 2, 1.0, 1.0]}
     assert_equal_data(result, expected)
+
+
+def test_corr_pairwise_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Correlation is pairwise: a null in one column must drop that row entirely,
+    # otherwise the other column's mean/stddev are computed over the wrong rows.
+    # Regression test for the pyarrow path, which previously skipped this filtering.
+    if "pyspark" in str(constructor):
+        request.applymarker(
+            pytest.skip(reason="PySpark corr function does not allow None values")
+        )
+    df = nw.from_native(
+        constructor({"a": [1.0, 2.0, 3.0, 100.0], "b": [1.0, 2.0, 3.0, None]})
+    )
+    result = df.select(nw.corr("a", "b").alias("c"))
+    # Pairwise-valid rows are a=[1, 2, 3], b=[1, 2, 3]: perfectly correlated.
+    expected = {"c": [1.0]}
+    assert_equal_data(result, expected)
