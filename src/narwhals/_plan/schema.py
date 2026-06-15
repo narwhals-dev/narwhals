@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable, Collection, Iterable, Mapping
 from functools import lru_cache
 from itertools import chain
@@ -339,6 +340,17 @@ class FrozenSchema(_BaseSchema):
 
     def __deepcopy__(self, memo: Any) -> Self:
         return self
+
+    if sys.version_info < (3, 11):
+
+        def __getstate__(self) -> tuple[None, dict[str, Any]]:
+            # https://github.com/python/cpython/pull/2821
+            return None, {"_mapping": self._mapping}
+
+    def __setstate__(self, state: tuple[None, dict[str, Any]]) -> None:
+        self__setattr__ = _OBJ_SETATTR.__get__(self)
+        for name, value in state[1].items():
+            self__setattr__(name, value)
 
     def __setattr__(self, name: str, value: Never) -> Never:
         if name not in self.__slots__:
