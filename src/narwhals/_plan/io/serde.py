@@ -5,21 +5,17 @@ import os
 # ruff: noqa: S301
 import pickle
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from narwhals._plan import common
 
 if TYPE_CHECKING:
     from io import StringIO
 
-    from _typeshed import SupportsNoArgReadline, SupportsRead
     from typing_extensions import TypeIs
 
-    from narwhals._plan.typing import SerdeFormat, SerdeSink, SerdeSource
+    from narwhals._plan.typing import PickleLoad, SerdeFormat, SerdeSink, SerdeSource
     from narwhals.typing import FileSource
-
-    class _PickleLoad(SupportsRead[bytes], SupportsNoArgReadline[bytes], Protocol):
-        """https://github.com/python/typeshed/blob/abbf4372552d78cdd4514db2a2d855658c1a98a5/stdlib/_pickle.pyi#L7-L10."""
 
 
 _Self = TypeVar("_Self")
@@ -29,7 +25,7 @@ def _is_file_source(source: Any) -> TypeIs[FileSource]:
     return isinstance(source, (str, Path, os.PathLike))
 
 
-def _can_pickle_load(source: Any) -> TypeIs[_PickleLoad]:
+def _can_pickle_load(source: Any) -> TypeIs[PickleLoad]:
     return common.hasattrs_static(source, "read", "readline")
 
 

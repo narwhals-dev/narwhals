@@ -6,17 +6,107 @@
 
 from __future__ import annotations
 
-# ruff: noqa: S301
 import io
 import pickle
 
+# ruff: noqa: S301
+from io import BytesIO
+from typing import TYPE_CHECKING, Literal, TypeAlias
+
 import pytest
+from pytest import FixtureRequest
 
 import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
+from narwhals._typing_compat import assert_never
 from narwhals.exceptions import ComputeError
 from tests.plan.utils import assert_expr_ir_equal
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+
+    from narwhals._plan.typing import ReadableBuffer
+
+
+class MockPickleRW:
+    """Exposes the interface required to roundtrip `pickle.dump` -> `pickle.load`.
+
+    Intersection of:
+
+        SupportsRead[bytes] & SupportsNoArgReadline[bytes] & Writer[bytes]
+    """
+
+    def __init__(self, initial_bytes: ReadableBuffer = b"") -> None:
+        self._dont_look: BytesIO = BytesIO(initial_bytes)
+
+    def read(self, n: int) -> bytes:
+        return self._dont_look.read(n)
+
+    def readline(self) -> bytes:
+        return self._dont_look.readline()
+
+    def write(self, data: bytes) -> int:
+        return self._dont_look.write(data)
+
+    def getbuffer(self) -> memoryview:
+        # Not required by either `dump` or `load`, but is an easy way to get back to the start
+        return self._dont_look.getbuffer()
+
+
+class MockPathLike:
+    """Duplicated from `frame_{scan_read,sink_write}_test.py`.
+
+    Trying to keep the diff self-containedl, will need to leave refactoring for now.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self._super_secret: Path = path
+
+    def __fspath__(self) -> str:
+        return self._super_secret.__fspath__()
+
+
+FileSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
+BufferSourceKind: TypeAlias = Literal["BytesIO", "PickleRW"]
+
+
+@pytest.fixture(params=[BytesIO, MockPickleRW])
+def buffer(request: FixtureRequest) -> BytesIO | MockPickleRW:
+    param: type[BytesIO | MockPickleRW] = request.param
+    return param()
+
+
+@pytest.fixture(params=["str", "Path", "PathLike"])
+def file(
+    request: FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> MockPathLike | str | Path:
+    param: FileSourceKind = request.param
+    path = tmp_path_factory.mktemp(param) / "source.tmp"
+    path.touch()
+    match param:
+        case "Path":
+            return path
+        case "PathLike":
+            return MockPathLike(path)
+        case "str":
+            return path.as_posix()
+        case _:
+            assert_never(param)
+
+
+@pytest.fixture
+def expr_complex() -> nwp.Expr:
+    return (
+        nwp.when(a=5)
+        .then(ncs.integer())
+        .otherwise(nwp.max("b"))
+        .name.suffix("_extra")
+        .rank("dense", descending=True)
+        * 99
+    ).name.to_uppercase()
+
 
 XFAIL_NOT_IMPL_JSON = pytest.mark.xfail(
     reason="`deserialize(format='json')` is not yet implemented",
@@ -56,11 +146,13 @@ def meta_eq(actual: nwp.Expr, expected: nwp.Expr) -> None:
     assert_expr_ir_equal(actual._ir, expected._ir)
 
 
-# TODO @dangotbanned: Cover more valid types for `file` and `source`
 @cases()
-def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:
-    json = expr.meta.serialize(format="binary")
-    round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")
+@pytest.mark.parametrize("buffer_read", [BytesIO, memoryview, bytes])
+def test_expr_serde_roundtrip_binary(
+    expr: nwp.Expr, buffer_read: Callable[[bytes], ReadableBuffer]
+) -> None:
+    buf = expr.meta.serialize()
+    round_tripped = nwp.Expr.deserialize(buffer_read(buf), format="binary")
     meta_eq(round_tripped, expr)
 
 
@@ -71,6 +163,23 @@ def test_expr_serde_roundtrip_json(expr: nwp.Expr) -> None:  # pragma: no cover
     json = expr.meta.serialize(format="json")
     round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[arg-type]
     meta_eq(round_tripped, expr)
+
+
+def test_expr_serde_file(expr_complex: nwp.Expr, file: MockPathLike | str | Path) -> None:
+    out = expr_complex.meta.serialize(file)
+    assert out is None
+    round_tripped = nwp.Expr.deserialize(file)
+    meta_eq(round_tripped, expr_complex)
+
+
+def test_expr_serde_buffer(
+    expr_complex: nwp.Expr, buffer: BytesIO | MockPickleRW
+) -> None:
+    out = expr_complex.meta.serialize(buffer)
+    assert out is None
+    rewind = type(buffer)(buffer.getbuffer())
+    round_tripped = nwp.Expr.deserialize(rewind)
+    meta_eq(round_tripped, expr_complex)
 
 
 # TODO @dangotbanned: Cover more invalid `source` types
@@ -112,3 +221,4 @@ def test_pickling_as_struct_11100() -> None:
     e = nwp.struct("a")
     roundtrip = pickle.loads(pickle.dumps(e))
     meta_eq(roundtrip, e)
+

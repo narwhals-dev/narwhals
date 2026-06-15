@@ -4,7 +4,6 @@ import os
 import sys
 import types
 from collections.abc import Callable, Container, Iterable
-from io import BytesIO
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
@@ -216,8 +215,17 @@ Either a string or an object that implements [`__fspath__`], such as [`pathlib.P
 [`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
 [`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
 """
+
+
+class PickleLoad(Protocol):
+    """[`_typeshed._pickle._ReadableFileobj`](https://github.com/python/typeshed/blob/abbf4372552d78cdd4514db2a2d855658c1a98a5/stdlib/_pickle.pyi#L7-L10)."""
+
+    def read(self, n: int, /) -> bytes: ...
+    def readline(self) -> bytes: ...
+
+
 SerdeFormat: TypeAlias = Literal["binary", "json"]
-SerdeSource: TypeAlias = FileSource | ReadableBuffer | BytesIO
+SerdeSource: TypeAlias = FileSource | ReadableBuffer | PickleLoad
 """Path to a file or a file-like object.
 
 By file-like object, we refer to objects that have a `read()` method,
