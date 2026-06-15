@@ -18,10 +18,6 @@ import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ComputeError
 from tests.plan.utils import assert_expr_ir_equal
 
-XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
-    reason="TODO @dangotbanned: Add `Expr.meta.serialize`",
-    raises=(AttributeError, NotImplementedError),
-)
 XFAIL_NOT_IMPL_JSON = pytest.mark.xfail(
     reason="`deserialize(format='json')` is not yet implemented",
     raises=(NotImplementedError),
@@ -60,23 +56,24 @@ def meta_eq(actual: nwp.Expr, expected: nwp.Expr) -> None:
     assert_expr_ir_equal(actual._ir, expected._ir)
 
 
+# TODO @dangotbanned: Cover more valid types for `file` and `source`
 @cases()
-@XFAIL_NOT_IMPL_SERDE
-def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:  # pragma: no cover
-    json = expr.meta.serialize(format="binary")  # type: ignore[attr-defined]
+def test_expr_serde_roundtrip_binary(expr: nwp.Expr) -> None:
+    json = expr.meta.serialize(format="binary")
     round_tripped = nwp.Expr.deserialize(io.BytesIO(json), format="binary")
     meta_eq(round_tripped, expr)
 
 
 @cases()
-@XFAIL_NOT_IMPL_SERDE
+@XFAIL_NOT_IMPL_JSON
 def test_expr_serde_roundtrip_json(expr: nwp.Expr) -> None:  # pragma: no cover
     expr = nwp.col("foo").sum().over("bar")
-    json = expr.meta.serialize(format="json")  # type: ignore[attr-defined]
+    json = expr.meta.serialize(format="json")
     round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[arg-type]
     meta_eq(round_tripped, expr)
 
 
+# TODO @dangotbanned: Cover more invalid `source` types
 def test_expr_deserialize_file_not_found() -> None:
     with pytest.raises(FileNotFoundError):
         nwp.Expr.deserialize("abcdef")
@@ -90,10 +87,10 @@ def test_expr_deserialize_invalid_json() -> None:
         nwp.Expr.deserialize(io.StringIO("abcdef"), format="json")  # type: ignore[arg-type]
 
 
-@XFAIL_NOT_IMPL_SERDE
+@XFAIL_NOT_IMPL_JSON
 def test_expression_json_13991() -> None:  # pragma: no cover
     expr = nwp.col("foo").cast(nw.Decimal(38, 10))
-    json = expr.meta.serialize(format="json")  # type: ignore[attr-defined]
+    json = expr.meta.serialize(format="json")
 
     round_tripped = nwp.Expr.deserialize(io.StringIO(json), format="json")  # type: ignore[arg-type]
     meta_eq(round_tripped, expr)
@@ -101,7 +98,6 @@ def test_expression_json_13991() -> None:  # pragma: no cover
 
 def test_serde_expression_5461() -> None:
     e = nwp.col("a").sqrt() / nwp.col("b").alias("c")
-
     roundtrip = pickle.loads(pickle.dumps(e))
     meta_eq(roundtrip, e)
 

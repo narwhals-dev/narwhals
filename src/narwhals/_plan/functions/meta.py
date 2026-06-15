@@ -8,6 +8,7 @@ from narwhals._utils import unstable
 
 if TYPE_CHECKING:
     from narwhals._plan import Expr, Selector
+    from narwhals._plan.typing import SerdeFormat, SerdeSink
 
 
 class ExprMetaNamespace(Immutable):
@@ -101,3 +102,37 @@ class ExprMetaNamespace(Immutable):
         """Undo any renaming operation like `alias` or `name.keep`."""
         msg = "`meta.undo_aliases()` is not yet implemented"
         raise NotImplementedError(msg)
+
+    # TODO @dangotbanned: Add examples
+    # TODO @dangotbanned: Add unstable note
+    @overload
+    @unstable
+    def serialize(
+        self, file: None = ..., *, format: Literal["binary"] = ...
+    ) -> bytes: ...
+    @overload
+    @unstable
+    def serialize(self, file: None = ..., *, format: Literal["json"]) -> str: ...
+    @overload
+    @unstable
+    def serialize(self, file: SerdeSink, *, format: SerdeFormat = ...) -> None: ...
+    @unstable
+    def serialize(
+        self, file: SerdeSink | None = None, *, format: SerdeFormat = "binary"
+    ) -> bytes | str | None:
+        """Serialize this expression to a file or string in JSON format.
+
+        Arguments:
+            file: File path to which the result should be written.
+
+                If set to `None` (default), the output is returned as a string instead.
+            format: The format in which to serialize. Options:
+
+                - `"binary"`: Serialize to bytes (default).
+                - `"json"`: Serialize to string.
+        """
+        from narwhals._plan.io import serde
+
+        if format == "json":
+            return serde.serialize_json(self._expr, file)
+        return serde.serialize_binary(self._expr, file)

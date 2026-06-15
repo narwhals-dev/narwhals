@@ -118,6 +118,7 @@ class Expr:
         return self
 
     # TODO @dangotbanned: Add examples after `Expr.meta.serialize`
+    # TODO @dangotbanned: Add unstable note
     @classmethod
     @unstable
     def deserialize(cls, source: SerdeSource, *, format: SerdeFormat = "binary") -> Self:
@@ -125,9 +126,9 @@ class Expr:
 
         Arguments:
             source: Path to a file or a file-like object.
+
                 By file-like object, we refer to objects that have a `read()` method,
                 such as a file handler (e.g. via builtin [`open`][] function) or [`io.BytesIO`][]).
-
             format: The format with which the Expr was serialized. Options:
 
                 - `"binary"`: Deserialize from bytes (default).

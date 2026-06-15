@@ -29,6 +29,17 @@ if TYPE_CHECKING:
     from narwhals._plan.series import Series
     from narwhals.typing import NonNestedLiteral, PythonLiteral
 
+if sys.version_info >= (3, 14):
+    from io import Writer
+else:
+    _T_contra = TypeVar("_T_contra", contravariant=True)
+
+    class Writer(Protocol[_T_contra]):
+        # https://docs.python.org/3/library/io.html#io.Writer
+        __slots__ = ()
+
+        def write(self, data: _T_contra, /) -> int: ...
+
 
 if sys.version_info >= (3, 12):
     from collections.abc import Buffer as ReadableBuffer
@@ -213,5 +224,5 @@ By file-like object, we refer to objects that have a `read()` method,
 such as a file handler (e.g. via builtin [`open`][] function) or [`io.BytesIO`][]).
 """
 
-SerdeSink: TypeAlias = FileSource | BytesIO
+SerdeSink: TypeAlias = FileSource | Writer[bytes]
 """File path to which the result should be written."""

@@ -11,3 +11,4 @@
         - is_literal
         - output_name
         - root_names
+        - serialize

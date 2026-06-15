@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from _typeshed import SupportsNoArgReadline, SupportsRead
     from typing_extensions import TypeIs
 
-    from narwhals._plan.typing import SerdeFormat, SerdeSource
+    from narwhals._plan.typing import SerdeFormat, SerdeSink, SerdeSource
     from narwhals.typing import FileSource
 
     class _PickleLoad(SupportsRead[bytes], SupportsNoArgReadline[bytes], Protocol):
@@ -34,7 +34,7 @@ def _can_pickle_load(source: Any) -> TypeIs[_PickleLoad]:
 
 
 def deserialize(
-    cls: type[_Self], source: SerdeSource, *, format: SerdeFormat = "binary"
+    cls: type[_Self], source: SerdeSource, format: SerdeFormat = "binary"
 ) -> _Self:
     if format == "json":
         return _deserialize_json(cls, source)
@@ -50,6 +50,22 @@ def deserialize(
         # https://github.com/python/cpython/blob/90748760d38ca3ac5fc6788a69becab905c95598/Modules/_pickle.c#L1239-L1253
         obj = pickle.loads(source)
     return _ensure_owner(obj, cls)
+
+
+def serialize_binary(obj: Any, file: SerdeSink | None, /) -> bytes | None:
+    if file is None:
+        return pickle.dumps(obj)
+    if _is_file_source(file):
+        with open(file, "wb") as fd:  # noqa: PTH123
+            pickle.dump(obj, fd)
+    else:
+        pickle.dump(obj, file)
+    return None
+
+
+def serialize_json(obj: Any, file: SerdeSink | StringIO | None, /) -> str | None:
+    msg = "`serialize(format='json')` is not yet implemented"
+    raise NotImplementedError(msg)
 
 
 def _deserialize_json(cls: type[_Self], source: SerdeSource | StringIO) -> _Self:
