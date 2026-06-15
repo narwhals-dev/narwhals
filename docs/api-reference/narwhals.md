@@ -14,6 +14,7 @@ Here are the top-level functions available in Narwhals.
         - concat
         - concat_str
         - corr
+        - cov
         - exclude
         - format
         - from_arrow

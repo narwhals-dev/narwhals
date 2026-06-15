@@ -828,6 +828,18 @@ def corr(
     return _stableify(nw.corr(a, b, method=method))
 
 
+def cov(a: IntoExpr, b: IntoExpr, *, ddof: int = 1) -> Expr:
+    """Compute the covariance between two columns.
+
+    Arguments:
+        a: Column name or Expression
+        b: Column name or Expression
+        ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+            where N represents the number of elements. By default ddof is 1.
+    """
+    return _stableify(nw.cov(a, b, ddof=ddof))
+
+
 def concat_str(
     exprs: IntoExpr | Iterable[IntoExpr],
     *more_exprs: IntoExpr,
@@ -1193,6 +1205,7 @@ __all__ = [
     "concat",
     "concat_str",
     "corr",
+    "cov",
     "dependencies",
     "dtypes",
     "dtypes",

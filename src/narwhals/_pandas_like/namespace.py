@@ -4,7 +4,7 @@ import operator
 import warnings
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
@@ -21,6 +21,8 @@ from narwhals._pandas_like.utils import is_non_nullable_boolean
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import TypeAlias
+
+    import pandas as pd
 
     from narwhals._utils import Implementation, Version
     from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
@@ -423,6 +425,32 @@ class PandasLikeNamespace(
                 PandasLikeSeries(
                     corr, implementation=self._implementation, version=self._version
                 )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )
+
+    def cov(self, a: PandasLikeExpr, b: PandasLikeExpr, *, ddof: int) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            b_series = df._evaluate_single_output_expr(b)
+            _df = cast(
+                "pd.DataFrame",
+                self._concat_horizontal([a_series.native, b_series.native]),
+            )
+            n = _df.count(axis=1).eq(2).sum()
+            if ddof == 0 and n == 1:
+                value = 0.0
+            elif n - ddof <= 0:
+                value = float("nan")
+            else:
+                value = _df.cov(ddof=ddof).iloc[0, 1]
+            return [
+                PandasLikeSeries.from_iterable([value], context=self, name=a_series.name)
             ]
 
         return self._expr._from_callable(
