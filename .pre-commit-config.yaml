@@ -65,21 +65,21 @@ repos:
       name: check-api-reference
       pass_filenames: false
       entry: uv run --extra polars utils/check_api_reference.py
-      language: system
+      language: python
     - id: sort-api-reference
       name: sort-api-reference
       pass_filenames: false
       entry: uv run utils/sort_api_reference.py
-      language: system
+      language: python
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false
       entry: uv run utils/check_slotted_classes.py
-      language: system
+      language: python
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: uv run utils/import_check.py
-      language: system
+      language: python
       files: ^src/narwhals/
       exclude: ^src/narwhals/dependencies\.py
     - id: self-self
