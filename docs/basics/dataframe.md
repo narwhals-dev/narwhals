@@ -29,11 +29,10 @@ Make a Python file with the following content:
 
     def func(df: IntoFrameT) -> IntoFrameT:
         return (
-            nw.from_native(df)
+            nw
+            .from_native(df)
             .select(
-                a_sum=nw.col("a").sum(),
-                a_mean=nw.col("a").mean(),
-                a_std=nw.col("a").std(),
+                a_sum=nw.col("a").sum(), a_mean=nw.col("a").mean(), a_std=nw.col("a").std()
             )
             .to_native()
         )
@@ -48,9 +47,7 @@ Make a Python file with the following content:
     @nw.narwhalify
     def func(df: FrameT) -> FrameT:
         return df.select(
-            a_sum=nw.col("a").sum(),
-            a_mean=nw.col("a").mean(),
-            a_std=nw.col("a").std(),
+            a_sum=nw.col("a").sum(), a_mean=nw.col("a").mean(), a_std=nw.col("a").std()
         )
     ```
 
@@ -100,9 +97,7 @@ Make a Python file with the following content:
 
 
     def func(df: IntoFrameT) -> IntoFrameT:
-        return (
-            nw.from_native(df).group_by("a").agg(nw.col("b").mean()).sort("a").to_native()
-        )
+        return nw.from_native(df).group_by("a").agg(nw.col("b").mean()).sort("a").to_native()
     ```
 
 === "@narwhalify"
@@ -165,9 +160,7 @@ Make a Python file with the following content:
 
     def func(df: IntoFrameT) -> IntoFrameT:
         return (
-            nw.from_native(df)
-            .with_columns(a_plus_b=nw.sum_horizontal("a", "b"))
-            .to_native()
+            nw.from_native(df).with_columns(a_plus_b=nw.sum_horizontal("a", "b")).to_native()
         )
     ```
 

@@ -20,14 +20,12 @@ import duckdb
 import polars as pl
 import pandas as pd
 
-df_polars = pl.DataFrame(
-    {
-        "A": [1, 2, 3, 4, 5],
-        "fruits": ["banana", "banana", "apple", "apple", "banana"],
-        "B": [5, 4, 3, 2, 1],
-        "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
-    }
-)
+df_polars = pl.DataFrame({
+    "A": [1, 2, 3, 4, 5],
+    "fruits": ["banana", "banana", "apple", "apple", "banana"],
+    "B": [5, 4, 3, 2, 1],
+    "cars": ["beetle", "audi", "beetle", "beetle", "beetle"],
+})
 df_pandas = df_polars.to_pandas()
 df_duckdb = duckdb.sql("SELECT * FROM df_polars")
 ```
@@ -53,9 +51,7 @@ which implements `__arrow_c_stream__`:
 def df_to_polars(df_native: Any) -> pl.DataFrame:
     if hasattr(df_native, "__arrow_c_stream__"):
         return nw.from_arrow(df_native, backend=pl).to_native()
-    msg = (
-        f"Expected object which implements '__arrow_c_stream__' got: {type(df_native)}"
-    )
+    msg = f"Expected object which implements '__arrow_c_stream__' got: {type(df_native)}"
     raise TypeError(msg)
 
 

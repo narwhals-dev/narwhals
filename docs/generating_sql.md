@@ -10,7 +10,8 @@ from narwhals.typing import FrameT
 
 def avg_monthly_price(df: FrameT) -> FrameT:
     return (
-        df.group_by(nw.col("date").dt.truncate("1mo"))
+        df
+        .group_by(nw.col("date").dt.truncate("1mo"))
         .agg(nw.col("price").mean())
         .sort("date")
     )
@@ -34,7 +35,8 @@ from narwhals.sql import table
 prices = table("prices", {"date": nw.Date, "price": nw.Float64})
 
 result = (
-    prices.group_by(nw.col("date").dt.truncate("1mo"))
+    prices
+    .group_by(nw.col("date").dt.truncate("1mo"))
     .agg(nw.col("price").mean())
     .sort("date")
 )
