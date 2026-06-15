@@ -1,6 +1,6 @@
 # Meta
 
-::: narwhals._plan.expr.MetaNamespace
+::: narwhals._plan.expr.ExprMetaNamespace
     options:
       show_bases: false
       members:

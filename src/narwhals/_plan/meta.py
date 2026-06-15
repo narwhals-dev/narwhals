@@ -15,130 +15,85 @@ from narwhals._plan.expressions.functions import AsStruct
 from narwhals._plan.expressions.literal import Lit, LitSeries
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals._plan.expressions.struct import FieldByName
-from narwhals._utils import unstable
 from narwhals.exceptions import ComputeError, InvalidOperationError
 from narwhals.utils import Version
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan import Expr, Selector
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.typing import MapIR
 
 
+def has_selectors(expr: ir.ExprIR, /) -> bool:
+    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/meta.rs#L53-L64
+    # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/expr/meta.py#L81-L91
+    return any(isinstance(e, ir.SelectorIR) for e in expr.iter_left())
+
+
+def is_column_selection(expr: ir.ExprIR, *, allow_aliasing: bool = False) -> bool:
+    nodes = expr.iter_left()
+    selection = ir.Column, ir.SelectorIR
+    if not allow_aliasing:
+        return all(isinstance(e, selection) for e in nodes)
+    targets = *selection, ir.Alias, ir.KeepName, ir.RenameAlias
+    return all(isinstance(e, targets) for e in nodes)
+
+
+def is_literal(expr: ir.ExprIR, *, allow_aliasing: bool = False) -> bool:
+    it = expr.iter_left()
+    selection = (Lit, LitSeries) if not allow_aliasing else (Lit, LitSeries, ir.Alias)
+    return all(
+        isinstance(e, selection)
+        or (
+            isinstance(e, ir.Cast)
+            and isinstance(e.expr, Lit)
+            and isinstance(e.expr.dtype, _TP_DATETIME)
+        )
+        for e in it
+    )
+
+
+def output_name(expr: ir.ExprIR, *, raise_if_undetermined: bool = True) -> str | None:
+    ok_or_err = _expr_output_name(expr)
+    if isinstance(ok_or_err, ComputeError):
+        if raise_if_undetermined:
+            # NOTE: See (https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2161824883)
+            _expr_output_name.cache_clear()
+            raise ok_or_err
+        return None
+    return ok_or_err
+
+
+# TODO @dangotbanned: Maybe try to share the docs with `ExprMetaNamespace`
 class MetaNamespace(IRNamespace):
     """Methods to traverse and introspect existing expressions."""
 
+    # TODO @dangotbanned: Rename this version (used in combination expansion)
     def has_multiple_outputs(self) -> bool:
-        """Indicate if this expression **can** expand into multiple expressions.
+        return has_selectors(self._ir)
 
-        Important:
-            Guarantees the expression **will not** expand in the negative case,
-            see ([polars#23708](https://github.com/pola-rs/polars/issues/23708))
-        """
-        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/dsl/meta.rs#L53-L64
-        # https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/py-polars/src/polars/expr/meta.py#L81-L91
-        return any(isinstance(e, ir.SelectorIR) for e in self._ir.iter_left())
-
-    def is_column(self) -> bool:
-        """Indicate if this expression is a basic/unaliased column."""
+    # TODO @dangotbanned: (Possibly) remove this version
+    def is_column(self) -> bool:  # pragma: no cover
         return isinstance(self._ir, ir.Column)
 
     def is_column_selection(self, *, allow_aliasing: bool = False) -> bool:
-        """Indicate if this expression only selects columns (optionally aliased).
+        return is_column_selection(self._ir, allow_aliasing=allow_aliasing)
 
-        Arguments:
-            allow_aliasing: If False (default), any aliasing is not considered to be column selection.
-        """
-        nodes = self._ir.iter_left()
-        selection = ir.Column, ir.SelectorIR
-        if not allow_aliasing:
-            return all(isinstance(e, selection) for e in nodes)
-        targets = *selection, ir.Alias, ir.KeepName, ir.RenameAlias
-        return all(isinstance(e, targets) for e in nodes)
-
-    def is_literal(self, *, allow_aliasing: bool = False) -> bool:
-        """Indicate if this expression is a literal value (optionally aliased).
-
-        Arguments:
-            allow_aliasing: If False (default), only a bare literal will match.
-        """
-        it = self._ir.iter_left()
-        selection = (Lit, LitSeries) if not allow_aliasing else (Lit, LitSeries, ir.Alias)
-        return all(
-            isinstance(e, selection)
-            or (
-                isinstance(e, ir.Cast)
-                and isinstance(e.expr, Lit)
-                and isinstance(e.expr.dtype, _TP_DATETIME)
-            )
-            for e in it
-        )
+    # TODO @dangotbanned: (Possibly) remove this version
+    def is_literal(self, *, allow_aliasing: bool = False) -> bool:  # pragma: no cover
+        return is_literal(self._ir, allow_aliasing=allow_aliasing)
 
     @overload
     def output_name(self, *, raise_if_undetermined: Literal[True] = True) -> str: ...
     @overload
     def output_name(self, *, raise_if_undetermined: Literal[False]) -> str | None: ...
     def output_name(self, *, raise_if_undetermined: bool = True) -> str | None:
-        """Get the column name that this expression would produce.
+        return output_name(self._ir, raise_if_undetermined=raise_if_undetermined)
 
-        Arguments:
-            raise_if_undetermined: If True (default), a `ComputeError` will be raised
-                if the output name depends on the schema of the context.
-                Otherwise `None` is returned.
-
-        Examples:
-            >>> import narwhals._plan as nw
-            >>> import narwhals._plan.selectors as ncs
-            >>> nw.col("a").meta.output_name()
-            'a'
-
-            Aliasing is supported:
-            >>> nw.col("a").alias("b").meta.output_name()
-            'b'
-
-            And chained renaming operations:
-            >>> nw.col("a").alias("b").min().name.to_uppercase().meta.output_name()
-            'B'
-
-            But selectors always require a schema:
-            >>> ncs.string().meta.output_name(raise_if_undetermined=False)
-            >>> ncs.string().meta.output_name()
-            Traceback (most recent call last):
-            narwhals.exceptions.ComputeError: unable to find root column name for expr 'ncs.string()' when calling 'output_name'
-        """
-        ok_or_err = _expr_output_name(self._ir)
-        if isinstance(ok_or_err, ComputeError):
-            if raise_if_undetermined:
-                # NOTE: See (https://github.com/narwhals-dev/narwhals/pull/2572#discussion_r2161824883)
-                _expr_output_name.cache_clear()
-                raise ok_or_err
-            return None
-        return ok_or_err
-
+    # TODO @dangotbanned: (Possibly) remove this version
     def root_names(self) -> list[str]:
-        """Get the root column names."""
         return list(iter_root_names(self._ir))
-
-    # TODO @dangotbanned: Add a `ExprMetaNamespace` to preserve the original version (also `undo_aliases`)
-    # - All of the other methods (and their docs) should still be shared
-    @unstable
-    def as_selector(self) -> Selector:
-        """Try to turn this expression into a selector.
-
-        Raises if the underlying expression is not a column or selector.
-        """
-        return self._ir.to_selector_ir().to_narwhals()
-
-    # NOTE: The internal part is already possible, but only safe from `ExprIR | SelectorIR`
-    # - At the narwhals-level, we'd lose track of `Expr | Selector` and their version
-    # - This guy is a placeholder to avoid using `undo_aliases` for something else
-    @unstable
-    def undo_aliases(self) -> Expr | Selector:
-        """Undo any renaming operation like `alias` or `name.keep`."""
-        msg = "`meta.undo_aliases()` is not yet implemented"
-        raise NotImplementedError(msg)
 
 
 _TP_DATETIME = Version.MAIN.dtypes.Datetime

@@ -38,7 +38,7 @@
 - [x] https://github.com/narwhals-dev/narwhals/issues/2928
     - [`LazyFrame.from_native`][narwhals._plan.lazyframe.LazyFrame.from_native]
 - [x] https://github.com/narwhals-dev/narwhals/issues/2869
-    - [`MetaNamespace`][narwhals._plan.expr.MetaNamespace]
+    - [`ExprMetaNamespace`][narwhals._plan.expr.ExprMetaNamespace]
 - [x] https://github.com/narwhals-dev/narwhals/issues/2589
     - [`Selector.__xor__`][narwhals._plan.selectors.Selector.__xor__]
 - [x] https://github.com/narwhals-dev/narwhals/issues/2484

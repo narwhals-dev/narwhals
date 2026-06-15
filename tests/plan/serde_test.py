@@ -9,7 +9,6 @@ from __future__ import annotations
 # ruff: noqa: S301
 import io
 import pickle
-from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,9 +17,6 @@ import narwhals._plan as nwp
 import narwhals._plan.selectors as ncs
 from narwhals.exceptions import ComputeError
 from tests.plan.utils import assert_expr_ir_equal
-
-if TYPE_CHECKING:
-    from narwhals._plan.meta import MetaNamespace
 
 XFAIL_NOT_IMPL_SERDE = pytest.mark.xfail(
     reason="TODO @dangotbanned: Add `Expr.meta.serialize`",
@@ -60,7 +56,7 @@ def cases() -> pytest.MarkDecorator:
 
 # TODO @dangotbanned: Add `Expr.meta.__eq__`
 # See https://github.com/narwhals-dev/narwhals/blob/c3f00c85945230c945ac2eb90e4b9049949a0313/src/narwhals/_plan/meta.py#L124-L141
-def meta_eq(actual: nwp.Expr, expected: nwp.Expr | MetaNamespace) -> None:
+def meta_eq(actual: nwp.Expr, expected: nwp.Expr) -> None:
     assert_expr_ir_equal(actual._ir, expected._ir)
 
 
@@ -107,7 +103,7 @@ def test_serde_expression_5461() -> None:
     e = nwp.col("a").sqrt() / nwp.col("b").alias("c")
 
     roundtrip = pickle.loads(pickle.dumps(e))
-    meta_eq(roundtrip, e.meta)
+    meta_eq(roundtrip, e)
 
 
 def test_pickling_simple_expression() -> None:
