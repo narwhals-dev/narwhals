@@ -105,7 +105,6 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   {include-group = "plugins"},
 ]
 docs = [
-  "black>=26.3.1",  # required by mkdocstrings_handlers
   "jinja2>=3.1.6",
   "markdown-exec[ansi]>=1.12.1",
   "mkdocs-autorefs>=1.4.4",
@@ -251,6 +250,7 @@ line-length = 90
 fix = true
 target-version = "py310"
 extend-exclude = ["**/this.py"]
+extension = { mdx = "markdown" }
 
 [tool.ruff.lint]
 preview = true
@@ -354,6 +354,7 @@ combine-as-imports = true
 split-on-trailing-comma = false
 
 [tool.ruff.format]
+preview = true
 docstring-code-format = true
 skip-magic-trailing-comma = true
 

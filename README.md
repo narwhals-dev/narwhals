@@ -103,9 +103,11 @@ from narwhals.typing import IntoFrameT
 
 def agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
     return (
-        nw.from_native(df_native)
+        nw
+        .from_native(df_native)
         .with_columns(
-            category=nw.when(nw.col("animal").str.contains("whale"))
+            category=nw
+            .when(nw.col("animal").str.contains("whale"))
             .then(nw.lit("whale"))
             .otherwise(nw.lit("other"))
         )
