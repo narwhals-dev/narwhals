@@ -1000,6 +1000,10 @@ class Expr:
             └──────────────────┘
         """
         if isinstance(other, Iterable) and not isinstance(other, (str, bytes)):
+            if iter(other) is other:
+                # One-shot iterators (e.g. generators) can only be consumed once,
+                # which some backends don't handle; materialise so they can reuse it.
+                other = list(other)
             return self._append_node(
                 ExprNode(
                     ExprKind.ELEMENTWISE,
