@@ -27,6 +27,7 @@ if sys.version_info >= (3, 13):
             isfunction(obj)
             or (isinstance(obj, (MethodType, property)) or ismethoddescriptor(obj))
         ) and obj.__name__.startswith(LOWERCASE)
+
 else:
 
     def _is_public_method_or_property(obj: Any) -> bool:

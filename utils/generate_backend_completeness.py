@@ -427,8 +427,10 @@ def render_table_and_write_to_output(
 ) -> None:
     """Render a markdown table and write it to a file."""
     table_df = (
-        df.with_columns(
-            pl.when(pl.col("Supported"))
+        df
+        .with_columns(
+            pl
+            .when(pl.col("Supported"))
             .then(pl.lit(":white_check_mark:"))
             .otherwise(pl.lit(":x:"))
             .alias("mark")
