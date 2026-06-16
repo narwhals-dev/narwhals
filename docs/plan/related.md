@@ -15,7 +15,8 @@
     - [`test_group_by_exclude_keys`](https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/tests/plan/group_by_test.py#L725-L760)
     - [`test_group_by_consistent_exclude_21773`](https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/tests/plan/group_by_test.py#L763-L803)
 - [x] Unify error message if selector ends up with zero columns ([#2469])
-    - `require_any` is accepted by (and the default) for [`expand_selectors`][narwhals._plan._expansion.expand_selectors], [`parse_expand_selectors`][narwhals._plan._expansion.parse_expand_selectors]
+    - `require_any` is accepted by (and the default) for [`expand_selectors`][narwhals._plan._expansion.expand_selectors], 
+      [`parse_expand_selectors`][narwhals._plan._expansion.parse_expand_selectors]
 
 ### Expressions
 - [x] Add `Expr.meta` namespace ([#2869])
@@ -31,16 +32,16 @@
     - [x] [`Expr.is_not_nan`][narwhals._plan.expr.Expr.is_not_nan]
     - [ ] `Expr.is_infinite`
 - [x] `Expr.is_in(Iterable)` raises inconsistently ([#3195])
-    - Validated [at the source](https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/expr.py#L515-L525) [^1]
+    - Validated [at the source] [^1]
     - Introduced specializations 
         - [`IsInExpr`][narwhals._plan.expressions.boolean.IsInExpr]
-        - [`IsInSeq`][narwhals._plan.expressions.boolean.IsInSeq] ([guarantees](https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/expressions/boolean.py#L60-L63) `tuple`)
+        - [`IsInSeq`][narwhals._plan.expressions.boolean.IsInSeq] ([guarantees] `tuple`)
         - [`IsInSeries`][narwhals._plan.expressions.boolean.IsInSeries]
 - [x] Support `null_count` in eager-only `group_by` ([#2484])
-    - Included in the [expanded pyarrow group_by support](https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/arrow/group_by.py#L64-L108)
+    - Included in the [expanded pyarrow group_by support]
 - [ ] Add `unnest` ([#3476])
     - [ ] `Expr.struct.unnest`
-    - [x] [`Series.struct.unnest`][narwhals._plan.series.Series.struct.unnest]
+    - [x] [`Series.struct.unnest`][narwhals._plan.series.SeriesStructNamespace.unnest]
     - [x] [`DataFrame.unnest`][narwhals._plan.dataframe.DataFrame.unnest]
     - [x] [`LazyFrame.unnest`][narwhals._plan.lazyframe.LazyFrame.unnest]
 - [x] Allow for scalars in `sum_horizontal` ([#1868]) [^2]
@@ -55,11 +56,14 @@
 - [ ] Add `Expr.meta.serialize`, `Expr.deserialize` ([#2704]) [^3]
     - [x] `pickle.dumps`
     - [ ] `pickle.loads`
-        - Needs a custom [`__setstate__`](https://docs.python.org/3/library/pickle.html#object.__setstate__)
         - *Quick implementation* (https://github.com/narwhals-dev/narwhals/compare/expr-ir/docs/fluff-1...expr-ir/serde-2)
 - [ ] Add `Expr.map_elements` ([#3512])
     - Anticipated in [`AnonymousExpr`][narwhals._plan.expressions.function_expr.AnonymousExpr]
     - [`FunctionFlags`][narwhals._plan._flags.FunctionFlags] could be factored out if there are no plans to support
+
+[guarantees]: https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/expressions/boolean.py#L60-L63
+[expanded pyarrow group_by support]: https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/arrow/group_by.py#L64-L108
+[at the source]: https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/expr.py#L515-L525
 
 ### General
 - [x] (#3042), (#3059), (#2786)
