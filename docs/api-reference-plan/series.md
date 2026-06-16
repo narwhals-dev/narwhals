@@ -3,7 +3,6 @@
 <!-- NOTE: Mostly all are missing-->
 
 ::: narwhals._plan.series.Series
-    handler: python
     options:
       members:
         - __arrow_c_stream__
@@ -28,10 +27,12 @@
         - cum_prod
         - cum_sum
         - diff
+        - drop_nans
         - drop_nulls
         - dtype
         - ewm_mean
         - exp
+        - explode
         - fill_nan
         - fill_null
         - filter
@@ -40,7 +41,9 @@
         - from_iterable
         - from_native
         - from_numpy
+        - gather
         - gather_every
+        - has_nulls
         - head
         - hist
         - implementation
@@ -53,7 +56,9 @@
         - is_in
         - is_last_distinct
         - is_nan
+        - is_not_nan
         - is_null
+        - is_not_null
         - is_sorted
         - is_unique
         - item
@@ -84,6 +89,7 @@
         - shape
         - shift
         - sin
+        - slice
         - skew
         - sort
         - sqrt
@@ -102,3 +108,11 @@
         - value_counts
         - var
         - zip_with
+
+## Struct
+::: narwhals._plan.series.SeriesStructNamespace
+    options:
+      members:
+        - field
+        - schema
+        - unnest
