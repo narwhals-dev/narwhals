@@ -4,6 +4,8 @@
 ### Expression Expansion
 - [x] Support zipped expansion for binary expressions ([#2291])
     - [`ExprIR.iter_expand`][narwhals._plan.expressions.ExprIR.iter_expand] and [`iter_expand_by_combination`][narwhals._plan._nodes.ExprTraverser.iter_expand_by_combination]
+- [x] Support broadcast expansion for both sides of binary expressions ([#2244])
+    - [`ExprIR.iter_expand`][narwhals._plan.expressions.ExprIR.iter_expand]
 - [x] Fix expanding `when` expressions to match Polars ([#3029])
     - [`ExprIR.iter_expand`][narwhals._plan.expressions.ExprIR.iter_expand] and [`iter_expand_by_combination`][narwhals._plan._nodes.ExprTraverser.iter_expand_by_combination]
 - [x] Formalise expression expansion in `group_by` ([#2225])
@@ -36,7 +38,21 @@
         - [`IsInSeries`][narwhals._plan.expressions.boolean.IsInSeries]
 - [x] Support `null_count` in eager-only `group_by` ([#2484])
     - Included in the [expanded pyarrow group_by support](https://github.com/narwhals-dev/narwhals/blob/4240b693ff098fb22d5cb3afb72b85c0b01d56b6/src/narwhals/_plan/arrow/group_by.py#L64-L108)
-- [ ] Add `Expr.meta.serialize`, `Expr.deserialize` ([#2704]) [^2]
+- [ ] Add `unnest` ([#3476])
+    - [ ] `Expr.struct.unnest`
+    - [x] [`Series.struct.unnest`][narwhals._plan.series.Series.struct.unnest]
+    - [x] [`DataFrame.unnest`][narwhals._plan.dataframe.DataFrame.unnest]
+    - [x] [`LazyFrame.unnest`][narwhals._plan.lazyframe.LazyFrame.unnest]
+- [x] Allow for scalars in `sum_horizontal` ([#1868]) [^2]
+- [x] Add `is_elementwise` and `returns_scalar` to `map_batches` ([#2522])
+    - [`Expr.map_batches`][narwhals._plan.expr.Expr.map_batches]
+- [x] Support `descending` and `nulls_last` in `over` ([#2790])
+    - [`Expr.over`][narwhals._plan.expr.Expr.over]
+    - Supports `Expr`s in `*partition_by` 
+    - Supports `Selector`s in `order_by`
+- [x] Add `Expr.hist` ([#1561])
+    - [`Expr.hist`][narwhals._plan.expr.Expr.hist]
+- [ ] Add `Expr.meta.serialize`, `Expr.deserialize` ([#2704]) [^3]
     - [x] `pickle.dumps`
     - [ ] `pickle.loads`
         - Needs a custom [`__setstate__`](https://docs.python.org/3/library/pickle.html#object.__setstate__)
@@ -58,7 +74,6 @@
     - https://github.com/narwhals-dev/narwhals/pull/3373
 
 
-
 [#2179]: https://github.com/narwhals-dev/narwhals/issues/2179
 [#2291]: https://github.com/narwhals-dev/narwhals/issues/2291
 [#3029]: https://github.com/narwhals-dev/narwhals/issues/3029
@@ -75,12 +90,23 @@
 [#2484]: https://github.com/narwhals-dev/narwhals/issues/2484
 [#2225]: https://github.com/narwhals-dev/narwhals/issues/2225
 [#2469]: https://github.com/narwhals-dev/narwhals/issues/2469
+[#3476]: https://github.com/narwhals-dev/narwhals/issues/3476
+[#1868]: https://github.com/narwhals-dev/narwhals/issues/1868
+[#2522]: https://github.com/narwhals-dev/narwhals/issues/2522
+[#2790]: https://github.com/narwhals-dev/narwhals/issues/2790
+[#2244]: https://github.com/narwhals-dev/narwhals/issues/2244
+[#1561]: https://github.com/narwhals-dev/narwhals/issues/1561
 
 [^1]: The cool kids call this *"parse, don't validate"*
-[^2]: [`Immutable`][narwhals._plan._immutable.Immutable] makes this trivial to support
+[^2]: Scalars are always parsed with `lit` (see [`narwhals/_plan/_parse.py`]).
+      
+      This digs up (#571) again, but ideally that would be an *opt-in* behavior in a future version.
+      Where we use a special `ExprIR` node (not `Col` or `Lit`) that unambigiously identifies what is in there - so all
+      other backends can reject it.
+[^3]: [`Immutable`][narwhals._plan._immutable.Immutable] makes this trivial to support
 
 
-
+[`narwhals/_plan/_parse.py`]: https://github.com/narwhals-dev/narwhals/blob/958094160d8a48bf1041ee62d0979bf66b1eec17/src/narwhals/_plan/_parse.py
 [Plugins]: ../api-reference-plan/plugins.md#plugins
 
 ## Cross-polination
