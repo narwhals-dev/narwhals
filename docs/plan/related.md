@@ -105,7 +105,7 @@
 [^2]: Scalars are always parsed with `lit` (see [`narwhals/_plan/_parse.py`]).
       
       This digs up (#571) again, but ideally that would be an *opt-in* behavior in a future version.
-      Where we use a special `ExprIR` node (not `Col` or `Lit`) that unambigiously identifies what is in there - so all
+      Where we use a special `ExprIR` node (not `Col` or `Lit`) that unambiguously identifies what is in there - so all
       other backends can reject it.
 [^3]: [`Immutable`][narwhals._plan._immutable.Immutable] makes this trivial to support
 
