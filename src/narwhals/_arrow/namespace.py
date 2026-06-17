@@ -282,11 +282,12 @@ class ArrowNamespace(
             a_series = df._evaluate_single_output_expr(a)
             arr1 = a_series.native
             arr2 = df._evaluate_single_output_expr(b).native
-            mean1 = pc.mean(arr1)
-            mean2 = pc.mean(arr2)
+            valid = pc.and_(pc.is_valid(arr1), pc.is_valid(arr2))
+            arr1 = pc.filter(arr1, valid)
+            arr2 = pc.filter(arr2, valid)
 
-            dev1 = pc.subtract(arr1, mean1)
-            dev2 = pc.subtract(arr2, mean2)
+            dev1 = pc.subtract(arr1, pc.mean(arr1))
+            dev2 = pc.subtract(arr2, pc.mean(arr2))
 
             covariance = pc.mean(pc.multiply(dev1, dev2))
 
