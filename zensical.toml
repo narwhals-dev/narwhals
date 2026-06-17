@@ -82,6 +82,18 @@ nav = [
         "api-reference/typing.md",
         "api-reference/utils.md",
     ]},
+    { "Plan (Experimental)" = [
+        "plan/index.md",
+        { "What's new?" = [
+            "plan/whats-new/index.md",
+            "plan/whats-new/on-the-surface.md",
+            "plan/whats-new/behind-the-scenes.md",
+        ] },
+        "plan/why.md",
+        "plan/related-issues.md",
+        "plan/mind-the-gap.md",
+        "plan/inspired.md",
+    ] },
     { "API Reference (Experimental)" = [
         "api-reference-plan/index.md", 
         "api-reference-plan/functions.md",
