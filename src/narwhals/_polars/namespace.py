@@ -209,6 +209,16 @@ class PolarsNamespace:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
         return self._expr(pl.struct(pl_exprs), version=self._version)
 
+    def list(self, *exprs: PolarsExpr, scalars_only: bool) -> PolarsExpr:
+        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
+
+        if scalars_only:
+            to_concat = pl_exprs
+        else:
+            to_concat = [e.implode().over(pl.int_range(pl.len())) for e in pl_exprs]
+
+        return self._expr(pl.concat_list(to_concat), version=self._version)
+
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
     ) -> PolarsExpr:
@@ -245,9 +255,11 @@ class PolarsSelectorNamespace:
 
     def by_dtype(self, dtypes: Iterable[IntoDType]) -> PolarsExpr:
         native_dtypes = [
-            narwhals_to_native_dtype(dtype, self._version).__class__
-            if isinstance(dtype, type) and issubclass(dtype, DType)
-            else narwhals_to_native_dtype(dtype, self._version)
+            (
+                narwhals_to_native_dtype(dtype, self._version).__class__
+                if isinstance(dtype, type) and issubclass(dtype, DType)
+                else narwhals_to_native_dtype(dtype, self._version)
+            )
             for dtype in dtypes
         ]
         return PolarsExpr(pl.selectors.by_dtype(native_dtypes), version=self._version)

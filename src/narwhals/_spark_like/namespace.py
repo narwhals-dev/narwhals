@@ -319,3 +319,18 @@ class SparkLikeNamespace(
             version=version,
             implementation=self._implementation,
         )
+
+    def list(self, *exprs: SparkLikeExpr, scalars_only: bool) -> SparkLikeExpr:
+        version = self._version
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [self._F.array(*cols)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+            implementation=self._implementation,
+        )

@@ -1975,3 +1975,59 @@ def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Ex
             ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, allow_multi_output=True
         )
     )
+
+
+def list_(*exprs: IntoExpr | Sequence[IntoExpr], scalars_only: bool = False) -> Expr:
+    """Collect columns into a list column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a list column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+        scalars_only: If True, assume all inputs are scalar columns. This allows us to
+            take a fast path in the polars backend, but is unused for all other
+            backends.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>>
+        >>> data = {
+        ...     "a": [1, 2, 3],
+        ...     "b": [4, None, 6],
+        ...     "d": [[10, 20], None, [40, 50, 60]],
+        ...     "e": [[100], [200, 300], [None]],
+        ... }
+        >>> df = nw.from_native(pl.DataFrame(data))
+        >>> df.select(
+        ...     nw.list("a", "b").alias("list"), nw.list("d", "e").alias("list_of_lists")
+        ... )
+        ┌──────────────────────────────────────┐
+        |          Narwhals DataFrame          |
+        |--------------------------------------|
+        |shape: (3, 2)                         |
+        |┌───────────┬────────────────────────┐|
+        |│ list      ┆ list_of_lists          │|
+        |│ ---       ┆ ---                    │|
+        |│ list[i64] ┆ list[list[i64]]        │|
+        |╞═══════════╪════════════════════════╡|
+        |│ [1, 4]    ┆ [[10, 20], [100]]      │|
+        |│ [2, null] ┆ [null, [200, 300]]     │|
+        |│ [3, 6]    ┆ [[40, 50, 60], [null]] │|
+        |└───────────┴────────────────────────┘|
+        └──────────────────────────────────────┘
+    """
+    flat_exprs = [_parse_into_expr(e) for e in flatten(exprs)]
+    if not flat_exprs:
+        msg = "expected at least 1 expression in 'list'"
+        raise ValueError(msg)
+
+    return Expr(
+        ExprNode(
+            ExprKind.ELEMENTWISE,
+            "list",
+            exprs=flat_exprs,
+            allow_multi_output=True,
+            scalars_only=scalars_only,
+        )
+    )

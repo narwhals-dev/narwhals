@@ -91,6 +91,19 @@ def is_array_or_scalar(obj: Any) -> TypeIs[ArrayOrScalar]:
     return isinstance(obj, (pa.ChunkedArray, pa.Array, pa.Scalar))
 
 
+def build_list_array(arrays: list[pa.Array]) -> pa.ChunkedArray:
+    # This works by using concat_arrays to vertically stack the arrays.
+    # Then we use take to grab the data by index and to horizontally
+    # pack the arrays.
+    n = len(arrays[0])
+    num_cols = len(arrays)
+    flat = pa.concat_arrays(arrays)
+    indices = [j * n + i for i in range(n) for j in range(num_cols)]
+    interleaved = pc.take(flat, pa.array(indices))
+    offsets = pa.array(range(0, n * num_cols + 1, num_cols), type=pa.int32())
+    return pa.chunked_array([pa.ListArray.from_arrays(offsets, interleaved)])
+
+
 def chunked_array(
     arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
 ) -> ChunkedArrayAny:

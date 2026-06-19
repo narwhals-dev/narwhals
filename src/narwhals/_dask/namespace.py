@@ -305,12 +305,12 @@ class DaskNamespace(
                 df = new_df
 
             if otherwise is None:
-                (condition, then_series) = align_series_full_broadcast(
+                condition, then_series = align_series_full_broadcast(
                     df, condition, then_value
                 )
                 validate_comparand(condition, then_series)
                 return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
-            (condition, then_series, otherwise_series) = align_series_full_broadcast(
+            condition, then_series, otherwise_series = align_series_full_broadcast(
                 df, condition, then_value, otherwise_value
             )
             validate_comparand(condition, then_series)
@@ -364,3 +364,4 @@ class DaskNamespace(
         )
 
     struct = not_implemented()
+    list = not_implemented()

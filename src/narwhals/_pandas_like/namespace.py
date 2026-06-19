@@ -404,6 +404,43 @@ class PandasLikeNamespace(
             context=self,
         )
 
+    def list(self, *exprs: PandasLikeExpr, scalars_only: bool) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            try:
+                import pandas as pd  # ignore-banned-import
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = (
+                    "list requires pyarrow to be installed for pandas backend. "
+                    "Please install pyarrow: pip install pyarrow"
+                )
+                raise ImportError(msg) from exc
+
+            from narwhals._arrow.utils import build_list_array
+
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            result = build_list_array(
+                [pa.array(s.native, from_pandas=True) for s in series]
+            )
+
+            impl = self._implementation
+            result_native = impl.to_native_namespace().Series(
+                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                name=series[0].name,
+                index=series[0].native.index,
+            )
+            return [
+                self._series(result_native, implementation=impl, version=self._version)
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def _if_then_else(
         self,
         when: NativeSeriesT,

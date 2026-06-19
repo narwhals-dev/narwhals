@@ -12,7 +12,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import cast_to_comparable_string_types
+from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -256,6 +256,20 @@ class ArrowNamespace(
             )
             result = pa.chunked_array([struct_array])
             return [ArrowSeries(result, name=name, version=self._version)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def list(self, *exprs: ArrowExpr, scalars_only: bool) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            # pa.concat_arrays requires Array, not ChunkedArray
+            result = build_list_array([s.native.combine_chunks() for s in series])
+            return [ArrowSeries(result, name=series[0].name, version=self._version)]
 
         return self._expr._from_callable(
             func=func,
