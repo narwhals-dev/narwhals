@@ -233,7 +233,7 @@ def test_init_already_narwhals_lazy_eager_only() -> None:
     # like a native one (https://github.com/narwhals-dev/narwhals/issues/3226).
     lf = nw.from_native(pl.LazyFrame({"a": [1, 2, 3]}))
     with pytest.raises(TypeError, match="Cannot only use `eager_only`"):
-        nw.from_native(lf, eager_only=True)
+        nw.from_native(lf, eager_only=True)  # type: ignore[call-overload]
     # `pass_through` returns the frame unchanged instead of raising.
     assert nw.from_native(lf, eager_only=True, pass_through=True) is lf
     # An already-narwhals DataFrame is eager, so `eager_only` is a no-op.
