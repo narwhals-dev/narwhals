@@ -19,7 +19,10 @@ class IbisExprListNamespace(LazyExprNamespace["IbisExpr"], ListNamespace["IbisEx
     def len(self) -> IbisExpr:
         return self.compliant._with_callable(lambda expr: expr.length())
 
-    def unique(self) -> IbisExpr:
+    def unique(self, *, maintain_order: bool) -> IbisExpr:
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for the Ibis backend."
+            raise NotImplementedError(msg)
         return self.compliant._with_callable(lambda expr: expr.unique())
 
     def contains(self, item: NonNestedLiteral) -> IbisExpr:

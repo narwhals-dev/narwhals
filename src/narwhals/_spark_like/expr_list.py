@@ -19,7 +19,10 @@ class SparkLikeExprListNamespace(
     def len(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.array_size)
 
-    def unique(self) -> SparkLikeExpr:
+    def unique(self, *, maintain_order: bool) -> SparkLikeExpr:
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for the Spark-like backend."
+            raise NotImplementedError(msg)
         return self.compliant._with_elementwise(self.compliant._F.array_distinct)
 
     def contains(self, item: NonNestedLiteral) -> SparkLikeExpr:

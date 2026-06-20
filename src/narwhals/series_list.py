@@ -37,10 +37,15 @@ class SeriesListNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.list.len()
         )
 
-    def unique(self) -> SeriesT:
+    def unique(self, *, maintain_order: bool = False) -> SeriesT:
         """Get the unique/distinct values in the list.
 
-        Null values are included in the result. The order of unique values is not guaranteed.
+        Null values are included in the result.
+
+        Arguments:
+            maintain_order: Keep the same order as the input data. Setting this to
+                `True` is only supported by the Polars backend; for the other
+                backends the order of the unique values is not guaranteed.
 
         Examples:
             >>> import polars as pl
@@ -58,7 +63,9 @@ class SeriesListNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.list.unique()
+            self._narwhals_series._compliant_series.list.unique(
+                maintain_order=maintain_order
+            )
         )
 
     def contains(self, item: NonNestedLiteral) -> SeriesT:
