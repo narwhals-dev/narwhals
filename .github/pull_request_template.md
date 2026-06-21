@@ -35,7 +35,7 @@ See CONTRIBUTING.md "AI-assisted contributions" section.
 -->
 
 - [ ] No AI tools were used for this PR
-- [ ] AI tools were used (please list which tools and which models)
+- [ ] AI tools were used (please list which tools, models, prompts, etc..)
 
 ## Checklist
 
