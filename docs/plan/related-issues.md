@@ -126,7 +126,7 @@ Ideas that have already filtered back in some form
 [tests/plan/utils.py]: https://github.com/narwhals-dev/narwhals/blob/c57e72c801b5817dc9d20262029fc6c6143c31b2/tests/plan/utils.py
 
 
-## Upstream blockers/wants
+## Upstream (`main`) blockers/wants
 
 - [ ] Supertyping #3396 (also unblocks #3386)
     - [`BinaryExpr.resolve_dtype`][narwhals._plan.expressions.BinaryExpr.resolve_dtype]
