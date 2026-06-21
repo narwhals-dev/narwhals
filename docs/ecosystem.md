@@ -15,6 +15,7 @@ for their dataframe interoperability needs:
 * [marimo](https://github.com/marimo-team/marimo)
 * [metalearners](https://github.com/Quantco/metalearners)
 * [mosaic](https://github.com/uwdata/mosaic)
+* [pandera](https://github.com/pandera-dev/pandera)
 * [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
 * [plotly](https://github.com/plotly/plotly.py)
 * [pointblank](https://github.com/posit-dev/pointblank)

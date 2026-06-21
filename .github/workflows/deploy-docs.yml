@@ -6,6 +6,8 @@ on:
       - main
 env:
   cache_id: ""
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
   UV_SYSTEM_PYTHON: 1
 
 permissions:
@@ -23,14 +25,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Configure Git Credentials
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: 3.x
+          python-version: "3.14"
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV

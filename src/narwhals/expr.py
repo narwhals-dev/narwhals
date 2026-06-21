@@ -2347,6 +2347,16 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "sqrt"))
 
+    def _is_close_float_promote(self) -> Self:
+        # Promote to float for `is_close`, letting each backend pick the appropriate
+        # float type. Dispatched (rather than inlined as `self + 0.0`) so backends can
+        # align old behavior with current: e.g. Polars < 1.34 does not upcast
+        # `Decimal + float` to `Float64` in the lazy engine, which breaks the downstream
+        # `is_finite`/`clip`. See `PolarsExpr._is_close_float_promote`.
+        return self._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "_is_close_float_promote")
+        )
+
     def is_close(  # noqa: PLR0914
         self,
         other: Expr | Series[Any] | NumericLiteral,
@@ -2426,8 +2436,7 @@ class Expr:
         other_is_not_inf: Expr | Series[Any] | bool
 
         # Promote to float to handle non-float numeric types (e.g. Decimal, integers).
-        # Adding 0.0 lets each backend decide the appropriate float type.
-        self_f = self + 0.0
+        self_f = self._is_close_float_promote()
 
         if isinstance(other, (float, int, Decimal)):
             from math import isinf, isnan
@@ -2444,7 +2453,11 @@ class Expr:
             other_is_not_inf = not other_is_inf
 
         else:
-            other_f = other + 0.0
+            other_f = (
+                other._is_close_float_promote()
+                if isinstance(other, Expr)
+                else other + 0.0
+            )
             other_abs, other_is_nan = other_f.abs(), other_f.is_nan()
             other_is_not_inf = other_f.is_finite() | other_is_nan
             other_is_inf = ~other_is_not_inf

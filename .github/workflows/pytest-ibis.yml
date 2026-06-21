@@ -7,13 +7,13 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
 permissions:
   contents: read
 
 jobs:
-
   pytest-ibis-constructor:
     if: github.head_ref != 'bump-version'
     strategy:
@@ -22,21 +22,13 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
+          python-version: ${{ matrix.python-version }}
           enable-cache: "true"
           cache-suffix: ibis-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group core-tests
-      - name: install ibis
-        run: uv pip install -e ".[ibis]"
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors ibis
+        run: make run-ci DEPS="--group core-tests --extra ibis --extra pandas" CMD="pytest tests --constructors=ibis"

@@ -9,6 +9,7 @@ from narwhals._polars.namespace import PolarsNamespace
 from narwhals._polars.series import PolarsSeries
 from narwhals._polars.utils import (
     FROM_DICTS_ACCEPTS_MAPPINGS,
+    RESPECT_JOIN_NULL_SEMI_ANTI,
     catch_polars_exception,
     extract_args_kwargs,
     narwhals_to_native_dtype,
@@ -221,9 +222,13 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         how_native = (
             "outer" if (self._backend_version < (0, 20, 29) and how == "full") else how
         )
+        other_native = other.native
+        is_semi_or_anti = how in {"semi", "anti"}
+        if is_semi_or_anti and not RESPECT_JOIN_NULL_SEMI_ANTI:  # pragma: no cover
+            other_native = other_native.drop_nulls(subset=right_on)
         return self._with_native(
             self.native.join(
-                other=other.native,
+                other=other_native,
                 how=how_native,
                 left_on=left_on,
                 right_on=right_on,

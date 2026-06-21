@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -150,6 +151,16 @@ class PolarsExpr:
             native = self.native.is_finite()
         else:  # pragma: no cover
             native = pl.when(self.native.is_not_null()).then(self.native.is_finite())
+        return self._with_native(native)
+
+    def _is_close_float_promote(self) -> Self:
+        # This is scoped to `is_close` (Boolean output), so widening `Float16/Float32`
+        # here is harmless for the final result.
+        native = (
+            self.native + 0.0
+            if BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT
+            else self.native.cast(pl.Float64)
+        )
         return self._with_native(native)
 
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:

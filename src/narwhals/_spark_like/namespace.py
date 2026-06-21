@@ -22,7 +22,7 @@ from narwhals._spark_like.utils import (
 from narwhals._sql.namespace import SQLNamespace
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from sqlframe.base.column import Column
 
@@ -247,6 +247,48 @@ class SparkLikeNamespace(
 
         return self._expr(
             call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+            implementation=self._implementation,
+        )
+
+    def cov(self, a: SparkLikeExpr, b: SparkLikeExpr, *, ddof: int) -> SparkLikeExpr:
+        F = self._F
+
+        def _cov(
+            a_: Column, b_: Column, wrap: Callable[[Column], Column]
+        ) -> list[Column]:
+            # `wrap` adds the window frame to each aggregate in a window context and
+            # is the identity otherwise. A compound expression can't be wrapped as a
+            # single window function, so each aggregate is wrapped individually.
+            if ddof == 0:
+                return [wrap(F.covar_pop(a_, b_))]
+            if ddof == 1:
+                return [wrap(F.covar_samp(a_, b_))]
+            is_valid = a_.isNotNull() & b_.isNotNull()
+            n_samples = wrap(F.sum(F.when(is_valid, F.lit(1)).otherwise(F.lit(0))))
+            denominator = n_samples - F.lit(ddof)
+            rescaled = wrap(F.covar_samp(a_, b_)) * ((n_samples - F.lit(1)) / denominator)
+            return [F.when(denominator <= F.lit(0), F.lit(None)).otherwise(rescaled)]
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return _cov(a_, b_, lambda e: e)
+
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: WindowInputs[Column]
+        ) -> list[Column]:
+            assert not inputs.order_by  # noqa: S101
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            window = df._Window.partitionBy(*(inputs.partition_by or [F.lit(1)]))
+            return _cov(a_, b_, lambda e: e.over(window))
+
+        return self._expr(
+            call=func,
+            window_function=window_f,
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
