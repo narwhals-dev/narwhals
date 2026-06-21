@@ -51,10 +51,10 @@ it. That is to say, if you write your code like this:
 === "from/to_native"
     ```py
     import narwhals.stable.v2 as nw
-    from narwhals.stable.v2.typing import IntoFrameT
+    from narwhals.stable.v2.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def func(df: IntoFrameT) -> IntoFrameT:
+    def func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return nw.from_native(df).with_columns(nw.col("a").cum_sum()).to_native()
     ```
 
@@ -164,6 +164,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
 
 - Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
   write:
+
   ```py
   import narwhals as nw
   import polars as pl
@@ -173,12 +174,14 @@ So far, nothing, everything non-unstable from the main namespace should be avail
   # mypy infers `s.to_native()` to be `polars.Series`
   reveal_type(s.to_native())
   ```
-  Previously, `Series` was not generic, so in the above example
+
+Previously, `Series` was not generic, so in the above example
   `s.to_native()` would have been inferred as `Any`.
 
 - Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
     has been deprecated in favour of `pass_through`. This is because several users expressed
     confusion/surprise over what `strict=False` did.
+
     ```py
     # v1 syntax:
     nw.from_native(df, strict=False)
@@ -186,7 +189,8 @@ So far, nothing, everything non-unstable from the main namespace should be avail
     # main namespace (and, when we get there, v2) syntax:
     nw.from_native(df, pass_through=True)
     ```
-    If you are using Narwhals>=1.13.0, then we recommend using `pass_through`, as that
+
+If you are using Narwhals>=1.13.0, then we recommend using `pass_through`, as that
     works consistently across namespaces.
 
     In the future:
@@ -210,7 +214,7 @@ So far, nothing, everything non-unstable from the main namespace should be avail
     assert nw.Datetime("us") in {nw.Datetime("us")}
     ```
 
-    To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
+To check if a dtype is a datetime (regardless of `time_unit` or `time_zone`)
     we recommend using `==` instead, as that works consistently
     across namespaces:
 

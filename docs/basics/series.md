@@ -25,10 +25,10 @@ This can stay lazy, so we just use expressions:
 === "from/to_native"
     ```python exec="yes" source="above" session="series_ex1"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def my_func(df: IntoFrameT) -> IntoFrameT:
+    def my_func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return nw.from_native(df).filter(nw.col("a") > 0).to_native()
     ```
 
@@ -85,10 +85,10 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 === "from/to_native"
     ```python exec="yes" source="above" session="series_ex2"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def my_func(df: IntoFrameT) -> IntoFrameT:
+    def my_func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return nw.from_native(df).with_columns(nw.col("a") * 2).to_native()
     ```
 
@@ -130,6 +130,7 @@ and call it either on a eager or lazy dataframe:
     ```
 
 === "PyArrow"
+
     ```python exec="yes" source="material-block" result="python" session="series_ex2"
     import pyarrow as pa
 

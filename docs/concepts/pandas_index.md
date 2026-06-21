@@ -20,10 +20,10 @@ Let's learn about what Narwhals promises.
 
 ```python exec="yes" source="above" session="ex1"
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-def my_func(df: IntoFrameT) -> IntoFrameT:
+def my_func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
     df = nw.from_native(df)
     df = df.with_columns(a_plus_one=nw.col("a") + 1)
     return nw.to_native(df)

@@ -24,10 +24,10 @@ Make a Python file with the following content:
 === "from/to_native"
     ```python exec="yes" source="above" session="df_ex1"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def func(df: IntoFrameT) -> IntoFrameT:
+    def func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return (
             nw.from_native(df)
             .select(
@@ -96,10 +96,10 @@ Make a Python file with the following content:
 === "from/to_native"
     ```python exec="yes" source="above" session="df_ex2"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def func(df: IntoFrameT) -> IntoFrameT:
+    def func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return (
             nw.from_native(df).group_by("a").agg(nw.col("b").mean()).sort("a").to_native()
         )
@@ -160,10 +160,10 @@ Make a Python file with the following content:
 === "from/to_native"
     ```python exec="yes" source="above" session="df_ex3"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def func(df: IntoFrameT) -> IntoFrameT:
+    def func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return (
             nw.from_native(df)
             .with_columns(a_plus_b=nw.sum_horizontal("a", "b"))

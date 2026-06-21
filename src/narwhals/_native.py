@@ -345,8 +345,8 @@ or `nw.LazyFrame` and returns an object of the same type.
 
 Examples:
     >>> import narwhals as nw
-    >>> from narwhals.typing import IntoFrameT
-    >>> def agnostic_func(df_native: IntoFrameT) -> IntoFrameT:
+    >>> from narwhals.typing import IntoDataFrameT,IntoLazyFrameT
+    >>> def agnostic_func(df_native: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
     ...     df = nw.from_native(df_native)
     ...     return df.with_columns(c=nw.col("a") + 1).to_native()
 """

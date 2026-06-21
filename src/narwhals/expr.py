@@ -363,7 +363,7 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
+            >>> from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
             >>>
             >>> data = {"a": [1, 2, 3]}
             >>> df_pd = pd.DataFrame(data)
@@ -371,7 +371,7 @@ class Expr:
 
             We define a library agnostic function:
 
-            >>> def agnostic_ewm_mean(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_ewm_mean(df_native: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrame | IntoLazyFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(
             ...         nw.col("a").ewm_mean(com=1, ignore_nulls=False)
