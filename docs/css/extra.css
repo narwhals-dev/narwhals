@@ -8,6 +8,13 @@
   margin-left: 5vw;
 }
 
+/*:root {
+  --md-tooltip-width: 600px;
+}*/
+:root {
+  --md-tooltip-width: 600px;
+}
+
 /* API Completeness Table Styles */
 .table-container {
   overflow-x: auto;

@@ -91,6 +91,7 @@ nav = [
         ] },
         "plan/why.md",
         "plan/related-issues.md",
+        "plan/use-cases.md",
         "plan/mind-the-gap.md",
         "plan/inspired.md",
     ] },
@@ -193,6 +194,7 @@ inventories = [
     "https://typing-extensions.readthedocs.io/en/latest/objects.inv",
     # https://github.com/ibis-project/ibis/issues/11723
     # TODO @dangotbanned: cudf, dask, duckdb, pyspark, sqlframe
+    "https://altair-viz.github.io/objects.inv",
 ]
 paths = ["narwhals"]
 
@@ -231,7 +233,8 @@ merge_init_into_class = true
 alternate_style = true
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
-  { name = "python", class = "python", format = "markdown_exec.formatter", validator = "markdown_exec.validator"}
+  { name = "python", class = "python", format = "markdown_exec.formatter", validator = "markdown_exec.validator"},
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
 ]
 
 [project.markdown_extensions.pymdownx.emoji]
@@ -246,6 +249,8 @@ generic = true
 # https://mkdocstrings.github.io/recipes/#automatic-highlighting-for-indented-code-blocks-in-docstrings
 pygments_lang_class = true
 default_lang = "python"
+anchor_linenums = true
+line_spans = "__span"
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 [project.markdown_extensions.footnotes]
