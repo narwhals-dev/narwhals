@@ -87,7 +87,6 @@ if TYPE_CHECKING:
         SingleColSelector,
         SingleIndexSelector,
         SizeUnit,
-        SupportLevel,
         UniqueKeepStrategy,
         _2DArray,
     )
@@ -106,10 +105,6 @@ MultiIndexSelector: TypeAlias = "_MultiIndexSelector[Series[Any]]"
 
 class BaseFrame(Generic[_FrameT]):
     _compliant_frame: Any
-    # `_level` is stored on subclasses:
-    #   * For stable.v1 "interchange" is still supported.
-    #   * For main and stable.v2 only "full" and "lazy" are supported.
-    _level: SupportLevel
 
     implementation: _Implementation = _Implementation()
     """Return [`narwhals.Implementation`][] of native frame.
@@ -476,7 +471,6 @@ class DataFrame(BaseFrame[DataFrameT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
-    _level: SupportLevel = "full"
 
     @property
     def _compliant(self) -> CompliantDataFrame[Any, Any, DataFrameT, Self]:
@@ -2372,7 +2366,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
-    _level: SupportLevel = "lazy"
 
     @property
     def _compliant(self) -> CompliantLazyFrame[Any, LazyFrameT, Self]:
