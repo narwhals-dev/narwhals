@@ -1,0 +1,216 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
+
+import pytest
+
+import narwhals as nw
+import narwhals._plan as nwp
+from tests.plan.utils import Eager, Lazy, assert_equal_data
+from tests.utils import PANDAS_VERSION
+
+pytest.importorskip("polars")
+pytest.importorskip("pyarrow")
+from collections.abc import Callable
+from pathlib import Path
+
+import polars as pl
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import TypeAlias
+
+    from narwhals._typing import BackendName
+    from narwhals.typing import FileSource
+    from tests.conftest import Data
+
+
+IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
+IntoKwds: TypeAlias = dict[str, Any] | Callable[[], dict[str, Any]]
+"""Keyword-arguments, or a callback that returns them."""
+
+
+@pytest.fixture(scope="module")
+def data() -> Data:
+    return {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
+
+
+XFAIL_NOT_IMPL = pytest.mark.xfail(
+    reason="Not implemented yet", raises=NotImplementedError
+)
+
+lazy_core_backend = pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param("duckdb", marks=XFAIL_NOT_IMPL),
+        pytest.param("ibis", marks=XFAIL_NOT_IMPL),
+        pytest.param("sqlframe", marks=XFAIL_NOT_IMPL),
+    ],
+)
+
+
+param_pandas_import = pytest.param(
+    "pandas",
+    {"engine": "pyarrow"},
+    marks=[
+        pytest.mark.xfail(reason="Not implemented pandas", raises=NotImplementedError),
+        pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow"),
+    ],
+)
+scan_backend = pytest.mark.parametrize("backend", ["pyarrow", "polars"])
+
+
+def pyarrow_read_csv_kwds() -> dict[str, Any]:
+    from pyarrow import csv
+
+    return {
+        "read_options": csv.ReadOptions(column_names=None),
+        "parse_options": csv.ParseOptions(delimiter=","),
+        "convert_options": csv.ConvertOptions(include_columns=["a", "b", "z"]),
+    }
+
+
+class MockPathLike:
+    def __init__(self, path: Path) -> None:
+        self._super_secret: Path = path
+
+    def __fspath__(self) -> str:
+        return self._super_secret.__fspath__()
+
+
+def _into_file_source(source: Path, which: IOSourceKind, /) -> FileSource:
+    mapping: Mapping[IOSourceKind, FileSource] = {
+        "str": str(source),
+        "Path": source,
+        "PathLike": MockPathLike(source),
+    }
+    return mapping[which]
+
+
+def _into_kwds(into_kwds: IntoKwds) -> dict[str, Any]:
+    return into_kwds if not callable(into_kwds) else into_kwds()
+
+
+@pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
+def csv_path(
+    data: Data, tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
+) -> FileSource:
+    fp = tmp_path_factory.mktemp("data") / "file.csv"
+    pl.DataFrame(data).write_csv(fp)
+    return _into_file_source(fp, request.param)
+
+
+@pytest.fixture(scope="module", params=["str", "Path", "PathLike"])
+def parquet_path(
+    data: Data, tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
+) -> FileSource:
+    fp = tmp_path_factory.mktemp("data") / "file.parquet"
+    pl.DataFrame(data).write_parquet(fp)
+    return _into_file_source(fp, request.param)
+
+
+def assert_equal_eager(result: nwp.DataFrame[Any], expected: Data) -> None:
+    assert_equal_data(result, expected)
+    assert isinstance(result, nwp.DataFrame)
+
+
+def test_read_csv(data: Data, csv_path: FileSource, eager: Eager) -> None:
+    assert_equal_eager(nwp.read_csv(csv_path, backend=eager), data)
+
+
+@pytest.mark.parametrize(
+    ("backend", "into_kwds"), [param_pandas_import, ("pyarrow", pyarrow_read_csv_kwds)]
+)
+def test_read_csv_kwargs(
+    data: Data, csv_path: FileSource, backend: Eager, into_kwds: IntoKwds
+) -> None:
+    kwds = _into_kwds(into_kwds)
+    assert_equal_eager(nwp.read_csv(csv_path, backend=backend, **kwds), data)
+
+
+@lazy_core_backend
+def test_read_csv_raise_with_lazy(backend: Lazy) -> None:
+    pytest.importorskip(backend)
+    with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
+        nwp.read_csv("unused.csv", backend=backend)  # type: ignore[arg-type]
+
+
+def test_read_parquet(data: Data, parquet_path: FileSource, eager: Eager) -> None:
+    assert_equal_eager(nwp.read_parquet(parquet_path, backend=eager), data)
+
+
+@pytest.mark.parametrize(
+    ("backend", "into_kwds"),
+    [
+        param_pandas_import,
+        ("pyarrow", {"use_threads": False, "columns": ["a", "b", "z"]}),
+    ],
+)
+def test_read_parquet_kwargs(
+    data: Data, parquet_path: FileSource, backend: Eager, into_kwds: IntoKwds
+) -> None:
+    kwds = _into_kwds(into_kwds)
+    assert_equal_eager(nwp.read_parquet(parquet_path, backend=backend, **kwds), data)
+
+
+@lazy_core_backend
+def test_read_parquet_raise_with_lazy(backend: Lazy) -> None:
+    pytest.importorskip(backend)
+    with pytest.raises(ValueError, match="support in Narwhals is lazy-only"):
+        nwp.read_parquet("unused.parquet", backend=backend)  # type: ignore[arg-type]
+
+
+# TODO @dangotbanned: Transform steps, change the schema
+# TODO @dangotbanned: Collect
+@scan_backend
+def test_scan_parquet(parquet_path: FileSource, backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    lf = nwp.scan_parquet(parquet_path, backend=backend)
+    schema = lf.collect_schema()
+    expected = nw.Schema({"a": nw.Int64(), "b": nw.Float64(), "z": nw.String()})
+    assert len(schema) == 3
+    assert schema == expected
+    assert expected == nwp.read_parquet_schema(parquet_path, backend=backend)
+
+
+@scan_backend
+def test_scan_csv(csv_path: FileSource, backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    lf = nwp.scan_csv(csv_path, backend=backend)
+    schema = lf.collect_schema()
+    expected = nw.Schema({"a": nw.Int64(), "b": nw.Float64(), "z": nw.String()})
+    assert len(schema) == 3
+    assert schema == expected
+    assert expected == nwp.read_csv_schema(csv_path, backend=backend)
+
+
+@scan_backend
+def test_read_parquet_schema(parquet_path: FileSource, backend: BackendName) -> None:
+    schema = nwp.read_parquet_schema(parquet_path, backend=backend)
+    expected = pl.scan_parquet(Path(parquet_path)).collect().schema
+    result = schema.to_polars()
+    assert result == expected
+
+
+@scan_backend
+def test_read_csv_schema(csv_path: FileSource, backend: BackendName) -> None:
+    schema = nwp.read_csv_schema(csv_path, backend=backend)
+    expected = pl.scan_csv(Path(csv_path)).collect().schema
+    result = schema.to_polars()
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "include_columns", [["b", "z"], ["a", "b"], ["z", "a"], ["z"]], ids=str
+)
+@pytest.mark.parametrize("csv_path", ["str"], indirect=True)
+def test_read_csv_schema_kwargs_pyarrow(
+    csv_path: str, include_columns: list[str]
+) -> None:
+    from pyarrow import csv
+
+    convert = csv.ConvertOptions(include_columns=include_columns)
+    schema = nwp.read_csv_schema(csv_path, backend="pyarrow", convert_options=convert)
+    expected = pl.scan_csv(csv_path).select(include_columns).collect().schema
+    result = schema.to_polars()
+    assert result == expected

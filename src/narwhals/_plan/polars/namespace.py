@@ -1,0 +1,114 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, ClassVar, overload
+
+import polars as pl
+
+from narwhals._plan._version import into_version
+from narwhals._plan.common import todo
+from narwhals._plan.compliant.namespace import CompliantNamespace
+from narwhals._plan.polars import compat
+from narwhals._polars.utils import (
+    narwhals_to_native_dtype as _dtype_native,
+    native_to_narwhals_dtype as _dtype_from_native,
+)
+from narwhals._utils import Implementation, Version
+
+if TYPE_CHECKING:
+    from narwhals._plan.polars.dataframe import PolarsDataFrame as DataFrame
+    from narwhals._plan.polars.expr import PolarsExpr as Expr
+    from narwhals._plan.polars.lazyframe import (
+        PolarsEvaluator as Evaluator,
+        PolarsLazyFrame as LazyFrame,
+    )
+    from narwhals._plan.polars.series import PolarsSeries as Series
+    from narwhals.dtypes import Date, DType, FloatType, IntegerType
+    from narwhals.schema import Schema
+    from narwhals.typing import IntoDType
+
+
+@overload
+def dtype_to_native(dtype: IntoDType, /, version: Version) -> pl.DataType: ...
+@overload
+def dtype_to_native(dtype: None, /, version: Version) -> None: ...
+@overload
+def dtype_to_native(
+    dtype: IntoDType | None, /, version: Version
+) -> pl.DataType | None: ...
+def dtype_to_native(dtype: IntoDType | None, /, version: Version) -> pl.DataType | None:
+    """Convert a Narwhals `DType` to a `polars.DataType`, or passthrough `None`."""
+    return dtype if dtype is None else _dtype_native(dtype, version)
+
+
+def dtype_to_native_fast(dtype: IntegerType | FloatType | Date) -> Any:
+    name = dtype.__class__.__name__
+    if native := getattr(pl, name, None):
+        return native
+    # NOTE: Purely an error path for 128-bit ints
+    return dtype_to_native(dtype, Version.MAIN)
+
+
+def dtype_from_native(dtype: pl.DataType, version: Version, /) -> DType:
+    """Convert a `polars.DataType` to a Narwhals `DType`."""
+    return _dtype_from_native(dtype, version)
+
+
+if compat.LAZYFRAME_HAS_COLLECT_SCHEMA or TYPE_CHECKING:
+    collect_schema = pl.LazyFrame.collect_schema
+else:
+
+    def collect_schema(self: pl.LazyFrame) -> pl.Schema:
+        return self.schema
+
+
+class PolarsNamespace(CompliantNamespace["Expr", "Expr"]):
+    __slots__ = ()
+    version: ClassVar[Version] = Version.MAIN
+    implementation: ClassVar = Implementation.POLARS
+
+    @property
+    def _dataframe(self) -> type[DataFrame]:
+        from narwhals._plan.polars.dataframe import PolarsDataFrame
+
+        return PolarsDataFrame
+
+    @property
+    def _lazyframe(self) -> type[LazyFrame]:
+        from narwhals._plan.polars.lazyframe import PolarsLazyFrame
+
+        return PolarsLazyFrame
+
+    @property
+    def _expr(self) -> type[Expr]:
+        from narwhals._plan.polars.expr import PolarsExpr
+
+        return PolarsExpr
+
+    @property
+    def _scalar(self) -> type[Expr]:
+        return self._expr
+
+    @property
+    def _series(self) -> type[Series]:
+        from narwhals._plan.polars.series import PolarsSeries
+
+        return PolarsSeries
+
+    _frame = todo()  # pyright: ignore[reportAssignmentType, reportIncompatibleMethodOverride]
+
+    @property
+    def _evaluator(self) -> type[Evaluator]:
+        from narwhals._plan.polars.lazyframe import PolarsEvaluator
+
+        return PolarsEvaluator
+
+    def read_csv_schema(self, source: str, /, **kwds: Any) -> Schema:
+        schema = collect_schema(pl.scan_csv(source, **kwds))
+        return into_version(self.version).schema.from_polars(schema)
+
+    def read_parquet_schema(self, source: str, /, **kwds: Any) -> Schema:
+        schema = pl.read_parquet_schema(source, **kwds)
+        return into_version(self.version).schema.from_polars(schema)
+
+
+PolarsNamespace()

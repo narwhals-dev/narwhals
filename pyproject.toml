@@ -60,6 +60,10 @@ ibis = ["ibis-framework>=6.0.0", "rich>=12.4.4", "packaging>=21.3", "pyarrow_hot
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
+[project.entry-points.'narwhals.plugins.plan']
+polars = "narwhals._plan.polars:plugin"
+pyarrow = "narwhals._plan.arrow:plugin"
+
 [dependency-groups]
 core = [
   "pandas>=1.3.4",
@@ -305,6 +309,9 @@ ignore = [
 [tool.ruff.lint.flake8-builtins]
 builtins-ignorelist = ["format"]
 
+[tool.ruff.lint.flake8-errmsg]
+max-string-length = 15
+
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
   "Series", 
@@ -312,6 +319,12 @@ extend-ignore-names = [
   "_Window", 
   "F", 
   "_F",
+  "_self", # needed to preserve the method `self` in a `Protocol` https://github.com/python/mypy/issues/16200
+  "unary",
+  # type variables
+  "DF", 
+  "LF",
+  "S",
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -327,6 +340,9 @@ extend-ignore-names = [
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
+]
+"tests/plan/*" = [
+  "PT013",  # pytest-incorrect-pytest-import (like, really?)
 ]
 "tpch/tests/*" = ["S101"]
 "utils/*" = ["S311", "T201"]
@@ -358,7 +374,13 @@ docstring-code-format = true
 skip-magic-trailing-comma = true
 
 [tool.pytest.ini_options]
-norecursedirs =  ['*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'src/narwhals/_*']
+norecursedirs =  [
+  '*.egg', '.*', '_darcs', 'build', 'CVS', 'dist', 'node_modules', 'venv', '{arch}', 'src/narwhals/_*',
+  # `narwhals/_*` ignores `_plan` which has doctests at multiple levels
+  'src/narwhals/_arrow', 'src/narwhals/_compliant', 'src/narwhals/_dask', 'src/narwhals/_duckdb', 'src/narwhals/_ibis', 
+  'src/narwhals/_interchange', 'src/narwhals/_pandas_like', 'src/narwhals/_polars', 'src/narwhals/_spark_like', 
+  'src/narwhals/_sql', 
+]
 testpaths = ["tests"]
 pythonpath = ["src"]
 filterwarnings = [
@@ -411,7 +433,11 @@ filterwarnings = [
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
 ]
 xfail_strict = true
-markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "unsafe_globals: tests that may trigger failures elsewhere when run in parallel"
+]
+addopts = ["-m not unsafe_globals"]
 env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",
@@ -437,6 +463,16 @@ omit = [
   # Remove after finishing eager sub-protocols
   "src/narwhals/_compliant/namespace.py",
   "tests/ibis_test.py",
+  # NOTE: Gradually adding as things become more stable
+  'src/narwhals/_plan/arrow/*',
+  'src/narwhals/_plan/polars/*',
+  'src/narwhals/_plan/compliant/package.py',
+  'src/narwhals/_plan/compliant/scalar.py',
+  'src/narwhals/_plan/**/typing.py',
+  'src/narwhals/_plan/dtypes_mapper.py',
+  'src/narwhals/_plan/plans/visitors.py',
+  'src/narwhals/_plan/plans/_explain.py',
+  'src/narwhals/_plan/plans/conversion.py',
 ]
 exclude_also = [
   "if sys.version_info() <",
@@ -454,7 +490,17 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',
+  'def __repr__',
+  'def __str__',
+  # Extends a `covdefaults` pattern to account for `EM10{1,2}`
+  # https://github.com/asottile/covdefaults/blob/a5228df597ffc7933bb2fb5b7bad94119a40a896/covdefaults.py#L90-L92
+  # https://docs.astral.sh/ruff/rules/raw-string-in-exception/
+  # https://docs.astral.sh/ruff/rules/f-string-in-exception/
+  '^\s*msg = .+\n\s*raise NotImplementedError\b',
+  # Adapted from https://github.com/pydantic/pydantic/blob/aa4d8b3fbc5f449ce1c05ebec36b1d4b3b736b69/pyproject.toml#L271
+  'class .*\bProtocol(\[.+\])?\):',
+  "if MYPY:"
 ]
 
 [tool.mypy]
@@ -462,6 +508,7 @@ files = ["src", "tests", "packages/test-plugin"]
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
+check_untyped_defs = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -491,6 +538,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "narwhals._plan.expressions.expr"
 ]
 warn_return_any = false
 
@@ -515,7 +563,30 @@ defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
 search-path = ["src", "."]
-project-includes = ["tests"]
+project-includes = ["src/narwhals/_plan", "tests"]
+project-excludes = [
+    # - waaaaaaaay too many things to deal with any time soon (`pyrefly==1.0.0`)
+    # - lots of false positives which spiral out
+    # - ([not-a-type], [bad-override], [bad-specialization], [invalid-type-var])
+    "src/narwhals/_plan/_dispatch.py",
+    "src/narwhals/_plan/_dtype.py",
+    "src/narwhals/_plan/_flags.py",
+    "src/narwhals/_plan/_parameters.py",
+    "src/narwhals/_plan/arrow",
+    "src/narwhals/_plan/common.py",
+    "src/narwhals/_plan/compliant",
+    "src/narwhals/_plan/dataframe.py",
+    "src/narwhals/_plan/expr.py",
+    "src/narwhals/_plan/expressions/temporal.py",
+    "src/narwhals/_plan/functions",
+    "src/narwhals/_plan/lazyframe.py",
+    "src/narwhals/_plan/plans/conversion.py",
+    "src/narwhals/_plan/polars",
+    "src/narwhals/_plan/schema.py",
+    "src/narwhals/_plan/selectors.py",
+    "src/narwhals/_plan/series.py",
+    "src/narwhals/_plan/translate.py",
+]
 ignore-missing-imports = [
     "cudf.*",
     "cupy.*",

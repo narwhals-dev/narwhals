@@ -1,0 +1,125 @@
+"""Struct function namespace, and some helpers."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, overload
+
+import pyarrow as pa
+import pyarrow.compute as pc
+
+from narwhals._plan import common
+from narwhals._plan.arrow import compat
+from narwhals._plan.arrow.functions.meta import call
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from narwhals._plan.arrow.acero import Field
+    from narwhals._plan.arrow.typing import (
+        ArrayAny,
+        Arrow,
+        ArrowAny,
+        ChunkedArrayAny,
+        ChunkedStruct,
+        IntoArrowAny,
+        IntoScalar,
+        Native,
+        SameArrowT,
+        ScalarAny,
+        Struct,
+        StructArray,
+    )
+    from narwhals._plan.typing import Seq
+
+__all__ = ("as_struct", "field", "field_names", "fields", "schema")
+
+
+@overload
+def as_struct(columns: Seq[IntoScalar], names: Iterable[str]) -> pa.StructScalar: ...
+@overload
+def as_struct(
+    columns: Iterable[ChunkedArrayAny] | Iterator[Native], names: Iterable[str]
+) -> ChunkedStruct: ...
+@overload
+def as_struct(columns: Iterable[ArrayAny], names: Iterable[str]) -> pa.StructArray: ...
+def as_struct(columns: Iterable[IntoArrowAny], names: Iterable[str]) -> Struct:
+    """Collect columns into a struct.
+
+    Arguments:
+        columns: Value(s) to collect into a struct. Scalars will will be broadcast unless all
+            inputs are scalar.
+        names: Name(s) to assign to each struct field.
+
+    Note:
+        Roughly [`polars.struct`] but `names` must be resolved ahead of time.
+
+    [`polars.struct`]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.struct.html
+    """
+    options = _make_names(common.ensure_seq_str(names))
+    result: Struct = call("make_struct", *columns, options=options)
+    return result
+
+
+def schema(native: Arrow[pa.StructScalar] | pa.StructType, /) -> pa.Schema:
+    """Get the struct definition as a schema.
+
+    Arguments:
+        native: Struct-typed arrow data, or a `StructType` *itself*.
+    """
+    tp = native if isinstance(native, pa.StructType) else native.type
+    fields = tp.fields if compat.HAS_STRUCT_TYPE_FIELDS else list(tp)
+    return pa.schema(fields)
+
+
+def field_names(native: Arrow[pa.StructScalar] | pa.StructType, /) -> list[str]:
+    """Get the names of each field in a struct.
+
+    Arguments:
+        native: Struct-typed arrow data, or a `StructType` *itself*.
+    """
+    tp = native if isinstance(native, pa.StructType) else native.type
+    return tp.names if compat.HAS_STRUCT_TYPE_FIELDS else [f.name for f in tp]
+
+
+@overload
+def field(native: ChunkedStruct, name: Field, /) -> ChunkedArrayAny: ...
+@overload
+def field(native: StructArray, name: Field, /) -> ArrayAny: ...
+@overload
+def field(native: pa.StructScalar, name: Field, /) -> ScalarAny: ...
+@overload
+def field(native: SameArrowT, name: Field, /) -> SameArrowT: ...
+@overload
+def field(native: Native, name: Field, /) -> Native: ...
+def field(native: ArrowAny, name: Field, /) -> ArrowAny:
+    """Retrieve a single field from a struct as a new array/scalar.
+
+    Arguments:
+        native: Struct-typed arrow data.
+        name: Name of the struct field to retrieve.
+    """
+    result: ArrowAny = call("struct_field", native, options=_get_name(name))
+    return result
+
+
+@overload
+def fields(native: ChunkedStruct, *names: Field) -> Seq[ChunkedArrayAny]: ...
+@overload
+def fields(native: StructArray, *names: Field) -> Seq[ArrayAny]: ...
+@overload
+def fields(native: pa.StructScalar, *names: Field) -> Seq[ScalarAny]: ...
+@overload
+def fields(native: SameArrowT, *names: Field) -> Seq[SameArrowT]: ...
+def fields(native: ArrowAny, *names: Field) -> Seq[ArrowAny]:
+    """Retrieve multiple fields from a struct as new array/scalar(s).
+
+    Arguments:
+        native: Struct-typed arrow data.
+        names: Names of the struct fields to retrieve.
+    """
+    f = pc.get_function("struct_field")
+    return tuple["ArrowAny", ...](f.call([native], _get_name(nm)) for nm in names)
+
+
+_make_names = pc.MakeStructOptions
+_get_name = pc.StructFieldOptions

@@ -1,0 +1,310 @@
+"""Where the base `Function` lives.
+
+## Implementation Notes
+The design was adapted from an *older* version of (rust) polars.
+
+[`dsl::function_expr::FunctionExpr`] became `Function`
+
+```rust
+pub enum Expr {                    // class ExprIR: ...
+                                   // class Function: ...
+                                   //
+    Function {                     // class FunctionExpr(ExprIR):
+        input: Vec<Expr>,          //     args: Seq[ExprIR]
+        function: FunctionExpr,    //     function: Function
+    //            ^^^^^^^^^^^^                      ^^^^^^^^
+        options: FunctionOptions,  //     flags: FunctionFlags
+    },
+```
+
+This *fleeting* version was bookended by 2 PRs landing a couple months apart:
+- [refactor: Separate `FunctionOptions` from DSL calls]
+- [refactor: Separate `FunctionExpr` and `IRFunctionExpr`]
+
+Interestingly, that meant:
+- we got all the definitions of [`FunctionOptions`]
+- but didn't need to introduce [another layer] to access them at their [new home]
+
+[`dsl::function_expr::FunctionExpr`]: https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/function_expr/mod.rs#L121-L1402
+[refactor: Separate `FunctionOptions` from DSL calls]: https://github.com/pola-rs/polars/pull/22133
+[refactor: Separate `FunctionExpr` and `IRFunctionExpr`]: https://github.com/pola-rs/polars/pull/23140
+[`FunctionOptions`]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/options.rs#L54-L281
+[new home]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/function_expr/mod.rs#L994-L1238
+[another layer]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/mod.rs#L258-L267
+"""
+
+from __future__ import annotations
+
+from functools import cache
+from typing import TYPE_CHECKING, Any, Literal
+
+from narwhals._plan import _parameters as params
+from narwhals._plan._dispatch import FunctionDispatch
+from narwhals._plan._dtype import IntoResolveDType, ResolveDType
+from narwhals._plan._flags import FunctionFlags
+from narwhals._plan._immutable import Immutable
+from narwhals.dtypes import DType
+
+if TYPE_CHECKING:
+    from typing import ClassVar
+
+    from typing_extensions import Self
+
+    from narwhals._plan._dispatch import DispatcherOptions
+    from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
+    from narwhals._plan.schema import FrozenSchema
+
+__all__ = ("Function", "HorizontalFunction")
+
+# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
+ELEMENTWISE = FunctionFlags.ELEMENTWISE
+
+
+class Function(Immutable):
+    r"""A general transformation applied to an expression.
+
+    A `Function` is distinct from an expression but appears in many of them as:
+
+        FunctionExpr[Function]
+
+    **Instances** capture non-expression arguments to `Expr` methods:
+
+    >>> import narwhals._plan as nw
+    >>> from narwhals._plan import expressions as ir
+    >>> from narwhals._plan.expressions import functions as F
+
+    >>> expr = nw.col("a").shift(2)
+    >>> expr_ir = expr._ir
+    >>> isinstance(expr_ir, ir.FunctionExpr)
+    True
+
+    >>> print(f"Function(args) : {expr_ir.function}\nExprIR args(s): {expr_ir.args[0]}")
+    Function(args) : Shift(n=2)
+    ExprIR args(s): Col(name='a')
+
+    Whereas **classes** encode most of the details, like...
+
+    What do we require of the expression argument(s)?
+    >>> F.Shift.__function_parameters__
+    Unary(DEFAULT)
+
+    What properties does the function have?
+    >>> F.Shift.__function_flags__
+    <FunctionFlags.LENGTH_PRESERVING: 4>
+
+    Which `CompliantExpr` method to call?
+    >>> F.Shift.__expr_ir_dispatch__
+    Dispatch<shift>
+
+    Does it transform the datatype?
+    >>> F.Shift.__expr_ir_dtype__
+    function.same_dtype()
+
+    See Also:
+        `narwhals._plan._function.py` doc for implementation notes
+    """
+
+    __function_parameters__: ClassVar[params.Parameters]
+    """Defines the number of expression arguments accepted and any constraints each has."""
+
+    __function_flags__: ClassVar[FunctionFlags] = FunctionFlags.DEFAULT
+    """Defines properties of the function.
+
+    Flags tell us how a function transforms the shape of it's input:
+
+        ┌───────────────────┬───────────────┬───────────┐
+        │ Flag              ┆ Input         ┆ Output    │
+        ╞═══════════════════╪═══════════════╪═══════════╡
+        │ AGGREGATION       ┆ Column        ┆ Scalar    │
+        │ ROW_SEPARABLE     ┆ Column        ┆ Unknown   │
+        │ LENGTH_PRESERVING ┆ Column/Scalar ┆ Preserved │
+        │ ELEMENTWISE       ┆ Column/Scalar ┆ Preserved │
+        └───────────────────┴───────────────┴───────────┘
+
+    And that's the main nugget we can use to answer the question:
+    > Is this function valid *here*?
+
+    See `FunctionFlags` for examples.
+
+    To customize the behavior, use the `flags` **parameter** [when subclassing]:
+
+        class FillNull(Function, flags=FunctionFlags.ELEMENTWISE): ...
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
+
+    __expr_ir_dispatch__: ClassVar[FunctionDispatch[FunctionExpr[Self]]] = (
+        FunctionDispatch.root("Function")
+    )
+    """Callable that dispatches to the appropriate compliant-level method.
+
+    See `DispatcherOptions` for examples.
+
+    To customize the behavior, use the `dispatch` **parameter** [when subclassing]:
+
+        class CategoricalFunction(Function, dispatch=DispatcherOptions(accessor_name="cat")): ...
+
+    Notes:
+        Each class has their own `FunctionDispatch` instance, and inheritance is only on the `options` property.
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
+
+    __expr_ir_dtype__: ClassVar[ResolveDType[FunctionExpr[Self]]] = ResolveDType()
+    """Callable defining how a `DType` is derived when `resolve_dtype` is called.
+
+    If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
+
+        class FillNullWithStrategy(Function, dtype=ResolveDType.function.same_dtype()):
+            __slots__ = ("limit", "strategy")
+            strategy: FillNullStrategy
+            limit: int | None
+
+    See `IntoResolveDType` and `ResolveDType` for more examples.
+
+    If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
+
+        class Pow(Function):
+            def resolve_dtype(self, node: FunctionExpr, schema: FrozenSchema, /) -> DType:
+                base = node.args[0].resolve_dtype(schema)
+                if base.is_integer():
+                    if (exp := node.args[1].resolve_dtype(schema)).is_float():
+                        return exp
+                return base
+
+    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    """
+
+    def is_elementwise(self) -> bool:
+        return self.__function_flags__.is_elementwise()
+
+    def is_length_preserving(self) -> bool:  # pragma: no cover
+        return self.__function_flags__.is_length_preserving()
+
+    @classmethod
+    def __function_expr__(cls) -> type[FunctionExpr[Self]]:
+        """Return the `ExprIR` subclass this function should be wrapped with."""
+        return _import_function_expr()
+
+    def to_function_expr(self, *args: ExprIR) -> FunctionExpr[Self]:
+        """Wrap this function as an expression.
+
+        Arguments:
+            *args: Expression arguments for the function.
+                The first input is the root and responsible for the output name.
+        """
+        exprs = self.__function_parameters__.check(self, args)
+        return self.__function_expr__()(args=exprs, function=self)
+
+    def __init_subclass__(
+        cls: type[Self],
+        *,
+        dispatch: DispatcherOptions | Literal["skip"] | None = None,
+        dtype: IntoResolveDType[Self] | None = None,
+        flags: FunctionFlags | None = None,
+        **_: Any,
+    ) -> None:
+        """Hook to [customize a new subclass] of `Function`.
+
+        All parameters are optional and will be inherited when not provided to `__init_subclass__`.
+
+        Arguments:
+            dispatch: Defines how to build a `FunctionDispatch.
+                Stored in `__expr_ir_dispatch__.options`.
+
+                *"skip"* can be used for mixins that add anything unrelated to `dispatch`.
+
+            dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
+                Stored in `__expr_ir_dtype__`.
+
+                See `IntoResolveDType` and `ResolveDType` for usage.
+
+                **Warning**: This functionality is considered **unstable**.
+                Full support depends on [#3396].
+
+            flags: Defines how a function transforms the shape of it's input.
+                Stored in `__function_flags__`.
+
+        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+        """
+        super().__init_subclass__(**_)
+        if flags is not None:
+            cls.__function_flags__ = flags
+        if dispatch != "skip":
+            cls.__expr_ir_dispatch__ = FunctionDispatch.from_type(cls, dispatch)
+        if dtype is not None:
+            if isinstance(dtype, DType):
+                dtype = ResolveDType.just_dtype(dtype)
+            elif not isinstance(dtype, ResolveDType):
+                dtype = ResolveDType.function.visitor(dtype)
+            # NOTE: See `FunctionVisitor` for invariance issue
+            cls.__expr_ir_dtype__ = dtype  # type: ignore [assignment]
+
+    def __repr__(self) -> str:
+        return self.__expr_ir_dispatch__.name
+
+    def __expr_ir_repr__(self, node: FunctionExpr[Any], /) -> str:
+        """Format the repr of the expression that wraps this function."""
+        first, *rest = node.args
+        if rest:
+            return f"{first!r}.{self!r}({rest!r})"
+        return f"{first!r}.{self!r}()"
+
+    def resolve_dtype(self, node: FunctionExpr[Any], schema: FrozenSchema, /) -> DType:
+        """Get the data type of an expanded expression.
+
+        Arguments:
+            node: The expanded expression, wrapping this function.
+            schema: The same schema used to project `node`.
+        """
+        return self.__expr_ir_dtype__(node, schema)
+
+    def _resolve_name_nested(
+        self, node: FunctionExpr[Any], schema: FrozenSchema, /
+    ) -> ExprIR:
+        """See `{ExprIR,AsStruct}._resolve_name_nested`."""
+        return node
+
+
+class HorizontalFunction(Function, flags=ELEMENTWISE):
+    """Transformations *across* columns.
+
+    Special cases of [fold] or [reduce].
+
+    [fold]: https://docs.pola.rs/user-guide/expressions/folds/
+    [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
+    """
+
+    __function_parameters__: ClassVar[params.Variadic] = params.Variadic()
+
+    @classmethod
+    def __function_expr__(cls) -> type[HorizontalExpr[Self]]:
+        return _import_horizontal_expr()
+
+
+class UnaryFunction(Function, dispatch="skip"):
+    __function_parameters__: ClassVar[params.Unary] = params.Unary()
+
+
+class BinaryFunction(Function, dispatch="skip"):
+    __function_parameters__: ClassVar[params.Binary] = params.Binary()
+
+
+class TernaryFunction(Function, dispatch="skip"):
+    __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
+
+
+@cache
+def _import_function_expr() -> type[FunctionExpr[Any]]:
+    # NOTE: Very heavily used (`Function.to_function_expr`), but creates a cycle
+    from narwhals._plan.expressions import FunctionExpr
+
+    return FunctionExpr
+
+
+@cache
+def _import_horizontal_expr() -> type[HorizontalExpr[Any]]:
+    from narwhals._plan.expressions import HorizontalExpr
+
+    return HorizontalExpr

@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Final
+
+import pytest
+
+from narwhals.exceptions import ShapeError
+from tests.utils import POLARS_VERSION, PYARROW_VERSION
+
+if PYARROW_VERSION < (21,):  # pragma: no cover
+    pytest.importorskip("numpy")
+import datetime as dt
+
+import narwhals as nw
+from narwhals import _plan as nwp
+from tests.plan.utils import (
+    DataFrame,
+    Eager,
+    assert_equal_data,
+    assert_equal_series,
+    re_compile,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from typing_extensions import LiteralString
+
+    from narwhals.typing import ClosedInterval, IntoDType
+
+
+@pytest.fixture(scope="module")
+def data() -> dict[str, Any]:
+    """Variant of `compliant_test.data_small`, with only numeric data."""
+    return {
+        "b": [1, 2, 3],
+        "c": [9, 2, 4],
+        "d": [8, 7, 8],
+        "e": [None, 9, 7],
+        "j": [12.1, None, 4.0],
+        "k": [42, 10, None],
+        "l": [4, 5, 6],
+        "m": [0, 1, 2],
+    }
+
+
+@pytest.fixture(scope="module", params=[2024, 2400])
+def leap_year(request: pytest.FixtureRequest) -> int:
+    result: int = request.param
+    return result
+
+
+def skip_if(condition: bool, /, reason: LiteralString) -> None:  # noqa: FBT001
+    if condition:
+        pytest.skip(reason)
+
+
+def skip_if_polars_linear_space(is_polars: bool, /) -> None:  # noqa: FBT001
+    skip_if(
+        is_polars and POLARS_VERSION < (1, 21), reason="too old for `polars.linear_space`"
+    )
+
+
+EXPECTED_DATE_1: Final = [
+    dt.date(2020, 1, 26),
+    dt.date(2020, 2, 20),
+    dt.date(2020, 3, 16),
+    dt.date(2020, 4, 10),
+]
+EXPECTED_DATE_2: Final = [dt.date(2021, 1, 30)]
+EXPECTED_DATE_3: Final = [
+    dt.date(2000, 1, 1),
+    dt.date(2002, 9, 14),
+    dt.date(2005, 5, 28),
+    dt.date(2008, 2, 9),
+    dt.date(2010, 10, 23),
+    dt.date(2013, 7, 6),
+    dt.date(2016, 3, 19),
+    dt.date(2018, 12, 1),
+    dt.date(2021, 8, 14),
+]
+EXPECTED_DATE_4: Final = [
+    dt.date(2006, 10, 14),
+    dt.date(2013, 7, 27),
+    dt.date(2020, 5, 9),
+]
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        (
+            [
+                nwp.date_range(
+                    dt.date(2020, 1, 1),
+                    dt.date(2020, 4, 30),
+                    interval="25d",
+                    closed="none",
+                )
+            ],
+            {"literal": EXPECTED_DATE_1},
+        ),
+        (
+            (
+                nwp.date_range(
+                    dt.date(2021, 1, 30),
+                    nwp.lit(18747, nw.Int32).cast(nw.Date),
+                    interval="90d",
+                    closed="left",
+                ).alias("date_range_cast_expr"),
+                {"date_range_cast_expr": EXPECTED_DATE_2},
+            )
+        ),
+    ],
+)
+def test_date_range(
+    expr: nwp.Expr | Sequence[nwp.Expr],
+    expected: dict[str, Any],
+    data: dict[str, list[dt.date]],
+    dataframe: DataFrame,
+) -> None:
+    result = dataframe(data).select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_date_range_eager_leap(eager: Eager, leap_year: int) -> None:
+    series_leap = nwp.date_range(
+        dt.date(leap_year, 2, 25), dt.date(leap_year, 3, 25), eager=eager
+    )
+    series_regular = nwp.date_range(
+        dt.date(leap_year + 1, 2, 25),
+        dt.date(leap_year + 1, 3, 25),
+        interval=dt.timedelta(days=1),
+        eager=eager,
+    )
+    assert len(series_regular) == 29
+    assert len(series_leap) == 30
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "interval", "closed", "expected"),
+    [
+        (dt.date(2000, 1, 1), dt.date(2023, 8, 31), "987d", "both", EXPECTED_DATE_3),
+        (dt.date(2000, 1, 1), dt.date(2023, 8, 31), "354w", "right", EXPECTED_DATE_4),
+    ],
+)
+def test_date_range_eager(
+    start: dt.date,
+    end: dt.date,
+    interval: str | dt.timedelta,
+    closed: ClosedInterval,
+    expected: list[dt.date],
+    eager: Eager,
+) -> None:
+    ser = nwp.date_range(start, end, interval=interval, closed=closed, eager=eager)
+    result = ser.to_list()
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    ("expr", "expected"),
+    [
+        ([nwp.int_range(5)], {"literal": [0, 1, 2, 3, 4]}),
+        ([nwp.int_range(nwp.len()).alias("len")], {"len": [0, 1, 2]}),
+        (
+            nwp.int_range(nwp.len() * 5, 20).alias("binary_expr-1"),
+            {"binary_expr-1": [15, 16, 17, 18, 19]},
+        ),
+        (
+            nwp.int_range(
+                nwp.col("b").alias("binary_expr-2").min() + 4, nwp.col("d").last()
+            ),
+            {"binary_expr-2": [5, 6, 7]},
+        ),
+    ],
+)
+def test_int_range(
+    expr: nwp.Expr | Sequence[nwp.Expr],
+    expected: dict[str, Any],
+    data: dict[str, Any],
+    dataframe: DataFrame,
+) -> None:
+    result = dataframe(data).select(expr)
+    assert_equal_data(result, expected)
+
+
+def test_int_range_eager(eager: Eager) -> None:
+    ser = nwp.int_range(50, eager=eager)
+    assert isinstance(ser, nwp.Series)
+    assert ser.to_list() == list(range(50))
+
+
+@pytest.mark.parametrize(("start", "end"), [(0, 0), (0, 1), (-1, 0), (-2.1, 3.4)])
+@pytest.mark.parametrize(
+    "num_samples", [0, 1, 2, 5, pytest.param(1_000, marks=pytest.mark.slow)]
+)
+@pytest.mark.parametrize("interval", ["both", "left", "right", "none"])
+@pytest.mark.parametrize("eager_false", [True, False])
+def test_linear_space_values(
+    start: float,
+    end: float,
+    num_samples: int,
+    interval: ClosedInterval,
+    *,
+    eager: Eager,
+    eager_false: bool,
+) -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L19-L56
+    skip_if_polars_linear_space(eager == "polars")
+    if not eager_false:
+        result = nwp.linear_space(
+            start, end, num_samples, closed=interval, eager=eager
+        ).rename("ls")
+    else:
+        result = nwp.select(
+            ls=nwp.linear_space(start, end, num_samples, closed=interval, eager=False),
+            eager=eager,
+        ).to_series()
+
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    if interval == "both":
+        expected = np.linspace(start, end, num_samples)
+    elif interval == "left":
+        expected = np.linspace(start, end, num_samples, endpoint=False)
+    elif interval == "right":
+        expected = np.linspace(start, end, num_samples + 1)[1:]
+    else:
+        expected = np.linspace(start, end, num_samples + 2)[1:-1]
+
+    assert_equal_series(result, expected, "ls")
+
+
+def test_linear_space_expr(eager: Eager) -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L59-L68
+    skip_if_polars_linear_space(eager == "polars")
+    df = nwp.from_dict({"a": [1, 2, 3, 4, 5]}, backend=eager)
+    result = df.select(nwp.linear_space(0, nwp.col("a").len(), 3))
+    expected = df.select(
+        literal=nwp.Series.from_iterable([0.0, 2.5, 5.0], dtype=nw.Float64, backend=eager)
+    )
+    assert_equal_data(result, expected)
+
+    result = df.select(nwp.linear_space(nwp.col("a").len(), 0, 3))
+    expected = df.select(
+        a=nwp.Series.from_iterable([5.0, 2.5, 0.0], dtype=nw.Float64, backend=eager)
+    )
+    assert_equal_data(result, expected)
+
+
+# NOTE: More general "supertyping" behavior would need `pyarrow.unify_schemas`
+# (https://arrow.apache.org/docs/14.0/python/generated/pyarrow.unify_schemas.html)
+@pytest.mark.parametrize(
+    ("dtype_start", "dtype_end", "dtype_expected"),
+    [
+        pytest.param(
+            nw.Float32,
+            nw.Float32,
+            nw.Float32,
+            marks=pytest.mark.xfail(
+                reason="Didn't preserve `Float32` dtype, promoted to `Float64`",
+                raises=AssertionError,
+            ),
+        ),
+        (nw.Float32, nw.Float64, nw.Float64),
+        (nw.Float64, nw.Float32, nw.Float64),
+        (nw.Float64, nw.Float64, nw.Float64),
+        (nw.UInt8, nw.UInt32, nw.Float64),
+        (nw.Int16, nw.Int128, nw.Float64),
+        (nw.Int8, nw.Float64, nw.Float64),
+    ],
+)
+def test_linear_space_expr_numeric_dtype(
+    dtype_start: IntoDType, dtype_end: IntoDType, dtype_expected: IntoDType, eager: Eager
+) -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L71-L95
+    skip_if_polars_linear_space(eager == "polars")
+    df = nwp.select(eager=eager)
+    result = df.select(
+        ls=nwp.linear_space(nwp.lit(0, dtype=dtype_start), nwp.lit(1, dtype=dtype_end), 6)
+    )
+    expected = df.select(
+        ls=nwp.Series.from_iterable(
+            [0.0, 0.2, 0.4, 0.6, 0.8, 1.0], dtype=dtype_expected, backend=eager
+        )
+    )
+    assert result.get_column("ls").dtype == dtype_expected
+    assert_equal_data(result, expected)
+
+
+def test_linear_space_expr_wrong_length(dataframe: DataFrame) -> None:
+    # NOTE: Adapted from https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/functions/range/test_linear_space.py#L194-L199
+    skip_if_polars_linear_space(dataframe.is_polars())
+    msg_narwhals = r"Expected object of length 6, got 5"
+    msg_polars = r"6.+5"
+    pattern = re_compile(rf"({msg_narwhals})|({msg_polars})")
+    with pytest.raises(ShapeError, match=pattern):
+        dataframe({"a": [1, 2, 3, 4, 5]}).with_columns(nwp.linear_space(0, 1, 6))

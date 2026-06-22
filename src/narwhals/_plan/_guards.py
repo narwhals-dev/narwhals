@@ -1,0 +1,129 @@
+"""Common type guards, mostly with inline imports."""
+
+from __future__ import annotations
+
+import datetime as dt
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, TypeVar
+
+from narwhals._utils import _hasattr_static
+from narwhals.dtypes import DType
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from typing_extensions import TypeIs
+
+    from narwhals._plan import expressions as ir
+    from narwhals._plan.compliant.series import CompliantSeries
+    from narwhals._plan.dataframe import DataFrame
+    from narwhals._plan.lazyframe import LazyFrame
+    from narwhals._plan.series import Series
+    from narwhals._plan.typing import DataFrameT, LazyFrameT, NativeSeriesT, Seq
+    from narwhals.typing import NonNestedLiteral, PythonLiteral
+
+    T = TypeVar("T")
+
+NON_NESTED_LITERAL_TPS = (int, float, str, dt.date, dt.time, dt.timedelta, bytes, Decimal)
+_PYTHON_LITERAL_TPS = (*NON_NESTED_LITERAL_TPS, list, tuple, dict, type(None))
+
+
+def _ir(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
+    from narwhals._plan import expressions as ir
+
+    return ir
+
+
+def _series(*_: Any):  # type: ignore[no-untyped-def]  # noqa: ANN202
+    from narwhals._plan import series
+
+    return series
+
+
+def is_non_nested_literal(obj: Any) -> TypeIs[NonNestedLiteral]:
+    return obj is None or isinstance(obj, NON_NESTED_LITERAL_TPS)
+
+
+def is_python_literal(obj: Any) -> TypeIs[PythonLiteral]:
+    return isinstance(obj, _PYTHON_LITERAL_TPS)
+
+
+def is_python_literal_type(tp: type[Any]) -> TypeIs[type[PythonLiteral]]:
+    return tp in _PYTHON_LITERAL_TPS
+
+
+def is_series(obj: Series[NativeSeriesT] | Any) -> TypeIs[Series[NativeSeriesT]]:
+    return isinstance(obj, _series().Series)
+
+
+def is_compliant_series(
+    obj: CompliantSeries[NativeSeriesT] | Any,
+) -> TypeIs[CompliantSeries[NativeSeriesT]]:
+    return _hasattr_static(obj, "__narwhals_series__")
+
+
+def is_iterable_reject(obj: Any) -> TypeIs[str | bytes | Series | CompliantSeries]:
+    return isinstance(obj, (str, bytes, _series().Series, DType)) or is_compliant_series(
+        obj
+    )
+
+
+def is_over(obj: Any) -> TypeIs[ir.Over]:
+    return isinstance(obj, _ir().Over)
+
+
+def is_function_expr(obj: Any) -> TypeIs[ir.FunctionExpr[Any]]:
+    return isinstance(obj, _ir().FunctionExpr)
+
+
+def is_binary_expr(obj: Any) -> TypeIs[ir.BinaryExpr]:
+    return isinstance(obj, _ir().BinaryExpr)
+
+
+def is_agg_expr(obj: Any) -> TypeIs[ir.AggExpr]:
+    return isinstance(obj, _ir().AggExpr)
+
+
+def is_aggregation(obj: Any) -> TypeIs[ir.AggExpr | ir.FunctionExpr[Any]]:
+    """Superset of `ExprIR.is_scalar`, excludes literals & len."""
+    return is_agg_expr(obj) or (is_function_expr(obj) and obj.is_scalar())
+
+
+def is_seq_column(exprs: Seq[ir.ExprIR], /) -> TypeIs[Seq[ir.Column]]:
+    """Return True if **every** element is a `Column`.
+
+    Use this for detecting fastpaths in sub-expressions, that can rely on
+    every element in `exprs` having a resolved `name` attribute.
+    """
+    Column = _ir().Column  # noqa: N806
+    return all(isinstance(e, Column) for e in exprs)
+
+
+def is_lazyframe(obj: LazyFrameT | Any) -> TypeIs[LazyFrameT]:
+    """Return True if `obj` is a `LazyFrame`.
+
+    Tip:
+        Prefer `is_sequence_lazyframe` if you need to check multiple frames,
+        as `is_lazyframe` will import `LazyFrame` once per item.
+    """
+    from narwhals._plan.lazyframe import LazyFrame
+
+    return isinstance(obj, LazyFrame)
+
+
+def is_sequence_lazyframe(
+    obj: Sequence[LazyFrameT | DataFrame[Any, Any]] | Any,
+) -> TypeIs[Sequence[LazyFrameT]]:
+    """Return True if **every** element is a `LazyFrame`."""
+    from narwhals._plan.lazyframe import LazyFrame
+
+    return all(isinstance(item, LazyFrame) for item in obj)
+
+
+def is_sequence_dataframe(
+    obj: Sequence[DataFrameT | LazyFrame[Any]] | Any,
+) -> TypeIs[Sequence[DataFrameT]]:
+    """Return True if **every** element is a `DataFrame`."""
+    from narwhals._plan.dataframe import DataFrame
+
+    return all(isinstance(item, DataFrame) for item in obj)

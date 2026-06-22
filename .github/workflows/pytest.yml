@@ -76,12 +76,14 @@ jobs:
           enable-cache: "true"
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      - name: Run pytest (plan)
+        run: make run-ci-plan
       - name: Run pytest
-        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe --ignore=tests/plan --ignore=src/narwhals/_plan --cov-append"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest src --doctest-modules"
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest src --doctest-modules --ignore=src/narwhals/_plan" 
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
