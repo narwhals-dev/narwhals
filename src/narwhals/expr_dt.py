@@ -711,6 +711,11 @@ class ExprDateTimeNamespace(Generic[ExprT]):
                 - 'q': quarter.
                 - 'y': year.
 
+        Notes:
+            For the Ibis backend, offsetting timezone-aware data by a calendar
+            unit ('d', 'mo', 'q' or 'y') raises: Ibis stores such values as UTC,
+            so the result would diverge from other backends across DST transitions.
+
         Examples:
             >>> from datetime import datetime
             >>> import polars as pl

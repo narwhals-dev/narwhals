@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+import ibis
+
 from narwhals._duration import Interval
-from narwhals._ibis.utils import (
-    UNITS_DICT_BUCKET,
-    UNITS_DICT_TRUNCATE,
-    timedelta_to_ibis_interval,
-)
+from narwhals._ibis.utils import UNITS_DICT_BUCKET, UNITS_DICT_TRUNCATE
 from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
 from narwhals._utils import not_implemented
 
@@ -62,12 +60,35 @@ class IbisExprDateTimeNamespace(SQLExprDateTimeNamesSpace["IbisExpr"]):
 
     def offset_by(self, by: str) -> IbisExpr:
         interval = Interval.parse_no_constraints(by)
-        unit = interval.unit
-        if unit in {"y", "q", "mo", "d", "ns"}:
-            msg = f"Offsetting by {unit} is not yet supported for ibis."
+        multiple, unit = interval.multiple, interval.unit
+        if unit == "ns":
+            msg = "Offsetting by nanoseconds is not yet supported for ibis."
             raise NotImplementedError(msg)
-        offset = timedelta_to_ibis_interval(interval.to_timedelta())
-        return self.compliant._with_callable(lambda expr: expr.add(offset))
+        # `ibis.interval` does not accept `quarters` on all supported ibis
+        # versions (`truncate` avoids passing it through for the same reason),
+        # so express a quarter offset as the equivalent number of months.
+        offset_multiple, offset_unit = multiple, unit
+        if unit == "q":
+            offset_multiple, offset_unit = 3 * multiple, "mo"
+        kwds: dict[BucketUnit, Any] = {UNITS_DICT_BUCKET[offset_unit]: offset_multiple}
+        offset = ibis.interval(**kwds)
+
+        def fn(expr: ir.TimestampValue) -> ir.TimestampValue:
+            # Ibis stores timezone-aware data as UTC, so calendar offsets are
+            # applied to the underlying instant rather than wall-clock time.
+            # The result would differ from other backends across a DST
+            # transition, so refuse it rather than return a surprising value.
+            tz = getattr(expr.type(), "timezone", None)
+            if unit in {"y", "q", "mo", "d"} and tz is not None:
+                msg = (
+                    f"Offsetting timezone-aware data by {UNITS_DICT_BUCKET[unit]} is "
+                    "not supported for ibis, as the result would be incorrect across "
+                    "daylight saving time transitions."
+                )
+                raise NotImplementedError(msg)
+            return expr.add(offset)
+
+        return self.compliant._with_callable(fn)
 
     def replace_time_zone(self, time_zone: str | None) -> IbisExpr:
         if time_zone is None:
