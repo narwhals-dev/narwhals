@@ -339,4 +339,28 @@ class DaskNamespace(
             version=self._version,
         )
 
+    def cov(self, a: DaskExpr, b: DaskExpr, *, ddof: int) -> DaskExpr:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            # `Series.cov` is sample covariance (ddof=1); rescale it by
+            # (n - 1) / (n - ddof) for other ddof values.
+            cov_samp = a_.cov(b_).to_series()
+            if ddof == 1:
+                return [cov_samp]
+
+            n_samples = (~a_.isna() & ~b_.isna()).sum().to_series()
+            denominator = n_samples - ddof
+            result = cov_samp * (n_samples - 1) / denominator.where(denominator > 0)
+            if ddof == 0:
+                result = result.where(n_samples != 1, 0.0)
+            return [result.rename(a_.name)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
     struct = not_implemented()
