@@ -655,3 +655,48 @@ jobs:
         run: |
           cd fairlearn
           pytest test/unit -m "narwhals"
+
+  lightgbm:
+    if: github.head_ref != 'bump-version'
+    env:
+      UV_SYSTEM_PYTHON: 1
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: "true"
+          cache-suffix: lightgbm-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: clone-lightgbm
+        run: |
+          git clone https://github.com/lightgbm-org/LightGBM.git --recursive --depth=1
+          cd LightGBM
+          git log
+      - name: install-lightgbm
+        run: |
+          cd LightGBM
+          uv pip install pip
+          sh ./build-python.sh install
+      - name: install-deps
+        run: |
+          uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt
+      - name: install-narwhals-dev
+        run: |
+          uv pip uninstall narwhals
+          uv pip install -e .
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: |
+          cd LightGBM
+          pytest --config-file python-package/pyproject.toml tests/python_package_test
