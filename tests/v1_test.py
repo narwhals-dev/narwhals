@@ -421,17 +421,15 @@ def test_get_level() -> None:
 
 
 def test_v1_explicit_level_kwarg() -> None:
-    # `_duckdb`/`_ibis` pass `level="interchange"` explicitly for a v1 DataFrame.
-    # We have no such _real_ cases for LazyFrame and Series
     pytest.importorskip("polars")
     import polars as pl
 
     nw_lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
-    rewrapped_lf = nw_v1.LazyFrame[pl.LazyFrame](nw_lf._compliant_frame, level="lazy")
+    rewrapped_lf = nw_v1.LazyFrame[pl.LazyFrame](nw_lf._compliant_frame)
     assert nw_v1.get_level(rewrapped_lf) == "lazy"
 
     nw_s = nw_v1.from_native(pl.Series(name="a", values=[1]), series_only=True)
-    rewrapped_s = nw_v1.Series(nw_s._compliant_series, level="full")
+    rewrapped_s = nw_v1.Series(nw_s._compliant_series)
     assert nw_v1.get_level(rewrapped_s) == "full"
 
 
@@ -444,14 +442,13 @@ def main_instances(eager_implementation: EagerAllowed) -> MainInstances:
     return df, df.lazy(), df.get_column("a")
 
 
-@pytest.mark.xfail(reason="TODO: Remove level from main and v2")
 def test_get_level_raises_main(main_instances: MainInstances) -> None:
     df, lf, ser = main_instances
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         nw_v1.get_level(df)  # type: ignore[arg-type]
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         nw_v1.get_level(ser)  # type: ignore[arg-type]
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         nw_v1.get_level(lf)  # type: ignore[arg-type]
 
 

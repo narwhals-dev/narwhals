@@ -58,7 +58,6 @@ if TYPE_CHECKING:
         RankMethod,
         RollingInterpolationMethod,
         SingleIndexSelector,
-        SupportLevel,
         TemporalLiteral,
         _1DArray,
     )
@@ -86,8 +85,6 @@ class Series(Generic[IntoSeriesT]):
     """
 
     _version: ClassVar[Version] = Version.MAIN
-    # See note on `BaseFrame._level`. Subclasses override at class or instance level.
-    _level: SupportLevel = "full"
 
     @property
     def _compliant(self) -> CompliantSeries[IntoSeriesT]:

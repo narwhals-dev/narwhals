@@ -12,6 +12,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
+    ensure_type,
     generate_temporary_column_name,
     inherit_doc,
     is_ordered_categorical,
@@ -61,6 +62,7 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.stable.v1.typing import (
     DataFrameT,
+    Frame,
     IntoDataFrameT,
     IntoFrame,
     IntoLazyFrameT,
@@ -115,7 +117,6 @@ if TYPE_CHECKING:
         PythonLiteral,
         SingleColSelector,
         SingleIndexSelector,
-        SupportLevel,
         _1DArray,
         _2DArray,
     )
@@ -130,15 +131,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     _version = Version.V1
 
     @inherit_doc(NwDataFrame)
-    def __init__(self, df: Any, *, level: SupportLevel | None = None) -> None:
-        from narwhals._interchange.dataframe import InterchangeFrame
-
+    def __init__(self, df: Any) -> None:
         assert df._version is Version.V1  # noqa: S101
         super().__init__(df)
-        if level is not None:
-            self._level = level
-        elif isinstance(self._compliant_frame, InterchangeFrame):
-            self._level = "interchange"
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
@@ -268,11 +263,9 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     _version = Version.V1
 
     @inherit_doc(NwLazyFrame)
-    def __init__(self, df: Any, *, level: SupportLevel | None = None) -> None:
+    def __init__(self, df: Any) -> None:
         assert df._version is Version.V1  # noqa: S101
         super().__init__(df)
-        if level is not None:
-            self._level = level
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -322,15 +315,9 @@ class Series(NwSeries[IntoSeriesT]):
     _version = Version.V1
 
     @inherit_doc(NwSeries)
-    def __init__(self, series: Any, *, level: SupportLevel | None = None) -> None:
-        from narwhals._interchange.series import InterchangeSeries
-
+    def __init__(self, series: Any) -> None:
         assert series._version is Version.V1  # noqa: S101
         super().__init__(series)
-        if level is not None:
-            self._level = level
-        elif isinstance(self._compliant_series, InterchangeSeries):
-            self._level = "interchange"
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
@@ -922,7 +909,7 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
 
-def get_level(obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT]) -> SupportLevel:
+def get_level(obj: Frame | Series[Any]) -> Literal["full", "lazy", "interchange"]:
     """Level of support Narwhals has for current object.
 
     Arguments:
@@ -936,7 +923,18 @@ def get_level(obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT]) -> Sup
               which involves iterating over rows in Python.
             - 'interchange': only metadata operations are supported (`df.schema`)
     """
-    return obj._level
+    from narwhals._interchange.dataframe import InterchangeFrame
+    from narwhals._interchange.series import InterchangeSeries
+
+    ensure_type(obj, DataFrame, Series, LazyFrame)
+    if isinstance(obj, DataFrame):
+        return "interchange" if isinstance(obj._compliant, InterchangeFrame) else "full"
+    if isinstance(obj, Series):
+        return "interchange" if isinstance(obj._compliant, InterchangeSeries) else "full"
+    if isinstance(obj, LazyFrame):
+        # NOTE: There weren't any tests covering the "full" part before
+        return "lazy" if obj.implementation.is_polars() else "full"
+    assert_never(obj)
 
 
 class When(nw_f.When):
