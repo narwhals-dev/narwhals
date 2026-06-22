@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypeVar
 from altair.expr import core as alt_ir
 
 from narwhals._plan import _function, expressions as ir
+from narwhals._plan.altair.exceptions import unsupported_error
 from narwhals._plan.expressions import (
     aggregation as agg,
     boolean,
@@ -125,17 +126,6 @@ def into_vega_expr(expr: ir.ExprIR | Expr) -> str:
     return repr(alt_expr)
 
 
-def unsupported_error(expr: ir.ExprIR, /) -> NotImplementedError:
-    if isinstance(expr, ir.FunctionExpr):
-        name = type(expr.function).__name__
-    else:
-        name = type(expr).__name__
-    msg = (
-        f"Converting {name!r} to a vega expression is not yet implemented, got: {expr!r}"
-    )
-    return NotImplementedError(msg)
-
-
 @functools.singledispatch
 def _from_expr_ir(expr: ir.ExprIR) -> AltExpr:
     # Unlikely
@@ -143,7 +133,7 @@ def _from_expr_ir(expr: ir.ExprIR) -> AltExpr:
     # - KeepName, RenameAlias
     # - Alias (only the top-level allowed)
     # - SelectorIR (altair data model is probably too fuzzy for this)
-    raise unsupported_error(expr)
+    raise unsupported_error(expr, "vega expression")
 
 
 @_from_expr_ir.register(ir.Column)
@@ -171,7 +161,7 @@ def _function_expr(expr: ir.FunctionExpr) -> AltExpr:
     result = _from_function(expr.function, expr.args)
     if result is not None:
         return result
-    raise unsupported_error(expr)
+    raise unsupported_error(expr, "vega expression")
 
 
 @functools.singledispatch
@@ -348,7 +338,7 @@ def _(expr: ir.HorizontalExpr) -> AltExpr:
     result = _from_function_horizontal(expr.function, args)
     if result is not None:
         return result
-    raise unsupported_error(expr)
+    raise unsupported_error(expr, "vega expression")
 
 
 @_from_expr_ir.register(agg.First)
