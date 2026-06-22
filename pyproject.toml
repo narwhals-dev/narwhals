@@ -86,7 +86,7 @@ tests = [
 # CI jobs that measure `tests/` coverage add `--group plugins` explicitly.
 # See https://github.com/narwhals-dev/narwhals/pull/3664 and https://github.com/narwhals-dev/narwhals/pull/3665
 
-sklearn = [  # heavier dependencies we don't necessarily need in every testing job
+sklearn = [
   "scikit-learn",
 ]
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
