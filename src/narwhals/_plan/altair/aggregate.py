@@ -8,27 +8,41 @@ try:
 except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
+
+from narwhals._plan import _parse, expressions as ir
+from narwhals._plan.altair.exceptions import unsupported_error
 from narwhals._plan.expressions import aggregation as agg, functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
+from narwhals._plan.meta import resolve_name as _meta_resolve_name
+from narwhals._plan.schema import FrozenSchema
 from narwhals.typing import RankMethod, RollingInterpolationMethod
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping
 
+    from _typeshed import Incomplete
     from altair.vegalite.v6.schema._typing import AggregateOp_T, WindowOnlyOp_T
 
-    from narwhals._plan import _function, expressions as ir
+    import narwhals._plan as nwp
+    from narwhals._plan import _function as _f
+    from narwhals._plan.typing import OneOrIterable
 
+    IntoExpr: TypeAlias = nwp.Expr | str
+    """Only expressions or column names will ever be valid in this context."""
 
-Ddof: TypeAlias = Literal[0, 1]
+OutputName: TypeAlias = str
+
+AggOrWindow_T: TypeAlias = "AggregateOp_T | WindowOnlyOp_T"
+
+Ddof: TypeAlias = int
 """Only `{var,std}(ddof={0,1})` is supported."""
 
 Quantile: TypeAlias = tuple[RollingInterpolationMethod, float]
 """Only `quantile({0.25,0.75}, "linear")` is supported."""
 
-SUPPORTED_BY_POLARS: tuple[AggregateOp_T | WindowOnlyOp_T, ...] = ("product", "nth_value")
+SUPPORTED_BY_POLARS: tuple[AggOrWindow_T, ...] = ("product", "nth_value")
 
-UNSUPPORTED: tuple[AggregateOp_T | WindowOnlyOp_T, ...] = (
+UNSUPPORTED: tuple[AggOrWindow_T, ...] = (
     *SUPPORTED_BY_POLARS,
     "ci0",
     "ci1",
@@ -36,7 +50,6 @@ UNSUPPORTED: tuple[AggregateOp_T | WindowOnlyOp_T, ...] = (
     "exponential",  # not documented
     "exponentialb",  # not documented
     # window_only
-    # TODO @dangotbanned: Search for these on polars tracker
     "cume_dist",
     "percent_rank",
     "ntile",
@@ -61,7 +74,6 @@ AGG_EXPR: Mapping[type[ir.AggExpr | ir.ExprIR], AggregateOp_T] = {
     Implode: "values",
 }
 
-# NOTE: Only supported when `dd`
 AGG_EXPR_VAR_STD: Mapping[tuple[type[agg.Std | agg.Var], Ddof], AggregateOp_T] = {
     (agg.Std, 0): "stdevp",
     (agg.Std, 1): "stdev",
@@ -72,7 +84,7 @@ AGG_EXPR_QUANTILE: Mapping[Quantile, AggregateOp_T] = {
     ("linear", 0.25): "q1",
     ("linear", 0.75): "q3",
 }
-AGG_FUNC: Mapping[type[_function.Aggregation], AggregateOp_T] = {F.NullCount: "missing"}
+AGG_FUNC: Mapping[type[_f.Aggregation], AggregateOp_T] = {F.NullCount: "missing"}
 
 
 WINDOW_EXPR: Mapping[type[ir.AggExpr], WindowOnlyOp_T] = {
@@ -80,13 +92,160 @@ WINDOW_EXPR: Mapping[type[ir.AggExpr], WindowOnlyOp_T] = {
     agg.Last: "last_value",
 }
 
+
+# NOTE: Need to enforce `alt.WindowTransform(frame=(None,0))`
+WINDOW_FUNC_CUM: Mapping[type[F.CumAgg], AggregateOp_T] = {
+    F.CumProd: "product",
+    F.CumMin: "min",
+    F.CumMax: "max",
+    F.CumSum: "sum",
+    F.CumCount: "count",
+}
+
+
+# NOTE: Need to convert `RollingOptions` -> frame=(...)
+WINDOW_FUNC_ROLLING: Mapping[type[F.RollingWindow], AggregateOp_T] = {
+    F.RollingMean: "mean",
+    F.RollingSum: "sum",
+}
+# NOTE: Need to convert `RollingOptions` -> frame=(...)
+WINDOW_FUNC_ROLLING_VAR_STD: Mapping[
+    tuple[type[F.RollingStd | F.RollingVar], Ddof], AggregateOp_T
+] = {
+    (F.RollingStd, 0): "stdevp",
+    (F.RollingStd, 1): "stdev",
+    (F.RollingVar, 0): "variancep",
+    (F.RollingVar, 1): "variance",
+}
+
+
 RANK_METHOD_WINDOW: Mapping[RankMethod, WindowOnlyOp_T] = {
     "ordinal": "row_number",
     "dense": "dense_rank",
     "min": "rank",  # not sure if this is equivalent
 }
 
+WindowOp: TypeAlias = tuple[AggOrWindow_T, Any]
+"""`(op, param)` in a `WindowFieldDef`."""
 
-def shift_to_window_op(f: F.Shift, /) -> tuple[Literal["lag", "lead"], int]:
+
+# TODO @dangotbanned: Implement `transform_aggregate` support
+# (remember that this should be adaptable for encodings like `alt.PositionFieldDef`)
+def aggregated_field_def(
+    alias: OutputName,
+    expr: ir.ExprIR,  # noqa: ARG001
+) -> alt.AggregatedFieldDef | Incomplete:
+    op: AggregateOp_T  # noqa: F842
+    kwds = {"as": alias}  # noqa: F841
+    raise NotImplementedError("todo")
+
+
+def agg_field_def_to_position_field_def(
+    obj: alt.AggregatedFieldDef,  # noqa: ARG001
+) -> alt.PositionFieldDef:
+    # NOTE: there's no typing for attribute access
+    _remap_fields = {"op": "aggregate", "field": "field", "as": "title"}
+    raise NotImplementedError("todo")
+
+
+@functools.singledispatch
+def _function_window(f: ir.Function, /) -> WindowOp | None:  # noqa: ARG001
+    return None
+
+
+for _tp in AGG_FUNC:
+    _function_window.register(_tp, lambda f: (AGG_FUNC[type(f)], alt.Undefined))
+
+
+@_function_window.register(F.Shift)
+def shift_to_window_op(f: F.Shift, /) -> WindowOp:
     n = f.n
     return ("lead", n) if n >= 1 else ("lag", abs(n))
+
+
+@_function_window.register(F.Rank)
+def rank_to_window_op(f: F.Rank, /) -> WindowOp | None:
+    opts = f.options
+    if (op := RANK_METHOD_WINDOW.get(opts.method)) and not opts.descending:
+        return op, alt.Undefined
+    return None
+
+
+# TODO @dangotbanned: Simplify the `AggExpr` branch
+# TODO @dangotbanned: Change the shape of it to allow using `over` to split out multiple `alt.WindowTransform`s
+def window_field_def(
+    alias: OutputName, expr: ir.ExprIR
+) -> alt.WindowFieldDef | Incomplete:
+    """Try to convert a narwhals expression to part of a `WindowTransform`.
+
+    - by default, everything is cumulative
+    - `frame` can be used to define either cumulative or rolling
+    """
+    op: WindowOnlyOp_T | AggregateOp_T
+    param: alt.typing.Optional[Any] = alt.Undefined
+    kwds = {"as": alias}
+    if isinstance(expr, ir.FunctionExpr):
+        if (window_op := _function_window(expr.function)) is None:
+            raise unsupported_error(expr, "window transform")
+        op, param = window_op
+        if not isinstance(expr.args[0], ir.Column):
+            raise unsupported_error(expr, "window transform")
+        field = expr.args[0].name
+
+    elif isinstance(expr, ir.AggExpr):
+        if (supported := AGG_EXPR.get(type(expr))) is None:
+            match expr:
+                case agg.Quantile(interpolation=i, quantile=q) if (
+                    i,
+                    q,
+                ) in AGG_EXPR_QUANTILE:
+                    op = AGG_EXPR_QUANTILE[(i, q)]
+                case agg.Std(ddof=ddof) | agg.Var(ddof=ddof) if ddof in {0, 1}:
+                    op = AGG_EXPR_VAR_STD[(type(expr), ddof)]
+                case _:
+                    raise unsupported_error(expr, "window transform")
+        else:
+            op = supported
+        if not isinstance(expr.expr, ir.Column):
+            raise unsupported_error(expr, "window transform")
+        field = expr.expr.name
+
+    elif isinstance(expr, ir.Column):
+        op = "values"
+        field = expr.name
+    else:
+        raise unsupported_error(expr, "window transform")
+    return alt.WindowFieldDef(op=op, field=field, param=param, **kwds)
+
+
+def window_transform(*exprs: IntoExpr, **named_exprs: IntoExpr) -> alt.WindowTransform:
+    """Parse into narwhals expressions and translate to a single window transform."""
+    return alt.WindowTransform(
+        [
+            window_field_def(alias, expr)
+            for alias, expr in parse_into_named_expr(*exprs, **named_exprs)
+        ]
+    )
+
+
+# TODO @dangotbanned: convert `over` -> `WindowTransform
+def over_window_transform(expr: ir.Over | ir.OverOrdered) -> alt.WindowTransform:
+    msg = (
+        f"TODO: convert `over` -> `WindowTransform`, got {expr!r}.\n"
+        "alt.WindowTransform(window=expr.expr, frame=(...), groupby=expr.partition_by, sort=alt.SortField(field=order_by[i], order='descending'))"
+    )
+    raise NotImplementedError(msg)
+
+
+# required for the signature of `resolve_name`, but only for `struct`, which would fail here anyway
+_EMPTY_SCHEMA: Final = FrozenSchema.empty()
+
+
+def parse_into_named_expr(
+    exprs: OneOrIterable[IntoExpr] = (), *more_exprs: IntoExpr, **named_exprs: IntoExpr
+) -> Iterator[tuple[OutputName, ir.ExprIR]]:
+    """Use this for a select-like context."""
+    for expr_ir in _parse.into_iter_expr_ir(exprs, *more_exprs, **named_exprs):
+        # NOTE: I think altair's data model is too fuzzy for expression expansion
+        # would be very nice to use selectors & `.name.{pre,suf}fix` if possible though
+        yield _meta_resolve_name(expr_ir, _EMPTY_SCHEMA)
