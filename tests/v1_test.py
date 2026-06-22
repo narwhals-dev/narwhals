@@ -5,7 +5,7 @@ import re
 from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 import pytest
 
@@ -433,6 +433,43 @@ def test_v1_explicit_level_kwarg() -> None:
     nw_s = nw_v1.from_native(pl.Series(name="a", values=[1]), series_only=True)
     rewrapped_s = nw_v1.Series(nw_s._compliant_series, level="full")
     assert nw_v1.get_level(rewrapped_s) == "full"
+
+
+MainInstances: TypeAlias = tuple[nw.DataFrame[Any], nw.LazyFrame[Any], nw.Series[Any]]
+
+
+@pytest.fixture
+def main_instances(eager_implementation: EagerAllowed) -> MainInstances:
+    df = nw.DataFrame.from_dict({"a": [1, 2, 3]}, backend=eager_implementation)
+    return df, df.lazy(), df.get_column("a")
+
+
+@pytest.mark.xfail(reason="TODO: Remove level from main and v2")
+def test_get_level_raises_main(main_instances: MainInstances) -> None:
+    df, lf, ser = main_instances
+    with pytest.raises(AttributeError):
+        nw_v1.get_level(df)  # type: ignore[arg-type]
+    with pytest.raises(AttributeError):
+        nw_v1.get_level(ser)  # type: ignore[arg-type]
+    with pytest.raises(AttributeError):
+        nw_v1.get_level(lf)  # type: ignore[arg-type]
+
+
+def test_get_level_main_via_v1_from_native(main_instances: MainInstances) -> None:
+    df, lf, ser = main_instances
+    df_v1 = nw_v1.from_native(df)
+    # NOTE: Typing doesn't match the behavior following (#3515)
+    _lf_v1 = nw_v1.from_native(lf)  # type: ignore[call-overload]
+    lf_v1: nw_v1.LazyFrame[Any] = _lf_v1
+    ser_v1 = nw_v1.from_native(ser, series_only=True)
+
+    assert nw_v1.get_level(df_v1) == "full"
+    assert nw_v1.get_level(ser_v1) == "full"
+    if lf_v1.implementation.is_polars():
+        assert nw_v1.get_level(lf_v1) == "lazy"
+    else:
+        # Well this is strange?
+        assert nw_v1.get_level(lf_v1) == "full"
 
 
 def test_any_horizontal() -> None:
