@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "rangeStrategy": "update-lockfile",
+  "enabledManagers": ["pep621"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Never propose updates for the workspace package itself",
+      "matchPackageNames": ["narwhals", "test-plugin"],
+      "enabled": false
+    },
+    {
+      "description": "Group all uv.lock bumps into one PR to cut noise",
+      "matchManagers": ["pep621"],
+      "groupName": "uv.lock dependencies"
+    }
+  ]
+}
