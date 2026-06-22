@@ -25,7 +25,7 @@ from narwhals._plan.expressions import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import LiteralString, Unpack
+    from typing_extensions import LiteralString
 
     from narwhals._plan import Expr
     from narwhals._plan.typing import Seq
@@ -40,20 +40,8 @@ AltExpr: TypeAlias = alt_ir.Expression
 FnMap: TypeAlias = Mapping[type[ir.Function], _VT_co]
 AltUnary: TypeAlias = Callable[[AltExpr], AltExpr]
 AltBinary: TypeAlias = Callable[[AltExpr, AltExpr], AltExpr]
-AltHorizontal: TypeAlias = Callable[["Unpack[tuple[AltExpr, ...]]"], AltExpr]
 
 _COMMA = ","
-
-
-AltFnName: TypeAlias = Literal["length", "peek", "sort"]
-"""Common `FunctionExpression` names.
-
-Not planning to list them all, just documenting.
-
-Important:
-    `"peek"` (last) should be more efficient than regular indexing, since it
-    [requires less codegen](https://github.com/vega/vega/blob/9fef6ea66a02973adc90f6824558c76996a5ef86/packages/vega-util/src/peek.ts)
-"""
 
 
 class AltExprStr(alt_ir.Expression):
@@ -87,7 +75,7 @@ class AltExprStr(alt_ir.Expression):
 
     @staticmethod
     def call_fn(
-        function: Literal["if"], exprs: Iterable[alt_ir.Expression], /
+        function: Literal["if", "max", "min"], exprs: Iterable[alt_ir.Expression], /
     ) -> AltExprStr:
         return AltExprStr(f"{function}({_COMMA.join(repr(e) for e in exprs)})")
 
@@ -210,12 +198,14 @@ def _is_null(expr: AltExpr, /) -> AltExpr:
     # https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality
     # this is technically valid for python, but is meaningless in `polars`
     # and you'll get a warning saying to use `is_null`
-    return expr == None  # noqa: E711
+    result: AltExpr = expr == None  # noqa: E711
+    return result
 
 
 def _then_invert(func: AltUnary, /) -> AltUnary:
     def _(expr: AltExpr, /) -> AltExpr:
-        return ~func(expr)
+        result: AltExpr = ~func(expr)
+        return result
 
     return _
 
@@ -270,12 +260,12 @@ _HORIZONTAL_REDUCE: FnMap[AltBinary] = {
     boolean.AllHorizontal: operator.and_,
     F.SumHorizontal: operator.add,
 }
-_HORIZONTAL_NATIVE: FnMap[AltHorizontal] = {
-    F.MaxHorizontal: ae.max,
-    F.MinHorizontal: ae.min,
+_HORIZONTAL_NATIVE_NAME: FnMap[Literal["max", "min"]] = {
+    F.MaxHorizontal: "max",
+    F.MinHorizontal: "min",
 }
 
-_REWRITE_FUNCTION: Final = {
+_REWRITE_FUNCTION: Final[FnMap[Callable[..., AltExpr]]] = {
     boolean.IsInSeq: _rewrite_is_in_seq_horizontal,
     ir.struct.FieldByName: _rewrite_struct_field_getitem,
 }
@@ -340,10 +330,10 @@ for _tp in _HORIZONTAL_REDUCE:
 
 
 def _horizontal_native(f: _function.Horizontal, exprs: Iterable[AltExpr], /) -> AltExpr:
-    return _HORIZONTAL_NATIVE[type(f)](*exprs)
+    return AltExprStr.call_fn(_HORIZONTAL_NATIVE_NAME[type(f)], exprs)
 
 
-for _tp in _HORIZONTAL_NATIVE:
+for _tp in _HORIZONTAL_NATIVE_NAME:
     _from_function_horizontal.register(_tp, _horizontal_native)
 
 
@@ -428,4 +418,5 @@ def _(op: ops.FloorDivide, left: AltExpr, right: AltExpr) -> AltExpr:
 
 @_from_binary.register(ops.ExclusiveOr)
 def _(op: ops.ExclusiveOr, left: AltExpr, right: AltExpr) -> alt_ir.BinaryExpression:  # noqa: ARG001
-    return (left & ~right) | (~left & right)
+    result: alt_ir.BinaryExpression = (left & ~right) | (~left & right)
+    return result
