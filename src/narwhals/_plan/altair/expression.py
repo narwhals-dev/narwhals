@@ -28,7 +28,6 @@ from narwhals._plan.expressions import (
 if TYPE_CHECKING:
     from typing_extensions import LiteralString
 
-    from narwhals._plan import Expr
     from narwhals._plan.typing import Seq
     from narwhals.typing import PythonLiteral
 
@@ -114,16 +113,14 @@ def _dict_fmt(items: Iterable[tuple[str, _T]], to_str: Callable[[_T], str], /) -
 ae = alt.expr
 
 
-def into_vega_expr(expr: ir.ExprIR | Expr) -> str:
+def into_vega_expr(expr: ir.ExprIR) -> str:
     """Convert a narwhals expression into an altair-compatible vega expression.
 
     ## Notes
     - top-level, can optionally wrap with `@functools.lru_cache`
     - fails loudly if conversion isn't supported
     """
-    expr = expr if isinstance(expr, ir.ExprIR) else expr._ir
-    alt_expr = _from_expr_ir(expr)
-    return repr(alt_expr)
+    return repr(_from_expr_ir(expr))
 
 
 @functools.singledispatch

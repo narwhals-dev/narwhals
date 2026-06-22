@@ -8,24 +8,21 @@ try:
 except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
-
-from narwhals._plan import _parse, expressions as ir
+from narwhals._plan import expressions as ir
 from narwhals._plan.altair.exceptions import unsupported_error
+from narwhals._plan.altair.parse import parse_into_named_exprs
 from narwhals._plan.expressions import aggregation as agg, functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
-from narwhals._plan.meta import resolve_name as _meta_resolve_name
-from narwhals._plan.schema import FrozenSchema
 from narwhals.typing import RankMethod, RollingInterpolationMethod
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Mapping
 
     from _typeshed import Incomplete
     from altair.vegalite.v6.schema._typing import AggregateOp_T, WindowOnlyOp_T
 
     import narwhals._plan as nwp
     from narwhals._plan import _function as _f
-    from narwhals._plan.typing import OneOrIterable
 
     IntoExpr: TypeAlias = nwp.Expr | str
     """Only expressions or column names will ever be valid in this context."""
@@ -220,12 +217,8 @@ def window_field_def(
 
 def window_transform(*exprs: IntoExpr, **named_exprs: IntoExpr) -> alt.WindowTransform:
     """Parse into narwhals expressions and translate to a single window transform."""
-    return alt.WindowTransform(
-        [
-            window_field_def(alias, expr)
-            for alias, expr in parse_into_named_expr(*exprs, **named_exprs)
-        ]
-    )
+    parsed = parse_into_named_exprs(*exprs, **named_exprs)
+    return alt.WindowTransform([window_field_def(alias, expr) for alias, expr in parsed])
 
 
 # TODO @dangotbanned: convert `over` -> `WindowTransform
@@ -235,17 +228,3 @@ def over_window_transform(expr: ir.Over | ir.OverOrdered) -> alt.WindowTransform
         "alt.WindowTransform(window=expr.expr, frame=(...), groupby=expr.partition_by, sort=alt.SortField(field=order_by[i], order='descending'))"
     )
     raise NotImplementedError(msg)
-
-
-# required for the signature of `resolve_name`, but only for `struct`, which would fail here anyway
-_EMPTY_SCHEMA: Final = FrozenSchema.empty()
-
-
-def parse_into_named_expr(
-    exprs: OneOrIterable[IntoExpr] = (), *more_exprs: IntoExpr, **named_exprs: IntoExpr
-) -> Iterator[tuple[OutputName, ir.ExprIR]]:
-    """Use this for a select-like context."""
-    for expr_ir in _parse.into_iter_expr_ir(exprs, *more_exprs, **named_exprs):
-        # NOTE: I think altair's data model is too fuzzy for expression expansion
-        # would be very nice to use selectors & `.name.{pre,suf}fix` if possible though
-        yield _meta_resolve_name(expr_ir, _EMPTY_SCHEMA)
