@@ -122,6 +122,12 @@ class PolarsNamespace:
             return self._expr(pl.count().alias("len"), self._version)
         return self._expr(pl.len(), self._version)
 
+    def cov(self, a: PolarsExpr, b: PolarsExpr, *, ddof: int) -> PolarsExpr:
+        native = pl.cov(a.native, b.native, ddof=ddof)
+        n_samples = (a.native.is_not_null() & b.native.is_not_null()).sum()
+        result = pl.when(n_samples > pl.lit(ddof)).then(native)
+        return self._expr(result, self._version)
+
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
         it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
         return self._expr(pl.all_horizontal(*(expr.native for expr in it)), self._version)

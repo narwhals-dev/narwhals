@@ -1307,6 +1307,39 @@ def corr(a: IntoExpr, b: IntoExpr, method: CorrelationMethod = "pearson") -> Exp
     return Expr(ExprNode(ExprKind.AGGREGATION, "corr", exprs=(a, b), method=method))
 
 
+def cov(a: IntoExpr, b: IntoExpr, *, ddof: int = 1) -> Expr:
+    """Compute the covariance between two columns.
+
+    Arguments:
+        a: Column name or Expression
+        b: Column name or Expression
+        ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+            where N represents the number of elements. By default ddof is 1.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>>
+        >>> df_native = pl.DataFrame({"a": [1, 2, 3], "b": [0, 3, 2]})
+        >>> nw.from_native(df_native).select(
+        ...     sample=nw.cov("a", "b"), population=nw.cov("a", "b", ddof=0)
+        ... )
+        ┌───────────────────────┐
+        |  Narwhals DataFrame   |
+        |-----------------------|
+        |shape: (1, 2)          |
+        |┌────────┬────────────┐|
+        |│ sample ┆ population │|
+        |│ ---    ┆ ---        │|
+        |│ f64    ┆ f64        │|
+        |╞════════╪════════════╡|
+        |│ 1.0    ┆ 0.666667   │|
+        |└────────┴────────────┘|
+        └───────────────────────┘
+    """
+    return Expr(ExprNode(ExprKind.AGGREGATION, "cov", exprs=(a, b), ddof=ddof))
+
+
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 

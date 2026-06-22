@@ -21,6 +21,7 @@ from narwhals._duckdb.utils import (
     narwhals_to_native_dtype,
     sql_expression,
     when,
+    window_expression,
 )
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -31,7 +32,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -182,6 +183,45 @@ class DuckDBNamespace(
 
         return self._expr(
             call=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
+    def cov(self, a: DuckDBExpr, b: DuckDBExpr, *, ddof: int) -> DuckDBExpr:
+        def _cov(
+            a_: Expression, b_: Expression, wrap: Callable[[Expression], Expression]
+        ) -> list[Expression]:
+            # `wrap` adds the window frame to each aggregate in a window context and
+            # is the identity otherwise. A compound expression can't be wrapped as a
+            # single window function, so each aggregate is wrapped individually.
+            if ddof == 0:
+                return [wrap(F("covar_pop", a_, b_))]
+            if ddof == 1:
+                return [wrap(F("covar_samp", a_, b_))]
+            is_valid = (a_.isnotnull() & b_.isnotnull()).cast(duckdb_dtypes.BIGINT)
+            n_samples = wrap(F("sum", is_valid))
+            denominator = n_samples - lit(ddof)
+            rescaled = wrap(F("covar_samp", a_, b_)) * (
+                (n_samples - lit(1)) / denominator
+            )
+            return [when(denominator <= lit(0), lit(None)).otherwise(rescaled)]
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return _cov(a_, b_, lambda e: e)
+
+        def window_f(
+            df: DuckDBLazyFrame, inputs: WindowInputs[Expression]
+        ) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return _cov(a_, b_, lambda e: window_expression(e, inputs.partition_by))
+
+        return self._expr(
+            call=func,
+            window_function=window_f,
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
