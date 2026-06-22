@@ -1,7 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, TypeAlias
+import functools
+from typing import TYPE_CHECKING, Any, Final, TypeAlias
 
+try:
+    import altair as alt
+except ImportError as err:
+    msg = "`altair` is required to convert `ExprIR`s to transformations."
+    raise ModuleNotFoundError(msg) from err
 from narwhals._plan.expressions import aggregation as agg, functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
 from narwhals.typing import RankMethod, RollingInterpolationMethod
