@@ -868,11 +868,17 @@ def maybe_align_index(
     return lhs
 
 
-def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any | None:
+def maybe_get_index(
+    obj: DataFrame[Any] | LazyFrame[Any] | Series[Any], *, as_series: bool = False
+) -> Any | None:
     """Get the index of a DataFrame or a Series, if it's pandas-like.
 
     Arguments:
         obj: Dataframe or Series.
+        as_series: If `True`, return the index wrapped as a Narwhals `Series`
+            (matching the implementation of `obj`) instead of the raw native
+            index. This makes the result directly usable as the `index`
+            argument of [`maybe_set_index`][narwhals.maybe_set_index].
 
     Notes:
         This is only really intended for backwards-compatibility purposes,
@@ -893,11 +899,37 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         >>> series = nw.from_native(series_pd, series_only=True)
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
+        >>> nw.maybe_get_index(df, as_series=True)
+        ┌───────────────┐
+        |Narwhals Series|
+        |---------------|
+        | 0    0        |
+        | 1    1        |
+        | dtype: int64  |
+        └───────────────┘
     """
+    from narwhals.translate import _from_native_impl
+
     obj_any = cast("Any", obj)
     native_obj = obj_any.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
-        return native_obj.index
+        native_index = native_obj.index
+        if not as_series:
+            return native_index
+        compliant = getattr(obj_any, "_compliant_frame", None)
+        if compliant is None:
+            compliant = obj_any._compliant_series
+        ns = obj_any.implementation.to_native_namespace()
+        native_index_series = ns.Series(native_index, name=native_index.name)
+        return _from_native_impl(
+            native_index_series,
+            pass_through=False,
+            eager_only=False,
+            eager_or_interchange_only=False,
+            series_only=True,
+            allow_series=None,
+            version=compliant._version,
+        )
     return None
 
 
