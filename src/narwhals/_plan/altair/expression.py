@@ -275,10 +275,6 @@ for _tp in _UNARY_BOOLEAN:
 
 @_from_function.register(_function.Unary)
 def _(f: _function.Unary, args: tuple[ir.ExprIR], /) -> AltExpr | None:
-    """These are all the things I see from the *other* side.
-
-    - Once I have them, see if we can compose stuff from *here*
-    """
     expr = _from_expr_ir(args[0])
     if supported := _UNARY_SIMPLE.get(type(f)):
         return supported(expr)
@@ -288,9 +284,8 @@ def _(f: _function.Unary, args: tuple[ir.ExprIR], /) -> AltExpr | None:
         case F.Round(decimals=0):
             return ae.round(expr)
         case F.Log() | F.Round():
-            name = type(f).__name__
-            msg = f"Converting {name!r} to a vega expression with non-default arguments is not supported, got: {f.to_function_expr(*args)!r}"
-            raise NotImplementedError(msg)
+            expr_ir = f.to_function_expr(*args)
+            raise unsupported_error(expr_ir, "vega expression", "non-default")
         case strings._StringUnary() | ir.temporal._TemporalUnary():
             msg_0 = f"TODO: ({f.__expr_ir_dispatch__.options.accessor_name!r}, unary) {type(f).__name__!r}"
             raise NotImplementedError(msg_0)
@@ -344,11 +339,9 @@ for _tp in _UNARY_EXPR_FN_NAME:
 
 @_from_expr_ir.register(ir.Sort)
 def _(expr: ir.Sort) -> AltExpr:
+    # https://vega.github.io/vega/docs/expressions/#sort
     if expr.descending or expr.nulls_last:
-        # https://vega.github.io/vega/docs/expressions/#sort
-        name = type(expr).__name__
-        msg = f"Converting {name!r} to a vega expression with non-default arguments is not supported, got: {expr!r}"
-        raise NotImplementedError(msg)
+        raise unsupported_error(expr, "vega expression", "non-default")
     return AltExprStr.call_fn_unary("sort", _from_expr_ir(expr.expr))
 
 
