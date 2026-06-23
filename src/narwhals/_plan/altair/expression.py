@@ -26,8 +26,6 @@ from narwhals._plan.expressions import (
 )
 
 if TYPE_CHECKING:
-    from typing_extensions import LiteralString
-
     from narwhals._plan.typing import Seq
     from narwhals.typing import PythonLiteral
 
@@ -36,6 +34,7 @@ _VT_co = TypeVar("_VT_co", covariant=True)
 _T = TypeVar("_T")
 
 AltExpr: TypeAlias = alt_ir.Expression
+AltFnName: TypeAlias = Literal["if", "max", "min", "indexof", "peek", "length", "sort"]
 
 FnMap: TypeAlias = Mapping[type[ir.Function], _VT_co]
 AltUnary: TypeAlias = Callable[[AltExpr], AltExpr]
@@ -74,9 +73,7 @@ class AltExprStr(alt_ir.Expression):
         return AltExprStr(_list_fmt(exprs, repr))
 
     @staticmethod
-    def call_fn(
-        function: Literal["if", "max", "min"], exprs: Iterable[alt_ir.Expression], /
-    ) -> AltExprStr:
+    def call_fn(function: AltFnName, exprs: Iterable[alt_ir.Expression], /) -> AltExprStr:
         return AltExprStr(f"{function}({_COMMA.join(repr(e) for e in exprs)})")
 
     @staticmethod
@@ -240,7 +237,7 @@ _HORIZONTAL_REDUCE: FnMap[AltBinary] = {
     boolean.AllHorizontal: operator.and_,
     F.SumHorizontal: operator.add,
 }
-_HORIZONTAL_NATIVE_NAME: FnMap[Literal["max", "min"]] = {
+_HORIZONTAL_NATIVE_NAME: FnMap[AltFnName] = {
     F.MaxHorizontal: "max",
     F.MinHorizontal: "min",
 }
@@ -255,7 +252,7 @@ Particularly when what they do is a one-off thing.
 """
 
 # https://github.com/vega/vega/blob/9fef6ea66a02973adc90f6824558c76996a5ef86/packages/vega-util/src/peek.ts
-_UNARY_EXPR_FN_NAME: Mapping[type[ir.ExprIR], LiteralString] = {
+_UNARY_EXPR_FN_NAME: Mapping[type[ir.ExprIR], AltFnName] = {
     agg.Last: "peek",
     agg.Len: "length",
 }
