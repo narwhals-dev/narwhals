@@ -197,25 +197,18 @@ def _then_invert(func: AltUnary, /) -> AltUnary:
     return _
 
 
-def _rewrite_is_in_seq_horizontal(f: boolean.IsInSeq, args: Seq[ir.ExprIR], /) -> AltExpr:
-    """May want to consider a performance warning if `len(f.other) >= SOMETHING`.
+def _rewrite_is_in_seq(f: boolean.IsInSeq, args: Seq[ir.ExprIR], /) -> AltExpr:
+    """Similar to `FieldOneOfPredicate`.
 
-    The intention is to support writing this:
+    Adapted from [vega-lite](https://github.com/vega/vega-lite/blob/91845a3bca89f9e8bd6ae847bc1b3f31cc85e919/src/predicate.ts#L231-L232)
 
-        (alt.datum.label == "Begin") | (alt.datum.label == "End")
+    Can use instead of chaining `__or__`:
 
-    As this:
-
-        nw.col("label").is_in(["Begin", "End"])
-
-    Since `altair` already does an equivalent rewrite for:
-
-        alt.when(datum="Begin", datum="End")
-        (alt.datum.label == "Begin") & (alt.datum.label == "End")
+        (alt.datum.label == "Begin") | (alt.datum.label == "Middle") | (alt.datum.label == "End")
+        nw.col("label").is_in(["Begin", "Middle", "End"])
     """
     prev = _from_expr_ir(args[0])
-    result: AltExpr = functools.reduce(operator.or_, (prev == elem for elem in f.other))
-    return result
+    return AltExprStr(f"indexof({_from_lit(f.other)},{prev!r}) !== -1")
 
 
 def _rewrite_struct_field_getitem(
@@ -253,7 +246,7 @@ _HORIZONTAL_NATIVE_NAME: FnMap[Literal["max", "min"]] = {
 }
 
 _REWRITE_FUNCTION: Final[FnMap[Callable[..., AltExpr]]] = {
-    boolean.IsInSeq: _rewrite_is_in_seq_horizontal,
+    boolean.IsInSeq: _rewrite_is_in_seq,
     ir.struct.FieldByName: _rewrite_struct_field_getitem,
 }
 """Translations that use some non-expression argument of the `Function`.
