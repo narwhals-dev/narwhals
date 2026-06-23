@@ -23,9 +23,12 @@ from narwhals._plan.expressions import (
     functions as F,
     operators as ops,
     strings,
+    temporal,
 )
 
 if TYPE_CHECKING:
+    from altair.vegalite.v6.schema._typing import SingleTimeUnit_T
+
     from narwhals._plan.typing import Seq
     from narwhals.typing import PythonLiteral
 
@@ -34,7 +37,9 @@ _VT_co = TypeVar("_VT_co", covariant=True)
 _T = TypeVar("_T")
 
 AltExpr: TypeAlias = alt_ir.Expression
-AltFnName: TypeAlias = Literal["if", "max", "min", "indexof", "peek", "length", "sort"]
+AltFnName: TypeAlias = Literal[
+    "if", "max", "min", "indexof", "inrange", "peek", "length", "sort"
+]
 
 FnMap: TypeAlias = Mapping[type[ir.Function], _VT_co]
 AltUnary: TypeAlias = Callable[[AltExpr], AltExpr]
@@ -194,6 +199,29 @@ def _then_invert(func: AltUnary, /) -> AltUnary:
     return _
 
 
+def _rewrite_is_between(f: boolean.IsBetween, args: Seq[ir.ExprIR], /) -> AltExpr:
+    """Similar to `FieldRangePredicate`.
+
+    Adapted from [vega-lite](https://github.com/vega/vega-lite/blob/91845a3bca89f9e8bd6ae847bc1b3f31cc85e919/src/predicate.ts#L235-L242)
+
+    Note:
+        Not handling the null cases, as I found no tests in narwhals/polars that expect that to work
+    """
+    if f.closed != "both":
+        expr_ir = f.to_function_expr(*args)
+        raise unsupported_error(expr_ir, "vega expression", "non-default")
+    root = args[0]
+    exprs = (_from_expr_ir(arg) for arg in args)
+    if isinstance(root, ir.FunctionExpr) and (
+        time_unit := _TEMPORAL_TIME_UNIT.get(type(root.function))
+    ):
+        prev, lower, upper = exprs
+        return AltExprStr(
+            f"inrange({prev!r}, [{time_unit}({lower!r}), {time_unit}({upper!r})])"
+        )
+    return AltExprStr.call_fn("inrange", exprs)
+
+
 def _rewrite_is_in_seq(f: boolean.IsInSeq, args: Seq[ir.ExprIR], /) -> AltExpr:
     """Similar to `FieldOneOfPredicate`.
 
@@ -243,10 +271,11 @@ _HORIZONTAL_NATIVE_NAME: FnMap[AltFnName] = {
 }
 
 _REWRITE_FUNCTION: Final[FnMap[Callable[..., AltExpr]]] = {
+    boolean.IsBetween: _rewrite_is_between,
     boolean.IsInSeq: _rewrite_is_in_seq,
     ir.struct.FieldByName: _rewrite_struct_field_getitem,
 }
-"""Translations that use some non-expression argument of the `Function`.
+"""Translations that do something fancy with the `Function`.
 
 Particularly when what they do is a one-off thing.
 """
@@ -258,6 +287,23 @@ _UNARY_EXPR_FN_NAME: Mapping[type[ir.ExprIR], AltFnName] = {
 }
 """Similar to `FunctionExpr[Unary]`, but the expression comes from `self.expr`."""
 
+_TEMPORAL_TIME_UNIT: FnMap[SingleTimeUnit_T] = {
+    temporal.Year: "year",
+    # has no equivalent
+    # - "quarter" -> (Q1-Q4) polars has is without the prefix
+    # - "month" -> (Jan-Dec)
+    temporal.Day: "date",
+    # has no equivalent
+    # - "week" -> (W01-W52)
+    # - "day" -> (Sunday-Saturday)
+    temporal.OrdinalDay: "dayofyear",
+    # NOTE: These aren't quite equivalent (vega -> Time, polars -> Int),
+    # but for the purpose of visualization, you likely want the richer type
+    temporal.Hour: "hours",
+    temporal.Minute: "minutes",
+    temporal.Second: "seconds",
+    temporal.Millisecond: "milliseconds",
+}
 
 for _tp, _rewrite_fn in _REWRITE_FUNCTION.items():
     _from_function.register(_tp, _rewrite_fn)
@@ -278,6 +324,8 @@ def _(f: _function.Unary, args: tuple[ir.ExprIR], /) -> AltExpr | None:
     expr = _from_expr_ir(args[0])
     if supported := _UNARY_SIMPLE.get(type(f)):
         return supported(expr)
+    if time_unit := _TEMPORAL_TIME_UNIT.get(type(f)):
+        return AltExprStr.call_fn_unary(time_unit, expr)
     match f:
         case F.Log(base=math.e):
             return ae.log(expr)
