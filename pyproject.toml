@@ -92,14 +92,14 @@ sklearn = [
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
   # Type checkers
   "mypy==2.1.0",
-  "pyrefly==1.0.0",
+  "pyrefly==1.1.1",
   "pyright",
   # Dependencies
   "pyarrow<24", # temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3560
   "hypothesis>=6.0.0",
   "pytest>=9.0.3",
-  "pandas-stubs==2.3.0.250703",
-  "pyarrow-stubs==19.2",
+  "pandas-stubs==2.3.3.260113",
+  "pyarrow-stubs==19.4",
   "typing-extensions==4.15.0",
   "narwhals[dask,duckdb,ibis,pandas,polars,pyarrow,sql,sqlframe]",
   {include-group = "plugins"},
@@ -138,13 +138,13 @@ extreme-minimum-versions = [
   "setuptools",
   "tzdata",
   "pandas==1.3.4",
-  "polars==0.20.4",
-  "numpy==1.21.4",
+  "polars==1.42.0",
+  "numpy==2.5.0",
   "pyarrow==13.0.0",
-  "pyarrow-stubs<17",
-  "scipy==1.7.3",
-  "scikit-learn==1.1.0",
-  "duckdb==1.1",
+  "pyarrow-stubs<20",
+  "scipy==1.18.0",
+  "scikit-learn==1.9.0",
+  "duckdb==1.5.4",
   {include-group = "tests"},
 ]
 
@@ -152,13 +152,13 @@ extreme-pretty-old-versions = [
   "setuptools",
   "tzdata",
   "pandas==1.4.1",
-  "polars==0.20.4",
-  "numpy==1.22.0",
+  "polars==1.42.0",
+  "numpy==2.5.0",
   "pyarrow==14.0.0",
-  "pyarrow-stubs<17",
-  "scipy==1.8.0",
-  "scikit-learn==1.1.0",
-  "duckdb==1.2",
+  "pyarrow-stubs<20",
+  "scipy==1.18.0",
+  "scikit-learn==1.9.0",
+  "duckdb==1.5.4",
   {include-group = "tests"},
 ]
 
@@ -166,19 +166,19 @@ extreme-not-so-old-versions = [
   "setuptools",
   "tzdata",
   "pandas==2.0.3",
-  "polars==0.20.8",
-  "numpy==1.24.4",
+  "polars==1.42.0",
+  "numpy==2.5.0",
   "pyarrow==15.0.0",
-  "pyarrow-stubs<17",
-  "scipy==1.8.0",
-  "scikit-learn==1.3.0",
-  "duckdb==1.3",
-  "dask[dataframe]==2024.10",
+  "pyarrow-stubs<20",
+  "scipy==1.18.0",
+  "scikit-learn==1.9.0",
+  "duckdb==1.5.4",
+  "dask[dataframe]==2026.6.0",
   {include-group = "tests"},
 ]
 
 min-pyspark-version = [
-  "pyspark==3.5.0",
+  "pyspark==4.1.2",
   {include-group = "core-tests"},
 ]
 
