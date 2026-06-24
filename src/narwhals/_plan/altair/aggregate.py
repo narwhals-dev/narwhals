@@ -11,6 +11,13 @@ except ImportError as err:
 from narwhals._plan import expressions as ir
 from narwhals._plan.altair.exceptions import unsupported_error
 from narwhals._plan.altair.parse import parse_into_named_exprs
+from narwhals._plan.altair.typing import (
+    AggOrWindow,
+    AggregateOp,
+    IntoExprColumn,
+    OutputName,
+    WindowOp,
+)
 from narwhals._plan.expressions import aggregation as agg, functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
 from narwhals.typing import RankMethod, RollingInterpolationMethod
@@ -19,17 +26,9 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from _typeshed import Incomplete
-    from altair.vegalite.v6.schema._typing import AggregateOp_T, WindowOnlyOp_T
 
-    import narwhals._plan as nwp
     from narwhals._plan import _function as _f
 
-    IntoExpr: TypeAlias = nwp.Expr | str
-    """Only expressions or column names will ever be valid in this context."""
-
-OutputName: TypeAlias = str
-
-AggOrWindow_T: TypeAlias = "AggregateOp_T | WindowOnlyOp_T"
 
 Ddof: TypeAlias = int
 """Only `{var,std}(ddof={0,1})` is supported."""
@@ -37,9 +36,12 @@ Ddof: TypeAlias = int
 Quantile: TypeAlias = tuple[RollingInterpolationMethod, float]
 """Only `quantile({0.25,0.75}, "linear")` is supported."""
 
-SUPPORTED_BY_POLARS: tuple[AggOrWindow_T, ...] = ("product", "nth_value")
+WindowParam: TypeAlias = tuple[AggOrWindow, Any]
+"""`(op, param)` in a `WindowFieldDef`."""
 
-UNSUPPORTED: tuple[AggOrWindow_T, ...] = (
+
+SUPPORTED_BY_POLARS: tuple[AggOrWindow, ...] = ("product", "nth_value")
+UNSUPPORTED: tuple[AggOrWindow, ...] = (
     *SUPPORTED_BY_POLARS,
     "ci0",
     "ci1",
@@ -56,7 +58,7 @@ UNSUPPORTED: tuple[AggOrWindow_T, ...] = (
 # need to add an actual `Implode` aggregation, but keep this too
 Implode: Final = Col
 
-AGG_EXPR: Mapping[type[ir.AggExpr | ir.ExprIR], AggregateOp_T] = {
+AGG_EXPR: Mapping[type[ir.AggExpr | ir.ExprIR], AggregateOp] = {
     agg.ArgMax: "argmax",
     agg.ArgMin: "argmin",
     agg.Count: "valid",
@@ -71,27 +73,27 @@ AGG_EXPR: Mapping[type[ir.AggExpr | ir.ExprIR], AggregateOp_T] = {
     Implode: "values",
 }
 
-AGG_EXPR_VAR_STD: Mapping[tuple[type[agg.Std | agg.Var], Ddof], AggregateOp_T] = {
+AGG_EXPR_VAR_STD: Mapping[tuple[type[agg.Std | agg.Var], Ddof], AggregateOp] = {
     (agg.Std, 0): "stdevp",
     (agg.Std, 1): "stdev",
     (agg.Var, 0): "variancep",
     (agg.Var, 1): "variance",
 }
-AGG_EXPR_QUANTILE: Mapping[Quantile, AggregateOp_T] = {
+AGG_EXPR_QUANTILE: Mapping[Quantile, AggregateOp] = {
     ("linear", 0.25): "q1",
     ("linear", 0.75): "q3",
 }
-AGG_FUNC: Mapping[type[_f.Aggregation], AggregateOp_T] = {F.NullCount: "missing"}
+AGG_FUNC: Mapping[type[_f.Aggregation], AggregateOp] = {F.NullCount: "missing"}
 
 
-WINDOW_EXPR: Mapping[type[ir.AggExpr], WindowOnlyOp_T] = {
+WINDOW_EXPR: Mapping[type[ir.AggExpr], WindowOp] = {
     agg.First: "first_value",
     agg.Last: "last_value",
 }
 
 
 # NOTE: Need to enforce `alt.WindowTransform(frame=(None,0))`
-WINDOW_FUNC_CUM: Mapping[type[F.CumAgg], AggregateOp_T] = {
+WINDOW_FUNC_CUM: Mapping[type[F.CumAgg], AggregateOp] = {
     F.CumProd: "product",
     F.CumMin: "min",
     F.CumMax: "max",
@@ -101,13 +103,13 @@ WINDOW_FUNC_CUM: Mapping[type[F.CumAgg], AggregateOp_T] = {
 
 
 # NOTE: Need to convert `RollingOptions` -> frame=(...)
-WINDOW_FUNC_ROLLING: Mapping[type[F.RollingWindow], AggregateOp_T] = {
+WINDOW_FUNC_ROLLING: Mapping[type[F.RollingWindow], AggregateOp] = {
     F.RollingMean: "mean",
     F.RollingSum: "sum",
 }
 # NOTE: Need to convert `RollingOptions` -> frame=(...)
 WINDOW_FUNC_ROLLING_VAR_STD: Mapping[
-    tuple[type[F.RollingStd | F.RollingVar], Ddof], AggregateOp_T
+    tuple[type[F.RollingStd | F.RollingVar], Ddof], AggregateOp
 ] = {
     (F.RollingStd, 0): "stdevp",
     (F.RollingStd, 1): "stdev",
@@ -116,14 +118,11 @@ WINDOW_FUNC_ROLLING_VAR_STD: Mapping[
 }
 
 
-RANK_METHOD_WINDOW: Mapping[RankMethod, WindowOnlyOp_T] = {
+RANK_METHOD_WINDOW: Mapping[RankMethod, WindowOp] = {
     "ordinal": "row_number",
     "dense": "dense_rank",
     "min": "rank",  # not sure if this is equivalent
 }
-
-WindowOp: TypeAlias = tuple[AggOrWindow_T, Any]
-"""`(op, param)` in a `WindowFieldDef`."""
 
 
 # TODO @dangotbanned: Implement `transform_aggregate` support
@@ -132,7 +131,7 @@ def aggregated_field_def(
     alias: OutputName,
     expr: ir.ExprIR,  # noqa: ARG001
 ) -> alt.AggregatedFieldDef | Incomplete:
-    op: AggregateOp_T  # noqa: F842
+    op: AggregateOp  # noqa: F842
     kwds = {"as": alias}  # noqa: F841
     raise NotImplementedError("todo")
 
@@ -146,7 +145,7 @@ def agg_field_def_to_position_field_def(
 
 
 @functools.singledispatch
-def _function_window(f: ir.Function, /) -> WindowOp | None:  # noqa: ARG001
+def _function_window(f: ir.Function, /) -> WindowParam | None:  # noqa: ARG001
     return None
 
 
@@ -155,13 +154,13 @@ for _tp in AGG_FUNC:
 
 
 @_function_window.register(F.Shift)
-def shift_to_window_op(f: F.Shift, /) -> WindowOp:
+def shift_to_window_op(f: F.Shift, /) -> WindowParam:
     n = f.n
     return ("lead", n) if n >= 1 else ("lag", abs(n))
 
 
 @_function_window.register(F.Rank)
-def rank_to_window_op(f: F.Rank, /) -> WindowOp | None:
+def rank_to_window_op(f: F.Rank, /) -> WindowParam | None:
     opts = f.options
     if (op := RANK_METHOD_WINDOW.get(opts.method)) and not opts.descending:
         return op, alt.Undefined
@@ -178,7 +177,7 @@ def window_field_def(
     - by default, everything is cumulative
     - `frame` can be used to define either cumulative or rolling
     """
-    op: WindowOnlyOp_T | AggregateOp_T
+    op: AggOrWindow
     param: alt.typing.Optional[Any] = alt.Undefined
     kwds = {"as": alias}
     if isinstance(expr, ir.FunctionExpr):
@@ -215,7 +214,9 @@ def window_field_def(
     return alt.WindowFieldDef(op=op, field=field, param=param, **kwds)
 
 
-def window_transform(*exprs: IntoExpr, **named_exprs: IntoExpr) -> alt.WindowTransform:
+def window_transform(
+    *exprs: IntoExprColumn, **named_exprs: IntoExprColumn
+) -> alt.WindowTransform:
     """Parse into narwhals expressions and translate to a single window transform."""
     parsed = parse_into_named_exprs(*exprs, **named_exprs)
     return alt.WindowTransform([window_field_def(alias, expr) for alias, expr in parsed])

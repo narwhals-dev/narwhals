@@ -29,6 +29,7 @@ from narwhals._plan.expressions import (
 if TYPE_CHECKING:
     from altair.vegalite.v6.schema._typing import SingleTimeUnit_T
 
+    from narwhals._plan.altair.typing import VegaExpr
     from narwhals._plan.typing import Seq
     from narwhals.typing import PythonLiteral
 
@@ -58,13 +59,12 @@ class AltExprStr(alt_ir.Expression):
         - I just want a thin wrapper around a string and to hash it
     """
 
-    js_repr: str
-    """An *already-repr'd* vega expression."""
+    js_repr: VegaExpr
 
-    def __init__(self, js_repr: str, /) -> None:
+    def __init__(self, js_repr: VegaExpr, /) -> None:
         super().__init__(js_repr=js_repr)
 
-    def __repr__(self) -> str:
+    def __repr__(self) -> VegaExpr:
         return self.js_repr
 
     __str__ = __repr__
@@ -102,11 +102,13 @@ class AltExprStr(alt_ir.Expression):
         return AltExprStr(f"{owner}[{item!r}]")
 
 
-def _list_fmt(values: Iterable[_T], to_str: Callable[[_T], str], /) -> str:
+def _list_fmt(values: Iterable[_T], to_str: Callable[[_T], str], /) -> VegaExpr:
     return f"[{_COMMA.join(to_str(value) for value in values)}]"
 
 
-def _dict_fmt(items: Iterable[tuple[str, _T]], to_str: Callable[[_T], str], /) -> str:
+def _dict_fmt(
+    items: Iterable[tuple[str, _T]], to_str: Callable[[_T], str], /
+) -> VegaExpr:
     lb, rb = "{", "}"
     return f"{lb}{_COMMA.join(f'{k!r}:{to_str(v)}' for k, v in items)}{rb}"
 
@@ -115,7 +117,7 @@ def _dict_fmt(items: Iterable[tuple[str, _T]], to_str: Callable[[_T], str], /) -
 ae = alt.expr
 
 
-def into_vega_expr(expr: ir.ExprIR) -> str:
+def into_vega_expr(expr: ir.ExprIR) -> VegaExpr:
     """Convert a narwhals expression into an altair-compatible vega expression.
 
     ## Notes
@@ -399,7 +401,7 @@ def _(expr: ir.Lit[PythonLiteral]) -> AltExpr:
 
 
 @functools.singledispatch
-def _from_lit(value: PythonLiteral) -> str:
+def _from_lit(value: PythonLiteral) -> VegaExpr:
     return repr(value)
 
 
@@ -410,13 +412,13 @@ _from_lit.register(bool, lambda value: "true" if value else "false")
 
 @_from_lit.register(list)
 @_from_lit.register(tuple)
-def _(value: list[Any] | tuple[Any, ...]) -> str:
+def _(value: list[Any] | tuple[Any, ...]) -> VegaExpr:
     """Adds support for `nw.lit([1,2,3])` -> `"[1,2,3]"`."""
     return _list_fmt(value, _from_lit)
 
 
 @_from_lit.register(dict)
-def _(value: dict[str, Any]) -> str:
+def _(value: dict[str, Any]) -> VegaExpr:
     """Adds support for `nw.lit({"a": 1, "b": 2})` -> `"{'a': 1, 'b': 2}"`."""
     return _dict_fmt(value.items(), _from_lit)
 
