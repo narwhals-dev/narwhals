@@ -5,7 +5,7 @@
   "labels": ["dependencies"],
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 6am"]
+    "schedule": ["* 0-5 * * *"]
   },
   "packageRules": [
     {
