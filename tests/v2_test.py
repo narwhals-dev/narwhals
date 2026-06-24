@@ -116,13 +116,14 @@ def test_when_then_otherwise_stable_expr() -> None:
     otherwise = (
         nw_v2.when(nw_v2.col("a").is_null()).then(nw_v2.lit(0)).otherwise(nw_v2.col("a"))
     )
-    chained = nw_v2.when(nw_v2.col("a") > 1).then("b").when(nw_v2.col("a") > 2).then("c")
-    assert isinstance(otherwise, nw_v2.Expr)
-    assert isinstance(chained, nw_v2.Expr)
-    exprs: list[nw_v2.Expr] = [otherwise.alias("a"), chained]
-    assert len(exprs) == 2
     if TYPE_CHECKING:
         assert_type(otherwise, nw_v2.Expr)
+
+    chained = nw_v2.when(nw_v2.col("a") > 1).then("b").when(nw_v2.col("a") > 2).then("c")
+    exprs: list[nw_v2.Expr] = [otherwise.alias("a"), chained]
+    assert len(exprs) == 2
+    assert isinstance(otherwise, nw_v2.Expr)
+    assert isinstance(chained, nw_v2.Expr)
 
 
 def test_constructors() -> None:
