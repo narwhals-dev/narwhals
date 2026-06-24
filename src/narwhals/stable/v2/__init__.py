@@ -904,7 +904,7 @@ class Then(nw_f.Then, Expr):
     def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         return When(*predicates, chain=self._chain)
 
-    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral | _1DArray) -> Expr:
+    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Expr:
         return _stableify(super().otherwise(otherwise_value))
 
 
