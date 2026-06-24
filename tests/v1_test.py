@@ -119,6 +119,21 @@ def test_when_then() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
+def test_when_then_otherwise_stable_expr() -> None:
+    # `Then.otherwise` and chained `Then.when` must stay the stable `Expr` subclass,
+    # both at runtime and for type checkers, so the result fits in `list[nw_v1.Expr]`.
+    otherwise = (
+        nw_v1.when(nw_v1.col("a").is_null()).then(nw_v1.lit(0)).otherwise(nw_v1.col("a"))
+    )
+    chained = nw_v1.when(nw_v1.col("a") > 1).then("b").when(nw_v1.col("a") > 2).then("c")
+    assert isinstance(otherwise, nw_v1.Expr)
+    assert isinstance(chained, nw_v1.Expr)
+    exprs: list[nw_v1.Expr] = [otherwise.alias("a"), chained]
+    assert len(exprs) == 2
+    if TYPE_CHECKING:
+        assert_type(otherwise, nw_v1.Expr)
+
+
 def test_constructors() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
