@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Final, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, overload
 
 try:
     import altair as alt
@@ -9,7 +9,7 @@ except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
 from narwhals._plan import expressions as ir
-from narwhals._plan.altair.exceptions import unsupported_error
+from narwhals._plan.altair.exceptions import Target, unsupported_error
 from narwhals._plan.altair.parse import parse_into_named_exprs
 from narwhals._plan.altair.typing import (
     AggOrWindow,
@@ -19,24 +19,19 @@ from narwhals._plan.altair.typing import (
     WindowOp,
 )
 from narwhals._plan.expressions import aggregation as agg, functions as F
-from narwhals._plan.expressions.expr import Col, LenStar
-from narwhals.typing import RankMethod, RollingInterpolationMethod
+from narwhals._plan.expressions.expr import Col
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from _typeshed import Incomplete
-
     from narwhals._plan import _function as _f
+    from narwhals._plan.altair import typing as alt_t
+    from narwhals.typing import RankMethod
 
 
-Ddof: TypeAlias = int
-"""Only `{var,std}(ddof={0,1})` is supported."""
+Incomplete: TypeAlias = Any
 
-Quantile: TypeAlias = tuple[RollingInterpolationMethod, float]
-"""Only `quantile({0.25,0.75}, "linear")` is supported."""
-
-WindowParam: TypeAlias = tuple[AggOrWindow, Any]
+WindowParam: TypeAlias = tuple[AggOrWindow, alt.typing.Optional[float]]
 """`(op, param)` in a `WindowFieldDef`."""
 
 
@@ -58,31 +53,31 @@ UNSUPPORTED: tuple[AggOrWindow, ...] = (
 # need to add an actual `Implode` aggregation, but keep this too
 Implode: Final = Col
 
-AGG_EXPR: Mapping[type[ir.AggExpr | ir.ExprIR], AggregateOp] = {
-    agg.ArgMax: "argmax",
-    agg.ArgMin: "argmin",
-    agg.Count: "valid",
-    agg.Len: "count",  # > Note: 'count' operates directly on the input objects and return the same value regardless of the provided field.
-    LenStar: "count",
-    agg.Max: "max",
-    agg.Mean: "mean",
-    agg.Median: "median",
-    agg.Min: "min",
-    agg.NUnique: "distinct",
-    agg.Sum: "sum",
-    Implode: "values",
-}
 
-AGG_EXPR_VAR_STD: Mapping[tuple[type[agg.Std | agg.Var], Ddof], AggregateOp] = {
-    (agg.Std, 0): "stdevp",
-    (agg.Std, 1): "stdev",
-    (agg.Var, 0): "variancep",
-    (agg.Var, 1): "variance",
+_AggOptions: TypeAlias = tuple[Incomplete, ...]
+"""Arguments from an aggregation expression that are supported."""
+
+_AggExprKey: TypeAlias = tuple[type[ir.AggExpr], _AggOptions]
+
+AGG_EXPR: Mapping[_AggExprKey, AggregateOp] = {
+    (agg.Count, ()): "valid",
+    (agg.Len, ()): "count",  # > returns the same value regardless of ... field.
+    (agg.Max, ()): "max",
+    (agg.Mean, ()): "mean",
+    (agg.Median, ()): "median",
+    (agg.Min, ()): "min",
+    (agg.NUnique, ()): "distinct",
+    (agg.Sum, ()): "sum",
+    (agg.Std, (0,)): "stdevp",
+    (agg.Std, (1,)): "stdev",
+    (agg.Var, (0,)): "variancep",
+    (agg.Var, (1,)): "variance",
+    (agg.Quantile, ("linear", 0.25)): "q1",
+    (agg.Quantile, ("linear", 0.75)): "q3",
 }
-AGG_EXPR_QUANTILE: Mapping[Quantile, AggregateOp] = {
-    ("linear", 0.25): "q1",
-    ("linear", 0.75): "q3",
-}
+"""Mapping from supported aggregations to their `AggregateOp` equivalent."""
+
+
 AGG_FUNC: Mapping[type[_f.Aggregation], AggregateOp] = {F.NullCount: "missing"}
 
 
@@ -109,7 +104,7 @@ WINDOW_FUNC_ROLLING: Mapping[type[F.RollingWindow], AggregateOp] = {
 }
 # NOTE: Need to convert `RollingOptions` -> frame=(...)
 WINDOW_FUNC_ROLLING_VAR_STD: Mapping[
-    tuple[type[F.RollingStd | F.RollingVar], Ddof], AggregateOp
+    tuple[type[F.RollingStd | F.RollingVar], int], AggregateOp
 ] = {
     (F.RollingStd, 0): "stdevp",
     (F.RollingStd, 1): "stdev",
@@ -123,25 +118,6 @@ RANK_METHOD_WINDOW: Mapping[RankMethod, WindowOp] = {
     "dense": "dense_rank",
     "min": "rank",  # not sure if this is equivalent
 }
-
-
-# TODO @dangotbanned: Implement `transform_aggregate` support
-# (remember that this should be adaptable for encodings like `alt.PositionFieldDef`)
-def aggregated_field_def(
-    alias: OutputName,
-    expr: ir.ExprIR,  # noqa: ARG001
-) -> alt.AggregatedFieldDef | Incomplete:
-    op: AggregateOp  # noqa: F842
-    kwds = {"as": alias}  # noqa: F841
-    raise NotImplementedError("todo")
-
-
-def agg_field_def_to_position_field_def(
-    obj: alt.AggregatedFieldDef,  # noqa: ARG001
-) -> alt.PositionFieldDef:
-    # NOTE: there's no typing for attribute access
-    _remap_fields = {"op": "aggregate", "field": "field", "as": "title"}
-    raise NotImplementedError("todo")
 
 
 @functools.singledispatch
@@ -167,6 +143,45 @@ def rank_to_window_op(f: F.Rank, /) -> WindowParam | None:
     return None
 
 
+@overload
+def from_agg_expr(expr: ir.AggExpr, context: Literal["window"]) -> alt_t.WindowField: ...
+@overload
+def from_agg_expr(expr: ir.AggExpr, context: Literal["aggregate"]) -> alt_t.AggField: ...
+@overload
+def from_agg_expr(expr: ir.AggExpr, context: Literal["encoding"]) -> alt_t.Field: ...
+def from_agg_expr(
+    expr: ir.AggExpr, context: Target
+) -> alt_t.Field | alt_t.AggField | alt_t.WindowField:
+    prev = expr.expr
+    if isinstance(prev, Col):
+        key = _agg_expr_key(expr)
+        if (op := AGG_EXPR.get(key)) is None:
+            raise unsupported_error(
+                expr, context, reason=("non-default" if key[1] != () else None)
+            )
+
+        return {"field": prev.name, "op": op}
+
+    raise unsupported_error(expr, context)
+
+
+@functools.singledispatch
+def _agg_expr_key(expr: ir.AggExpr) -> _AggExprKey:
+    """Destructure an `AggExpr` into the parts that dictate if we can support it."""
+    return type(expr), ()
+
+
+@_agg_expr_key.register(agg.Quantile)
+def _(expr: agg.Quantile) -> _AggExprKey:
+    return type(expr), (expr.interpolation, expr.quantile)
+
+
+@_agg_expr_key.register(agg.Std)
+@_agg_expr_key.register(agg.Var)
+def _(expr: agg.Std | agg.Var) -> _AggExprKey:
+    return type(expr), (expr.ddof,)
+
+
 # TODO @dangotbanned: Simplify the `AggExpr` branch
 # TODO @dangotbanned: Change the shape of it to allow using `over` to split out multiple `alt.WindowTransform`s
 def window_field_def(
@@ -189,22 +204,7 @@ def window_field_def(
         field = expr.args[0].name
 
     elif isinstance(expr, ir.AggExpr):
-        if (supported := AGG_EXPR.get(type(expr))) is None:
-            match expr:
-                case agg.Quantile(interpolation=i, quantile=q) if (
-                    i,
-                    q,
-                ) in AGG_EXPR_QUANTILE:
-                    op = AGG_EXPR_QUANTILE[(i, q)]
-                case agg.Std(ddof=ddof) | agg.Var(ddof=ddof) if ddof in {0, 1}:
-                    op = AGG_EXPR_VAR_STD[(type(expr), ddof)]
-                case _:
-                    raise unsupported_error(expr, "window")
-        else:
-            op = supported
-        if not isinstance(expr.expr, ir.Column):
-            raise unsupported_error(expr, "window")
-        field = expr.expr.name
+        return alt.WindowFieldDef(**from_agg_expr(expr, "window"), **kwds)
 
     elif isinstance(expr, Col):
         op = "values"

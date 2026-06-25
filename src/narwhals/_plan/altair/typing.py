@@ -63,8 +63,11 @@ IntoExpr: TypeAlias = IntoExprColumn | PythonLiteral
 """Anything that can be converted into an expression."""
 
 
-AggregateOp: TypeAlias = alt_t.AggregateOp_T
-"""Aggregates accepted by `WindowFieldDef(op=...)`."""
+AggregateOp: TypeAlias = alt_t.NonArgAggregateOp_T
+"""Aggregates accepted by `WindowFieldDef(op=...)`.
+
+Excludes `"argmin"`, `"argmax"` as they have a very different meaning to the polars methods.
+"""
 
 WindowOp: TypeAlias = alt_t.WindowOnlyOp_T
 """Window functions accepted by `WindowFieldDef(op=...)`."""
@@ -83,7 +86,7 @@ class ArgMax(TypedDict):
     argmax: FieldName
 
 
-Aggregate: TypeAlias = alt_t.NonArgAggregateOp_T | ArgMax | ArgMin
+Aggregate: TypeAlias = AggregateOp | ArgMax | ArgMin
 """Anything accepted by `Encoding(aggregate=...)`.
 
 - Probably gonna be annoying to wrap/unwrap (internally).
@@ -153,3 +156,17 @@ class Value(TypedDict):
     """Shared by all values."""
 
     value: HasExpr | alt_t.PrimitiveValue_T
+
+
+AggField = TypedDict(
+    "AggField", {"field": FieldName, "op": AggregateOp, "as": "NotRequired[FieldName]"}
+)
+WindowField = TypedDict(
+    "WindowField",
+    {
+        "field": FieldName,
+        "op": AggOrWindow,
+        "as": "NotRequired[FieldName]",
+        "param": "NotRequired[float]",
+    },
+)
