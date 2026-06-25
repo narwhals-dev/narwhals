@@ -182,10 +182,10 @@ def window_field_def(
     kwds = {"as": alias}
     if isinstance(expr, ir.FunctionExpr):
         if (window_op := _function_window(expr.function)) is None:
-            raise unsupported_error(expr, "window transform")
+            raise unsupported_error(expr, "window")
         op, param = window_op
-        if not isinstance(expr.args[0], ir.Column):
-            raise unsupported_error(expr, "window transform")
+        if not isinstance(expr.args[0], Col):
+            raise unsupported_error(expr, "window")
         field = expr.args[0].name
 
     elif isinstance(expr, ir.AggExpr):
@@ -199,18 +199,18 @@ def window_field_def(
                 case agg.Std(ddof=ddof) | agg.Var(ddof=ddof) if ddof in {0, 1}:
                     op = AGG_EXPR_VAR_STD[(type(expr), ddof)]
                 case _:
-                    raise unsupported_error(expr, "window transform")
+                    raise unsupported_error(expr, "window")
         else:
             op = supported
         if not isinstance(expr.expr, ir.Column):
-            raise unsupported_error(expr, "window transform")
+            raise unsupported_error(expr, "window")
         field = expr.expr.name
 
-    elif isinstance(expr, ir.Column):
+    elif isinstance(expr, Col):
         op = "values"
         field = expr.name
     else:
-        raise unsupported_error(expr, "window transform")
+        raise unsupported_error(expr, "window")
     return alt.WindowFieldDef(op=op, field=field, param=param, **kwds)
 
 

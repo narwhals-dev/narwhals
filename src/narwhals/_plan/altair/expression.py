@@ -134,7 +134,7 @@ def _from_expr_ir(expr: ir.ExprIR) -> AltExpr:
     # - KeepName, RenameAlias
     # - Alias (only the top-level allowed)
     # - SelectorIR (altair data model is probably too fuzzy for this)
-    raise unsupported_error(expr, "vega expression")
+    raise unsupported_error(expr, "expr")
 
 
 @_from_expr_ir.register(ir.Column)
@@ -162,7 +162,7 @@ def _function_expr(expr: ir.FunctionExpr) -> AltExpr:
     result = _from_function(expr.function, expr.args)
     if result is not None:
         return result
-    raise unsupported_error(expr, "vega expression")
+    raise unsupported_error(expr, "expr")
 
 
 @functools.singledispatch
@@ -211,7 +211,7 @@ def _rewrite_is_between(f: boolean.IsBetween, args: Seq[ir.ExprIR], /) -> AltExp
     """
     if f.closed != "both":
         expr_ir = f.to_function_expr(*args)
-        raise unsupported_error(expr_ir, "vega expression", "non-default")
+        raise unsupported_error(expr_ir, "expr", "non-default")
     root = args[0]
     exprs = (_from_expr_ir(arg) for arg in args)
     if isinstance(root, ir.FunctionExpr) and (
@@ -335,7 +335,7 @@ def _(f: _function.Unary, args: tuple[ir.ExprIR], /) -> AltExpr | None:
             return ae.round(expr)
         case F.Log() | F.Round():
             expr_ir = f.to_function_expr(*args)
-            raise unsupported_error(expr_ir, "vega expression", "non-default")
+            raise unsupported_error(expr_ir, "expr", "non-default")
         case strings._StringUnary() | ir.temporal._TemporalUnary():
             msg_0 = f"TODO: ({f.__expr_ir_dispatch__.options.accessor_name!r}, unary) {type(f).__name__!r}"
             raise NotImplementedError(msg_0)
@@ -370,7 +370,7 @@ def _(expr: ir.HorizontalExpr) -> AltExpr:
     result = _from_function_horizontal(expr.function, args)
     if result is not None:
         return result
-    raise unsupported_error(expr, "vega expression")
+    raise unsupported_error(expr, "expr")
 
 
 @_from_expr_ir.register(agg.First)
@@ -391,7 +391,7 @@ for _tp in _UNARY_EXPR_FN_NAME:
 def _(expr: ir.Sort) -> AltExpr:
     # https://vega.github.io/vega/docs/expressions/#sort
     if expr.descending or expr.nulls_last:
-        raise unsupported_error(expr, "vega expression", "non-default")
+        raise unsupported_error(expr, "expr", "non-default")
     return AltExprStr.call_fn_unary("sort", _from_expr_ir(expr.expr))
 
 
