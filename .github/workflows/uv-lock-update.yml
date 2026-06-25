@@ -1,0 +1,55 @@
+name: uv lock update
+
+on:
+  schedule:
+    # Every day at 04:00 UTC
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: uv-lock-update
+  cancel-in-progress: true
+
+jobs:
+  uv-lock-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      - name: Refresh lockfile
+        # Equivalent of `uv lock -U`: bump every dependency to the latest
+        # version allowed by the pyproject.toml constraints.
+        run: uv lock --upgrade
+      - name: Open or update PR if changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock is already up to date."
+            exit 0
+          fi
+          branch="ci/uv-lock-update"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add uv.lock
+          git commit -m "chore(deps): refresh uv.lock via \`uv lock --upgrade\`"
+          # Rolling branch: force-push so a single PR always carries the latest lockfile.
+          git push --force --set-upstream origin "$branch"
+          open_prs=$(gh pr list --head "$branch" --state open --json number --jq 'length')
+          if [ "$open_prs" -eq 0 ]; then
+            gh pr create \
+              --title "chore(deps): refresh uv.lock" \
+              --body "Automated refresh of \`uv.lock\` to the latest versions allowed by the \`pyproject.toml\` constraints, via \`uv lock --upgrade\`." \
+              --base main \
+              --head "$branch" \
+              --label dependencies
+          else
+            echo "PR already open for $branch; force-pushed the latest lockfile to it."
+          fi
