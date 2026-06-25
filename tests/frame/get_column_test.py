@@ -15,7 +15,7 @@ def test_get_column(constructor_eager: ConstructorEager) -> None:
         (KeyError, TypeError),
         match=(
             r"Expected str|'int' object cannot be (converted|cast)|0"
-            r"|argument 'name': 'int' object is not an instance of 'str'"
+            r"|'int' object is not an instance of 'str'"
         ),
     ):
         # Check that trying to get a column by position is disallowed here.
