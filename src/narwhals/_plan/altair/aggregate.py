@@ -154,13 +154,15 @@ def from_agg_expr(
 ) -> alt_t.Field | alt_t.AggField | alt_t.WindowField:
     prev = expr.expr
     if isinstance(prev, Col):
+        field = prev.name
         key = _agg_expr_key(expr)
         if (op := AGG_EXPR.get(key)) is None:
             raise unsupported_error(
                 expr, context, reason=("non-default" if key[1] != () else None)
             )
-
-        return {"field": prev.name, "op": op}
+        if context == "encoding":
+            return {"field": field, "aggregate": op, "type": "quantitative"}
+        return {"field": field, "op": op}
 
     raise unsupported_error(expr, context)
 
