@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
-    from narwhals._utils import _LimitedContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         IntoSchema,

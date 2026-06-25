@@ -1253,8 +1253,6 @@ class PandasLikeDataFrame(
             # Per-row "shape" of the explode: a real list (length >= 1) keeps its
             # length, while an empty `[]` / null list maps to *minus* the number of rows
             # it expands to under the flags (`0` => drops out, `-1` => a single null row).
-            # Reals stay positive, so they never compare equal to an empty/null list:
-            # Polars treats those as incompatible when exploding several columns at once.
             raw = native_frame[name].list.len()
             is_null = native_frame[name].isna()
             return raw.mask(raw == 0, -empty_rows).where(~is_null, -null_rows)
