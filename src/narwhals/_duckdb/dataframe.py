@@ -29,7 +29,6 @@ from narwhals._utils import (
     requires,
 )
 from narwhals.dependencies import get_duckdb
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -464,39 +463,38 @@ class DuckDBLazyFrame(
         keep_condition = reduce(and_, (col(name).isnotnull() for name in subset_))
         return self._with_native(self.native.filter(keep_condition))
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = self._version.dtypes
-        schema = self.collect_schema()
-        for name in columns:
-            dtype = schema[name]
-            if dtype != dtypes.List:
-                msg = (
-                    f"`explode` operation not supported for dtype `{dtype}`, "
-                    "expected List type"
-                )
-                raise InvalidOperationError(msg)
-
-        if len(columns) != 1:
-            msg = (
-                "Exploding on multiple columns is not supported with DuckDB backend since "
-                "we cannot guarantee that the exploded columns have matching element counts."
-            )
-            raise NotImplementedError(msg)
-
-        col_to_explode = col(columns[0])
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        col_to_explode = col(self._validate_explode_columns(columns))
+        col_is_valid = col_to_explode.isnotnull()
         rel = self.native
         original_columns = self.columns
 
         zero = lit(0)
-        not_null_condition = col_to_explode.isnotnull() & F("len", col_to_explode) > zero
-        non_null_rel = rel.filter(not_null_condition).select(
+        length = F("len", col_to_explode)
+        is_non_empty = col_is_valid & (length > zero)
+        non_null_rel = rel.filter(is_non_empty).select(
             *(
                 F("unnest", col_to_explode).alias(name) if name in columns else name
                 for name in original_columns
             )
         )
 
-        null_rel = rel.filter(~not_null_condition).select(
+        # Empty and/or null lists are emitted as a single null row, depending on flags.
+        null_condition = None
+        if keep_nulls:
+            null_condition = ~col_is_valid
+        if empty_as_null:
+            is_empty = col_is_valid & (length == zero)
+            null_condition = (
+                is_empty if null_condition is None else (null_condition | is_empty)
+            )
+
+        if null_condition is None:
+            return self._with_native(non_null_rel)
+
+        null_rel = rel.filter(null_condition).select(
             *(
                 lit(None).alias(name) if name in columns else name
                 for name in original_columns
