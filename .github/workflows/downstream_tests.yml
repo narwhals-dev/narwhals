@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - src/**
+      - .github/workflows/downstream_tests.yml
   workflow_call:
     inputs:
       skip-fairlearn:

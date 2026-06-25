@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "**.py"
+      - .github/workflows/extremes.yml
 
 env:
   PY_COLORS: 1

@@ -6,6 +6,7 @@ on:
       - src/narwhals/_expression_parsing.py
       - src/narwhals/_pandas_like/**
       - tests/**
+      - .github/workflows/pytest-modin.yml
   workflow_call:
 
 env:

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "**.py"
+      - .github/workflows/pytest.yml
   workflow_call:
 
 env:

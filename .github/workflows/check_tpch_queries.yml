@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "**.py"
+      - .github/workflows/check_tpch_queries.yml
 
 env:
   PY_COLORS: 1

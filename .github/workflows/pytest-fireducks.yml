@@ -5,6 +5,7 @@ on:
     paths:
       - src/**
       - tests/**
+      - .github/workflows/pytest-fireducks.yml
   workflow_call:
 
 env:
