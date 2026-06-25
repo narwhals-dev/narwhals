@@ -3,6 +3,8 @@ from __future__ import annotations
 import functools
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, overload
 
+from narwhals._plan.options import SortMultipleOptions
+
 try:
     import altair as alt
 except ImportError as err:
@@ -119,6 +121,18 @@ RANK_METHOD_WINDOW: Mapping[RankMethod, WindowOp] = {
     "min": "rank",  # not sure if this is equivalent
 }
 
+_Desc: TypeAlias = bool
+_NullsLast: TypeAlias = bool
+_SortByOptions: TypeAlias = tuple[_Desc, _NullsLast]
+
+AGG_MAX_MIN_BY: Mapping[
+    tuple[type[agg.First | agg.Last], _SortByOptions], Literal["argmax", "argmin"]
+] = {
+    (agg.Last, (False, False)): "argmax",
+    (agg.First, (False, True)): "argmin",
+    (agg.First, (True, True)): "argmax",
+}
+
 
 @functools.singledispatch
 def _function_window(f: ir.Function, /) -> WindowParam | None:  # noqa: ARG001
@@ -163,6 +177,20 @@ def from_agg_expr(
         if context == "encoding":
             return {"field": field, "aggregate": op, "type": "quantitative"}
         return {"field": field, "op": op}
+
+    # NOTE: See `typing.Aggregate` for how this rewrite works
+    if context == "encoding" and isinstance(expr, (agg.First, agg.Last)):
+        match prev:
+            case ir.SortBy(
+                expr=Col(name=field),
+                by=(Col(name=by),),
+                options=SortMultipleOptions(descending=(desc,), nulls_last=(nulls,)),
+            ) if op := AGG_MAX_MIN_BY.get((type(expr), (desc, nulls))):
+                return {
+                    "field": field,
+                    "aggregate": ({"argmin": by} if op == "argmin" else {"argmax": by}),
+                    "type": "quantitative",
+                }
 
     raise unsupported_error(expr, context)
 

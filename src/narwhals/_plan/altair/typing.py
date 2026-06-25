@@ -89,11 +89,26 @@ class ArgMax(TypedDict):
 Aggregate: TypeAlias = AggregateOp | ArgMax | ArgMin
 """Anything accepted by `Encoding(aggregate=...)`.
 
-- Probably gonna be annoying to wrap/unwrap (internally).
-- But these are aggs from narwhals that'll be easier to write now as expressions.
+## [`Arg{Max,Min}`](https://vega.github.io/vega-lite/docs/aggregate.html#argmax)
 
-See Also:
-    [Argmin / Argmax]: https://vega.github.io/vega-lite/docs/aggregate.html#argmax
+[`pl.Expr.{max,min}_by`]: https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.max_by.html#polars.Expr.max_by
+
+These guys are pretty strange:
+
+- No other aggregations in vega-lite accept arguments
+    - Apparently you can use it without arguments in a `transform`
+- The behavior in the example is equivalent to [`pl.Expr.{max,min}_by`]
+- We don't have `nw.Expr.{max,min}_by`
+
+*But*, we can use `sort_by` to match how max/min ignore nulls:
+
+    alt.X("Production Budget", aggregate={"argmax": "US Gross"})
+    pl.col("Production Budget").max_by("US Gross")
+    nwp.col("Production Budget").sort_by("US Gross").last()
+
+    alt.X("Production Budget", aggregate={"argmin": "US Gross"})
+    pl.col("Production Budget").min_by("US Gross")
+    nwp.col("Production Budget").sort_by("US Gross", nulls_last=True).first()
 """
 
 
