@@ -633,7 +633,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         rng = np.random.default_rng(seed=seed)
         idx = np.arange(num_rows)
-        mask = rng.choice(idx, size=n, replace=with_replacement)
+        mask = cast("_1DArray", rng.choice(idx, size=n, replace=with_replacement))
         return self._with_native(self.native.take(mask))
 
     def fill_nan(self, value: float | None) -> Self:
