@@ -162,10 +162,12 @@ def from_agg_expr(expr: ir.AggExpr, context: Literal["window"]) -> alt_t.WindowF
 @overload
 def from_agg_expr(expr: ir.AggExpr, context: Literal["aggregate"]) -> alt_t.AggField: ...
 @overload
-def from_agg_expr(expr: ir.AggExpr, context: Literal["encoding"]) -> alt_t.Field: ...
+def from_agg_expr(
+    expr: ir.AggExpr, context: Literal["encoding"]
+) -> alt_t.FieldClosed: ...
 def from_agg_expr(
     expr: ir.AggExpr, context: Target
-) -> alt_t.Field | alt_t.AggField | alt_t.WindowField:
+) -> alt_t.FieldClosed | alt_t.AggField | alt_t.WindowField:
     prev = expr.expr
     if isinstance(prev, Col):
         field = prev.name
