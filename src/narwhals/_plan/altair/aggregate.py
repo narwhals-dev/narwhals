@@ -83,9 +83,9 @@ AGG_EXPR: Mapping[_AggExprKey, AggregateOp] = {
 AGG_FUNC: Mapping[type[_f.Aggregation], AggregateOp] = {F.NullCount: "missing"}
 
 
-WINDOW_EXPR: Mapping[type[ir.AggExpr], WindowOp] = {
-    agg.First: "first_value",
-    agg.Last: "last_value",
+WINDOW_ONLY_AGG_EXPR: Mapping[_AggExprKey, WindowOp] = {
+    (agg.First, ()): "first_value",
+    (agg.Last, ()): "last_value",
 }
 
 
@@ -171,6 +171,8 @@ def from_agg_expr(
         field = prev.name
         key = _agg_expr_key(expr)
         if (op := AGG_EXPR.get(key)) is None:
+            if context == "window" and (wop := WINDOW_ONLY_AGG_EXPR.get(key)):
+                return {"field": field, "op": wop}
             raise unsupported_error(
                 expr, context, reason=("non-default" if key[1] != () else None)
             )
@@ -212,7 +214,6 @@ def _(expr: agg.Std | agg.Var) -> _AggExprKey:
     return type(expr), (expr.ddof,)
 
 
-# TODO @dangotbanned: Simplify the `AggExpr` branch
 # TODO @dangotbanned: Change the shape of it to allow using `over` to split out multiple `alt.WindowTransform`s
 def window_field_def(
     alias: OutputName, expr: ir.ExprIR
