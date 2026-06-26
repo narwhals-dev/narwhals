@@ -8,18 +8,21 @@ if find_spec("altair") is None:
     msg = "`altair` is required to convert `ExprIR`s"
     raise ModuleNotFoundError(msg)
 
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, Union
+import datetime as dt
+from typing import TYPE_CHECKING, Literal, TypeAlias, Union
 
 from altair.expr import core as alt_ir
 from altair.vegalite.v6.schema import _typing as alt_t
 
 if TYPE_CHECKING:
     from _typeshed import Incomplete
-    from typing_extensions import NotRequired
+    from altair.typing import Optional
+    from typing_extensions import NotRequired, TypedDict
 
     import narwhals._plan as nwp
     from narwhals._plan.typing import OneOrSeq
-
+else:
+    from typing import TypedDict
 
 VegaExpr: TypeAlias = str
 """A stringized [Vega Expression].
@@ -58,6 +61,10 @@ IntoExprColumn: TypeAlias = Union[FieldName, "nwp.Expr"]
 
 Many contexts will not support literals.
 """
+
+NativeValue: TypeAlias = str | bool | float | dt.date | dt.datetime | None
+"""Any python literal that is supported in `SchemaBase(value=...)`"""
+
 
 IntoExpr: TypeAlias = IntoExprColumn | PythonLiteral
 """Anything that can be converted into an expression."""
@@ -122,6 +129,10 @@ class HasExpr(TypedDict):
     expr: VegaExpr
 
 
+InnerValue: TypeAlias = NativeValue | HasExpr
+"""Anything accepted by `Value(value=...)` or `Datum(datum=...)`."""
+
+
 class HasRepeat(TypedDict):
     """Tie a channel to the row or column within a repeated chart.
 
@@ -147,7 +158,7 @@ class MaybeTitle(TypedDict):
 class Datum(HasType, MaybeTitle, TypedDict):
     """Shared by all datums."""
 
-    datum: HasExpr | alt_t.PrimitiveValue_T | HasRepeat
+    datum: InnerValue | HasRepeat
     """A constant data value.
 
     - Can never support transforms
@@ -160,17 +171,24 @@ class Field(HasType, MaybeTitle, TypedDict):
 
     # `HasRepeat` is always allowed, but not sure how it would make sense in narwhals
     field: FieldName  # | HasRepeat
-    aggregate: NotRequired[Aggregate]
+    aggregate: Optional[Aggregate]
     timeUnit: NotRequired[TimeUnit]
     # On all fields, but havent mapped expressions over - maybe:
     # - hist?
     bin: NotRequired[Incomplete]
 
 
+if TYPE_CHECKING:
+    # https://github.com/python/mypy/pull/21382
+    class FieldClosed(Field, TypedDict, closed=True): ...  # type: ignore[call-arg]
+else:
+    FieldClosed = Field
+
+
 class Value(TypedDict):
     """Shared by all values."""
 
-    value: HasExpr | alt_t.PrimitiveValue_T
+    value: InnerValue
 
 
 AggField = TypedDict(
