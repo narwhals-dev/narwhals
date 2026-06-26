@@ -168,6 +168,13 @@ def from_agg_expr(
 def from_agg_expr(
     expr: ir.AggExpr, context: Target
 ) -> alt_t.FieldClosed | alt_t.AggField | alt_t.WindowField:
+    """Translate an `AggExpr` into something altair understands.
+
+    ## Notes
+    - In most cases, this is restricted to `col("field").<aggregation>()`
+    - The target context dictates the shape of the result
+    - Transforms never include a type
+    """
     prev = expr.expr
     if isinstance(prev, Col):
         field = prev.name
