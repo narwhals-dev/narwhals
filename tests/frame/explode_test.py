@@ -12,12 +12,11 @@ from tests.utils import (
     assert_equal_data,
 )
 
-# For context, polars allows to explode multiple columns only if the columns
-# have matching element counts, therefore, l1 and l2 but not l1 and l3 together.
+# `a` is a non-list column (used to assert the dtype error); `l3`/`l4` are non-empty
+# lists of matching per-row length, so they can be exploded together. The null/empty
+# and flag behaviour lives in `test_explode_frame_options`.
 data = {
     "a": ["x", "y", "z", "w"],
-    "l1": [[1, 2], None, [None], []],
-    "l2": [[3, None], None, [42], []],
     "l3": [[1, 2], [3], [None], [1]],
     "l4": [[1, 2], [3], [123], [456]],
 }
@@ -29,7 +28,7 @@ def _apply_explode_markers(
     unsupported = ["dask", "cudf", "pyarrow_table"]
     if multi_col:
         # Lazy SQL backends reject multi-column explode outright.
-        unsupported += ["duckdb", "pyspark", "ibis"]
+        unsupported.extend(["duckdb", "pyspark", "ibis"])
     if any(backend in str(constructor) for backend in unsupported):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
@@ -42,8 +41,7 @@ def test_explode_single_col(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
     # `l3` has no null/empty lists, so every row survives regardless of the flags.
-    # The default behaviour over null/empty lists is covered by
-    # `test_explode_empty_as_null_keep_nulls`.
+    # The null/empty + flag behaviour is covered by `test_explode_frame_options`.
     _apply_explode_markers(request, constructor)
 
     result = (
@@ -60,8 +58,8 @@ def test_explode_single_col(
 def test_explode_multiple_cols(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # `l3`/`l4` are all non-empty real lists of matching per-row length. The default
-    # behaviour over null/empty lists is covered by `test_explode_multiple_cols_flags`.
+    # `l3`/`l4` are all non-empty real lists of matching per-row length. The null/empty
+    # + flag behaviour is covered by `test_explode_frame_options`.
     _apply_explode_markers(request, constructor, multi_col=True)
 
     result = (
@@ -76,93 +74,6 @@ def test_explode_multiple_cols(
         "l3": [1, 1, 2, 3, None],
         "l4": [456, 1, 2, 3, 123],
     }
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize(
-    ("empty_as_null", "keep_nulls", "expected"),
-    [
-        # Use l2 column, hence:
-        # x corresponds to [3, None]: non-empty (with null element),
-        # y to null element, z to a non-empty list, w to an empty list
-        (True, True, {"a": ["w", "x", "x", "y", "z"], "l2": [None, 3, None, None, 42]}),
-        (True, False, {"a": ["w", "x", "x", "z"], "l2": [None, 3, None, 42]}),
-        (False, True, {"a": ["x", "x", "y", "z"], "l2": [3, None, None, 42]}),
-        (False, False, {"a": ["x", "x", "z"], "l2": [3, None, 42]}),
-    ],
-)
-def test_explode_empty_as_null_keep_nulls(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    *,
-    empty_as_null: bool,
-    keep_nulls: bool,
-    expected: dict[str, list[int | None]],
-) -> None:
-    _apply_explode_markers(request, constructor)
-
-    result = (
-        nw.from_native(constructor(data))
-        .with_columns(nw.col("l2").cast(nw.List(nw.Int32())))
-        .explode("l2", empty_as_null=empty_as_null, keep_nulls=keep_nulls)
-        .select("a", "l2")
-        .sort("a", "l2", nulls_last=True)
-    )
-    assert_equal_data(result, expected)
-
-
-@pytest.mark.parametrize(
-    ("empty_as_null", "keep_nulls", "expected"),
-    [
-        # `l1`/`l2` have matching layout per row: x non-empty, y null, z [None], w empty.
-        # The flags apply to both columns consistently
-        (
-            True,
-            True,
-            {
-                "a": ["w", "x", "x", "y", "z"],
-                "l1": [None, 1, 2, None, None],
-                "l2": [None, 3, None, None, 42],
-            },
-        ),
-        (
-            True,
-            False,
-            {
-                "a": ["w", "x", "x", "z"],
-                "l1": [None, 1, 2, None],
-                "l2": [None, 3, None, 42],
-            },
-        ),
-        (
-            False,
-            True,
-            {
-                "a": ["x", "x", "y", "z"],
-                "l1": [1, 2, None, None],
-                "l2": [3, None, None, 42],
-            },
-        ),
-        (False, False, {"a": ["x", "x", "z"], "l1": [1, 2, None], "l2": [3, None, 42]}),
-    ],
-)
-def test_explode_multiple_cols_flags(
-    request: pytest.FixtureRequest,
-    constructor: Constructor,
-    *,
-    empty_as_null: bool,
-    keep_nulls: bool,
-    expected: dict[str, list[int | None]],
-) -> None:
-    _apply_explode_markers(request, constructor, multi_col=True)
-
-    result = (
-        nw.from_native(constructor(data))
-        .with_columns(nw.col("l1", "l2").cast(nw.List(nw.Int32())))
-        .explode("l1", "l2", empty_as_null=empty_as_null, keep_nulls=keep_nulls)
-        .select("a", "l1", "l2")
-        .sort("a", "l1", nulls_last=True)
-    )
     assert_equal_data(result, expected)
 
 
@@ -282,3 +193,132 @@ def test_explode_invalid_operation_error_eager(
         InvalidOperationError, match="`explode` operation not supported for dtype"
     ):
         _ = nw.from_native(constructor_eager(data)).explode("a")
+
+
+# Ported from the Polars reference test (extended below with a `String`-typed list
+# column `b`, so the explode path is exercised on more than just integer lists):
+# https://github.com/pola-rs/polars/blob/1684cc09dfaa46656dfecc45ab866d01aa69bc78/py-polars/tests/unit/operations/test_explode.py#L596-L616
+options_data = {
+    "a": [[1, 2, 3], None, [4, 5, 6], []],
+    "b": [[None, "dog", "cat"], None, ["narwhal", None, "orca"], []],
+    "i": [1, 2, 3, 4],
+}
+
+
+@pytest.mark.parametrize(
+    ("columns", "multi_col", "empty_as_null", "keep_nulls", "expected"),
+    [
+        # Single `Int32` list column `a` (column `b` is dropped via `select`).
+        (
+            ("a",),
+            False,
+            True,
+            True,
+            {"a": [1, 2, 3, None, 4, 5, 6, None], "i": [1, 1, 1, 2, 3, 3, 3, 4]},
+        ),
+        (
+            ("a",),
+            False,
+            False,
+            True,
+            {"a": [1, 2, 3, None, 4, 5, 6], "i": [1, 1, 1, 2, 3, 3, 3]},
+        ),
+        (
+            ("a",),
+            False,
+            True,
+            False,
+            {"a": [1, 2, 3, 4, 5, 6, None], "i": [1, 1, 1, 3, 3, 3, 4]},
+        ),
+        (("a",), False, False, False, {"a": [1, 2, 3, 4, 5, 6], "i": [1, 1, 1, 3, 3, 3]}),
+        # `String` list column `b` exploded alongside `a`; both share the same per-row
+        # null/empty layout, so the flags apply consistently across the two columns.
+        (
+            ("b", "a"),
+            True,
+            True,
+            True,
+            {
+                "b": [None, "dog", "cat", None, "narwhal", None, "orca", None],
+                "a": [1, 2, 3, None, 4, 5, 6, None],
+                "i": [1, 1, 1, 2, 3, 3, 3, 4],
+            },
+        ),
+        (
+            ("b", "a"),
+            True,
+            False,
+            True,
+            {
+                "b": [None, "dog", "cat", None, "narwhal", None, "orca"],
+                "a": [1, 2, 3, None, 4, 5, 6],
+                "i": [1, 1, 1, 2, 3, 3, 3],
+            },
+        ),
+        (
+            ("b", "a"),
+            True,
+            True,
+            False,
+            {
+                "b": [None, "dog", "cat", "narwhal", None, "orca", None],
+                "a": [1, 2, 3, 4, 5, 6, None],
+                "i": [1, 1, 1, 3, 3, 3, 4],
+            },
+        ),
+        (
+            ("b", "a"),
+            True,
+            False,
+            False,
+            {
+                "b": [None, "dog", "cat", "narwhal", None, "orca"],
+                "a": [1, 2, 3, 4, 5, 6],
+                "i": [1, 1, 1, 3, 3, 3],
+            },
+        ),
+    ],
+)
+def test_explode_frame_options(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    columns: tuple[str, ...],
+    *,
+    multi_col: bool,
+    empty_as_null: bool,
+    keep_nulls: bool,
+    expected: dict[str, list[int | str | None]],
+) -> None:
+    _apply_explode_markers(request, constructor, multi_col=multi_col)
+
+    result = (
+        nw.from_native(constructor(options_data))
+        .with_columns(
+            nw.col("a").cast(nw.List(nw.Int32())), nw.col("b").cast(nw.List(nw.String()))
+        )
+        .explode(columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls)
+        .select(*columns, "i")
+        # `i` is a stable per-source-row key and `a`'s values are unique within each
+        # `i` group, so this fully determines row order for every backend.
+        .sort("i", "a", nulls_last=True)
+    )
+    assert_equal_data(result, expected)
+
+
+def test_explode_frame_single_elements(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Exploding a subset of the list columns leaves the others as-is, and the order in
+    # which columns are passed to `explode` does not matter.
+    # Ported from https://github.com/narwhals-dev/narwhals/pull/3347.
+    _apply_explode_markers(request, constructor, multi_col=True)
+
+    df = nw.from_native(
+        constructor({"a": [[1], [2], [3]], "b": [[4], [5], [6]], "i": [0, 10, 20]})
+    ).with_columns(nw.col("a", "b").cast(nw.List(nw.Int32())))
+
+    single = df.explode("a").select("a", "b", "i").sort("i")
+    assert_equal_data(single, {"a": [1, 2, 3], "b": [[4], [5], [6]], "i": [0, 10, 20]})
+
+    both = df.explode("b", "a").select("a", "b", "i").sort("i")
+    assert_equal_data(both, {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 10, 20]})
