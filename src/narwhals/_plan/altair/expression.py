@@ -224,7 +224,9 @@ def _rewrite_is_between(f: boolean.IsBetween, args: Seq[ir.ExprIR], /) -> AltExp
     return AltExprStr.call_fn("inrange", exprs)
 
 
-def _rewrite_is_in_seq(f: boolean.IsInSeq, args: Seq[ir.ExprIR], /) -> AltExpr:
+def _rewrite_is_in_seq(
+    f: boolean.IsInSeq, args: Seq[ir.ExprIR], /, *, is_not_in: bool = False
+) -> AltExpr:
     """Similar to `FieldOneOfPredicate`.
 
     Adapted from [vega-lite](https://github.com/vega/vega-lite/blob/91845a3bca89f9e8bd6ae847bc1b3f31cc85e919/src/predicate.ts#L231-L232)
@@ -234,8 +236,9 @@ def _rewrite_is_in_seq(f: boolean.IsInSeq, args: Seq[ir.ExprIR], /) -> AltExpr:
         (alt.datum.label == "Begin") | (alt.datum.label == "Middle") | (alt.datum.label == "End")
         nw.col("label").is_in(["Begin", "Middle", "End"])
     """
-    prev = _from_expr_ir(args[0])
-    return AltExprStr(f"indexof({_from_lit(f.other)},{prev!r}) !== -1")
+    # NOTE: Seems hacky, but prefixing `!` doesn't seem to work?
+    op = "===" if is_not_in else "!=="
+    return AltExprStr(f"indexof({_from_lit(f.other)},{_from_expr_ir(args[0])!r}) {op} -1")
 
 
 def _rewrite_struct_field_getitem(
@@ -245,13 +248,19 @@ def _rewrite_struct_field_getitem(
     return AltExprStr.get_item(repr(_from_expr_ir(args[0])), f.name)
 
 
+def _rewrite_not(_: boolean.Not, args: Seq[ir.ExprIR], /) -> AltExpr:
+    prev = args[0]
+    if isinstance(prev, ir.FunctionExpr) and isinstance(prev.function, boolean.IsInSeq):
+        return _rewrite_is_in_seq(prev.function, prev.args, is_not_in=True)
+    return AltExprStr(f"(!{_from_expr_ir(prev)!r})")
+
+
 _UNARY_BOOLEAN: FnMap[AltUnary] = {
     boolean.IsNull: _is_null,
     boolean.IsNotNull: _then_invert(_is_null),
     boolean.IsNan: ae.isNaN,
     boolean.IsNotNan: _then_invert(ae.isNaN),
     boolean.IsFinite: ae.isFinite,
-    boolean.Not: operator.invert,
 }
 # all the math stuff that works unconditionally
 _UNARY_SIMPLE: FnMap[AltUnary] = {
@@ -275,6 +284,7 @@ _HORIZONTAL_NATIVE_NAME: FnMap[AltFnName] = {
 _REWRITE_FUNCTION: Final[FnMap[Callable[..., AltExpr]]] = {
     boolean.IsBetween: _rewrite_is_between,
     boolean.IsInSeq: _rewrite_is_in_seq,
+    boolean.Not: _rewrite_not,
     ir.struct.FieldByName: _rewrite_struct_field_getitem,
 }
 """Translations that do something fancy with the `Function`.
