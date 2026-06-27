@@ -2,6 +2,9 @@ name: Min, old, and nightly versions
 
 on:
   pull_request:
+    paths:
+      - "**.py"
+      - .github/workflows/extremes.yml
 
 env:
   PY_COLORS: 1
