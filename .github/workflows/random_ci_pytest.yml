@@ -2,6 +2,9 @@ name: Random Versions
 
 on:
   pull_request:
+    paths:
+      - "**.py"
+      - .github/workflows/random_ci_pytest.yml
 
 env:
   PY_COLORS: 1
