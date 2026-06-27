@@ -167,7 +167,7 @@ def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
 
 
 def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
-    return _should_interchange(type(obj))
+    return _should_interchange(type(obj))  # type: ignore[arg-type]
 
 
 _HAS_TOP_LEVEL_DF = (
