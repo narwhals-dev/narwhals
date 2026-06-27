@@ -237,10 +237,9 @@ def test_interchange_schema_duckdb() -> None:
     assert df.collect_schema() == expected
 
 
-@pytest.mark.xfail(reason="TODO @dangotbanned: Isolate v1 `__dataframe__` support")
 def test_invalid() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
-    with pytest.raises(TypeError, match="Cannot only use `series_only=True`"):
+    with pytest.raises(TypeError, match="Unsupported dataframe type"):
         nw_v1.from_native(df, eager_only=True)
     with pytest.raises(ValueError, match="Invalid parameter combination"):
         nw_v1.from_native(df, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
