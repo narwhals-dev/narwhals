@@ -13,9 +13,9 @@ from tests.utils import (
 
 data = {
     "a": [1, 2, 3],
-    "b": [4, 5, 6],
-    "d": [[10, 20], [30], [40, 50, 60]],
-    "e": [[100], [200, 300], [400, 500]],
+    "b": [4, None, 6],
+    "d": [[10, 20], None, [40, 50, 60]],
+    "e": [[None], [200, 300], [400, 500]],
 }
 
 UNSUPPORTED_BACKENDS = ("dask",)
@@ -27,6 +27,8 @@ def maybe_skip(constructor: Constructor | ConstructorEager) -> None:
     ):
         reason = "pandas is too old or pyarrow not installed"
         pytest.skip(reason=reason)
+    if constructor.__name__ == "pandas_constructor":
+        pytest.skip(reason="numpy-backed pandas cannot represent nullable integers")
 
 
 @pytest.mark.parametrize(
@@ -45,7 +47,7 @@ def test_list_positional_exprs(
     df = nw.from_native(constructor(data))
     result = df.select(nw.list(*exprs).alias("list"))
 
-    expected = {"list": [[1, 4], [2, 5], [3, 6]]}
+    expected = {"list": [[1, 4], [2, None], [3, 6]]}
     assert_equal_data(result, expected)
 
 
@@ -75,7 +77,7 @@ def test_list_with_expressions(
     df = nw.from_native(constructor(data))
     result = df.select(nw.list(nw.col("a") * 2, nw.col("b") + 1).alias("list"))
 
-    expected = {"list": [[2, 5], [4, 6], [6, 7]]}
+    expected = {"list": [[2, 5], [4, None], [6, 7]]}
     assert_equal_data(result, expected)
 
 
@@ -89,7 +91,7 @@ def test_list_of_lists(request: pytest.FixtureRequest, constructor: Constructor)
     result = df.select(nw.list("d", "e").alias("nested"))
 
     expected = {
-        "nested": [[[10, 20], [100]], [[30], [200, 300]], [[40, 50, 60], [400, 500]]]
+        "nested": [[[10, 20], [None]], [None, [200, 300]], [[40, 50, 60], [400, 500]]]
     }
     assert_equal_data(result, expected)
 
