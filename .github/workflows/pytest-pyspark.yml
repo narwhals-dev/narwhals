@@ -93,7 +93,7 @@ jobs:
 
       - name: install-reqs
         # temporary pin to get CI green
-        run: uv pip install -e ".[pandas]" --group core-tests --group extra "pyarrow<22.0"
+        run: uv pip install -e ".[pandas]" --group core-tests --group sklearn "pyarrow<22.0"
       - name: install pyspark
         run: uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" "setuptools<78"
       - name: show-deps
