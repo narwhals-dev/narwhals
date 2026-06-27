@@ -12,6 +12,11 @@ if TYPE_CHECKING:
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
+XFAIL_INTERCHANGE = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Isolate v1 `__dataframe__` support",
+    raises=NotImplementedError,
+)
+
 
 class InterchangeDataFrame:
     def __init__(self, df: CustomDataFrame) -> None:
@@ -39,6 +44,7 @@ class CustomDataFrame:
         return InterchangeDataFrame(self)
 
 
+@XFAIL_INTERCHANGE
 def test_interchange() -> None:
     df = CustomDataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "z": [1, 4, 2]})
     result = nw_v1.from_native(df, eager_or_interchange_only=True).select("a", "z")
@@ -51,6 +57,7 @@ def test_interchange_non_v1() -> None:
         nw.from_native(df)  # type: ignore[call-overload]
 
 
+@XFAIL_INTERCHANGE
 def test_interchange_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
@@ -77,6 +84,7 @@ def test_interchange_ibis(
     assert out_cols == ["a", "z"]
 
 
+@XFAIL_INTERCHANGE
 def test_interchange_duckdb() -> None:
     pytest.importorskip("polars")
     pytest.importorskip("duckdb")

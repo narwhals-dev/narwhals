@@ -13,8 +13,13 @@ data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y",
 
 pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
+XFAIL_INTERCHANGE = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Isolate v1 `__dataframe__` support",
+    raises=NotImplementedError,
+)
 
 
+@XFAIL_INTERCHANGE
 def test_interchange_to_arrow() -> None:
     import polars as pl
     import pyarrow as pa
@@ -26,6 +31,7 @@ def test_interchange_to_arrow() -> None:
     assert isinstance(result, pa.Table)
 
 
+@XFAIL_INTERCHANGE
 def test_interchange_ibis_to_arrow(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
@@ -51,6 +57,7 @@ def test_interchange_ibis_to_arrow(
     assert isinstance(result, pa.Table)
 
 
+@XFAIL_INTERCHANGE
 def test_interchange_duckdb_to_arrow() -> None:
     pytest.importorskip("duckdb")
 

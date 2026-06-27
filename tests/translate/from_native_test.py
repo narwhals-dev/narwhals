@@ -308,7 +308,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
             True,
             pytest.raises(
                 TypeError,
-                match="Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` with sqlframe DataFrame",
+                match="Cannot only use `series_only`, `eager_only` with sqlframe DataFrame",
             ),
         ),
     ],

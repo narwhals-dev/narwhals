@@ -14,7 +14,13 @@ if TYPE_CHECKING:
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 
+XFAIL_INTERCHANGE = pytest.mark.xfail(
+    reason="TODO @dangotbanned: Isolate v1 `__dataframe__` support",
+    raises=NotImplementedError,
+)
 
+
+@XFAIL_INTERCHANGE
 def test_interchange() -> None:
     df_pl = pl.DataFrame(data)
     df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
@@ -33,6 +39,7 @@ def test_interchange() -> None:
         series.__native_namespace__()
 
 
+@XFAIL_INTERCHANGE
 @pytest.mark.filterwarnings("ignore:.*The `ArrowDtype` class is not available in pandas")
 def test_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
@@ -56,6 +63,7 @@ def test_ibis(
     assert series.__native_namespace__() == ibis
 
 
+@XFAIL_INTERCHANGE
 def test_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb

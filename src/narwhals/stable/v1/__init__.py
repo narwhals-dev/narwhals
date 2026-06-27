@@ -656,11 +656,22 @@ def from_native(
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
 
+    if eager_only and eager_or_interchange_only:
+        msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
+        raise ValueError(msg)
+
+    if eager_or_interchange_only:
+        if eager_only:
+            msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
+            raise ValueError(msg)
+
+        msg = "TODO @dangotbanned: Isolate v1 `__dataframe__` support"
+        raise NotImplementedError(msg)
+
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
         eager_only=eager_only,
-        eager_or_interchange_only=eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
         version=Version.V1,

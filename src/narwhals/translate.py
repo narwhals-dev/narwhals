@@ -213,7 +213,6 @@ def from_native(
         native_object,
         pass_through=pass_through,
         eager_only=eager_only,
-        eager_or_interchange_only=False,
         series_only=series_only,
         allow_series=allow_series,
         version=Version.MAIN,
@@ -225,8 +224,6 @@ def _translate_if_compliant(  # noqa: C901,PLR0911
     *,
     pass_through: bool = False,
     eager_only: bool = False,
-    # Interchange-level was removed after v1
-    eager_or_interchange_only: bool,
     series_only: bool,
     allow_series: bool | None,
     version: Version,
@@ -246,9 +243,9 @@ def _translate_if_compliant(  # noqa: C901,PLR0911
                 msg = "Cannot only use `series_only` with lazyframe"
                 raise TypeError(msg)
             return compliant_object
-        if eager_only or eager_or_interchange_only:
+        if eager_only:
             if not pass_through:
-                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with lazyframe"
+                msg = "Cannot only use `eager_only` with lazyframe"
                 raise TypeError(msg)
             return compliant_object
         return version.lazyframe(
@@ -272,13 +269,10 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     *,
     pass_through: bool = False,
     eager_only: bool = False,
-    # Interchange-level was removed after v1
-    eager_or_interchange_only: bool,
     series_only: bool,
     allow_series: bool | None,
     version: Version,
 ) -> Any:
-    from narwhals._interchange.dataframe import supports_dataframe_interchange
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
 
@@ -309,9 +303,6 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             msg = "Invalid parameter combination: `series_only=True` and `allow_series=False`"
             raise ValueError(msg)
         allow_series = True
-    if eager_only and eager_or_interchange_only:
-        msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
-        raise ValueError(msg)
 
     # Extensions
     if (
@@ -319,7 +310,6 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
             native_object,
             pass_through=pass_through,
             eager_only=eager_only,
-            eager_or_interchange_only=eager_or_interchange_only,
             series_only=series_only,
             allow_series=allow_series,
             version=version,
@@ -334,11 +324,9 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
                 raise TypeError(msg)
             return native_object
-        if (eager_only or eager_or_interchange_only) and is_polars_lazyframe(
-            native_object
-        ):
+        if (eager_only) and is_polars_lazyframe(native_object):
             if not pass_through:
-                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with polars.LazyFrame"
+                msg = "Cannot only use `eager_only` with polars.LazyFrame"
                 raise TypeError(msg)
             return native_object
         if (not allow_series) and is_polars_series(native_object):
@@ -397,9 +385,9 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = "Cannot only use `series_only` with dask DataFrame"
                 raise TypeError(msg)
             return native_object
-        if eager_only or eager_or_interchange_only:
+        if eager_only:
             if not pass_through:
-                msg = "Cannot only use `eager_only` or `eager_or_interchange_only` with dask DataFrame"
+                msg = "Cannot only use `eager_only` with dask DataFrame"
                 raise TypeError(msg)
             return native_object
         if (
@@ -443,36 +431,21 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
     # PySpark
     if is_native_spark_like(native_object):  # pragma: no cover
         ns_spark = version.namespace.from_native_object(native_object)
-        if series_only or eager_only or eager_or_interchange_only:
+        if series_only or eager_only:
             if not pass_through:
                 msg = (
-                    "Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` "
+                    "Cannot only use `series_only`, `eager_only` "
                     f"with {ns_spark.implementation} DataFrame"
                 )
                 raise TypeError(msg)
             return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
 
-    # Interchange protocol
-    if version is Version.V1 and supports_dataframe_interchange(native_object):
-        from narwhals._interchange.dataframe import InterchangeFrame
-
-        if eager_only or series_only:
-            if not pass_through:
-                msg = (
-                    "Cannot only use `series_only=True` or `eager_only=False` "
-                    "with object which only implements __dataframe__"
-                )
-                raise TypeError(msg)
-            return native_object
-        return Version.V1.dataframe(InterchangeFrame(native_object))
-
     if (compliant_object := plugins.from_native(native_object, version)) is not None:
         return _translate_if_compliant(
             compliant_object,
             pass_through=pass_through,
             eager_only=eager_only,
-            eager_or_interchange_only=eager_or_interchange_only,
             series_only=series_only,
             allow_series=allow_series,
             version=version,
