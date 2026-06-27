@@ -1977,16 +1977,13 @@ def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Ex
     )
 
 
-def list_(*exprs: IntoExpr | Sequence[IntoExpr], scalars_only: bool = False) -> Expr:
+def list_(*exprs: IntoExpr | Sequence[IntoExpr]) -> Expr:
     """Collect columns into a list column.
 
     Arguments:
         *exprs: Column(s) to collect into a list column, specified as
             positional arguments. Accepts only expression input. Strings are parsed
             as column names, other non-expression inputs are not allowed.
-        scalars_only: If True, assume all inputs are scalar columns. This allows us to
-            take a fast path in the polars backend, but is unused for all other
-            backends.
 
     Examples:
         >>> import polars as pl
@@ -2016,11 +2013,5 @@ def list_(*exprs: IntoExpr | Sequence[IntoExpr], scalars_only: bool = False) -> 
         raise ValueError(msg)
 
     return Expr(
-        ExprNode(
-            ExprKind.ELEMENTWISE,
-            "list",
-            exprs=flat_exprs,
-            allow_multi_output=True,
-            scalars_only=scalars_only,
-        )
+        ExprNode(ExprKind.ELEMENTWISE, "list", exprs=flat_exprs, allow_multi_output=True)
     )

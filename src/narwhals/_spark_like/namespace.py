@@ -320,7 +320,7 @@ class SparkLikeNamespace(
             implementation=self._implementation,
         )
 
-    def list(self, *exprs: SparkLikeExpr, scalars_only: bool) -> SparkLikeExpr:
+    def list(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
         version = self._version
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:

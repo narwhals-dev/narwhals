@@ -253,13 +253,12 @@ class DuckDBNamespace(
             version=version,
         )
 
-    def list(self, *exprs: DuckDBExpr, scalars_only: bool) -> DuckDBExpr:
+    def list(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         version = self._version
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             cols = [native_expr for expr in exprs for native_expr in expr(df)]
-            col_args = ", ".join(str(col) for col in cols)
-            return [sql_expression(f"list_pack({col_args})")]
+            return [F("list_pack", *cols)]
 
         return self._expr(
             call=func,

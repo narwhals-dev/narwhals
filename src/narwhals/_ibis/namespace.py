@@ -211,7 +211,7 @@ class IbisNamespace(
             version=version,
         )
 
-    def list(self, *exprs: IbisExpr, scalars_only: bool) -> IbisExpr:
+    def list(self, *exprs: IbisExpr) -> IbisExpr:
         version = self._version
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
