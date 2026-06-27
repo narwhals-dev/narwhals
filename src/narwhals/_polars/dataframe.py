@@ -108,7 +108,6 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
     drop_nulls: Method[Self]
-    explode: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
@@ -234,6 +233,11 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 right_on=right_on,
                 suffix=suffix,
             )
+        )
+
+    def explode(self, columns: Sequence[str]) -> Self:
+        return self._with_native(
+            self.native.explode(columns, empty_as_null=True, keep_nulls=True)
         )
 
     def top_k(
