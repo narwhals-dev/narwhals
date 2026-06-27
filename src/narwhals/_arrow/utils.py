@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 
 else:
     from pyarrow.compute import extract_regex
-    from pyarrow.types import is_dictionary  # noqa: F401
     from pyarrow.types import (
+        is_dictionary,  # noqa: F401
         is_duration,
         is_fixed_size_list,
         is_large_list,
