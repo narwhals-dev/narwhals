@@ -238,9 +238,8 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     def explode(self, columns: Sequence[str]) -> Self:
         if self._backend_version < (1, 36):
             return self._with_native(self.native.explode(columns))
-        return self._with_native(
-            self.native.explode(columns, empty_as_null=True, keep_nulls=True)
-        )
+        res = self.native.explode(columns, empty_as_null=True, keep_nulls=True)
+        return self._with_native(res)
 
     def top_k(
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
