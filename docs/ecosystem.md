@@ -12,6 +12,7 @@ for their dataframe interoperability needs:
 * [formulaic](https://github.com/matthewwardrop/formulaic)
 * [gt-extras](https://github.com/posit-dev/gt-extras)
 * [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
+* [lightgbm](https://github.com/lightgbm-org/LightGBM)
 * [marimo](https://github.com/marimo-team/marimo)
 * [metalearners](https://github.com/Quantco/metalearners)
 * [mosaic](https://github.com/uwdata/mosaic)
