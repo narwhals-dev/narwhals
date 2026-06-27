@@ -55,12 +55,6 @@ if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
 
-XFAIL_INTERCHANGE = pytest.mark.xfail(
-    reason="TODO @dangotbanned: Isolate v1 `__dataframe__` support",
-    raises=NotImplementedError,
-)
-
-
 def test_toplevel() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -265,7 +259,6 @@ def test_hist_v1() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
-@XFAIL_INTERCHANGE
 @pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
 def test_is_ordered_categorical_interchange_protocol() -> None:
@@ -413,7 +406,6 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
     assert not is_native_series(ser)
 
 
-@XFAIL_INTERCHANGE
 def test_get_level() -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -630,7 +622,6 @@ def test_strict(strict: Any, context: Any) -> None:
         assert isinstance(res, np.ndarray)
 
 
-@XFAIL_INTERCHANGE
 def test_from_native_strict_false_typing() -> None:
     pytest.importorskip("polars")
     import polars as pl

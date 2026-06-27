@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import enum
+import sys
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 
+from narwhals import dependencies as deps
 from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
 
 if TYPE_CHECKING:
@@ -161,3 +164,33 @@ class InterchangeFrame:
 
 def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
     return _hasattr_static(obj, "__dataframe__")
+
+
+def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
+    return _should_interchange(type(obj))
+
+
+_HAS_TOP_LEVEL_DF = (
+    deps.get_polars,
+    deps.get_pandas,
+    deps.get_dask_dataframe,
+    deps.get_modin,
+)
+
+
+# TODO @dangotbanned: ~~cudf~~, sqlframe?, pyspark?, pyspark-connect?
+@lru_cache(64)
+def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
+    if not supports_dataframe_interchange(tp_native):
+        return False
+    exclude = tuple(mod.DataFrame for get in _HAS_TOP_LEVEL_DF if (mod := get()))
+    if pa := deps.get_pyarrow():
+        exclude = (*exclude, pa.Table)
+    hooks = (
+        mod.pandas.DataFrame
+        for name in deps.IMPORT_HOOKS
+        if (mod := sys.modules.get(name))
+    )
+    if exclude := (*exclude, *hooks):
+        return not issubclass(tp_native, exclude)
+    return True
