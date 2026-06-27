@@ -139,7 +139,9 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            init_series, *series = tuple(
+                chain.from_iterable(expr(df) for expr in exprs)
+            )
             native_series = reduce(
                 pc.min_element_wise, [s.native for s in series], init_series.native
             )
@@ -156,7 +158,9 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            init_series, *series = tuple(
+                chain.from_iterable(expr(df) for expr in exprs)
+            )
             native_series = reduce(
                 pc.max_element_wise, [s.native for s in series], init_series.native
             )
@@ -229,7 +233,9 @@ class ArrowNamespace(
     def coalesce(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             align = self._series._align_full_broadcast
-            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            init_series, *series = align(
+                *chain.from_iterable(expr(df) for expr in exprs)
+            )
             return [
                 ArrowSeries(
                     pc.coalesce(init_series.native, *(s.native for s in series)),
@@ -264,7 +270,7 @@ class ArrowNamespace(
             context=self,
         )
 
-    def list(self, *exprs: ArrowExpr, scalars_only: bool) -> ArrowExpr:
+    def list(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
             # pa.concat_arrays requires Array, not ChunkedArray
@@ -287,7 +293,9 @@ class ArrowNamespace(
         otherwise = pa.nulls(len(when), then.type) if otherwise is None else otherwise
         return pc.if_else(when.fill_null(pa.scalar(False)), then, otherwise)
 
-    def corr(self, a: ArrowExpr, b: ArrowExpr, *, method: CorrelationMethod) -> ArrowExpr:
+    def corr(
+        self, a: ArrowExpr, b: ArrowExpr, *, method: CorrelationMethod
+    ) -> ArrowExpr:
         if method != "pearson":
             msg = "Only 'pearson' correlation is supported for Pyarrow."
             raise NotImplementedError(msg)
