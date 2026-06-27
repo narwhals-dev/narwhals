@@ -927,14 +927,17 @@ def get_level(obj: Frame | Series[Any]) -> Literal["full", "lazy", "interchange"
     from narwhals._interchange.series import InterchangeSeries
 
     ensure_type(obj, DataFrame, Series, LazyFrame)
-    if isinstance(obj, DataFrame):
-        return "interchange" if isinstance(obj._compliant, InterchangeFrame) else "full"
-    if isinstance(obj, Series):
-        return "interchange" if isinstance(obj._compliant, InterchangeSeries) else "full"
-    if isinstance(obj, LazyFrame):
-        # NOTE: There weren't any tests covering the "full" part before
-        return "lazy" if obj.implementation.is_polars() else "full"
-    assert_never(obj)
+    compliant = obj._compliant
+    impl = obj.implementation
+    if (
+        isinstance(compliant, (InterchangeFrame, InterchangeSeries))
+        or impl.is_duckdb()
+        or impl.is_ibis()
+    ):
+        return "interchange"
+    if isinstance(obj, LazyFrame) and impl.is_polars():
+        return "lazy"
+    return "full"
 
 
 class When(nw_f.When):
