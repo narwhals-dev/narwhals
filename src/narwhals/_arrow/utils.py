@@ -49,10 +49,11 @@ if TYPE_CHECKING:
         options: Any = None,
         memory_pool: Any = None,
     ) -> ChunkedArrayStructArray: ...
+
 else:
     from pyarrow.compute import extract_regex
+    from pyarrow.types import is_dictionary  # noqa: F401
     from pyarrow.types import (
-        is_dictionary,  # noqa: F401
         is_duration,
         is_fixed_size_list,
         is_large_list,
@@ -91,7 +92,7 @@ def is_array_or_scalar(obj: Any) -> TypeIs[ArrayOrScalar]:
     return isinstance(obj, (pa.ChunkedArray, pa.Array, pa.Scalar))
 
 
-def build_list_array(arrays: list[pa.Array]) -> pa.ChunkedArray:
+def build_list_array(arrays: list[pa.Array[Any]]) -> pa.ChunkedArray[Any]:
     # This works by using concat_arrays to vertically stack the arrays.
     # Then we use take to grab the data by index and to horizontally
     # pack the arrays.
