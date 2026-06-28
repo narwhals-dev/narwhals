@@ -2,6 +2,11 @@ name: Type checking
 
 on:
   pull_request:
+    paths:
+      - "**.py"
+      - .github/workflows/typing.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:
