@@ -72,4 +72,4 @@ class IbisSeries(_interchange.InterchangeSeriesV1["ir.Table"]):
         native = next(iter(self._native_series.schema().values()))
         # NOTE: `Concrete` (base class for `DataType`) has two bases that define `__hash__ = None`,
         # and then decides to implement `__hash__`? Okay ...
-        return native_to_narwhals_dtype(native, self._version)  # type: ignore[arg-type]
+        return native_to_narwhals_dtype(native, self._version)  # pyright: ignore[reportArgumentType]

@@ -91,7 +91,7 @@ class Column(Protocol):
     def dtype(self) -> tuple[DtypeKind, int, Any, Any] | Any: ...
 
 
-class RecoverableColumn(Column, Protocol[Original_co]):
+class RecoverableColumn(Column, Protocol[Original_co]):  # type: ignore[misc]
     _version: Version = Version.V1
     _native_series: Original_co
 
@@ -99,7 +99,7 @@ class RecoverableColumn(Column, Protocol[Original_co]):
         return self
 
 
-class InterchangeSeriesV1(RecoverableColumn[Original_co], Protocol[Original_co]):
+class InterchangeSeriesV1(RecoverableColumn[Original_co], Protocol[Original_co]):  # type: ignore[misc]
     _implementation: Implementation
 
     @property
@@ -166,7 +166,7 @@ class InterchangeFrameV1(RecoverableFrame[Original_co], Protocol[Original_co]):
     def to_narwhals(self) -> DataFrameV1[Any]:  # pragma: no cover
         from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-        return DataFrameV1(self)
+        return DataFrameV1(self)  # type: ignore[no-any-return]
 
 
 DFI_METHODS = (
