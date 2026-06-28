@@ -2942,3 +2942,18 @@ class Series(Generic[IntoSeriesT]):
     @property
     def struct(self) -> SeriesStructNamespace[Self]:
         return SeriesStructNamespace(self)
+
+    def equals(
+        self,
+        other: Self,
+        *,
+        check_dtypes: bool = False,
+        check_names: bool = False,
+        null_equal: bool = True,
+    ) -> bool:
+        return self._compliant_series.equals(
+            other._compliant_series,
+            check_dtypes=check_dtypes,
+            check_names=check_names,
+            null_equal=null_equal,
+        )

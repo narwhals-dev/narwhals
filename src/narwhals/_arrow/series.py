@@ -553,6 +553,26 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def null_count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)
 
+    def equals(
+        self, other: Self, *, check_dtypes: bool, check_names: bool, null_equal: bool
+    ) -> bool:
+        if check_names and self._name != other._name:
+            return False
+        if check_dtypes and self.dtype != other.dtype:
+            return False
+        if len(self) != len(other):
+            return False
+        lhs = self.native
+        rhs = other.native
+        if null_equal:
+            both_null = pc.and_(pc.is_null(lhs), pc.is_null(rhs))
+            values_equal = pc.equal(lhs, rhs)
+            result = pc.if_else(both_null, True, values_equal)
+            return bool(pc.all(result).as_py())
+        if lhs.null_count or rhs.null_count:
+            return False
+        return bool(pc.all(pc.equal(lhs, rhs)).as_py())
+
     def head(self, n: int) -> Self:
         if n >= 0:
             return self._with_native(self.native.slice(0, n))

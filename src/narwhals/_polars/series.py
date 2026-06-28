@@ -92,6 +92,7 @@ INHERITED_METHODS = frozenset(
         "cum_sum",
         "diff",
         "drop_nulls",
+        "equals",
         "exp",
         "fill_null",
         "fill_nan",
@@ -720,6 +721,7 @@ class PolarsSeries:
     cum_sum: Method[Self]
     diff: Method[Self]
     drop_nulls: Method[Self]
+    equals: Method[bool]
     exp: Method[Self]
     fill_null: Method[Self]
     fill_nan: Method[Self]
