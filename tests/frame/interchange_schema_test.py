@@ -245,16 +245,9 @@ def test_invalid() -> None:
         nw_v1.from_native(df, eager_only=True, eager_or_interchange_only=True)  # type: ignore[call-overload]
 
 
-# TODO @dangotbanned: Fix this?
-@pytest.mark.xfail(
-    reason=(
-        "Error was being raised by `InterchangeSeries._implementation`, but test uses `InterchangeFrame.filter`.\n"
-        "Revealed by adding `InterchangeSeries._implementation = Implementation.UNKNOWN`"
-    )
-)
 def test_invalid_filter() -> None:
     df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
     with pytest.raises(
         NotImplementedError, match="is not supported for interchange-level dataframes"
     ):
-        nw_v1.from_native(df, eager_or_interchange_only=True).filter([True, False, True])
+        nw_v1.from_native(df, eager_or_interchange_only=True).filter(nw_v1.col("a") == 1)
