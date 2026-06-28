@@ -809,10 +809,13 @@ class ArrowDataFrame(
         num_rows = len(self)
         if n is None and fraction is not None:
             n = int(num_rows * fraction)
+
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(num_rows)
-        mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._with_native(self.native.take(mask), validate_column_names=False)
+        indices = rng.choice(np.arange(num_rows), size=n, replace=with_replacement)
+        return self._with_native(
+            self.native.take(pa.array(indices, type=pa.uint64())),
+            validate_column_names=False,
+        )
 
     def unpivot(
         self,
