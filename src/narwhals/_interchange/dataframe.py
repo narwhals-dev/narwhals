@@ -142,6 +142,10 @@ class InterchangeFrameV1(RecoverableFrame[Original_co], Protocol[Original_co]):
     def columns(self) -> list[str]:
         return list(self.column_names())
 
+    @property
+    def _native_frame(self) -> Original_co:
+        return self._df
+
     def to_pandas(self) -> pd.DataFrame: ...
     def to_arrow(self) -> pa.Table: ...
     def get_column(self, name: str, /) -> InterchangeSeriesV1[Original_co]: ...
