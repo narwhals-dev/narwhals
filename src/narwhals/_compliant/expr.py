@@ -636,16 +636,9 @@ class EagerExpr(
     def diff(self) -> Self:
         return self._reuse_series("diff")
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         return self._reuse_series(
-            "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+            "sample", n=n, with_replacement=with_replacement, seed=seed
         )
 
     def alias(self, name: str) -> Self:
