@@ -120,18 +120,21 @@ def test_when_then() -> None:
 
 
 def test_when_then_otherwise_stable_expr() -> None:
-    # `Then.otherwise` and chained `Then.when` must stay the stable `Expr` subclass,
-    # both at runtime and for type checkers, so the result fits in `list[nw_v1.Expr]`.
-    otherwise = (
-        nw_v1.when(nw_v1.col("a").is_null()).then(nw_v1.lit(0)).otherwise(nw_v1.col("a"))
-    )
+    # `Then.otherwise` and chained `Then.when` must stay the stable `Expr` subclass
+    a = nw_v1.col("a")
+    otherwise = nw_v1.when(a.is_null()).then(nw_v1.lit(0)).otherwise(a)
+    otherwise_alias = otherwise.alias("a")
+    then = nw_v1.when(a > 1).then("b").when(a > 2).then("c")
+    then_alias = then.alias("d")
+
     if TYPE_CHECKING:
         assert_type(otherwise, nw_v1.Expr)
-    chained = nw_v1.when(nw_v1.col("a") > 1).then("b").when(nw_v1.col("a") > 2).then("c")
-    exprs: list[nw_v1.Expr] = [otherwise.alias("a"), chained]
-    assert len(exprs) == 2
-    assert isinstance(otherwise, nw_v1.Expr)
-    assert isinstance(chained, nw_v1.Expr)
+        assert_type(otherwise_alias, nw_v1.Expr)
+        assert_type(then, nw_v1.Then)
+        assert_type(then_alias, nw_v1.Then)
+
+    for expr in (otherwise, otherwise_alias, then, then_alias):
+        assert isinstance(expr, nw_v1.Expr)
 
 
 def test_constructors() -> None:
