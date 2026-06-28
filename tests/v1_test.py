@@ -52,7 +52,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.stable.v1.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
-    from tests.utils import Constructor, ConstructorEager
 
 
 def test_toplevel() -> None:

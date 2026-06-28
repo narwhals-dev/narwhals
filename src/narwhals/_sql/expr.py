@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._compliant.typing import AliasNames, WindowFunction
     from narwhals._sql.expr_dt import SQLExprDateTimeNamesSpace
     from narwhals._sql.expr_str import SQLExprStringNamespace
     from narwhals._sql.namespace import SQLNamespace
