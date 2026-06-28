@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, TypedDict
+
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from tests.utils import ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+
+    class SampleKwargs(TypedDict, total=False):
+        n: int | None
+        fraction: float | None
+
 
 data = {"a": [1, 2, 3, 4]}
 
@@ -26,29 +35,24 @@ def test_sample_default_single_row(constructor_eager: ConstructorEager) -> None:
     assert s.sample().shape == (1,)
 
 
-def test_sample_both_n_and_fraction(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("expected_exception", "msg", "params"),
+    [
+        (ValueError, "cannot specify both `n` and `fraction`", {"n": 2, "fraction": 0.5}),
+        (InvalidOperationError, "sample size must be a positive integer", {"n": -1}),
+        (ShapeError, "cannot take a larger sample than the total population", {"n": 10}),
+    ],
+)
+def test_sample_raises(
+    constructor_eager: ConstructorEager,
+    expected_exception: type[Exception],
+    msg: str,
+    params: SampleKwargs,
+) -> None:
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
 
-    with pytest.raises(ValueError, match="cannot specify both `n` and `fraction`"):
-        s.sample(n=2, fraction=0.5)
-
-
-def test_sample_negative_size(constructor_eager: ConstructorEager) -> None:
-    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-
-    with pytest.raises(
-        InvalidOperationError, match="sample size must be a positive integer"
-    ):
-        s.sample(n=-1)
-
-
-def test_sample_larger_than_population(constructor_eager: ConstructorEager) -> None:
-    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-
-    with pytest.raises(
-        ShapeError, match="cannot take a larger sample than the total population"
-    ):
-        s.sample(n=100)
+    with pytest.raises(expected_exception=expected_exception, match=msg):
+        s.sample(**params)
 
 
 def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import pytest
 
@@ -9,6 +9,11 @@ from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
+
+    class SampleKwargs(TypedDict, total=False):
+        n: int | None
+        fraction: float | None
+
 
 data = {"a": [1, 2, 3, 4], "b": ["x", "y", "x", "y"]}
 
@@ -30,29 +35,24 @@ def test_sample_default_single_row(constructor_eager: ConstructorEager) -> None:
     assert df.sample().shape == (1, 2)
 
 
-def test_sample_both_n_and_fraction(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize(
+    ("expected_exception", "msg", "params"),
+    [
+        (ValueError, "cannot specify both `n` and `fraction`", {"n": 2, "fraction": 0.5}),
+        (InvalidOperationError, "sample size must be a positive integer", {"n": -1}),
+        (ShapeError, "cannot take a larger sample than the total population", {"n": 10}),
+    ],
+)
+def test_sample_raises(
+    constructor_eager: ConstructorEager,
+    expected_exception: type[Exception],
+    msg: str,
+    params: SampleKwargs,
+) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
-    with pytest.raises(ValueError, match="cannot specify both `n` and `fraction`"):
-        df.sample(n=2, fraction=0.5)
-
-
-def test_sample_negative_size(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-
-    with pytest.raises(
-        InvalidOperationError, match="sample size must be a positive integer"
-    ):
-        df.sample(n=-1)
-
-
-def test_sample_larger_than_population(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-
-    with pytest.raises(
-        ShapeError, match="cannot take a larger sample than the total population"
-    ):
-        df.sample(n=100)
+    with pytest.raises(expected_exception=expected_exception, match=msg):
+        df.sample(**params)
 
 
 def test_sample_fraction(constructor_eager: ConstructorEager) -> None:
