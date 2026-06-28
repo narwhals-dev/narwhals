@@ -632,9 +632,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             n = int(num_rows * fraction)
 
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(num_rows)
-        mask = cast("_1DArray", rng.choice(idx, size=n, replace=with_replacement))
-        return self._with_native(self.native.take(mask))
+        indices = rng.choice(np.arange(num_rows), size=n, replace=with_replacement)
+        return self._with_native(self.native.take(pa.array(indices, type=pa.uint64())))
 
     def fill_nan(self, value: float | None) -> Self:
         result = pc.if_else(pc.is_nan(self.native), value, self.native)
