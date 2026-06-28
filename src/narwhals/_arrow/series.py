@@ -568,7 +568,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             both_null = pc.and_(pc.is_null(lhs), pc.is_null(rhs))
             values_equal = pc.equal(lhs, rhs)
             result = pc.if_else(both_null, True, values_equal)
-            return bool(pc.all(result).as_py())
+            return bool(pc.all(result, skip_nulls=False).as_py())
         if lhs.null_count or rhs.null_count:
             return False
         return bool(pc.all(pc.equal(lhs, rhs)).as_py())

@@ -465,6 +465,15 @@ class PandasLikeDataFrame(
         mask = ~plx.any_horizontal(plx.col(*subset).is_null(), ignore_nulls=True)
         return self.filter(mask)
 
+    def equals(self, other: Self, *, null_equal: bool) -> bool:
+        if self.shape != other.shape:
+            return False  # not needed but can short-circuit the isna() scan below
+        if not null_equal and (
+            self.native.isna().any(axis=None) or other.native.isna().any(axis=None)
+        ):
+            return False
+        return self.native.equals(other.native)
+
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.memory_usage(deep=True).sum()
         return scale_bytes(sz, unit=unit)

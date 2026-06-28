@@ -350,6 +350,21 @@ class ArrowDataFrame(
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
 
+    def equals(self, other: Self, *, null_equal: bool) -> bool:
+        if self.shape != other.shape:
+            return False
+        if self.columns != other.columns:
+            return False
+        return all(
+            self.get_column(name).equals(
+                other.get_column(name),
+                check_dtypes=False,
+                check_names=False,
+                null_equal=null_equal,
+            )
+            for name in self.columns
+        )
+
     def estimated_size(self, unit: SizeUnit) -> int | float:
         sz = self.native.nbytes
         return scale_bytes(sz, unit)
