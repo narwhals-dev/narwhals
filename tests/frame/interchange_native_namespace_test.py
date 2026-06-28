@@ -33,10 +33,6 @@ def test_interchange() -> None:
         series.__native_namespace__()
 
 
-@pytest.mark.xfail(
-    reason="Cannot access native namespace for interchange-level dataframes with unknown backend.",
-    raises=NotImplementedError,
-)
 @pytest.mark.filterwarnings("ignore:.*The `ArrowDtype` class is not available in pandas")
 def test_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest

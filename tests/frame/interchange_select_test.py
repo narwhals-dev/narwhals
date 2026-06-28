@@ -51,10 +51,6 @@ def test_interchange_non_v1() -> None:
         nw.from_native(df)  # type: ignore[call-overload]
 
 
-@pytest.mark.xfail(
-    reason="Expected interchange object to implement `_df` property to allow for recovering original object.",
-    raises=NotImplementedError,
-)
 def test_interchange_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover

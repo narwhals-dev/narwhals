@@ -661,13 +661,19 @@ def from_native(
         if eager_only:
             msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
             raise ValueError(msg)
+
         if should_interchange(native_object):
+            # TODO @dangotbanned: Handle duckdb
+            if dependencies.is_ibis_table(native_object):
+                from narwhals._ibis.interchange import IbisDataFrame
+
+                return DataFrame(IbisDataFrame(native_object))
             return DataFrame(InterchangeFrame(native_object))
 
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
-        eager_only=eager_only,
+        eager_only=eager_only or eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
         version=Version.V1,

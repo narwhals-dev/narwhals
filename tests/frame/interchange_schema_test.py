@@ -68,10 +68,6 @@ def test_interchange_schema() -> None:
     assert df["a"].dtype == nw_v1.Int64
 
 
-@pytest.mark.xfail(
-    reason="Data type date32[day] not supported by interchange protocol",
-    raises=ValueError,
-)
 @pytest.mark.filterwarnings("ignore:.*locale specific date formats")
 def test_interchange_schema_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
