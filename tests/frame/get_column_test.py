@@ -19,10 +19,11 @@ def test_get_column_missing(constructor_eager: ConstructorEager) -> None:
     expected_error: type[Exception]
     backend_name = str(constructor_eager)
     if "polars" in backend_name:
+        # NOTE: The error message in polars keep being a moving target
         import polars as pl
 
         expected_error = pl.exceptions.ColumnNotFoundError
-        msg = '"c" not found'
+        msg = "c"
     elif "pyarrow_table" in backend_name:
         expected_error = KeyError
         msg = "'Field \"c\" does not exist in schema'"
@@ -38,8 +39,9 @@ def test_get_column_missing(constructor_eager: ConstructorEager) -> None:
 def test_get_column_invalid_type(constructor_eager: ConstructorEager) -> None:
     backend_name = str(constructor_eager)
     if "polars" in backend_name:
+        # NOTE: The error message in polars keep being a moving target
         expected_error = TypeError
-        msg = "'int' object is not an instance of 'str'"
+        msg = "'int' object"
     elif "pyarrow_table" in backend_name:
         expected_error = TypeError
         msg = "Expected str, got: <class 'int'>"
