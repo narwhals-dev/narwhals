@@ -296,7 +296,9 @@ _HAS_TOP_LEVEL_DF = (
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
     if not supports_dataframe_interchange(tp_native):
-        return False
+        return (duckdb := deps.get_duckdb()) and issubclass(
+            tp_native, duckdb.DuckDBPyRelation
+        )
     exclude = tuple(mod.DataFrame for get in _HAS_TOP_LEVEL_DF if (mod := get()))
     exclude = (*exclude, pa.Table) if (pa := deps.get_pyarrow()) else exclude
     hooks = (

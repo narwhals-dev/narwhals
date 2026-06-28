@@ -668,6 +668,11 @@ def from_native(
                 from narwhals._ibis.interchange import IbisDataFrame
 
                 return DataFrame(IbisDataFrame(native_object))
+            if dependencies.is_duckdb_relation(native_object):
+                fake_interchange = Version.V1.namespace.from_backend(
+                    "duckdb"
+                ).compliant.from_native(native_object)
+                return DataFrame(fake_interchange)
             return DataFrame(InterchangeFrame(native_object))
 
     return _from_native_impl(  # type: ignore[no-any-return]
