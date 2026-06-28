@@ -38,3 +38,11 @@ def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
 
     assert r1.equals(r2)  # type: ignore[attr-defined]
     assert not r1.equals(r3)  # type: ignore[attr-defined]
+
+
+def test_sample_neither(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
+    result = df.sample()
+    assert isinstance(result, nw.DataFrame)
+    assert result.shape == (1, 1)
+    assert result.item() in {1, 2, 3}

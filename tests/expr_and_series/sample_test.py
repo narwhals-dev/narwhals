@@ -25,3 +25,11 @@ def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(
         {"res1": [(seed1 == seed2).all()], "res2": [(seed1 == seed3).all()]}, expected
     )
+
+
+def test_sample_neither(constructor_eager: ConstructorEager) -> None:
+    ser = nw.from_native(constructor_eager({"a": [1, 2, 3]})).get_column("a")
+    result = ser.sample()
+    assert isinstance(result, nw.Series)
+    assert result.shape == (1,)
+    assert result.item() in {1, 2, 3}
