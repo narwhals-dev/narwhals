@@ -1231,7 +1231,12 @@ class PandasLikeSeries(EagerSeries[Any]):
                 return False  # not needed but can short-circuit the isna() checks below
             if self.native.isna().any() or other.native.isna().any():
                 return False
-        return self.native.equals(other.native)
+        other_native = (
+            other.native.astype(self.native.dtype)
+            if not check_dtypes and self.native.dtype != other.native.dtype
+            else other.native
+        )
+        return self.native.equals(other_native)
 
 
 class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
