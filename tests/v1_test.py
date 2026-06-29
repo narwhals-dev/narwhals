@@ -36,8 +36,6 @@ from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
     assert_equal_data,
     assert_equal_hash,
     assert_equal_series,
