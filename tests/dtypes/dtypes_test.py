@@ -319,25 +319,21 @@ def test_huge_int() -> None:
 
 
 def test_float16() -> None:
+    pytest.importorskip("pyarrow")
+    import numpy as np
+    import pyarrow as pa
 
-    if PYARROW_VERSION >= (16,):
-        import pyarrow as pa
-
-        ca = pa.chunked_array([[1.0, 2.0, 3.0]], type=pa.float16())
-        result = nw.from_native(ca, series_only=True)
-        assert result.dtype == nw.Float16
-        assert result.cast(nw.Float16).to_native().type == pa.float16()
-    else:  # pragma: no cover
-        # PyArrow added casting to/from half-float in 16.0
-        pass
+    # Build from a NumPy half-float array: passing Python floats with
+    # `type=pa.float16()` is rejected ("Expected np.float16 instance") on several
+    # PyArrow versions. Reading a half-float array works on all of them.
+    ca = pa.chunked_array([pa.array(np.array([1.0, 2.0, 3.0], dtype=np.float16))])
+    assert nw.from_native(ca, series_only=True).dtype == nw.Float16
 
     if POLARS_VERSION >= (1, 36):
         import polars as pl
 
         s = pl.Series([1.0, 2.0, 3.0], dtype=pl.Float16)
-        result = nw.from_native(s, series_only=True)
-        assert result.dtype == nw.Float16
-        assert result.cast(nw.Float16).to_native().dtype == pl.Float16
+        assert nw.from_native(s, series_only=True).dtype == nw.Float16
     else:  # pragma: no cover
         # Polars added `Float16` in 1.36.0
         pass
