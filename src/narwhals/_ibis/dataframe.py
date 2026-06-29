@@ -146,17 +146,6 @@ class IbisLazyFrame(
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    # TODO @dangotbanned: Figure out if this is needed
-    def lazy(self, backend: None = None, **_: None) -> Self:
-        # The `backend`` argument has no effect but we keep it here for
-        # backwards compatibility because in `narwhals.stable.v1`
-        # function `.from_native()` will return a DataFrame for Ibis.
-
-        if backend is not None:  # pragma: no cover
-            msg = "`backend` argument is not supported for Ibis"
-            raise ValueError(msg)
-        return self
-
     def with_columns(self, *exprs: IbisExpr) -> Self:
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         return self._with_native(self.native.mutate(**new_columns_map))

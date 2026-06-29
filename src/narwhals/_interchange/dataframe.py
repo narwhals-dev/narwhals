@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Never, Self, TypeIs
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
@@ -83,7 +83,7 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
     raise AssertionError(msg)
 
 
-Original_co = TypeVar("Original_co", bound=DataFrameLike, covariant=True)
+Original_co = TypeVar("Original_co", bound=DataFrameLike | Any, covariant=True)
 
 
 class Column(Protocol):
@@ -98,6 +98,10 @@ class RecoverableColumn(Column, Protocol[Original_co]):  # type: ignore[misc]
     def __narwhals_series__(self) -> Self:
         return self
 
+    @property
+    def native(self) -> Original_co:
+        return self._native_series
+
 
 class InterchangeSeriesV1(RecoverableColumn[Original_co], Protocol[Original_co]):  # type: ignore[misc]
     _implementation: Implementation
@@ -107,6 +111,11 @@ class InterchangeSeriesV1(RecoverableColumn[Original_co], Protocol[Original_co])
 
     def __native_namespace__(self) -> ModuleType:
         return self._implementation.to_native_namespace()
+
+    if not TYPE_CHECKING:
+
+        def __getattr__(self, name: str) -> Never:
+            raise unsupported_error(name)
 
 
 class Frame(Protocol):
@@ -130,6 +139,7 @@ class RecoverableFrame(Frame, Protocol[Original_co]):
     """
 
     def __narwhals_dataframe__(self) -> Self:
+        """Required once inside `DataFrame.__init__`."""
         return self
 
 
@@ -151,6 +161,15 @@ DFI_METHODS = (
 SENTINEL = object()
 
 
+def unsupported_error(method_name: str) -> NotImplementedError:
+    msg = (
+        f"Attribute {method_name!r} is not supported for interchange-level dataframes.\n\n"
+        "Hint: you probably called `from_native` on an object which isn't fully "
+        "supported by `narwhals.stable.v1`, yet implements `__dataframe__`."
+    )
+    return NotImplementedError(msg)
+
+
 class WrapsInterchangeFrame(Protocol):
     _dfi: Frame
 
@@ -160,12 +179,7 @@ class WrapsInterchangeFrame(Protocol):
             and (func := getattr_static(self._dfi, attr, SENTINEL)) is not SENTINEL
         ):
             return func
-        msg = (
-            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
-            "Hint: you probably called `from_native` on an object which isn't fully "
-            "supported by `narwhals.stable.v1`, yet implements `__dataframe__`."
-        )
-        raise NotImplementedError(msg)
+        raise unsupported_error(attr)
 
 
 class InterchangeFrameV1(

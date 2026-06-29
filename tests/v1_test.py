@@ -59,7 +59,7 @@ def xfail_interchange(
 ) -> None:
     """Ensure we raise when trying to use a non interchange-level method."""
     marker = pytest.mark.xfail(
-        frame.implementation.is_ibis(),
+        frame.implementation.is_ibis() or frame.implementation.is_duckdb(),
         reason=f"{method!r} is not supported for interchange-level dataframes.",
         raises=NotImplementedError,
     )
@@ -333,15 +333,19 @@ def test_cast_to_enum_v1(
     # Backends that do not (yet) support Enum dtype
     if any(
         backend in str(constructor)
-        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
+        for backend in ("pyarrow_table", "sqlframe", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df_native = constructor({"a": ["a", "b"]})
+    df = nw_v1.from_native(constructor({"a": ["a", "b"]}))
+    # NOTE: the pattern on raises conflicts with the error that is raised on expr evaluation,
+    # which is before the cast that is tested
+    xfail_interchange("__narwhals_namespace__", df, request)
+    _ = df.__narwhals_namespace__()
 
     msg = re.escape("Converting to Enum is not supported in narwhals.stable.v1")
     with pytest.raises(NotImplementedError, match=msg):
-        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
+        df.select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
 
 
 def test_v1_ordered_categorical_pandas() -> None:

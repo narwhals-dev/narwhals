@@ -672,12 +672,10 @@ def from_native(  # noqa: PLR0911
 
             return DataFrame(IbisDataFrame(native_object))
 
-        # TODO @dangotbanned: Isolate eager duckdb from `DuckDBLazyFrame`
         if dependencies.is_duckdb_relation(native_object):
-            fake_interchange = Version.V1.namespace.from_backend(
-                "duckdb"
-            ).compliant.from_native(native_object)
-            return DataFrame(fake_interchange)
+            from narwhals._duckdb.interchange import DuckDBDataFrame
+
+            return DataFrame(DuckDBDataFrame(native_object))
         return DataFrame(InterchangeFrame(native_object))
 
     return _from_native_impl(  # type: ignore[no-any-return]
