@@ -319,13 +319,17 @@ def test_huge_int() -> None:
 
 
 def test_float16() -> None:
-    pytest.importorskip("pyarrow")
-    import pyarrow as pa
 
-    ca = pa.chunked_array([[1.0, 2.0, 3.0]], type=pa.float16())
-    result = nw.from_native(ca, series_only=True)
-    assert result.dtype == nw.Float16
-    assert result.cast(nw.Float16).to_native().type == pa.float16()
+    if PYARROW_VERSION >= (16,):
+        import pyarrow as pa
+
+        ca = pa.chunked_array([[1.0, 2.0, 3.0]], type=pa.float16())
+        result = nw.from_native(ca, series_only=True)
+        assert result.dtype == nw.Float16
+        assert result.cast(nw.Float16).to_native().type == pa.float16()
+    else:  # pragma: no cover
+        # PyArrow added casting to/from half-float in 16.0
+        pass
 
     if POLARS_VERSION >= (1, 36):
         import polars as pl
@@ -354,6 +358,8 @@ def test_float16_pandas(source_dtype: str, expected_native_dtype: str) -> None:
         pytest.importorskip("pyarrow")
         if PANDAS_VERSION < (1, 5):  # pragma: no cover
             pytest.skip("too old for pyarrow-backed dtypes")
+        if PYARROW_VERSION < (16,):  # pragma: no cover
+            pytest.skip("PyArrow added casting to/from half-float in 16.0")
 
     import pandas as pd
 

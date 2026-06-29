@@ -175,6 +175,9 @@ FLOAT16_UNSUPPORTED = ("duckdb", "pyspark", "sqlframe")
 def test_cast_to_float16(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 36):
         pytest.skip("Polars added `Float16` in 1.36.0")
+    if "pyarrow" in str(constructor) and PYARROW_VERSION < (16,):
+        # PyArrow added casting to/from half-float in 16.0
+        pytest.skip("PyArrow added casting to/from half-float in 16.0")
 
     data = {"a": [1.0, 2.0, 3.0]}
     df = nw.from_native(constructor(data))
