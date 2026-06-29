@@ -213,6 +213,7 @@ Join the party!
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [pysummaries](https://github.com/Genentech/pysummaries)
 - [rio](https://github.com/rio-labs/rio)
+- [scikit-learn](https://github.com/scikit-learn/scikit-learn)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [tabmat](https://github.com/Quantco/tabmat)
