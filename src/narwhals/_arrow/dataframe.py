@@ -17,7 +17,6 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
-    Version,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,

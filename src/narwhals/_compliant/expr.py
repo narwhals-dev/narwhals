@@ -13,7 +13,6 @@ from narwhals._compliant.any_namespace import (
     StructNamespace,
 )
 from narwhals._compliant.column import CompliantColumn
-from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import (
     AliasName,
     AliasNames,
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
+    from narwhals._compliant.typing import EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
