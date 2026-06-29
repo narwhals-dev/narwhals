@@ -622,7 +622,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(
+def from_native(  # noqa: PLR0911
     native_object: IntoDataFrameT
     | IntoLazyFrameT
     | IntoFrame
@@ -656,24 +656,29 @@ def from_native(
     if kwds:
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
+    if eager_only and eager_or_interchange_only:
+        msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
+        raise ValueError(msg)
 
-    if eager_or_interchange_only:
-        if eager_only:
-            msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
-            raise ValueError(msg)
+    if should_interchange(native_object):
+        if eager_only or series_only:
+            if not pass_through:
+                msg = "Cannot use `series_only=True` or `eager_only=True` with object which only implements `__dataframe__`"
+                raise TypeError(msg)
+            return native_object  # type: ignore[return-value]
 
-        if should_interchange(native_object):
-            # TODO @dangotbanned: Handle duckdb
-            if dependencies.is_ibis_table(native_object):
-                from narwhals._ibis.interchange import IbisDataFrame
+        if dependencies.is_ibis_table(native_object):
+            from narwhals._ibis.interchange import IbisDataFrame
 
-                return DataFrame(IbisDataFrame(native_object))
-            if dependencies.is_duckdb_relation(native_object):
-                fake_interchange = Version.V1.namespace.from_backend(
-                    "duckdb"
-                ).compliant.from_native(native_object)
-                return DataFrame(fake_interchange)
-            return DataFrame(InterchangeFrame(native_object))
+            return DataFrame(IbisDataFrame(native_object))
+
+        # TODO @dangotbanned: Isolate eager duckdb from `DuckDBLazyFrame`
+        if dependencies.is_duckdb_relation(native_object):
+            fake_interchange = Version.V1.namespace.from_backend(
+                "duckdb"
+            ).compliant.from_native(native_object)
+            return DataFrame(fake_interchange)
+        return DataFrame(InterchangeFrame(native_object))
 
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
