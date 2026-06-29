@@ -144,9 +144,6 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if dtype == pl.Object:
         return dtypes.Object()
     if isinstance(dtype, pl.Categorical):
-        # `isinstance` (not `==`): a `pl.Categorical` with explicitly defined
-        # categories, e.g. `pl.Categorical(categories=pl.Categories("name"))`, does
-        # not compare equal to the `pl.Categorical` class. See narwhals#3719.
         return dtypes.Categorical()
     if isinstance(dtype, pl.Enum):
         if version is Version.V1:
