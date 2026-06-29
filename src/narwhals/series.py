@@ -11,6 +11,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
+    _resolve_sample_size,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
@@ -1207,9 +1208,12 @@ class Series(Generic[IntoSeriesT]):
                4
             ]
         """
+        size = _resolve_sample_size(
+            n=n, fraction=fraction, height=len(self), with_replacement=with_replacement
+        )
         return self._with_compliant(
             self._compliant_series.sample(
-                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+                n=size, with_replacement=with_replacement, seed=seed
             )
         )
 

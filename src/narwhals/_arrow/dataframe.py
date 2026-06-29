@@ -17,7 +17,6 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
-    Version,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
@@ -796,22 +795,11 @@ class ArrowDataFrame(
     def to_arrow(self) -> pa.Table:
         return self.native
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         import numpy as np  # ignore-banned-import
 
-        num_rows = len(self)
-        if n is None and fraction is not None:
-            n = int(num_rows * fraction)
-
         rng = np.random.default_rng(seed=seed)
-        indices = rng.choice(np.arange(num_rows), size=n, replace=with_replacement)
+        indices = rng.choice(np.arange(n), size=n, replace=with_replacement)
         return self._with_native(
             self.native.take(pa.array(indices, type=pa.uint64())),
             validate_column_names=False,
