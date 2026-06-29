@@ -75,6 +75,7 @@ def test_interchange_ibis(
     out_cols = df.select("a", "z").schema.names()
 
     assert out_cols == ["a", "z"]
+    assert isinstance(df.get_column("a").to_native(), ibis.Table)
 
 
 def test_interchange_duckdb() -> None:
@@ -91,3 +92,4 @@ def test_interchange_duckdb() -> None:
     out_cols = df.select("a", "z").schema.names()
 
     assert out_cols == ["a", "z"]
+    assert isinstance(df.get_column("a").to_native(), duckdb.DuckDBPyRelation)
