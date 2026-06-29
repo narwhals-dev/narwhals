@@ -26,6 +26,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
+    _resolve_sample_size,
     can_lazyframe_collect,
     check_columns_exist,
     flatten,
@@ -2266,9 +2267,12 @@ class DataFrame(BaseFrame[DataFrameT]):
             |   1    2   32    |
             └──────────────────┘
         """
+        size = _resolve_sample_size(
+            n=n, fraction=fraction, height=len(self), with_replacement=with_replacement
+        )
         return self._with_compliant(
             self._compliant_frame.sample(
-                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+                n=size, with_replacement=with_replacement, seed=seed
             )
         )
 

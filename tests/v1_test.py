@@ -897,6 +897,15 @@ def test_expr_sample(constructor_eager: ConstructorEager) -> None:
     assert result_expr == expected_expr
 
 
+def test_expr_sample_fraction(constructor_eager: ConstructorEager) -> None:
+    # `fraction` is resolved against the column height at evaluation time.
+    df = nw_v1.from_native(constructor_eager({"a": [1, None] * 10}), eager_only=True)
+
+    result_expr = df.select(nw_v1.col("a").drop_nulls().sample(fraction=0.1)).shape
+    expected_expr = (1, 1)
+    assert result_expr == expected_expr
+
+
 def test_is_frame() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
