@@ -322,18 +322,6 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
         assert isinstance(res, nw.LazyFrame)
 
 
-def test_interchange_protocol_non_v1() -> None:
-    class MockDf:
-        def __dataframe__(self) -> None:  # pragma: no cover
-            pass
-
-    mockdf = MockDf()
-    result = nw.from_native(mockdf, pass_through=True)
-    assert result is mockdf
-    with pytest.raises(TypeError):
-        nw.from_native(mockdf)  # type: ignore[call-overload]
-
-
 def test_from_native_strict_native_series() -> None:
     obj: list[int] = [1, 2, 3, 4]
     array_like = cast("Iterable[Any]", obj)

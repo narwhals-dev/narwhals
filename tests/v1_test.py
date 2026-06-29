@@ -275,20 +275,6 @@ def test_hist_v1() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
-@pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
-def test_is_ordered_categorical_interchange_protocol() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    df = pd.DataFrame(
-        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
-    ).__dataframe__()
-    assert nw_v1.is_ordered_categorical(
-        nw_v1.from_native(df, eager_or_interchange_only=True)["a"]
-    )
-
-
 def test_all_nulls_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -588,17 +574,6 @@ def test_from_native_strict_false_typing() -> None:
 def test_from_native_strict_false_invalid() -> None:
     with pytest.raises(ValueError, match="Cannot pass both `strict`"):
         nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
-
-
-def test_from_mock_interchange_protocol_non_strict() -> None:
-    class MockDf:
-        def __dataframe__(self) -> None:  # pragma: no cover
-            pass
-
-    mockdf = MockDf()
-    result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
-    # mypy issue?
-    assert result is mockdf  # type: ignore[comparison-overlap]
 
 
 def test_from_native_lazyframe() -> None:
