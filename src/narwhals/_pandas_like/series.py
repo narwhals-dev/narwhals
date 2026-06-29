@@ -639,18 +639,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def n_unique(self) -> int:
         return self.native.nunique(dropna=False)
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         return self._with_native(
-            self.native.sample(
-                n=n, frac=fraction, replace=with_replacement, random_state=seed
-            )
+            self.native.sample(n=n, replace=with_replacement, random_state=seed)
         )
 
     def abs(self) -> Self:
