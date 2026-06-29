@@ -216,7 +216,7 @@ class PolarsNamespace:
             to_concat = [e.implode().over(pl.int_range(pl.len())) for e in pl_exprs]
             expr = pl.concat_list(to_concat)
         else:
-            expr = pl.list(pl_exprs)  # type: ignore[attr-defined]
+            expr = pl.list(pl_exprs)  # type: ignore[attr-defined]  # pragma: no cover
 
         return self._expr(expr, version=self._version)
 
