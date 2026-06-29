@@ -149,10 +149,6 @@ class InterchangeFrame:
         raise unsupported_error(attr)
 
 
-def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
-    return _hasattr_static(obj, "__dataframe__")
-
-
 def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
     return _should_interchange(type(obj))  # type: ignore[arg-type]
 
@@ -167,7 +163,7 @@ _HAS_TOP_LEVEL_DF = (
 
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
-    if not supports_dataframe_interchange(tp_native):
+    if not _hasattr_static(tp_native, "__dataframe__"):
         return (duckdb := deps.get_duckdb()) and issubclass(
             tp_native, duckdb.DuckDBPyRelation
         )
