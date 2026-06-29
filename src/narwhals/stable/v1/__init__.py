@@ -670,12 +670,12 @@ def from_native(  # noqa: PLR0911
         if dependencies.is_ibis_table(native_object):
             from narwhals._ibis.interchange import IbisDataFrame
 
-            return DataFrame(IbisDataFrame(native_object))
+            return DataFrame(IbisDataFrame.from_native(native_object))
 
         if dependencies.is_duckdb_relation(native_object):
             from narwhals._duckdb.interchange import DuckDBDataFrame
 
-            return DataFrame(DuckDBDataFrame(native_object))
+            return DataFrame(DuckDBDataFrame.from_native(native_object))
         return DataFrame(InterchangeFrame(native_object))
 
     return _from_native_impl(  # type: ignore[no-any-return]

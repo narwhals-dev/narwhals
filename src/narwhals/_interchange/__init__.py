@@ -5,3 +5,4 @@ from narwhals._interchange.dataframe import (
     InterchangeSeriesV1 as InterchangeSeriesV1,
     unsupported_error as unsupported_error,
 )
+from narwhals._interchange.lazyframe import LazyFrame as LazyFrame
