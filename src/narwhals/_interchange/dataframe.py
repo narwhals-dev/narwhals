@@ -3,23 +3,18 @@ from __future__ import annotations
 import enum
 import sys
 from functools import lru_cache
-from inspect import getattr_static
-from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 
 from narwhals import dependencies as deps
 from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
-    from types import ModuleType
-
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Never, Self, TypeIs
+    from typing_extensions import Self, TypeIs
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.stable.v1 import DataFrame as DataFrameV1
 
 
 class DataFrameLike(Protocol):
@@ -83,152 +78,21 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
     raise AssertionError(msg)
 
 
-Original_co = TypeVar("Original_co", bound=DataFrameLike | Any, covariant=True)
-
-
-class Column(Protocol):
-    @property
-    def dtype(self) -> tuple[DtypeKind, int, Any, Any] | Any: ...
-
-
-class RecoverableColumn(Column, Protocol[Original_co]):  # type: ignore[misc]
-    _version: Version = Version.V1
-    _native_series: Original_co
-
-    def __narwhals_series__(self) -> Self:
-        return self
-
-    @property
-    def native(self) -> Original_co:
-        return self._native_series
-
-
-class InterchangeSeriesV1(RecoverableColumn[Original_co], Protocol[Original_co]):  # type: ignore[misc]
-    _implementation: Implementation
-
-    @property
-    def dtype(self) -> DType: ...  # ?
-
-    def __native_namespace__(self) -> ModuleType:
-        return self._implementation.to_native_namespace()
-
-    if not TYPE_CHECKING:
-
-        def __getattr__(self, name: str) -> Never:
-            raise unsupported_error(name)
-
-
-class Frame(Protocol):
-    def __dataframe__(self, *_: Any, **__: Any) -> Self:  # pragma: no cover
-        return self
-
-    def column_names(self) -> Iterable[str]: ...
-    def get_column_by_name(self, name: str, /) -> Column: ...
-    def select_columns_by_name(self, names: Sequence[str], /) -> Self: ...
-
-
-class RecoverableFrame(Frame, Protocol[Original_co]):
-    _version: Version = Version.V1
-
-    @property
-    def _df(self) -> Original_co: ...
-
-    """Allow for recovering original object.
-
-    See https://github.com/data-apis/dataframe-api/issues/360.
-    """
-
-    def __narwhals_dataframe__(self) -> Self:
-        """Required once inside `DataFrame.__init__`."""
-        return self
-
-
-DFI_METHODS = (
-    "column_names",
-    "__dataframe__",
-    "get_chunks",
-    "get_column",
-    "get_column_by_name",
-    "get_columns",
-    "metadata",
-    "num_chunks",
-    "num_columns",
-    "num_rows",
-    "select_columns",
-    "select_columns_by_name",
-)
-
-SENTINEL = object()
-
-
 def unsupported_error(method_name: str) -> NotImplementedError:
     msg = (
-        f"Attribute {method_name!r} is not supported for interchange-level dataframes.\n\n"
+        f"{method_name!r} is not supported for interchange-level dataframes.\n\n"
         "Hint: you probably called `from_native` on an object which isn't fully "
         "supported by `narwhals.stable.v1`, yet implements `__dataframe__`."
     )
     return NotImplementedError(msg)
 
 
-class WrapsInterchangeFrame(Protocol):
-    _dfi: Frame
-
-    def __getattr__(self, attr: str) -> Any:
-        if (
-            attr in DFI_METHODS
-            and (func := getattr_static(self._dfi, attr, SENTINEL)) is not SENTINEL
-        ):
-            return func
-        raise unsupported_error(attr)
-
-
-class InterchangeFrameV1(
-    WrapsInterchangeFrame, RecoverableFrame[Original_co], Protocol[Original_co]
-):
-    _implementation: Implementation
-
-    @property
-    def schema(self) -> dict[str, DType]: ...
-    @property
-    def columns(self) -> list[str]:
-        return list(self.column_names())
-
-    @property
-    def _native_frame(self) -> Original_co:
-        return self._df
-
-    def to_pandas(self) -> pd.DataFrame: ...
-    def to_arrow(self) -> pa.Table: ...
-    def get_column(self, name: str, /) -> InterchangeSeriesV1[Original_co]: ...
-    def get_column_by_name(
-        self, name: str, /
-    ) -> InterchangeSeriesV1[Original_co]:  # pragma: no cover
-        return self.get_column(name)
-
-    def collect_schema(self) -> dict[str, DType]:
-        return self.schema
-
-    def __native_namespace__(self) -> ModuleType:
-        return self._implementation.to_native_namespace()
-
-    def simple_select(self, *column_names: str) -> Self:
-        return self.select_columns_by_name(column_names)
-
-    def to_narwhals(self) -> DataFrameV1[Any]:  # pragma: no cover
-        from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-        return DataFrameV1(self)  # type: ignore[no-any-return]
-
-
-# TODO @dangotbanned: Review what is going on here
-# - roll in the protocol stuff
-# - integrate duckdb
-class InterchangeFrame(WrapsInterchangeFrame):
+class InterchangeFrame:
     _version = Version.V1
     _implementation: Final = Implementation.UNKNOWN
 
     def __init__(self, df: DataFrameLike) -> None:
-        self._dfi = df.__dataframe__()
+        self._dfi: Any = df.__dataframe__()
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -279,22 +143,10 @@ class InterchangeFrame(WrapsInterchangeFrame):
 
     def simple_select(self, *column_names: str) -> Self:
         frame = self._dfi.select_columns_by_name(list(column_names))
-        if not hasattr(frame, "_df"):  # pragma: no cover
-            msg = (
-                "Expected interchange object to implement `_df` property to allow for recovering original object.\n"
-                "See https://github.com/data-apis/dataframe-api/issues/360."
-            )
-            raise NotImplementedError(msg)
-        return self.__class__(frame._df)  # pyright: ignore[reportAttributeAccessIssue]
+        return self.__class__(frame._df)
 
-    def select(self, *exprs: str) -> Self:  # pragma: no cover
-        msg = (
-            "`select`-ing not by name is not supported for interchange-only level.\n\n"
-            "If you would like to see this kind of object better supported in "
-            "Narwhals, please open a feature request "
-            "at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)
+    def __getattr__(self, attr: str) -> Any:
+        raise unsupported_error(attr)
 
 
 def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
@@ -313,7 +165,6 @@ _HAS_TOP_LEVEL_DF = (
 )
 
 
-# TODO @dangotbanned: ~~cudf~~, sqlframe?, pyspark?, pyspark-connect?
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
     if not supports_dataframe_interchange(tp_native):
