@@ -572,6 +572,247 @@ def test_polars_categorical_with_defined_categories() -> None:
     assert df.select(ncs.categorical()).columns == ["cat"]
 
 
+@pytest.mark.parametrize(
+    ("args", "name", "namespace", "physical"),
+    [
+        ((), "", "", nw.UInt32),  # default is the (unnamed) global collection
+        ((None,), "", "", nw.UInt32),  # `None` is the same global collection
+        (("my_name",), "my_name", "", nw.UInt32),
+        (("my_name", "my_namespace"), "my_name", "my_namespace", nw.UInt32),
+        (("my_name", "my_namespace", nw.UInt8), "my_name", "my_namespace", nw.UInt8),
+        (("my_name", "", nw.UInt16()), "my_name", "", nw.UInt16),  # instance is accepted
+    ],
+)
+def test_categories_construct(
+    args: tuple[Any, ...], name: str, namespace: str, physical: type[nw.dtypes.DType]
+) -> None:
+    cats = nw.Categories(*args)
+    assert cats.name == name
+    assert cats.namespace == namespace
+    assert cats.physical == physical
+
+
+@pytest.mark.parametrize("physical", [nw.UInt64, nw.Int32, nw.String, "u8"])
+def test_categories_invalid_physical(physical: Any) -> None:
+    # mirror Polars: an unsupported physical is a `TypeError`
+    with pytest.raises(TypeError, match="physical"):
+        nw.Categories("my_name", physical=physical)
+
+
+@pytest.mark.parametrize("kwargs", [{"namespace": "ns"}, {"physical": nw.UInt8}])
+def test_categories_global_must_be_default(kwargs: dict[str, Any]) -> None:
+    # mirror Polars: the unnamed/global collection cannot be customized
+    with pytest.raises(ValueError, match="global"):
+        nw.Categories(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("categories", "expected"),
+    [
+        (nw.Categories(), True),
+        (nw.Categories(None), True),
+        (nw.Categories(""), True),
+        (nw.Categories("colors"), False),
+        (nw.Categories("colors", "ns"), False),
+        (nw.Categories("colors", physical=nw.UInt8), False),
+    ],
+)
+def test_categories_is_global(categories: nw.Categories, *, expected: bool) -> None:
+    assert categories.is_global() is expected
+
+
+# Distinct collections: each is equal (and hashes equal) only to a copy of itself.
+# Name, namespace and physical type all participate in identity.
+CATEGORIES = [
+    nw.Categories(),
+    nw.Categories("foo"),
+    nw.Categories("foo", physical=nw.UInt16),
+    nw.Categories("boo"),
+    nw.Categories("foo", "bar"),
+    nw.Categories("foo", "baz"),
+    nw.Categories("foo", "bar", nw.UInt8),
+]
+
+
+# Adapted from https://github.com/pola-rs/polars/blob/89030b68968146672601a73aed3631f54854a291/py-polars/tests/unit/datatypes/test_categories.py
+def test_categories_eq_hash() -> None:
+    for i, left in enumerate(CATEGORIES):
+        copy = nw.Categories(left.name, left.namespace, left.physical)
+        assert left == copy
+        assert_equal_hash(left, copy)
+        for j, right in enumerate(CATEGORIES):
+            if i != j:
+                assert left != right
+
+
+@pytest.mark.parametrize("other", ["a", nw.Categorical, nw.Categorical()])
+def test_categories_not_equal_to_non_categories(other: object) -> None:
+    # Categories is not a dtype: never equal to unrelated objects
+    assert nw.Categories("a") != other
+
+
+@pytest.mark.parametrize(
+    ("categories", "expected"),
+    [
+        (nw.Categories(), "Categories()"),  # the global collection has a bare repr
+        (nw.Categories("a"), "Categories('a')"),
+        (
+            nw.Categories("a", "ns"),
+            "Categories(name='a', namespace='ns', physical=UInt32)",
+        ),
+        (
+            nw.Categories("a", physical=nw.UInt8),
+            "Categories(name='a', namespace='', physical=UInt8)",
+        ),
+        (
+            nw.Categories("a", "ns", nw.UInt16),
+            'Categories(name="a", namespace="ns", physical=UInt16)',
+        ),
+    ],
+)
+def test_categories_repr(categories: nw.Categories, expected: str) -> None:
+    assert repr(categories) == expected
+
+
+@pytest.mark.parametrize(
+    ("categories", "expected"),
+    [
+        (None, None),
+        (nw.Categories(), None),  # unnamed + default physical normalizes to the default
+        ("my_name", nw.Categories("my_name")),  # str shorthand for the name
+        (nw.Categories("my_name"), nw.Categories("my_name")),
+        # a non-default physical is preserved on a named collection
+        (
+            nw.Categories("my_name", physical=nw.UInt8),
+            nw.Categories("my_name", "", nw.UInt8),
+        ),
+    ],
+)
+def test_categorical_categories(
+    categories: nw.Categories | str | None, expected: nw.Categories | None
+) -> None:
+    dtype = nw.Categorical(categories)
+    assert isinstance(dtype, nw.Categorical)
+    assert dtype.categories == expected
+
+
+@pytest.mark.parametrize(
+    ("dtype", "other", "equal"),
+    [
+        # narwhals convention: a parametrized dtype still matches its bare class,
+        # so `== nw.Categorical` checks and the `categorical()` selector keep working
+        (nw.Categorical(), nw.Categorical, True),
+        (nw.Categorical(), nw.Categorical(), True),
+        (nw.Categorical(nw.Categories()), nw.Categorical(), True),
+        (nw.Categorical("my_name"), nw.Categorical, True),
+        (nw.Categorical("my_name"), nw.Categorical(nw.Categories("my_name")), True),
+        (
+            nw.Categorical(nw.Categories("my_name")),
+            nw.Categorical(nw.Categories("x")),
+            False,
+        ),
+        (nw.Categorical(nw.Categories("my_name")), nw.Categorical(), False),
+        (nw.Categorical(nw.Categories("my_name")), nw.Enum(["a", "b"]), False),
+    ],
+)
+def test_categorical_eq(dtype: nw.Categorical, other: object, *, equal: bool) -> None:
+    assert (dtype == other) is equal
+
+
+@pytest.mark.parametrize(
+    ("dtype", "expected"),
+    [
+        (nw.Categorical(), "Categorical"),
+        (nw.Categorical(nw.Categories()), "Categorical"),
+        (nw.Categorical("my_name"), "Categorical(categories=Categories('my_name'))"),
+    ],
+)
+def test_categorical_repr(dtype: nw.Categorical, expected: str) -> None:
+    assert repr(dtype) == expected
+
+
+@pytest.mark.parametrize("categories", [None, "a", nw.Categories("a", "ns")])
+def test_categorical_hash(categories: nw.Categories | str | None) -> None:
+    assert_equal_hash(nw.Categorical(categories), nw.Categorical(categories))
+
+
+def test_categorical_hash_distinct() -> None:
+    assert hash(nw.Categorical("a")) != hash(nw.Categorical("b"))
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 32), reason="`pl.Categories` was introduced in 1.32"
+)
+@pytest.mark.parametrize(
+    ("name", "namespace", "physical"),
+    [
+        ("my_name", "my_namespace", nw.UInt32),
+        ("my_name", "", nw.UInt8),
+        ("my_name", "my_namespace", nw.UInt16),
+        ("", "", nw.UInt32),  # the (unnamed) default surfaces no categories
+    ],
+)
+def test_polars_categorical_roundtrip(
+    name: str, namespace: str, physical: type[nw.dtypes.DType]
+) -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    pl_physical = {nw.UInt8: pl.UInt8, nw.UInt16: pl.UInt16, nw.UInt32: pl.UInt32}[
+        physical
+    ]
+    native_dtype = pl.Categorical(categories=pl.Categories(name, namespace, pl_physical))
+    df = nw.from_native(pl.DataFrame({"cat": pl.Series(["a", "b"], dtype=native_dtype)}))
+
+    dtype = df.schema["cat"]
+    assert isinstance(dtype, nw.Categorical)
+    is_default = not name and not namespace and physical is nw.UInt32
+    assert dtype.categories == (
+        None if is_default else nw.Categories(name, namespace, physical)
+    )
+
+    # casting back to the native backend round-trips the full collection identity
+    result = df.select(nw.col("cat").cast(dtype)).to_native()
+    assert result.schema["cat"] == native_dtype
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 32), reason="`pl.Categories` was introduced in 1.32"
+)
+def test_polars_named_categorical_v1_is_frozen() -> None:
+    # stable.v1 must keep the pre-existing (parameterless) behavior
+    pytest.importorskip("polars")
+    import polars as pl
+
+    import narwhals.stable.v1 as nw_v1
+
+    native_dtype = pl.Categorical(categories=pl.Categories("my_name"))
+    df = nw_v1.from_native(
+        pl.DataFrame({"cat": pl.Series(["a", "b"], dtype=native_dtype)})
+    )
+
+    dtype = df.schema["cat"]
+    assert isinstance(dtype, nw_v1.Categorical)
+    assert dtype == nw_v1.Categorical
+    assert dtype.categories is None
+
+
+def test_categorical_named_cast_all_backends(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # The named-categories payload is only meaningful for Polars; for every other
+    # backend it is silently ignored, but casting must still succeed and yield a
+    # `Categorical`. Backends without categorical support are expected to fail.
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis", "sqlframe")):
+        request.applymarker(pytest.mark.xfail(reason="No categorical dtype support"))
+    if "modin" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="Modin categorical cast quirks"))
+
+    df = nw.from_native(constructor({"a": ["x", "y", "x"]}))
+    result = df.with_columns(nw.col("a").cast(nw.Categorical(nw.Categories("my_name"))))
+    assert result.collect_schema()["a"] == nw.Categorical
+
+
 def test_enum_repr() -> None:
     result = nw.Enum(["a", "b"])
     assert "Enum(categories=['a', 'b'])" in repr(result)

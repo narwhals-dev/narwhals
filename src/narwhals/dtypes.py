@@ -638,8 +638,123 @@ class Duration(TemporalType, metaclass=_DurationMeta):
         return f"{class_name}(time_unit={self.time_unit!r})"
 
 
+class Categories:
+    """A named collection of categories backing a [`Categorical`][] dtype.
+
+    Two categories are considered equal (and will use the same physical mapping of
+    categories to strings) if they have the same name, namespace and physical
+    backing type, even if they are created in separate calls to Categories.
+
+    Warning:
+        This functionality is currently considered **unstable**. It may be
+        changed at any point without it being considered a breaking change.
+
+    Warning:
+        This functionality affects only polars backed objects.
+
+    Arguments:
+        name: The name of this `Categories`. If set to `None` or an empty string, this
+            refers to the global categories.
+        namespace: An optional namespace for this `Categories`.
+            Defaults to the empty string. If the name is empty or `None`
+            indicating the global categories, the namespace must also be empty.
+        physical: The physical type used to represent the categories.
+            Defaults to `UInt32` (must be one of `UInt8`, `UInt16` and `UInt32}`)
+
+    Examples:
+        >>> import narwhals as nw
+        >>> nw.Categorical(nw.Categories("colors"))
+        Categorical(categories=Categories(name='colors'))
+
+    Adapted from https://github.com/pola-rs/polars/blob/py-1.42.0/py-polars/src/polars/datatypes/classes.py#L677-L856
+    """
+
+    __slots__ = ("name", "namespace", "physical")
+    name: str
+    """Name of the categories collection."""
+    namespace: str
+    """Namespace of the categories collection."""
+    physical: type[DType]
+    """Unsigned integer dtype used to store the category codes."""
+
+    def __init__(
+        self,
+        name: str | None = None,
+        namespace: str = "",
+        physical: type[DType] | DType = UInt32,
+    ) -> None:
+        physical = self._parse_physical(physical)
+        name = name or ""
+        # Mirror Polars: the global (unnamed) collection is shared, so it cannot
+        # carry a namespace or a non-default physical type.
+        if not name and (namespace or physical is not UInt32):
+            msg = (
+                "The global (unnamed) categories collection may not specify a "
+                f"namespace or a non-default physical type, got: {namespace=}, "
+                f"{physical!r}."
+            )
+            raise ValueError(msg)
+        self.name = name
+        self.namespace = namespace
+        self.physical = physical
+
+    @staticmethod
+    def _parse_physical(physical: type[DType] | DType) -> type[DType]:
+        if isinstance_or_issubclass(physical, (UInt8, UInt16, UInt32)):
+            return physical.base_type()
+        msg = (
+            "Categories `physical` must be one of UInt8, UInt16, UInt32, "
+            f"got: {physical!r}"
+        )
+        raise TypeError(msg)
+
+    def is_global(self) -> bool:
+        """Whether this is the (unnamed) global categories collection.
+
+        A named collection is local; the empty-named one is the global collection
+        shared across frames (mirroring Polars).
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Categories().is_global()
+            True
+            >>> nw.Categories("colors").is_global()
+            False
+        """
+        # A non-default `namespace`/`physical` is only allowed alongside a name, so
+        # an empty name is a sufficient (and complete) test for the global collection.
+        return not self.name
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, Categories)
+            and self.name == other.name
+            and self.namespace == other.namespace
+            and self.physical == other.physical
+        )
+
+    def __hash__(self) -> int:
+        return hash((self.__class__, self.name, self.namespace, self.physical))
+
+    def __repr__(self) -> str:
+        name = self.name
+        namespace = self.namespace
+        phys = self.physical
+        if self.is_global():
+            return "Categories()"
+        if namespace == "" and phys == UInt32:
+            return f'Categories("{name}")'
+        return f'Categories(name="{name}", namespace="{namespace}", physical={phys})'
+
+
 class Categorical(DType):
     """A categorical encoding of a set of strings.
+
+    Arguments:
+        categories: The categories collection backing the encoding. Only Polars
+            tracks a named collection; for every other backend this stays `None`.
+            A string is interpreted as the collection's `name`, and an unnamed
+            collection is normalized to `None`.
 
     Examples:
         >>> import polars as pl
@@ -648,6 +763,52 @@ class Categorical(DType):
         >>> nw.from_native(s_native, series_only=True).cast(nw.Categorical).dtype
         Categorical
     """
+
+    __slots__ = ("categories",)
+    categories: Categories | None
+    """The categories collection backing the encoding, or `None` when unnamed."""
+
+    def __init__(self, categories: Categories | str | None = None) -> None:
+        if isinstance(categories, str):
+            categories = Categories(categories)
+        # narwhals has no global categories collection: the (unnamed) global one
+        # carries no information, so it is normalized to `None`. This keeps a bare
+        # `Categorical()` with its original repr, equality and hash semantics.
+        if isinstance(categories, Categories) and categories.is_global():
+            categories = None
+        self.categories = categories
+
+    def __eq__(self, other: DType | type[DType]) -> bool:  # type: ignore[override]
+        """Check if this Categorical is equivalent to another DType.
+
+        Examples:
+            >>> import narwhals as nw
+            >>> nw.Categorical() == nw.Categorical
+            True
+            >>> nw.Categorical(nw.Categories("a")) == nw.Categorical
+            True
+            >>> nw.Categorical(nw.Categories("a")) == nw.Categorical(nw.Categories("a"))
+            True
+            >>> nw.Categorical(nw.Categories("a")) == nw.Categorical(nw.Categories("b"))
+            False
+            >>> nw.Categorical(nw.Categories("a")) == nw.Enum(["a", "b"])
+            False
+        """
+        if type(other) is DTypeClass:
+            return other is Categorical
+        return isinstance(other, type(self)) and self.categories == other.categories
+
+    def __hash__(self) -> int:
+        # Preserve the bare-class hash for the (overwhelmingly common) default, so
+        # that `Categorical()` remains interchangeable with how it hashed before.
+        if self.categories is None:
+            return hash(self.__class__)
+        return hash((self.__class__, self.categories))
+
+    def __repr__(self) -> str:
+        if self.categories is None:
+            return super().__repr__()
+        return f"{type(self).__name__}(categories={self.categories!r})"
 
 
 class Enum(DType):

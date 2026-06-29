@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method
     from narwhals._polars.expr import PolarsExpr
     from narwhals._polars.series import PolarsSeries
-    from narwhals.dtypes import DType
+    from narwhals.dtypes import Categories, DType
     from narwhals.typing import IntoDType
 
     T = TypeVar("T")
@@ -82,6 +82,12 @@ BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 https://github.com/pola-rs/polars/pull/24594
 """
 
+HAS_CATEGORIES: Final[bool] = BACKEND_VERSION >= (1, 32, 0)
+"""`pl.Categories` and `pl.Categorical(categories=...)` since the Categorical rework.
+
+https://github.com/pola-rs/polars/pull/23016
+"""
+
 
 @overload
 def extract_native(obj: _StoresNative[NativeT]) -> NativeT: ...
@@ -106,6 +112,15 @@ def extract_args_kwargs(
 ) -> tuple[Iterator[Any], dict[str, Any]]:
     it_args = (extract_native(arg) for arg in args)
     return it_args, {k: extract_native(v) for k, v in kwds.items()}
+
+
+def _categories_from_native(categories: pl.Categories, version: Version) -> Categories:
+    """Map a `pl.Categories` collection to a narwhals `Categories`."""
+    from narwhals.dtypes import Categories
+
+    native_physical = categories.physical()
+    physical = native_to_narwhals_dtype(native_physical, version)
+    return Categories(categories.name(), categories.namespace(), physical)
 
 
 @lru_cache(maxsize=16)
@@ -144,10 +159,9 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if dtype == pl.Object:
         return dtypes.Object()
     if isinstance(dtype, pl.Categorical):
-        # `isinstance` (not `==`): a `pl.Categorical` with explicitly defined
-        # categories, e.g. `pl.Categorical(categories=pl.Categories("name"))`, does
-        # not compare equal to the `pl.Categorical` class. See narwhals#3719.
-        return dtypes.Categorical()
+        if version is Version.V1 or not HAS_CATEGORIES:
+            return dtypes.Categorical()
+        return dtypes.Categorical(_categories_from_native(dtype.categories, version))
     if isinstance(dtype, pl.Enum):
         if version is Version.V1:
             return dtypes.Enum()  # type: ignore[call-arg]
@@ -217,6 +231,16 @@ def narwhals_to_native_dtype(  # noqa: C901
 ) -> pl.DataType:
     dtypes = version.dtypes
     base_type = dtype.base_type()
+    if (
+        HAS_CATEGORIES
+        and isinstance(dtype, dtypes.Categorical)
+        and dtype.categories is not None
+    ):
+        cats = dtype.categories
+        physical = NW_TO_PL_DTYPES[cats.physical]
+        return pl.Categorical(
+            categories=pl.Categories(cats.name, cats.namespace, physical)
+        )
     if pl_type := NW_TO_PL_DTYPES.get(base_type):
         return pl_type
     if isinstance_or_issubclass(dtype, dtypes.Enum):

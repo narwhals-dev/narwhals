@@ -43,11 +43,10 @@ def iter_api_reference_names(tp: type[Any]) -> Iterator[str]:
 
 def iter_api_reference_names_dtypes(module: ModuleType) -> Iterator[str]:
     base = module.DType
-    # NOTE: Special case, only non-dtype
-    field_dtype = module.Field
+    # NOTE: Special case, non-dtype helpers
+    non_dtypes = {module.Field, module.Categories}
     for name, _ in inspect.getmembers(
-        module,
-        lambda x: isinstance(x, type) and (issubclass(x, base) or x is field_dtype),
+        module, lambda x: isinstance(x, type) and (issubclass(x, base) or x in non_dtypes)
     ):
         yield name
 

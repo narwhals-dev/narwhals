@@ -35,6 +35,7 @@
         - Struct
         - String
         - Categorical
+        - Categories
         - Enum
         - Binary
         - Boolean
