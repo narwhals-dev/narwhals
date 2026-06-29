@@ -44,13 +44,26 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from typing_extensions import assert_type
+    from typing_extensions import LiteralString, assert_type
 
     from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.stable.v1.typing import Frame, IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
+
+
+# TODO @dangotbanned: Include duckdb after checking ci fallout for ibis
+def xfail_interchange(
+    method: LiteralString, frame: Frame, request: pytest.FixtureRequest
+) -> None:
+    """Ensure we raise when trying to use a non interchange-level method."""
+    marker = pytest.mark.xfail(
+        frame.implementation.is_ibis(),
+        reason=f"{method!r} is not supported for interchange-level dataframes.",
+        raises=NotImplementedError,
+    )
+    request.applymarker(marker)
 
 
 def test_toplevel() -> None:
@@ -446,12 +459,13 @@ def test_all_horizontal() -> None:
     assert_equal_data(result, expected)
 
 
-def test_with_row_index(constructor: Constructor) -> None:
+def test_with_row_index(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))
+    xfail_interchange("with_row_index", frame, request)
 
     msg = "Cannot pass `order_by`"
     context = (
@@ -877,8 +891,10 @@ def test_is_frame() -> None:
     assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
 
 
-def test_with_version(constructor: Constructor) -> None:
-    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+def test_with_version(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    frame = nw_v1.from_native(constructor({"a": [1, 2]}))
+    xfail_interchange("lazy", frame, request)
+    lf = frame.lazy()
     assert isinstance(lf, nw_v1.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
 
@@ -1188,7 +1204,7 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
         "c": [None, None, 1, None, 2, None],
     }
     df = nw_v1.from_native(constructor(data))
-
+    xfail_interchange("__narwhals_namespace__", df, request)
     with pytest.warns(NarwhalsUnstableWarning):
         df.select(nw_v1.col("a", "b").any_value())
 

@@ -110,7 +110,7 @@ class InterchangeSeriesV1(RecoverableColumn[Original_co], Protocol[Original_co])
 
 
 class Frame(Protocol):
-    def __dataframe__(self, *, allow_copy: bool = True) -> Self:  # pragma: no cover
+    def __dataframe__(self, *_: Any, **__: Any) -> Self:  # pragma: no cover
         return self
 
     def column_names(self) -> Iterable[str]: ...
@@ -133,7 +133,44 @@ class RecoverableFrame(Frame, Protocol[Original_co]):
         return self
 
 
-class InterchangeFrameV1(RecoverableFrame[Original_co], Protocol[Original_co]):
+DFI_METHODS = (
+    "column_names",
+    "__dataframe__",
+    "get_chunks",
+    "get_column",
+    "get_column_by_name",
+    "get_columns",
+    "metadata",
+    "num_chunks",
+    "num_columns",
+    "num_rows",
+    "select_columns",
+    "select_columns_by_name",
+)
+
+SENTINEL = object()
+
+
+class WrapsInterchangeFrame(Protocol):
+    _dfi: Frame
+
+    def __getattr__(self, attr: str) -> Any:
+        if (
+            attr in DFI_METHODS
+            and (func := getattr_static(self._dfi, attr, SENTINEL)) is not SENTINEL
+        ):
+            return func
+        msg = (
+            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
+            "Hint: you probably called `from_native` on an object which isn't fully "
+            "supported by `narwhals.stable.v1`, yet implements `__dataframe__`."
+        )
+        raise NotImplementedError(msg)
+
+
+class InterchangeFrameV1(
+    WrapsInterchangeFrame, RecoverableFrame[Original_co], Protocol[Original_co]
+):
     _implementation: Implementation
 
     @property
@@ -169,33 +206,15 @@ class InterchangeFrameV1(RecoverableFrame[Original_co], Protocol[Original_co]):
         return DataFrameV1(self)  # type: ignore[no-any-return]
 
 
-DFI_METHODS = (
-    "column_names",
-    "__dataframe__",
-    "get_chunks",
-    "get_column",
-    "get_column_by_name",
-    "get_columns",
-    "metadata",
-    "num_chunks",
-    "num_columns",
-    "num_rows",
-    "select_columns",
-    "select_columns_by_name",
-)
-
-SENTINEL = object()
-
-
 # TODO @dangotbanned: Review what is going on here
 # - roll in the protocol stuff
 # - integrate duckdb
-class InterchangeFrame:
+class InterchangeFrame(WrapsInterchangeFrame):
     _version = Version.V1
     _implementation: Final = Implementation.UNKNOWN
 
     def __init__(self, df: DataFrameLike) -> None:
-        self._interchange_frame = df.__dataframe__()
+        self._dfi = df.__dataframe__()
 
     def __narwhals_dataframe__(self) -> Self:
         return self
@@ -211,7 +230,7 @@ class InterchangeFrame:
     def get_column(self, name: str) -> InterchangeSeries:
         from narwhals._interchange.series import InterchangeSeries
 
-        return InterchangeSeries(self._interchange_frame.get_column_by_name(name))
+        return InterchangeSeries(self._dfi.get_column_by_name(name))
 
     def to_pandas(self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
@@ -222,53 +241,37 @@ class InterchangeFrame:
                 f" 'pandas>=1.5.0' to be installed, found {pd.__version__}"
             )
             raise NotImplementedError(msg)
-        return pd.api.interchange.from_dataframe(self._interchange_frame)
+        return pd.api.interchange.from_dataframe(self._dfi)
 
     def to_arrow(self) -> pa.Table:
         from pyarrow.interchange.from_dataframe import (  # ignore-banned-import()
             from_dataframe,
         )
 
-        return from_dataframe(self._interchange_frame)
+        return from_dataframe(self._dfi)
 
     @property
     def schema(self) -> dict[str, DType]:
         return {
             column_name: map_interchange_dtype_to_narwhals_dtype(
-                self._interchange_frame.get_column_by_name(column_name).dtype
+                self._dfi.get_column_by_name(column_name).dtype
             )
-            for column_name in self._interchange_frame.column_names()
+            for column_name in self._dfi.column_names()
         }
 
     @property
     def columns(self) -> list[str]:
-        return list(self._interchange_frame.column_names())
-
-    def __getattr__(self, attr: str) -> Any:
-        if (
-            attr in DFI_METHODS
-            and (func := getattr_static(self._interchange_frame, attr, SENTINEL))
-            is not SENTINEL
-        ):  # pragma: no cover
-            return func
-        msg = (
-            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
-            "Hint: you probably called `nw.from_native` on an object which isn't fully "
-            "supported by Narwhals, yet implements `__dataframe__`. If you would like to "
-            "see this kind of object supported in Narwhals, please open a feature request "
-            "at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)
+        return list(self._dfi.column_names())
 
     def simple_select(self, *column_names: str) -> Self:
-        frame = self._interchange_frame.select_columns_by_name(list(column_names))
+        frame = self._dfi.select_columns_by_name(list(column_names))
         if not hasattr(frame, "_df"):  # pragma: no cover
             msg = (
                 "Expected interchange object to implement `_df` property to allow for recovering original object.\n"
                 "See https://github.com/data-apis/dataframe-api/issues/360."
             )
             raise NotImplementedError(msg)
-        return self.__class__(frame._df)
+        return self.__class__(frame._df)  # pyright: ignore[reportAttributeAccessIssue]
 
     def select(self, *exprs: str) -> Self:  # pragma: no cover
         msg = (
