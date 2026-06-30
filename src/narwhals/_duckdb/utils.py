@@ -273,7 +273,7 @@ def narwhals_to_native_dtype(  # noqa: PLR0912, C901
     if duckdb_type := NW_TO_DUCKDB_DTYPES.get(base_type):
         return duckdb_type
     if isinstance_or_issubclass(dtype, dtypes.Enum):
-        if version is Version.V1:
+        if version is Version.V1:  # pragma: no cover
             msg = "Converting to Enum is not supported in narwhals.stable.v1"
             raise NotImplementedError(msg)
         if isinstance(dtype, dtypes.Enum):
