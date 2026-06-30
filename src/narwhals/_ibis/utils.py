@@ -148,6 +148,8 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
         return dtypes.Float64()
     if ibis_dtype.is_float32():
         return dtypes.Float32()
+    if ibis_dtype.is_float16():
+        return dtypes.Float16()
     if ibis_dtype.is_string():
         return dtypes.String()
     if ibis_dtype.is_date():
@@ -219,6 +221,7 @@ dtypes = Version.MAIN.dtypes
 NW_TO_IBIS_DTYPES: Mapping[type[DType], IbisDataType] = {
     dtypes.Float64: ibis_dtypes.Float64(),
     dtypes.Float32: ibis_dtypes.Float32(),
+    dtypes.Float16: ibis_dtypes.Float16(),
     dtypes.Binary: ibis_dtypes.Binary(),
     dtypes.String: ibis_dtypes.String(),
     dtypes.Boolean: ibis_dtypes.Boolean(),
