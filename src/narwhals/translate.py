@@ -324,7 +324,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 msg = f"Cannot only use `series_only` with {type(native_object).__qualname__}"
                 raise TypeError(msg)
             return native_object
-        if (eager_only) and is_polars_lazyframe(native_object):
+        if eager_only and is_polars_lazyframe(native_object):
             if not pass_through:
                 msg = "Cannot only use `eager_only` with polars.LazyFrame"
                 raise TypeError(msg)
@@ -433,10 +433,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
         ns_spark = version.namespace.from_native_object(native_object)
         if series_only or eager_only:
             if not pass_through:
-                msg = (
-                    "Cannot only use `series_only`, `eager_only` "
-                    f"with {ns_spark.implementation} DataFrame"
-                )
+                msg = f"Cannot only use `series_only` or `eager_only` with {ns_spark.implementation} DataFrame"
                 raise TypeError(msg)
             return native_object
         return ns_spark.compliant.from_native(native_object).to_narwhals()
