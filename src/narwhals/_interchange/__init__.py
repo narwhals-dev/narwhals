@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from narwhals._interchange.dataframe import (
-    InterchangeFrame as InterchangeFrame,
-    should_interchange as should_interchange,
-)
-from narwhals._interchange.lazyframe import LazyFrame as LazyFrame
+from narwhals._interchange.dataframe import InterchangeFrame, should_interchange
+from narwhals._interchange.lazyframe import LazyFrame
+
+__all__ = "InterchangeFrame", "LazyFrame", "should_interchange"
