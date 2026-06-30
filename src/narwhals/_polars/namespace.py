@@ -213,7 +213,8 @@ class PolarsNamespace:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
 
         if self._backend_version < (2,):
-            to_concat = [e.implode().over(pl.int_range(pl.len())) for e in pl_exprs]
+            length = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
+            to_concat = [e.implode().over(pl.int_range(length)) for e in pl_exprs]
             expr = pl.concat_list(to_concat)
         else:
             expr = pl.list(pl_exprs)  # type: ignore[attr-defined]  # pragma: no cover
