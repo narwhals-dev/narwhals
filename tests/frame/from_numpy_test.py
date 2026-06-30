@@ -56,3 +56,15 @@ def test_from_numpy_non_eager() -> None:
 def test_from_numpy_not2d(eager_backend: EagerAllowed) -> None:
     with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):
         nw.DataFrame.from_numpy(np.array([0]), backend=eager_backend)  # pyright: ignore[reportArgumentType]
+
+
+def test_from_numpy_square_not_transposed(eager_backend: EagerAllowed) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3716
+    # A square array must keep row orientation. The array is Fortran-contiguous
+    # (as produced by `DataFrame.to_numpy()`), which is what made the polars
+    # backend infer column orientation and silently transpose it.
+    square = cast("_2DArray", np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]], order="F"))
+    result = nw.DataFrame.from_numpy(
+        square, schema=["a", "b", "c"], backend=eager_backend
+    )
+    assert_equal_data(result, {"a": [0, 3, 6], "b": [1, 4, 7], "c": [2, 5, 8]})
