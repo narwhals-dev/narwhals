@@ -20,12 +20,6 @@ NativeT = TypeVar("NativeT", NativeDuckDB, "ibis.Table")
 Compliant: TypeAlias = CompliantLazyFrame[Any, NativeT, Any]
 
 
-def _getattr_typing(self: LazyFrame[Any] | Series[Any], name: str) -> Any:
-    if name in self._ALLOW:
-        return getattr(self._compliant, name)
-    raise unsupported_error(name)
-
-
 class LazyFrame(Protocol[NativeT]):
     _compliant: Compliant[NativeT]
     _version: Version = Version.V1
@@ -69,7 +63,7 @@ class LazyFrame(Protocol[NativeT]):
     else:
 
         def __getattr__(self, name: str) -> Any:
-            return _getattr_typing(self, name)
+            return _typed_getattr_impl(self, name)
 
 
 class Series(Generic[NativeT]):
@@ -99,4 +93,12 @@ class Series(Generic[NativeT]):
     else:
 
         def __getattr__(self, name: str) -> Any:
-            return _getattr_typing(self, name)
+            return _typed_getattr_impl(self, name)
+
+
+def _typed_getattr_impl(self: LazyFrame[Any] | Series[Any], name: str) -> Any:
+    # NOTE: `self.__getattr__` is outside of type checking so that `self.i_dont_exist` is reported as an error
+    # Splitting it out here ensures that features like "Find all references" still work
+    if name in self._ALLOW:
+        return getattr(self._compliant, name)
+    raise unsupported_error(name)
