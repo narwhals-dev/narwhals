@@ -47,6 +47,19 @@ def test_from_numpy_schema_list(constructor_eager: ConstructorEager) -> None:
     assert result.columns == schema
 
 
+def test_from_numpy_polars_schema_preserves_fortran_rows() -> None:
+    pl = pytest.importorskip("polars")
+
+    native = pl.DataFrame(np.arange(9, dtype=float).reshape(3, 3))
+    result = nw.from_numpy(
+        native.to_numpy(),
+        backend=pl,
+        schema=["a", "b", "c"],
+    )
+
+    np.testing.assert_array_equal(result.to_numpy(), native.to_numpy())
+
+
 def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)
