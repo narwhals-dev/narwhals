@@ -93,6 +93,9 @@ def test_enum(
         for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+        reason = "Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6."
+        pytest.skip(reason=reason)
 
     categories = ["a", "b", "c"]
     result = (
@@ -129,6 +132,9 @@ def test_enum_distinct_from_categorical(
         for backend in ("pyarrow_table", "duckdb", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+        # Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6.
+        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))

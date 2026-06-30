@@ -7,7 +7,11 @@ import polars as pl
 
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
-from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
+from narwhals._polars.utils import (
+    BACKEND_VERSION,
+    extract_args_kwargs,
+    narwhals_to_native_dtype,
+)
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass, requires
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
@@ -237,6 +241,14 @@ class PolarsNamespace:
         )
 
 
+# NOTE: Polars accepts the bare `pl.Enum` class (as opposed to an instantiated `pl.Enum([...])`)
+# in `by_dtype` from 0.20.6 onwards, so selecting "any enum" is not expressible on older versions.
+_ENUM_SELECTOR_UNSUPPORTED = (
+    "Selecting `Enum` columns is only supported for 'polars>=0.20.6', "
+    f"found version {BACKEND_VERSION}."
+)
+
+
 class PolarsSelectorNamespace:
     _implementation = Implementation.POLARS
 
@@ -257,6 +269,8 @@ class PolarsSelectorNamespace:
         if isinstance_or_issubclass(dtype, dtypes.Enum):
             if version is not Version.V1 and isinstance(dtype, dtypes.Enum):
                 return narwhals_to_native_dtype(dtype, version)
+            if BACKEND_VERSION < (0, 20, 6):
+                raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
             return pl.Enum
         if isinstance(dtype, type) and issubclass(dtype, DType):
             return narwhals_to_native_dtype(dtype, version).__class__
@@ -278,9 +292,11 @@ class PolarsSelectorNamespace:
         return PolarsExpr(pl.selectors.categorical(), version=self._version)
 
     def enum(self) -> PolarsExpr:
+        if BACKEND_VERSION < (0, 20, 6):
+            raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
         expr = (
             pl.selectors.by_dtype(pl.Enum)
-            if self._implementation._backend_version() < (1, 32)
+            if BACKEND_VERSION < (1, 32)
             else pl.selectors.enum()  # Added in v1.32.0 (pola-rs/polars#23351)
         )
         return PolarsExpr(expr, version=self._version)
