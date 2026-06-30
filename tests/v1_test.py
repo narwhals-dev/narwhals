@@ -53,7 +53,6 @@ if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
 
 
-# TODO @dangotbanned: Include duckdb after checking ci fallout for ibis
 def xfail_interchange(
     method: LiteralString, frame: Frame, request: pytest.FixtureRequest
 ) -> None:
