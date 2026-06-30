@@ -142,7 +142,7 @@ class PolarsNamespace:
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        _how: Literal["vertical", "horizontal", "horizontal_extend", "diagonal"] = (
+        _how = (
             "horizontal_extend"
             if how == "horizontal" and self._backend_version >= (1, 42, 1)
             else how
