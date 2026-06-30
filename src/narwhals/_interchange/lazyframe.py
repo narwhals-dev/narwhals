@@ -11,20 +11,24 @@ if TYPE_CHECKING:
     import ibis
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self
+    from typing_extensions import LiteralString, Self
 
     from narwhals._typing import _LazyAllowedImpl
     from narwhals.dtypes import DType
 
 NativeT = TypeVar("NativeT", NativeDuckDB, "ibis.Table")
+"""A native lazyframe."""
 Compliant: TypeAlias = CompliantLazyFrame[Any, NativeT, Any]
+"""An opaque compliant lazyframe wrapper."""
+LazyFrameOps: TypeAlias = frozenset["LiteralString"]
+"""Everything that is exposed from `CompliantLazyFrame` via `__getattr__`."""
 
 
 class LazyFrame(Protocol[NativeT]):
     _compliant: Compliant[NativeT]
     _version: Version = Version.V1
     _implementation: ClassVar[_LazyAllowedImpl]
-    _ALLOW: frozenset[str] = frozenset(
+    _ALLOW: LazyFrameOps = frozenset(
         (
             "native",
             "__native_namespace__",
@@ -69,8 +73,7 @@ class LazyFrame(Protocol[NativeT]):
 class Series(Generic[NativeT]):
     _lazy: LazyFrame[NativeT]
     _version: Version = Version.V1
-
-    _ALLOW: frozenset[str] = frozenset(
+    _ALLOW: LazyFrameOps = frozenset(
         ("native", "__native_namespace__", "_implementation")
     )
 
