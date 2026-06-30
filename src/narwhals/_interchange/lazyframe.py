@@ -41,11 +41,8 @@ class LazyFrame(Protocol[NativeT]):
         )
     )
 
-    def __init__(self, compliant: Compliant[NativeT]) -> None:
-        self._compliant = compliant
-
     def simple_select(self, *column_names: str) -> Self:
-        return type(self)(self._compliant.simple_select(*column_names))
+        return self.from_compliant(self._compliant.simple_select(*column_names))
 
     def get_column(self, name: str) -> Series[NativeT]:
         return Series(self.simple_select(name))
@@ -54,9 +51,15 @@ class LazyFrame(Protocol[NativeT]):
         return self
 
     @classmethod
-    def from_native(cls: type[LazyFrame[Any]], native: NativeT) -> LazyFrame[NativeT]:
+    def from_compliant(cls, compliant: Compliant[NativeT]) -> Self:
+        self = cls.__new__(cls)
+        self._compliant = compliant
+        return self
+
+    @classmethod
+    def from_native(cls, native: NativeT) -> Self:
         ns = Version.V1.namespace.from_native_object(native).compliant
-        return cls(ns.from_native(native))
+        return cls.from_compliant(ns.from_native(native))
 
     def to_pandas(self) -> pd.DataFrame: ...
     def to_arrow(self) -> pa.Table: ...
