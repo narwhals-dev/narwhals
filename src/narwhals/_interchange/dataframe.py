@@ -94,19 +94,25 @@ def unsupported_error(method_name: str) -> NotImplementedError:
     return NotImplementedError(msg)
 
 
-class InterchangeFrame:
-    _version = Version.V1
+class _Interchange:
+    _version: Final = Version.V1
     _implementation: Final = Implementation.UNKNOWN
 
+    def __native_namespace__(self) -> NoReturn:
+        kind = "series" if "Series" in type(self).__name__ else "dataframes"
+        msg = f"Cannot access native namespace for interchange-level {kind} with unknown backend."
+        raise NotImplementedError(msg)
+
+    def __getattr__(self, attr: str) -> Any:
+        raise unsupported_error(attr)
+
+
+class InterchangeFrame(_Interchange):
     def __init__(self, df: DataFrameLike) -> None:
         self._dfi: Any = df.__dataframe__()
 
     def __narwhals_dataframe__(self) -> Self:
         return self
-
-    def __native_namespace__(self) -> NoReturn:
-        msg = "Cannot access native namespace for interchange-level dataframes with unknown backend."
-        raise NotImplementedError(msg)
 
     def get_column(self, name: str) -> InterchangeSeries:
         return InterchangeSeries(self._dfi.get_column_by_name(name))
@@ -146,23 +152,13 @@ class InterchangeFrame:
         frame = self._dfi.select_columns_by_name(list(column_names))
         return self.__class__(frame._df)
 
-    def __getattr__(self, attr: str) -> Any:
-        raise unsupported_error(attr)
 
-
-class InterchangeSeries:
-    _version = Version.V1
-    _implementation: Final = Implementation.UNKNOWN
-
+class InterchangeSeries(_Interchange):
     def __init__(self, df: Any) -> None:
         self._native_series = df
 
     def __narwhals_series__(self) -> Self:
         return self
-
-    def __native_namespace__(self) -> NoReturn:
-        msg = "Cannot access native namespace for interchange-level series with unknown backend."
-        raise NotImplementedError(msg)
 
     @property
     def dtype(self) -> DType:
@@ -171,9 +167,6 @@ class InterchangeSeries:
     @property
     def native(self) -> Any:
         return self._native_series
-
-    def __getattr__(self, attr: str) -> NoReturn:
-        raise unsupported_error(attr)  # pragma: no cover
 
 
 def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
