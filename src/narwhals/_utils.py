@@ -1152,7 +1152,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
         >>> nw.is_ordered_categorical(s_pl)
         False
     """
-    from narwhals._interchange.series import InterchangeSeries
+    from narwhals._interchange import InterchangeSeries
 
     dtypes = series._compliant_series._version.dtypes
     compliant = series._compliant_series

@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self, TypeIs
 
-    from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
 
 
@@ -110,8 +109,6 @@ class InterchangeFrame:
         raise NotImplementedError(msg)
 
     def get_column(self, name: str) -> InterchangeSeries:
-        from narwhals._interchange.series import InterchangeSeries
-
         return InterchangeSeries(self._dfi.get_column_by_name(name))
 
     def to_pandas(self) -> pd.DataFrame:
@@ -151,6 +148,32 @@ class InterchangeFrame:
 
     def __getattr__(self, attr: str) -> Any:
         raise unsupported_error(attr)
+
+
+class InterchangeSeries:
+    _version = Version.V1
+    _implementation: Final = Implementation.UNKNOWN
+
+    def __init__(self, df: Any) -> None:
+        self._native_series = df
+
+    def __narwhals_series__(self) -> Self:
+        return self
+
+    def __native_namespace__(self) -> NoReturn:
+        msg = "Cannot access native namespace for interchange-level series with unknown backend."
+        raise NotImplementedError(msg)
+
+    @property
+    def dtype(self) -> DType:
+        return map_interchange_dtype_to_narwhals_dtype(self._native_series.dtype)
+
+    @property
+    def native(self) -> Any:
+        return self._native_series
+
+    def __getattr__(self, attr: str) -> NoReturn:
+        raise unsupported_error(attr)  # pragma: no cover
 
 
 def should_interchange(obj: object) -> TypeIs[DataFrameLike]:

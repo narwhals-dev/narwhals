@@ -944,8 +944,7 @@ def get_level(obj: Frame | Series[Any]) -> Literal["full", "lazy", "interchange"
               which involves iterating over rows in Python.
             - 'interchange': only metadata operations are supported (`df.schema`)
     """
-    from narwhals._interchange.dataframe import InterchangeFrame
-    from narwhals._interchange.series import InterchangeSeries
+    from narwhals._interchange import InterchangeFrame, InterchangeSeries
 
     ensure_type(obj, DataFrame, Series, LazyFrame)
     compliant = obj._compliant
