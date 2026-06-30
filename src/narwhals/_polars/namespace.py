@@ -142,7 +142,12 @@ class PolarsNamespace:
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        result = pl.concat((item.native for item in items), how=how)
+        _how: Literal["vertical", "horizontal", "horizontal_extend", "diagonal"] = (
+            "horizontal_extend"
+            if how == "horizontal" and self._backend_version >= (1, 42, 1)
+            else how
+        )
+        result = pl.concat((item.native for item in items), how=_how)
         if isinstance(result, pl.DataFrame):
             return self._dataframe(result, version=self._version)
         return self._lazyframe.from_native(result, context=self)
