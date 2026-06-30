@@ -49,16 +49,12 @@ if TYPE_CHECKING:
     from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
-    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 
 class DuckDBLazyFrame(
-    SQLLazyFrame[
-        "DuckDBExpr", "duckdb.DuckDBPyRelation", "LazyFrame[duckdb.DuckDBPyRelation]"
-    ],
-    ValidateBackendVersion,
+    SQLLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"], ValidateBackendVersion
 ):
     _implementation = Implementation.DUCKDB
 
@@ -89,9 +85,6 @@ class DuckDBLazyFrame(
         cls, data: duckdb.DuckDBPyRelation, /, *, context: _LimitedContext
     ) -> Self:
         return cls(data, version=context._version)
-
-    def to_narwhals(self, *args: Any, **kwds: Any) -> LazyFrame[duckdb.DuckDBPyRelation]:
-        return self._version.lazyframe(self)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self

@@ -35,16 +35,13 @@ if TYPE_CHECKING:
     from narwhals._ibis.namespace import IbisNamespace
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
-    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
 
-class IbisLazyFrame(
-    SQLLazyFrame["IbisExpr", "ir.Table", "LazyFrame[ir.Table]"], ValidateBackendVersion
-):
+class IbisLazyFrame(SQLLazyFrame["IbisExpr", "ir.Table"], ValidateBackendVersion):
     _implementation = Implementation.IBIS
 
     def __init__(
@@ -64,9 +61,6 @@ class IbisLazyFrame(
     @classmethod
     def from_native(cls, data: ir.Table, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
-
-    def to_narwhals(self) -> LazyFrame[ir.Table]:
-        return self._version.lazyframe(self)
 
     def __narwhals_lazyframe__(self) -> Self:
         return self
