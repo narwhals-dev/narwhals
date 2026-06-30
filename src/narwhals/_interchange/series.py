@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final, NoReturn
 
-from narwhals._interchange.dataframe import map_interchange_dtype_to_narwhals_dtype
+from narwhals._interchange.dataframe import (
+    map_interchange_dtype_to_narwhals_dtype,
+    unsupported_error,
+)
 from narwhals._utils import Implementation, Version
 
 if TYPE_CHECKING:
@@ -22,11 +25,7 @@ class InterchangeSeries:
         return self
 
     def __native_namespace__(self) -> NoReturn:
-        msg = (
-            "Cannot access native namespace for interchange-level series with unknown backend. "
-            "If you would like to see this kind of object supported in Narwhals, please "
-            "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
-        )
+        msg = "Cannot access native namespace for interchange-level series with unknown backend."
         raise NotImplementedError(msg)
 
     @property
@@ -38,11 +37,4 @@ class InterchangeSeries:
         return self._native_series
 
     def __getattr__(self, attr: str) -> NoReturn:
-        msg = (  # pragma: no cover
-            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
-            "Hint: you probably called `nw.from_native` on an object which isn't fully "
-            "supported by Narwhals, yet implements `__dataframe__`. If you would like to "
-            "see this kind of object supported in Narwhals, please open a feature request "
-            "at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)
+        raise unsupported_error(attr)  # pragma: no cover

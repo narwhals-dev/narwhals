@@ -106,11 +106,7 @@ class InterchangeFrame:
         return self
 
     def __native_namespace__(self) -> NoReturn:
-        msg = (
-            "Cannot access native namespace for interchange-level dataframes with unknown backend."
-            "If you would like to see this kind of object supported in Narwhals, please "
-            "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
-        )
+        msg = "Cannot access native namespace for interchange-level dataframes with unknown backend."
         raise NotImplementedError(msg)
 
     def get_column(self, name: str) -> InterchangeSeries:
