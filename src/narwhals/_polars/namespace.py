@@ -7,8 +7,12 @@ import polars as pl
 
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
-from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
-from narwhals._utils import Implementation, requires
+from narwhals._polars.utils import (
+    BACKEND_VERSION,
+    extract_args_kwargs,
+    narwhals_to_native_dtype,
+)
+from narwhals._utils import Implementation, Version, isinstance_or_issubclass, requires
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
@@ -21,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
 
 
@@ -237,6 +241,14 @@ class PolarsNamespace:
         )
 
 
+# NOTE: Polars accepts the bare `pl.Enum` class (as opposed to an instantiated `pl.Enum([...])`)
+# in `by_dtype` from 0.20.6 onwards, so selecting "any enum" is not expressible on older versions.
+_ENUM_SELECTOR_UNSUPPORTED = (
+    "Selecting `Enum` columns is only supported for 'polars>=0.20.6', "
+    f"found version {BACKEND_VERSION}."
+)
+
+
 class PolarsSelectorNamespace:
     _implementation = Implementation.POLARS
 
@@ -244,13 +256,25 @@ class PolarsSelectorNamespace:
         self._version = context._version
 
     def by_dtype(self, dtypes: Iterable[IntoDType]) -> PolarsExpr:
-        native_dtypes = [
-            narwhals_to_native_dtype(dtype, self._version).__class__
-            if isinstance(dtype, type) and issubclass(dtype, DType)
-            else narwhals_to_native_dtype(dtype, self._version)
-            for dtype in dtypes
-        ]
+        native_dtypes = [self._to_native_dtype(dtype) for dtype in dtypes]
         return PolarsExpr(pl.selectors.by_dtype(native_dtypes), version=self._version)
+
+    def _to_native_dtype(self, dtype: IntoDType) -> pl.DataType | type[pl.DataType]:
+        # `Enum` can only be turned into a concrete `pl.Enum` instance when its
+        # categories are known. They aren't when the bare `Enum` class is passed,
+        # nor in `stable.v1` (where categories are never tracked). In those cases
+        # we match on the `pl.Enum` class, which selects any enum column.
+        version = self._version
+        dtypes = version.dtypes
+        if isinstance_or_issubclass(dtype, dtypes.Enum):
+            if version is not Version.V1 and isinstance(dtype, dtypes.Enum):
+                return narwhals_to_native_dtype(dtype, version)
+            if BACKEND_VERSION < (0, 20, 6):
+                raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
+            return pl.Enum
+        if isinstance(dtype, type) and issubclass(dtype, DType):
+            return narwhals_to_native_dtype(dtype, version).__class__
+        return narwhals_to_native_dtype(dtype, version)
 
     def matches(self, pattern: str) -> PolarsExpr:
         return PolarsExpr(pl.selectors.matches(pattern=pattern), version=self._version)
@@ -266,6 +290,16 @@ class PolarsSelectorNamespace:
 
     def categorical(self) -> PolarsExpr:
         return PolarsExpr(pl.selectors.categorical(), version=self._version)
+
+    def enum(self) -> PolarsExpr:
+        if BACKEND_VERSION < (0, 20, 6):
+            raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
+        expr = (
+            pl.selectors.by_dtype(pl.Enum)
+            if BACKEND_VERSION < (1, 32)
+            else pl.selectors.enum()  # Added in v1.32.0 (pola-rs/polars#23351)
+        )
+        return PolarsExpr(expr, version=self._version)
 
     def all(self) -> PolarsExpr:
         return PolarsExpr(pl.selectors.all(), version=self._version)

@@ -218,7 +218,7 @@ NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.UInt32: pa.uint32(),
     dtypes.UInt64: pa.uint64(),
 }
-UNSUPPORTED_DTYPES = (dtypes.Object,)
+UNSUPPORTED_DTYPES = (dtypes.Object, dtypes.Enum)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:

@@ -132,6 +132,9 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
     def categorical(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(self._version.dtypes.Categorical)
 
+    def enum(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+        return self._is_dtype(self._version.dtypes.Enum)
+
     def string(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(self._version.dtypes.String)
 
