@@ -7,7 +7,7 @@ import narwhals as nw
 from narwhals import exceptions, functions as nw_f
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr
-from narwhals._interchange import InterchangeFrame, should_interchange
+from narwhals._interchange import InterchangeFrame, InterchangeSeries, should_interchange
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -944,8 +944,6 @@ def get_level(obj: Frame | Series[Any]) -> Literal["full", "lazy", "interchange"
               which involves iterating over rows in Python.
             - 'interchange': only metadata operations are supported (`df.schema`)
     """
-    from narwhals._interchange import InterchangeFrame, InterchangeSeries
-
     ensure_type(obj, DataFrame, Series, LazyFrame)
     compliant = obj._compliant
     impl = obj.implementation
