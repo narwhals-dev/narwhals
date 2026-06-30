@@ -3,13 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._compliant.expr import LazyExpr
-from narwhals._compliant.typing import (
-    AliasNames,
-    EvalNames,
-    EvalSeries,
-    NativeExprT,
-    WindowFunction,
-)
+from narwhals._compliant.typing import EvalNames, EvalSeries, NativeExprT
 from narwhals._compliant.window import WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
