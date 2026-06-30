@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -11,25 +11,7 @@ from narwhals.stable.v1.dependencies import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    import duckdb
-    import ibis
-
-    Interchange: TypeAlias = duckdb.DuckDBPyRelation | ibis.Table
-
-
-@pytest.fixture
-def data() -> dict[str, Any]:
-    return {"a": [1, 2, 3], "b": [4, 5, 6]}
-
-
-@pytest.fixture
-def frame(constructor: Callable[[Any], Interchange], data: dict[str, Any]) -> Interchange:
-    name = str(constructor)
-    if "duckdb" in name or "ibis" in name:
-        return constructor(data)
-    pytest.skip("non-interchange frames are checked in other tests")
+    from tests.interchange.conftest import Interchange
 
 
 def test_is_into_dataframe(frame: Interchange) -> None:

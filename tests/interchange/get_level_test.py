@@ -1,23 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
-import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 
 if TYPE_CHECKING:
-    from narwhals._typing import EagerAllowed
-
-
-MainInstances: TypeAlias = tuple[nw.DataFrame[Any], nw.LazyFrame[Any], nw.Series[Any]]
-
-
-@pytest.fixture
-def main_instances(eager_implementation: EagerAllowed) -> MainInstances:
-    df = nw.DataFrame.from_dict({"a": [1, 2, 3]}, backend=eager_implementation)
-    return df, df.lazy(), df.get_column("a")
+    from tests.interchange.conftest import MainInstances
 
 
 def test_get_level() -> None:

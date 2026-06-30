@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
@@ -7,15 +9,8 @@ import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2
 from tests.utils import PANDAS_VERSION
 
-
-class MockDf:
-    def __dataframe__(self) -> None:  # pragma: no cover
-        return
-
-
-@pytest.fixture
-def mockdf() -> MockDf:
-    return MockDf()
+if TYPE_CHECKING:
+    from tests.interchange.conftest import MockDf
 
 
 def test_main_reject(mockdf: MockDf) -> None:
