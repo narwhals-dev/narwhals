@@ -6,21 +6,29 @@ except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+import narwhals._plan as nw
 from narwhals._plan.altair.expression import into_vega_expr
 from narwhals._plan.altair.parse import parse_into_named_exprs
 
 if TYPE_CHECKING:
-    from narwhals._plan.altair.typing import IntoExprColumn
+    from collections.abc import Iterator
+
+    from narwhals._plan.altair.typing import IntoAltExpr
+    from narwhals._plan.expr import Expr as NwExpr
 
 
 def calculate_transform(
-    *exprs: IntoExprColumn, **named_exprs: IntoExprColumn
-) -> list[alt.CalculateTransform]:
-    # one transform per expression
-    parsed = parse_into_named_exprs(*exprs, **named_exprs)
-    return [
-        alt.CalculateTransform(**{"as": alias, "calculate": into_vega_expr(e)})
-        for alias, e in parsed
-    ]
+    *exprs: nw.Expr, **named_exprs: nw.Expr | IntoAltExpr
+) -> Iterator[alt.CalculateTransform]:
+    if native := tuple(
+        name for name, e in named_exprs.items() if not isinstance(e, nw.Expr)
+    ):
+        for alias in native:
+            yield alt.CalculateTransform(
+                **{"as": alias, "calculate": named_exprs.pop(alias)}
+            )
+    only_nw = cast("dict[str, NwExpr]", named_exprs)
+    for alias, e in parse_into_named_exprs(*exprs, **only_nw):
+        yield alt.CalculateTransform(**{"as": alias, "calculate": into_vega_expr(e)})

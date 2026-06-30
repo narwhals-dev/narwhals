@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import TYPE_CHECKING, Final
 
 from narwhals._plan import _parse, expressions as ir
 from narwhals._plan.meta import resolve_name as _meta_resolve_name
 from narwhals._plan.schema import FrozenSchema
-from narwhals._plan.typing import OneOrIterable
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

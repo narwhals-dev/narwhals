@@ -12,10 +12,13 @@ import datetime as dt
 from typing import TYPE_CHECKING, Literal, TypeAlias, Union
 
 from altair.expr import core as alt_ir
+from altair.typing import EncodeKwds as _EncodeKwds
 from altair.vegalite.v6.schema import _typing as alt_t
 
 if TYPE_CHECKING:
+    import altair as alt
     from _typeshed import Incomplete
+    from altair import typing as _alt_t
     from altair.typing import Optional
     from typing_extensions import NotRequired, TypedDict
 
@@ -35,6 +38,9 @@ AltExpr: TypeAlias = alt_ir.Expression
 
 [Vega Expression]: https://vega.github.io/vega/docs/expressions/"""
 
+
+IntoAltExpr: TypeAlias = VegaExpr | AltExpr
+"""Anything that is currently accepted as an altair expression."""
 
 Predicate: TypeAlias = VegaExpr | AltExpr
 """Anything [^1] that is accepted by `condition(test=...)`.
@@ -203,3 +209,48 @@ WindowField = TypedDict(
         "param": "NotRequired[float]",
     },
 )
+
+
+class EncodeKwds(_EncodeKwds, total=False):
+    """Encoding channels map properties of the data to visual properties of the chart."""
+    angle: _alt_t.ChannelAngle | nwp.Expr
+    color: _alt_t.ChannelColor | nwp.Expr
+    column: _alt_t.ChannelColumn | nwp.Expr
+    description: _alt_t.ChannelDescription | nwp.Expr
+    detail: _alt_t.ChannelDetail | nwp.Expr
+    facet: _alt_t.ChannelFacet | nwp.Expr
+    fill: _alt_t.ChannelFill | nwp.Expr
+    fillOpacity: _alt_t.ChannelFillOpacity | nwp.Expr  # noqa: N815
+    href: _alt_t.ChannelHref | nwp.Expr
+    key: _alt_t.ChannelKey | nwp.Expr
+    latitude: _alt_t.ChannelLatitude | nwp.Expr
+    latitude2: _alt_t.ChannelLatitude2 | nwp.Expr
+    longitude: _alt_t.ChannelLongitude | nwp.Expr
+    longitude2: _alt_t.ChannelLongitude2 | nwp.Expr
+    opacity: _alt_t.ChannelOpacity | nwp.Expr
+    order: _alt_t.ChannelOrder | nwp.Expr
+    radius: _alt_t.ChannelRadius | nwp.Expr
+    radius2: _alt_t.ChannelRadius2 | nwp.Expr
+    row: _alt_t.ChannelRow | nwp.Expr
+    shape: _alt_t.ChannelShape | nwp.Expr
+    size: _alt_t.ChannelSize | nwp.Expr
+    stroke: _alt_t.ChannelStroke | nwp.Expr
+    strokeDash: _alt_t.ChannelStrokeDash | nwp.Expr  # noqa: N815
+    strokeOpacity: _alt_t.ChannelStrokeOpacity | nwp.Expr  # noqa: N815
+    strokeWidth: _alt_t.ChannelStrokeWidth | nwp.Expr  # noqa: N815
+    text: _alt_t.ChannelText | nwp.Expr
+    theta: _alt_t.ChannelTheta | nwp.Expr
+    theta2: _alt_t.ChannelTheta2 | nwp.Expr
+    time: str | alt.Time | alt.api.IntoCondition | nwp.Expr
+    tooltip: _alt_t.ChannelTooltip | nwp.Expr
+    url: _alt_t.ChannelUrl | nwp.Expr
+    x: _alt_t.ChannelX | nwp.Expr
+    x2: _alt_t.ChannelX2 | nwp.Expr
+    xError: _alt_t.ChannelXError | nwp.Expr  # noqa: N815
+    xError2: _alt_t.ChannelXError2 | nwp.Expr  # noqa: N815
+    xOffset: _alt_t.ChannelXOffset | nwp.Expr  # noqa: N815
+    y: _alt_t.ChannelY | nwp.Expr
+    y2: _alt_t.ChannelY2 | nwp.Expr
+    yError: _alt_t.ChannelYError | nwp.Expr  # noqa: N815
+    yError2: _alt_t.ChannelYError2 | nwp.Expr  # noqa: N815
+    yOffset: _alt_t.ChannelYOffset | nwp.Expr  # noqa: N815
