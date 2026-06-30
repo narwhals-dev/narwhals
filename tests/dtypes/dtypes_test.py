@@ -552,6 +552,26 @@ def test_enum_repr_pl() -> None:
     assert "Enum(categories=['broccoli', 'cabbage'])" in repr(dtype)
 
 
+@pytest.mark.skipif(
+    POLARS_VERSION < (1, 32), reason="`pl.Categories` was introduced in 1.32"
+)
+def test_polars_categorical_with_defined_categories() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3719
+    pytest.importorskip("polars")
+    import polars as pl
+
+    import narwhals.selectors as ncs
+
+    dtype = pl.Categorical(categories=pl.Categories("my_name"))
+    df = nw.from_native(
+        pl.DataFrame({"cat": pl.Series(["a", "b", "a", "c"], dtype=dtype)})
+    )
+
+    assert df.schema["cat"] == nw.Categorical
+    assert isinstance(df.schema["cat"], nw.Categorical)
+    assert df.select(ncs.categorical()).columns == ["cat"]
+
+
 def test_enum_repr() -> None:
     result = nw.Enum(["a", "b"])
     assert "Enum(categories=['a', 'b'])" in repr(result)
