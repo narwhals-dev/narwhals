@@ -5,8 +5,16 @@ import sys
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 
-from narwhals import dependencies as deps
 from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
+from narwhals.dependencies import (
+    IMPORT_HOOKS,
+    get_dask_dataframe,
+    get_duckdb,
+    get_modin,
+    get_pandas,
+    get_polars,
+    get_pyarrow,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -153,25 +161,14 @@ def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
     return _should_interchange(type(obj))  # type: ignore[arg-type]
 
 
-_HAS_TOP_LEVEL_DF = (
-    deps.get_polars,
-    deps.get_pandas,
-    deps.get_dask_dataframe,
-    deps.get_modin,
-)
-
-
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
     if not _hasattr_static(tp_native, "__dataframe__"):
-        return (duckdb := deps.get_duckdb()) and issubclass(
-            tp_native, duckdb.DuckDBPyRelation
-        )
-    exclude = tuple(mod.DataFrame for get in _HAS_TOP_LEVEL_DF if (mod := get()))
-    exclude = (*exclude, pa.Table) if (pa := deps.get_pyarrow()) else exclude
+        return (duckdb := get_duckdb()) and issubclass(tp_native, duckdb.DuckDBPyRelation)
+    has_top_level_df = (get_polars, get_pandas, get_dask_dataframe, get_modin)
+    exclude = tuple(mod.DataFrame for get in has_top_level_df if (mod := get()))
+    exclude = (*exclude, pa.Table) if (pa := get_pyarrow()) else exclude
     hooks = (
-        mod.pandas.DataFrame
-        for name in deps.IMPORT_HOOKS
-        if (mod := sys.modules.get(name))
+        mod.pandas.DataFrame for name in IMPORT_HOOKS if (mod := sys.modules.get(name))
     )
     return not (exclude := (*exclude, *hooks)) or not issubclass(tp_native, exclude)
