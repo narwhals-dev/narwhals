@@ -421,7 +421,7 @@ class PandasLikeNamespace(
             series = align(*chain.from_iterable(expr(df) for expr in exprs))
             arrays = [
                 (
-                    s.native.array._pa_array.combine_chunks()  # type: ignore[attr-defined]
+                    s.native.array._pa_array.combine_chunks()
                     if is_dtype_pyarrow(s.native.dtype)
                     else pa.array(s.native, from_pandas=True)
                 )
