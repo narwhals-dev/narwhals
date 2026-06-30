@@ -143,7 +143,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Boolean()
     if dtype == pl.Object:
         return dtypes.Object()
-    if dtype == pl.Categorical:
+    if isinstance(dtype, pl.Categorical):
         return dtypes.Categorical()
     if isinstance(dtype, pl.Enum):
         if version is Version.V1:
