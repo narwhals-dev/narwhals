@@ -3,20 +3,29 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pytest
 
+pytest.importorskip("numpy")
 pytest.importorskip("pandas")
 
-
+import numpy as np
 import pandas as pd
 
 import narwhals as nw
+from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from typing_extensions import Self
+
+
+# `cast`-preserving sparse support is best-effort.
+# pandas<2.0 has different sparse `astype` behaviour.
+# Schema *reading* of numeric/bool subtypes works everywhere.
+REQUIRES_PANDAS_V2 = pytest.mark.skipif(
+    PANDAS_VERSION < (2,), reason="sparse cast support targets pandas>=2.0"
+)
 
 
 class CustomInt16Dtype(pd.api.extensions.ExtensionDtype):  # pragma: no cover
@@ -106,20 +115,23 @@ def test_schema_with_ext() -> None:
 
 def test_sparse_schema() -> None:
     # See https://github.com/narwhals-dev/narwhals/issues/3722.
+    # Sparse columns map to the narwhals dtype of their dense subtype (not `Unknown`).
+    # The string/object subtype needs sample densification (which pre-2.0 pandas doesn't
+    # do), so it's covered separately by `test_sparse_object_cast_string_densifies`.
     df = pd.DataFrame(
         {
             "a": pd.arrays.SparseArray([0, 1, 0, 2]),
             "b": pd.arrays.SparseArray([0.0, 1.5, 0.0, 2.5]),
             "c": pd.arrays.SparseArray([True, False, False, True]),
-            "d": pd.arrays.SparseArray(["x", "y", "x", "z"]),
         }
     )
     assert nw.from_native(df).schema == nw.Schema(
-        {"a": nw.Int64(), "b": nw.Float64(), "c": nw.Boolean(), "d": nw.String()}
+        {"a": nw.Int64(), "b": nw.Float64(), "c": nw.Boolean()}
     )
     assert nw.from_native(df["a"], series_only=True).dtype == nw.Int64
 
 
+@REQUIRES_PANDAS_V2
 def test_sparse_cast_preserves_sparsity() -> None:
     # Casting a sparse column to a numpy-subtype target keeps it sparse *and* must not
     # corrupt the data: a naive `astype(SparseDtype("float64"))` keeps the sparse index
@@ -140,6 +152,7 @@ def test_sparse_cast_preserves_sparsity() -> None:
     assert isinstance(nw.to_native(s.cast(nw.Int64)).dtype, pd.SparseDtype)
 
 
+@REQUIRES_PANDAS_V2
 @pytest.mark.parametrize(
     ("data", "target"),
     [
@@ -159,6 +172,7 @@ def test_sparse_cast_densifies_when_unsupported(
     assert not isinstance(native.dtype, pd.SparseDtype)
 
 
+@REQUIRES_PANDAS_V2
 @pytest.mark.parametrize(
     ("data", "target"),
     [
@@ -171,17 +185,12 @@ def test_sparse_cast_densifies_when_unsupported(
         # the slow path through `keep_sparse_dtype`.
         (
             pd.arrays.SparseArray(
-                np.array(
-                    ["2020-01-01", "2020-01-01", "2020-01-02"], dtype="datetime64[ms]"
-                )
+                ["2020-01-01", "2020-01-01", "2020-01-02"], dtype="datetime64[ms]"
             ),
             nw.Datetime("us"),
         ),
         # Timedelta subtype (`kind == "m"`); source unit differs from target.
-        (
-            pd.arrays.SparseArray(np.array([0, 0, 5], dtype="timedelta64[us]")),
-            nw.Duration("ns"),
-        ),
+        (pd.arrays.SparseArray([0, 0, 5], dtype="timedelta64[us]"), nw.Duration("ns")),
     ],
 )
 def test_sparse_cast_stays_sparse(data: Any, target: nw.dtypes.DType) -> None:
@@ -203,6 +212,7 @@ def test_sparse_cast_stays_sparse(data: Any, target: nw.dtypes.DType) -> None:
     np.testing.assert_array_equal(sparse_result.to_numpy(), dense_result.to_numpy())
 
 
+@REQUIRES_PANDAS_V2
 def test_sparse_object_cast_string_densifies() -> None:
     # A sparse `object` column sniffs as `String`, so casting to `String` is a no-op at
     # the narwhals level. The fast path in `cast` must NOT keep it sparse: an
