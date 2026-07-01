@@ -57,6 +57,7 @@ class Chart:
             self._chart._add_transform(*calculate_transform(*exprs, **named_exprs))
         )
 
+    # TODO @dangotbanned: Need to accept and pass-through non-Expr inputs
     def transform_window(self, **named_exprs: nw.Expr) -> Self:
         return self._from_altair(
             self._chart._add_transform(window_transform(**named_exprs))

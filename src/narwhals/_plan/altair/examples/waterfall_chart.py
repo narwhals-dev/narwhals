@@ -1,4 +1,38 @@
-# (https://altair-viz.github.io/gallery/waterfall_chart.html)
+"""[Waterfall Chart].
+
+[Waterfall Chart]: https://altair-viz.github.io/gallery/waterfall_chart.html
+
+The original was an impressive feat, but required combining 6 different ways to write an expression in Altair:
+
+1. `alt.datum.<column-name>`
+2. `alt.expr.<expression-method-name>(<into-vega-expr-string>, ...)`
+3. Operator overloading on the above
+4. `.transform_window(<new-column-name> = "<aggregate-or-window-op-name>(<column-name>)")`
+5. `.transform_calculate(<new-column-name> = <vega-expr-string> | alt.Expr)`
+6. `alt.when(<most-of-the-above> | alt.Parameter).then(<shorthand-string> | alt.value | dict | alt.SchemaBase).when(...).then(...)...`
+
+The above is not even every *possible* way to write something that looks like an expression 😵
+
+---
+
+Knowing when you can use each - or even what they all are - is non-trivial:
+
+- `alt.datum.<column-name>` stops working when the column has a space
+    - you then need to use `alt.datum["<column-name>"]`
+- Magic strings cannot be type checked and appear in many places
+    - `"lead(label)"` is valid in one place
+    - `"sum(amount)"` is valid in many places, but is not a `<vega-expr-string>`
+- Operator overloading often degrades to `Unknown`
+- Most signatures say they accept `dict | alt.SchemaBase | str`
+    - but have more complicated runtime rules
+    - nothing is accepted everywhere
+
+Note:
+    Writing a Narwhals expression produces an `ExprIR` that can translate to every use case in this chart.
+
+    It is also *immutable-by-design*, so the translation can be cached on any hot paths.
+"""
+
 from __future__ import annotations
 
 import altair as alt
@@ -91,7 +125,10 @@ chart = nw_alt.layer(
         text="calc_sum_dec:N", y="calc_sum_dec:Q"
     ),
     base.mark_text(baseline="middle").encode(
-        text="calc_text_amount:N", y="calc_center:Q", color=alt.value("white")
+        # TODO @dangotbanned: Enable `Lit` -> `Value` on `encode`
+        text="calc_text_amount:N",
+        y="calc_center:Q",
+        color=alt.value("white"),
     ),
     width=800,
     height=450,
