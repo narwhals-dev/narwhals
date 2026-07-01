@@ -40,6 +40,7 @@ from narwhals.stable.v1.dtypes import (
     Duration,
     Enum,
     Field,
+    Float16,
     Float32,
     Float64,
     Int8,
@@ -938,7 +939,12 @@ class When(nw_f.When):
         return Then._from_chain(new_chain)
 
 
-class Then(nw_f.Then, Expr): ...
+class Then(nw_f.Then, Expr):
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
+        return When(*predicates, chain=self._chain)
+
+    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Expr:
+        return _stableify(super().otherwise(otherwise_value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -1118,6 +1124,7 @@ __all__ = [
     "Enum",
     "Expr",
     "Field",
+    "Float16",
     "Float32",
     "Float64",
     "Implementation",

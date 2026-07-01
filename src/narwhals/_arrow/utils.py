@@ -155,6 +155,8 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
         return dtypes.Float64()
     if pa.types.is_float32(dtype):
         return dtypes.Float32()
+    if pa.types.is_float16(dtype):
+        return dtypes.Float16()
     # bug in coverage? it shows `31->exit` (where `31` is currently the line number of
     # the next line), even though both when the if condition is true and false are covered
     if (  # pragma: no cover
@@ -200,6 +202,7 @@ dtypes = Version.MAIN.dtypes
 NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.Float64: pa.float64(),
     dtypes.Float32: pa.float32(),
+    dtypes.Float16: pa.float16(),
     dtypes.Binary: pa.binary(),
     dtypes.String: pa.string(),
     dtypes.Boolean: pa.bool_(),
@@ -215,7 +218,7 @@ NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.UInt32: pa.uint32(),
     dtypes.UInt64: pa.uint64(),
 }
-UNSUPPORTED_DTYPES = (dtypes.Object,)
+UNSUPPORTED_DTYPES = (dtypes.Object, dtypes.Enum)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:

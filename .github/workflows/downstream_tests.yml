@@ -5,6 +5,8 @@ on:
     paths:
       - src/**
       - .github/workflows/downstream_tests.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
     inputs:
       skip-fairlearn:
@@ -150,7 +152,7 @@ jobs:
       - name: Run pytest
         run: |
           cd scikit-lego
-          pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
+          pytest --numprocesses=logical --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
     if: github.head_ref != 'bump-version'
@@ -703,3 +705,50 @@ jobs:
         run: |
           cd LightGBM
           pytest --config-file python-package/pyproject.toml tests/python_package_test
+
+  scikit-learn:
+    if: github.head_ref != 'bump-version'
+    env:
+      UV_SYSTEM_PYTHON: 1
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: Clone scikit-learn
+        run: |
+          git clone https://github.com/scikit-learn/scikit-learn.git --depth=1
+          cd scikit-learn
+          git log
+      - name: Build scikit-learn
+        run: |
+          cd scikit-learn
+          uv pip install -U ninja meson-python numpy cython joblib threadpoolctl scipy
+          uv pip install --editable . --verbose --no-build-isolation --config-settings editable-verbose=true
+          uv pip install -U pandas polars pyarrow pytest pytest-xdist
+      - name: Install Narwhals branch
+        run: |
+          uv pip uninstall narwhals
+          uv pip install -e .
+      - name: Run tests
+        # Based on https://github.com/scikit-learn/scikit-learn/pull/31127#issuecomment-4425039398
+        run: |
+          cd scikit-learn
+          tests=(
+            sklearn/utils/tests/test_indexing.py
+            sklearn/utils/tests/test_validation.py
+            sklearn/compose/tests/test_column_transformer.py
+            sklearn/ensemble/_hist_gradient_boosting/tests/test_gradient_boosting.py
+          )
+          pytest "${tests[@]}"

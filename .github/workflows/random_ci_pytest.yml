@@ -5,6 +5,8 @@ on:
     paths:
       - "**.py"
       - .github/workflows/random_ci_pytest.yml
+      - pyproject.toml
+      - uv.lock
 
 env:
   PY_COLORS: 1

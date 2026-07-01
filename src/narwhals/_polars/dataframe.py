@@ -108,7 +108,6 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
     drop_nulls: Method[Self]
-    explode: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
@@ -235,6 +234,12 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 suffix=suffix,
             )
         )
+
+    def explode(self, columns: Sequence[str]) -> Self:
+        if self._backend_version < (1, 36):
+            return self._with_native(self.native.explode(columns))
+        res = self.native.explode(columns, empty_as_null=True, keep_nulls=True)
+        return self._with_native(res)
 
     def top_k(
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
@@ -388,7 +393,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if isinstance(schema, (Mapping, Schema))
             else schema
         )
-        return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
+        native = pl.from_numpy(data, pl_schema, orient="row")
+        return cls.from_native(native, context=context)
 
     def to_narwhals(self) -> DataFrame[pl.DataFrame]:
         return self._version.dataframe(self, level="full")
