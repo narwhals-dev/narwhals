@@ -70,7 +70,6 @@ jobs:
       SPARK_VERSION: 4.1.0
       SPARK_PORT: 15002
       SPARK_CONNECT: true
-      SPARK_HOME: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -99,24 +98,15 @@ jobs:
       - name: show-deps
         run: uv pip freeze
 
-      - name: Cache Spark
-        id: cache-spark
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: /opt/spark
-          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop3
-
-      - name: Download Spark
-        if: steps.cache-spark.outputs.cache-hit != 'true'
-        run: |
-          wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
-          tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz
-          sudo mv spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
-
       - name: Set Spark env variables
+        run: echo "SPARK_HOME=$(uv run --no-sync python -c 'import pyspark, os; print(os.path.dirname(pyspark.__file__))')" >> $GITHUB_ENV
+
+      - name: Fetch connect server scripts
+        # pyspark[connect] ships everything these scripts need, just not the scripts themselves
         run: |
-          echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
-          echo "/opt/spark/bin" >> $GITHUB_PATH
+          curl -sSf "https://raw.githubusercontent.com/apache/spark/v${SPARK_VERSION}/sbin/start-connect-server.sh" -o "$SPARK_HOME/sbin/start-connect-server.sh"
+          curl -sSf "https://raw.githubusercontent.com/apache/spark/v${SPARK_VERSION}/sbin/stop-connect-server.sh" -o "$SPARK_HOME/sbin/stop-connect-server.sh"
+          chmod +x "$SPARK_HOME/sbin/start-connect-server.sh" "$SPARK_HOME/sbin/stop-connect-server.sh"
 
       - name: Start Spark Connect server
         run: |
@@ -129,5 +119,5 @@ jobs:
         run: uv run --no-sync pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
 
       - name: Stop Spark Connect server
-        if: always() && env.SPARK_HOME != ''
+        if: always()
         run: $SPARK_HOME/sbin/stop-connect-server.sh
