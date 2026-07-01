@@ -45,6 +45,7 @@ class Chart:
         self._chart = chart
         return self
 
+    # TODO @dangotbanned: Support non-string literals in `**named_exprs`
     def transform_calculate(
         self, *exprs: nw.Expr, **named_exprs: nw.Expr | IntoAltExpr
     ) -> Self:
@@ -63,6 +64,11 @@ class Chart:
             self._chart._add_transform(window_transform(**named_exprs))
         )
 
+    # TODO @dangotbanned: Add more cases as they show up in other examples
+    # - lit -> value
+    # - aggregate -> aggregate_field_def
+    # - col -> field
+    #   - define the string once, use it as chainable expression or directly in a chart
     def encode(self, *args: nw.Expr | Any, **kwds: Unpack[EncodeKwds]) -> Self:
         args_ = (_encode_expr(e) if isinstance(e, nw.Expr) else e for e in args)
         kwds_ = {
@@ -130,9 +136,6 @@ def layer(*charts: Chart, **kwds: Unpack[_ChartKwds]) -> Chart:
     )
 
 
-# TODO @dangotbanned: Add more cases as they show up in other examples
-# - lit -> value
-# - aggregate -> aggregate_field_def
 def _encode_expr(expr: nw.Expr) -> ConditionalValue | ConditionalField:
     e = expr._ir
     if isinstance(e, ir.TernaryExpr):
