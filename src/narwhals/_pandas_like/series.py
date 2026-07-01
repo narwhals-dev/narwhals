@@ -17,6 +17,8 @@ from narwhals._pandas_like.utils import (
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    is_object_native_dtype,
+    keep_sparse_dtype,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -238,10 +240,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     def dtype(self) -> DType:
         native_dtype = self.native.dtype
         return (
-            native_to_narwhals_dtype(native_dtype, self._version, self._implementation)
-            if native_dtype != "object"
-            else object_native_to_narwhals_dtype(
+            object_native_to_narwhals_dtype(
                 self.native, self._version, self._implementation
+            )
+            if is_object_native_dtype(native_dtype)
+            else native_to_narwhals_dtype(
+                native_dtype, self._version, self._implementation
             )
         )
 
@@ -313,9 +317,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return None if in_place else self._with_native(series)
 
     def cast(self, dtype: IntoDType) -> Self:
-        if self.dtype == dtype and self.native.dtype != "object":
+        if self.dtype == dtype and not is_object_native_dtype(self.native.dtype):
             # Avoid dealing with pandas' type-system if we can. Note that it's only
-            # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
+            # safe to do this if we're not starting with object dtype (incl. a sparse
+            # `object` subtype), see tests/expr_and_series/cast_test.py::test_cast_object_pandas
             # for an example of why.
             return self._with_native(self.native, preserve_broadcast=True)
         pd_dtype = narwhals_to_native_dtype(
@@ -324,6 +329,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
+        # Keep a sparse column sparse (when the target subtype allows it).
+        pd_dtype = keep_sparse_dtype(pd_dtype, self.native.dtype)
         return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:

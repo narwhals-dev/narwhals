@@ -262,9 +262,18 @@ def object_native_to_narwhals_dtype(
         # objects, so we can just return String.
         return dtypes.String()
 
-    infer = pd.api.types.infer_dtype
-    # Arbitrary limit of 100 elements to use to sniff dtype.
-    inferred_dtype = "empty" if series is None else infer(series.head(100), skipna=True)
+    if series is None:  # pragma: no cover
+        # Only reachable via the `allow_object` path in `native_to_narwhals_dtype`.
+        inferred_dtype = "empty"
+    else:
+        # Arbitrary limit of 100 elements to use to sniff dtype.
+        sample: Any = series.head(100)
+        if is_dtype_sparse(sample.dtype):
+            # Densify the (small) sample so a sparse `object` column is sniffed the
+            # same way as its dense equivalent.
+            sample = sample.astype(sample.dtype.subtype)
+        infer = pd.api.types.infer_dtype
+        inferred_dtype = infer(sample, skipna=True)
     if inferred_dtype == "string":
         return dtypes.String()
     if inferred_dtype == "empty" and version is not Version.V1:
@@ -314,6 +323,11 @@ def native_to_narwhals_dtype(
     *,
     allow_object: bool = False,
 ) -> DType:
+    if is_dtype_sparse(native_dtype):
+        # A pandas sparse column has the same logical dtype as its dense `subtype`
+        # (e.g. `Sparse[int64, 0]` -> `Int64`). We don't densify here: that's a
+        # metadata-only unwrap, so reading a schema stays cheap.
+        native_dtype = native_dtype.subtype
     str_dtype = str(native_dtype)
 
     if is_dtype_pyarrow(native_dtype) or str_dtype.startswith(CUDF_BASE_DTYPE_PREFIX):
@@ -379,6 +393,70 @@ def iter_dtype_backends(
 @functools.lru_cache(maxsize=16)
 def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
+
+
+# NOTE: Returns `bool` rather than `TypeIs[pd.SparseDtype]` on purpose: the
+# `pandas-stubs` `SparseDtype` doesn't expose `.subtype`, so narrowing would only
+# get in the way of reading it.
+@functools.lru_cache(maxsize=16)
+def is_dtype_sparse(dtype: Any) -> bool:
+    """Return `True` if `dtype` is a pandas `SparseDtype`."""
+    return isinstance(dtype, pd.SparseDtype)
+
+
+def is_object_native_dtype(native_dtype: Any) -> bool:
+    """Return `True` for the `object` dtype, including a sparse `object` subtype.
+
+    These need dtype sniffing (`object_native_to_narwhals_dtype`) rather than the
+    string-based mapping in `native_to_narwhals_dtype`.
+    """
+    if is_dtype_sparse(native_dtype):
+        native_dtype = native_dtype.subtype
+    return native_dtype == "object"
+
+
+def keep_sparse_dtype(
+    target: str | PandasDtype, source_native_dtype: Any
+) -> str | PandasDtype:
+    """Re-wrap a dense cast `target` so a sparse column stays sparse, when safe.
+
+    A `SparseDtype` source stays sparse only when `target` resolves to a numeric or
+    temporal numpy subtype (`dtype.kind` in `iufbMm`: (un)signed int, float, bool,
+    datetime, timedelta); we then return `SparseDtype(subtype, fill_value)`, carrying
+    the source fill across. Every other `target` densifies (returns `target` as-is),
+    because for those there is no sparse result that preserves the data:
+
+    - Non-numpy targets (nullable / pyarrow / categorical): `pd.SparseDtype` only
+      accepts numpy subtypes and raises `TypeError` on anything else.
+    - Object / string subtypes: these *are* numpy dtypes, but casting to them is a
+      no-op passthrough. `pd.SparseDtype(str)` collapses to `Sparse[object]`, and an
+      `object` `astype` never applies `str()`, so `.cast(String)` would leave the
+      values un-stringified. Only densifying routes through a real `astype(str)`.
+    - Numeric/temporal targets whose source fill is unrepresentable (e.g. a `NaN` fill
+      cast to an integer subtype): no fill keeps the compressed entries intact.
+
+    Carrying the fill is mandatory: `astype(SparseDtype(subtype))` keeps the sparse
+    index but resets the fill to the subtype default, silently rewriting the compressed
+    entries (`Sparse[int64, 0]` -> `Sparse[float64, nan]` turns every stored `0` into `NaN`).
+
+    References:
+    - `numpy.dtype.kind`: https://numpy.org/doc/stable/reference/generated/numpy.dtype.kind.html
+    - `pandas.SparseDtype`: https://pandas.pydata.org/docs/reference/api/pandas.SparseDtype.html
+    - pandas sparse guide: https://pandas.pydata.org/docs/user_guide/sparse.html
+    """
+    if not is_dtype_sparse(source_native_dtype):
+        return target
+    try:
+        sparse_dtype: Any = pd.SparseDtype(target)  # `Any`: stubs hide `.subtype`
+        subtype = sparse_dtype.subtype
+        if subtype.kind not in "iufbMm":
+            return target
+        # `np.asarray(..., dtype=subtype)` (not `subtype.type(...)`) raises on an
+        # unrepresentable fill instead of silently coercing.
+        fill_value: Any = np.asarray(source_native_dtype.fill_value, dtype=subtype)[()]
+    except (TypeError, ValueError):
+        return target
+    return pd.SparseDtype(subtype, fill_value)
 
 
 dtypes = Version.MAIN.dtypes
