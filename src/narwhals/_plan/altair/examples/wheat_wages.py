@@ -15,7 +15,8 @@ from narwhals._plan.altair import chart as nw_alt
 
 load = Loader.from_backend("polars")
 
-base_wheat = nw_alt.Chart(load("wheat")).transform_calculate(year_end=nw.col("year") + 5)
+year, index, start, end = (nw.col(name) for name in ("year", "index", "start", "end"))
+base_wheat = nw_alt.Chart(load("wheat")).transform_calculate(year_end=year + 5)
 bars = base_wheat.mark_bar(fill="#aaa", stroke="#999").encode(
     alt.X("year").bin("binned").axis(format="d", tickCount=5).scale(zero=False),
     alt.Y("wheat").axis(zindex=1),
@@ -25,23 +26,21 @@ bars = base_wheat.mark_bar(fill="#aaa", stroke="#999").encode(
 section_line = (
     nw_alt.Chart(pl.DataFrame({"year": [1600, 1650, 1700, 1750, 1800]}))
     .mark_rule(stroke="#000", strokeWidth=0.6, opacity=0.7)
-    .encode(x="year")
+    .encode(x=year)
 )
 
-area = base_wheat.mark_area(color="#a4cedb", opacity=0.7).encode(x="year", y="wages")
+area = base_wheat.mark_area(color="#a4cedb", opacity=0.7).encode(x=year, y="wages")
 area_line_1 = area.mark_line(color="#000", opacity=0.7)
 area_line_2 = area.mark_line(yOffset=-2, color="#EE8182")
 
-commonwealth, start, end = nw.col("commonwealth"), nw.col("start"), nw.col("end")
-# NOTE: No idea what to call this guy
-cond = nw.when(commonwealth.is_null(), nw.col("index") % 2).then(-1).otherwise(1)
+cond = nw.when(nw.col("commonwealth").is_null(), index % 2).then(-1).otherwise(1)
 base_monarchs = nw_alt.Chart(load("monarchs")).transform_calculate(
-    offset=cond * 2 + 95, off2=cond + 95, y=nw.lit(95), x=start + (end - start) / 2
+    x=start + (end - start) / 2, y=nw.lit(95), offset=cond * 2 + 95, off2=cond + 95
 )
 top_bars = base_monarchs.mark_bar(stroke="#000").encode(
     alt.Fill("commonwealth").legend(None).scale(range=["black", "white"]),
-    x="start",
-    x2="end",
+    x=start,
+    x2=end,
     y="y:Q",
     y2="offset",
 )

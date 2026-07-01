@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 else:
     from typing import TypedDict
 
+VegaType: TypeAlias = alt_t.StandardType_T
+
 VegaExpr: TypeAlias = str
 """A stringized [Vega Expression].
 
@@ -149,7 +151,7 @@ class HasRepeat(TypedDict):
 
 class HasType(TypedDict):
     # `"geojson"` is allowed in some places, but not all
-    type: alt_t.StandardType_T
+    type: NotRequired[Optional[VegaType]]
     """[`type`] has some interesting inference rules.
 
     [`type`]: https://vega.github.io/vega-lite/docs/type.html
@@ -210,7 +212,7 @@ WindowField = TypedDict(
 )
 
 
-class EncodeKwds(TypedDict, total=False):
+class _EncodeKwds(TypedDict, total=False):
     """Encoding channels map properties of the data to visual properties of the chart."""
 
     angle: _alt_t.ChannelAngle | nwp.Expr
@@ -254,3 +256,10 @@ class EncodeKwds(TypedDict, total=False):
     yError: _alt_t.ChannelYError | nwp.Expr
     yError2: _alt_t.ChannelYError2 | nwp.Expr
     yOffset: _alt_t.ChannelYOffset | nwp.Expr
+
+
+if TYPE_CHECKING:
+    # https://github.com/python/mypy/pull/21382
+    class EncodeKwds(_EncodeKwds, TypedDict, closed=True): ...  # type: ignore[call-arg]
+else:
+    EncodeKwds = _EncodeKwds

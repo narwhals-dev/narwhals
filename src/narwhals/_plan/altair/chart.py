@@ -5,18 +5,21 @@ A real integration would update these APIs to expect `narwhals._plan.Expr` objec
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import functools
+from typing import TYPE_CHECKING, Any, Final
 
 import altair as alt
 import altair.utils
 
 import narwhals._plan as nw
+import narwhals.stable.v1 as stable_v1
 from narwhals._plan import expressions as ir
 from narwhals._plan.altair.aggregate import window_transform
 from narwhals._plan.altair.calculate import calculate_transform
 from narwhals._plan.altair.conditional import (
     ConditionalField,
     ConditionalValue,
+    _value,
     encode_ternary_expr,
 )
 from narwhals._plan.altair.exceptions import unsupported_error
@@ -24,12 +27,37 @@ from narwhals._plan.altair.exceptions import unsupported_error
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from altair.typing import ChartType as AltChart
+    from altair.typing import ChartType as AltChart, Optional
     from altair.vegalite.v6.schema._config import ThemeConfig as _ChartKwds
     from altair.vegalite.v6.schema.mixins import _MarkDef
     from typing_extensions import Self, Unpack
 
-    from narwhals._plan.altair.typing import EncodeKwds, IntoAltExpr
+    from narwhals._plan.altair.typing import (
+        EncodeKwds,
+        Field,
+        IntoAltExpr,
+        Value,
+        VegaType,
+    )
+    from narwhals.dtypes import DType
+
+_EMPTY_SCHEMA: Final = stable_v1.Schema()
+
+_SECONDARY_FIELD: Final = frozenset(
+    (
+        "latitude2",
+        "longitude2",
+        "radius2",
+        "theta2",
+        "x2",
+        "xError",
+        "xError2",
+        "y2",
+        "yError",
+        "yError2",
+    )
+)
+"""Channels that don't accept a `type`."""
 
 
 class Chart:
@@ -37,7 +65,8 @@ class Chart:
         self, data: alt.ChartDataType = alt.Undefined, /, **kwds: Unpack[_ChartKwds]
     ) -> None:
         # TODO @dangotbanned: Widen `height`, `width` to use `Map` (not `dict[str, Any]`)
-        self._chart: AltChart = alt.Chart(data, **kwds)  # type: ignore[arg-type]
+        maybe_frame = stable_v1.from_native(data, pass_through=True)
+        self._chart: AltChart = alt.Chart(maybe_frame, **kwds)  # type: ignore[arg-type]
 
     @classmethod
     def _from_altair(cls, chart: AltChart, /) -> Self:
@@ -64,18 +93,56 @@ class Chart:
             self._chart._add_transform(window_transform(**named_exprs))
         )
 
+    @functools.cached_property
+    def _try_collect_schema(self) -> stable_v1.Schema:
+        """Collect and cache the schema of a narwhals dataframe.
+
+        ## Notes
+        - Persisted for a single `encode` context
+        - No-op if the current chart isn't wrapping a dataframe
+        - Deferred until an encoding channel requires a type
+        - native -> narwhals is cached within narwhals
+        - narwhals -> vega is cached here
+        - Bypasses `utils.parse_shorthand`, which does a lot more work than this
+        """
+        if isinstance(self._chart.data, stable_v1.DataFrame):
+            # TODO @dangotbanned: Fix this upstream, `stable.v*` needs to override `schema`, `collect_schema`
+            return self._chart.data.collect_schema()  # type: ignore[return-value]
+        return _EMPTY_SCHEMA
+
     # TODO @dangotbanned: Add more cases as they show up in other examples
-    # - lit -> value
     # - aggregate -> aggregate_field_def
-    # - col -> field
-    #   - define the string once, use it as chainable expression or directly in a chart
     def encode(self, *args: nw.Expr | Any, **kwds: Unpack[EncodeKwds]) -> Self:
-        args_ = (_encode_expr(e) if isinstance(e, nw.Expr) else e for e in args)
+        """Map properties of the data to visual properties of the chart."""
+        args_ = (self._encode_expr(e) if isinstance(e, nw.Expr) else e for e in args)
         kwds_ = {
-            channel: (_encode_expr(e) if isinstance(e, nw.Expr) else e)
+            channel: (self._encode_expr(e, channel) if isinstance(e, nw.Expr) else e)
             for channel, e in kwds.items()
         }
         return self._from_altair(self._chart.encode(*args_, **kwds_))  # type: ignore[arg-type]
+
+    def _encode_expr(
+        self, expr: nw.Expr, channel: str | None = None
+    ) -> ConditionalValue | ConditionalField | Field | Value:
+        e = expr._ir
+        if isinstance(e, ir.TernaryExpr):
+            return encode_ternary_expr(e)
+
+        if isinstance(e, ir.Column):
+            field = e.name
+            if channel and channel in _SECONDARY_FIELD:
+                return {"field": field, "aggregate": alt.Undefined}
+            if dtype := self._try_collect_schema.get(field):
+                vtype = _vegalite_type(dtype)
+            else:
+                vtype = alt.Undefined
+            return {"field": field, "type": vtype, "aggregate": alt.Undefined}
+
+        # TODO @dangotbanned: Still unsure when datum/value should be preferred
+        if isinstance(e, ir.Lit):
+            return {"value": _value(e)}
+
+        raise unsupported_error(e, "encoding")
 
     def properties(self, **kwds: Unpack[_ChartKwds]) -> Self:
         """Set top-level properties of the chart."""
@@ -136,11 +203,15 @@ def layer(*charts: Chart, **kwds: Unpack[_ChartKwds]) -> Chart:
     )
 
 
-def _encode_expr(expr: nw.Expr) -> ConditionalValue | ConditionalField:
-    e = expr._ir
-    if isinstance(e, ir.TernaryExpr):
-        return encode_ternary_expr(e)
-    raise unsupported_error(e, "encoding")
+@functools.lru_cache(16)
+def _vegalite_type(dtype: DType, /) -> Optional[VegaType]:
+    if dtype.is_numeric():
+        return "quantitative"
+    if isinstance(dtype, (stable_v1.String, stable_v1.Categorical, stable_v1.Boolean)):
+        return "nominal"
+    if isinstance(dtype, (stable_v1.Datetime, stable_v1.Date)):
+        return "temporal"
+    return alt.Undefined
 
 
 def _wrapper(chart: Chart, method_name: str) -> Callable[..., Chart]:
