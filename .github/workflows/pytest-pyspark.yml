@@ -3,6 +3,7 @@ name: PyTest PySpark constructor
 on:
   pull_request:
     paths:
+      - .github/workflows/pytest-pyspark.yml
       - src/narwhals/_expression_parsing.py
       - src/narwhals/_spark_like/**
       - src/narwhals/_sql/**
