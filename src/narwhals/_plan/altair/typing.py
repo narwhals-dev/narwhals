@@ -12,7 +12,6 @@ import datetime as dt
 from typing import TYPE_CHECKING, Literal, TypeAlias, Union
 
 from altair.expr import core as alt_ir
-from altair.typing import EncodeKwds as _EncodeKwds
 from altair.vegalite.v6.schema import _typing as alt_t
 
 if TYPE_CHECKING:
@@ -211,8 +210,9 @@ WindowField = TypedDict(
 )
 
 
-class EncodeKwds(_EncodeKwds, total=False):
+class EncodeKwds(TypedDict, total=False):
     """Encoding channels map properties of the data to visual properties of the chart."""
+
     angle: _alt_t.ChannelAngle | nwp.Expr
     color: _alt_t.ChannelColor | nwp.Expr
     column: _alt_t.ChannelColumn | nwp.Expr
@@ -220,7 +220,7 @@ class EncodeKwds(_EncodeKwds, total=False):
     detail: _alt_t.ChannelDetail | nwp.Expr
     facet: _alt_t.ChannelFacet | nwp.Expr
     fill: _alt_t.ChannelFill | nwp.Expr
-    fillOpacity: _alt_t.ChannelFillOpacity | nwp.Expr  # noqa: N815
+    fillOpacity: _alt_t.ChannelFillOpacity | nwp.Expr
     href: _alt_t.ChannelHref | nwp.Expr
     key: _alt_t.ChannelKey | nwp.Expr
     latitude: _alt_t.ChannelLatitude | nwp.Expr
@@ -235,9 +235,9 @@ class EncodeKwds(_EncodeKwds, total=False):
     shape: _alt_t.ChannelShape | nwp.Expr
     size: _alt_t.ChannelSize | nwp.Expr
     stroke: _alt_t.ChannelStroke | nwp.Expr
-    strokeDash: _alt_t.ChannelStrokeDash | nwp.Expr  # noqa: N815
-    strokeOpacity: _alt_t.ChannelStrokeOpacity | nwp.Expr  # noqa: N815
-    strokeWidth: _alt_t.ChannelStrokeWidth | nwp.Expr  # noqa: N815
+    strokeDash: _alt_t.ChannelStrokeDash | nwp.Expr
+    strokeOpacity: _alt_t.ChannelStrokeOpacity | nwp.Expr
+    strokeWidth: _alt_t.ChannelStrokeWidth | nwp.Expr
     text: _alt_t.ChannelText | nwp.Expr
     theta: _alt_t.ChannelTheta | nwp.Expr
     theta2: _alt_t.ChannelTheta2 | nwp.Expr
@@ -246,11 +246,11 @@ class EncodeKwds(_EncodeKwds, total=False):
     url: _alt_t.ChannelUrl | nwp.Expr
     x: _alt_t.ChannelX | nwp.Expr
     x2: _alt_t.ChannelX2 | nwp.Expr
-    xError: _alt_t.ChannelXError | nwp.Expr  # noqa: N815
-    xError2: _alt_t.ChannelXError2 | nwp.Expr  # noqa: N815
-    xOffset: _alt_t.ChannelXOffset | nwp.Expr  # noqa: N815
+    xError: _alt_t.ChannelXError | nwp.Expr
+    xError2: _alt_t.ChannelXError2 | nwp.Expr
+    xOffset: _alt_t.ChannelXOffset | nwp.Expr
     y: _alt_t.ChannelY | nwp.Expr
     y2: _alt_t.ChannelY2 | nwp.Expr
-    yError: _alt_t.ChannelYError | nwp.Expr  # noqa: N815
-    yError2: _alt_t.ChannelYError2 | nwp.Expr  # noqa: N815
-    yOffset: _alt_t.ChannelYOffset | nwp.Expr  # noqa: N815
+    yError: _alt_t.ChannelYError | nwp.Expr
+    yError2: _alt_t.ChannelYError2 | nwp.Expr
+    yOffset: _alt_t.ChannelYOffset | nwp.Expr

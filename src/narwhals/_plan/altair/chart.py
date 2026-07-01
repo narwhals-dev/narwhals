@@ -69,7 +69,7 @@ class Chart:
             channel: (_encode_expr(e) if isinstance(e, nw.Expr) else e)
             for channel, e in kwds.items()
         }
-        return self._from_altair(self._chart.encode(*args_, **kwds_))  # pyright: ignore[reportArgumentType]
+        return self._from_altair(self._chart.encode(*args_, **kwds_))  # type: ignore[arg-type]
 
     def to_altair(self) -> AltChart:
         return self._chart

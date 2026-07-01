@@ -6,7 +6,7 @@ except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import narwhals._plan as nw
 from narwhals._plan.altair.expression import into_vega_expr
@@ -26,9 +26,8 @@ def calculate_transform(
         name for name, e in named_exprs.items() if not isinstance(e, nw.Expr)
     ):
         for alias in native:
-            yield alt.CalculateTransform(
-                **{"as": alias, "calculate": named_exprs.pop(alias)}
-            )
+            kwds: dict[str, Any] = {"as": alias, "calculate": named_exprs.pop(alias)}
+            yield alt.CalculateTransform(**kwds)
     only_nw = cast("dict[str, NwExpr]", named_exprs)
     for alias, e in parse_into_named_exprs(*exprs, **only_nw):
         yield alt.CalculateTransform(**{"as": alias, "calculate": into_vega_expr(e)})
