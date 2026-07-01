@@ -10,14 +10,19 @@ import altair as alt
 import polars as pl
 from altair.datasets import Loader
 
+from narwhals._plan.altair import chart as nw_alt
+
 load = Loader.from_backend("polars")
 
-base_wheat = alt.Chart(load("wheat")).transform_calculate(year_end="+datum.year + 5")
+# TODO @dangotbanned: use binary expr
+base_wheat = nw_alt.Chart(load("wheat")).transform_calculate(year_end="+datum.year + 5")
 
-base_monarchs = alt.Chart(load("monarchs")).transform_calculate(
+# TODO @dangotbanned: use binary expr, when
+# TODO @dangotbanned: probably rewrite the "is odd" stuff, although it is supported
+base_monarchs = nw_alt.Chart(load("monarchs")).transform_calculate(
     offset="((!datum.commonwealth && datum.index % 2) ? -1: 1) * 2 + 95",
     off2="((!datum.commonwealth && datum.index % 2) ? -1: 1) + 95",
-    y="95",
+    y="95",  # TODO @dangotbanned: Update transform_calculate to convert `95` -> `lit(95)`
     x="+datum.start + (+datum.end - +datum.start)/2",
 )
 
@@ -28,7 +33,7 @@ bars = base_wheat.mark_bar(fill="#aaa", stroke="#999").encode(
 )
 
 section_line = (
-    alt.Chart(pl.DataFrame({"year": [1600, 1650, 1700, 1750, 1800]}))
+    nw_alt.Chart(pl.DataFrame({"year": [1600, 1650, 1700, 1750, 1800]}))
     .mark_rule(stroke="#000", strokeWidth=0.6, opacity=0.7)
     .encode(x="year")
 )
@@ -50,8 +55,9 @@ top_text = base_monarchs.mark_text(yOffset=14, fontSize=9, fontStyle="italic").e
 )
 
 chart = (
-    alt.layer(bars, section_line, area, area_line_1, area_line_2, top_bars, top_text)
-    .properties(width=900, height=400)
+    nw_alt.layer(bars, section_line, area, area_line_1, area_line_2, top_bars, top_text)
+    # TODO @dangotbanned: Add `properties`, `configure_*`
+    .properties(width=900, height=400)  # pyright: ignore[reportAttributeAccessIssue]
     .configure_axis(title=None, gridColor="white", gridOpacity=0.25, domain=False)
     .configure_view(stroke="transparent")
 )
