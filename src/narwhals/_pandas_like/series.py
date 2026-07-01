@@ -87,6 +87,7 @@ PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "float64[pyarrow]": "float64",
     "Float32": "float32",
     "float32[pyarrow]": "float32",
+    "halffloat[pyarrow]": "float16",
 }
 PANDAS_TO_NUMPY_DTYPE_MISSING = {
     "Int64": "float64",
@@ -109,6 +110,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
     "float64[pyarrow]": "float64",
     "Float32": "float32",
     "float32[pyarrow]": "float32",
+    "halffloat[pyarrow]": "float16",
 }
 
 

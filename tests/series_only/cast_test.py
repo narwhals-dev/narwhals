@@ -130,3 +130,14 @@ def test_cast_to_enum_vmain(
 
     df_nw = df_nw.select(col_a.cast(nw.Enum(["a", "b"])))
     assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
+
+
+def test_cast_to_enum_pyarrow_unsupported() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df_nw = nw.from_native(pa.table({"a": ["a", "b"]}))
+    with pytest.raises(
+        NotImplementedError, match="Converting to Enum dtype is not supported for PyArrow"
+    ):
+        df_nw.select(nw.col("a").cast(nw.Enum(["a", "b"])))
