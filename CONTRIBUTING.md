@@ -414,7 +414,8 @@ The aim is to keep maintainer time focused on review quality, not on triaging ma
 
 3. **Engage with review feedback**: we reserve the right to close, without extended discussion,
     pull requests where the author does not engage with reviewer comments.
-    This applies whether or not AI was used.
+
+    **This applies whether or not AI was used.**
 
 4. **First-time contributors** are asked to:
     
@@ -422,6 +423,9 @@ The aim is to keep maintainer time focused on review quality, not on triaging ma
       This is a quick check that your dev environment works and that you have run the code you are proposing.
     - Keep at most one open pull request at a time, so reviewers can give it proper attention before
       you open the next one.
+  
+5. When interacting in issues, pull requests, discussion, discord, etc., **do not use LLMs to speak for you**,
+    except for translation or grammar edits. Human-to-human communication is foundational to open source communities.
 
 ## Claiming issues
 

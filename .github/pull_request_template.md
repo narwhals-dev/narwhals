@@ -31,11 +31,11 @@
 For transparency only.
 By submitting this PR you accept full responsibility for every line of code,
 regardless of how it was produced.
-See CONTRIBUTING.md "AI-assisted contributions" section.
+See [AI-assisted contributions](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#ai-assisted-contributions).
 -->
 
-- [ ] No AI tools were used for this PR
-- [ ] AI tools were used (please list which tools, models, prompts, etc..)
+- [ ] No AI tools were used for this PR.
+- [ ] AI tools were used.
 
 ## Checklist
 
