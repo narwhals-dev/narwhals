@@ -5,6 +5,8 @@ on:
     paths:
       - "**.py"
       - .github/workflows/pytest.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:

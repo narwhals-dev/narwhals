@@ -7,6 +7,8 @@ on:
       - src/narwhals/_pandas_like/**
       - tests/**
       - .github/workflows/pytest-modin.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:

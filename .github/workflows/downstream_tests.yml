@@ -5,6 +5,8 @@ on:
     paths:
       - src/**
       - .github/workflows/downstream_tests.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
     inputs:
       skip-fairlearn:
