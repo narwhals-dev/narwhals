@@ -84,6 +84,7 @@ class Chart:
 
         @altair.utils.use_signature(_MarkDef)
         def mark_bar(self, **kwds: Any) -> Self: ...
+        # TODO @dangotbanned: Try writing the rest as aliases?
         @altair.utils.use_signature(_MarkDef)
         def mark_rule(self, **kwds: Any) -> Self: ...
         @altair.utils.use_signature(_MarkDef)
@@ -103,10 +104,16 @@ class Chart:
         @altair.utils.use_signature(_MarkDef)
         def mark_arc(self, **kwds: Any) -> Self: ...
 
+        # NOTE: May be able to write most of the others as aliases
+        @altair.utils.use_signature(alt.AxisConfig)
+        def configure_axis(self, **kwds: Any) -> Self: ...
+        @altair.utils.use_signature(alt.ViewConfig)
+        def configure_view(self, **kwds: Any) -> Self: ...
+
     else:
 
         def __getattr__(self, name: str) -> Callable[..., Chart]:
-            if not name.startswith("mark_"):
+            if not name.startswith(("mark_", "configure")):
                 msg = f"{type(self).__name__!r} object has no attribute {name!r}"
                 raise AttributeError(msg)
             return _wrapper(self, name)
