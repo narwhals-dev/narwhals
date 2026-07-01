@@ -27,16 +27,13 @@ bars = base_wheat.mark_bar(fill="#aaa", stroke="#999").encode(
     x2="year_end",
 )
 
-section_data = pl.DataFrame({"year": [1600, 1650, 1700, 1750, 1800]})
-
 section_line = (
-    alt.Chart(section_data)
+    alt.Chart(pl.DataFrame({"year": [1600, 1650, 1700, 1750, 1800]}))
     .mark_rule(stroke="#000", strokeWidth=0.6, opacity=0.7)
     .encode(x="year")
 )
 
 area = base_wheat.mark_area(color="#a4cedb", opacity=0.7).encode(x="year", y="wages")
-
 area_line_1 = area.mark_line(color="#000", opacity=0.7)
 area_line_2 = area.mark_line(yOffset=-2, color="#EE8182")
 
