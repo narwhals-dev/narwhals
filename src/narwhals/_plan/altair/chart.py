@@ -71,6 +71,10 @@ class Chart:
         }
         return self._from_altair(self._chart.encode(*args_, **kwds_))  # type: ignore[arg-type]
 
+    def properties(self, **kwds: Unpack[_ChartKwds]) -> Self:
+        """Set top-level properties of the chart."""
+        return self._from_altair(self._chart.properties(**kwds))
+
     def to_altair(self) -> AltChart:
         return self._chart
 

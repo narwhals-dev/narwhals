@@ -56,8 +56,7 @@ top_text = base_monarchs.mark_text(yOffset=14, fontSize=9, fontStyle="italic").e
 
 chart = (
     nw_alt.layer(bars, section_line, area, area_line_1, area_line_2, top_bars, top_text)
-    # TODO @dangotbanned: Add `properties`, `configure_*`
-    .properties(width=900, height=400)  # pyright: ignore[reportAttributeAccessIssue]
+    .properties(width=900, height=400)
     .configure_axis(title=None, gridColor="white", gridOpacity=0.25, domain=False)
     .configure_view(stroke="transparent")
 )
