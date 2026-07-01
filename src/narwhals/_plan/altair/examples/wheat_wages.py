@@ -7,12 +7,14 @@
 from __future__ import annotations
 
 import altair as alt
-import pandas as pd
-from altair.datasets import data
+import polars as pl
+from altair.datasets import Loader
 
-base_wheat = alt.Chart(data.wheat.url).transform_calculate(year_end="+datum.year + 5")
+load = Loader.from_backend("polars")
 
-base_monarchs = alt.Chart(data.monarchs.url).transform_calculate(
+base_wheat = alt.Chart(load("wheat")).transform_calculate(year_end="+datum.year + 5")
+
+base_monarchs = alt.Chart(load("monarchs")).transform_calculate(
     offset="((!datum.commonwealth && datum.index % 2) ? -1: 1) * 2 + 95",
     off2="((!datum.commonwealth && datum.index % 2) ? -1: 1) + 95",
     y="95",
@@ -25,9 +27,7 @@ bars = base_wheat.mark_bar(fill="#aaa", stroke="#999").encode(
     alt.X2("year_end"),
 )
 
-section_data = pd.DataFrame(
-    [{"year": 1600}, {"year": 1650}, {"year": 1700}, {"year": 1750}, {"year": 1800}]
-)
+section_data = pl.DataFrame({"year": [1600, 1650, 1700, 1750, 1800]})
 
 section_line = (
     alt.Chart(section_data)
