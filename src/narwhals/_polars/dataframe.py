@@ -393,11 +393,14 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if isinstance(schema, (Mapping, Schema))
             else schema
         )
-        # Pass `orient="row"` explicitly: without it polars infers the orientation
-        # and transposes square, Fortran-contiguous arrays (e.g. the output of
-        # `DataFrame.to_numpy()`), contradicting the documented row orientation.
+        # polars only mis-infers orientation for *square* arrays: it inspects the
+        # array's memory layout and transposes Fortran-contiguous input (e.g. the
+        # output of `DataFrame.to_numpy()`), contradicting the documented row
+        # orientation. For non-square arrays its schema-length heuristic is correct,
+        # so only pin `orient="row"` when the array is square.
+        orient = "row" if data.shape[0] == data.shape[1] else None
         return cls.from_native(
-            pl.from_numpy(data, pl_schema, orient="row"), context=context
+            pl.from_numpy(data, pl_schema, orient=orient), context=context
         )
 
     def to_narwhals(self) -> DataFrame[pl.DataFrame]:
