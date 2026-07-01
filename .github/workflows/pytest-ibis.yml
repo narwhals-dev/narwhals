@@ -8,6 +8,8 @@ on:
       - src/narwhals/_sql/**      
       - tests/**
       - .github/workflows/pytest-ibis.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:
