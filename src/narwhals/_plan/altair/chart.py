@@ -130,7 +130,8 @@ class Chart:
         from_expr = encode.from_expr
         args_ = (from_expr(e._ir, self) if isinstance(e, nw.Expr) else e for e in args)
         kwds_ = {
-            channel: (from_expr(e._ir, self, channel) if isinstance(e, nw.Expr) else e)
+            # TODO @dangotbanned: review if `mypy` understands this after bump for PEP 728
+            channel: (from_expr(e._ir, self, channel) if isinstance(e, nw.Expr) else e)  # type: ignore[call-overload]
             for channel, e in kwds.items()
         }
         return self._from_altair(self._chart.encode(*args_, **kwds_))  # type: ignore[arg-type]

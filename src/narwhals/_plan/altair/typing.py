@@ -91,6 +91,23 @@ AggOrWindow: TypeAlias = AggregateOp | WindowOp
 
 _Repeater: TypeAlias = Literal["row", "column", "repeat", "layer"]
 
+Channel: TypeAlias = (
+    alt_t.SingleDefUnitChannel_T
+    | Literal[
+        "column",
+        "detail",
+        "facet",
+        "order",
+        "row",
+        "tooltip",
+        "xError",
+        "xError2",
+        "yError",
+        "yError2",
+    ]
+)
+"""Keywords that can be passed to `Chart.encode(...)`."""
+
 
 class ArgMin(TypedDict):
     argmin: FieldName

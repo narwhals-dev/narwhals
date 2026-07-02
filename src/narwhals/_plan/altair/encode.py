@@ -16,7 +16,7 @@ from narwhals._plan import expressions as ir
 from narwhals._plan.altair import aggregate, typing as alt_t
 from narwhals._plan.altair.exceptions import unsupported_error as _unsupported_error
 from narwhals._plan.altair.expression import into_vega_expr
-from narwhals._plan.altair.typing import Field, Value
+from narwhals._plan.altair.typing import Channel, Field, Value
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
 
@@ -117,20 +117,22 @@ unsupported_error = functools.partial(_unsupported_error, target="encoding")
 
 
 @overload
-def from_expr(expr: ir.Lit, chart: NwChart, channel: str | None = None) -> Value: ...
+def from_expr(expr: ir.Lit, chart: NwChart, channel: Channel | None = None) -> Value: ...
 @overload
 def from_expr(
-    expr: ir.TernaryExpr, chart: NwChart, channel: str | None = None
+    expr: ir.TernaryExpr, chart: NwChart, channel: Channel | None = None
 ) -> ConditionalValue | ConditionalField: ...
 @overload
 def from_expr(
     expr: Col | LenStar | ir.AggExpr | ir.FunctionExpr,
     chart: NwChart,
-    channel: str | None = None,
+    channel: Channel | None = None,
 ) -> Field: ...
 @overload
-def from_expr(expr: ir.ExprIR, chart: NwChart, channel: str | None = None) -> Encoded: ...
-def from_expr(expr: ir.ExprIR, chart: NwChart, channel: str | None = None) -> Encoded:
+def from_expr(
+    expr: ir.ExprIR, chart: NwChart, channel: Channel | None = None
+) -> Encoded: ...
+def from_expr(expr: ir.ExprIR, chart: NwChart, channel: Channel | None = None) -> Encoded:
     result = _from_expr(expr, chart, channel)
     if result is None:
         raise unsupported_error(expr)
@@ -138,13 +140,18 @@ def from_expr(expr: ir.ExprIR, chart: NwChart, channel: str | None = None) -> En
 
 
 @functools.singledispatch
-def _from_expr(expr: ir.ExprIR, chart: NwChart, channel: str | None, /) -> Encoded | None:  # noqa: ARG001
+def _from_expr(
+    expr: ir.ExprIR,  # noqa: ARG001
+    chart: NwChart,  # noqa: ARG001
+    channel: Channel | None,  # noqa: ARG001
+    /,
+) -> Encoded | None:
     return None
 
 
 @_from_expr.register(ir.TernaryExpr)
 def ternary_expr(
-    expr: ir.TernaryExpr, chart: NwChart, channel: str | None, /
+    expr: ir.TernaryExpr, chart: NwChart, channel: Channel | None, /
 ) -> ConditionalValue | ConditionalField:
     """Translation of `TernaryExpr` into a conditional encoding.
 
@@ -207,7 +214,7 @@ def ternary_expr(
 
 
 def _ternary_chained(
-    first: TestValue, otherwise: ir.TernaryExpr, chart: NwChart, channel: str | None
+    first: TestValue, otherwise: ir.TernaryExpr, chart: NwChart, channel: Channel | None
 ) -> ConditionalValue | ConditionalField:
     conditions = [first]
     last: ir.TernaryExpr | ir.ExprIR = otherwise
@@ -226,7 +233,7 @@ def _ternary_chained(
 
 
 @_from_expr.register(Col)
-def _col(expr: Col, chart: NwChart, channel: str | None, /) -> Field:
+def _col(expr: Col, chart: NwChart, channel: Channel | None, /) -> Field:
     field = expr.name
     if vtype := vegalite_type(field, chart, channel):
         return {_FIELD: field, _AGG: Undefined, _TYPE: vtype}
@@ -234,7 +241,7 @@ def _col(expr: Col, chart: NwChart, channel: str | None, /) -> Field:
 
 
 @_from_expr.register(ir.AggExpr)
-def _agg_expr(expr: ir.AggExpr, chart: NwChart, channel: str | None, /) -> Field:
+def _agg_expr(expr: ir.AggExpr, chart: NwChart, channel: Channel | None, /) -> Field:
     encoding = aggregate.from_agg_expr(expr, context="encoding")
     if vtype := vegalite_type(encoding[_FIELD], chart, channel, _Q):
         encoding[_TYPE] = vtype
@@ -242,7 +249,7 @@ def _agg_expr(expr: ir.AggExpr, chart: NwChart, channel: str | None, /) -> Field
 
 
 @_from_expr.register(LenStar)
-def _len(_: LenStar, __: NwChart, channel: str | None, /) -> Field:
+def _len(_: LenStar, __: NwChart, channel: Channel | None, /) -> Field:
     if channel and channel in _SECONDARY_FIELD:
         return {_FIELD: "__count__", _AGG: "count"}
     return {_FIELD: "__count__", _AGG: "count", _TYPE: _Q}
@@ -250,7 +257,7 @@ def _len(_: LenStar, __: NwChart, channel: str | None, /) -> Field:
 
 @_from_expr.register(ir.FunctionExpr)
 def _function_expr(
-    expr: ir.FunctionExpr, _: NwChart, channel: str | None, /
+    expr: ir.FunctionExpr, _: NwChart, channel: Channel | None, /
 ) -> Field | None:
     match expr:
         case ir.FunctionExpr(function=F.NullCount(), args=(Col(name=name),)):
@@ -264,7 +271,7 @@ def _function_expr(
 
 
 @_from_expr.register(ir.Lit)
-def _lit(expr: ir.Lit, _: NwChart, __: str | None, /) -> Value:
+def _lit(expr: ir.Lit, _: NwChart, __: Channel | None, /) -> Value:
     # NOTE: https://altair-viz.github.io/user_guide/encodings/index.html#datum-and-value
     # A heuristic would probably be too complex:
     # - via the context of `channel` & `expr.dtype`
@@ -273,7 +280,7 @@ def _lit(expr: ir.Lit, _: NwChart, __: str | None, /) -> Value:
     return {"value": _value(expr)}
 
 
-def _field(expr: ir.ExprIR, chart: NwChart, channel: str | None) -> Field:
+def _field(expr: ir.ExprIR, chart: NwChart, channel: Channel | None) -> Field:
     if not isinstance(expr, _TP_FIELD):
         raise unsupported_error(expr)
     return from_expr(expr, chart, channel)
@@ -295,7 +302,7 @@ def _conditional_value(
 def vegalite_type(
     field: str,
     chart: NwChart,
-    channel: str | None,
+    channel: Channel | None,
     /,
     default: Optional[VegaType] = Undefined,
 ) -> Optional[VegaType] | None:
