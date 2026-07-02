@@ -170,6 +170,8 @@ class Chart:
         e = expr._ir
         if isinstance(e, ir.TernaryExpr):
             return encode_ternary_expr(e)
+        if isinstance(e, ir.Len):
+            return {"field": "__count__", "aggregate": "count"}
 
         if isinstance(e, ir.Column):
             field = e.name

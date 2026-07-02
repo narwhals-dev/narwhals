@@ -253,6 +253,9 @@ def window_field_def(
     elif isinstance(expr, Col):
         op = "values"
         field = expr.name
+    elif isinstance(expr, ir.Len):
+        op = "count"
+        field = "__count__"
     else:
         raise unsupported_error(expr, "window")
     return alt.WindowFieldDef(op=op, field=field, param=param, **kwds)
@@ -281,6 +284,8 @@ def _agg_field_def(alias: OutputName, expr: ir.ExprIR) -> alt.AggregatedFieldDef
         return alt.AggregatedFieldDef(**from_agg_expr(expr, "aggregate"), **{"as": alias})
     if isinstance(expr, Col):
         result = {"op": "values", "field": expr.name, "as": alias}
+    elif isinstance(expr, ir.Len):
+        result = {"op": "count", "field": "__count__", "as": alias}
     elif isinstance(expr, ir.FunctionExpr) and (op := AGG_FUNC.get(type(expr.function))):
         if not isinstance(expr.args[0], Col):
             raise unsupported_error(expr, "aggregate")
