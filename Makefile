@@ -3,6 +3,14 @@
 
 .DEFAULT_GOAL := help
 
+# coverage's execv/fork patches raise on Windows; collapse them to `subprocess`
+# there (coverage dedupes) and keep the default values elsewhere.
+# See `tool.coverage.run.patch` in pyproject.toml.
+ifeq ($(OS),Windows_NT)
+export COVERAGE_PATCH_EXECV ?= subprocess
+export COVERAGE_PATCH_FORK ?= subprocess
+endif
+
 .PHONY: help
 help:  ## Display this help screen
 	@echo -e "\033[1mAvailable commands:\033[0m"
@@ -31,6 +39,13 @@ docs-clean-serve: ## Rebuild docs from a clean state and serve them locally
 	$(MAKE) docs-serve
 
 .PHONY: run-ci
-run-ci:  ## Print resolved deps, then run a command via uv. Usage: make run-ci DEPS="<groups/extras>" CMD="<command>" [RUN_ONLY="<uv-run-only flags, e.g. --isolated, --with X, --no-sync>"]
+run-ci:  ## Print resolved deps, then run a command via uv (no coverage; used by doctests, narrow-dep runs, tpch, ibis, modin). Usage: make run-ci DEPS="<groups/extras>" CMD="<command>" [RUN_ONLY="<uv-run-only flags, e.g. --isolated, --with X, --no-sync>"]
 	uv export --no-annotate --no-hashes $(DEPS)
 	uv run $(DEPS) $(RUN_ONLY) $(CMD)
+
+.PHONY: run-ci-coverage
+run-ci-coverage:  ## Like run-ci but under coverage (run -> combine -> report). Usage: make run-ci-coverage DEPS="<groups/extras>" CMD="<command, e.g. pytest tests --nw-backends=...>" [FAIL_UNDER="<int>"] [COV_SOURCE="<path to scope coverage to, e.g. src/narwhals/_spark_like; drives both 'run --source' and 'report --include'>"] [RUN_ONLY="<uv-run-only flags>"]
+	uv export --no-annotate --no-hashes $(DEPS)
+	uv run $(DEPS) $(RUN_ONLY) coverage run $(if $(COV_SOURCE),--source=$(COV_SOURCE)) -m $(CMD)
+	uv run $(DEPS) $(RUN_ONLY) coverage combine
+	uv run $(DEPS) $(RUN_ONLY) coverage report $(if $(COV_SOURCE),--include=$(COV_SOURCE)/*) $(if $(FAIL_UNDER),--fail-under=$(FAIL_UNDER))

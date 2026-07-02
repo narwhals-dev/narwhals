@@ -13,6 +13,7 @@ env:
   PYTEST_ADDOPTS: "--numprocesses=logical"
   UV_LOCKED: 1
   UV_NO_DEV: 1
+  COVERAGE_PROCESS_START: pyproject.toml
 
 permissions:
   contents: read
@@ -41,5 +42,7 @@ jobs:
       - name: Run pytest with random versions
         run: |
           uv run --group tests --group plugins --with-requirements random-requirements.txt \
-          pytest tests --cov=src --cov=tests --cov-fail-under=75 \
-          --constructors="pandas,pyarrow,polars[eager],polars[lazy]"
+          coverage run -m pytest tests \
+          --nw-backends="pandas,pyarrow,polars[eager],polars[lazy]"
+          uv run --group tests --group plugins --with-requirements random-requirements.txt coverage combine
+          uv run --group tests --group plugins --with-requirements random-requirements.txt coverage report --fail-under=75

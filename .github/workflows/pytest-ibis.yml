@@ -15,6 +15,7 @@ on:
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
+  COVERAGE_PROCESS_START: pyproject.toml
   UV_LOCKED: 1
   UV_NO_DEV: 1
 
@@ -39,4 +40,4 @@ jobs:
           cache-suffix: ibis-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--group core-tests --extra ibis --extra pandas" CMD="pytest tests --constructors=ibis"
+        run: make run-ci DEPS="--group core-tests --extra ibis --extra pandas" CMD="pytest tests --nw-backends=ibis"

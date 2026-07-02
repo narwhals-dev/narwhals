@@ -76,7 +76,7 @@ def test_native_namespace_frame(constructor: Constructor) -> None:
 
 
 def test_native_namespace_series(constructor_eager: ConstructorEager) -> None:
-    constructor_name = constructor_eager.__name__
+    constructor_name = str(constructor_eager)
 
     expected_namespace = _get_expected_namespace(constructor_name=constructor_name)
 
