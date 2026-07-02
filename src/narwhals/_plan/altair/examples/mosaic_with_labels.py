@@ -81,8 +81,6 @@ text = base.mark_text(baseline="middle").encode(
     alt.Y("yc:Q").title("Cylinders"),
     text="Cylinders:N",
 )
-# TODO @dangotbanned: Add `Chart.__add__`
-mosaic = rect + text  # pyright: ignore[reportOperatorIssue]
 
 origin_labels = base.mark_text(baseline="middle", align="center").encode(
     # TODO @dangotbanned: Almost able to do this with `nw.min("xc").alias("Origin")`
@@ -93,10 +91,9 @@ origin_labels = base.mark_text(baseline="middle", align="center").encode(
 )
 
 chart = (
-    # TODO @dangotbanned: Add `Chart.__and__`
-    (origin_labels & mosaic)
+    (origin_labels & (rect + text))
     # TODO @dangotbanned: Add `Chart.resolve_` to `__getattr__`
-    .resolve_scale(x="shared")
+    .resolve_scale(x="shared")  # pyright: ignore[reportAttributeAccessIssue]
     .configure_view(stroke="")
     # TODO @dangotbanned: Add `Chart.configure_concat` to `__getattr__`
     .configure_concat(spacing=10)

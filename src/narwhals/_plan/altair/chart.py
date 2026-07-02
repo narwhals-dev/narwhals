@@ -238,6 +238,16 @@ class Chart:
                 raise AttributeError(msg)
             return _wrapper(self, name)
 
+    def __add__(self, other: Chart) -> Chart:
+        return Chart._from_altair(alt.LayerChart((self._chart, other._chart)))
+
+    def __and__(self, other: Chart) -> Chart:
+        return Chart._from_altair(alt.VConcatChart((self._chart, other._chart)))
+
+    def __or__(self, other: Chart) -> Chart:
+        # `TopLevelMixin.__or__` has some logic for `Concat` vs `HConcat`
+        return Chart._from_altair(self._chart.__or__(other._chart))
+
 
 def layer(*charts: Chart, **kwds: Unpack[_ChartKwds]) -> Chart:
     """Layer multiple charts."""
