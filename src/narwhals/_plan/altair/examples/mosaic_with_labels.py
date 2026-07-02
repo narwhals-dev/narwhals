@@ -23,19 +23,22 @@ base = (
         offset="normalize",
         sort=[alt.SortField("Origin", "ascending")],
     )
+    # TODO @dangotbanned: Add a similar API to `transform_aggregate`
+    # - but this one is allowed to use `OverOrdered`
     .transform_window(
-        x="min(stack_count_Origin1)",
-        x2="max(stack_count_Origin2)",
-        rank_Cylinders="dense_rank()",
-        distinct_Cylinders="distinct(Cylinders)",
-        groupby=["Origin"],
-        frame=[None, None],
-        sort=[alt.SortField("Cylinders", "ascending")],
+        x="min(stack_count_Origin1)",  # pyright: ignore[reportArgumentType]
+        x2="max(stack_count_Origin2)",  # pyright: ignore[reportArgumentType]
+        rank_Cylinders="dense_rank()",  # pyright: ignore[reportArgumentType]
+        distinct_Cylinders="distinct(Cylinders)",  # pyright: ignore[reportArgumentType]
+        groupby=["Origin"],  # pyright: ignore[reportArgumentType]
+        frame=[None, None],  # pyright: ignore[reportArgumentType]
+        sort=[alt.SortField("Cylinders", "ascending")],  # pyright: ignore[reportArgumentType]
     )
+    # TODO @dangotbanned: Maybe able to merge into the above call?
     .transform_window(
-        rank_Origin="dense_rank()",
-        frame=[None, None],
-        sort=[alt.SortField("Origin", "ascending")],
+        rank_Origin="dense_rank()",  # pyright: ignore[reportArgumentType]
+        frame=[None, None],  # pyright: ignore[reportArgumentType]
+        sort=[alt.SortField("Origin", "ascending")],  # pyright: ignore[reportArgumentType]
     )
     .transform_stack(
         stack="len",
@@ -44,6 +47,7 @@ base = (
         offset="normalize",
         sort=[alt.SortField("Cylinders", "ascending")],
     )
+    # TODO @dangotbanned: Replace all of these with expressions
     .transform_calculate(
         ny="datum.y + (datum.rank_Cylinders - 1) * datum.distinct_Cylinders * 0.01 / 3",
         ny2="datum.y2 + (datum.rank_Cylinders - 1) * datum.distinct_Cylinders * 0.01 / 3",
@@ -67,12 +71,18 @@ rect = base.mark_rect().encode(
 
 
 text = base.mark_text(baseline="middle").encode(
-    alt.X("xc:Q").axis(None), alt.Y("yc:Q").title("Cylinders"), text="Cylinders:N"
+    alt.X("xc:Q").axis(None),
+    # NOTE:`y=nwp.col("yc").alias("Cylinders").cast(nw.Int64)`?
+    # Probably too long
+    alt.Y("yc:Q").title("Cylinders"),
+    text="Cylinders:N",
 )
 # TODO @dangotbanned: Add `Chart.__add__`
-mosaic = rect + text
+mosaic = rect + text  # pyright: ignore[reportOperatorIssue]
 
 origin_labels = base.mark_text(baseline="middle", align="center").encode(
+    # TODO @dangotbanned: Almost able to do this with `nw.min("xc").alias("Origin")`
+    # The axis orient though may be a blocker
     alt.X("min(xc):Q").title("Origin").axis(orient="top"),
     alt.Color("Origin").legend(None),
     text="Origin",
@@ -84,6 +94,7 @@ chart = (
     # TODO @dangotbanned: Add `Chart.resolve_` to `__getattr__`
     .resolve_scale(x="shared")
     .configure_view(stroke="")
+    # TODO @dangotbanned: Add `Chart.configure_concat` to `__getattr__`
     .configure_concat(spacing=10)
     .configure_axis(domain=False, ticks=False, labels=False, grid=False)
 )
