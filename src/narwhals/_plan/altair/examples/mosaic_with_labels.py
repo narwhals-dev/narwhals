@@ -92,10 +92,9 @@ origin_labels = base.mark_text(baseline="middle", align="center").encode(
 
 chart = (
     (origin_labels & (rect + text))
-    # TODO @dangotbanned: Add `Chart.resolve_` to `__getattr__`
-    .resolve_scale(x="shared")  # pyright: ignore[reportAttributeAccessIssue]
+    .resolve_scale(x="shared")
     .configure_view(stroke="")
     # TODO @dangotbanned: Add `Chart.configure_concat` to `__getattr__`
-    .configure_concat(spacing=10)
+    .configure_concat(spacing=10)  # pyright: ignore[reportAttributeAccessIssue]
     .configure_axis(domain=False, ticks=False, labels=False, grid=False)
 )

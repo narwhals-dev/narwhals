@@ -230,10 +230,17 @@ class Chart:
         @altair.utils.use_signature(alt.ViewConfig)
         def configure_view(self, **kwds: Any) -> Self: ...
 
+        @altair.utils.use_signature(alt.AxisResolveMap)
+        def resolve_axis(self, **kwds: Any) -> Self: ...
+        @altair.utils.use_signature(alt.LegendResolveMap)
+        def resolve_legend(self, **kwds: Any) -> Self: ...
+        @altair.utils.use_signature(alt.ScaleResolveMap)
+        def resolve_scale(self, **kwds: Any) -> Self: ...
+
     else:
 
         def __getattr__(self, name: str) -> Callable[..., Chart]:
-            if not name.startswith(("mark_", "configure")):
+            if not name.startswith(("mark_", "configure", "resolve_")):
                 msg = f"{type(self).__name__!r} object has no attribute {name!r}"
                 raise AttributeError(msg)
             return _wrapper(self, name)
