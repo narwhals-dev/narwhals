@@ -94,7 +94,6 @@ chart = (
     (origin_labels & (rect + text))
     .resolve_scale(x="shared")
     .configure_view(stroke="")
-    # TODO @dangotbanned: Add `Chart.configure_concat` to `__getattr__`
-    .configure_concat(spacing=10)  # pyright: ignore[reportAttributeAccessIssue]
+    .configure_concat(spacing=10)
     .configure_axis(domain=False, ticks=False, labels=False, grid=False)
 )
