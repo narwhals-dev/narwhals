@@ -8,6 +8,7 @@ from __future__ import annotations
 import altair as alt
 from altair.datasets import load
 
+import narwhals._plan as nw
 from narwhals._plan.altair import chart as nw_alt
 
 source = load("cars", backend="polars")
@@ -15,11 +16,10 @@ source = load("cars", backend="polars")
 # TODO @dangotbanned: narwhalify!
 base = (
     nw_alt.Chart(source)
-    # TODO @dangotbanned: Add `transform_aggregate`
-    .transform_aggregate(count_="count()", groupby=["Origin", "Cylinders"])  # pyright: ignore[reportAttributeAccessIssue]
+    .transform_aggregate(nw.len().over("Origin", "Cylinders"))
     # TODO @dangotbanned: Add `transform_stack`
-    .transform_stack(
-        stack="count_",
+    .transform_stack(  # pyright: ignore[reportAttributeAccessIssue]
+        stack="len",
         as_=["stack_count_Origin1", "stack_count_Origin2"],
         offset="normalize",
         sort=[alt.SortField("Origin", "ascending")],
@@ -40,7 +40,7 @@ base = (
         sort=[alt.SortField("Origin", "ascending")],
     )
     .transform_stack(
-        stack="count_",
+        stack="len",
         groupby=["Origin"],
         as_=["y", "y2"],
         offset="normalize",

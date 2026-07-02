@@ -14,9 +14,12 @@ from narwhals._plan import expressions as ir
 from narwhals._plan.altair.exceptions import Target, unsupported_error
 from narwhals._plan.altair.parse import parse_into_named_exprs
 from narwhals._plan.altair.typing import (
+    AggField,
     AggOrWindow,
     AggregateOp,
+    FieldName,
     IntoExprColumn,
+    Optional,
     OutputName,
     WindowOp,
 )
@@ -24,8 +27,9 @@ from narwhals._plan.expressions import aggregation as agg, functions as F
 from narwhals._plan.expressions.expr import Col
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterator, Mapping, Sequence
 
+    import narwhals._plan as nw
     from narwhals._plan import _function as _f
     from narwhals._plan.altair import typing as alt_t
     from narwhals.typing import RankMethod
@@ -260,6 +264,63 @@ def window_transform(
     """Parse into narwhals expressions and translate to a single window transform."""
     parsed = parse_into_named_exprs(*exprs, **named_exprs)
     return alt.WindowTransform([window_field_def(alias, expr) for alias, expr in parsed])
+
+
+def _agg_field_def(alias: OutputName, expr: ir.ExprIR) -> alt.AggregatedFieldDef:
+    result: AggField
+    if isinstance(expr, ir.AggExpr):
+        return alt.AggregatedFieldDef(**from_agg_expr(expr, "aggregate"), **{"as": alias})
+    if isinstance(expr, Col):
+        result = {"op": "values", "field": expr.name, "as": alias}
+    elif isinstance(expr, ir.FunctionExpr) and (op := AGG_FUNC.get(type(expr.function))):
+        if not isinstance(expr.args[0], Col):
+            raise unsupported_error(expr, "aggregate")
+        result = {"op": op, "field": expr.args[0].name, "as": alias}
+    elif isinstance(expr, ir.Over):
+        msg = f"`transform_aggregate(groupby=...)` cannot be used in combination with `over`.\nGot: {expr!r}"
+        raise TypeError(msg)
+    else:
+        raise unsupported_error(expr, "aggregate")
+    return alt.AggregatedFieldDef(**result)
+
+
+def _agg_over_transform(alias: OutputName, expr: ir.Over) -> alt.AggregateTransform:
+    by = expr.partition_by
+    if isinstance(expr, ir.OverOrdered) or len(
+        group_by := tuple(e.name for e in by if isinstance(e, Col))
+    ) != len(by):
+        if isinstance(expr, ir.OverOrdered):
+            msg = "`order_by`"
+        else:
+            msg = "`partition_by` with expressions (excluding `col('name')`)"
+        msg = f"`transform_aggregate` does not support {msg}, got:\n    {expr!r}"
+        raise NotImplementedError(msg)
+
+    return alt.AggregateTransform([_agg_field_def(alias, expr.expr)], group_by)
+
+
+def aggregate_transform(
+    *exprs: nw.Expr,
+    group_by: Optional[Sequence[FieldName]] = alt.Undefined,
+    **named_exprs: nw.Expr,
+) -> Iterator[alt.AggregateTransform]:
+    """Extended support with `over` as an alternative to `groupby`.
+
+    - `transform_aggregate(groupby=...)` applies to all aggregate expressions
+    - `over()` can be used for more precision, while staying in a single `transform_aggregate` call
+    """
+    parsed = parse_into_named_exprs(*exprs, **named_exprs)
+    if group_by is alt.Undefined or not group_by:
+        non_over_fields: list[alt.AggregatedFieldDef] = []
+        for alias, expr in parsed:
+            if isinstance(expr, ir.Over):
+                yield _agg_over_transform(alias, expr)
+            else:
+                non_over_fields.append(_agg_field_def(alias, expr))
+        if non_over_fields:
+            yield alt.AggregateTransform(non_over_fields)
+    else:
+        yield alt.AggregateTransform([_agg_field_def(alias, e) for alias, e in parsed])
 
 
 # TODO @dangotbanned: convert `over` -> `WindowTransform

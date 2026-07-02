@@ -12,13 +12,13 @@ import datetime as dt
 from typing import TYPE_CHECKING, Literal, TypeAlias, Union
 
 from altair.expr import core as alt_ir
+from altair.typing import Optional as Optional  # noqa: PLC0414, TC002
 from altair.vegalite.v6.schema import _typing as alt_t
 
 if TYPE_CHECKING:
     import altair as alt
     from _typeshed import Incomplete
     from altair import typing as _alt_t
-    from altair.typing import Optional
     from typing_extensions import NotRequired, TypedDict
 
     import narwhals._plan as nwp

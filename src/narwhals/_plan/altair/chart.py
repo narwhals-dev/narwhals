@@ -14,7 +14,7 @@ import altair.utils
 import narwhals._plan as nw
 import narwhals.stable.v1 as stable_v1
 from narwhals._plan import expressions as ir
-from narwhals._plan.altair.aggregate import window_transform
+from narwhals._plan.altair.aggregate import aggregate_transform, window_transform
 from narwhals._plan.altair.calculate import calculate_transform
 from narwhals._plan.altair.conditional import (
     ConditionalField,
@@ -25,7 +25,7 @@ from narwhals._plan.altair.conditional import (
 from narwhals._plan.altair.exceptions import unsupported_error
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from altair.typing import ChartType as AltChart, Optional
     from altair.vegalite.v6.schema._config import ThemeConfig as _ChartKwds
@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from narwhals._plan.altair.typing import (
         EncodeKwds,
         Field,
+        FieldName,
         IntoAltExpr,
         Value,
         VegaType,
@@ -91,6 +92,18 @@ class Chart:
     def transform_window(self, **named_exprs: nw.Expr) -> Self:
         return self._from_altair(
             self._chart._add_transform(window_transform(**named_exprs))
+        )
+
+    def transform_aggregate(
+        self,
+        *exprs: nw.Expr,
+        groupby: Optional[Sequence[FieldName]] = alt.Undefined,
+        **named_exprs: nw.Expr,
+    ) -> Self:
+        return self._from_altair(
+            self._chart._add_transform(
+                *aggregate_transform(*exprs, group_by=groupby, **named_exprs)
+            )
         )
 
     @functools.cached_property
