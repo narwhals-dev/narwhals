@@ -90,9 +90,17 @@ class Chart:
         )
 
     # TODO @dangotbanned: Need to accept and pass-through non-Expr inputs
-    def transform_window(self, **named_exprs: nw.Expr) -> Self:
+    def transform_window(
+        self,
+        frame: Optional[Sequence[float | None]] = alt.Undefined,
+        groupby: Optional[Sequence[FieldName]] = alt.Undefined,
+        sort: Optional[Sequence[alt.SortField | dict[str, str]]] = alt.Undefined,
+        **named_exprs: nw.Expr,
+    ) -> Self:
         return self._from_altair(
-            self._chart._add_transform(window_transform(**named_exprs))
+            self._chart._add_transform(
+                window_transform(frame=frame, group_by=groupby, sort=sort, **named_exprs)
+            )
         )
 
     def transform_aggregate(

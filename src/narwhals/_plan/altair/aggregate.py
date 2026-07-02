@@ -259,11 +259,20 @@ def window_field_def(
 
 
 def window_transform(
-    *exprs: IntoExprColumn, **named_exprs: IntoExprColumn
+    *exprs: IntoExprColumn,
+    frame: Optional[Sequence[float | None]] = alt.Undefined,
+    group_by: Optional[Sequence[FieldName]] = alt.Undefined,
+    sort: Optional[Sequence[alt.SortField | dict[str, str]]] = alt.Undefined,
+    **named_exprs: IntoExprColumn,
 ) -> alt.WindowTransform:
     """Parse into narwhals expressions and translate to a single window transform."""
     parsed = parse_into_named_exprs(*exprs, **named_exprs)
-    return alt.WindowTransform([window_field_def(alias, expr) for alias, expr in parsed])
+    return alt.WindowTransform(
+        [window_field_def(alias, expr) for alias, expr in parsed],
+        frame=frame,
+        groupby=group_by,
+        sort=sort,
+    )
 
 
 def _agg_field_def(alias: OutputName, expr: ir.ExprIR) -> alt.AggregatedFieldDef:

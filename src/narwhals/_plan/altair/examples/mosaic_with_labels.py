@@ -26,19 +26,19 @@ base = (
     # TODO @dangotbanned: Add a similar API to `transform_aggregate`
     # - but this one is allowed to use `OverOrdered`
     .transform_window(
-        x="min(stack_count_Origin1)",  # pyright: ignore[reportArgumentType]
-        x2="max(stack_count_Origin2)",  # pyright: ignore[reportArgumentType]
-        rank_Cylinders="dense_rank()",  # pyright: ignore[reportArgumentType]
-        distinct_Cylinders="distinct(Cylinders)",  # pyright: ignore[reportArgumentType]
-        groupby=["Origin"],  # pyright: ignore[reportArgumentType]
-        frame=[None, None],  # pyright: ignore[reportArgumentType]
-        sort=[alt.SortField("Cylinders", "ascending")],  # pyright: ignore[reportArgumentType]
+        x=nw.min("stack_count_Origin1"),
+        x2=nw.max("stack_count_Origin2"),
+        rank_Cylinders=nw.col("Cylinders").rank("dense"),
+        distinct_Cylinders=nw.col("Cylinders").n_unique(),
+        groupby=["Origin"],
+        frame=[None, None],
+        sort=[alt.SortField("Cylinders", "ascending")],
     )
     # TODO @dangotbanned: Maybe able to merge into the above call?
     .transform_window(
-        rank_Origin="dense_rank()",  # pyright: ignore[reportArgumentType]
-        frame=[None, None],  # pyright: ignore[reportArgumentType]
-        sort=[alt.SortField("Origin", "ascending")],  # pyright: ignore[reportArgumentType]
+        rank_Origin=nw.col("Origin").rank("dense"),
+        frame=[None, None],
+        sort=[alt.SortField("Origin", "ascending")],
     )
     .transform_stack(
         stack="len",
