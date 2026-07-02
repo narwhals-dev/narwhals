@@ -190,7 +190,7 @@ def from_agg_expr(
                 expr, context, reason=("non-default" if key[1] != () else None)
             )
         if context == "encoding":
-            return {"field": field, "aggregate": op, "type": "quantitative"}
+            return {"field": field, "aggregate": op}
         return {"field": field, "op": op}
 
     # NOTE: See `typing.Aggregate` for how this rewrite works
@@ -204,7 +204,6 @@ def from_agg_expr(
                 return {
                     "field": field,
                     "aggregate": ({"argmin": by} if op == "argmin" else {"argmax": by}),
-                    "type": "quantitative",
                 }
 
     raise unsupported_error(expr, context)

@@ -13,11 +13,9 @@ import altair.utils
 
 import narwhals._plan as nw
 import narwhals.stable.v1 as stable_v1
-from narwhals._plan import expressions as ir
 from narwhals._plan.altair import encode
 from narwhals._plan.altair.aggregate import aggregate_transform, window_transform
 from narwhals._plan.altair.calculate import calculate_transform
-from narwhals._plan.altair.exceptions import unsupported_error
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -28,34 +26,10 @@ if TYPE_CHECKING:
     from altair.vegalite.v6.schema.mixins import _MarkDef
     from typing_extensions import Self, Unpack
 
-    from narwhals._plan.altair.encode import ConditionalField, ConditionalValue
-    from narwhals._plan.altair.typing import (
-        EncodeKwds,
-        Field,
-        FieldName,
-        IntoAltExpr,
-        Value,
-        VegaType,
-    )
+    from narwhals._plan.altair.typing import EncodeKwds, FieldName, IntoAltExpr, VegaType
     from narwhals.dtypes import DType
 
 _EMPTY_SCHEMA: Final = stable_v1.Schema()
-
-_SECONDARY_FIELD: Final = frozenset(
-    (
-        "latitude2",
-        "longitude2",
-        "radius2",
-        "theta2",
-        "x2",
-        "xError",
-        "xError2",
-        "y2",
-        "yError",
-        "yError2",
-    )
-)
-"""Channels that don't accept a `type`."""
 
 
 class Chart:
@@ -153,41 +127,13 @@ class Chart:
     # - aggregate -> aggregate_field_def
     def encode(self, *args: nw.Expr | Any, **kwds: Unpack[EncodeKwds]) -> Self:
         """Map properties of the data to visual properties of the chart."""
-        args_ = (self._encode_expr(e) if isinstance(e, nw.Expr) else e for e in args)
+        from_expr = encode.from_expr
+        args_ = (from_expr(e._ir, self) if isinstance(e, nw.Expr) else e for e in args)
         kwds_ = {
-            channel: (self._encode_expr(e, channel) if isinstance(e, nw.Expr) else e)
+            channel: (from_expr(e._ir, self, channel) if isinstance(e, nw.Expr) else e)
             for channel, e in kwds.items()
         }
         return self._from_altair(self._chart.encode(*args_, **kwds_))  # type: ignore[arg-type]
-
-    def _encode_expr(
-        self, expr: nw.Expr, channel: str | None = None
-    ) -> ConditionalValue | ConditionalField | Field | Value:
-        e = expr._ir
-        if isinstance(e, ir.TernaryExpr):
-            return encode.ternary_expr(e)
-        if isinstance(e, ir.Len):
-            return {"field": "__count__", "aggregate": "count"}
-
-        if isinstance(e, ir.Column):
-            field = e.name
-            if channel and channel in _SECONDARY_FIELD:
-                return {"field": field, "aggregate": alt.Undefined}
-            if dtype := self._try_collect_schema.get(field):
-                vtype = _vegalite_type(dtype)
-            else:
-                vtype = alt.Undefined
-            return {"field": field, "type": vtype, "aggregate": alt.Undefined}
-
-        # TODO @dangotbanned: ~~Still unsure~~ when datum/value should be preferred
-        # https://altair-viz.github.io/user_guide/encodings/index.html#datum-and-value
-        # A heuristic would probably be too complex:
-        # - needs the context of the `channel` & `DType`
-        # - use datum when there's a scale?
-        if isinstance(e, ir.Lit):
-            return {"value": encode._value(e)}
-
-        raise unsupported_error(e, "encoding")
 
     def properties(self, **kwds: Unpack[_ChartKwds]) -> Self:
         """Set top-level properties of the chart."""
