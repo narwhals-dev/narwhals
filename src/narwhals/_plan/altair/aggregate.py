@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
     import narwhals._plan as nw
-    from narwhals._plan import _function as _f
     from narwhals._plan.altair import typing as alt_t
     from narwhals.typing import RankMethod
 
@@ -84,7 +83,7 @@ AGG_EXPR: Mapping[_AggExprKey, AggregateOp] = {
 """Mapping from supported aggregations to their `AggregateOp` equivalent."""
 
 
-AGG_FUNC: Mapping[type[_f.Aggregation], AggregateOp] = {F.NullCount: "missing"}
+AGG_FUNC: Mapping[type[ir.Function], AggregateOp] = {F.NullCount: "missing"}
 
 
 WINDOW_ONLY_AGG_EXPR: Mapping[_AggExprKey, WindowOp] = {
