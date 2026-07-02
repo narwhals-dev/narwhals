@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 
     from altair.typing import ChartType as AltChart, Optional
     from altair.vegalite.v6.schema._config import ThemeConfig as _ChartKwds
+    from altair.vegalite.v6.schema._typing import StackOffset_T
     from altair.vegalite.v6.schema.mixins import _MarkDef
     from typing_extensions import Self, Unpack
 
@@ -103,6 +104,27 @@ class Chart:
         return self._from_altair(
             self._chart._add_transform(
                 *aggregate_transform(*exprs, group_by=groupby, **named_exprs)
+            )
+        )
+
+    # TODO @dangotbanned: Is there a reasonable parallel to lean on here?
+    def transform_stack(
+        self,
+        as_: FieldName | Sequence[FieldName],
+        stack: FieldName,
+        groupby: Sequence[FieldName] = (),
+        offset: Optional[StackOffset_T] = alt.Undefined,
+        sort: Optional[Sequence[alt.SortField]] = alt.Undefined,
+    ) -> Self:
+        """https://vega.github.io/vega/docs/transforms/stack/.
+
+        Not sure if this corresponds to any relational operators.
+        """
+        return self._from_altair(
+            self._chart._add_transform(
+                alt.StackTransform(
+                    stack=stack, groupby=groupby, offset=offset, sort=sort, **{"as": as_}
+                )
             )
         )
 

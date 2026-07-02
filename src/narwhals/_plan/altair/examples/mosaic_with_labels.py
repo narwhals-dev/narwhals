@@ -17,13 +17,11 @@ source = load("cars", backend="polars")
 base = (
     nw_alt.Chart(source)
     .transform_aggregate(nw.len().over("Origin", "Cylinders"))
-    # TODO @dangotbanned: Add `transform_stack`
-    .transform_stack(  # pyright: ignore[reportAttributeAccessIssue]
+    .transform_stack(
         stack="len",
         as_=["stack_count_Origin1", "stack_count_Origin2"],
         offset="normalize",
         sort=[alt.SortField("Origin", "ascending")],
-        groupby=[],
     )
     .transform_window(
         x="min(stack_count_Origin1)",
