@@ -8,12 +8,16 @@ from __future__ import annotations
 import altair as alt
 from altair.datasets import load
 
+from narwhals._plan.altair import chart as nw_alt
+
 source = load("cars", backend="polars")
 
 # TODO @dangotbanned: narwhalify!
 base = (
-    alt.Chart(source)
-    .transform_aggregate(count_="count()", groupby=["Origin", "Cylinders"])
+    nw_alt.Chart(source)
+    # TODO @dangotbanned: Add `transform_aggregate`
+    .transform_aggregate(count_="count()", groupby=["Origin", "Cylinders"])  # pyright: ignore[reportAttributeAccessIssue]
+    # TODO @dangotbanned: Add `transform_stack`
     .transform_stack(
         stack="count_",
         as_=["stack_count_Origin1", "stack_count_Origin2"],
@@ -67,7 +71,7 @@ rect = base.mark_rect().encode(
 text = base.mark_text(baseline="middle").encode(
     alt.X("xc:Q").axis(None), alt.Y("yc:Q").title("Cylinders"), text="Cylinders:N"
 )
-
+# TODO @dangotbanned: Add `Chart.__add__`
 mosaic = rect + text
 
 origin_labels = base.mark_text(baseline="middle", align="center").encode(
@@ -77,7 +81,9 @@ origin_labels = base.mark_text(baseline="middle", align="center").encode(
 )
 
 chart = (
+    # TODO @dangotbanned: Add `Chart.__and__`
     (origin_labels & mosaic)
+    # TODO @dangotbanned: Add `Chart.resolve_` to `__getattr__`
     .resolve_scale(x="shared")
     .configure_view(stroke="")
     .configure_concat(spacing=10)
