@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.22.1"
+version = "2.23.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -89,7 +89,7 @@ tests = [
 # CI jobs that measure `tests/` coverage add `--group plugins` explicitly.
 # See https://github.com/narwhals-dev/narwhals/pull/3664 and https://github.com/narwhals-dev/narwhals/pull/3665
 
-extra = [  # heavier dependencies we don't necessarily need in every testing job
+sklearn = [
   "scikit-learn",
 ]
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
@@ -399,6 +399,11 @@ filterwarnings = [
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
 
+  # numpy>=2.5 deprecates generic-unit timedeltas; pandas (>=2.3) trips this from
+  # `pd.Timedelta(...)`. The warning is attributed to the caller's module (e.g. test
+  # code), so it cannot be scoped to `pandas`; keep it unscoped for this exact message.
+  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning",
+
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 
@@ -406,7 +411,6 @@ filterwarnings = [
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 
   # raised internally by Dask
-  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
   "ignore:.*Downcasting behavior in Series and DataFrame methods 'where', 'mask', and 'clip' is deprecated.*:FutureWarning:dask",
   "ignore:.*inplace keyword .* is deprecated*:Warning:dask",
 

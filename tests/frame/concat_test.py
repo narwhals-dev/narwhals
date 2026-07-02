@@ -39,6 +39,30 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
         nw.concat([df_left.lazy()], how="horizontal")
 
 
+def test_concat_horizontal_mismatched(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        # TODO(unassigned): support mismatched lengths for pyarrow https://github.com/narwhals-dev/narwhals/issues/3730.
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df_left = nw.from_native(constructor_eager(data), eager_only=True)
+
+    data_right = {"c": [6, 12], "d": [0, -4]}
+    df_right = nw.from_native(constructor_eager(data_right), eager_only=True)
+
+    result = nw.concat([df_left, df_right], how="horizontal")
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8.0, 9.0],
+        "c": [6, 12, None],
+        "d": [0, -4, None],
+    }
+    assert_equal_data(result, expected)
+
+
 def test_concat_vertical(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (

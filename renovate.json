@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "enabledManagers": ["pep621"],
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 0-5 * * *"]
+  },
+  "packageRules": [
+    {
+      "description": "Never edit pyproject.toml. Disable every dependency version update; uv.lock is refreshed wholesale by lockFileMaintenance, the equivalent of `uv lock -U` (latest versions allowed by the pyproject constraints).",
+      "matchManagers": ["pep621"],
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
+      "enabled": false
+    }
+  ]
+}

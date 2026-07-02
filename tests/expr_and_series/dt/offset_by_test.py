@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from contextlib import nullcontext as does_not_raise
 from datetime import date, datetime, timezone
+from typing import Any
 
 import pytest
 
@@ -142,14 +144,14 @@ def test_offset_by(
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     if any(x in by for x in ("y", "q", "mo")) and any(
-        x in str(constructor) for x in ("dask", "pyarrow", "ibis")
+        x in str(constructor) for x in ("dask", "pyarrow")
     ):
         request.applymarker(pytest.mark.xfail())
     if "ns" in by and any(
         x in str(constructor) for x in ("dask", "pyspark", "ibis", "cudf", "duckdb")
     ):
         request.applymarker(pytest.mark.xfail())
-    if by.endswith("d") and any(x in str(constructor) for x in ("dask", "ibis")):
+    if by.endswith("d") and any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
 
     df = nw.from_native(constructor(data))
@@ -266,8 +268,40 @@ def test_offset_by_date_pandas() -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("by", "context"),
+    [
+        ("1d", pytest.raises(NotImplementedError, match="daylight saving")),
+        ("3mo", pytest.raises(NotImplementedError, match="daylight saving")),
+        ("2q", pytest.raises(NotImplementedError, match="daylight saving")),
+        ("1y", pytest.raises(NotImplementedError, match="daylight saving")),
+        # Pure-duration units are unambiguous and remain supported.
+        ("7h", does_not_raise()),
+    ],
+)
+def test_offset_by_tz_aware_ibis(by: str, context: Any) -> None:  # pragma: no cover
+    # Ibis stores tz-aware data as UTC, so calendar offsets would diverge from
+    # other backends across DST transitions; they should raise, while pure
+    # durations remain supported (see #3681).
+    pytest.importorskip("ibis")
+    pytest.importorskip("polars")
+    import ibis
+    import polars as pl
+
+    con = ibis.duckdb.connect()
+    tbl = con.create_table(
+        "offset_by_tz",
+        pl.LazyFrame({"a": [datetime(2020, 10, 25)]}).with_columns(
+            pl.col("a").dt.replace_time_zone("Europe/Amsterdam")
+        ),
+    )
+    df = nw.from_native(tbl)
+    with context:
+        df.select(nw.col("a").dt.offset_by(by)).to_native().execute()
+
+
 def test_offset_by_3471(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("dask", "ibis")):
+    if any(x in str(constructor) for x in ("dask",)):
         request.applymarker(pytest.mark.xfail())
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

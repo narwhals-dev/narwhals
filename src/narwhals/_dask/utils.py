@@ -78,6 +78,7 @@ dtypes_v1 = Version.V1.dtypes
 NW_TO_DASK_DTYPES: Mapping[type[DType], str] = {
     dtypes.Float64: "float64",
     dtypes.Float32: "float32",
+    dtypes.Float16: "float16",
     dtypes.Boolean: "bool",
     dtypes.Categorical: "category",
     dtypes.Date: "date32[day][pyarrow]",

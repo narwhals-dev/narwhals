@@ -84,6 +84,7 @@ def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
         nw.Datetime,
         nw.Decimal,
         nw.Duration,
+        nw.Float16,
         nw.Float32,
         nw.Float64,
         nw.Int8,
