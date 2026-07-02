@@ -5,6 +5,8 @@ on:
     paths:
       - "**.py"
       - .github/workflows/check_tpch_queries.yml
+      - pyproject.toml
+      - uv.lock
 
 env:
   PY_COLORS: 1
