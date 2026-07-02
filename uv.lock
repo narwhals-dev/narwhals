@@ -1857,7 +1857,7 @@ wheels = [
 
 [[package]]
 name = "narwhals"
-version = "2.22.1"
+version = "2.23.0"
 source = { editable = "." }
 
 [package.optional-dependencies]
