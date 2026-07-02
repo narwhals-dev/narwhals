@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import UnsupportedDTypeError
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -163,6 +165,30 @@ def test_cast_series(
             assert ltype != rtype
         else:
             assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
+
+
+# Backends with no half-precision (16-bit) floating point type: casting to `Float16`
+# raises for these instead of silently widening.
+FLOAT16_UNSUPPORTED = ("duckdb", "pyspark", "sqlframe")
+
+
+def test_cast_to_float16(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 36):
+        pytest.skip("Polars added `Float16` in 1.36.0")
+    if "pyarrow" in str(constructor) and PYARROW_VERSION < (16,):
+        # PyArrow added casting to/from half-float in 16.0
+        pytest.skip("PyArrow added casting to/from half-float in 16.0")
+
+    data = {"a": [1.0, 2.0, 3.0]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in FLOAT16_UNSUPPORTED):
+        with pytest.raises((NotImplementedError, UnsupportedDTypeError)):
+            df.select(nw.col("a").cast(nw.Float16)).lazy().collect()
+    else:
+        result = df.select(nw.col("a").cast(nw.Float16))
+        assert result.collect_schema()["a"] == nw.Float16
+        assert_equal_data(result, data)
 
 
 def test_cast_string() -> None:

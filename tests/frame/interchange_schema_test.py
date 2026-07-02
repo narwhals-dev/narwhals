@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 import narwhals.stable.v1 as nw_v1
-from tests.utils import IBIS_VERSION
+from tests.utils import IBIS_VERSION, POLARS_VERSION
 
 pytest.importorskip("polars")
 import polars as pl
@@ -231,6 +231,13 @@ def test_interchange_schema_duckdb() -> None:
     assert df["a"].dtype == nw_v1.Int64
     assert df.columns == list(expected.keys())
     assert df.collect_schema() == expected
+
+
+@pytest.mark.skipif(POLARS_VERSION < (1, 36), reason="Polars added `Float16` in 1.36.0")
+def test_interchange_schema_float16() -> None:
+    df_pl = pl.DataFrame({"a": [1.0, 2.0, 3.0]}, schema={"a": pl.Float16})
+    df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
+    assert df.schema["a"] == nw_v1.Float16
 
 
 def test_invalid() -> None:

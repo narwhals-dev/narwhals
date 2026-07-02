@@ -8,6 +8,7 @@
         - NumericType
         - Decimal
         - FloatType
+        - Float16
         - Float32
         - Float64
         - IntegerType
