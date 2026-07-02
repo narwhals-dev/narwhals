@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 Incomplete: TypeAlias = Any
 
-WindowParam: TypeAlias = tuple[AggOrWindow, alt.typing.Optional[float]]
+WindowParam: TypeAlias = tuple[AggOrWindow, Optional[float]]
 """`(op, param)` in a `WindowFieldDef`."""
 
 
@@ -233,7 +233,7 @@ def window_field_def(
     - `frame` can be used to define either cumulative or rolling
     """
     op: AggOrWindow
-    param: alt.typing.Optional[Any] = alt.Undefined
+    param: Optional[Any] = alt.Undefined
     kwds = {"as": alias}
     if isinstance(expr, ir.FunctionExpr):
         if (window_op := _function_window(expr.function)) is None:
