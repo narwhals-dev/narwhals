@@ -262,7 +262,7 @@ TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
     "us": duckdb_dtypes.TIMESTAMP,
     "ns": duckdb_dtypes.TIMESTAMP_NS,
 }
-UNSUPPORTED_DTYPES = dtypes.Categorical
+UNSUPPORTED_DTYPES = (dtypes.Categorical, dtypes.Float16)
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0912, C901

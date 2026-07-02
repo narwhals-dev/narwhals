@@ -425,6 +425,19 @@ class Float32(FloatType):
     """
 
 
+class Float16(FloatType):
+    """16-bit floating point type.
+
+    Examples:
+        >>> import pyarrow as pa
+        >>> import narwhals as nw
+        >>> s_native = pa.chunked_array([[0.001, 0.1, 0.01, 0.1]], type=pa.float16())
+        >>> s = nw.from_native(s_native, series_only=True)
+        >>> s.dtype
+        Float16
+    """
+
+
 class String(DType):
     """UTF-8 encoded string type.
 

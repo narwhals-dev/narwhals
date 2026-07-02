@@ -70,6 +70,8 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
             return dtypes.Float64()
         if interchange_dtype[1] == 32:
             return dtypes.Float32()
+        if interchange_dtype[1] == 16:
+            return dtypes.Float16()
         msg = "Invalid bit width for FLOAT"  # pragma: no cover
         raise AssertionError(msg)
     if interchange_dtype[0] == DtypeKind.BOOL:

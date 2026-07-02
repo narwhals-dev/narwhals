@@ -76,6 +76,9 @@ FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
 HAS_UINT_128: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 """https://github.com/pola-rs/polars/pull/24346"""
 
+HAS_FLOAT_16: Final[bool] = BACKEND_VERSION >= (1, 36, 0)
+"""https://github.com/pola-rs/polars/pull/25185"""
+
 BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 """Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32` promotion).
 
@@ -117,6 +120,8 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
+    if HAS_FLOAT_16 and dtype == pl.Float16:
+        return dtypes.Float16()
     if HAS_INT_128 and dtype == pl.Int128:
         return dtypes.Int128()
     if dtype == pl.Int64:
@@ -143,7 +148,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Boolean()
     if dtype == pl.Object:
         return dtypes.Object()
-    if dtype == pl.Categorical:
+    if isinstance(dtype, pl.Categorical):
         return dtypes.Categorical()
     if isinstance(dtype, pl.Enum):
         if version is Version.V1:
@@ -183,7 +188,8 @@ def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
     if not HAS_INT_128:  # pragma: no cover
         return {}
     nw_to_pl: dict[type[DType], pl.DataType] = {dtypes.Int128: pl.Int128()}
-    return nw_to_pl | {dtypes.UInt128: pl.UInt128()} if HAS_UINT_128 else nw_to_pl
+    nw_to_pl = nw_to_pl | {dtypes.UInt128: pl.UInt128()} if HAS_UINT_128 else nw_to_pl
+    return nw_to_pl | {dtypes.Float16: pl.Float16()} if HAS_FLOAT_16 else nw_to_pl
 
 
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
