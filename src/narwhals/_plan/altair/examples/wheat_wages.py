@@ -1,4 +1,3 @@
-# TODO @dangotbanned: narwhalify!
 """[Wheat and Wages].
 
 [Wheat and Wages]: https://altair-viz.github.io/gallery/wheat_wages.html
