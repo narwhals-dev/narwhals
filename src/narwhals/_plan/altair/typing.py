@@ -173,7 +173,7 @@ class Datum(HasType, MaybeTitle, TypedDict):
     """
 
 
-class Field(HasType, MaybeTitle, TypedDict):
+class FieldOpen(HasType, MaybeTitle, TypedDict):
     """Shared by all fields."""
 
     # `HasRepeat` is always allowed, but not sure how it would make sense in narwhals
@@ -185,19 +185,23 @@ class Field(HasType, MaybeTitle, TypedDict):
     bin: NotRequired[Incomplete]
 
 
-if TYPE_CHECKING:
-    # https://github.com/python/mypy/pull/21382
-    class FieldClosed(Field, TypedDict, closed=True): ...  # type: ignore[call-arg]
-else:
-    FieldClosed = Field
-
-
-class Value(TypedDict):
+class ValueOpen(TypedDict):
     """Shared by all values."""
 
     value: InnerValue
 
 
+if TYPE_CHECKING:
+    # https://github.com/python/mypy/pull/21382
+    class Field(FieldOpen, closed=True): ...  # type: ignore[call-arg]
+
+    class Value(ValueOpen, closed=True): ...  # type: ignore[call-arg]
+else:
+    Field = FieldOpen
+    Value = ValueOpen
+
+# NOTE: `mypy` stops understanding any of the fields if `closed=True`
+# is used with the functional syntax
 AggField = TypedDict(
     "AggField", {"field": FieldName, "op": AggregateOp, "as": "NotRequired[FieldName]"}
 )

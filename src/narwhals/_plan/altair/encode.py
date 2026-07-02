@@ -16,6 +16,7 @@ from narwhals._plan import expressions as ir
 from narwhals._plan.altair import aggregate, typing as alt_t
 from narwhals._plan.altair.exceptions import unsupported_error as _unsupported_error
 from narwhals._plan.altair.expression import into_vega_expr
+from narwhals._plan.altair.typing import Field, Value
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
 
@@ -48,16 +49,16 @@ if TYPE_CHECKING:
     # https://github.com/python/mypy/pull/21382
     class TestDatum(_Test, alt_t.Datum, TypedDict, closed=True):  # type: ignore[call-arg]
         """When `test`, then `datum`."""
-    class TestField(_Test, alt_t.Field, TypedDict, closed=True):  # type: ignore[call-arg]
+    class TestField(_Test, alt_t.FieldOpen, TypedDict, closed=True):  # type: ignore[call-arg]
         """When `test`, then `field`."""
-    class TestValue(_Test, alt_t.Value, TypedDict, closed=True):  # type: ignore[call-arg]
+    class TestValue(_Test, alt_t.ValueOpen, TypedDict, closed=True):  # type: ignore[call-arg]
         """When `test`, then `value`."""
 else:
     class TestDatum(_Test, alt_t.Datum, TypedDict):
         """When `test`, then `datum`."""
-    class TestField(_Test, alt_t.Field, TypedDict):
+    class TestField(_Test, alt_t.FieldOpen, TypedDict):
         """When `test`, then `field`."""
-    class TestValue(_Test, alt_t.Value, TypedDict):
+    class TestValue(_Test, alt_t.ValueOpen, TypedDict):
         """When `test`, then `value`."""
 
 class _Conditional(TypedDict):
@@ -65,15 +66,15 @@ class _Conditional(TypedDict):
 
 if TYPE_CHECKING:
     class ConditionalDatum(_Conditional, alt_t.Datum, TypedDict, closed=True): ...  # type: ignore[call-arg]
-    class ConditionalField(_Conditional, alt_t.Field, TypedDict, closed=True): ...  # type: ignore[call-arg]
+    class ConditionalField(_Conditional, alt_t.FieldOpen, TypedDict, closed=True): ...  # type: ignore[call-arg]
     class ConditionalValue(TypedDict, closed=True):  # type: ignore[call-arg]
         condition: TestAny | list[TestValue]
         value: NotRequired[alt_t.InnerValue]
         """Optional else-clause."""
 else:
     class ConditionalDatum(_Conditional, alt_t.Datum, TypedDict): ...
-    class ConditionalField(_Conditional, alt_t.Field, TypedDict): ...
-    class ConditionalValue(_Conditional, alt_t.Value, TypedDict):
+    class ConditionalField(_Conditional, alt_t.FieldOpen, TypedDict): ...
+    class ConditionalValue(_Conditional, alt_t.ValueOpen, TypedDict):
         condition: TestAny | list[TestValue]
         value: NotRequired[alt_t.InnerValue]
         """Optional else-clause."""
@@ -83,7 +84,8 @@ TestAny: TypeAlias = TestDatum | TestField | TestValue
 """Any pair of `when(test).then(...)` terms."""
 
 
-Encoded: TypeAlias = ConditionalValue | ConditionalField | alt_t.FieldClosed | alt_t.Value
+Encoded: TypeAlias = ConditionalValue | ConditionalField | Field | Value
+"""Anything that has been translated for `altair.Chart.encode`."""
 
 _TP_FIELD = (Col, LenStar, ir.AggExpr, ir.FunctionExpr)
 _TP_NATIVE_VALUE = (str, int, bool, float, dt.date, dt.datetime, type(None))
@@ -115,9 +117,7 @@ unsupported_error = functools.partial(_unsupported_error, target="encoding")
 
 
 @overload
-def from_expr(
-    expr: ir.Lit, chart: NwChart, channel: str | None = None
-) -> alt_t.Value: ...
+def from_expr(expr: ir.Lit, chart: NwChart, channel: str | None = None) -> Value: ...
 @overload
 def from_expr(
     expr: ir.TernaryExpr, chart: NwChart, channel: str | None = None
@@ -127,7 +127,7 @@ def from_expr(
     expr: Col | LenStar | ir.AggExpr | ir.FunctionExpr,
     chart: NwChart,
     channel: str | None = None,
-) -> alt_t.FieldClosed: ...
+) -> Field: ...
 @overload
 def from_expr(expr: ir.ExprIR, chart: NwChart, channel: str | None = None) -> Encoded: ...
 def from_expr(expr: ir.ExprIR, chart: NwChart, channel: str | None = None) -> Encoded:
@@ -226,7 +226,7 @@ def _ternary_chained(
 
 
 @_from_expr.register(Col)
-def _col(expr: Col, chart: NwChart, channel: str | None, /) -> alt_t.FieldClosed:
+def _col(expr: Col, chart: NwChart, channel: str | None, /) -> Field:
     field = expr.name
     if vtype := vegalite_type(field, chart, channel):
         return {_FIELD: field, _AGG: Undefined, _TYPE: vtype}
@@ -234,9 +234,7 @@ def _col(expr: Col, chart: NwChart, channel: str | None, /) -> alt_t.FieldClosed
 
 
 @_from_expr.register(ir.AggExpr)
-def _agg_expr(
-    expr: ir.AggExpr, chart: NwChart, channel: str | None, /
-) -> alt_t.FieldClosed:
+def _agg_expr(expr: ir.AggExpr, chart: NwChart, channel: str | None, /) -> Field:
     encoding = aggregate.from_agg_expr(expr, context="encoding")
     if vtype := vegalite_type(encoding[_FIELD], chart, channel, _Q):
         encoding[_TYPE] = vtype
@@ -244,7 +242,7 @@ def _agg_expr(
 
 
 @_from_expr.register(LenStar)
-def _len(_: LenStar, __: NwChart, channel: str | None, /) -> alt_t.FieldClosed:
+def _len(_: LenStar, __: NwChart, channel: str | None, /) -> Field:
     if channel and channel in _SECONDARY_FIELD:
         return {_FIELD: "__count__", _AGG: "count"}
     return {_FIELD: "__count__", _AGG: "count", _TYPE: _Q}
@@ -253,10 +251,10 @@ def _len(_: LenStar, __: NwChart, channel: str | None, /) -> alt_t.FieldClosed:
 @_from_expr.register(ir.FunctionExpr)
 def _function_expr(
     expr: ir.FunctionExpr, _: NwChart, channel: str | None, /
-) -> alt_t.FieldClosed | None:
+) -> Field | None:
     match expr:
         case ir.FunctionExpr(function=F.NullCount(), args=(Col(name=name),)):
-            field: alt_t.FieldClosed = {_FIELD: name, _AGG: "missing"}
+            field: Field = {_FIELD: name, _AGG: "missing"}
             if channel and channel in _SECONDARY_FIELD:
                 return field
             field[_TYPE] = _Q
@@ -266,7 +264,7 @@ def _function_expr(
 
 
 @_from_expr.register(ir.Lit)
-def _lit(expr: ir.Lit, _: NwChart, __: str | None, /) -> alt_t.Value:
+def _lit(expr: ir.Lit, _: NwChart, __: str | None, /) -> Value:
     # NOTE: https://altair-viz.github.io/user_guide/encodings/index.html#datum-and-value
     # A heuristic would probably be too complex:
     # - via the context of `channel` & `expr.dtype`
@@ -275,7 +273,7 @@ def _lit(expr: ir.Lit, _: NwChart, __: str | None, /) -> alt_t.Value:
     return {"value": _value(expr)}
 
 
-def _field(expr: ir.ExprIR, chart: NwChart, channel: str | None) -> alt_t.FieldClosed:
+def _field(expr: ir.ExprIR, chart: NwChart, channel: str | None) -> Field:
     if not isinstance(expr, _TP_FIELD):
         raise unsupported_error(expr)
     return from_expr(expr, chart, channel)
