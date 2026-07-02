@@ -46,7 +46,6 @@ jobs:
         run: uv pip freeze
       - name: Run mypy and pyright
         run: make typing
-      - name: Run pyright type completeness
+      - name: Check type-completeness
         run: |
-          uv pip install -U pyright-cov
-          pyright-cov --verifytypes narwhals --ignoreexternal --fail-under 100
+          uv run pyrefly coverage check src/narwhals --public-only
