@@ -412,7 +412,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if isinstance(schema, (Mapping, Schema))
             else schema
         )
-        return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
+        native = pl.from_numpy(data, pl_schema, orient="row")
+        return cls.from_native(native, context=context)
 
     def to_narwhals(self) -> DataFrame[pl.DataFrame]:
         return self._version.dataframe(self, level="full")

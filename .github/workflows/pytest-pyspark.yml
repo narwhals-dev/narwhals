@@ -3,11 +3,14 @@ name: PyTest PySpark constructor
 on:
   pull_request:
     paths:
+      - .github/workflows/pytest-pyspark.yml
       - src/narwhals/_expression_parsing.py
       - src/narwhals/_spark_like/**
       - src/narwhals/_sql/**
       - tests/*scan*.py
       - tests/frame/*sink*.py
+      - pyproject.toml
+      - uv.lock
   workflow_call:
   schedule:
     - cron: 0 12 * * 0  # Sunday at mid-day
@@ -30,7 +33,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -49,7 +52,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -70,10 +73,16 @@ jobs:
       SPARK_VERSION: 4.1.0
       SPARK_PORT: 15002
       SPARK_CONNECT: true
-      SPARK_HOME: ""
     runs-on: ${{ matrix.os }}
+
+    container:
+      # env context isn't available here (https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability), so this must match SPARK_VERSION
+      image: apache/spark:4.1.0
+      options: --user root
+      env:
+        HOME: /root
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -81,12 +90,6 @@ jobs:
           enable-cache: "true"
           cache-suffix: pyspark-connect-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-
-      - name: Install Java 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: zulu
-          java-version: 17
 
       - name: Create venv
         run: uv venv --python ${{ matrix.python-version }}
@@ -99,29 +102,9 @@ jobs:
       - name: show-deps
         run: uv pip freeze
 
-      - name: Cache Spark
-        id: cache-spark
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: /opt/spark
-          key: spark-${{ env.SPARK_VERSION }}-bin-hadoop3
-
-      - name: Download Spark
-        if: steps.cache-spark.outputs.cache-hit != 'true'
-        run: |
-          wget https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz
-          tar -xzf spark-${SPARK_VERSION}-bin-hadoop3.tgz
-          sudo mv spark-${SPARK_VERSION}-bin-hadoop3 /opt/spark
-
-      - name: Set Spark env variables
-        run: |
-          echo "SPARK_HOME=/opt/spark" >> $GITHUB_ENV
-          echo "/opt/spark/bin" >> $GITHUB_PATH
-
       - name: Start Spark Connect server
         run: |
-          $SPARK_HOME/sbin/start-connect-server.sh \
-            --conf spark.connect.grpc.binding.port=${SPARK_PORT}
+          /opt/spark/sbin/start-connect-server.sh --master 'local[*]' --conf spark.connect.grpc.binding.port=${SPARK_PORT}
           sleep 5
           echo "Spark Connect server started"
 
@@ -129,5 +112,5 @@ jobs:
         run: uv run --no-sync pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=90 --runslow --constructors "pyspark[connect]"
 
       - name: Stop Spark Connect server
-        if: always() && env.SPARK_HOME != ''
-        run: $SPARK_HOME/sbin/stop-connect-server.sh
+        if: always()
+        run: /opt/spark/sbin/stop-connect-server.sh
