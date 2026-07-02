@@ -11,16 +11,12 @@ from altair.datasets import load
 import narwhals._plan as nw
 from narwhals._plan.altair import chart as nw_alt
 
-source = load("cars", backend="polars")
-
-# TODO @dangotbanned: narwhalify!
-
 rank_cylinders = nw.col("rank_Cylinders")
 rank_origin = nw.col("rank_Origin")
 distinct_cylinders = nw.col("distinct_Cylinders")
 
 base = (
-    nw_alt.Chart(source)
+    nw_alt.Chart(load("cars", backend="polars"))
     .transform_aggregate(nw.len().over("Origin", "Cylinders"))
     .transform_stack(
         stack="len",
