@@ -6,6 +6,8 @@ on:
       - src/**
       - tests/**
       - .github/workflows/pytest-fireducks.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:
