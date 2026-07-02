@@ -14,6 +14,11 @@ from narwhals._plan.altair import chart as nw_alt
 source = load("cars", backend="polars")
 
 # TODO @dangotbanned: narwhalify!
+
+rank_cylinders = nw.col("rank_Cylinders")
+rank_origin = nw.col("rank_Origin")
+distinct_cylinders = nw.col("distinct_Cylinders")
+
 base = (
     nw_alt.Chart(source)
     .transform_aggregate(nw.len().over("Origin", "Cylinders"))
@@ -47,14 +52,13 @@ base = (
         offset="normalize",
         sort=[alt.SortField("Cylinders", "ascending")],
     )
-    # TODO @dangotbanned: Replace all of these with expressions
     .transform_calculate(
-        ny="datum.y + (datum.rank_Cylinders - 1) * datum.distinct_Cylinders * 0.01 / 3",
-        ny2="datum.y2 + (datum.rank_Cylinders - 1) * datum.distinct_Cylinders * 0.01 / 3",
-        nx="datum.x + (datum.rank_Origin - 1) * 0.01",
-        nx2="datum.x2 + (datum.rank_Origin - 1) * 0.01",
-        xc="(datum.nx+datum.nx2)/2",
-        yc="(datum.ny+datum.ny2)/2",
+        ny=nw.col("y") + (rank_cylinders - 1) * distinct_cylinders * 0.01 / 3,
+        ny2=nw.col("y2") + (rank_cylinders - 1) * distinct_cylinders * 0.01 / 3,
+        nx=nw.col("x") + (rank_origin - 1) * 0.01,
+        nx2=nw.col("x2") + (rank_origin - 1) * 0.01,
+        xc=(nw.col("nx") + nw.col("nx2")) / 2,
+        yc=(nw.col("ny") + nw.col("ny2")) / 2,
     )
 )
 
