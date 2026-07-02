@@ -42,4 +42,10 @@ See [AI-assisted contributions](https://github.com/narwhals-dev/narwhals/blob/ma
 - [ ] Code follows style guide (ruff)
 - [ ] Tests added
 - [ ] Documented the changes
-- [ ] If this is your first PR to narwhals, attach a screenshot of `pytest` passing locally (not CI)
+- [ ] If this is your first PR to narwhals, attach a screenshot of `pytest` passing locally (not CI):
+    
+    ```bash
+    PYTEST_ADDOPTS="--numprocesses=logical" \
+    make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn --group plugins" \
+    CMD="pytest tests --cov=src --cov=tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+    ```
