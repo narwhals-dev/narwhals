@@ -14,14 +14,9 @@ import altair.utils
 import narwhals._plan as nw
 import narwhals.stable.v1 as stable_v1
 from narwhals._plan import expressions as ir
+from narwhals._plan.altair import encode
 from narwhals._plan.altair.aggregate import aggregate_transform, window_transform
 from narwhals._plan.altair.calculate import calculate_transform
-from narwhals._plan.altair.conditional import (
-    ConditionalField,
-    ConditionalValue,
-    _value,
-    encode_ternary_expr,
-)
 from narwhals._plan.altair.exceptions import unsupported_error
 
 if TYPE_CHECKING:
@@ -33,6 +28,7 @@ if TYPE_CHECKING:
     from altair.vegalite.v6.schema.mixins import _MarkDef
     from typing_extensions import Self, Unpack
 
+    from narwhals._plan.altair.encode import ConditionalField, ConditionalValue
     from narwhals._plan.altair.typing import (
         EncodeKwds,
         Field,
@@ -169,7 +165,7 @@ class Chart:
     ) -> ConditionalValue | ConditionalField | Field | Value:
         e = expr._ir
         if isinstance(e, ir.TernaryExpr):
-            return encode_ternary_expr(e)
+            return encode.ternary_expr(e)
         if isinstance(e, ir.Len):
             return {"field": "__count__", "aggregate": "count"}
 
@@ -183,9 +179,13 @@ class Chart:
                 vtype = alt.Undefined
             return {"field": field, "type": vtype, "aggregate": alt.Undefined}
 
-        # TODO @dangotbanned: Still unsure when datum/value should be preferred
+        # TODO @dangotbanned: ~~Still unsure~~ when datum/value should be preferred
+        # https://altair-viz.github.io/user_guide/encodings/index.html#datum-and-value
+        # A heuristic would probably be too complex:
+        # - needs the context of the `channel` & `DType`
+        # - use datum when there's a scale?
         if isinstance(e, ir.Lit):
-            return {"value": _value(e)}
+            return {"value": encode._value(e)}
 
         raise unsupported_error(e, "encoding")
 
