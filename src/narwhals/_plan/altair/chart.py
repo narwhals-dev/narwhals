@@ -20,6 +20,7 @@ from narwhals._plan.altair.calculate import calculate_transform
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
+    from _typeshed import Incomplete
     from altair.typing import ChartType as AltChart, Optional
     from altair.vegalite.v6.schema._config import ThemeConfig as _ChartKwds
     from altair.vegalite.v6.schema._typing import StackOffset_T
@@ -93,6 +94,28 @@ class Chart:
                 *aggregate_transform(*exprs, group_by=groupby, **named_exprs)
             )
         )
+
+    def transform_filter(
+        self,
+        predicate: Optional[nw.Expr | Incomplete] = alt.Undefined,
+        *more_predicates: nw.Expr | Incomplete,
+        empty: Optional[bool] = alt.Undefined,
+        **constraints: nw.Expr | Incomplete,
+    ) -> Self:
+        """Add a filter to the chart.
+
+        ## Chart ideas
+        - [2x `FieldOneOfPredicate` 1](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/ranged_dot_plot.py#L15-L21)
+        - [2x `FieldOneOfPredicate` 2](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/line_chart_with_cumsum_faceted.py#L14-L19)
+        - [calculate_residuals](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/calculate_residuals.py#L14-L32)
+            - 2x filter: is_not_null + is_between/just use less than?
+            - Also has some weird renaming on calculate that could be cleaner with positional + alias
+        - [interactive_column_selection](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/interactive_column_selection.py#L56-L59)
+            - good candidate for complexity
+            - but heavy parameter usage and pandas indexing
+        - [all the features](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/multiple_interactions.py#L20-L33)
+        """
+        raise NotImplementedError
 
     # TODO @dangotbanned: Is there a reasonable parallel to lean on here?
     def transform_stack(
