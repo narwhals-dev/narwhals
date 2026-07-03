@@ -36,6 +36,7 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, TypeVar, cast, overload
 
 from narwhals._utils import Implementation, generate_temporary_column_name
+from narwhals.testing.typing import ConstructorProtocol
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -77,7 +78,9 @@ T_co = TypeVar("T_co", covariant=True, bound="IntoFrame")
 R = TypeVar("R", bound="IntoFrame")
 
 
-class frame_constructor(Generic[T_co]):  # noqa: N801
+class frame_constructor(  # noqa: N801
+    ConstructorProtocol["DataFrame[Any] | LazyFrame[Any]"], Generic[T_co]
+):
     """Callable wrapper around a backend frame builder.
 
     Turns a column-oriented `dict` (typed as [`Data`][narwhals.testing.typing.Data])
@@ -85,6 +88,9 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
     nullability, GPU need) lives on the instance, alongside the wrapped
     `func`. Equality and hashing are keyed on `(type, name)`, so two lookups
     of the same registered constructor compare equal.
+
+    Implements [`ConstructorProtocol`][narwhals.testing.typing.ConstructorProtocol],
+    from which the member docstrings are inherited.
 
     Warning:
         Instances should be created via [`narwhals.testing.constructors.frame_constructor.register`][],
@@ -194,15 +200,6 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
     def __call__(
         self, obj: Data, /, namespace: NarwhalsNamespace | None = None, **kwds: Any
     ) -> DataFrame[Any] | LazyFrame[Any]:
-        """Build a native frame and wrap it with `namespace.from_native`.
-
-        Arguments:
-            obj: Column-oriented mapping passed to the wrapped builder.
-            namespace: A narwhals namespace (e.g. `narwhals`, `narwhals.stable.v1`)
-                whose `from_native` performs the wrapping.
-                Defaults to the main `narwhals` namespace.
-            **kwds: Forwarded to the wrapped builder.
-        """
         if namespace is None:
             import narwhals
 
@@ -212,83 +209,67 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
 
     @property
     def identifier(self) -> str:
-        """Instance-level string identifier for test IDs."""
         return self.name
 
     @property
     def is_lazy(self) -> bool:
-        """Whether this constructor produces a lazy native frame."""
         return not self.is_eager
 
     @property
     def is_pandas(self) -> bool:
-        """Whether this is one of the pandas constructors."""
         return self.implementation.is_pandas()
 
     @property
     def is_modin(self) -> bool:
-        """Whether this is one of the modin constructors."""
         return self.implementation.is_modin()
 
     @property
     def is_cudf(self) -> bool:
-        """Whether this is the cudf constructor."""
         return self.implementation.is_cudf()
 
     @property
     def is_pandas_like(self) -> bool:
-        """Whether this constructor produces a pandas-like dataframe (pandas, modin, cudf)."""
         return self.implementation.is_pandas_like()
 
     @property
     def is_polars(self) -> bool:
-        """Whether this is one of the polars constructors."""
         return self.implementation.is_polars()
 
     @property
     def is_pyarrow(self) -> bool:
-        """Whether this is the pyarrow table constructor."""
         return self.implementation.is_pyarrow()
 
     @property
     def is_dask(self) -> bool:
-        """Whether this is the dask constructor."""
         return self.implementation.is_dask()
 
     @property
     def is_duckdb(self) -> bool:
-        """Whether this is the duckdb constructor."""
         return self.implementation.is_duckdb()
 
     @property
     def is_pyspark(self) -> bool:
-        """Whether this is one of the pyspark constructors."""
         impl = self.implementation
         return impl.is_pyspark() or impl.is_pyspark_connect()
 
     @property
     def is_sqlframe(self) -> bool:
-        """Whether this is the sqlframe constructor."""
         return self.implementation.is_sqlframe()
 
     @property
     def is_ibis(self) -> bool:
-        """Whether this is the ibis constructor."""
         return self.implementation.is_ibis()
 
     @property
     def is_spark_like(self) -> bool:
-        """Whether this constructor uses a spark-like backend (pyspark, sqlframe)."""
         return self.implementation.is_spark_like()
 
     @property
     def needs_pyarrow(self) -> bool:
-        """Whether this constructor requires `pyarrow` to be installed."""
         return "pyarrow" in self.requirements
 
     @property
     def is_available(self) -> bool:
-        """Whether every package this constructor needs is importable."""
         return is_backend_available(*self.requirements)
 
     def __str__(self) -> str:
