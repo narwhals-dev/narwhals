@@ -17,6 +17,7 @@ from altair.expr import core as alt_ir
 
 from narwhals._plan import _function, expressions as ir
 from narwhals._plan.altair.exceptions import unsupported_error
+from narwhals._plan.altair.typing import AltExpr
 from narwhals._plan.expressions import (
     aggregation as agg,
     boolean,
@@ -37,7 +38,6 @@ if TYPE_CHECKING:
 _VT_co = TypeVar("_VT_co", covariant=True)
 _T = TypeVar("_T")
 
-AltExpr: TypeAlias = alt_ir.Expression
 AltFnName: TypeAlias = Literal[
     "if", "max", "min", "indexof", "inrange", "peek", "length", "sort"
 ]
