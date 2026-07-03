@@ -176,6 +176,7 @@ class InterchangeSeries(_Interchange):
 
 
 def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
+    """Return True if we'd use interchange/metadata-level support for `obj`."""
     return _should_interchange(type(obj))  # type: ignore[arg-type]
 
 
@@ -206,9 +207,11 @@ def _iter_exclude_interchange() -> Iterator[type[DataFrameLike]]:
 
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
-    if not _hasattr_static(tp_native, "__dataframe__"):
-        include = (duckdb.DuckDBPyRelation,) if (duckdb := get_duckdb()) else ()
-        include = (*include, ibis.Table) if (ibis := get_ibis()) else include
-        return bool(include) and issubclass(tp_native, include)
-    exclude_intersection = tuple(_iter_exclude_interchange())
-    return (not exclude_intersection) or (not issubclass(tp_native, exclude_intersection))
+    if _hasattr_static(tp_native, "__dataframe__"):
+        # Ensure we use `__dataframe__` when it is the **only** option we have
+        exclude = tuple(_iter_exclude_interchange())
+        return (not exclude) or (not issubclass(tp_native, exclude))
+    include = (duckdb.DuckDBPyRelation,) if (duckdb := get_duckdb()) else ()
+    # Gracefully handle `ibis` removing `__dataframe__` support in the future (we don't use it anyway)
+    include = (*include, ibis.Table) if (ibis := get_ibis()) else include
+    return bool(include) and issubclass(tp_native, include)
