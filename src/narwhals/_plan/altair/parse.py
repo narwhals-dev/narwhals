@@ -22,7 +22,7 @@ def parse_into_named_exprs(
     *more_exprs: IntoExprColumn,
     **named_exprs: IntoExprColumn,
 ) -> Iterator[tuple[OutputName, ir.ExprIR]]:
-    """Use this for a select-like context."""
+    """Parse inputs for a select-like context."""
     for expr_ir in _parse.into_iter_expr_ir(exprs, *more_exprs, **named_exprs):
         # NOTE: I think altair's data model is too fuzzy for expression expansion
         # would be very nice to use selectors & `.name.{pre,suf}fix` if possible though

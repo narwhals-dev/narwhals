@@ -117,23 +117,35 @@ def _dict_fmt(
 ae = alt.expr
 
 
-def into_vega_expr(expr: ir.ExprIR) -> VegaExpr:
-    """Convert a narwhals expression into an altair-compatible vega expression.
+def into_vega_expr(expr: ir.ExprIR, /) -> VegaExpr:
+    """Convert an [`ExprIR`][narwhals._plan.expressions.ExprIR] into a [Vega Expression].
+
+    [Vega Expression]: https://vega.github.io/vega/docs/expressions/
+
+    Arguments:
+        expr: The intermediate representation of an [`Expr`][narwhals._plan.Expr].
+
+    Raises:
+        NotImplementedError: If the expression contains any unsupported operations.
 
     ## Notes
-    - top-level, can optionally wrap with `@functools.lru_cache`
-    - fails loudly if conversion isn't supported
+    Common unsupported expressions:
+
+    - [`Alias`][narwhals._plan.expressions.Alias]
+        - If the outer context supports it, use `parse_into_named_exprs` *first* to resolve the output name
+    - [`SelectorIR`][narwhals._plan.expressions.SelectorIR]
+        - (Vega) expressions and transforms can produce new "columns"
+          but they do not change the schema of the original data source.
+    - Most aggregations & non-elementwise functions
+        - Many *can* be translated, but only for specific contexts like `Chart.transform_*` or `Chart.encode`
     """
+    # NOTE: Can safely add `@functools.lru_cache` here, or on any
+    # function in this module that accepts only `ExprIR` or `Function`
     return repr(_from_expr_ir(expr))
 
 
 @functools.singledispatch
 def _from_expr_ir(expr: ir.ExprIR) -> AltExpr:
-    # Unlikely
-    # - LitSeries
-    # - KeepName, RenameAlias
-    # - Alias (only the top-level allowed)
-    # - SelectorIR (altair data model is probably too fuzzy for this)
     raise unsupported_error(expr, "expr")
 
 
