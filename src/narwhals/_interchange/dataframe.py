@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
 from narwhals.dependencies import (
     IMPORT_HOOKS,
+    get_cudf,
     get_dask_dataframe,
     get_duckdb,
     get_modin,
