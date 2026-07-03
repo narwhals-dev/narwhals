@@ -51,7 +51,11 @@ pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
-ibis = ["ibis-framework>=6.0.0", "pyarrow_hotfix>=0.7"]
+ibis = [
+    "ibis-framework>=6.0.0",
+    "packaging>=21.3",  # runtime import at ibis/backends/duckdb and others
+    "pyarrow_hotfix>=0.7",  # runtime import anytime pyarrow is imported
+  ]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
@@ -95,6 +99,7 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   "pytest>=9.0.3",
   "pandas-stubs==2.3.0.250703",
   "pyarrow-stubs==19.2",
+  "rich>=12.4.4",  # type import to resolve ibis
   "typing-extensions==4.15.0",
   "narwhals[dask,duckdb,ibis,pandas,polars,pyarrow,sql,sqlframe]",
   {include-group = "plugins"},
@@ -186,14 +191,6 @@ min-pyspark-version = [
 source-include = ["tests/**"]
 
 [tool.uv]
-# Floors for transitives we don't import directly
-# NOTE: Constraints don't add a package to the install set;
-# they only narrow the version that may be chosen when it IS pulled in.
-# See: https://docs.astral.sh/uv/reference/settings/#constraint-dependencies
-constraint-dependencies = [
-    "rich>=12.4.4",
-    "packaging>=21.3",
-]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
 # See https://docs.astral.sh/uv/reference/settings/#conflicts.
