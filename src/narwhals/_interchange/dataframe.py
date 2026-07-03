@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 
 from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
 from narwhals.dependencies import (
-    IMPORT_HOOKS,
+    IMPORT_HOOKS as PANDAS_IMPORT_HOOKS,
     get_cudf,
     get_dask_dataframe,
     get_duckdb,
@@ -18,6 +18,8 @@ from narwhals.dependencies import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self, TypeIs
@@ -176,14 +178,34 @@ def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
     return _should_interchange(type(obj))  # type: ignore[arg-type]
 
 
+def _iter_exclude_interchange() -> Iterator[type[DataFrameLike]]:
+    """Yield classes that we want to **avoid** using with `__dataframe__`.
+
+    We *could* use them with interchange-level support - but we have a better option at home.
+
+    Sadly this type is [not yet](https://www.youtube.com/watch?v=xUsPD7iwETY) spellable:
+
+        (DataFrameLike & (pl.DataFrame | pd.DataFrame | pa.Table | dd.DataFrame | mpd.DataFrame | cudf.DataFrame)
+        #              |             union
+        #         intersection
+
+    We gathers all the types (that are already imported) which fit the the right-hand-side,
+    as we need to refine from the set produced by checking `__dataframe__`.
+    """
+    has_top_level_df = (get_polars, get_pandas, get_dask_dataframe, get_modin, get_cudf)
+    for get_module in has_top_level_df:
+        if module := get_module():
+            yield module.DataFrame
+    if pa := get_pyarrow():
+        yield pa.Table
+    for module_name in PANDAS_IMPORT_HOOKS:
+        if module := sys.modules.get(module_name):
+            yield module.pandas.DataFrame
+
+
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
     if not _hasattr_static(tp_native, "__dataframe__"):
         return (duckdb := get_duckdb()) and issubclass(tp_native, duckdb.DuckDBPyRelation)
-    has_top_level_df = (get_polars, get_pandas, get_dask_dataframe, get_modin)
-    exclude = tuple(mod.DataFrame for get in has_top_level_df if (mod := get()))
-    exclude = (*exclude, pa.Table) if (pa := get_pyarrow()) else exclude
-    hooks = (
-        mod.pandas.DataFrame for name in IMPORT_HOOKS if (mod := sys.modules.get(name))
-    )
-    return not (exclude := (*exclude, *hooks)) or not issubclass(tp_native, exclude)
+    exclude_intersection = tuple(_iter_exclude_interchange())
+    return (not exclude_intersection) or (not issubclass(tp_native, exclude_intersection))
