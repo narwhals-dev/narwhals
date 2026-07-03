@@ -14,7 +14,7 @@ import os
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     import pytest
 
@@ -87,7 +87,9 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def _select_backends(config: pytest.Config) -> list[FrameConstructor]:  # pragma: no cover
+def _select_backends(  # pragma: no cover
+    config: pytest.Config,
+) -> Sequence[FrameConstructor]:
     from narwhals.testing.constructors import (
         available_default_cpu_backends,
         prepare_backends,
@@ -128,4 +130,4 @@ def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     fixture_name = next(iter(matched_fixtures))
     filter_fn = fixture_filters[fixture_name]
     params = [c for c in selected if filter_fn(c)]
-    metafunc.parametrize(fixture_name, params, ids=[c.name for c in params])
+    metafunc.parametrize(fixture_name, params, ids=[c.identifier for c in params])

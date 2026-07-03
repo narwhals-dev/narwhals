@@ -46,7 +46,6 @@ The plugin auto-loads as soon as you `pip install narwhals`. Just write a test:
 ```python
 from typing import TYPE_CHECKING
 
-import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 
 if TYPE_CHECKING:
@@ -55,15 +54,18 @@ if TYPE_CHECKING:
 
 def test_shape(nw_dataframe: DataFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    df = nw_dataframe(data, namespace=nw)
+    df = nw_dataframe(data)  # (1)!
     assert df.shape == (3, 1)
 
 
 def test_laziness(nw_lazyframe: LazyFrameConstructor) -> None:
     data: Data = {"x": [1, 2, 3]}
-    lf = nw_lazyframe(data, namespace=nw_v2)
+    lf = nw_lazyframe(data, namespace=nw_v2)  # (2)!
     assert isinstance(lf, nw_v2.LazyFrame)
 ```
+
+1. Wraps with the main `narwhals` namespace by default
+2. Opt in to a stable namespace
 
 The fixtures are parametrised against every supported backend that is installed
 in the current environment. Filter the matrix on the command line:
@@ -73,7 +75,7 @@ pytest --nw-backends="pandas,polars[lazy]"
 pytest --all-nw-backends
 ```
 
-## Type aliases
+## Typing
 
 ::: narwhals.testing.typing
     handler: python
@@ -82,7 +84,9 @@ pytest --all-nw-backends
       heading_level: 3
       members:
         - Data
+        - ConstructorProtocol
         - FrameConstructor
         - DataFrameConstructor
         - LazyFrameConstructor
+        - PandasConstructor
         - NarwhalsNamespace

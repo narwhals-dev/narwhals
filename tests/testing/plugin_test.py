@@ -18,11 +18,11 @@ def test_constructor_eager_fixture_runs_for_each_backend(
 
     pytester.makeconftest("")
     pytester.makepyfile("""
-        import narwhals as nw
         from narwhals.testing.typing import DataFrameConstructor
 
         def test_shape(nw_dataframe: DataFrameConstructor) -> None:
-            df = nw_dataframe({"x": [1, 2, 3]}, namespace=nw)
+            # `namespace` defaults to the main `narwhals` namespace
+            df = nw_dataframe({"x": [1, 2, 3]})
             assert df.shape == (3, 1)
     """)
     result = pytester.runpytest_subprocess(

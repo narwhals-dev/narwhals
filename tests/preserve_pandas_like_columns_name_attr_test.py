@@ -7,11 +7,11 @@ import pytest
 import narwhals as nw
 
 if TYPE_CHECKING:
-    from tests.utils import Constructor
+    from tests.utils import PandasConstructor
 
 
 def test_ops_preserve_column_index_name(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: PandasConstructor, request: pytest.FixtureRequest
 ) -> None:
     if not any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
         pytest.skip(

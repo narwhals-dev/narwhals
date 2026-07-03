@@ -13,14 +13,15 @@ import pytest
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version
 from narwhals.dependencies import get_pandas
-from narwhals.translate import from_native
 
 # TODO(FBruzzesi): Replace these aliases once all the test suite migrates to *FrameConstructor's
-from tests.conftest import (
-    _PatchedDataFrameConstructor as ConstructorEager,
-    _PatchedDataFrameConstructor as ConstructorPandasLike,
-    _PatchedFrameConstructor as Constructor,
+from narwhals.testing.typing import (
+    DataFrameConstructor as ConstructorEager,
+    DataFrameConstructor as ConstructorPandasLike,
+    FrameConstructor as Constructor,
+    PandasConstructor,
 )
+from narwhals.translate import from_native
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -33,7 +34,12 @@ if TYPE_CHECKING:
 # TODO(FBruzzesi): Remove these aliases once all the test suite migrates to *FrameConstructor's
 # NOTE: Explicitly exported otherwise mypy will raise an [attr-defined] error for each file
 # importing them from `tests.utils` rather than `narwhals.testing.typing` directly.
-__all__ = ("Constructor", "ConstructorEager", "ConstructorPandasLike")
+__all__ = (
+    "Constructor",
+    "ConstructorEager",
+    "ConstructorPandasLike",
+    "PandasConstructor",
+)
 
 
 def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
