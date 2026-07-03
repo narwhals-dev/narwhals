@@ -11,6 +11,7 @@ from narwhals.dependencies import (
     get_cudf,
     get_dask_dataframe,
     get_duckdb,
+    get_ibis,
     get_modin,
     get_pandas,
     get_polars,
@@ -206,6 +207,8 @@ def _iter_exclude_interchange() -> Iterator[type[DataFrameLike]]:
 @lru_cache(64)
 def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
     if not _hasattr_static(tp_native, "__dataframe__"):
-        return (duckdb := get_duckdb()) and issubclass(tp_native, duckdb.DuckDBPyRelation)
+        include = (duckdb.DuckDBPyRelation,) if (duckdb := get_duckdb()) else ()
+        include = (*include, ibis.Table) if (ibis := get_ibis()) else include
+        return bool(include) and issubclass(tp_native, include)
     exclude_intersection = tuple(_iter_exclude_interchange())
     return (not exclude_intersection) or (not issubclass(tp_native, exclude_intersection))
