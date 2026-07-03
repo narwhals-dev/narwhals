@@ -47,7 +47,6 @@ if TYPE_CHECKING:
     from narwhals._spark_like.utils import SparkSession
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import Version, _LimitedContext
-    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import JoinStrategy, UniqueKeepStrategy
 
@@ -58,8 +57,7 @@ Incomplete: TypeAlias = Any  # pragma: no cover
 
 
 class SparkLikeLazyFrame(
-    SQLLazyFrame["SparkLikeExpr", "SQLFrameDataFrame", "LazyFrame[SQLFrameDataFrame]"],
-    ValidateBackendVersion,
+    SQLLazyFrame["SparkLikeExpr", "SQLFrameDataFrame"], ValidateBackendVersion
 ):
     def __init__(
         self,
@@ -112,9 +110,6 @@ class SparkLikeLazyFrame(
     @classmethod
     def from_native(cls, data: SQLFrameDataFrame, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version, implementation=context._implementation)
-
-    def to_narwhals(self) -> LazyFrame[SQLFrameDataFrame]:
-        return self._version.lazyframe(self)
 
     def __native_namespace__(self) -> ModuleType:  # pragma: no cover
         return self._implementation.to_native_namespace()

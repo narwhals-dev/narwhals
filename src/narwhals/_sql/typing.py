@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from narwhals._sql.expr import SQLExpr
 
     SQLExprAny = SQLExpr[Any, Any]
-    SQLLazyFrameAny = SQLLazyFrame[Any, Any, Any]
+    SQLLazyFrameAny = SQLLazyFrame[Any, Any]
 
 SQLExprT = TypeVar("SQLExprT", bound="SQLExprAny")
 SQLExprT_contra = TypeVar("SQLExprT_contra", bound="SQLExprAny", contravariant=True)

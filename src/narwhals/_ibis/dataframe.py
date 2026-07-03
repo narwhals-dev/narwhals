@@ -27,29 +27,21 @@ if TYPE_CHECKING:
     from types import ModuleType
     from typing import TypeAlias
 
-    import pandas as pd
-    import pyarrow as pa
     from ibis.expr.operations import Binary
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
     from narwhals._ibis.group_by import IbisGroupBy
     from narwhals._ibis.namespace import IbisNamespace
-    from narwhals._ibis.series import IbisInterchangeSeries
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
-    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
 
-class IbisLazyFrame(
-    SQLLazyFrame["IbisExpr", "ir.Table", "LazyFrame[ir.Table] | DataFrameV1[ir.Table]"],
-    ValidateBackendVersion,
-):
+class IbisLazyFrame(SQLLazyFrame["IbisExpr", "ir.Table"], ValidateBackendVersion):
     _implementation = Implementation.IBIS
 
     def __init__(
@@ -70,20 +62,6 @@ class IbisLazyFrame(
     def from_native(cls, data: ir.Table, /, *, context: _LimitedContext) -> Self:
         return cls(data, version=context._version)
 
-    def to_narwhals(self) -> LazyFrame[ir.Table] | DataFrameV1[ir.Table]:
-        if self._version is Version.V1:
-            from narwhals.stable.v1 import DataFrame
-
-            return DataFrame(self)
-        return self._version.lazyframe(self)
-
-    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
-        # Keep around for backcompat.
-        if self._version is not Version.V1:
-            msg = "__narwhals_dataframe__ is not implemented for IbisLazyFrame"
-            raise AttributeError(msg)
-        return self
-
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
@@ -94,11 +72,6 @@ class IbisLazyFrame(
         from narwhals._ibis.namespace import IbisNamespace
 
         return IbisNamespace(version=self._version)
-
-    def get_column(self, name: str) -> IbisInterchangeSeries:
-        from narwhals._ibis.series import IbisInterchangeSeries
-
-        return IbisInterchangeSeries(self.native.select(name), version=self._version)
 
     def _iter_columns(self) -> Iterator[ir.Expr]:
         for name in self.columns:
@@ -167,16 +140,6 @@ class IbisLazyFrame(
         selection = (col for col in self.columns if col not in columns_to_drop)
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, backend: None = None, **_: None) -> Self:
-        # The `backend`` argument has no effect but we keep it here for
-        # backwards compatibility because in `narwhals.stable.v1`
-        # function `.from_native()` will return a DataFrame for Ibis.
-
-        if backend is not None:  # pragma: no cover
-            msg = "`backend` argument is not supported for Ibis"
-            raise ValueError(msg)
-        return self
-
     def with_columns(self, *exprs: IbisExpr) -> Self:
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         return self._with_native(self.native.mutate(**new_columns_map))
@@ -206,14 +169,6 @@ class IbisLazyFrame(
                 else list(self.native.columns)
             )
         return self._cached_columns
-
-    def to_pandas(self) -> pd.DataFrame:
-        # only if version is v1, keep around for backcompat
-        return self.native.to_pandas()
-
-    def to_arrow(self) -> pa.Table:
-        # only if version is v1, keep around for backcompat
-        return self.native.to_pyarrow()
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)

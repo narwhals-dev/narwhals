@@ -8,6 +8,7 @@ import duckdb
 from duckdb import StarExpression
 
 from narwhals._duckdb.utils import (
+    BACKEND_VERSION,
     DeferredTimeZone,
     F,
     catch_duckdb_exception,
@@ -37,7 +38,6 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import ModuleType
 
-    import pandas as pd
     import pyarrow as pa
     from duckdb import Expression
     from typing_extensions import Self, TypeIs
@@ -46,23 +46,15 @@ if TYPE_CHECKING:
     from narwhals._duckdb.expr import DuckDBExpr
     from narwhals._duckdb.group_by import DuckDBGroupBy
     from narwhals._duckdb.namespace import DuckDBNamespace
-    from narwhals._duckdb.series import DuckDBInterchangeSeries
     from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import _EagerAllowedImpl
     from narwhals._utils import _LimitedContext
-    from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.stable.v1 import DataFrame as DataFrameV1
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 
 class DuckDBLazyFrame(
-    SQLLazyFrame[
-        "DuckDBExpr",
-        "duckdb.DuckDBPyRelation",
-        "LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]",
-    ],
-    ValidateBackendVersion,
+    SQLLazyFrame["DuckDBExpr", "duckdb.DuckDBPyRelation"], ValidateBackendVersion
 ):
     _implementation = Implementation.DUCKDB
 
@@ -77,7 +69,7 @@ class DuckDBLazyFrame(
         self._version = version
         self._cached_native_schema: dict[str, duckdb_dtypes.DuckDBPyType] | None = None
         self._cached_columns: list[str] | None = None
-        if validate_backend_version:
+        if validate_backend_version:  # pragma: no cover
             self._validate_backend_version()
 
     @property
@@ -94,22 +86,6 @@ class DuckDBLazyFrame(
     ) -> Self:
         return cls(data, version=context._version)
 
-    def to_narwhals(
-        self, *args: Any, **kwds: Any
-    ) -> LazyFrame[duckdb.DuckDBPyRelation] | DataFrameV1[duckdb.DuckDBPyRelation]:
-        if self._version is Version.V1:
-            from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-            return DataFrameV1(self)  # type: ignore[no-any-return]
-        return self._version.lazyframe(self)
-
-    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
-        # Keep around for backcompat.
-        if self._version is not Version.V1:
-            msg = "__narwhals_dataframe__ is not implemented for DuckDBLazyFrame"
-            raise AttributeError(msg)
-        return self
-
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
@@ -121,11 +97,6 @@ class DuckDBLazyFrame(
 
         return DuckDBNamespace(version=self._version)
 
-    def get_column(self, name: str) -> DuckDBInterchangeSeries:
-        from narwhals._duckdb.series import DuckDBInterchangeSeries
-
-        return DuckDBInterchangeSeries(self.native.select(name), version=self._version)
-
     def _iter_columns(self) -> Iterator[Expression]:
         for name in self.columns:
             yield col(name)
@@ -134,19 +105,8 @@ class DuckDBLazyFrame(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is None or backend is Implementation.PYARROW:
-            from narwhals._arrow.dataframe import ArrowDataFrame
-
-            res_native = (
-                self.native.to_arrow_table()
-                if self._backend_version >= (1, 5)
-                else self.native.fetch_arrow_table()
-            )
-            return ArrowDataFrame(
-                res_native,
-                validate_backend_version=True,
-                version=self._version,
-                validate_column_names=True,
-            )
+            ns = self._version.namespace.from_backend(Implementation.PYARROW).compliant
+            return ns.from_native(to_arrow_table(self.native))
 
         if backend is Implementation.PANDAS:
             from narwhals._pandas_like.dataframe import PandasLikeDataFrame
@@ -198,16 +158,6 @@ class DuckDBLazyFrame(
         selection = [col(name) for name in self.columns if name not in columns_to_drop]
         return self._with_native(self.native.select(*selection))
 
-    def lazy(self, backend: None = None, **_: None) -> Self:
-        # The `backend`` argument has no effect but we keep it here for
-        # backwards compatibility because in `narwhals.stable.v1`
-        # function `.from_native()` will return a DataFrame for DuckDB.
-
-        if backend is not None:  # pragma: no cover
-            msg = "`backend` argument is not supported for DuckDB"
-            raise ValueError(msg)
-        return self
-
     def with_columns(self, *exprs: DuckDBExpr) -> Self:
         new_columns_map = dict(evaluate_exprs_and_aliases(self, *exprs))
         result = [
@@ -258,14 +208,6 @@ class DuckDBLazyFrame(
                 else self.native.columns
             )
         return self._cached_columns
-
-    def to_pandas(self) -> pd.DataFrame:
-        # only if version is v1, keep around for backcompat
-        return self.native.df()
-
-    def to_arrow(self) -> pa.Table:
-        # only if version is v1, keep around for backcompat
-        return self.lazy().collect(Implementation.PYARROW).native  # type: ignore[no-any-return]
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)
@@ -540,9 +482,6 @@ class DuckDBLazyFrame(
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
-        if order_by is None:
-            msg = "Cannot pass `order_by` to `with_row_index` for DuckDB"
-            raise TypeError(msg)
         expr = (window_expression(F("row_number"), order_by=order_by) - lit(1)).alias(
             name
         )
@@ -556,3 +495,8 @@ class DuckDBLazyFrame(
             (FORMAT parquet)
             """  # noqa: S608
         duckdb.sql(query)
+
+
+def to_arrow_table(rel: duckdb.DuckDBPyRelation) -> pa.Table:
+    to_arrow = rel.to_arrow_table if BACKEND_VERSION >= (1, 5) else rel.fetch_arrow_table
+    return to_arrow()

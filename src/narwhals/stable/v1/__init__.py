@@ -7,6 +7,7 @@ import narwhals as nw
 from narwhals import exceptions, functions as nw_f
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import ExprKind, ExprNode, is_expr
+from narwhals._interchange import InterchangeFrame, InterchangeSeries, should_interchange
 from narwhals._typing_compat import TypeVar, assert_never
 from narwhals._utils import (
     Implementation,
@@ -622,7 +623,7 @@ def from_native(
 ) -> Any: ...
 
 
-def from_native(
+def from_native(  # noqa: PLR0911
     native_object: IntoDataFrameT
     | IntoLazyFrameT
     | IntoFrame
@@ -656,12 +657,32 @@ def from_native(
     if kwds:
         msg = f"from_native() got an unexpected keyword argument {next(iter(kwds))!r}"
         raise TypeError(msg)
+    if eager_only and eager_or_interchange_only:
+        msg = "Invalid parameter combination: `eager_only=True` and `eager_or_interchange_only=True`"
+        raise ValueError(msg)
+
+    if should_interchange(native_object):
+        if eager_only or series_only:
+            if not pass_through:
+                msg = "Cannot use `series_only=True` or `eager_only=True` with object which only implements `__dataframe__`"
+                raise TypeError(msg)
+            return native_object  # type: ignore[return-value]
+
+        if dependencies.is_ibis_table(native_object):
+            from narwhals._ibis.interchange import IbisDataFrame
+
+            return DataFrame(IbisDataFrame.from_native(native_object))
+
+        if dependencies.is_duckdb_relation(native_object):
+            from narwhals._duckdb.interchange import DuckDBDataFrame
+
+            return DataFrame(DuckDBDataFrame.from_native(native_object))
+        return DataFrame(InterchangeFrame(native_object))
 
     return _from_native_impl(  # type: ignore[no-any-return]
         native_object,
         pass_through=pass_through,
-        eager_only=eager_only,
-        eager_or_interchange_only=eager_or_interchange_only,
+        eager_only=eager_only or eager_or_interchange_only,
         series_only=series_only,
         allow_series=allow_series,
         version=Version.V1,
@@ -924,9 +945,6 @@ def get_level(obj: Frame | Series[Any]) -> Literal["full", "lazy", "interchange"
               which involves iterating over rows in Python.
             - 'interchange': only metadata operations are supported (`df.schema`)
     """
-    from narwhals._interchange.dataframe import InterchangeFrame
-    from narwhals._interchange.series import InterchangeSeries
-
     ensure_type(obj, DataFrame, Series, LazyFrame)
     compliant = obj._compliant
     impl = obj.implementation

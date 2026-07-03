@@ -1,16 +1,30 @@
 from __future__ import annotations
 
 import enum
+import sys
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 
 from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
+from narwhals.dependencies import (
+    IMPORT_HOOKS as PANDAS_IMPORT_HOOKS,
+    get_cudf,
+    get_dask_dataframe,
+    get_duckdb,
+    get_ibis,
+    get_modin,
+    get_pandas,
+    get_polars,
+    get_pyarrow,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     import pandas as pd
     import pyarrow as pa
     from typing_extensions import Self, TypeIs
 
-    from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
 
 
@@ -77,28 +91,37 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
     raise AssertionError(msg)
 
 
-class InterchangeFrame:
-    _version = Version.V1
+def unsupported_error(method_name: str) -> NotImplementedError:
+    msg = (
+        f"{method_name!r} is not supported for interchange-level dataframes.\n\n"
+        "Hint: you probably called `from_native` on an object which isn't fully "
+        "supported by `narwhals.stable.v1`, yet implements `__dataframe__`."
+    )
+    return NotImplementedError(msg)
+
+
+class _Interchange:
+    _version: Final = Version.V1
     _implementation: Final = Implementation.UNKNOWN
 
+    def __native_namespace__(self) -> NoReturn:
+        kind = "series" if "Series" in type(self).__name__ else "dataframes"
+        msg = f"Cannot access native namespace for interchange-level {kind} with unknown backend."
+        raise NotImplementedError(msg)
+
+    def __getattr__(self, attr: str) -> Any:
+        raise unsupported_error(attr)
+
+
+class InterchangeFrame(_Interchange):
     def __init__(self, df: DataFrameLike) -> None:
-        self._interchange_frame = df.__dataframe__()
+        self._dfi: Any = df.__dataframe__()
 
     def __narwhals_dataframe__(self) -> Self:
         return self
 
-    def __native_namespace__(self) -> NoReturn:
-        msg = (
-            "Cannot access native namespace for interchange-level dataframes with unknown backend."
-            "If you would like to see this kind of object supported in Narwhals, please "
-            "open a feature request at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)
-
     def get_column(self, name: str) -> InterchangeSeries:
-        from narwhals._interchange.series import InterchangeSeries
-
-        return InterchangeSeries(self._interchange_frame.get_column_by_name(name))
+        return InterchangeSeries(self._dfi.get_column_by_name(name))
 
     def to_pandas(self) -> pd.DataFrame:
         import pandas as pd  # ignore-banned-import()
@@ -109,57 +132,86 @@ class InterchangeFrame:
                 f" 'pandas>=1.5.0' to be installed, found {pd.__version__}"
             )
             raise NotImplementedError(msg)
-        return pd.api.interchange.from_dataframe(self._interchange_frame)
+        return pd.api.interchange.from_dataframe(self._dfi)
 
     def to_arrow(self) -> pa.Table:
         from pyarrow.interchange.from_dataframe import (  # ignore-banned-import()
             from_dataframe,
         )
 
-        return from_dataframe(self._interchange_frame)
+        return from_dataframe(self._dfi)
 
     @property
     def schema(self) -> dict[str, DType]:
         return {
             column_name: map_interchange_dtype_to_narwhals_dtype(
-                self._interchange_frame.get_column_by_name(column_name).dtype
+                self._dfi.get_column_by_name(column_name).dtype
             )
-            for column_name in self._interchange_frame.column_names()
+            for column_name in self._dfi.column_names()
         }
 
     @property
     def columns(self) -> list[str]:
-        return list(self._interchange_frame.column_names())
-
-    def __getattr__(self, attr: str) -> NoReturn:
-        msg = (
-            f"Attribute {attr} is not supported for interchange-level dataframes.\n\n"
-            "Hint: you probably called `nw.from_native` on an object which isn't fully "
-            "supported by Narwhals, yet implements `__dataframe__`. If you would like to "
-            "see this kind of object supported in Narwhals, please open a feature request "
-            "at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)
+        return list(self._dfi.column_names())
 
     def simple_select(self, *column_names: str) -> Self:
-        frame = self._interchange_frame.select_columns_by_name(list(column_names))
-        if not hasattr(frame, "_df"):  # pragma: no cover
-            msg = (
-                "Expected interchange object to implement `_df` property to allow for recovering original object.\n"
-                "See https://github.com/data-apis/dataframe-api/issues/360."
-            )
-            raise NotImplementedError(msg)
+        frame = self._dfi.select_columns_by_name(list(column_names))
         return self.__class__(frame._df)
 
-    def select(self, *exprs: str) -> Self:  # pragma: no cover
-        msg = (
-            "`select`-ing not by name is not supported for interchange-only level.\n\n"
-            "If you would like to see this kind of object better supported in "
-            "Narwhals, please open a feature request "
-            "at https://github.com/narwhals-dev/narwhals/issues."
-        )
-        raise NotImplementedError(msg)
+
+class InterchangeSeries(_Interchange):
+    def __init__(self, df: Any) -> None:
+        self._native_series = df
+
+    def __narwhals_series__(self) -> Self:
+        return self
+
+    @property
+    def dtype(self) -> DType:
+        return map_interchange_dtype_to_narwhals_dtype(self._native_series.dtype)
+
+    @property
+    def native(self) -> Any:
+        return self._native_series
 
 
-def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
-    return _hasattr_static(obj, "__dataframe__")
+def should_interchange(obj: object) -> TypeIs[DataFrameLike]:
+    """Return True if we'd use interchange/metadata-level support for `obj`."""
+    return _should_interchange(type(obj))  # type: ignore[arg-type]
+
+
+def _iter_exclude_interchange() -> Iterator[type[DataFrameLike]]:
+    """Yield classes that we want to **avoid** using with `__dataframe__`.
+
+    We *could* use them with interchange-level support - but we have a better option at home.
+
+    Sadly this type is [not yet](https://www.youtube.com/watch?v=xUsPD7iwETY) spellable:
+
+        (DataFrameLike & (pl.DataFrame | pd.DataFrame | pa.Table | dd.DataFrame | mpd.DataFrame | cudf.DataFrame)
+        #              |             union
+        #         intersection
+
+    We gathers all the types (that are already imported) which fit the the right-hand-side,
+    as we need to refine from the set produced by checking `__dataframe__`.
+    """
+    has_top_level_df = (get_polars, get_pandas, get_dask_dataframe, get_modin, get_cudf)
+    for get_module in has_top_level_df:
+        if module := get_module():
+            yield module.DataFrame
+    if pa := get_pyarrow():
+        yield pa.Table
+    for module_name in PANDAS_IMPORT_HOOKS:  # pragma: no cover
+        if module := sys.modules.get(module_name):
+            yield module.pandas.DataFrame
+
+
+@lru_cache(64)
+def _should_interchange(tp_native: type[Any]) -> TypeIs[type[DataFrameLike]]:
+    if _hasattr_static(tp_native, "__dataframe__"):
+        # Ensure we use `__dataframe__` when it is the **only** option we have
+        exclude = tuple(_iter_exclude_interchange())
+        return (not exclude) or (not issubclass(tp_native, exclude))
+    include = (duckdb.DuckDBPyRelation,) if (duckdb := get_duckdb()) else ()
+    # Gracefully handle `ibis` removing `__dataframe__` support in the future (we don't use it anyway)
+    include = (*include, ibis.Table) if (ibis := get_ibis()) else include
+    return bool(include) and issubclass(tp_native, include)

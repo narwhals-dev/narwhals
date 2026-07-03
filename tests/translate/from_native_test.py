@@ -304,13 +304,7 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
     ("eager_only", "context"),
     [
         (False, does_not_raise()),
-        (
-            True,
-            pytest.raises(
-                TypeError,
-                match="Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` with sqlframe DataFrame",
-            ),
-        ),
+        (True, pytest.raises(TypeError, match=r"`eager_only`.+sqlframe")),
     ],
 )
 def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: no cover
@@ -320,18 +314,6 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
     with context:
         res = nw.from_native(df, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
-
-
-def test_interchange_protocol_non_v1() -> None:
-    class MockDf:
-        def __dataframe__(self) -> None:  # pragma: no cover
-            pass
-
-    mockdf = MockDf()
-    result = nw.from_native(mockdf, pass_through=True)
-    assert result is mockdf
-    with pytest.raises(TypeError):
-        nw.from_native(mockdf)  # type: ignore[call-overload]
 
 
 def test_from_native_strict_native_series() -> None:

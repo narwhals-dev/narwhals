@@ -8,7 +8,6 @@ from narwhals._compliant.typing import (
     NativeExprT,
     NativeLazyFrameT,
 )
-from narwhals._translate import ToNarwhalsT_co
 from narwhals._utils import check_columns_exist, generate_temporary_column_name
 from narwhals.exceptions import MultiOutputExpressionError
 
@@ -20,14 +19,17 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._sql.expr import SQLExpr
+    from narwhals.dataframe import LazyFrame
     from narwhals.exceptions import ColumnNotFoundError
 
     Incomplete: TypeAlias = Any
 
 
 class SQLLazyFrame(
-    CompliantLazyFrame[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
-    Protocol[CompliantExprT_contra, NativeLazyFrameT, ToNarwhalsT_co],
+    CompliantLazyFrame[
+        CompliantExprT_contra, NativeLazyFrameT, "LazyFrame[NativeLazyFrameT]"
+    ],
+    Protocol[CompliantExprT_contra, NativeLazyFrameT],
 ):
     def _evaluate_window_expr(
         self,
@@ -64,3 +66,6 @@ class SQLLazyFrame(
             filtered = lf_with_tmp._filter(ns.col(tmp_col))
             return filtered.drop([tmp_col], strict=False)
         return self._filter(predicate)
+
+    def to_narwhals(self) -> LazyFrame[NativeLazyFrameT]:
+        return self._version.lazyframe(self)

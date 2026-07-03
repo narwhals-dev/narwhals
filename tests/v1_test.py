@@ -5,7 +5,7 @@ import re
 from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -44,13 +44,25 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from typing_extensions import assert_type
+    from typing_extensions import LiteralString, assert_type
 
     from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.stable.v1.typing import Frame, IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
+
+
+def xfail_interchange(
+    method: LiteralString, frame: Frame, request: pytest.FixtureRequest
+) -> None:
+    """Ensure we raise when trying to use a non interchange-level method."""
+    marker = pytest.mark.xfail(
+        frame.implementation.is_ibis() or frame.implementation.is_duckdb(),
+        reason=f"{method!r} is not supported for interchange-level dataframes.",
+        raises=NotImplementedError,
+    )
+    request.applymarker(marker)
 
 
 def test_toplevel() -> None:
@@ -275,20 +287,6 @@ def test_hist_v1() -> None:
     assert isinstance(result, nw_v1.DataFrame)
 
 
-@pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires interchange protocol")
-def test_is_ordered_categorical_interchange_protocol() -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    df = pd.DataFrame(
-        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
-    ).__dataframe__()
-    assert nw_v1.is_ordered_categorical(
-        nw_v1.from_native(df, eager_or_interchange_only=True)["a"]
-    )
-
-
 def test_all_nulls_pandas() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -334,15 +332,19 @@ def test_cast_to_enum_v1(
     # Backends that do not (yet) support Enum dtype
     if any(
         backend in str(constructor)
-        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
+        for backend in ("pyarrow_table", "sqlframe", "pyspark")
     ):
         request.applymarker(pytest.mark.xfail)
 
-    df_native = constructor({"a": ["a", "b"]})
+    df = nw_v1.from_native(constructor({"a": ["a", "b"]}))
+    # NOTE: the pattern on raises conflicts with the error that is raised on expr evaluation,
+    # which is before the cast that is tested
+    xfail_interchange("__narwhals_namespace__", df, request)
+    _ = df.__narwhals_namespace__()
 
     msg = re.escape("Converting to Enum is not supported in narwhals.stable.v1")
     with pytest.raises(NotImplementedError, match=msg):
-        nw_v1.from_native(df_native).select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
+        df.select(nw_v1.col("a").cast(nw_v1.Enum))  # type: ignore[arg-type]
 
 
 def test_v1_ordered_categorical_pandas() -> None:
@@ -422,69 +424,6 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
     assert not is_native_series(ser)
 
 
-def test_get_level() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
-    assert (
-        nw_v1.get_level(
-            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
-        )
-        == "interchange"
-    )
-
-
-def test_v1_explicit_level_kwarg() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    nw_lf = nw_v1.from_native(pl.LazyFrame({"a": [1]}))
-    rewrapped_lf = nw_v1.LazyFrame[pl.LazyFrame](nw_lf._compliant_frame)
-    assert nw_v1.get_level(rewrapped_lf) == "lazy"
-
-    nw_s = nw_v1.from_native(pl.Series(name="a", values=[1]), series_only=True)
-    rewrapped_s = nw_v1.Series(nw_s._compliant_series)
-    assert nw_v1.get_level(rewrapped_s) == "full"
-
-
-MainInstances: TypeAlias = tuple[nw.DataFrame[Any], nw.LazyFrame[Any], nw.Series[Any]]
-
-
-@pytest.fixture
-def main_instances(eager_implementation: EagerAllowed) -> MainInstances:
-    df = nw.DataFrame.from_dict({"a": [1, 2, 3]}, backend=eager_implementation)
-    return df, df.lazy(), df.get_column("a")
-
-
-def test_get_level_raises_main(main_instances: MainInstances) -> None:
-    df, lf, ser = main_instances
-    with pytest.raises(TypeError):
-        nw_v1.get_level(df)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        nw_v1.get_level(ser)  # type: ignore[arg-type]
-    with pytest.raises(TypeError):
-        nw_v1.get_level(lf)  # type: ignore[arg-type]
-
-
-def test_get_level_main_via_v1_from_native(main_instances: MainInstances) -> None:
-    df, lf, ser = main_instances
-    df_v1 = nw_v1.from_native(df)
-    # NOTE: Typing doesn't match the behavior following (#3515)
-    _lf_v1 = nw_v1.from_native(lf)  # type: ignore[call-overload]
-    lf_v1: nw_v1.LazyFrame[Any] = _lf_v1
-    ser_v1 = nw_v1.from_native(ser, series_only=True)
-
-    assert nw_v1.get_level(df_v1) == "full"
-    assert nw_v1.get_level(ser_v1) == "full"
-    if lf_v1.implementation.is_polars():
-        assert nw_v1.get_level(lf_v1) == "lazy"
-    else:
-        # Well this is strange?
-        assert nw_v1.get_level(lf_v1) == "full"
-
-
 def test_any_horizontal() -> None:
     # here, it defaults to Kleene logic.
     pytest.importorskip("polars")
@@ -523,12 +462,13 @@ def test_all_horizontal() -> None:
     assert_equal_data(result, expected)
 
 
-def test_with_row_index(constructor: Constructor) -> None:
+def test_with_row_index(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"abc": ["foo", "bars"], "xyz": [100, 200], "const": [42, 42]}
 
     frame = nw_v1.from_native(constructor(data))
+    xfail_interchange("with_row_index", frame, request)
 
     msg = "Cannot pass `order_by`"
     context = (
@@ -651,17 +591,6 @@ def test_from_native_strict_false_typing() -> None:
 def test_from_native_strict_false_invalid() -> None:
     with pytest.raises(ValueError, match="Cannot pass both `strict`"):
         nw_v1.from_native({"a": [1, 2, 3]}, strict=True, pass_through=False)  # type: ignore[call-overload]
-
-
-def test_from_mock_interchange_protocol_non_strict() -> None:
-    class MockDf:
-        def __dataframe__(self) -> None:  # pragma: no cover
-            pass
-
-    mockdf = MockDf()
-    result = nw_v1.from_native(mockdf, eager_only=True, strict=False)
-    # mypy issue?
-    assert result is mockdf  # type: ignore[comparison-overlap]
 
 
 def test_from_native_lazyframe() -> None:
@@ -965,8 +894,10 @@ def test_is_frame() -> None:
     assert nw_v1.dependencies.is_narwhals_dataframe(lf.collect())
 
 
-def test_with_version(constructor: Constructor) -> None:
-    lf = nw_v1.from_native(constructor({"a": [1, 2]})).lazy()
+def test_with_version(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    frame = nw_v1.from_native(constructor({"a": [1, 2]}))
+    xfail_interchange("lazy", frame, request)
+    lf = frame.lazy()
     assert isinstance(lf, nw_v1.LazyFrame)
     assert lf._compliant_frame._with_version(Version.MAIN)._version is Version.MAIN
 
@@ -1276,7 +1207,7 @@ def test_any_value_expr(constructor: Constructor, request: pytest.FixtureRequest
         "c": [None, None, 1, None, 2, None],
     }
     df = nw_v1.from_native(constructor(data))
-
+    xfail_interchange("__narwhals_namespace__", df, request)
     with pytest.warns(NarwhalsUnstableWarning):
         df.select(nw_v1.col("a", "b").any_value())
 

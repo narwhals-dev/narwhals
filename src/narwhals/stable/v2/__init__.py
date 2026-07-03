@@ -486,7 +486,6 @@ def from_native(
         eager_only=eager_only,
         series_only=series_only,
         allow_series=allow_series,
-        eager_or_interchange_only=False,
         version=Version.V2,
     )
 
