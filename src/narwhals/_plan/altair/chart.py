@@ -26,8 +26,7 @@ if TYPE_CHECKING:
     from altair.vegalite.v6.schema.mixins import _MarkDef
     from typing_extensions import Self, Unpack
 
-    from narwhals._plan.altair.typing import EncodeKwds, FieldName, IntoAltExpr, VegaType
-    from narwhals.dtypes import DType
+    from narwhals._plan.altair.typing import EncodeKwds, FieldName, IntoAltExpr
 
 _EMPTY_SCHEMA: Final = stable_v1.Schema()
 
@@ -212,17 +211,6 @@ def layer(*charts: Chart, **kwds: Unpack[_ChartKwds]) -> Chart:
     return Chart._from_altair(
         alt.LayerChart(layer=tuple(c._chart for c in charts), **kwds)
     )
-
-
-@functools.lru_cache(16)
-def _vegalite_type(dtype: DType, /) -> Optional[VegaType]:
-    if dtype.is_numeric():
-        return "quantitative"
-    if isinstance(dtype, (stable_v1.String, stable_v1.Categorical, stable_v1.Boolean)):
-        return "nominal"
-    if isinstance(dtype, (stable_v1.Datetime, stable_v1.Date)):
-        return "temporal"
-    return alt.Undefined
 
 
 def _wrapper(chart: Chart, method_name: str) -> Callable[..., Chart]:
