@@ -17,7 +17,8 @@ from altair.expr import core as alt_ir
 
 from narwhals._plan import _function, expressions as ir
 from narwhals._plan.altair.exceptions import unsupported_error
-from narwhals._plan.altair.typing import AltExpr
+from narwhals._plan.altair.typing import AltExpr, IntoAltExpr
+from narwhals._plan.expr import Expr as NwExpr
 from narwhals._plan.expressions import (
     aggregation as agg,
     boolean,
@@ -164,6 +165,31 @@ def _(expr: ir.BinaryExpr) -> AltExpr:
 def _(expr: ir.TernaryExpr) -> AltExpr:
     exprs = (_from_expr_ir(e) for e in (expr.predicate, expr.truthy, expr.falsy))
     return AltExprStr.call_fn("if", exprs)
+
+
+def parse_into_vega_expr(expr: NwExpr | IntoAltExpr, /) -> VegaExpr:
+    """Convenience wrapper around [`into_vega_expr`][].
+
+    Arguments:
+        expr: An [`Expr`][narwhals._plan.Expr] or anything that is
+            currently accepted as an altair expression.
+    """
+    return _into_vega_expr(expr)
+
+
+@functools.singledispatch
+def _into_vega_expr(expr: NwExpr | IntoAltExpr, /) -> VegaExpr:
+    msg = f"Cannot convert an {type(expr).__name__!r} a vega expression, got: {expr!r}"
+    raise TypeError(msg)
+
+
+@_into_vega_expr.register(NwExpr)
+def _(expr: NwExpr, /) -> VegaExpr:
+    return into_vega_expr(expr._ir)
+
+
+_into_vega_expr.register(str, str)
+_into_vega_expr.register(alt_ir.Expression, repr)
 
 
 # TODO @dangotbanned: misc

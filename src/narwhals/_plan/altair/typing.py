@@ -35,13 +35,17 @@ VegaExpr: TypeAlias = str
 """
 
 AltExpr: TypeAlias = alt_ir.Expression
-"""An altair wrapper around a [Vega Expression].
+"""An [altair wrapper] around a [Vega Expression].
 
+[altair wrapper]: https://altair-viz.github.io/user_guide/interactions/expressions.html
 [Vega Expression]: https://vega.github.io/vega/docs/expressions/"""
 
 
 IntoAltExpr: TypeAlias = VegaExpr | AltExpr
-"""Anything that is currently accepted as an altair expression."""
+"""Anything that is currently accepted as an [altair expression].
+
+[altair expression]: https://altair-viz.github.io/user_guide/interactions/expressions.html
+"""
 
 Predicate: TypeAlias = VegaExpr | AltExpr
 """Anything [^1] that is accepted by `condition(test=...)`.
