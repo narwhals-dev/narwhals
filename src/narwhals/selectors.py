@@ -228,6 +228,35 @@ def categorical() -> Selector:
     return Selector(ExprNode(ExprKind.SELECTOR, "selectors.categorical"))
 
 
+def enum() -> Selector:
+    """Select enum columns.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>> import narwhals.selectors as ncs
+        >>> df_native = pl.DataFrame(
+        ...     {"a": [1, 2], "b": ["x", "y"]},
+        ...     schema_overrides={"b": pl.Enum(["x", "y"])},
+        ... )
+        >>> df = nw.from_native(df_native)
+
+        Let's select enum dtypes:
+
+        >>> df.select(ncs.enum()).to_native()
+        shape: (2, 1)
+        ┌──────┐
+        │ b    │
+        │ ---  │
+        │ enum │
+        ╞══════╡
+        │ x    │
+        │ y    │
+        └──────┘
+    """
+    return Selector(ExprNode(ExprKind.SELECTOR, "selectors.enum"))
+
+
 def all() -> Selector:
     """Select all columns.
 
@@ -316,6 +345,7 @@ __all__ = [
     "by_dtype",
     "categorical",
     "datetime",
+    "enum",
     "matches",
     "numeric",
     "string",

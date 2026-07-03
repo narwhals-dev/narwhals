@@ -2,6 +2,12 @@ name: PyTest FireDucks
 
 on:
   pull_request:
+    paths:
+      - src/**
+      - tests/**
+      - .github/workflows/pytest-fireducks.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:
@@ -17,7 +23,7 @@ jobs:
     if: github.head_ref != 'bump-version'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
