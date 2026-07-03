@@ -51,12 +51,7 @@ pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
-ibis = ["ibis-framework>=6.0.0", "rich>=12.4.4", "packaging>=21.3", "pyarrow_hotfix>=0.7"]
-# TODO(FBruzzesi): Investigate if dependencies other than ibis-framework itself
-# can be moved to constraint-dependencies section. See:
-#  * docs.astral.sh/uv/reference/settings#constraint-dependencies
-#  * https://github.com/narwhals-dev/narwhals/pull/3608#discussion_r3252827624
-
+ibis = ["ibis-framework>=6.0.0"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
@@ -191,6 +186,15 @@ min-pyspark-version = [
 source-include = ["tests/**"]
 
 [tool.uv]
+# Floors for transitives we don't import directly
+# NOTE: Constraints don't add a package to the install set;
+# they only narrow the version that may be chosen when it IS pulled in.
+# See: https://docs.astral.sh/uv/reference/settings/#constraint-dependencies
+constraint-dependencies = [
+    "rich>=12.4.4",
+    "packaging>=21.3",
+    "pyarrow_hotfix>=0.7",
+]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
 # See https://docs.astral.sh/uv/reference/settings/#conflicts.
