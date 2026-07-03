@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import string
 from dataclasses import dataclass
+from datetime import date, datetime
 from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
@@ -19,7 +20,7 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import get_module_version_as_tuple
+from tests.utils import contains_integer_like_floats, get_module_version_as_tuple
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -626,3 +627,34 @@ def test_deferred_iterable() -> None:
     assert next(iter(deferred_1)) == "h"
     assert list(deferred_1) == list("hello")
     assert "".join(chain(deferred_1, deferred_2)) == "helloHELLO"
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        pytest.param([1, 2, 3], False, id="all_ints"),
+        pytest.param([1.5, 2.2, 3.1], False, id="no_integer_like_floats"),
+        pytest.param([1.0, 2.0, 3.5], True, id="some_integer_like_floats"),
+        pytest.param([1.0, 2.0, 3.0], True, id="all_integer_like_floats"),
+        pytest.param([1, 2.0, 3], True, id="mixed_int_and_float"),
+        pytest.param([], False, id="empty_list"),
+        pytest.param([-1.0, -2.0], True, id="negative_integer_like_floats"),
+        pytest.param([1.0, 2.5, 3.0, 4.1], True, id="mixed_floats"),
+        # mixed non-numeric types
+        pytest.param(["a", "b", "c"], False, id="all_strings"),
+        pytest.param([1.0, "a", 2.0], True, id="floats_and_strings"),
+        pytest.param([1, "a", 2], False, id="ints_and_strings_no_floats"),
+        # datetime / date objects
+        pytest.param([date(2024, 1, 1), date(2024, 1, 2)], False, id="all_dates"),
+        pytest.param(
+            [datetime(2024, 1, 1), 1.0, datetime(2024, 1, 2)],
+            True,
+            id="floats_and_datetimes",
+        ),
+        # None / null handling
+        pytest.param([None, None], False, id="all_none"),
+        pytest.param([1.0, None, 2.0], True, id="floats_and_none"),
+    ],
+)
+def test_contains_integer_like_floats(values: list[Any], expected: bool) -> None:  # noqa: FBT001
+    assert contains_integer_like_floats(values) is expected
