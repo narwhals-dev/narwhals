@@ -75,7 +75,7 @@ pytest --nw-backends="pandas,polars[lazy]"
 pytest --all-nw-backends
 ```
 
-## Type aliases
+## Typing
 
 ::: narwhals.testing.typing
     handler: python
@@ -84,9 +84,11 @@ pytest --all-nw-backends
       heading_level: 3
       members:
         - Data
+        - ConstructorProtocol
         - FrameConstructor
         - DataFrameConstructor
         - LazyFrameConstructor
+        - PandasConstructor
         - NarwhalsNamespace
 
 1. wraps with the main `narwhals` namespace by default

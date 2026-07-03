@@ -489,7 +489,7 @@ def test_with_row_index(constructor: Constructor) -> None:
     )
 
     with context:
-        result = frame.with_row_index()  # pyright: ignore[reportCallIssue]  # pyrefly: ignore[missing-argument]
+        result = frame.with_row_index()  # type: ignore[call-arg]  # pyright: ignore[reportCallIssue]  # pyrefly: ignore[missing-argument]
 
         expected = {"index": [0, 1], **data}
         assert_equal_data(result, expected)
