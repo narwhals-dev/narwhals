@@ -7,6 +7,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v1 as nw_v1
 import narwhals.stable.v2 as nw_v2
+from narwhals._native import is_native_ibis
 from narwhals.dependencies import is_into_dataframe
 from narwhals.stable.v1.dependencies import is_into_dataframe as v1_is_into_dataframe
 from narwhals.stable.v2.dependencies import is_into_dataframe as v2_is_into_dataframe
@@ -44,9 +45,13 @@ class DictDataFrame:  # pragma: no cover
 def test_is_into_dataframe(nw_frame: FrameConstructor) -> None:
     native_frame = nw_frame(data, nw).to_native()
     frame = nw.from_native(native_frame)
-    # NOTE: `type-var` because v1 `from_native` typing does not admit `NativeIbis`,
-    # which `IntoLazyFrame` (hence the constructor return) includes.
-    nw_v1_frame = nw_v1.from_native(native_frame)  # type: ignore[type-var]
+    if is_native_ibis(native_frame):
+        # NOTE: `call-overload` because v1 `from_native` typing does not admit
+        # `NativeIbis`, yet at runtime ibis tables are still wrapped
+        # (as interchange-level frames).
+        nw_v1_frame = nw_v1.from_native(native_frame)  # type: ignore[call-overload]
+    else:
+        nw_v1_frame = nw_v1.from_native(native_frame)
     nw_v2_frame = nw_v2.from_native(native_frame)
 
     result = any(x in str(nw_frame) for x in EAGER_CONSTRUCTOR_NAMES)

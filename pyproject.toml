@@ -457,6 +457,7 @@ exclude_also = [
   'if "(cudf|modin|pyspark|ibis)" in',
   "if not .*.is_pandas",
   "if is_ibis_table",
+  "if is_native_ibis",
   "if MYPY",
   "except ModuleNotFoundError",
   'request.applymarker\(pytest.mark.xfail',
