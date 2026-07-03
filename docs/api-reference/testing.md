@@ -90,6 +90,3 @@ pytest --all-nw-backends
         - LazyFrameConstructor
         - PandasConstructor
         - NarwhalsNamespace
-
-1. wraps with the main `narwhals` namespace by default
-2. opt in to a stable namespace
