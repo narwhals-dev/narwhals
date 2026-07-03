@@ -278,6 +278,6 @@ def xfail_if_pyspark_connect(  # pragma: no cover
         request.applymarker(pytest.mark.xfail(reason=reason))
 
 
-def any_integer_like_float(values: list[Any]) -> bool:
+def any_integer_like_floats(values: list[Any]) -> bool:
     """Return True if any value is a float that represents an integer (e.g. 1.0, 2.0)."""
     return any(isinstance(v, float) and v.is_integer() for v in values)

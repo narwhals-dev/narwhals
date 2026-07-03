@@ -20,7 +20,7 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import contains_integer_like_floats, get_module_version_as_tuple
+from tests.utils import any_integer_like_floats, get_module_version_as_tuple
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -656,5 +656,5 @@ def test_deferred_iterable() -> None:
         pytest.param([1.0, None, 2.0], True, id="floats_and_none"),
     ],
 )
-def test_contains_integer_like_floats(values: list[Any], expected: bool) -> None:  # noqa: FBT001
-    assert contains_integer_like_floats(values) is expected
+def test_any_integer_like_floats(values: list[Any], expected: bool) -> None:  # noqa: FBT001
+    assert any_integer_like_floats(values) is expected
