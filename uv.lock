@@ -175,7 +175,6 @@ members = [
 ]
 constraints = [
     { name = "packaging", specifier = ">=21.3" },
-    { name = "pyarrow-hotfix", specifier = ">=0.7" },
     { name = "rich", specifier = ">=12.4.4" },
 ]
 
@@ -1928,6 +1927,7 @@ duckdb = [
 ]
 ibis = [
     { name = "ibis-framework" },
+    { name = "pyarrow-hotfix" },
 ]
 modin = [
     { name = "modin", version = "0.23.1.post0", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-local-dev' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-min-pyspark-version' and extra == 'group-8-narwhals-typing')" },
@@ -2169,6 +2169,7 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'pandas'", specifier = ">=1.3.4" },
     { name = "polars", marker = "extra == 'polars'", specifier = ">=0.20.4" },
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=13.0.0" },
+    { name = "pyarrow-hotfix", marker = "extra == 'ibis'", specifier = ">=0.7" },
     { name = "pyspark", marker = "extra == 'pyspark'", specifier = ">=3.5.0" },
     { name = "pyspark", extras = ["connect"], marker = "extra == 'pyspark-connect'", specifier = ">=3.5.0" },
     { name = "sqlframe", marker = "extra == 'sqlframe'", specifier = ">=3.22.0,!=3.39.3" },
@@ -3939,6 +3940,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/88/a3/d2c462d4ef313521eaf2eff04d204ac60775263f1fb08c374b543f79f610/pyarrow-23.0.1-cp314-cp314t-musllinux_1_2_aarch64.whl", hash = "sha256:46718a220d64677c93bc243af1d44b55998255427588e400677d7192671845c7", size = 48259435, upload-time = "2026-02-16T10:13:49.226Z" },
     { url = "https://files.pythonhosted.org/packages/cc/f1/11a544b8c3d38a759eb3fbb022039117fd633e9a7b19e4841cc3da091915/pyarrow-23.0.1-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:a09f3876e87f48bc2f13583ab551f0379e5dfb83210391e68ace404181a20690", size = 50629149, upload-time = "2026-02-16T10:13:57.238Z" },
     { url = "https://files.pythonhosted.org/packages/50/f2/c0e76a0b451ffdf0cf788932e182758eb7558953f4f27f1aff8e2518b653/pyarrow-23.0.1-cp314-cp314t-win_amd64.whl", hash = "sha256:527e8d899f14bd15b740cd5a54ad56b7f98044955373a17179d5956ddb93d9ce", size = 28365807, upload-time = "2026-02-16T10:14:03.892Z" },
+]
+
+[[package]]
+name = "pyarrow-hotfix"
+version = "0.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/d2/ed/c3e8677f7abf3981838c2af7b5ac03e3589b3ef94fcb31d575426abae904/pyarrow_hotfix-0.7.tar.gz", hash = "sha256:59399cd58bdd978b2e42816a4183a55c6472d4e33d183351b6069f11ed42661d", size = 9910, upload-time = "2025-04-25T10:17:06.247Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/2e/c3/94ade4906a2f88bc935772f59c934013b4205e773bcb4239db114a6da136/pyarrow_hotfix-0.7-py3-none-any.whl", hash = "sha256:3236f3b5f1260f0e2ac070a55c1a7b339c4bb7267839bd2015e283234e758100", size = 7923, upload-time = "2025-04-25T10:17:05.224Z" },
 ]
 
 [[package]]

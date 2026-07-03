@@ -51,7 +51,7 @@ pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
-ibis = ["ibis-framework>=6.0.0"]
+ibis = ["ibis-framework>=6.0.0", "pyarrow_hotfix>=0.7"]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
@@ -193,7 +193,6 @@ source-include = ["tests/**"]
 constraint-dependencies = [
     "rich>=12.4.4",
     "packaging>=21.3",
-    "pyarrow_hotfix>=0.7",
 ]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
