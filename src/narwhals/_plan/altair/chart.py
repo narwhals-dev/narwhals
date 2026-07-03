@@ -66,6 +66,11 @@ class Chart:
         sort: Optional[Sequence[alt.SortField | dict[str, str]]] = alt.Undefined,
         **named_exprs: nw.Expr,
     ) -> Self:
+        """Add named window aggregations to the chart.
+
+        ## Chart ideas
+        - [first,last](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/co2_concentration.py#L23-L29)
+        """
         return self._from_altair(
             self._chart._add_transform(
                 window_transform(frame=frame, group_by=groupby, sort=sort, **named_exprs)
@@ -78,6 +83,11 @@ class Chart:
         groupby: Optional[Sequence[FieldName]] = alt.Undefined,
         **named_exprs: nw.Expr,
     ) -> Self:
+        """Add named aggregations to the chart.
+
+        ## Chart ideas
+        - [`argmax` -> use `struct.field` in encode?](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/line_chart_with_custom_legend.py#L25-L31)
+        """
         return self._from_altair(
             self._chart._add_transform(
                 *aggregate_transform(*exprs, group_by=groupby, **named_exprs)
@@ -122,10 +132,13 @@ class Chart:
             return self._chart.data.collect_schema()  # type: ignore[return-value]
         return _EMPTY_SCHEMA
 
-    # TODO @dangotbanned: Add more cases as they show up in other examples
-    # - aggregate -> aggregate_field_def
     def encode(self, *args: nw.Expr | Any, **kwds: Unpack[EncodeKwds]) -> Self:
-        """Map properties of the data to visual properties of the chart."""
+        """Map properties of the data to visual properties of the chart.
+
+        ## Chart ideas:
+        - [argmax rewrite](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/line_with_last_value_labeled.py#L26-L31)
+        - [conditional within a property setter](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/lasagna_plot.py#L11-L32)
+        """
         from_expr = encode.from_expr
         args_ = (from_expr(e._ir, self) if isinstance(e, nw.Expr) else e for e in args)
         kwds_ = {
