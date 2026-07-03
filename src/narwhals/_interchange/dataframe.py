@@ -199,7 +199,7 @@ def _iter_exclude_interchange() -> Iterator[type[DataFrameLike]]:
             yield module.DataFrame
     if pa := get_pyarrow():
         yield pa.Table
-    for module_name in PANDAS_IMPORT_HOOKS:
+    for module_name in PANDAS_IMPORT_HOOKS:  # pragma: no cover
         if module := sys.modules.get(module_name):
             yield module.pandas.DataFrame
 
