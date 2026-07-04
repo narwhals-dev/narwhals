@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     import narwhals._plan as nw
     from narwhals._plan.altair import typing as alt_t
 
-    class _Name(TypedDict, total=False, closed=True):
+    class _Name(TypedDict, total=False, closed=True):  # type: ignore[call-arg]
         name: str
 
 
@@ -272,7 +272,7 @@ def _build_serializer(
 
     # NOTE: `mypy`, `jupyter_client` optionally depend on `orjson`
     if find_spec("orjson"):
-        import orjson
+        import orjson  # type: ignore[import-not-found]
 
         orjson_encode: Callable[[Any], bytes] = functools.partial(
             orjson.dumps,
