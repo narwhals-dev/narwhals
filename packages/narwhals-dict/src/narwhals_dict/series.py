@@ -9,12 +9,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._compliant import EagerSeries
 from narwhals._utils import Implementation, not_implemented
 from narwhals.exceptions import ShapeError
-from narwhals_dict.utils import (
-    binary_op,
-    infer_dtype,
-    is_native_column,
-    py_type_for_dtype,
-)
+from narwhals_dict.utils import binary_op, cast_values, infer_dtype, is_native_column
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -35,6 +30,8 @@ if TYPE_CHECKING:
     )
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.namespace import DictNamespace
+    from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
+    from narwhals_dict.series_str import DictSeriesStringNamespace
     from narwhals_dict.typing import NativeSeries
 
 
@@ -277,11 +274,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_unary(lambda value: round(value, decimals))
 
     def cast(self, dtype: IntoDType) -> Self:
-        py_type = py_type_for_dtype(dtype, self._version)
-        if py_type is None:
-            msg = f"`cast` to {dtype} is not supported for the dict backend."
-            raise NotImplementedError(msg)
-        return self._with_unary(py_type)
+        return self._with_native(
+            cast_values(self.native, dtype, self._version), preserve_broadcast=True
+        )
 
     def clip(self, lower_bound: Any, upper_bound: Any) -> Self:
         return self.clip_lower(lower_bound).clip_upper(upper_bound)
@@ -574,9 +569,20 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     value_counts = not_implemented()
     fill_nan = not_implemented()
 
+    # Namespaces
+    @property
+    def str(self) -> DictSeriesStringNamespace:
+        from narwhals_dict.series_str import DictSeriesStringNamespace
+
+        return DictSeriesStringNamespace(self)
+
+    @property
+    def dt(self) -> DictSeriesDateTimeNamespace:
+        from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
+
+        return DictSeriesDateTimeNamespace(self)
+
     # Namespaces: not implemented (yet).
-    str: Any = not_implemented()
-    dt: Any = not_implemented()
     cat: Any = not_implemented()
     list: Any = not_implemented()
     struct: Any = not_implemented()

@@ -322,6 +322,13 @@ extend-ignore-names = [
 "src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
+"packages/*/src/*/utils.py" = [
+  "PLR0911", # too-many-return-statements
+]
+"packages/*/tests/*" = [
+  "S101",
+  "INP001", # implicit-namespace-package; an `__init__.py` would clash with the root `tests` module
+]
 "tests/*" = [
   "S101", 
   "C901",    # complex-structure
