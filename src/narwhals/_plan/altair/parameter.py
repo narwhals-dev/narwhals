@@ -77,14 +77,14 @@ Accepts config via a `select` argument.
 [defines a data query]: https://vega.github.io/vega-lite/docs/selection.html
 """
 
-
-SelectionConfig: TypeAlias = (
-    theme.IntervalSelectionConfigKwds | theme.PointSelectionConfigKwds
-)
+IntervalConfig: TypeAlias = theme.IntervalSelectionConfigKwds
+PointConfig: TypeAlias = theme.PointSelectionConfigKwds
+SelectionConfig: TypeAlias = IntervalConfig | PointConfig
 """Any config accepted by `SelectionParam(select=...)`.
 
-Note:
-    They also allow `Literal['point', 'interval']`.
+Important:
+    Avoid using these `TypedDict`s directly, as the corresponding classes have a required (at validation-time)
+    discriminator field `type`. But that isn't captured in the `TypedDict` or `SchemaBase` definitions.
 """
 
 ParamKwds: TypeAlias = theme.VariableParameterKwds | theme.TopLevelSelectionParameterKwds
@@ -214,18 +214,12 @@ def _param_name(kwds: ParamKwds, /) -> str:
     return f"param_{hashlib.sha224(encoded, usedforsecurity=False).hexdigest()[:16]}"
 
 
-def _config_interval(
-    **kwds: Unpack[theme.IntervalSelectionConfigKwds],
-) -> theme.IntervalSelectionConfigKwds:
-    # discriminator field is the only required argument
+def _config_interval(**kwds: Unpack[IntervalConfig]) -> IntervalConfig:
     kwds["type"] = "interval"
     return kwds
 
 
-def _config_point(
-    **kwds: Unpack[theme.PointSelectionConfigKwds],
-) -> theme.PointSelectionConfigKwds:
-    # discriminator field is the only required argument
+def _config_point(**kwds: Unpack[PointConfig]) -> PointConfig:
     kwds["type"] = "point"
     return kwds
 
