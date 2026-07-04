@@ -230,11 +230,39 @@ def _config_point(
     return kwds
 
 
+def serialize(
+    obj: Any, /, *, deterministic: bool, default: Callable[[Any], Any] | None = str
+) -> bytes:
+    """Serialize an object to bytes.
+
+    Arguments:
+        obj: An object composed of JSON compatible types.
+        deterministic: Ensure the same input produces the same output bytes.
+            Use this when serializing to generate a hash value.
+
+            Does not guarantee anything beyond the description in [`msgspec.json.encode(order="deterministic")`]
+
+        default: A hook for objects that can't otherwise be serialized.
+            The caller is responsible for providing a hook that roundtrips,
+            which `default=str` cannot.
+
+    Important:
+        Uses the fastest available json serializer, in priority of [`msgspec`] > [`orjson`] > [`json`].
+
+    [`msgspec`]: https://github.com/msgspec/msgspec
+    [`orjson`]: https://github.com/ijl/orjson
+    [`json`]: https://docs.python.org/3/library/json.html
+    [`msgspec.json.encode(order="deterministic")`]: https://msgspec.dev/api#msgspec.json.encode
+    """
+    return _build_serializer(deterministic=deterministic, default=default)(obj)
+
+
 @functools.cache
-def _build_encoder(
-    *, deterministic: bool = False, default: Callable[[Any], Any] = str
+def _build_serializer(
+    *, deterministic: bool = False, default: Callable[[Any], Any] | None = str
 ) -> Callable[[Any], bytes]:
-    # NOTE: marimo depends on msgspec, so take it if available
+    """Return the fastest available json serializer."""
+    # NOTE: `marimo` depends on `msgspec`, so take it if available
     if find_spec("msgspec"):
         from msgspec.json import Encoder
 
@@ -262,7 +290,3 @@ def _build_encoder(
         return _encode(obj).encode()
 
     return encode
-
-
-def serialize(obj: Any, /, *, deterministic: bool) -> bytes:
-    return _build_encoder(deterministic=deterministic)(obj)
