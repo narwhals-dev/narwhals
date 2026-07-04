@@ -68,14 +68,25 @@ class DictNamespace(
 
     # Horizontal functions: evaluate all exprs, align lengths, then reduce row-wise.
     def _horizontal(
-        self, exprs: Sequence[DictExpr], reducer: Callable[[tuple[Any, ...]], Any]
+        self,
+        exprs: Sequence[DictExpr],
+        reducer: Callable[[tuple[Any, ...]], Any],
+        fast_reducer: Callable[[tuple[Any, ...]], Any] | None = None,
     ) -> DictExpr:
+        # `fast_reducer` must agree with `reducer` on null-free rows; it is applied
+        # via `map` when no input column contains nulls, so C-level builtins
+        # (`all`, `sum`, ...) skip the per-row Python frame entirely.
         def func(df: DictDataFrame) -> list[DictSeries]:
             series = list(chain.from_iterable(expr(df) for expr in exprs))
             aligned = self._series._align_full_broadcast(*series)
-            result = [
-                reducer(row) for row in zip(*(s.native for s in aligned), strict=True)
-            ]
+            columns = [s.native for s in aligned]
+            func = (
+                fast_reducer
+                if fast_reducer is not None
+                and not any(None in column for column in columns)
+                else reducer
+            )
+            result = list(map(func, zip(*columns, strict=True)))
             return [aligned[0]._with_native(result)]
 
         return self._expr._from_callable(
@@ -87,29 +98,33 @@ class DictNamespace(
 
     def all_horizontal(self, *exprs: DictExpr, ignore_nulls: bool) -> DictExpr:
         def reducer(row: tuple[Any, ...]) -> Any:
-            values = [value for value in row if value is not None]
-            if any(not value for value in values):
-                return False
-            if not ignore_nulls and len(values) != len(row):
-                return None
-            return True
+            has_null = False
+            for value in row:
+                if value is None:
+                    has_null = True
+                elif not value:
+                    return False
+            return None if has_null and not ignore_nulls else True
 
-        return self._horizontal(exprs, reducer)
+        return self._horizontal(exprs, reducer, fast_reducer=all)
 
     def any_horizontal(self, *exprs: DictExpr, ignore_nulls: bool) -> DictExpr:
         def reducer(row: tuple[Any, ...]) -> Any:
-            values = [value for value in row if value is not None]
-            if any(values):
-                return True
-            if not ignore_nulls and len(values) != len(row):
-                return None
-            return False
+            has_null = False
+            for value in row:
+                if value is None:
+                    has_null = True
+                elif value:
+                    return True
+            return None if has_null and not ignore_nulls else False
 
-        return self._horizontal(exprs, reducer)
+        return self._horizontal(exprs, reducer, fast_reducer=any)
 
     def sum_horizontal(self, *exprs: DictExpr) -> DictExpr:
         return self._horizontal(
-            exprs, lambda row: sum(value for value in row if value is not None)
+            exprs,
+            lambda row: sum(value for value in row if value is not None),
+            fast_reducer=sum,
         )
 
     def mean_horizontal(self, *exprs: DictExpr) -> DictExpr:
@@ -123,12 +138,14 @@ class DictNamespace(
         return self._horizontal(
             exprs,
             lambda row: min((value for value in row if value is not None), default=None),
+            fast_reducer=min,
         )
 
     def max_horizontal(self, *exprs: DictExpr) -> DictExpr:
         return self._horizontal(
             exprs,
             lambda row: max((value for value in row if value is not None), default=None),
+            fast_reducer=max,
         )
 
     def coalesce(self, *exprs: DictExpr) -> DictExpr:

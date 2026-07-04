@@ -2,17 +2,18 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Mapping
-from itertools import compress
+from itertools import chain, compress, repeat
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerDataFrame
+from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, check_column_names_are_unique, not_implemented
 from narwhals.exceptions import ShapeError
 from narwhals_dict.series import DictSeries
 from narwhals_dict.utils import is_native_frame
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Collection, Iterator, Sequence
     from types import ModuleType
 
     from typing_extensions import Self, TypeIs
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import (
         IntoSchema,
+        JoinStrategy,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         _2DArray,
@@ -388,21 +390,38 @@ class DictDataFrame(
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]: ...
     def rows(self, *, named: bool) -> list[tuple[Any, ...]] | list[dict[str, Any]]:
         if named:
-            return [
-                dict(zip(self.columns, row, strict=True))
-                for row in zip(*self.native.values(), strict=True)
-            ]
-        return list(zip(*self.native.values(), strict=True))
+            return list(self.iter_rows(named=True, buffer_size=512))
+        return list(self.iter_rows(named=False, buffer_size=512))
 
+    @overload
+    def iter_rows(
+        self, *, named: Literal[True], buffer_size: int
+    ) -> Iterator[dict[str, Any]]: ...
+    @overload
+    def iter_rows(
+        self, *, named: Literal[False], buffer_size: int
+    ) -> Iterator[tuple[Any, ...]]: ...
+    @overload
+    def iter_rows(
+        self, *, named: bool, buffer_size: int
+    ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]: ...
     def iter_rows(
         self, *, named: bool, buffer_size: int
     ) -> Iterator[tuple[Any, ...]] | Iterator[dict[str, Any]]:
-        # TODO(FBruzzesi): Invert dependencies by implementing `rows` via `iter_rows`
-        # In this way we can keep iter_rows lazy and use buffer_size
-        if named:
-            yield from self.rows(named=True)
-        else:
-            yield from self.rows(named=False)
+        # Columns are sliced one chunk of `buffer_size` rows at a time, so extra
+        # memory is bounded by the buffer and each chunk is a snapshot: mutating
+        # the native lists mid-iteration cannot affect already-buffered rows.
+        columns = self.native.values()
+        names = self.columns
+        num_rows = len(self)
+
+        for idx in range(0, num_rows, buffer_size):
+            buffer = (column[idx : idx + buffer_size] for column in columns)
+            if named:
+                for row in zip(*buffer, strict=True):
+                    yield dict(zip(names, row, strict=True))
+            else:
+                yield from zip(*buffer, strict=True)
 
     def row(self, index: int) -> tuple[Any, ...]:
         return tuple(column[index] for column in self.native.values())
@@ -426,6 +445,211 @@ class DictDataFrame(
 
         return DictGroupBy(self, keys, drop_null_keys=drop_null_keys)
 
+    # Joins are plain hash joins: build `key -> row indices` for the right side,
+    # probe with the left rows, then gather both sides into the output columns.
+    # Following polars semantics: null keys do not match (nulls_equal = False is
+    # the polars default), `inner`/`left` coalesce the key columns (right keys are
+    # dropped), `full` keeps both sides' keys, and right columns colliding with
+    # left ones get the suffix appended.
+    @staticmethod
+    def _take(column: NativeSeries, indices: Sequence[Any]) -> list[Any]:
+        """Gather values at `indices`, which must not contain `None`."""
+        return list(map(column.__getitem__, indices))
+
+    @staticmethod
+    def _take_nullable(column: NativeSeries, indices: Sequence[Any]) -> list[Any]:
+        """Gather values at `indices`, where a `None` index yields a null."""
+        return [None if i is None else column[i] for i in indices]
+
+    def _iter_join_keys(self, keys: Sequence[str]) -> Iterator[Any]:
+        """Yields one hashable key per row, or `None` for rows with any null key.
+
+        Single-key joins use the column values directly (no tuple per row);
+        multi-key joins yield the value tuple. `None in row` checks identity
+        first, so it only falls back to `==` for values that are not nulls.
+        """
+        if len(keys) == 1:
+            yield from self.native[keys[0]]
+        else:
+            for row in self.simple_select(*keys).iter_rows(named=False, buffer_size=512):
+                yield None if None in row else row
+
+    def _join_key_index(self, keys: Sequence[str]) -> dict[Any, list[int]]:
+        """Map each (non-null) key to the row indices where it appears."""
+        index: dict[Any, list[int]] = {}
+        for row, key in enumerate(self._iter_join_keys(keys)):
+            if key is not None:
+                index.setdefault(key, []).append(row)
+        return index
+
+    def _join_key_set(self, keys: Sequence[str]) -> set[Any]:
+        """Distinct non-null keys; enough for `semi`/`anti`, cheaper than the index."""
+        key_set = set(self._iter_join_keys(keys))
+        key_set.discard(None)
+        return key_set
+
+    def _join_output_names(
+        self, other: Self, *, exclude_right: Collection[str], suffix: str
+    ) -> dict[str, str]:
+        """Map right column names to output names, raising on duplicates."""
+        left_names = set(self.columns)
+        right_names = {
+            name: f"{name}{suffix}" if name in left_names else name
+            for name in other.columns
+            if name not in exclude_right
+        }
+        check_column_names_are_unique([*self.columns, *right_names.values()])
+        return right_names
+
+    def _join_gather(
+        self,
+        other: Self,
+        left_indices: Sequence[int | None],
+        right_indices: Sequence[int | None],
+        *,
+        exclude_right: Collection[str],
+        suffix: str,
+    ) -> Self:
+        right_names = self._join_output_names(
+            other, exclude_right=exclude_right, suffix=suffix
+        )
+        # `None in list` is a single identity-first C-speed scan; paying it once
+        # per side buys the fast `map` gather for every column of that side.
+        take_left = self._take_nullable if None in left_indices else self._take
+        take_right = self._take_nullable if None in right_indices else self._take
+        result: DictFrame = {
+            name: take_left(column, left_indices) for name, column in self.native.items()
+        }
+        for name, output_name in right_names.items():
+            result[output_name] = take_right(other.native[name], right_indices)
+        return self._with_native(result, validate_column_names=False)
+
+    def _join_inner(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> Self:
+        right_index = other._join_key_index(right_on)
+        left_indices: list[int | None] = []
+        right_indices: list[int | None] = []
+        get_matches = right_index.get
+        for row, key in enumerate(self._iter_join_keys(left_on)):
+            if key is not None and (matches := get_matches(key)) is not None:
+                left_indices.extend(repeat(row, len(matches)))
+                right_indices.extend(matches)
+        return self._join_gather(
+            other, left_indices, right_indices, exclude_right=set(right_on), suffix=suffix
+        )
+
+    def _join_left(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> Self:
+        right_index = other._join_key_index(right_on)
+        left_indices: list[int | None] = []
+        right_indices: list[int | None] = []
+        get_matches = right_index.get
+        for row, key in enumerate(self._iter_join_keys(left_on)):
+            matches = get_matches(key) if key is not None else None
+            if matches:
+                left_indices.extend(repeat(row, len(matches)))
+                right_indices.extend(matches)
+            else:
+                left_indices.append(row)
+                right_indices.append(None)
+        return self._join_gather(
+            other, left_indices, right_indices, exclude_right=set(right_on), suffix=suffix
+        )
+
+    def _join_full(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+    ) -> Self:
+        # Keys are not coalesced: both sides' keys stay in the output, and rows
+        # unmatched on either side get nulls for the opposite side's columns.
+        right_index = other._join_key_index(right_on)
+        left_indices: list[int | None] = []
+        right_indices: list[int | None] = []
+        matched_right: set[int] = set()
+        get_matches = right_index.get
+        for row, key in enumerate(self._iter_join_keys(left_on)):
+            matches = get_matches(key) if key is not None else None
+            if matches:
+                left_indices.extend(repeat(row, len(matches)))
+                right_indices.extend(matches)
+                matched_right.update(matches)
+            else:
+                left_indices.append(row)
+                right_indices.append(None)
+        for row in range(len(other)):
+            if row not in matched_right:
+                left_indices.append(None)
+                right_indices.append(row)
+        return self._join_gather(
+            other, left_indices, right_indices, exclude_right=(), suffix=suffix
+        )
+
+    def _join_cross(self, other: Self, *, suffix: str) -> Self:
+        # Values are laid out directly, no index lists: each left value is
+        # repeated `len(other)` times and each right column is tiled `len(self)`
+        # times, all at C speed via `chain`/`repeat` and list multiplication.
+        right_names = self._join_output_names(other, exclude_right=(), suffix=suffix)
+        n_left, n_right = len(self), len(other)
+        result: DictFrame = {
+            name: list(chain.from_iterable(map(repeat, column, repeat(n_right))))
+            for name, column in self.native.items()
+        }
+        for name, output_name in right_names.items():
+            result[output_name] = list(other.native[name]) * n_left
+        return self._with_native(result, validate_column_names=False)
+
+    def _join_semi(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> Self:
+        right_keys = other._join_key_set(right_on)
+        return self._mask_rows(
+            [key in right_keys for key in self._iter_join_keys(left_on)]
+        )
+
+    def _join_anti(
+        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+    ) -> Self:
+        right_keys = other._join_key_set(right_on)
+        return self._mask_rows(
+            [key not in right_keys for key in self._iter_join_keys(left_on)]
+        )
+
+    def join(
+        self,
+        other: Self,
+        *,
+        how: JoinStrategy,
+        left_on: Sequence[str] | None,
+        right_on: Sequence[str] | None,
+        suffix: str,
+    ) -> Self:
+        if how == "cross":
+            return self._join_cross(other, suffix=suffix)
+        if left_on is None or right_on is None:  # pragma: no cover
+            raise ValueError(left_on, right_on)
+        if error := self._check_columns_exist(left_on):
+            raise error
+        if error := other._check_columns_exist(right_on):
+            raise error
+        if how == "inner":
+            return self._join_inner(
+                other, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        if how == "left":
+            return self._join_left(
+                other, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        if how == "full":
+            return self._join_full(
+                other, left_on=left_on, right_on=right_on, suffix=suffix
+            )
+        if how == "semi":
+            return self._join_semi(other, left_on=left_on, right_on=right_on)
+        if how == "anti":
+            return self._join_anti(other, left_on=left_on, right_on=right_on)
+        assert_never(how)
+
     def lazy(self, backend: Any = None, *, session: Any = None) -> Any:
         if backend is None:
             return self
@@ -444,7 +668,6 @@ class DictDataFrame(
     explode = not_implemented()
     from_arrow = not_implemented()
     is_unique = not_implemented()
-    join = not_implemented()
     join_asof = not_implemented()
     pivot = not_implemented()
     sample = not_implemented()

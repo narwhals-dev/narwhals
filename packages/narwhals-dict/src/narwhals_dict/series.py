@@ -7,6 +7,7 @@ from itertools import accumulate, compress, count, pairwise, repeat
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerSeries
+from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, not_implemented
 from narwhals.exceptions import ShapeError
 from narwhals_dict.utils import binary_op, cast_values, infer_dtype, is_native_column
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        ClosedInterval,
         FillNullStrategy,
         Into1DArray,
         IntoDType,
@@ -300,6 +302,29 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     def clip_upper(self, upper_bound: Any) -> Self:
         return self._with_binary(min, upper_bound)
+
+    # TODO(FBruzzesi): Do not fallback to super implementation
+    def is_between(
+        self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
+    ) -> Self:
+        lo, lo_is_scalar = self._extract_comparand(lower_bound)
+        hi, hi_is_scalar = self._extract_comparand(upper_bound)
+        if not (lo_is_scalar and hi_is_scalar) or lo is None or hi is None:
+            # Series or null bounds: reuse the operator-based default,
+            # which already handles alignment and null propagation.
+            return super().is_between(lower_bound, upper_bound, closed)
+        values = self.native
+        if closed == "left":
+            result = [None if v is None else lo <= v < hi for v in values]
+        elif closed == "right":
+            result = [None if v is None else lo < v <= hi for v in values]
+        elif closed == "none":
+            result = [None if v is None else lo < v < hi for v in values]
+        elif closed == "both":
+            result = [None if v is None else lo <= v <= hi for v in values]
+        else:
+            assert_never(closed)
+        return self._with_native(result, preserve_broadcast=True)
 
     # Aggregations (return Python scalars, `None` for empty/all-null where applicable)
     def len(self) -> int:

@@ -46,7 +46,8 @@ repos:
                 # Internal use only, less urgent
                 ^utils/.*|
                 # Soft-deprecated, so less crucial to document so carefully
-                src/narwhals/stable/v1/.*
+                src/narwhals/stable/v1/.*|
+                packages/.*
             )$
         # Keep in sync with `flake8-typing-imports` so the same venv is reused.
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
