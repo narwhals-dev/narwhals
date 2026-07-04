@@ -515,9 +515,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         return self._with_native(self.native[rows.start : rows.stop : rows.step])
 
-    def scatter(self, indices: Any, values: Any) -> Self:
-        indices = indices.native if isinstance(indices, DictSeries) else indices
-        values = values.native if isinstance(values, DictSeries) else values
+    def scatter(self, indices: Self, values: Self) -> Self:
         result = list(self.native)
         for index, value in zip(indices, values, strict=True):
             result[index] = value

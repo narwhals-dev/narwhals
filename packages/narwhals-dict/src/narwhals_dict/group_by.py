@@ -161,10 +161,16 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, frame, exclude
             )
-            if len(list(expr._metadata.op_nodes_reversed())) == 1:
+            op_nodes = list(expr._metadata.op_nodes_reversed())
+            if len(op_nodes) == 1:
                 # e.g. `agg(nw.len())`: no input column, just count rows per group.
                 result[aliases[0]] = [len(indices) for indices in group_indices]
-            elif self._is_simple(expr):
+            elif self._is_simple(expr) and op_nodes[1].name == "col":
+                # e.g. `col("a").sum()`: the aggregation applies directly to a stored
+                # column, so we can gather it and dispatch to a `DictSeries` method.
+                # A non-`col` node before the leaf (e.g. `when(...).then(...)`,
+                # `round(...)`, arithmetic) transforms the values first and must go
+                # through the fallback, which re-evaluates the whole expression.
                 result.update(
                     self._agg_simple(expr, frame, gather, output_names, aliases)
                 )
