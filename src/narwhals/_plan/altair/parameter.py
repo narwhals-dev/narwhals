@@ -241,6 +241,17 @@ def _build_encoder(
         return Encoder(
             order="deterministic" if deterministic else None, enc_hook=default
         ).encode
+
+    # NOTE: `mypy`, `jupyter_client` optionally depend on `orjson`
+    if find_spec("orjson"):
+        import orjson
+
+        orjson_encode: Callable[[Any], bytes] = functools.partial(
+            orjson.dumps,
+            default=default,
+            option=orjson.OPT_SORT_KEYS if deterministic else None,
+        )
+        return orjson_encode
     from json import JSONEncoder
 
     _encode = JSONEncoder(
