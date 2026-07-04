@@ -462,7 +462,7 @@ exclude_also = [
 ]
 
 [tool.mypy]
-files = ["src", "tests", "packages/test-plugin"]
+files = ["src", "tests", "packages/test-plugin", "packages/narwhals-dict"]
 pretty = true
 strict = true
 allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
@@ -495,6 +495,7 @@ module = [
   "narwhals._arrow.*",
   "narwhals._dask.*",
   "narwhals._spark_like.*",
+  "narwhals_dict.*",
 ]
 warn_return_any = false
 
@@ -509,7 +510,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src", "tests", "packages/test-plugin"]
+include = ["src", "tests", "packages/test-plugin", "packages/narwhals-dict"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib
