@@ -29,6 +29,7 @@ if TYPE_CHECKING:
         _SliceName,
     )
     from narwhals_dict.expr import DictExpr
+    from narwhals_dict.group_by import DictGroupBy
     from narwhals_dict.namespace import DictNamespace
     from narwhals_dict.typing import DictFrame, NativeSeries
 
@@ -418,6 +419,13 @@ class DictDataFrame(
         name = self.columns[column] if isinstance(column, int) else column
         return self.native[name][row]
 
+    def group_by(
+        self, keys: Sequence[str] | Sequence[DictExpr], *, drop_null_keys: bool
+    ) -> DictGroupBy:
+        from narwhals_dict.group_by import DictGroupBy
+
+        return DictGroupBy(self, keys, drop_null_keys=drop_null_keys)
+
     def lazy(self, backend: Any = None, *, session: Any = None) -> Any:
         if backend is None:
             return self
@@ -435,7 +443,6 @@ class DictDataFrame(
     estimated_size = not_implemented()
     explode = not_implemented()
     from_arrow = not_implemented()
-    group_by = not_implemented()
     is_unique = not_implemented()
     join = not_implemented()
     join_asof = not_implemented()
