@@ -250,13 +250,27 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_unary(operator.abs)
 
     def exp(self) -> Self:
-        return self._with_unary(math.exp)
+        def _exp(value: float) -> float:
+            try:
+                return math.exp(value)
+            except OverflowError:
+                return float("inf")
+
+        return self._with_unary(_exp)
 
     def sqrt(self) -> Self:
-        return self._with_unary(math.sqrt)
+        def _sqrt(value: float) -> float:
+            return math.sqrt(value) if value >= 0 else float("nan")
+
+        return self._with_unary(_sqrt)
 
     def log(self, base: float) -> Self:
-        return self._with_unary(lambda value: math.log(value, base))
+        def _log(value: float) -> float:
+            if value > 0:
+                return math.log(value, base)
+            return float("-inf") if value == 0 else float("nan")
+
+        return self._with_unary(_log)
 
     def sin(self) -> Self:
         return self._with_unary(math.sin)
