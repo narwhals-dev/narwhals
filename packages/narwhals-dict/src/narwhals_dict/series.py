@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.namespace import DictNamespace
     from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
+    from narwhals_dict.series_list import DictSeriesListNamespace
     from narwhals_dict.series_str import DictSeriesStringNamespace
     from narwhals_dict.typing import DictFrame, NativeSeries
 
@@ -162,10 +163,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         if self._broadcast and not rhs_is_scalar:
             # e.g. `nw.lit(1) + nw.col("a")`: broadcast the scalar left-hand side.
             lhs = self.native[0] if self.native else None
-            result = [
-                None if (lhs is None or value is None) else op(lhs, value)
-                for value in rhs
-            ]
+            result = binary_op(
+                lambda value, scalar: op(scalar, value), rhs, lhs, is_scalar=True
+            )
         else:
             result = binary_op(op, self.native, rhs, is_scalar=rhs_is_scalar)
         return self._with_native(result, preserve_broadcast=preserve_broadcast)
@@ -1103,7 +1103,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
         return DictSeriesDateTimeNamespace(self)
 
+    @property
+    def list(self) -> DictSeriesListNamespace:
+        from narwhals_dict.series_list import DictSeriesListNamespace
+
+        return DictSeriesListNamespace(self)
+
     # Namespaces: not implemented (yet).
     cat: Any = not_implemented()
-    list: Any = not_implemented()
     struct: Any = not_implemented()
