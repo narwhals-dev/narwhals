@@ -151,25 +151,23 @@ class PointConfigKwds(_SelectionConfig, TypedDict, total=False):
     toggle: alt_t.VegaExpr | Literal[False]
 
 
-class _SelectionParamKwds(_CommonParamOpen, TypedDict, total=False):
+class _SelectionKwds(_CommonParamOpen, TypedDict, total=False):
     select: Required[_SelectionConfig]
     views: Sequence[str]
 
 
-class _IntervalParamKwds(_SelectionParamKwds, TypedDict, total=False):
+class _IntervalKwds(_SelectionKwds, TypedDict, total=False):
     select: Required[IntervalConfigKwds]  # type: ignore[misc]
     value: alt.api._SelectionIntervalValueMap  # type: ignore[misc]
 
 
-class _PointParamKwds(_SelectionParamKwds, TypedDict, total=False):
+class _PointKwds(_SelectionKwds, TypedDict, total=False):
     select: Required[PointConfigKwds]  # type: ignore[misc]
     value: alt.api._SelectionPointValue  # type: ignore[misc]
 
 
-_SelectionParamKwdsT = TypeVar(  # noqa: PLC0105
-    "_SelectionParamKwdsT",
-    bound=_SelectionParamKwds | _IntervalParamKwds | _PointParamKwds,
-    covariant=True,
+_SelectionKwdsT = TypeVar(  # noqa: PLC0105
+    "_SelectionKwdsT", bound=_SelectionKwds | _IntervalKwds | _PointKwds, covariant=True
 )
 
 
@@ -234,7 +232,7 @@ class _StateExchange(Protocol[_TD_co]):
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self: ...
 
 
-class _ParamBuilder:
+class _Param:
     """Experimental fluent parameter builder.
 
     ## Notes
@@ -259,30 +257,32 @@ class _ParamBuilder:
 
     def interval(
         self, default: Optional[alt.api._SelectionIntervalValueMap] = Undefined
-    ) -> _IntervalBuilder:
+    ) -> _Interval:
+        """Create an interval selection parameter, optionally with a default value."""
         state = self._unwrap_clone()
         if not is_undefined(default):
             state["value"] = default
-        return _IntervalBuilder._from_common(state)
+        return _Interval._from_common(state)
 
     def point(
         self, default: Optional[alt.api._SelectionPointValue] = Undefined
-    ) -> _PointBuilder:
+    ) -> _Point:
+        """Create a point selection parameter, optionally with a default value."""
         state = self._unwrap_clone()
         if not is_undefined(default):
             state["value"] = default
-        return _PointBuilder._from_common(state)
+        return _Point._from_common(state)
 
-    def var(self, default: Any = Undefined) -> _VariableParam:
+    def var(self, default: Any = Undefined) -> _Variable:
         """Create a variable parameter, optionally with a default value."""
         state = self._unwrap_clone()
         if not is_undefined(default):
             state["value"] = default
-        return _VariableParam._from_common(state)
+        return _Variable._from_common(state)
 
     def expr(
         self, expr: nw.Expr | alt_t.IntoAltExpr, /, default: Any = Undefined
-    ) -> _VariableParam:
+    ) -> _Variable:
         """Create a variable parameter that wraps an expression, optionally with a default value."""
         return self.var(default).expr(expr)
 
@@ -296,7 +296,7 @@ class _ParamBuilder:
         return type(self)(state)
 
 
-class _VariableParam(_StateExchange[VariableParamKwds]):
+class _Variable(_StateExchange[VariableParamKwds]):
     def __init__(self, state: VariableParamKwds, /) -> None:
         self._state: VariableParamKwds = state
 
@@ -341,15 +341,15 @@ class _VariableParam(_StateExchange[VariableParamKwds]):
         return type(self)(state)
 
 
-class _SelectionBuilder(_StateExchange[_SelectionParamKwdsT]):
-    def __init__(self, state: _SelectionParamKwdsT, /) -> None:
-        self._state: _SelectionParamKwdsT = state
+class _Selection(_StateExchange[_SelectionKwdsT]):
+    def __init__(self, state: _SelectionKwdsT, /) -> None:
+        self._state: _SelectionKwdsT = state
 
     @classmethod
-    def _state_default(cls) -> _SelectionParamKwdsT:
+    def _state_default(cls) -> _SelectionKwdsT:
         raise NotImplementedError
 
-    def _unwrap_clone(self) -> Cloned[_SelectionParamKwdsT]:
+    def _unwrap_clone(self) -> Cloned[_SelectionKwdsT]:
         return deepcopy(self._state)
 
     @classmethod
@@ -397,9 +397,9 @@ class _SelectionBuilder(_StateExchange[_SelectionParamKwdsT]):
         return type(self)(state)
 
 
-class _IntervalBuilder(_SelectionBuilder[_IntervalParamKwds]):
+class _Interval(_Selection[_IntervalKwds]):
     @classmethod
-    def _state_default(cls) -> _IntervalParamKwds:
+    def _state_default(cls) -> _IntervalKwds:
         return {"select": {"type": "interval"}}
 
     # > Interval selections can only be projected using encodings.
@@ -418,9 +418,9 @@ class _IntervalBuilder(_SelectionBuilder[_IntervalParamKwds]):
         return self
 
 
-class _PointBuilder(_SelectionBuilder[_PointParamKwds]):
+class _Point(_Selection[_PointKwds]):
     @classmethod
-    def _state_default(cls) -> _PointParamKwds:
+    def _state_default(cls) -> _PointKwds:
         return {"select": {"type": "point"}}
 
     def fields(self, *fields: str) -> Self:
@@ -438,8 +438,8 @@ class _PointBuilder(_SelectionBuilder[_PointParamKwds]):
         return self
 
 
-def _param(name: str | None = None) -> _ParamBuilder:
-    return _ParamBuilder({"name": name} if name else {})
+def _param(name: str | None = None) -> _Param:
+    return _Param({"name": name} if name else {})
 
 
 _FromT = TypeVar("_FromT", bound=_WithBinding, covariant=True)  # noqa: PLC0105
@@ -572,21 +572,21 @@ class _BindBuilder(_BaseBindBuilder[_FromT]):
 
 
 def _invalid_keys_error(
-    keys: Iterable[str], tp: type[_VariableParam | _SelectionBuilder[Any]]
+    keys: Iterable[str], tp: type[_Variable | _Selection[Any]]
 ) -> TypeError:
-    kind = "variable" if issubclass(tp, _VariableParam) else "selection"
+    kind = "variable" if issubclass(tp, _Variable) else "selection"
     msg = f"Keywords {list(keys)!r} cannot be used with {kind!r} parameters"
     return TypeError(msg)
 
 
-def slider_cutoff() -> _VariableParam:
+def slider_cutoff() -> _Variable:
     _p1 = _param().var().bind.range(0, 100, 1)
     _p2 = _param().var(50).bind.range(0, 100, 1)
     p3 = _param("slider").var(50).bind.range(0, 100, 1)
     return p3  # noqa: RET504
 
 
-def slider_point() -> _PointBuilder:
+def slider_point() -> _Point:
     _p1 = (
         _param()
         .bind.label("Release Year")
@@ -604,7 +604,7 @@ def slider_point() -> _PointBuilder:
     return _p2  # noqa: RET504
 
 
-def misc_params() -> _VariableParam:
+def misc_params() -> _Variable:
     _projection = (
         _param()
         .var(default="albersUsa")
