@@ -107,7 +107,11 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
     @classmethod
     def from_numpy(cls, data: Into1DArray, /, *, context: _LimitedContext) -> Self:
-        return cls.from_iterable(data.tolist(), context=context)
+        values = data.tolist()
+        # `tolist` on a 0-d array or numpy scalar returns a plain scalar.
+        return cls.from_iterable(
+            values if isinstance(values, list) else [values], context=context
+        )
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, name=self.name, version=version)
@@ -226,35 +230,54 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def __rmul__(self, other: Any) -> Self:
         return self._with_binary_right(operator.mul, other)
 
-    def __truediv__(self, other: Any) -> Self:
-        return self._with_binary(operator.truediv, other)
-
-    def __rtruediv__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.truediv, other)
-
-    def __floordiv__(self, other: Any) -> Self:
-        return self._with_binary(operator.floordiv, other)
-
-    def __rfloordiv__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.floordiv, other)
+    @staticmethod
+    def _truediv(numerator: float, denominator: float) -> float:
+        # Division by zero: match Polars/IEEE-754 (`±inf`, `0/0 -> NaN`)
+        # instead of Python's `ZeroDivisionError`.
+        try:
+            return numerator / denominator
+        except ZeroDivisionError:
+            if numerator:
+                return math.copysign(float("inf"), numerator)
+            return float("nan")
 
     @staticmethod
-    def _pow(base: Any, exponent: Any) -> Any:
+    def _floordiv(numerator: float, denominator: float) -> float | None:
+        # Floor division by zero: Polars returns null.
+        try:
+            return numerator // denominator
+        except ZeroDivisionError:
+            return None
+
+    def __truediv__(self, other: Self) -> Self:
+        return self._with_binary(self._truediv, other)
+
+    def __rtruediv__(self, other: Self) -> Self:
+        return self._with_binary_right(self._truediv, other)
+
+    def __floordiv__(self, other: Self) -> Self:
+        return self._with_binary(self._floordiv, other)
+
+    def __rfloordiv__(self, other: Self) -> Self:
+        return self._with_binary_right(self._floordiv, other)
+
+    @staticmethod
+    def _pow(base: float, exponent: float) -> float:
         result = base**exponent
         # Negative base with fractional exponent: match float semantics (Polars
         # returns NaN), not Python's complex result.
         return float("nan") if isinstance(result, complex) else result
 
-    def __pow__(self, other: Any) -> Self:
+    def __pow__(self, other: Self) -> Self:
         return self._with_binary(self._pow, other)
 
-    def __rpow__(self, other: Any) -> Self:
+    def __rpow__(self, other: Self) -> Self:
         return self._with_binary_right(self._pow, other)
 
-    def __mod__(self, other: Any) -> Self:
+    def __mod__(self, other: Self) -> Self:
         return self._with_binary(operator.mod, other)
 
-    def __rmod__(self, other: Any) -> Self:
+    def __rmod__(self, other: Self) -> Self:
         return self._with_binary_right(operator.mod, other)
 
     # Unary operations
@@ -371,8 +394,12 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return sum(values) / len(values) if values else None  # type: ignore[return-value]
 
     def median(self) -> float:
-        values = self._non_null()
-        return statistics.median(values) if values else None  # type: ignore[return-value]
+        if not (values := self._non_null()):
+            return None  # type: ignore[return-value]
+        if not self.dtype.is_numeric():
+            msg = "`median` operation not supported for non-numeric input type."
+            raise InvalidOperationError(msg)
+        return statistics.median(values)
 
     def std(self, *, ddof: int) -> float:
         variance = self.var(ddof=ddof)
@@ -474,6 +501,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         )
 
     def is_nan(self) -> Self:
+        if not self.dtype.is_numeric():
+            msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
+            raise InvalidOperationError(msg)
         return self._with_unary(
             lambda value: isinstance(value, float) and math.isnan(value)
         )
@@ -507,9 +537,21 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def fill_null(
         self, value: Any, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        if strategy is not None or limit is not None:
-            msg = "`fill_null` with `strategy`/`limit` is not supported for the dict backend."
-            raise NotImplementedError(msg)
+        if strategy is not None:
+            values = self.native if strategy == "forward" else self.native[::-1]
+            result: list[Any] = []
+            last: Any = None
+            gap = 0
+            for current in values:
+                if current is not None:
+                    last, gap = current, 0
+                    result.append(current)
+                else:
+                    gap += 1
+                    result.append(last if limit is None or gap <= limit else None)
+            if strategy == "backward":
+                result.reverse()
+            return self._with_native(result, preserve_broadcast=True)
         fill, is_scalar = self._extract_comparand(value)
         if is_scalar:
             result = [fill if current is None else current for current in self.native]
@@ -877,6 +919,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(rest + nulls if nulls_last else nulls + rest)
 
     def is_sorted(self, *, descending: bool) -> bool:
+        if not isinstance(descending, bool):
+            msg = f"argument 'descending' should be a bool, got: {type(descending).__name__}"
+            raise TypeError(msg)
         op = operator.ge if descending else operator.le
         return all(op(lhs, rhs) for lhs, rhs in pairwise(self._non_null()))
 
@@ -1007,7 +1052,25 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray:
         import numpy as np
 
-        return np.asarray(self.native, dtype=dtype)
+        values = self.native
+        if dtype is None:
+            nw_dtype = self.dtype
+            if isinstance(nw_dtype, self._version.dtypes.Datetime):
+                # NumPy has no time-zone support: convert to UTC, then drop it.
+                from datetime import timezone
+
+                values = [
+                    value.astimezone(timezone.utc).replace(tzinfo=None)
+                    if value is not None and value.tzinfo is not None
+                    else value
+                    for value in values
+                ]
+                return np.asarray(values, dtype="datetime64[us]")
+            if None in values and nw_dtype.is_numeric():
+                # Match other backends: numeric columns with nulls become
+                # float64 with NaN, not an object array holding `None`.
+                values = [float("nan") if value is None else value for value in values]
+        return np.asarray(values, dtype=dtype)
 
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _1DArray:
         return self.__array__(dtype, copy=copy)

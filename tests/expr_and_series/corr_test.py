@@ -107,7 +107,7 @@ def test_corr_series_spearman(
         does_not_raise()
         if any(
             x in str(constructor_eager)
-            for x in ("pandas", "polars", "modin", "cudf", "pyarrow")
+            for x in ("pandas", "polars", "modin", "cudf", "pyarrow", "dict")
         )
         else pytest.raises(NotImplementedError)
     )

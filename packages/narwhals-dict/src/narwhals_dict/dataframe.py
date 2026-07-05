@@ -13,7 +13,7 @@ from narwhals_dict.series import DictSeries
 from narwhals_dict.utils import is_native_frame
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterator, Sequence
+    from collections.abc import Collection, Iterable, Iterator, Sequence
     from types import ModuleType
 
     import pandas as pd
@@ -328,6 +328,13 @@ class DictDataFrame(
             indices = rest + nulls if nulls_last else nulls + rest
         return self._gather(indices)
 
+    def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
+        # TODO(FBruzzesi): Can we do better than sort + head?
+        descending = (
+            not reverse if isinstance(reverse, bool) else [not flag for flag in reverse]
+        )
+        return self.sort(*by, descending=descending, nulls_last=True).head(k)
+
     def unique(
         self,
         subset: Sequence[str] | None,
@@ -432,7 +439,10 @@ class DictDataFrame(
     def item(self, row: int | None, column: int | str | None) -> Any:
         if row is None and column is None:
             if self.shape != (1, 1):
-                msg = f"can only call `.item()` if the dataframe is of shape (1, 1), got: {self.shape}"
+                msg = (
+                    'can only call `.item()` without "row" or "column" values '
+                    f"if the DataFrame has a single element; shape={self.shape!r}"
+                )
                 raise ValueError(msg)
             return next(iter(self.native.values()))[0]
         if row is None or column is None:
@@ -665,6 +675,15 @@ class DictDataFrame(
         msg = "`collect` with a backend is not supported for the dict backend."
         raise NotImplementedError(msg)
 
+    def is_unique(self) -> DictSeries:
+        from collections import Counter
+
+        rows = list(zip(*self.native.values(), strict=True))
+        counts = Counter(rows)
+        return DictSeries(
+            [counts[row] == 1 for row in rows], name="", version=self._version
+        )
+
     def to_arrow(self) -> pa.Table:
         import pyarrow as pa  # ignore-banned-import
 
@@ -692,7 +711,6 @@ class DictDataFrame(
     estimated_size = not_implemented()
     explode = not_implemented()
     from_arrow = not_implemented()
-    is_unique = not_implemented()
     join_asof = not_implemented()
     pivot = not_implemented()
     sample = not_implemented()
