@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import decimal
 import enum
 import re
 from collections.abc import Mapping, Sequence
@@ -85,6 +86,13 @@ def native_to_narwhals_dtype(native_dtype: type[Any], version: Version) -> DType
     if issubclass(native_dtype, enum.Enum):
         # NOTE: before everything else: e.g. `enum.IntEnum` is a subclass of `int`.
         return dtypes.Enum(native_dtype)
+    if issubclass(native_dtype, decimal.Decimal):
+        # Casting creates a dynamic subclass carrying precision/scale (see
+        # `_decimal_caster`); a plain `decimal.Decimal` gets the defaults.
+        return dtypes.Decimal(
+            getattr(native_dtype, "_nw_precision", None),
+            getattr(native_dtype, "_nw_scale", 0),
+        )
     for py_type, dtype_name in _PY_TYPE_TO_DTYPE_NAME:
         if issubclass(native_dtype, py_type):
             return getattr(dtypes, dtype_name)()
@@ -96,6 +104,15 @@ def _dtype_of_value(value: Any, version: Version) -> DType:
     if isinstance(value, datetime):
         time_zone = str(value.tzinfo) if value.tzinfo is not None else None
         return dtypes.Datetime("us", time_zone)
+    if isinstance(value, decimal.Decimal):
+        if hasattr(type(value), "_nw_scale"):
+            # Cast-created subclass: precision/scale live on the type.
+            return native_to_narwhals_dtype(type(value), version)
+        # A plain `decimal.Decimal` only carries its scale on the value (the
+        # exponent).
+        exponent = value.as_tuple().exponent
+        scale = -exponent if isinstance(exponent, int) and exponent < 0 else 0
+        return dtypes.Decimal(None, scale)
     if isinstance(value, Mapping):
         return dtypes.Struct(
             {
@@ -135,6 +152,14 @@ def infer_dtype(values: Iterable[Any], version: Version) -> DType:
         return found[0]
     if all(dtype == dtypes.Int64() or dtype == dtypes.Float64() for dtype in found):
         return dtypes.Float64()
+    decimals = [dtype for dtype in found if isinstance(dtype, dtypes.Decimal)]
+    if len(decimals) == len(found):
+        # Mixed scales (e.g. plain `Decimal("1.5")` and `Decimal("2.25")`)
+        # promote to the widest, like Polars.
+        return dtypes.Decimal(
+            max(dtype.precision for dtype in decimals),
+            max(dtype.scale for dtype in decimals),
+        )
     return dtypes.Unknown()
 
 
@@ -156,6 +181,7 @@ def _nw_to_py_types(version: Version) -> Mapping[type[DType], type[Any]]:
         dtypes.Binary: bytes,
         dtypes.Struct: dict,
         dtypes.List: list,
+        dtypes.Decimal: decimal.Decimal,
     }
 
 
@@ -336,6 +362,43 @@ def _enum_caster(categories: tuple[str, ...]) -> Callable[[Any], enum.Enum]:
     return caster
 
 
+def _decimal_caster(precision: int, scale: int) -> Callable[[Any], decimal.Decimal]:
+    """Build a caster producing native values for `Decimal(precision, scale)`.
+
+    A plain `decimal.Decimal` exposes its scale (the negated exponent) but
+    nothing resembling the column's declared precision, so `cast(Decimal(10, 2))`
+    could never round-trip back out of `collect_schema`.
+
+    The caster therefore mints a dynamic `decimal.Decimal` subclass with
+    `_nw_precision`/`_nw_scale` class attributes.
+
+    Instances behave like any `decimal.Decimal`: arithmetic returns plain `Decimal`.
+
+    Casting rules:
+
+    - Floats go through `str()` first: `Decimal(1.1)` would materialize the full
+        binary expansion (`1.100000000000000088...`), not the literal the user sees.
+    - Values are quantized to `scale` fractional digits in a context capped at `precision`
+        significant digits, so a value that does not fit the requested type raises
+        `InvalidOperationError` instead of silently keeping extra digits.
+    """
+    decimal_cls: type[decimal.Decimal] = type(
+        "Decimal", (decimal.Decimal,), {"_nw_precision": precision, "_nw_scale": scale}
+    )
+    quantum = decimal.Decimal(1).scaleb(-scale)
+    context = decimal.Context(prec=precision)
+
+    def caster(value: Any) -> decimal.Decimal:
+        try:
+            result = decimal.Decimal(str(value) if isinstance(value, float) else value)
+            return decimal_cls(result.quantize(quantum, context=context))
+        except (decimal.InvalidOperation, ValueError, TypeError) as exc:
+            msg = f"Casting {value!r} to Decimal(precision={precision}, scale={scale}) failed."
+            raise InvalidOperationError(msg) from exc
+
+    return caster
+
+
 def _struct_caster(
     fields: Mapping[str, IntoDType], version: Version
 ) -> Callable[[Any], dict[str, Any]]:
@@ -377,6 +440,8 @@ def _caster_for(dtype: IntoDType, version: Version) -> Callable[[Any], Any]:
         return _to_int
     if dtype.is_float():
         return float
+    if isinstance(dtype, dtypes.Decimal):
+        return _decimal_caster(dtype.precision, dtype.scale)
     if isinstance(dtype, dtypes.Enum):
         return _enum_caster(dtype.categories)
     if isinstance(dtype, dtypes.Datetime):
@@ -398,6 +463,40 @@ def cast_values(values: Iterable[Any], dtype: IntoDType, version: Version) -> li
     return [None if value is None else caster(value) for value in values]
 
 
+def _first_non_null(values: Iterable[Any]) -> Any:
+    return next((value for value in values if value is not None), None)
+
+
+def _to_float_column(values: Iterable[Any]) -> list[Any]:
+    return [None if value is None else float(value) for value in values]
+
+
+def _promote_decimal_mix(
+    left: NativeSeries, right: Any, *, is_scalar: bool
+) -> tuple[NativeSeries, Any]:
+    """Promote the `Decimal` side of a `Decimal`/`float` operand mix to float.
+
+    Python raises TypeError on `Decimal + float` arithmetic, whereas dataframe
+    backends type-promote mixed decimal/float operations to a float supertype
+    (Polars resolves `Decimal`/`Float64` to `Float64`).
+
+    Promoting comparisons too is deliberate and also matches the supertype
+    behavior: natively `Decimal("0.1") == 0.1` is `False` in Python, while
+    both operands as floats compare equal.
+
+    Since values carry the schema in this backend, the column's dtype is read
+    off its first non-null value, and the conversion happens once per column
+    up front, keeping the elementwise loop in `binary_op` promotion-free.
+    """
+    left_sample = _first_non_null(left)
+    right_sample = right if is_scalar else _first_non_null(right)
+    if isinstance(left_sample, decimal.Decimal) and isinstance(right_sample, float):
+        left = _to_float_column(left)
+    elif isinstance(right_sample, decimal.Decimal) and isinstance(left_sample, float):
+        right = float(right) if is_scalar else _to_float_column(right)
+    return left, right
+
+
 def binary_op(
     op: Callable[[Any, Any], Any], left: NativeSeries, right: Any, *, is_scalar: bool
 ) -> list[Any]:
@@ -405,10 +504,12 @@ def binary_op(
     if is_scalar:
         if right is None:
             return [None] * len(left)
+        left, right = _promote_decimal_mix(left, right, is_scalar=True)
         return [None if lhs is None else op(lhs, right) for lhs in left]
     if len(left) != len(right):
         msg = f"Expected object of length {len(left)}, got: {len(right)}."
         raise ShapeError(msg)
+    left, right = _promote_decimal_mix(left, right, is_scalar=False)
     return [
         None if (lhs is None or rhs is None) else op(lhs, rhs)
         for lhs, rhs in zip(left, right, strict=True)
