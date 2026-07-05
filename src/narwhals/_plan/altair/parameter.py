@@ -546,7 +546,7 @@ class _BindBuilder(_BaseBindBuilder[_FromT]):
             "type": "interval",
             "encodings": encodings,
         }
-        if name := self._param_builder._state.get("name"):  # pyright: ignore[reportAttributeAccessIssue]
+        if name := self._param_builder._state.get("name"):  # type: ignore[attr-defined]
             return _selection(bind="scales", select=select, name=name)
         return _selection(bind="scales", select=select)
 
@@ -560,13 +560,13 @@ class _BindBuilder(_BaseBindBuilder[_FromT]):
             "type": "point",
             "encodings": [encoding],
         }
-        if name := self._param_builder._state.get("name"):  # pyright: ignore[reportAttributeAccessIssue]
+        if name := self._param_builder._state.get("name"):  # type: ignore[attr-defined]
             return _selection(bind="legend", select=select, name=name)
         return _selection(bind="legend", select=select)
 
     def legend_field(self, field: str, /) -> SelectionParam:
         select: theme.PointSelectionConfigKwds = {"type": "point", "fields": [field]}
-        if name := self._param_builder._state.get("name"):  # pyright: ignore[reportAttributeAccessIssue]
+        if name := self._param_builder._state.get("name"):  # type: ignore[attr-defined]
             return _selection(bind="legend", select=select, name=name)
         return _selection(bind="legend", select=select)
 
