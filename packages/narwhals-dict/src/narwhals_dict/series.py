@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
     from narwhals_dict.series_list import DictSeriesListNamespace
     from narwhals_dict.series_str import DictSeriesStringNamespace
+    from narwhals_dict.series_struct import DictSeriesStructNamespace
     from narwhals_dict.typing import DictFrame, NativeSeries
 
 
@@ -1109,6 +1110,11 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
         return DictSeriesListNamespace(self)
 
+    @property
+    def struct(self) -> DictSeriesStructNamespace:
+        from narwhals_dict.series_struct import DictSeriesStructNamespace
+
+        return DictSeriesStructNamespace(self)
+
     # Namespaces: not implemented (yet).
     cat: Any = not_implemented()
-    struct: Any = not_implemented()
