@@ -23,17 +23,17 @@ class FakeNative:
 
 
 class FakeCompliantDataFrame:
-    def __narwhals_dataframe__(self) -> Self:
+    def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         return self
 
 
 class FakeCompliantLazyFrame:
-    def __narwhals_lazyframe__(self) -> Self:
+    def __narwhals_lazyframe__(self) -> Self:  # pragma: no cover
         return self
 
 
 class FakeCompliantSeries:
-    def __narwhals_series__(self) -> Self:
+    def __narwhals_series__(self) -> Self:  # pragma: no cover
         return self
 
 
