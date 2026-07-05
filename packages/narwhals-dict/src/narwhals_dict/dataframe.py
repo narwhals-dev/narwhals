@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from collections.abc import Collection, Iterator, Sequence
     from types import ModuleType
 
+    import pandas as pd
+    import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
@@ -662,6 +665,28 @@ class DictDataFrame(
         msg = "`collect` with a backend is not supported for the dict backend."
         raise NotImplementedError(msg)
 
+    def to_arrow(self) -> pa.Table:
+        import pyarrow as pa  # ignore-banned-import
+
+        return pa.Table.from_pydict(
+            {name: list(column) for name, column in self.native.items()}
+        )
+
+    def to_pandas(self) -> pd.DataFrame:
+        import pandas as pd  # ignore-banned-import
+
+        return pd.DataFrame(dict(self.native))
+
+    def to_polars(self) -> pl.DataFrame:
+        import polars as pl  # ignore-banned-import
+
+        return pl.DataFrame(dict(self.native))
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+        import numpy as np  # ignore-banned-import
+
+        return np.column_stack(tuple(self.native.values()))
+
     # Not implemented (yet): fill in incrementally.
     __array__ = not_implemented()
     estimated_size = not_implemented()
@@ -671,10 +696,6 @@ class DictDataFrame(
     join_asof = not_implemented()
     pivot = not_implemented()
     sample = not_implemented()
-    to_arrow = not_implemented()
-    to_numpy = not_implemented()
-    to_pandas = not_implemented()
-    to_polars = not_implemented()
     unpivot = not_implemented()
     write_csv = not_implemented()
     write_parquet = not_implemented()

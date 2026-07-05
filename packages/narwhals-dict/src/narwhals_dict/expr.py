@@ -79,5 +79,26 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
 
         return DictNamespace(version=self._version)
 
-    ewm_mean = not_implemented()
+    def ewm_mean(
+        self,
+        *,
+        com: float | None,
+        span: float | None,
+        half_life: float | None,
+        alpha: float | None,
+        adjust: bool,
+        min_samples: int,
+        ignore_nulls: bool,
+    ) -> Self:
+        return self._reuse_series(
+            "ewm_mean",
+            com=com,
+            span=span,
+            half_life=half_life,
+            alpha=alpha,
+            adjust=adjust,
+            min_samples=min_samples,
+            ignore_nulls=ignore_nulls,
+        )
+
     over = not_implemented()
