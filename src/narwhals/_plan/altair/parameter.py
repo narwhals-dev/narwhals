@@ -143,6 +143,8 @@ _ElementType: TypeAlias = Literal[
 
 
 class _WithBind(Protocol):
+    """Can't think of a good name yet."""
+
     def _with_bind(self, bind: Binding, /) -> Self: ...
 
 
@@ -178,9 +180,20 @@ class _ParamBuilder:
 
     _state: _CommonParam
 
+    def __init__(self, state: _CommonParam, /) -> None:
+        self._state = state
+
     @property
-    def bind(self) -> _BindBuilder:
+    def bind(self) -> _BindBuilder[Self]:
         return _BindBuilder(self)
+
+    def _with_bind(self, bind: Binding, /) -> Self:
+        if self._state.get("bind"):
+            msg = "Keyword 'bind' was provided multiple times"
+            raise TypeError(msg)
+        next_state = deepcopy(self._state)
+        next_state["bind"] = bind
+        return type(self)(next_state)
 
     def point(self) -> Incomplete:
         msg = "TODO selection_point"
@@ -210,9 +223,9 @@ class _VariableParamBuilder:
         self._state = state
 
     @property
-    def bind(self) -> _CommonBindBuilder[Self]:
+    def bind(self) -> _BaseBindBuilder[Self]:
         """Bind the parameter to a UI element/widget."""
-        return _CommonBindBuilder(self)
+        return _BaseBindBuilder(self)
 
     def _with_bind(self, bind: Binding, /) -> Self:
         if self._state.get("bind"):
@@ -277,17 +290,17 @@ class _VariableParamBuilder:
 
 
 def _param_builder(name: str | None = None) -> _ParamBuilder:
-    obj = _ParamBuilder.__new__(_ParamBuilder)
-    obj._state = {"name": name} if name else {}
-    return obj
+    return _ParamBuilder({"name": name} if name else {})
 
 
-class _CommonBindBuilder(Generic[_PBuild]):
+class _BaseBindBuilder(Generic[_PBuild]):
     _state: _CommonBind
-    _param: _PBuild
+    """Binding state."""
+    _param_builder: _PBuild
+    """The parameter builder we came from."""
 
-    def __init__(self, builder: _PBuild, /) -> None:
-        self._param = builder
+    def __init__(self, param_builder: _PBuild, /) -> None:
+        self._param_builder = param_builder
         self._state = {}
 
     # NOTE: properties shared by all `Bind*`
@@ -315,7 +328,7 @@ class _CommonBindBuilder(Generic[_PBuild]):
 
     # NOTE: The actual bind methods, which return back to where we came from
     def checkbox(self) -> _PBuild:
-        return self._param._with_bind(
+        return self._param_builder._with_bind(
             theme.BindCheckboxKwds(input="checkbox", **self._state)
         )
 
@@ -341,7 +354,7 @@ class _CommonBindBuilder(Generic[_PBuild]):
             bind["max"] = max
         if step is not None:
             bind["step"] = step
-        return self._param._with_bind(bind)
+        return self._param_builder._with_bind(bind)
 
     def input(
         self,
@@ -355,7 +368,7 @@ class _CommonBindBuilder(Generic[_PBuild]):
             bind["autocomplete"] = autocomplete
         if placeholder is not None:
             bind["placeholder"] = placeholder
-        return self._param._with_bind(bind)
+        return self._param_builder._with_bind(bind)
 
     def _radio_select(
         self,
@@ -367,22 +380,18 @@ class _CommonBindBuilder(Generic[_PBuild]):
         bind = theme.BindRadioSelectKwds(input=input_type, options=options, **self._state)
         if labels:
             bind["labels"] = labels
-        return self._param._with_bind(bind)
+        return self._param_builder._with_bind(bind)
 
 
-# TODO @dangotbanned: Need the input element stuff too
-class _BindBuilder:
-    def __init__(self, builder: _ParamBuilder, /) -> None:
-        self._builder: _ParamBuilder = builder
-
-    # NOTE: Should not be accessible from `_VariableParamBuilder`
+# TODO @dangotbanned: Fix `self._param_builder._state` dependency
+class _BindBuilder(_BaseBindBuilder[_PBuild]):
     def scales(
         self, *, encodings: Sequence[_alt_t.SingleDefUnitChannel_T] = ("x", "y")
     ) -> SelectionParam:
         """Equivalent to `alt.Chart().interactive()`, but without adding the param to the chart."""
         # NOTE: Obvious now that `_selection` is the wrong API, when combined with this
         select = _config_interval(encodings=encodings)
-        if name := self._builder._state.get("name"):
+        if name := self._param_builder._state.get("name"):  # pyright: ignore[reportAttributeAccessIssue]
             return _selection(bind="scales", select=select, name=name)
         return _selection(bind="scales", select=select)
 
@@ -393,13 +402,13 @@ class _BindBuilder:
         self, encoding: _alt_t.SingleDefUnitChannel_T = "color", /
     ) -> SelectionParam:
         select = _config_point(encodings=[encoding])
-        if name := self._builder._state.get("name"):
+        if name := self._param_builder._state.get("name"):  # pyright: ignore[reportAttributeAccessIssue]
             return _selection(bind="legend", select=select, name=name)
         return _selection(bind="legend", select=select)
 
     def legend_field(self, field: str, /) -> SelectionParam:
         select = _config_point(fields=[field])
-        if name := self._builder._state.get("name"):
+        if name := self._param_builder._state.get("name"):  # pyright: ignore[reportAttributeAccessIssue]
             return _selection(bind="legend", select=select, name=name)
         return _selection(bind="legend", select=select)
 
