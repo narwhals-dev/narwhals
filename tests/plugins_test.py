@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
+from tests.utils import PYARROW_VERSION
 
 plugin_module = pytest.importorskip("test_plugin")
 
@@ -118,13 +119,19 @@ def test_read_plugin_lazy_only(
         lambda: nw.from_numpy(
             _np_array([[1, 4], [1, 5], [2, 6]]), schema=["a", "b"], backend=BACKEND
         ),
-        lambda: nw.from_arrow(_arrow_table(), backend=BACKEND),
+        pytest.param(
+            lambda: nw.from_arrow(_arrow_table(), backend=BACKEND),
+            marks=pytest.mark.skipif(PYARROW_VERSION < (14,), reason="too old"),
+        ),
         lambda: nw.DataFrame.from_dict(DATA, backend=BACKEND),
         lambda: nw.DataFrame.from_dicts(ROWS, backend=BACKEND),
         lambda: nw.DataFrame.from_numpy(
             _np_array([[1, 4], [1, 5], [2, 6]]), schema=["a", "b"], backend=BACKEND
         ),
-        lambda: nw.DataFrame.from_arrow(_arrow_table(), backend=BACKEND),
+        pytest.param(
+            lambda: nw.DataFrame.from_arrow(_arrow_table(), backend=BACKEND),
+            marks=pytest.mark.skipif(PYARROW_VERSION < (14,), reason="too old"),
+        ),
     ],
 )
 def test_eager_dataframe_constructors_plugin(
