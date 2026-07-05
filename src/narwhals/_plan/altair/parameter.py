@@ -185,7 +185,7 @@ class _WithBinding(Protocol):
 
 def _selection(**kwds: Unpack[theme.TopLevelSelectionParameterKwds]) -> SelectionParam:
     """Required: select."""
-    kwds["name"] = _param_name(kwds)
+    kwds = _ensure_param_name(kwds)
     if "views" in kwds:
         return alt.TopLevelSelectionParameter(**kwds)
     # this one doesn't have a typed dict, but the only difference vs the other is `views`
@@ -600,16 +600,21 @@ def misc_params() -> _Variable:
     return _search_box  # noqa: RET504
 
 
-def _param_name(
-    kwds: theme.VariableParameterKwds | theme.TopLevelSelectionParameterKwds, /
-) -> str:
-    if name := kwds.pop("name", None):
-        return name
-    encoded = serialize(kwds, deterministic=True)
-    # NOTE: https://github.com/vega/altair/pull/3291#issuecomment-1866999185
-    # - 256 vs 224 -> 64 vs 56 characters (only need 16)
-    # - not used for security
-    return f"param_{hashlib.sha224(encoded, usedforsecurity=False).hexdigest()[:16]}"
+_KwdsT = TypeVar(
+    "_KwdsT", bound=theme.VariableParameterKwds | theme.TopLevelSelectionParameterKwds
+)
+
+
+def _ensure_param_name(kwds: _KwdsT) -> _KwdsT:
+    """Generate a parameter name if we haven't got one yet."""
+    if kwds.get("name") is None:
+        encoded = serialize(kwds, deterministic=True)
+        # NOTE: https://github.com/vega/altair/pull/3291#issuecomment-1866999185
+        # - 256 vs 224 -> 64 vs 56 characters (only need 16)
+        # - not used for security
+        name = f"param_{hashlib.sha224(encoded, usedforsecurity=False).hexdigest()[:16]}"
+        kwds["name"] = name
+    return kwds
 
 
 def serialize(
