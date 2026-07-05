@@ -11,13 +11,99 @@ from narwhals._utils import (
 from narwhals.typing import CompliantLazyFrame
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
     from typing import TypeAlias
 
     from typing_extensions import Self
 
-    from narwhals import LazyFrame  # noqa: F401
+    from narwhals import DataFrame, LazyFrame  # noqa: F401
+    from narwhals._utils import _LimitedContext
 
 DictFrame: TypeAlias = dict[str, list[Any]]
+
+
+class DictDataFrame:
+    """Minimal eager frame, kept to the smallest surface exercised in narwhals' tests."""
+
+    _implementation = Implementation.UNKNOWN
+
+    def __init__(self, native_dataframe: DictFrame, *, version: Version) -> None:
+        self._native_frame: DictFrame = native_dataframe
+        self._version = version
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: Any = None,  # noqa: ARG003
+    ) -> Self:
+        return cls(
+            {name: list(values) for name, values in data.items()},
+            version=context._version,
+        )
+
+    @classmethod
+    def from_dicts(
+        cls,
+        data: Sequence[Mapping[str, Any]],
+        /,
+        *,
+        context: _LimitedContext,
+        schema: Any = None,  # noqa: ARG003
+    ) -> Self:
+        columns: list[str] = list(data[0]) if data else []
+        return cls(
+            {name: [row[name] for row in data] for name in columns},
+            version=context._version,
+        )
+
+    @classmethod
+    def from_numpy(
+        cls, data: Any, /, *, context: _LimitedContext, schema: Any = None
+    ) -> Self:
+        names = (
+            list(schema)
+            if schema is not None
+            else [str(index) for index in range(data.shape[1])]
+        )
+        return cls(
+            {name: data[:, index].tolist() for index, name in enumerate(names)},
+            version=context._version,
+        )
+
+    @classmethod
+    def from_arrow(cls, data: Any, /, *, context: _LimitedContext) -> Self:
+        import pyarrow as pa
+
+        return cls(pa.table(data).to_pydict(), version=context._version)
+
+    def __narwhals_dataframe__(self) -> Self:
+        return self
+
+    def __narwhals_namespace__(self) -> Any:
+        from test_plugin.namespace import DictNamespace
+
+        return DictNamespace(version=self._version)
+
+    def __len__(self) -> int:
+        return len(next(iter(self._native_frame.values()), []))
+
+    @property
+    def columns(self) -> list[str]:
+        return list(self._native_frame.keys())
+
+    @property
+    def native(self) -> DictFrame:
+        return self._native_frame
+
+    def _with_version(self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
+
+    def to_narwhals(self) -> DataFrame[Any]:
+        return self._version.dataframe(self, level="full")
 
 
 class DictLazyFrame(

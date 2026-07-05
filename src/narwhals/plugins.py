@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from functools import cache
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import CompliantNamespace
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
         CompliantLazyFrameAny,
         CompliantSeriesAny,
     )
+    from narwhals._typing import Backend, IntoBackend
     from narwhals.utils import Version
 
 
@@ -46,6 +48,55 @@ def _discover_entrypoints() -> EntryPoints:
 
     group = "narwhals.plugins"
     return eps(group=group)
+
+
+def _plugin_names() -> tuple[str, ...]:
+    """Entry point names of all installed plugins."""
+    return tuple(entry_point.name for entry_point in _discover_entrypoints())
+
+
+def _find_plugin(backend_name: str, /) -> ModuleType | None:
+    """Return the namespace of the first installed plugin matching `backend_name`.
+
+    `backend_name` is matched against both the entry point name and its module,
+    e.g. both `"my-plugin"` and `"my_plugin"` for a plugin registered as:
+
+        [project.entry-points.'narwhals.plugins']
+        my-plugin = 'my_plugin'
+    """
+    for entry_point in _discover_entrypoints():
+        if backend_name in {entry_point.name, entry_point.module}:
+            namespace: ModuleType = entry_point.load()
+            return namespace
+    return None
+
+
+def _backend_namespace(backend: IntoBackend[Backend], /) -> ModuleType:
+    """Resolve a backend which is not a Narwhals `Implementation` to a plugin namespace.
+
+    The namespace is expected to implement the `Plugin` protocol and/or the extension
+    hooks required by the calling function (e.g. `scan_csv`, ...) at its top level.
+    """
+    if isinstance(backend, ModuleType):
+        return backend
+    if isinstance(backend, str) and (plugin := _find_plugin(backend)) is not None:
+        return plugin
+    installed = ", ".join(_plugin_names()) or "<none>"
+    msg = (
+        f"Unsupported backend: {backend!r}.\n\n"
+        "Expected one of Narwhals' built-in backends (e.g. 'pandas', 'polars', "
+        "'pyarrow'), a native namespace module, or the name of an installed "
+        f"Narwhals plugin (installed plugins: {installed})."
+    )
+    raise ValueError(msg)
+
+
+def _plugin_hook(native_namespace: ModuleType, name: str, /) -> Any:
+    """Fetch extension hook `name` from a plugin namespace, raising if missing."""
+    if (hook := getattr(native_namespace, name, None)) is None:
+        msg = f"Unknown namespace is expected to implement `{name}` function."
+        raise AttributeError(msg)
+    return hook
 
 
 class PluginNamespace(CompliantNamespace[FrameT, Any], Protocol[FrameT, FromNativeR_co]):

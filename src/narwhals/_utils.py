@@ -77,6 +77,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
+        EagerNamespaceAny,
         EvalNames,
         NativeDataFrameT,
         NativeLazyFrameT,
@@ -1623,6 +1624,82 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
         Implementation.POLARS,
         Implementation.PYARROW,
     }
+
+
+def _ensure_eager_capable(
+    namespace: Any, /, *, source: str, function_name: str
+) -> EagerNamespaceAny:
+    """Duck-check that `namespace` implements the `EagerNamespace` protocol.
+
+    `_series` and `_dataframe` may be regular properties, missing entirely, or
+    `not_implemented` descriptors (which raise on instance access).
+    """
+    try:
+        eager_capable = namespace._series is not None and namespace._dataframe is not None
+    except (AttributeError, NotImplementedError):
+        eager_capable = False
+    if not eager_capable:
+        msg = (
+            f"Plugin backend {source!r} does not provide eager support (its "
+            "compliant namespace does not implement the `EagerNamespace` protocol), "
+            f"but `{function_name}` is an eager-only function."
+        )
+        raise ValueError(msg)
+    return cast("EagerNamespaceAny", namespace)
+
+
+def eager_namespace(
+    backend: IntoBackend[Backend],
+    /,
+    *,
+    version: Version,
+    function_name: str,
+    hint_example: str,
+) -> EagerNamespaceAny:
+    """Resolve `backend` to an eager-capable compliant namespace.
+
+    Built-in eager backends resolve directly. Anything unknown to `Implementation` is
+    resolved via the plugin entry-point registry, in which case the plugin's
+    `__narwhals_namespace__` must return a namespace implementing the `EagerNamespace`
+    protocol (in particular, the `_series` and `_dataframe` properties).
+    Built-in lazy-only backends raise an informative `ValueError`, suggesting
+    `hint_example` followed by a `.lazy(...)` call.
+    """
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        # NOTE: `cast` is required as the overload returns a union of concrete
+        # namespaces, whose invariant type parameters don't unify with `*Any` aliases.
+        return cast(
+            "EagerNamespaceAny", version.namespace.from_backend(implementation).compliant
+        )
+    if implementation is not Implementation.UNKNOWN:
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    {hint_example}.lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+    from narwhals.plugins import _backend_namespace, _plugin_hook
+
+    module = _backend_namespace(backend)
+    namespace = _plugin_hook(module, "__narwhals_namespace__")(version=version)
+    return _ensure_eager_capable(
+        namespace, source=module.__name__, function_name=function_name
+    )
+
+
+def eager_namespace_from_compliant(
+    compliant_object: Any, /, *, function_name: str
+) -> EagerNamespaceAny:
+    """Resolve the eager namespace of a compliant object originating from a plugin.
+
+    `Implementation.UNKNOWN` cannot be resolved back to a plugin, so methods which
+    internally construct series use the namespace of the compliant object itself.
+    """
+    namespace = compliant_object.__narwhals_namespace__()
+    return _ensure_eager_capable(
+        namespace, source=type(namespace).__name__, function_name=function_name
+    )
 
 
 def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
