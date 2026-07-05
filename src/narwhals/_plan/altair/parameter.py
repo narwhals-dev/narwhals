@@ -49,9 +49,7 @@ from narwhals._plan.altair.expression import parse_into_vega_expr
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Sequence
 
-    import altair.vegalite.v6.schema._typing as _alt_t
     import typing_extensions as te
-    from _typeshed import Incomplete
     from altair.vegalite.v6.schema._typing import (
         SelectionResolution_T,
         SingleDefUnitChannel_T,
@@ -109,17 +107,6 @@ Note:
     A TypedDict, sum-type equivalent of `altair.Binding`.
 """
 
-BindingSelect: TypeAlias = (
-    Binding | theme.LegendStreamBindingKwds | Literal["legend", "scales"]
-)
-"""Anything accepted by `selection_*(bind=...)`.
-
-Important:
-    Wider than `VariableParameter`.
-"""
-
-VariableParam: TypeAlias = alt.VariableParameter
-"""A parameter that wraps an expression."""
 
 SelectionParam: TypeAlias = alt.SelectionParameter | alt.TopLevelSelectionParameter
 """A parameter that [defines a data query] driven by user input (e.g., mouse clicks or drags).
@@ -196,15 +183,6 @@ class _WithBinding(Protocol):
     def _with_binding(self, bind: Binding, /) -> Self: ...
 
 
-def variable(
-    expr: nw.Expr | alt_t.IntoAltExpr, /, **kwds: Unpack[VariableParamKwds]
-) -> VariableParam:
-    """Create a named variable parameter."""
-    kwds["expr"] = parse_into_vega_expr(expr)
-    kwds["name"] = _param_name(kwds)
-    return alt.VariableParameter(**kwds)
-
-
 def _selection(**kwds: Unpack[theme.TopLevelSelectionParameterKwds]) -> SelectionParam:
     """Required: select."""
     kwds["name"] = _param_name(kwds)
@@ -224,15 +202,19 @@ class _StateExchange(Protocol[_TD_co]):
         """
         ...
 
+    def _unwrap(self) -> _TD_co:
+        """Return the inner state."""
+        ...
+
     def _unwrap_clone(self) -> Cloned[_TD_co]:
         """Return a deep-copy of the inner state."""
-        ...
+        return deepcopy(self._unwrap())
 
     @classmethod
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self: ...
 
 
-class _Param:
+class _Param(_StateExchange[_CommonParam]):
     """Experimental fluent parameter builder.
 
     ## Notes
@@ -248,8 +230,8 @@ class _Param:
     def _state_default(cls) -> _CommonParam:
         return {}
 
-    def _unwrap_clone(self) -> Cloned[_CommonParam]:
-        return deepcopy(self._state)
+    def _unwrap(self) -> _CommonParam:
+        return self._state
 
     @classmethod
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self:
@@ -304,8 +286,8 @@ class _Variable(_StateExchange[VariableParamKwds]):
     def _state_default(cls) -> VariableParamKwds:
         return {}
 
-    def _unwrap_clone(self) -> Cloned[VariableParamKwds]:
-        return deepcopy(self._state)
+    def _unwrap(self) -> VariableParamKwds:
+        return self._state
 
     @classmethod
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self:
@@ -349,8 +331,8 @@ class _Selection(_StateExchange[_SelectionKwdsT]):
     def _state_default(cls) -> _SelectionKwdsT:
         raise NotImplementedError
 
-    def _unwrap_clone(self) -> Cloned[_SelectionKwdsT]:
-        return deepcopy(self._state)
+    def _unwrap(self) -> _SelectionKwdsT:
+        return self._state
 
     @classmethod
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self:
@@ -616,52 +598,6 @@ def misc_params() -> _Variable:
         _param().var("").bind.label("Search ").input("search", placeholder="Country")
     )
     return _search_box  # noqa: RET504
-
-
-# too many parameters!
-def _selection_interval(
-    *,
-    # common
-    name: str | None,
-    bind: BindingSelect,
-    value: alt.api._SelectionIntervalValueMap,
-    views: Sequence[str],
-    # interval_config (`select` expands to)
-    # # common
-    clear: str | bool | theme.MergedStreamKwds | theme.DerivedStreamKwds,
-    encodings: Sequence[_alt_t.SingleDefUnitChannel_T],
-    fields: Sequence[str],
-    on: str | theme.MergedStreamKwds | theme.DerivedStreamKwds,
-    resolve: _alt_t.SelectionResolution_T,
-    # # interval
-    mark: theme.BrushConfigKwds,
-    translate: str | bool,
-    zoom: str | bool,
-) -> Incomplete:
-    """This & selection_point have too many parameters!"""
-    raise NotImplementedError
-
-
-# too many parameters!
-def _selection_point(
-    *,
-    # common
-    name: str | None,
-    bind: BindingSelect,
-    value: alt.api._SelectionPointValue,
-    views: Sequence[str],
-    # point_config (`select` expands to)
-    # # common
-    clear: str | bool | theme.MergedStreamKwds | theme.DerivedStreamKwds,
-    encodings: Sequence[_alt_t.SingleDefUnitChannel_T],
-    fields: Sequence[str],
-    on: str | theme.MergedStreamKwds | theme.DerivedStreamKwds,
-    resolve: _alt_t.SelectionResolution_T,
-    # # point
-    nearest: bool,
-    toggle: nw.Expr | alt_t.IntoAltExpr | bool,  # the other strings are all unrelated
-) -> Incomplete:
-    raise NotImplementedError
 
 
 def _param_name(
