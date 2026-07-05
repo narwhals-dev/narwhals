@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self, Unpack
 
     import narwhals._plan as nw
-    from narwhals._plan.altair import typing as alt_t
+    from narwhals._plan.altair import stream, typing as alt_t
 
     class _CommonBind(te.TypedDict, total=False, closed=True):  # type: ignore[call-arg]
         debounce: float
@@ -195,11 +195,11 @@ class _ParamBuilder:
         next_state["bind"] = bind
         return type(self)(next_state)
 
-    def point(self) -> Incomplete:
+    def point(self, default: Any = Undefined) -> _PointBuilder:
         msg = "TODO selection_point"
         raise NotImplementedError(msg)
 
-    def interval(self) -> Incomplete:
+    def interval(self) -> _IntervalBuilder:
         msg = "TODO selection_interval"
         raise NotImplementedError(msg)
 
@@ -213,6 +213,32 @@ class _ParamBuilder:
     def var(self, default: Any = Undefined) -> _VariableParamBuilder:
         """Create a variable parameter, optionally with a default value."""
         return _VariableParamBuilder._from_param_var(self, default)
+
+
+class _BaseSelectionBuilder:
+    def clear(
+        self, clear: stream.Stream | stream.StreamSelector | Literal[False], /
+    ) -> Self: ...
+    def encodings(self, *encodings: _alt_t.SingleDefUnitChannel_T) -> Self: ...
+    def on(self, trigger: stream.Stream | stream.StreamSelector, /) -> Self: ...
+    def resolve(self, resolve: _alt_t.SelectionResolution_T, /) -> Self: ...
+
+
+class _IntervalBuilder(_BaseSelectionBuilder):
+    # > Interval selections can only be projected using encodings.
+    def mark(self, mark: theme.BrushConfigKwds, /) -> Self: ...
+    # default is True
+    def translate(self, translate: stream.StreamSelector | Literal[False], /) -> Self: ...
+    # default is True
+    def zoom(self, zoom: stream.StreamSelector | Literal[False], /) -> Self: ...
+
+
+class _PointBuilder(_BaseSelectionBuilder):
+    def fields(self, *fields: str) -> Self: ...
+    # default is False, only allows bool
+    def nearest(self) -> Self: ...
+    # default is True
+    def toggle(self, toggle: nw.Expr | alt_t.IntoAltExpr | Literal[False], /) -> Self: ...
 
 
 @final
@@ -289,7 +315,7 @@ class _VariableParamBuilder:
         return self
 
 
-def _param_builder(name: str | None = None) -> _ParamBuilder:
+def _param(name: str | None = None) -> _ParamBuilder:
     return _ParamBuilder({"name": name} if name else {})
 
 
@@ -414,10 +440,28 @@ class _BindBuilder(_BaseBindBuilder[_PBuild]):
 
 
 def slider_cutoff() -> _VariableParamBuilder:
-    _p1 = _param_builder().var().bind.range(0, 100, 1)
-    _p2 = _param_builder().var(50).bind.range(0, 100, 1)
-    p3 = _param_builder("slider").var(50).bind.range(0, 100, 1)
+    _p1 = _param().var().bind.range(0, 100, 1)
+    _p2 = _param().var(50).bind.range(0, 100, 1)
+    p3 = _param("slider").var(50).bind.range(0, 100, 1)
     return p3  # noqa: RET504
+
+
+def slider_point() -> _PointBuilder:
+    _p1 = (
+        _param()
+        .bind.label("Release Year")
+        .range(1969, 2018, 1)
+        .point()
+        .fields("Release_Year")
+    )
+    _p2 = (
+        _param("x_select")
+        .bind.label("Year ")
+        .range(1955, 2005, step=5)
+        .point(1980)
+        .fields("year")
+    )
+    return _p2  # noqa: RET504
 
 
 def _variable(
