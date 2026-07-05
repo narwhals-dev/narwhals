@@ -154,7 +154,7 @@ class _PointKwds(_SelectionKwds, TypedDict, total=False):
 
 
 _SelectionKwdsT = TypeVar(  # noqa: PLC0105
-    "_SelectionKwdsT", bound=_SelectionKwds | _IntervalKwds | _PointKwds, covariant=True
+    "_SelectionKwdsT", bound=_IntervalKwds | _PointKwds, covariant=True
 )
 
 
