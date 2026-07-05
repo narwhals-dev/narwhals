@@ -70,10 +70,14 @@ EventType: TypeAlias = Literal[
 [Vega Event Stream]: https://vega.github.io/vega/docs/event-streams
 """
 
-StreamSelector: TypeAlias = LiteralString
-"""You're on your own, boss (see [Event Stream Selectors](https://vega.github.io/vega/docs/event-streams/#selector))."""
+StreamSelector: TypeAlias = EventType | LiteralString
+"""
+A [DOM event type], that is supported in a [Vega Event Stream] or an [Event Stream Selector].
 
-WindowEventType: TypeAlias = EventType | StreamSelector
+[DOM event type]: https://vega.github.io/vega/docs/event-streams/#types
+[Vega Event Stream]: https://vega.github.io/vega/docs/event-streams
+[Event Stream Selector]: https://vega.github.io/vega/docs/event-streams/#selector
+"""
 
 
 class _BaseEventStream(TypedDict, total=False):
@@ -135,7 +139,7 @@ class EventStreamRhs(_BaseEventStream, TypedDict, total=False):
 
     The browser window object.
     """
-    type: Required[WindowEventType]
+    type: Required[StreamSelector]
 
 
 class DerivedStream(_BaseEventStream, TypedDict, total=False):
