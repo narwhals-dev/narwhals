@@ -88,19 +88,9 @@ class DictDataFrame:
 
         return DictNamespace(version=self._version)
 
-    def __len__(self) -> int:
-        return len(next(iter(self._native_frame.values()), []))
-
-    @property
-    def columns(self) -> list[str]:
-        return list(self._native_frame.keys())
-
     @property
     def native(self) -> DictFrame:
         return self._native_frame
-
-    def _with_version(self, version: Version) -> Self:
-        return self.__class__(self._native_frame, version=version)
 
     def to_narwhals(self) -> DataFrame[Any]:
         return self._version.dataframe(self, level="full")

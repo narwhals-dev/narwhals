@@ -38,10 +38,6 @@ def scan_csv(source: str, separator: str = ",", **kwargs: Any) -> DictFrame:  # 
     return {name: [row[index] for row in rows] for index, name in enumerate(header)}
 
 
-def read_csv(source: str, separator: str = ",", **kwargs: Any) -> DictFrame:
-    return scan_csv(source, separator=separator, **kwargs)
-
-
 def scan_parquet(source: str, **kwargs: Any) -> DictFrame:
     import pyarrow.parquet as pq
 
@@ -49,5 +45,6 @@ def scan_parquet(source: str, **kwargs: Any) -> DictFrame:
     return result
 
 
-def read_parquet(source: str, **kwargs: Any) -> DictFrame:
-    return scan_parquet(source, **kwargs)
+# `read_*` returns the same native object; narwhals then enforces eagerness downstream.
+read_csv = scan_csv
+read_parquet = scan_parquet

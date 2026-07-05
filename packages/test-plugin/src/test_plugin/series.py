@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._utils import Implementation, not_implemented
+from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -49,9 +49,6 @@ class DictSeries:
 
         return DictNamespace(version=self._version)
 
-    def __len__(self) -> int:
-        return len(self._values)
-
     @property
     def native(self) -> list[Any]:
         return self._values
@@ -59,9 +56,6 @@ class DictSeries:
     @property
     def name(self) -> str:
         return self._name
-
-    def _with_version(self, version: Version) -> Self:
-        return self.__class__(self._values, name=self._name, version=version)
 
     def alias(self, name: str) -> Self:
         return self.__class__(self._values, name=name, version=self._version)
@@ -77,5 +71,3 @@ class DictSeries:
 
     def to_narwhals(self) -> Series[Any]:
         return self._version.series(self, level="full")
-
-    cast: Any = not_implemented()
