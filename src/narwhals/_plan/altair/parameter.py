@@ -60,6 +60,7 @@ if TYPE_CHECKING:
 
     import narwhals._plan as nw
     from narwhals._plan.altair import stream, typing as alt_t
+    from narwhals._plan.altair.typing import Optional
 
     class _CommonBind(te.TypedDict, total=False, closed=True):  # type: ignore[call-arg]
         debounce: float
@@ -156,11 +157,13 @@ class _SelectionParamKwds(_CommonParamOpen, TypedDict, total=False):
 
 
 class _IntervalParamKwds(_SelectionParamKwds, TypedDict, total=False):
-    select: Required[IntervalConfigKwds]
+    select: Required[IntervalConfigKwds]  # type: ignore[misc]
+    value: alt.api._SelectionIntervalValueMap  # type: ignore[misc]
 
 
 class _PointParamKwds(_SelectionParamKwds, TypedDict, total=False):
-    select: Required[PointConfigKwds]
+    select: Required[PointConfigKwds]  # type: ignore[misc]
+    value: alt.api._SelectionPointValue  # type: ignore[misc]
 
 
 _SelectionParamKwdsT = TypeVar(  # noqa: PLC0105
@@ -254,13 +257,17 @@ class _ParamBuilder:
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self:
         return cls(state)
 
-    def interval(self, default: Any = Undefined) -> _IntervalBuilder:
+    def interval(
+        self, default: Optional[alt.api._SelectionIntervalValueMap] = Undefined
+    ) -> _IntervalBuilder:
         state = self._unwrap_clone()
         if not is_undefined(default):
             state["value"] = default
         return _IntervalBuilder._from_common(state)
 
-    def point(self, default: Any = Undefined) -> _PointBuilder:
+    def point(
+        self, default: Optional[alt.api._SelectionPointValue] = Undefined
+    ) -> _PointBuilder:
         state = self._unwrap_clone()
         if not is_undefined(default):
             state["value"] = default
