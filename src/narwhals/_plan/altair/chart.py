@@ -196,6 +196,10 @@ class Chart:
         """Set top-level properties of the chart."""
         return self._from_altair(self._chart.properties(**kwds))
 
+    def add_params(self, *params: alt.Parameter) -> Self:
+        """Add one or more parameters to the chart."""
+        return self._from_altair(self._chart.add_params(*params))
+
     def to_altair(self) -> AltChart:
         return self._chart
 

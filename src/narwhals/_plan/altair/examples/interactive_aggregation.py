@@ -44,5 +44,4 @@ rule = (
     )
 )
 
-# TODO @dangotbanned: Add `add_params`
-chart = nw_alt.layer(raw, aggregated, rule).add_params(threshold)  # pyright: ignore[reportAttributeAccessIssue]
+chart = nw_alt.layer(raw, aggregated, rule).add_params(threshold)
