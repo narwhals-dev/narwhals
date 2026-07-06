@@ -627,7 +627,7 @@ class Series(Generic[IntoSeriesT]):
 
             * `.dt.timestamp()` for Unix timestamp.
             * `.dt.year()`, `.dt.month()`, `.dt.day()`, ..., for date components.
-            * `.dt.total_seconds()`, `.dt.total_milliseconds(), ..., for duration total time.
+            * `.dt.total_seconds()`, `.dt.total_milliseconds()`, ..., for duration total time.
 
         Examples:
             >>> import pyarrow as pa

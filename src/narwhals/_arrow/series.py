@@ -29,7 +29,6 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
-    Version,
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
@@ -64,7 +63,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.series import HistData
     from narwhals._typing import NoDefault
-    from narwhals._utils import _LimitedContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,

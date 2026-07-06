@@ -20,7 +20,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, Version, requires
+from narwhals._utils import NO_DEFAULT, Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
     from narwhals._typing import NoDefault
-    from narwhals._utils import _LimitedContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (

@@ -69,7 +69,7 @@ def _validate_cast_temporal_to_numeric(
         target: The target data type to cast to.
 
     Raises:
-        InvalidOperationError: If attempting to cast from temporal to integer.
+        InvalidOperationError: If attempting to cast from temporal to numeric.
     """
     if source.is_temporal() and target.is_numeric():
         msg = (
@@ -77,7 +77,7 @@ def _validate_cast_temporal_to_numeric(
             "Hint: Use `.dt` accessor methods instead, such as:\n"
             "  - `.dt.timestamp()` for Unix timestamp.\n"
             "  - `.dt.year()`, `.dt.month()`, `.dt.day()`, ..., for date components.\n"
-            "  - `.dt.total_seconds()`, `.dt.total_milliseconds(), ..., for duration total time."
+            "  - `.dt.total_seconds()`, `.dt.total_milliseconds()`, ..., for duration total time."
         )
         raise InvalidOperationError(msg)
 

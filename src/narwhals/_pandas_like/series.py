@@ -25,7 +25,7 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation, Version, is_list_of
+from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String, _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
     from narwhals._typing import NoDefault
-    from narwhals._utils import _LimitedContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
