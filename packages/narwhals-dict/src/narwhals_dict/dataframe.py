@@ -706,6 +706,25 @@ class DictDataFrame(
 
         return np.column_stack(tuple(self.native.values()))
 
+    def unpivot(
+        self,
+        on: Sequence[str] | None,
+        index: Sequence[str] | None,
+        variable_name: str,
+        value_name: str,
+    ) -> Self:
+        index = [] if index is None else list(index)
+        on = [c for c in self.columns if c not in index] if on is None else list(on)
+        if error := self._check_columns_exist([*index, *on]):
+            raise error
+        n = len(self)
+        native = self.native
+
+        result: DictFrame = {name: list(native[name]) * len(on) for name in index}
+        result[variable_name] = list(chain.from_iterable(repeat(name, n) for name in on))
+        result[value_name] = list(chain.from_iterable(native[name] for name in on))
+        return self._with_native(result)
+
     # Not implemented (yet): fill in incrementally.
     __array__ = not_implemented()
     estimated_size = not_implemented()
@@ -714,6 +733,5 @@ class DictDataFrame(
     join_asof = not_implemented()
     pivot = not_implemented()
     sample = not_implemented()
-    unpivot = not_implemented()
     write_csv = not_implemented()
     write_parquet = not_implemented()
