@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     import typing_extensions as te
+    from _typeshed import SupportsItemAccess
     from altair.vegalite.v6.schema._typing import (
         SelectionResolution_T,
         SingleDefUnitChannel_T,
@@ -60,6 +61,8 @@ if TYPE_CHECKING:
     from narwhals._plan.altair import typing as alt_t
     from narwhals._plan.altair._experimental import stream
     from narwhals._plan.altair.typing import Optional
+
+    _KwdsT = TypeVar("_KwdsT", bound=SupportsItemAccess[Any, Any])
 
     class _CommonBind(te.TypedDict, total=False, closed=True):  # type: ignore[call-arg]
         debounce: float
@@ -83,7 +86,7 @@ class _CommonParamOpen(TypedDict, total=False):
     value: Any
 
 
-_TD_co = TypeVar("_TD_co", bound="_CommonParamOpen", covariant=True)
+_TD_co = TypeVar("_TD_co", bound=_CommonParamOpen, covariant=True)
 
 T = TypeVar("T")
 
@@ -524,7 +527,7 @@ class _BindBuilder(_BaseBindBuilder[_Param]):
             "select": {"type": "interval", "encodings": encodings},
             "bind": "scales",
         }
-        return alt.SelectionParameter(**_ensure_param_name(_kwds))
+        return alt.SelectionParameter(**ensure_param_name(_kwds))
 
     def legend_encoding(
         self, encoding: SingleDefUnitChannel_T = "color", /
@@ -533,14 +536,14 @@ class _BindBuilder(_BaseBindBuilder[_Param]):
             "select": {"type": "point", "encodings": [encoding]},
             "bind": "scales",
         }
-        return alt.SelectionParameter(**_ensure_param_name(_kwds))
+        return alt.SelectionParameter(**ensure_param_name(_kwds))
 
     def legend_field(self, field: str, /) -> alt.SelectionParameter:
         _kwds: Any = self._param_builder._unwrap() | {
             "select": {"type": "point", "fields": [field]},
             "bind": "scales",
         }
-        return alt.SelectionParameter(**_ensure_param_name(_kwds))
+        return alt.SelectionParameter(**ensure_param_name(_kwds))
 
 
 def _invalid_keys_error(
@@ -590,14 +593,9 @@ def misc_params() -> _Variable:
     return _search_box  # noqa: RET504
 
 
-_KwdsT = TypeVar(
-    "_KwdsT", bound=theme.VariableParameterKwds | theme.TopLevelSelectionParameterKwds
-)
-
-
-def _ensure_param_name(kwds: _KwdsT) -> _KwdsT:
+def ensure_param_name(kwds: _KwdsT) -> _KwdsT:
     """Generate a parameter name if we haven't got one yet."""
-    if kwds.get("name") is None:
+    if "name" not in kwds:
         encoded = serialize(kwds, deterministic=True, default=str)
         # NOTE: https://github.com/vega/altair/pull/3291#issuecomment-1866999185
         # - 256 vs 224 -> 64 vs 56 characters (only need 16)
