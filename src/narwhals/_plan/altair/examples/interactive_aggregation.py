@@ -10,35 +10,31 @@ from altair.datasets import Loader
 
 import narwhals._plan as nw
 from narwhals._plan.altair import chart as nw_alt
+from narwhals._plan.altair.parameter import param
 
 load = Loader.from_backend("polars")
 base = nw_alt.Chart(load("movies")).mark_circle()
-threshold = alt.param("threshold", 5, bind=alt.binding_range(min=0, max=10, step=0.1))
+threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, step=0.1))
 
+imdb_rating = nw.col("IMDB Rating")
+rt_rating = nw.col("Rotten Tomatoes Rating")
+
+# TODO @dangotbanned: Support these as either:
+# - `nw.col("IMDB Rating").alias("IMDB Rating")`
+# - `nw.col("IMDB Rating").name.keep()`
+#   - This example is an edge case where that makes sense
 raw = base.encode(
-    # TODO @dangotbanned: Support these as either:
-    # - `nw.col("IMDB Rating").alias("IMDB Rating")`
-    # - `nw.col("IMDB Rating").name.keep()`
-    #   - This example is an edge case where that makes sense
     x=alt.X("IMDB Rating").title("IMDB Rating"),
     y=alt.Y("Rotten Tomatoes Rating").title("Rotten Tomatoes Rating"),
-).transform_filter(alt.datum["IMDB Rating"] >= threshold)
+).transform_filter(imdb_rating >= threshold)
 
+# TODO @dangotbanned: Does narwhals have a way of representing `scale(domain=...)`?
 aggregated = base.encode(
-    x=nw.col("IMDB Rating").hist(bin_count=10),
-    y=nw.col("Rotten Tomatoes Rating").hist(bin_count=10),
-    # TODO @dangotbanned: Does narwhals have a way of representing this?
+    x=imdb_rating.hist(bin_count=10),
+    y=rt_rating.hist(bin_count=10),
     size=alt.Size("count()").scale(domain=[0, 160]),
-).transform_filter(alt.datum["IMDB Rating"] < threshold)
+).transform_filter(imdb_rating < threshold)
 
-rule = (
-    nw_alt.Chart()
-    .mark_rule(color="gray")
-    .encode(
-        strokeWidth=nw.lit(6),
-        # TODO @dangotbanned: There must be a better way
-        x=alt.X(datum=alt.expr(threshold.name), type="quantitative"),
-    )
-)
+rule = nw_alt.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6))
 
 chart = nw_alt.layer(raw, aggregated, rule).add_params(threshold)

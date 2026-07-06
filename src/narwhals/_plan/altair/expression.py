@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypeVar, final
 from altair.expr import core as alt_ir
 
 from narwhals._plan import _function, expressions as ir
+from narwhals._plan.altair._parameter_ir import _ParameterIR
 from narwhals._plan.altair.exceptions import unsupported_error
 from narwhals._plan.altair.typing import AltExpr, IntoAltExpr
 from narwhals._plan.expr import Expr as NwExpr
@@ -172,6 +173,11 @@ def _(expr: ir.BinaryExpr) -> AltExpr:
 def _(expr: ir.TernaryExpr) -> AltExpr:
     exprs = (_from_expr_ir(e) for e in (expr.predicate, expr.truthy, expr.falsy))
     return AltExprStr.call_fn("if", exprs)
+
+
+@_from_expr_ir.register(_ParameterIR)
+def _(expr: _ParameterIR) -> AltExpr:
+    return AltExprStr(expr.name)
 
 
 def parse_into_alt_expr(

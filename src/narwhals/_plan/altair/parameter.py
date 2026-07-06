@@ -1,4 +1,4 @@
-"""Adds support for `alt.param(expr: nw.Expr)` and minor typing improvements."""
+"""Adds support for `alt.param(expr: nw.Expr)` and wrapping altair paramters in `nw.Expr`."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import altair as alt
 from altair import Undefined
 from altair.utils import is_undefined
 
+from narwhals._plan.altair import _parameter_ir
 from narwhals._plan.altair._experimental import parameter as alt_p
 from narwhals._plan.altair.expression import parse_into_vega_expr
 
@@ -20,10 +21,10 @@ if TYPE_CHECKING:
         SingleDefUnitChannel_T,
     )
 
-    import narwhals._plan as nw
     from narwhals._plan.altair import typing as alt_t
     from narwhals._plan.altair._experimental import stream
     from narwhals._plan.altair.typing import Optional
+    from narwhals._plan.expr import Expr as NwExpr
 
 __all__ = ["param", "selection_interval", "selection_point"]
 
@@ -31,11 +32,11 @@ __all__ = ["param", "selection_interval", "selection_point"]
 def param(
     name: Optional[str] = Undefined,
     *,
-    expr: Optional[nw.Expr | alt_t.IntoAltExpr] = Undefined,
+    expr: Optional[NwExpr | alt_t.IntoAltExpr] = Undefined,
     value: Optional[Any] = Undefined,
     bind: Optional[alt.Binding] = Undefined,
     react: Optional[Literal[False]] = Undefined,
-) -> alt.Parameter:
+) -> NwExpr:
     """Create a variable parameter.
 
     ## See Also
@@ -54,10 +55,12 @@ def param(
             param_type="variable",
         )
     )
-    return alt.Parameter(
-        name=kwds["name"],
-        param_type=kwds.pop("param_type"),
-        param=alt.VariableParameter(**kwds),
+    return _parameter_ir.from_altair(
+        alt.Parameter(
+            name=kwds["name"],
+            param_type=kwds.pop("param_type"),
+            param=alt.VariableParameter(**kwds),
+        )
     )
 
 
@@ -78,7 +81,7 @@ if TYPE_CHECKING:
         mark: Optional[theme.BrushConfigKwds] = Undefined,
         translate: Optional[stream.StreamSelector | Literal[False]] = Undefined,
         zoom: Optional[stream.StreamSelector | Literal[False]] = Undefined,
-    ) -> alt.Parameter:
+    ) -> NwExpr:
         """Create an interval selection parameter.
 
         ## See Also
@@ -102,7 +105,7 @@ if TYPE_CHECKING:
         resolve: Optional[SelectionResolution_T] = Undefined,
         toggle: Optional[alt_t.VegaExpr | Literal[False]] = Undefined,
         nearest: Optional[Literal[True]] = Undefined,
-    ) -> alt.Parameter:
+    ) -> NwExpr:
         """Create a point selection parameter.
 
         ## See Also
@@ -112,8 +115,12 @@ if TYPE_CHECKING:
         ...
 
 else:
-    selection_interval = alt.selection_interval
-    selection_point = alt.selection_point
+
+    def selection_interval(*args: Any, **kwds: Any) -> NwExpr:
+        return _parameter_ir.from_altair(alt.selection_interval(*args, **kwds))
+
+    def selection_point(*args: Any, **kwds: Any) -> NwExpr:
+        return _parameter_ir.from_altair(alt.selection_point(*args, **kwds))
 
 
 def _keep_defined(**kwds: Any) -> dict[str, Any]:

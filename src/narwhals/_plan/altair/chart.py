@@ -14,7 +14,7 @@ from altair.utils.schemapi import UndefinedType
 
 import narwhals._plan as nw
 import narwhals.stable.v1 as stable_v1
-from narwhals._plan.altair import encode
+from narwhals._plan.altair import _parameter_ir, encode
 from narwhals._plan.altair.aggregate import aggregate_transform, window_transform
 from narwhals._plan.altair.calculate import calculate_transform
 from narwhals._plan.altair.expression import parse_into_alt_expr
@@ -196,9 +196,11 @@ class Chart:
         """Set top-level properties of the chart."""
         return self._from_altair(self._chart.properties(**kwds))
 
-    def add_params(self, *params: alt.Parameter) -> Self:
+    def add_params(self, *params: alt.Parameter | nw.Expr) -> Self:
         """Add one or more parameters to the chart."""
-        return self._from_altair(self._chart.add_params(*params))
+        unwrap_expr = _parameter_ir.to_altair
+        it = (unwrap_expr(p) if isinstance(p, nw.Expr) else p for p in params)
+        return self._from_altair(self._chart.add_params(*it))
 
     def to_altair(self) -> AltChart:
         return self._chart

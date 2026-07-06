@@ -13,7 +13,7 @@ from altair import Undefined
 
 import narwhals.stable.v1 as stable_v1
 from narwhals._plan import expressions as ir
-from narwhals._plan.altair import aggregate, typing as alt_t
+from narwhals._plan.altair import _parameter_ir, aggregate, typing as alt_t
 from narwhals._plan.altair.exceptions import unsupported_error as _unsupported_error
 from narwhals._plan.altair.expression import into_vega_expr
 from narwhals._plan.altair.typing import Channel, Field, Value
@@ -84,7 +84,7 @@ TestAny: TypeAlias = TestDatum | TestField | TestValue
 """Any pair of `when(test).then(...)` terms."""
 
 
-Encoded: TypeAlias = ConditionalValue | ConditionalField | Field | Value
+Encoded: TypeAlias = ConditionalValue | ConditionalField | Field | Value | alt_t.Datum
 """Anything that has been translated for `altair.Chart.encode`."""
 
 _TP_FIELD = (Col, LenStar, ir.AggExpr, ir.FunctionExpr)
@@ -286,6 +286,18 @@ def _lit(expr: ir.Lit, _: NwChart, __: Channel | None, /) -> Value:
     # - use datum when there's a scale?
     #   - Very rarely seen `alt.datum(...)` in use
     return {"value": _value(expr)}
+
+
+@_from_expr.register(_parameter_ir._ParameterIR)
+def _(
+    expr: _parameter_ir._ParameterIR, __: NwChart, channel: Channel | None
+) -> alt_t.Datum:
+    datum: alt_t.Datum = {"datum": {"expr": expr.name}}
+    if channel and channel not in _SECONDARY_FIELD:
+        # NOTE: I think this would be the most common, but `"nominal"` comes up in an example...
+        # I'll need to redo it
+        datum[_TYPE] = _Q
+    return datum
 
 
 def _field(expr: ir.ExprIR, chart: NwChart, channel: Channel | None) -> Field:
