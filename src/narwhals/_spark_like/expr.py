@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-from contextlib import suppress
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -17,7 +16,6 @@ from narwhals._spark_like.utils import (
 )
 from narwhals._sql.expr import SQLExpr
 from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
-from narwhals.dtypes import DType, _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -252,31 +250,21 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(neg)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def _validated_dtype(dtype: IntoDType, df: SparkLikeLazyFrame) -> _NativeDType:
-            if dtype.is_numeric():
-                schema: dict[str, DType] = {}
-                with suppress(Exception):
-                    schema = df.collect_schema()
-
-                if schema:
-                    for name in self._evaluate_output_names(df):
-                        _validate_cast_temporal_to_numeric(
-                            source=schema[name], target=dtype
-                        )
-
+        def native_dtype(df: SparkLikeLazyFrame) -> _NativeDType:
+            self._validate_temporal_to_numeric_cast(df, dtype)
             return narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            native_dtype = _validated_dtype(dtype, df)
-            return [expr.cast(native_dtype) for expr in self(df)]
+            dtype_ = native_dtype(df)
+            return [expr.cast(dtype_) for expr in self(df)]
 
         def window_f(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            native_dtype = _validated_dtype(dtype, df)
-            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
+            dtype_ = native_dtype(df)
+            return [expr.cast(dtype_) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,

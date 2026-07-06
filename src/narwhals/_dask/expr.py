@@ -20,11 +20,9 @@ from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dt
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
-    Version,
     generate_temporary_column_name,
     not_implemented,
 )
-from narwhals.dtypes import _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -42,7 +40,7 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame
     from narwhals._dask.namespace import DaskNamespace
     from narwhals._typing import NoDefault
-    from narwhals._utils import _LimitedContext
+    from narwhals._utils import Version, _LimitedContext
     from narwhals.typing import (
         FillNullStrategy,
         IntoDType,
@@ -621,11 +619,7 @@ class DaskExpr(
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            if dtype.is_numeric():
-                schema = df.schema
-                for name in self._evaluate_output_names(df):
-                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
-
+            self._validate_temporal_to_numeric_cast(df, dtype)
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return [expr.astype(native_dtype) for expr in self._call(df)]
 

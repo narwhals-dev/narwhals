@@ -180,6 +180,18 @@ class ExprKind(Enum):
             ExprKind.ORDERABLE_AGGREGATION,
         }
 
+    @property
+    def is_selection(self) -> bool:
+        # Pure column selection: preserves dtype and maps each output directly
+        # into one or multiple columns, e.g. `nw.col('a')`, `nw.nth(0)`, `nw.all()`.
+        return self in {
+            ExprKind.ALL,
+            ExprKind.COL,
+            ExprKind.EXCLUDE,
+            ExprKind.NTH,
+            ExprKind.SELECTOR,
+        }
+
 
 def is_scalar_like(obj: CompliantExprAny) -> bool:
     return obj._metadata.is_scalar_like
@@ -413,6 +425,11 @@ class ExprMetadata:
         while current is not None:
             yield current.current_node
             current = current.prev
+
+    @property
+    def is_pure_selection(self) -> bool:
+        """Whether or not this is a bare column selection with no dtype-altering operation."""
+        return self.prev is None and self.current_node.kind.is_selection
 
     @classmethod
     def from_node(

@@ -508,3 +508,29 @@ def test_cast_temporal_to_numeric_raises_series(
     msg = "Casting from temporal type to numeric"
     with pytest.raises(InvalidOperationError, match=msg):
         series.cast(target_dtype)
+
+
+@pytest.mark.parametrize("target_dtype", [nw.Int64, nw.Float64])
+def test_cast_derived_temporal_to_numeric_allowed(
+    constructor: Constructor, target_dtype: nw.dtypes.DType
+) -> None:
+    data = {"a": [datetime(2000, 1, 1, 12, 0), datetime(2001, 1, 1, 12, 0)]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").dt.year().cast(target_dtype))
+    assert_equal_data(result, {"a": [2000, 2001]})
+
+
+@pytest.mark.parametrize("target_dtype", [nw.Int64, nw.Float64])
+def test_cast_chained_temporal_to_numeric_raises(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    target_dtype: nw.dtypes.DType,
+) -> None:
+    if "polars" in str(constructor):
+        reason = "Polars expressions wrap native expressions"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    df = nw.from_native(constructor({"a": [datetime(2000, 1, 1, 12, 0), None]})).lazy()
+    msg = "Casting from temporal type to numeric"
+    with pytest.raises(InvalidOperationError, match=msg):
+        df.select(nw.col("a").cast(nw.Datetime("us")).cast(target_dtype)).collect()

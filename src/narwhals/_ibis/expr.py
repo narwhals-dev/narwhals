@@ -27,7 +27,6 @@ from narwhals._utils import (
     extend_bool,
     not_implemented,
 )
-from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -285,11 +284,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            if dtype.is_numeric():
-                schema = df.collect_schema()
-                for name in self._evaluate_output_names(df):
-                    _validate_cast_temporal_to_numeric(source=schema[name], target=dtype)
-
+            self._validate_temporal_to_numeric_cast(df, dtype)
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return [expr.cast(native_dtype) for expr in self(df)]  # pyright: ignore[reportArgumentType, reportCallIssue]
 
