@@ -530,7 +530,8 @@ def test_cast_chained_temporal_to_numeric_raises(
         reason = "Polars expressions wrap native expressions"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    df = nw.from_native(constructor({"a": [datetime(2000, 1, 1, 12, 0), None]})).lazy()
+    df = nw.from_native(constructor({"a": ["2020-01-01T12:34:56"]})).lazy()
+    temporal = nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S")
     msg = "Casting from temporal type to numeric"
     with pytest.raises(InvalidOperationError, match=msg):
-        df.select(nw.col("a").cast(nw.Datetime("us")).cast(target_dtype)).collect()
+        df.select(temporal.cast(target_dtype)).collect()
