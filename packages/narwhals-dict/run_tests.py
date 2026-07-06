@@ -38,8 +38,6 @@ TESTS_THAT_NEED_FIX: list[str] = [
     "tests/expr_and_series/cast_test.py::test_cast_series",
     "tests/expr_and_series/cast_test.py::test_cast_struct",
     "tests/expr_and_series/cast_test.py::test_cast_to_float16",
-    "tests/expr_and_series/cat/get_categories_test.py::test_get_categories_eager",
-    "tests/expr_and_series/cat/get_categories_test.py::test_get_categories_lazy",
     "tests/expr_and_series/dt/datetime_duration_test.py::test_duration_attributes_nano",
     "tests/expr_and_series/dt/datetime_duration_test.py::test_duration_attributes_series_nano",
     "tests/expr_and_series/dt/timestamp_test.py::test_timestamp_datetimes",

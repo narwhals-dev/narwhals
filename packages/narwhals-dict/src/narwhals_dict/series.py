@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerSeries
 from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation, not_implemented
+from narwhals._utils import NO_DEFAULT, Implementation
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.utils import binary_op, cast_values, infer_dtype, is_native_column
 
@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     )
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.namespace import DictNamespace
+    from narwhals_dict.series_cat import DictSeriesCatNamespace
     from narwhals_dict.series_dt import DictSeriesDateTimeNamespace
     from narwhals_dict.series_list import DictSeriesListNamespace
     from narwhals_dict.series_str import DictSeriesStringNamespace
@@ -1116,5 +1117,8 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
 
         return DictSeriesStructNamespace(self)
 
-    # Namespaces: not implemented (yet).
-    cat: Any = not_implemented()
+    @property
+    def cat(self) -> DictSeriesCatNamespace:
+        from narwhals_dict.series_cat import DictSeriesCatNamespace
+
+        return DictSeriesCatNamespace(self)
