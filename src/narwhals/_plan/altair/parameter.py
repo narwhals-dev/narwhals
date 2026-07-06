@@ -54,7 +54,7 @@ if TYPE_CHECKING:
         SelectionResolution_T,
         SingleDefUnitChannel_T,
     )
-    from typing_extensions import Required, Self, Unpack
+    from typing_extensions import Required, Self
 
     import narwhals._plan as nw
     from narwhals._plan.altair import stream, typing as alt_t
@@ -105,15 +105,6 @@ Binding: TypeAlias = (
 
 Note:
     A TypedDict, sum-type equivalent of `altair.Binding`.
-"""
-
-
-SelectionParam: TypeAlias = alt.SelectionParameter | alt.TopLevelSelectionParameter
-"""A parameter that [defines a data query] driven by user input (e.g., mouse clicks or drags).
-
-Accepts config via a `select` argument.
-
-[defines a data query]: https://vega.github.io/vega-lite/docs/selection.html
 """
 
 
@@ -181,15 +172,6 @@ _ElementType: TypeAlias = Literal[
 
 class _WithBinding(Protocol):
     def _with_binding(self, bind: Binding, /) -> Self: ...
-
-
-def _selection(**kwds: Unpack[theme.TopLevelSelectionParameterKwds]) -> SelectionParam:
-    """Required: select."""
-    kwds = _ensure_param_name(kwds)
-    if "views" in kwds:
-        return alt.TopLevelSelectionParameter(**kwds)
-    # this one doesn't have a typed dict, but the only difference vs the other is `views`
-    return alt.SelectionParameter(**kwds)
 
 
 class _StateExchange(Protocol[_TD_co]):
@@ -269,7 +251,7 @@ class _Param(_StateExchange[_CommonParam]):
         return self.var(default).expr(expr)
 
     @property
-    def bind(self) -> _BindBuilder[Self]:
+    def bind(self) -> _BindBuilder:
         return _BindBuilder(self)
 
     def _with_binding(self, bind: Binding, /) -> Self:
@@ -517,40 +499,32 @@ class _BaseBindBuilder(Generic[_FromT]):
         return self._param_builder._with_binding(bind)
 
 
-# TODO @dangotbanned: Fix `self._param_builder._state` dependency
-class _BindBuilder(_BaseBindBuilder[_FromT]):
+class _BindBuilder(_BaseBindBuilder[_Param]):
     def scales(
         self, *, encodings: Sequence[SingleDefUnitChannel_T] = ("x", "y")
-    ) -> SelectionParam:
+    ) -> alt.SelectionParameter:
         """Equivalent to `alt.Chart().interactive()`, but without adding the param to the chart."""
-        # NOTE: Obvious now that `_selection` is the wrong API, when combined with this
-        select: theme.IntervalSelectionConfigKwds = {
-            "type": "interval",
-            "encodings": encodings,
+        _kwds: Any = self._param_builder._unwrap() | {
+            "select": {"type": "interval", "encodings": encodings},
+            "bind": "scales",
         }
-        if name := self._param_builder._state.get("name"):  # type: ignore[attr-defined]
-            return _selection(bind="scales", select=select, name=name)
-        return _selection(bind="scales", select=select)
-
-    # NOTE: 1 encoding or 1 field -> one method each
-    # https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/interactive_legend.py#L5-L6
+        return alt.SelectionParameter(**_ensure_param_name(_kwds))
 
     def legend_encoding(
         self, encoding: SingleDefUnitChannel_T = "color", /
-    ) -> SelectionParam:
-        select: theme.PointSelectionConfigKwds = {
-            "type": "point",
-            "encodings": [encoding],
+    ) -> alt.SelectionParameter:
+        _kwds: Any = self._param_builder._unwrap() | {
+            "select": {"type": "point", "encodings": [encoding]},
+            "bind": "scales",
         }
-        if name := self._param_builder._state.get("name"):  # type: ignore[attr-defined]
-            return _selection(bind="legend", select=select, name=name)
-        return _selection(bind="legend", select=select)
+        return alt.SelectionParameter(**_ensure_param_name(_kwds))
 
-    def legend_field(self, field: str, /) -> SelectionParam:
-        select: theme.PointSelectionConfigKwds = {"type": "point", "fields": [field]}
-        if name := self._param_builder._state.get("name"):  # type: ignore[attr-defined]
-            return _selection(bind="legend", select=select, name=name)
-        return _selection(bind="legend", select=select)
+    def legend_field(self, field: str, /) -> alt.SelectionParameter:
+        _kwds: Any = self._param_builder._unwrap() | {
+            "select": {"type": "point", "fields": [field]},
+            "bind": "scales",
+        }
+        return alt.SelectionParameter(**_ensure_param_name(_kwds))
 
 
 def _invalid_keys_error(
