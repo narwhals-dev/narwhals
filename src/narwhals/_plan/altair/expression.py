@@ -11,7 +11,7 @@ import functools
 import math
 import operator
 from collections.abc import Callable, Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypeVar, final
 
 from altair.expr import core as alt_ir
 
@@ -50,6 +50,7 @@ AltBinary: TypeAlias = Callable[[AltExpr, AltExpr], AltExpr]
 _COMMA = ","
 
 
+@final
 class AltExprStr(alt_ir.Expression):
     """Extensions to altair's expressions.
 
@@ -69,6 +70,12 @@ class AltExprStr(alt_ir.Expression):
         return self.js_repr
 
     __str__ = __repr__
+
+    def __copy__(self) -> AltExprStr:
+        return self
+
+    def __deepcopy__(self, memo: Any) -> AltExprStr:
+        return self
 
     @staticmethod
     def list_expr(exprs: Iterable[alt_ir.Expression], /) -> AltExprStr:
