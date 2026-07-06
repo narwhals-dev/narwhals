@@ -42,7 +42,6 @@ TESTS_THAT_NEED_FIX: list[str] = [
     "tests/expr_and_series/dt/datetime_duration_test.py::test_duration_attributes_series_nano",
     "tests/expr_and_series/dt/timestamp_test.py::test_timestamp_datetimes",
     "tests/expr_and_series/dt/timestamp_test.py::test_timestamp_datetimes_tz_aware",
-    "tests/expr_and_series/first_last_test.py::test_first_last_different_orders",
     "tests/expr_and_series/is_close_test.py::test_is_close_series_with_scalar",
     "tests/expr_and_series/is_close_test.py::test_is_close_series_with_series",
     "tests/expr_and_series/operators_test.py::test_logic_operators_expr_kleene",

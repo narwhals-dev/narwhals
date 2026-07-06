@@ -11,9 +11,77 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
 
     from narwhals._compliant.typing import NarwhalsAggregation
+    from narwhals._expression_parsing import ExprNode
     from narwhals_dict.dataframe import DictDataFrame
     from narwhals_dict.expr import DictExpr
     from narwhals_dict.typing import DictFrame
+
+
+class _GroupedRows:
+    """Per-`agg` cache of grouped row indices, gathered columns, and sub-frames.
+
+    `first`/`last` may each request a *different* `order_by`.
+
+    Each column is gathered by group indices at most once per `agg` call,
+    no matter how many expressions reference it. Sharing the gathered lists
+    (rather than copying) is safe: series and frame operations never mutate
+    native lists in place.
+    """
+
+    def __init__(self, frame: DictDataFrame, keys: Sequence[str]) -> None:
+        self._frame = frame
+        self._key_columns = [frame.native[key] for key in keys]
+        base_groups: dict[tuple[Any, ...], list[int]] = {}
+        for index, key in enumerate(zip(*self._key_columns, strict=True)):
+            base_groups.setdefault(key, []).append(index)
+        self.keys: list[tuple[Any, ...]] = list(base_groups)
+        self._indices: dict[tuple[str, ...], list[list[int]]] = {
+            (): [base_groups[key] for key in self.keys]
+        }
+
+        # Row keys are only needed to re-bucket a non-trivial `order_by`, so they are built lazily
+        self._row_keys: list[tuple[Any, ...]] | None = None
+        self._columns: dict[tuple[tuple[str, ...], str], list[list[Any]]] = {}
+        self._frames: dict[tuple[str, ...], list[DictDataFrame]] = {}
+
+    @property
+    def row_keys(self) -> list[tuple[Any, ...]]:
+        if self._row_keys is None:
+            self._row_keys = list(zip(*self._key_columns, strict=True))
+        return self._row_keys
+
+    def indices(self, order_by: tuple[str, ...]) -> list[list[int]]:
+        """Each group's row indices, ordered by `order_by` (ascending, nulls first)."""
+        if (cached := self._indices.get(order_by)) is None:
+            buckets: dict[tuple[Any, ...], list[int]] = {key: [] for key in self.keys}
+            for index in self._frame._sorted_indices(
+                order_by, descending=False, nulls_last=False
+            ):
+                buckets[self.row_keys[index]].append(index)
+            cached = self._indices[order_by] = [buckets[key] for key in self.keys]
+        return cached
+
+    def gather(self, order_by: tuple[str, ...], name: str) -> list[list[Any]]:
+        """Column `name` split into one list of values per group, in `order_by` order."""
+        if (columns := self._columns.get(cache_key := (order_by, name))) is None:
+            column = self._frame.native[name]
+            columns = self._columns[cache_key] = [
+                [column[i] for i in indices] for indices in self.indices(order_by)
+            ]
+        return columns
+
+    def frames(self, order_by: tuple[str, ...]) -> list[DictDataFrame]:
+        """One sub-frame per group (all columns), rows in `order_by` order."""
+        if (frames := self._frames.get(order_by)) is None:
+            col_names = self._frame.columns
+            frames = self._frames[order_by] = [
+                self._frame._with_native(
+                    {name: self.gather(order_by, name)[position] for name in col_names},
+                    validate_column_names=False,
+                )
+                for position in range(len(self.keys))
+            ]
+        return frames
 
 
 class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
@@ -64,25 +132,19 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
             groups.setdefault(key, []).append(index)
         return groups
 
-    def _order_by(self, *exprs: DictExpr) -> tuple[str, ...]:
-        """Collect a single `order_by` from order-dependent aggregations, like `first`/`last`."""
-        order_by: tuple[str, ...] = ()
-        for expr in exprs:
-            node = next(expr._metadata.op_nodes_reversed())
-            if node.name not in self._ORDER_DEPENDENT:
-                continue
-            if current := tuple(node.kwargs.get("order_by", ())):
-                if order_by and current != order_by:
-                    msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {current}."
-                    raise NotImplementedError(msg)
-                order_by = current
-        return order_by
+    @staticmethod
+    def _leaf_order_by(leaf: ExprNode) -> tuple[str, ...]:
+        """The `order_by` an order-dependent leaf (`first`/`last`) sorts each group by."""
+        if leaf.name in DictGroupBy._ORDER_DEPENDENT:
+            return tuple(leaf.kwargs.get("order_by", ()))
+        return ()
 
     def _agg_simple(
         self,
         expr: DictExpr,
         frame: DictDataFrame,
-        gather: Callable[[str], list[list[Any]]],
+        order_by: tuple[str, ...],
+        gather: Callable[[tuple[str, ...], str], list[list[Any]]],
         output_names: Sequence[str],
         aliases: Sequence[str],
     ) -> dict[str, list[Any]]:
@@ -98,7 +160,7 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
         return {
             alias: [
                 method(DictSeries(values, name=output_name, version=version))(**kwargs)
-                for values in gather(output_name)
+                for values in gather(order_by, output_name)
             ]
             for output_name, alias in zip(output_names, aliases, strict=True)
         }
@@ -129,42 +191,21 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
 
     def agg(self, *exprs: DictExpr) -> DictDataFrame:
         frame = self.compliant
-        if order_by := self._order_by(*exprs):
-            frame = frame.sort(*order_by, descending=False, nulls_last=False)
-        groups = self._group_indices(frame)
-        group_indices = list(groups.values())
-
-        # Each column is gathered by group indices at most once per `agg` call,
-        # no matter how many expressions reference it. Sharing the gathered lists
-        # (rather than copying) is safe: series and frame operations never mutate
-        # native lists in place.
-        gathered: dict[str, list[list[Any]]] = {}
-
-        def gather(name: str) -> list[list[Any]]:
-            if (columns := gathered.get(name)) is None:
-                column = frame.native[name]
-                columns = gathered[name] = [
-                    [column[i] for i in indices] for indices in group_indices
-                ]
-            return columns
-
+        groups = _GroupedRows(frame, self._keys)
         result: DictFrame = {
-            key_name: [key[position] for key in groups]
+            key_name: [key[position] for key in groups.keys]
             for position, key_name in enumerate(self._keys)
         }
-
         exclude = (*self._keys, *self._output_key_names)
-        # Sub-frames are only materialized if some expression needs the fallback,
-        # and are shared across all such expressions.
-        group_frames: list[DictDataFrame] | None = None
         for expr in exprs:
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, frame, exclude
             )
             op_nodes = list(expr._metadata.op_nodes_reversed())
+            order_by = self._leaf_order_by(op_nodes[0])
             if len(op_nodes) == 1:
                 # e.g. `agg(nw.len())`: no input column, just count rows per group.
-                result[aliases[0]] = [len(indices) for indices in group_indices]
+                result[aliases[0]] = [len(indices) for indices in groups.indices(())]
             elif self._is_simple(expr) and op_nodes[1].name == "col":
                 # e.g. `col("a").sum()`: the aggregation applies directly to a stored
                 # column, so we can gather it and dispatch to a `DictSeries` method.
@@ -172,18 +213,12 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
                 # `round(...)`, arithmetic) transforms the values first and must go
                 # through the fallback, which re-evaluates the whole expression.
                 result.update(
-                    self._agg_simple(expr, frame, gather, output_names, aliases)
+                    self._agg_simple(
+                        expr, frame, order_by, groups.gather, output_names, aliases
+                    )
                 )
             else:
-                if group_frames is None:
-                    group_frames = [
-                        frame._with_native(
-                            {name: gather(name)[position] for name in frame.native},
-                            validate_column_names=False,
-                        )
-                        for position in range(len(group_indices))
-                    ]
-                result.update(self._agg_complex(expr, group_frames, aliases))
+                result.update(self._agg_complex(expr, groups.frames(order_by), aliases))
 
         return frame._with_native(result, validate_column_names=False).rename(
             dict(zip(self._keys, self._output_key_names, strict=True))
