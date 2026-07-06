@@ -9,6 +9,10 @@ import altair as alt
 from altair.datasets import Loader
 
 import narwhals._plan as nw
+
+# TODO @dangotbanned: Move the impl modules under a subpackage (next to `examples`)
+# - export `Chart`, `param`, `selection_interval`, `selection_point`, etc
+# - import that here as `api`
 from narwhals._plan.altair import chart as nw_alt
 from narwhals._plan.altair.parameter import param
 
