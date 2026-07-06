@@ -31,6 +31,7 @@ from typing import (
     TYPE_CHECKING,
     Annotated,
     Any,
+    Final,
     Generic,
     Literal,
     Protocol,
@@ -47,7 +48,7 @@ from altair.utils import is_undefined
 from narwhals._plan.altair.expression import parse_into_vega_expr
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
 
     import typing_extensions as te
     from altair.vegalite.v6.schema._typing import (
@@ -260,6 +261,14 @@ class _Param(_StateExchange[_CommonParam]):
         return type(self)(state)
 
 
+class SchemaLike:
+    """TODO @dangotbanned: Figure out which classes/states can support this and how."""
+
+    _schema: Final[Mapping[Literal["type"], Literal["object"]]] = {"type": "object"}
+
+    def to_dict(self, *args: Any, **kwds: Any) -> Any: ...
+
+
 class _Variable(_StateExchange[VariableParamKwds]):
     def __init__(self, state: VariableParamKwds, /) -> None:
         self._state: VariableParamKwds = state
@@ -334,6 +343,13 @@ class _Selection(_StateExchange[_SelectionKwdsT]):
     def clear(self, _: stream.Stream | stream.StreamSelector | Literal[False], /) -> Self:
         self._state["select"]["clear"] = _
         return self
+
+    def empty(self, _: Literal[False], /) -> Self:
+        # NOTE: It isn't a property of a parameter, but can be used
+        # when referencing a selection parameter in a predicate
+        # https://vega.github.io/vega-lite/docs/parameter.html#as-predicates
+        msg = "TODO @dangotbanned: `Parameter.empty` is weird"
+        raise NotImplementedError(msg)
 
     def encodings(self, *encodings: SingleDefUnitChannel_T) -> Self:
         self._state["select"]["encodings"] = encodings
