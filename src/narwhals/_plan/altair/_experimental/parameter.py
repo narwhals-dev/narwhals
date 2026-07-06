@@ -23,10 +23,8 @@ from __future__ import annotations
 # mypy: disable-error-code="typeddict-item"
 # > Non-required keys (...) not explicitly found in any ** item"
 # TODO @dangotbanned: Review after PEP 728 support
-import functools
 import hashlib
 from copy import deepcopy
-from importlib.util import find_spec
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -45,10 +43,11 @@ from altair import Undefined, theme
 from altair.theme import VariableParameterKwds as VariableParamKwds
 from altair.utils import is_undefined
 
+from narwhals._plan.altair._experimental.serde import serialize
 from narwhals._plan.altair.expression import parse_into_vega_expr
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
 
     import typing_extensions as te
     from altair.vegalite.v6.schema._typing import (
@@ -599,72 +598,10 @@ _KwdsT = TypeVar(
 def _ensure_param_name(kwds: _KwdsT) -> _KwdsT:
     """Generate a parameter name if we haven't got one yet."""
     if kwds.get("name") is None:
-        encoded = serialize(kwds, deterministic=True)
+        encoded = serialize(kwds, deterministic=True, default=str)
         # NOTE: https://github.com/vega/altair/pull/3291#issuecomment-1866999185
         # - 256 vs 224 -> 64 vs 56 characters (only need 16)
         # - not used for security
         name = f"param_{hashlib.sha224(encoded, usedforsecurity=False).hexdigest()[:16]}"
         kwds["name"] = name
     return kwds
-
-
-def serialize(
-    obj: Any, /, *, deterministic: bool, default: Callable[[Any], Any] | None = str
-) -> bytes:
-    """Serialize an object to bytes.
-
-    Arguments:
-        obj: An object composed of JSON compatible types.
-        deterministic: Ensure the same input produces the same output bytes.
-            Use this when serializing to generate a hash value.
-
-            Does not guarantee anything beyond the description in [`msgspec.json.encode(order="deterministic")`]
-
-        default: A hook for objects that can't otherwise be serialized.
-            The caller is responsible for providing a hook that roundtrips,
-            which `default=str` cannot.
-
-    Important:
-        Uses the fastest available json serializer, in priority of [`msgspec`] > [`orjson`] > [`json`].
-
-    [`msgspec`]: https://github.com/msgspec/msgspec
-    [`orjson`]: https://github.com/ijl/orjson
-    [`json`]: https://docs.python.org/3/library/json.html
-    [`msgspec.json.encode(order="deterministic")`]: https://msgspec.dev/api#msgspec.json.encode
-    """
-    return _build_serializer(deterministic=deterministic, default=default)(obj)
-
-
-@functools.cache
-def _build_serializer(
-    *, deterministic: bool = False, default: Callable[[Any], Any] | None = str
-) -> Callable[[Any], bytes]:
-    """Return the fastest available json serializer."""
-    # NOTE: `marimo` depends on `msgspec`, so take it if available
-    if find_spec("msgspec"):
-        from msgspec.json import Encoder
-
-        return Encoder(
-            order="deterministic" if deterministic else None, enc_hook=default
-        ).encode
-
-    # NOTE: `mypy`, `jupyter_client` optionally depend on `orjson`
-    if find_spec("orjson"):
-        import orjson  # type: ignore[import-not-found]
-
-        orjson_encode: Callable[[Any], bytes] = functools.partial(
-            orjson.dumps,
-            default=default,
-            option=orjson.OPT_SORT_KEYS if deterministic else None,
-        )
-        return orjson_encode
-    from json import JSONEncoder
-
-    _encode = JSONEncoder(
-        sort_keys=deterministic, default=default, separators=(",", ":")
-    ).encode
-
-    def encode(obj: Any, /) -> bytes:
-        return _encode(obj).encode()
-
-    return encode
