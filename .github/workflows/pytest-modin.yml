@@ -2,36 +2,40 @@ name: PyTest Modin constructor
 
 on:
   pull_request:
+    paths:
+      - src/narwhals/_expression_parsing.py
+      - src/narwhals/_pandas_like/**
+      - tests/**
+      - .github/workflows/pytest-modin.yml
+      - pyproject.toml
+      - uv.lock
+  workflow_call:
 
 env:
   PY_COLORS: 1
   PYTEST_ADDOPTS: "--numprocesses=logical"
-  UV_SYSTEM_PYTHON: 1
-jobs:
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
 
+permissions:
+  contents: read
+
+jobs:
   pytest-modin-constructor:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.13"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
           enable-cache: "true"
           cache-suffix: modin-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: install-reqs
-        run: uv pip install -e . --group core-tests
-      - name: install modin
-        run: |
-          uv pip install -e ".[modin]"
-      - name: show-deps
-        run: uv pip freeze
       - name: Run pytest
-        run: pytest tests --constructors modin[pyarrow]
+        run: make run-ci DEPS="--group core-tests --extra modin" CMD="pytest tests --constructors=modin[pyarrow]"

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import InvalidOperationError
+from narwhals.exceptions import InvalidOperationError, UnsupportedDTypeError
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -20,7 +21,6 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals._native import NativeSQLFrame
     from narwhals.typing import NonNestedDType
 
 DATA = {
@@ -113,7 +113,7 @@ def test_cast(constructor: Constructor) -> None:
         *[nw.col(col_).cast(dtype) for col_, dtype in cast_map.items()]
     ).collect_schema()
 
-    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+    for (key, ltype), rtype in zip(result.items(), cast_map.values(), strict=False):
         if "modin_constructor" in str(constructor) and key in MODIN_XFAIL_COLUMNS:
             # TODO(unassigned): in modin we end up with `'<U0'` dtype
             # This block will act similarly to an xfail i.e. if we fix the issue, the
@@ -157,7 +157,7 @@ def test_cast_series(
     }
     result = df.select(df[col_].cast(dtype) for col_, dtype in cast_map.items()).schema
 
-    for (key, ltype), rtype in zip(result.items(), cast_map.values()):
+    for (key, ltype), rtype in zip(result.items(), cast_map.values(), strict=False):
         if "modin_constructor" in str(constructor_eager) and key in MODIN_XFAIL_COLUMNS:
             # TODO(unassigned): in modin we end up with `'<U0'` dtype
             # This block will act similarly to an xfail i.e. if we fix the issue, the
@@ -165,6 +165,30 @@ def test_cast_series(
             assert ltype != rtype
         else:
             assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
+
+
+# Backends with no half-precision (16-bit) floating point type: casting to `Float16`
+# raises for these instead of silently widening.
+FLOAT16_UNSUPPORTED = ("duckdb", "pyspark", "sqlframe")
+
+
+def test_cast_to_float16(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 36):
+        pytest.skip("Polars added `Float16` in 1.36.0")
+    if "pyarrow" in str(constructor) and PYARROW_VERSION < (16,):
+        # PyArrow added casting to/from half-float in 16.0
+        pytest.skip("PyArrow added casting to/from half-float in 16.0")
+
+    data = {"a": [1.0, 2.0, 3.0]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in FLOAT16_UNSUPPORTED):
+        with pytest.raises((NotImplementedError, UnsupportedDTypeError)):
+            df.select(nw.col("a").cast(nw.Float16)).lazy().collect()
+    else:
+        result = df.select(nw.col("a").cast(nw.Float16))
+        assert result.collect_schema()["a"] == nw.Float16
+        assert_equal_data(result, data)
 
 
 def test_cast_string() -> None:
@@ -219,9 +243,8 @@ def test_cast_datetime_tz_aware(
         or "ibis" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    request.applymarker(
-        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
-    )
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip()
 
     data = {
         "date": [
@@ -249,9 +272,8 @@ def test_cast_datetime_utc(
         or "sqlframe" in str(constructor)
     ):
         request.applymarker(pytest.mark.xfail)
-    request.applymarker(
-        pytest.mark.xfail(is_pyarrow_windows_no_tzdata(constructor), reason="no tzdata")
-    )
+    if is_pyarrow_windows_no_tzdata(constructor):
+        pytest.skip()
 
     data = {
         "date": [
@@ -271,7 +293,7 @@ def test_cast_datetime_utc(
 
 
 def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "sqlframe")):
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
@@ -279,40 +301,27 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    data = {
-        "a": [{"movie ": "Cars", "rating": 4.5}, {"movie ": "Toy Story", "rating": 4.9}]
-    }
+    from_dtype = nw.Struct(
+        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float64())]
+    )
 
-    native_df = constructor(data)
-
-    # NOTE: This branch needs to be rewritten to **not depend** on private `SparkLikeLazyFrame` properties
-    if "spark" in str(constructor):  # pragma: no cover
-        # Special handling for pyspark as it natively maps the input to
-        # a column of type MAP<STRING, STRING>
-        native_ldf = cast("NativeSQLFrame", native_df)
-        _tmp_nw_compliant_frame = nw.from_native(native_ldf)._compliant_frame
-        F = _tmp_nw_compliant_frame._F  # type: ignore[attr-defined]
-        T = _tmp_nw_compliant_frame._native_dtypes  # type: ignore[attr-defined] # noqa: N806
-
-        native_ldf = native_ldf.withColumn(
-            "a",
-            F.struct(
-                F.col("a.movie ").cast(T.StringType()).alias("movie "),
-                F.col("a.rating").cast(T.DoubleType()).alias("rating"),
-            ),
+    if "spark" in str(constructor):
+        data = {"movie": ["Cars", "Toy Story"], "rating": [4.5, 4.9]}
+        dframe = nw.from_native(constructor(data)).select(
+            a=nw.struct("movie", "rating").cast(from_dtype)
         )
-        assert nw.from_native(native_ldf).collect_schema() == nw.Schema(
-            {
-                "a": nw.Struct(
-                    [nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float64())]
-                )
-            }
-        )
-        native_df = native_ldf
 
-    dtype = nw.Struct([nw.Field("movie ", nw.String()), nw.Field("rating", nw.Float32())])
-    result = nw.from_native(native_df).select(nw.col("a").cast(dtype)).lazy().collect()
-    assert result.schema == {"a": dtype}
+    else:
+        data = {
+            "a": [{"movie": "Cars", "rating": 4.5}, {"movie": "Toy Story", "rating": 4.9}]
+        }
+        dframe = nw.from_native(constructor(data)).select(nw.col("a").cast(from_dtype))
+
+    to_dtype = nw.Struct(
+        [nw.Field("movie", nw.String()), nw.Field("rating", nw.Float32())]
+    )
+    result = dframe.select(nw.col("a").cast(to_dtype))
+    assert result.collect_schema() == {"a": to_dtype}
 
 
 def test_raise_if_polars_dtype(constructor: Constructor) -> None:

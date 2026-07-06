@@ -8,6 +8,7 @@
         - NumericType
         - Decimal
         - FloatType
+        - Float16
         - Float32
         - Float64
         - IntegerType
@@ -43,5 +44,7 @@
       show_root_heading: false
       show_source: false
       show_bases: true
-      filters: ["!^_", "^__eq__$"]
+      filters:
+        - "!^_"
+        - "^__eq__$"
       inherited_members: false

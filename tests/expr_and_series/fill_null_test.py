@@ -54,6 +54,8 @@ def test_fill_null_w_aggregate(constructor: Constructor) -> None:
 
 
 def test_fill_null_pandas_downcast() -> None:
+    # !NOTE: pandas 1.4.0 does NOT downcast to 'object' dtype. After filling
+    # null's, the dtype will be inferred to be 'bool' instead.
     pytest.importorskip("pandas")
     import pandas as pd
 

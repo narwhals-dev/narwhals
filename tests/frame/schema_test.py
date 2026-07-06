@@ -13,9 +13,9 @@ from tests.utils import PANDAS_VERSION, POLARS_VERSION, ConstructorPandasLike
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from typing import TypeAlias
 
     import polars as pl
-    from typing_extensions import TypeAlias
 
     from narwhals.typing import (
         DTypeBackend,
@@ -149,7 +149,7 @@ def test_dtypes() -> None:
         },
     )
     df_from_pl = nw.from_native(df_pl, eager_only=True)
-    expected = {
+    expected: dict[str, type[nw.dtypes.DType]] = {
         "a": nw.Int64,
         "b": nw.Int32,
         "c": nw.Int16,
@@ -177,18 +177,21 @@ def test_dtypes() -> None:
     assert {name: df_from_pl[name].dtype for name in df_from_pl.columns} == expected
 
     # pandas/pyarrow only have categorical, not enum
-    expected["r"] = nw.Categorical
+    expected_pa = {**expected, "r": nw.Categorical}
 
     df_from_pd = nw.from_native(
         df_pl.to_pandas(use_pyarrow_extension_array=True), eager_only=True
     )
 
-    assert df_from_pd.schema == df_from_pd.collect_schema() == expected
-    assert {name: df_from_pd[name].dtype for name in df_from_pd.columns} == expected
+    assert df_from_pd.schema == df_from_pd.collect_schema() == expected_pa
+    assert {name: df_from_pd[name].dtype for name in df_from_pd.columns} == expected_pa
 
     df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
 
     pure_pd_expected = {**expected, "n": nw.Datetime, "s": nw.Object, "u": nw.Object}
+    if POLARS_VERSION < (1, 41):  # pragma: no cover
+        pure_pd_expected = {**pure_pd_expected, "r": nw.Categorical}
+
     assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
     assert {
         name: df_from_pd[name].dtype for name in df_from_pd.columns
@@ -196,8 +199,8 @@ def test_dtypes() -> None:
 
     df_from_pa = nw.from_native(df_pl.to_arrow(), eager_only=True)
 
-    assert df_from_pa.schema == df_from_pa.collect_schema() == expected
-    assert {name: df_from_pa[name].dtype for name in df_from_pa.columns} == expected
+    assert df_from_pa.schema == df_from_pa.collect_schema() == expected_pa
+    assert {name: df_from_pa[name].dtype for name in df_from_pa.columns} == expected_pa
 
 
 def test_unknown_dtype() -> None:

@@ -2,33 +2,38 @@ name: Check Docs Build
 
 on:
   pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  PY_COLORS: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
+  UV_SYSTEM_PYTHON: 1
 
 jobs:
-  mkdocs:
+  zensical-strict-build:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         os: [ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: "true"
-          cache-suffix: ${{ matrix.python-version }}
-          cache-dependency-glob: "pyproject.toml"
-      - name: local-install
-        run: uv pip install -e . --group docs --system
-      - name: check-no-errors
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+      - run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: uv pip install -e ".[dask,ibis]" --group docs
+      - name: Run hooks manually
         run: |
-          python -m mkdocs build 2>&1 | tee output.txt
-          cat output.txt
-      - name: assert-no-errors
-        run: python utils/check_for_no_build_errors.py
-      - name: strict-docs-build
-        run: mkdocs build --strict
+          python utils/generate_backend_completeness.py
+          python utils/generate_zen_content.py
+      - run: zensical build --strict

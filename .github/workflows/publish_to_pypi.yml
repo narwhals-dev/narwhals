@@ -3,36 +3,124 @@
 # but with the following differences
 # - removed the TestPyPI part
 # - instead of `on: push`, we have `tags` in there too
+#
+# To gate the release on a new workflow:
+#   1. In the gating workflow, add `workflow_call:` to its `on:` triggers.
+#   2. Add `if: github.head_ref != 'bump-version'` to every job in that workflow.
+#      This skips it on the release PR opened from `bump-version`
+#      (otherwise jobs would run twice: once on the PR, once via the workflow_call below).
+#   3. Below, add a job that `uses: ./.github/workflows/<file>.yml` and append its name to `build.needs:`.
 
 name: Publish Python 🐍 distribution 📦 to PyPI
 
-on: 
+on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
 
+env:
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
+
+permissions: {}
 
 jobs:
+  pytest:
+    name: PyTest
+    uses: ./.github/workflows/pytest.yml
+    permissions:
+      contents: read
+
+  pytest-pyspark:
+    name: PyTest PySpark
+    uses: ./.github/workflows/pytest-pyspark.yml
+    permissions:
+      contents: read
+
+  pytest-ibis:
+    name: PyTest Ibis
+    uses: ./.github/workflows/pytest-ibis.yml
+    permissions:
+      contents: read
+
+  pytest-modin:
+    name: PyTest Modin
+    uses: ./.github/workflows/pytest-modin.yml
+    permissions:
+      contents: read
+
+  pytest-fireducks:
+    name: PyTest Fireducks
+    uses: ./.github/workflows/pytest-fireducks.yml
+    permissions:
+      contents: read
+
+  typing:
+    name: Type checking
+    uses: ./.github/workflows/typing.yml
+    permissions:
+      contents: read
+
+  downstream-tests:
+    name: Downstream tests
+    uses: ./.github/workflows/downstream_tests.yml
+    with:
+      skip-fairlearn: true
+    permissions:
+      contents: read
+
+  check-docs-build:
+    name: Check docs build
+    uses: ./.github/workflows/check_docs_build.yml
+    permissions:
+      contents: read
+
+  pre-commit-hooks:
+    name: Pre-commit hooks
+    uses: ./.github/workflows/pre-commit-hooks.yml
+    permissions:
+      contents: read
+
+  test-sdist:
+    name: Test sdist
+    uses: ./.github/workflows/test_sdist.yml
+    permissions:
+      contents: read
+
   build:
     name: Build distribution 📦
+    needs:
+      - pytest
+      - pytest-pyspark
+      - pytest-ibis
+      - pytest-modin
+      - typing
+      - downstream-tests
+      - check-docs-build
+      - pre-commit-hooks
+      - test-sdist
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       with:
         persist-credentials: false
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Install uv
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
-        python-version: "3.x"
-    - name: Install pypa/build
-      run: python3 -m pip install build --user
+        python-version: "3.13"
     - name: Build a binary wheel and a source tarball
-      run: python3 -m build
+      run: uv build
     - name: Check wheel content
-      run: python3 utils/check_dist_content.py
+      run: uv run python utils/check_dist_content.py
+    - name: Smoke tests (wheel and source distribution)
+      run: |
+        uv run --isolated --no-project --with dist/*.whl tests/version_test.py
+        uv run --isolated --no-project --with dist/*.tar.gz tests/version_test.py
     - name: Store the distribution packages
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: python-package-distributions
         path: dist/
@@ -52,12 +140,12 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: python-package-distributions
         path: dist/
     - name: Publish distribution 📦 to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+      uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
 
   github-release:
     name: >-
@@ -71,12 +159,12 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for sigstore
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
       with:
         name: python-package-distributions
         path: dist/
     - name: Sign the dists with Sigstore
-      uses: sigstore/gh-action-sigstore-python@v3.2.0
+      uses: sigstore/gh-action-sigstore-python@5b79a39c381910c090341a2c9b0bf022c8b387e1 # v3.4.0
       with:
         inputs: >-
           ./dist/*.tar.gz

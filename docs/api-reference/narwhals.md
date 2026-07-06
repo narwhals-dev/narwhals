@@ -13,6 +13,8 @@ Here are the top-level functions available in Narwhals.
         - col
         - concat
         - concat_str
+        - corr
+        - cov
         - exclude
         - format
         - from_arrow
@@ -45,6 +47,7 @@ Here are the top-level functions available in Narwhals.
         - scan_csv
         - scan_parquet
         - show_versions
+        - struct
         - sum
         - sum_horizontal
         - to_native

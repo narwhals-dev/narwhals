@@ -20,16 +20,16 @@ In Narwhals, this is reflected in separate methods for Null/NaN values:
 
 | Operation | Null                                          | NaN                                                                                                                                                                                                                                              |
 | --------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| is        | [`Expr.is_null`][narwhals.Expr.is_null]       | [`Expr.is_nan`][narwhals.Expr.is_nan]                                                                                                                                                                                                            |
-| fill      | [`Expr.fill_null`][narwhals.Expr.fill_null]   | [`Expr.fill_nan`][narwhals.Expr.fill_nan]                                                                                                                                                                                                        |
-| drop      | [`Expr.drop_nulls`][narwhals.Expr.drop_nulls] | *Not yet implemented (See [discussion](https://github.com/narwhals-dev/narwhals/issues/3031#issuecomment-3219910366))*<br>[`polars.Expr.drop_nans`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.drop_nans.html) |
-| count     | [`Expr.null_count`][narwhals.Expr.null_count] | *No upstream equivalent*                                                                                                                                                                                                                         |
+| is        | [`Expr.is_null`](../api-reference/expr.md#narwhals.Expr.is_null)       | [`Expr.is_nan`](../api-reference/expr.md#narwhals.Expr.is_nan)                                                                                                                                                                                                            |
+| fill      | [`Expr.fill_null`](../api-reference/expr.md#narwhals.Expr.fill_null)   | [`Expr.fill_nan`](../api-reference/expr.md#narwhals.Expr.fill_nan)                                                                                                                                                                                                        |
+| drop      | [`Expr.drop_nulls`](../api-reference/expr.md#narwhals.Expr.drop_nulls) | *Not yet implemented (See [discussion](https://github.com/narwhals-dev/narwhals/issues/3031#issuecomment-3219910366))*<br>[`polars.Expr.drop_nans`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.drop_nans.html) |
+| count     | [`Expr.null_count`](../api-reference/expr.md#narwhals.Expr.null_count) | *No upstream equivalent*                                                                                                                                                                                                                         |
 
 In pandas however the concepts are muddied, as different sentinel values represent *missing* [depending on the data type](https://pandas.pydata.org/docs/user_guide/missing_data.html).
 
 Check how different tools distinguish them (or don't) in the following example:
 
-```python exec="1" source="above" session="null_handling"
+```python exec="yes" source="above" session="null_handling"
 import narwhals as nw
 import numpy as np
 from narwhals.typing import IntoFrameT
@@ -49,7 +49,7 @@ def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
 ```
 
 === "pandas"
-    ```python exec="true" source="material-block" result="python" session="null_handling"
+    ```python exec="yes" source="material-block" result="python" session="null_handling"
     import pandas as pd
 
     df = pd.DataFrame(data)
@@ -57,7 +57,7 @@ def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
     ```
 
 === "pandas (pyarrow-backed)"
-    ```python exec="true" source="material-block" result="python" session="null_handling"
+    ```python exec="yes" source="material-block" result="python" session="null_handling"
     import pandas as pd
 
     df = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
@@ -65,7 +65,7 @@ def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
     ```
 
 === "Polars (eager)"
-    ```python exec="true" source="material-block" result="python" session="null_handling"
+    ```python exec="yes" source="material-block" result="python" session="null_handling"
     import polars as pl
 
     df = pl.DataFrame(data)
@@ -73,7 +73,7 @@ def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
     ```
 
 === "PyArrow"
-    ```python exec="true" source="material-block" result="python" session="null_handling"
+    ```python exec="yes" source="material-block" result="python" session="null_handling"
     import pyarrow as pa
 
     df = pa.table(data)
@@ -89,7 +89,7 @@ libraries do. Note however that discussion on what PyArrow-backed pandas datafra
 According to the IEEE-754 standard, NaN should compare as not equal to itself, and cannot
 be compared with other floating point numbers. Python and PyArrow follow these rules:
 
-```python exec="1" source="above" session="nan-comparisons" result="python"
+```python exec="yes" source="above" session="nan-comparisons" result="python"
 import pyarrow as pa
 import pyarrow.compute as pc
 
@@ -103,7 +103,7 @@ print(pc.equal(arr, arr))
 
 Polars and DuckDB, however, don't follow this rule, and treat NaN as equal to itself.
 
-```python exec="1" source="above" session="nan-comparisons" result="python"
+```python exec="yes" source="above" session="nan-comparisons" result="python"
 import polars as pl
 import duckdb
 

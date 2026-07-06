@@ -6,6 +6,8 @@
 [![Downloads](https://static.pepy.tech/badge/narwhals/month)](https://pepy.tech/project/narwhals)
 [![Trusted publishing](https://img.shields.io/badge/Trusted_publishing-Provides_attestations-bright_green)](https://peps.python.org/pep-0740/)
 [![PYPI - Types](https://img.shields.io/pypi/types/narwhals)](https://pypi.org/project/narwhals)
+[![LFX Health Score](https://insights.linuxfoundation.org/api/badge/health-score?project=narwhals-dev-narwhals)](https://insights.linuxfoundation.org/project/narwhals-dev-narwhals)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/narwhals-dev/narwhals/badge)](https://securityscorecards.dev/viewer/?uri=github.com/narwhals-dev/narwhals)
 
 Extremely lightweight and extensible compatibility layer between dataframe libraries!
 
@@ -21,10 +23,10 @@ Seamlessly support all, without depending on any!
 - ✅ Support pandas' complicated type system and index, without
   either getting in the way
 - ✅ **100% branch coverage**, tested against pandas and Polars nightly builds
-- ✅ **Negligible overhead**, see [overhead](./overhead.md/)
-- ✅ Let your IDE help you thanks to **full static typing**, see [`narwhals.typing`][]
+- ✅ **Negligible overhead**, see [overhead](overhead.md)
+- ✅ Let your IDE help you thanks to **full static typing**, see [`narwhals.typing`](./api-reference/typing.md)
 - ✅ **Perfect backwards compatibility policy**,
-  see [stable api](./backcompat.md/) for how to opt-in
+  see [stable api](backcompat.md) for how to opt-in
 
 ## Who's this for?
 

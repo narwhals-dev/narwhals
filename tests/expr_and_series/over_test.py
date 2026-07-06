@@ -245,7 +245,7 @@ def test_over_anonymous_cumulative(
     context = (
         pytest.raises(NotImplementedError)
         if df.implementation.is_pyarrow()
-        else pytest.raises(KeyError)  # type: ignore[arg-type]
+        else pytest.raises(KeyError)
         if df.implementation.is_modin()
         or (df.implementation.is_pandas() and PANDAS_VERSION < (1, 3))
         # TODO(unassigned): bug in old pandas + modin.
@@ -463,7 +463,7 @@ def test_len_over_2369(constructor: Constructor, request: pytest.FixtureRequest)
 
 
 def test_over_quantile(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if any(x in str(constructor) for x in ("pyarrow_table", "pyspark", "cudf")):
+    if any(x in str(constructor) for x in ("pyarrow_table", "cudf")):
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
@@ -499,8 +499,6 @@ def test_over_ewm_mean(
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin", "cudf")):
         # not implemented
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 2):
-        request.applymarker(pytest.mark.xfail(reason="too old, not implemented"))
 
     data = {"a": [0.0, 1.0, 3.0, 5.0, 7.0, 7.5], "b": [1, 1, 1, 2, 2, 2]}
 
@@ -588,3 +586,18 @@ def test_over_when_then_aggregation_partition_by(
     result = df.select("a", "b", c=expr).sort("b")
     expected = {"a": [1, 1, None, 3, 3], "b": [1, 3, 4, 5, 6], "c": expected_c}
     assert_equal_data(result, expected)
+
+
+def test_mutability(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(constructor({"a": [1, 1, 2], "b": [1, 2, 3]}))
+    left = nw.col("a").sum()
+    right = nw.col("a").mean()
+    expr = left + right
+    result = df.select(expr)
+    assert_equal_data(result, {"a": [16 / 3]})
+    result = df.with_columns(expr.over("b")).sort("b")
+    assert_equal_data(result, {"a": [2.0, 2.0, 4.0], "b": [1, 2, 3]})
+    result = df.select(expr)
+    assert_equal_data(result, {"a": [16 / 3]})

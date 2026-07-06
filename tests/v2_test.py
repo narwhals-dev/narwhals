@@ -46,6 +46,8 @@ def test_toplevel() -> None:
         max=nw_v2.max("a"),
         mean=nw_v2.mean("a"),
         median=nw_v2.median("a"),
+        corr=nw_v2.corr("a", "a"),
+        cov=nw_v2.cov("a", "a"),
         sum=nw_v2.sum("a"),
         sum_h=nw_v2.sum_horizontal("a"),
         min_h=nw_v2.min_horizontal("a"),
@@ -65,6 +67,8 @@ def test_toplevel() -> None:
         "max": [3, 3, 3],
         "mean": [2.0, 2.0, 2.0],
         "median": [2.0, 2.0, 2.0],
+        "corr": [1, 1, 1],
+        "cov": [1, 1, 1],
         "sum": [6, 6, 6],
         "sum_h": [1, 2, 3],
         "min_h": [1, 2, 3],
@@ -83,6 +87,18 @@ def test_toplevel() -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
+def test_struct() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    data = {"a": [1, 2], "b": ["dogs", None], "c": ["play", "walk"]}
+
+    df = nw_v2.from_native(pl.DataFrame(data))
+    result = df.select(my_struct=nw_v2.struct("a", "b"))
+    expected = {"my_struct": [{"a": 1, "b": "dogs"}, {"a": 2, "b": None}]}
+    assert_equal_data(result, expected)
+
+
 def test_when_then() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -92,6 +108,24 @@ def test_when_then() -> None:
     expected = {"b": [6, 5, 6]}
     assert_equal_data(result, expected)
     assert isinstance(result, nw_v2.DataFrame)
+
+
+def test_when_then_otherwise_stable_expr() -> None:
+    # `Then.otherwise` and chained `Then.when` must stay the stable `Expr` subclass
+    a = nw_v2.col("a")
+    otherwise = nw_v2.when(a.is_null()).then(nw_v2.lit(0)).otherwise(a)
+    otherwise_alias = otherwise.alias("a")
+    then = nw_v2.when(a > 1).then("b").when(a > 2).then("c")
+    then_alias = then.alias("d")
+
+    if TYPE_CHECKING:
+        assert_type(otherwise, nw_v2.Expr)
+        assert_type(otherwise_alias, nw_v2.Expr)
+        assert_type(then, nw_v2.Then)
+        assert_type(then_alias, nw_v2.Then)
+
+    for expr in (otherwise, otherwise_alias, then, then_alias):
+        assert isinstance(expr, nw_v2.Expr)
 
 
 def test_constructors() -> None:

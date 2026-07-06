@@ -2,12 +2,26 @@ name: Test Downstream Libraries - Fast
 
 on:
   pull_request:
+    paths:
+      - src/**
+      - .github/workflows/downstream_tests.yml
+      - pyproject.toml
+      - uv.lock
+  workflow_call:
+    inputs:
+      skip-fairlearn:
+        type: boolean
+        default: false
 
 env:
   PY_COLORS: 1
 
+permissions:
+  contents: read
+
 jobs:
   altair:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -17,19 +31,19 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: altair-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-altair
         run: |
-          git clone https://github.com/vega/altair.git --depth=1
+          git clone https://github.com/vega/altair.git
           cd altair
           git log
       - name: install-basics
@@ -37,8 +51,6 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
           uv pip install -e ".[dev, all]"
       - name: install-narwhals-dev
         run: |
@@ -56,6 +68,7 @@ jobs:
           mypy altair tests
 
   marimo:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -64,30 +77,25 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: marimo-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: clone-marimo
         run: |
-          # TODO: remove branch pin once https://github.com/marimo-team/marimo/pull/8510 is merged
-          git clone https://github.com/marimo-team/marimo.git --depth=1 --branch=push-kmswtyynuukw
+          git clone https://github.com/marimo-team/marimo.git --depth=1
           cd marimo
           git log
       - name: install-narwhals-dev
         run: |
           cd marimo
           uv add ../ --editable
-          # Temporary pin until it's addressed upstream.
-          uv add "pandas<3" --group test-optional
-          # Temporary pin to get CI green
-          uv add "sqlglot<28.7.0" --group test-optional
       - name: show-deps
         run: |
           cd marimo
@@ -107,6 +115,7 @@ jobs:
         timeout-minutes: 15
 
   scikit-lego:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -116,12 +125,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: sklego-${{ matrix.python-version }}
@@ -143,9 +152,10 @@ jobs:
       - name: Run pytest
         run: |
           cd scikit-lego
-          pytest -n auto --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
+          pytest --numprocesses=logical --disable-warnings --cov=sklego -m "not cvxpy and not formulaic and not umap"
 
   shiny:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -153,12 +163,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: shiny-${{ matrix.python-version }}
@@ -167,49 +177,42 @@ jobs:
         run: |
           git clone https://github.com/posit-dev/py-shiny.git
           cd py-shiny
-          uv venv -p ${{ matrix.python-version }}
           git log
-      - name: install-basics
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          uv pip install --upgrade tox virtualenv setuptools
-      - name: install-shiny-dev
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          # temporary pin to get CI green
-          uv pip install "flake8-bugbear<25.10.21"
-          make narwhals-install-shiny
+
+      - name: Narwhals integration setup
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-setup@main
+        with:
+          shiny-dir: py-shiny
+
       - name: install-narwhals-dev
+        env:
+          UV_SYSTEM_PYTHON: "1"
         run: |
           cd py-shiny
-          . .venv/bin/activate
           uv pip uninstall narwhals
           uv pip install -e ./..
       - name: show-deps
+        env:
+          UV_SYSTEM_PYTHON: "1"
         run: |
           cd py-shiny
-          . .venv/bin/activate
           uv pip freeze
-      - name: Run `make narwhals-test-integration`
-        run: |
-          cd py-shiny
-          . .venv/bin/activate
-          # Isort seems to behave slightly differently in CI
-          # so we ignore its output
-          make format -s
-          make narwhals-test-integration
+
+      - name: Narwhals integration test
+        uses: posit-dev/py-shiny/.github/py-shiny/narwhals-test@main
+        with:
+          shiny-dir: py-shiny
 
   tea-tasting:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: clone-tea-tasting
@@ -218,7 +221,7 @@ jobs:
           cd tea-tasting
           git log
       - name: install-uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
           cache-suffix: tea-tasting-${{ matrix.python-version }}
@@ -228,8 +231,6 @@ jobs:
         run: |
           cd tea-tasting
           uv sync --group test
-          # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
       - name: install-narwhals-dev
         run: |
           cd tea-tasting
@@ -247,6 +248,7 @@ jobs:
           uv run --no-sync pytest tests
 
   tubular:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -256,12 +258,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: tubular-${{ matrix.python-version }}
@@ -277,8 +279,6 @@ jobs:
       - name: install-tubular-dev
         run: |
           cd tubular
-          # Temporary pin until it's addressed upstream.
-          uv pip install "pandas<3"
           uv pip install -e ".[dev]"
       - name: install-narwhals-dev
         run: |
@@ -292,6 +292,7 @@ jobs:
           pytest tests --config-file=pyproject.toml
 
   plotly:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -299,12 +300,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: plotly-${{ matrix.python-version }}
@@ -337,6 +338,7 @@ jobs:
           pytest tests/test_optional/test_px
 
   hierarchicalforecast:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -346,12 +348,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: hierarchicalforecast-${{ matrix.python-version }}
@@ -381,6 +383,7 @@ jobs:
 
 
   formulaic:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -388,12 +391,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: formulaic-${{ matrix.python-version }}
@@ -426,18 +429,19 @@ jobs:
           hatch run tests --config-file=pyproject.toml
 
   pointblank:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: pointblank-${{ matrix.python-version }}
@@ -455,8 +459,6 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
-          # Temporary pin to get CI green
-          uv pip install "sqlglot<28.7.0"
           # Temporary pin to get CI green
           uv pip install "pandas<3"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
@@ -481,18 +483,19 @@ jobs:
           make test
 
   validoopsie:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
-        python-version: ["3.9", "3.12"] # 3.9 and 3.12 are enough to cover all the tests
+        python-version: ["3.10", "3.13"] # these are enough to cover all the tests
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: validoopsie-${{ matrix.python-version }}
@@ -506,9 +509,6 @@ jobs:
         run: |
           cd validoopsie
           uv sync --dev --upgrade
-          # Temporary pin until it's addressed upstream.
-          uv remove pandas --group dev
-          uv add "pandas<3"
       - name: install-narwhals-dev
         run: |
           cd validoopsie
@@ -531,6 +531,7 @@ jobs:
         timeout-minutes: 15
 
   darts:
+    if: github.head_ref != 'bump-version'
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -539,12 +540,12 @@ jobs:
         os: ["ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: darts-${{ matrix.python-version }}
@@ -557,10 +558,11 @@ jobs:
       - name: install-deps
         run: |
           cd darts
-          uv pip install . \
-          --group dev \
-          llvmlite==0.46.0 \
-          numba==0.63.1
+          uv build --wheel
+          uv pip install dist/darts-*.whl \
+            --group dev \
+            llvmlite==0.46.0 \
+            numba==0.63.1
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -576,6 +578,7 @@ jobs:
           pytest darts/tests/test_timeseries_static_covariates.py
 
   gt-extras:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -583,12 +586,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: gt-extras-${{ matrix.python-version }}
@@ -617,6 +620,7 @@ jobs:
           uv run --no-sync pytest
 
   fairlearn:
+    if: github.head_ref != 'bump-version' && !inputs.skip-fairlearn
     env:
       UV_SYSTEM_PYTHON: 1
     strategy:
@@ -626,12 +630,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: "true"
           cache-suffix: fairlearn-${{ matrix.python-version }}
@@ -645,7 +649,7 @@ jobs:
         run: |
           cd fairlearn
           # TODO(FBruzzesi): Align with fairlearn team to get a minimal requirement to test narwhals features
-          uv pip install -e . -r requirements.txt lightgbm matplotlib polars pyarrow pytest typing-extensions
+          uv pip install -e . lightgbm matplotlib polars pyarrow pytest typing-extensions
       - name: install-narwhals-dev
         run: |
           cd fairlearn
@@ -656,3 +660,95 @@ jobs:
         run: |
           cd fairlearn
           pytest test/unit -m "narwhals"
+
+  lightgbm:
+    if: github.head_ref != 'bump-version'
+    env:
+      UV_SYSTEM_PYTHON: 1
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: "true"
+          cache-suffix: lightgbm-${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: clone-lightgbm
+        run: |
+          git clone https://github.com/lightgbm-org/LightGBM.git --recursive --depth=1
+          cd LightGBM
+          git log
+      - name: install-lightgbm
+        run: |
+          cd LightGBM
+          uv pip install pip
+          sh ./build-python.sh install
+      - name: install-deps
+        run: |
+          uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt
+      - name: install-narwhals-dev
+        run: |
+          uv pip uninstall narwhals
+          uv pip install -e .
+      - name: show-deps
+        run: uv pip freeze
+      - name: Run pytest
+        run: |
+          cd LightGBM
+          pytest --config-file python-package/pyproject.toml tests/python_package_test
+
+  scikit-learn:
+    if: github.head_ref != 'bump-version'
+    env:
+      UV_SYSTEM_PYTHON: 1
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: "true"
+          cache-suffix: ${{ matrix.python-version }}
+          cache-dependency-glob: "pyproject.toml"
+      - name: Clone scikit-learn
+        run: |
+          git clone https://github.com/scikit-learn/scikit-learn.git --depth=1
+          cd scikit-learn
+          git log
+      - name: Build scikit-learn
+        run: |
+          cd scikit-learn
+          uv pip install -U ninja meson-python numpy cython joblib threadpoolctl scipy
+          uv pip install --editable . --verbose --no-build-isolation --config-settings editable-verbose=true
+          uv pip install -U pandas polars pyarrow pytest pytest-xdist
+      - name: Install Narwhals branch
+        run: |
+          uv pip uninstall narwhals
+          uv pip install -e .
+      - name: Run tests
+        # Based on https://github.com/scikit-learn/scikit-learn/pull/31127#issuecomment-4425039398
+        run: |
+          cd scikit-learn
+          tests=(
+            sklearn/utils/tests/test_indexing.py
+            sklearn/utils/tests/test_validation.py
+            sklearn/compose/tests/test_column_transformer.py
+            sklearn/ensemble/_hist_gradient_boosting/tests/test_gradient_boosting.py
+          )
+          pytest "${tests[@]}"

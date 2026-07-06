@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, Callable, TypeVar, cast
+from collections.abc import Callable, Iterable, Sequence
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
 
@@ -12,7 +12,9 @@ from narwhals._namespace import Namespace
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
-    from typing_extensions import Never, TypeAlias, assert_type  # noqa: F401
+    from typing import TypeAlias
+
+    from typing_extensions import Never, assert_type  # noqa: F401
 
     from narwhals._arrow.namespace import ArrowNamespace  # noqa: F401
     from narwhals._compliant import CompliantNamespace
@@ -91,7 +93,8 @@ def test_namespace_from_backend_typing(backend: _EagerAllowed) -> None:
     if TYPE_CHECKING:
         assert_type(
             namespace,
-            "Namespace[PolarsNamespace] | Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace]",
+            # pyrefly: `PolarsNamespace` is not assignable to upper bound `CompliantNamespace` of type variable `CompliantNamespaceT_co`
+            "Namespace[PolarsNamespace] | Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace]",  # pyrefly: ignore[bad-specialization]
         )
     assert repr(namespace) in {
         "Namespace[PolarsNamespace]",
@@ -125,7 +128,7 @@ def test_namespace_from_numpy_polars() -> None:
     import polars as pl
 
     arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
-    columns = "a", "b", "c"
+    columns = ["a", "b", "c", "d"]
     frame = Namespace.from_backend("polars").compliant.from_numpy(arr, columns).native
     if TYPE_CHECKING:
         assert_type(frame, pl.DataFrame)
@@ -210,7 +213,7 @@ def test_namespace_is_native() -> None:
             # NOTE: We can't spell intersections *yet* (https://github.com/python/typing/issues/213)
             # Would be:
             # `<subclass of list[int] and DataFrame> | <subclass of list[int] and LazyFrame> | <subclass of list[int] and Series>``
-            assert_type(unrelated, "Never")  # pyright: ignore[reportAssertTypeFailure]
+            assert_type(unrelated, "Never")  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         else:
             assert_type(unrelated, "list[int]")
 

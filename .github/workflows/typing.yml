@@ -2,24 +2,36 @@ name: Type checking
 
 on:
   pull_request:
+    paths:
+      - "**.py"
+      - .github/workflows/typing.yml
+      - pyproject.toml
+      - uv.lock
+  workflow_call:
 
 env:
   PY_COLORS: 1
+  UV_LOCKED: 1
+  UV_NO_DEV: 1
+
+permissions:
+  contents: read
 
 jobs:
   typing:
+    if: github.head_ref != 'bump-version'
     strategy:
       matrix:
         python-version: ["3.12"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           activate-environment: true
           enable-cache: "true"
@@ -29,7 +41,7 @@ jobs:
         run: uv venv .venv --clear
       - name: install-reqs
         # TODO: add more dependencies/backends incrementally
-        run: uv pip install -e ".[pyspark]" --group core --group typing
+        run: uv pip install -e ".[pyspark]" --group typing
       - name: show-deps
         run: uv pip freeze
       - name: Run mypy and pyright

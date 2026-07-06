@@ -19,11 +19,10 @@ pytest.importorskip("pyarrow")
 import polars as pl
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
     from pathlib import Path
     from types import ModuleType
-
-    from typing_extensions import TypeAlias
+    from typing import TypeAlias
 
     from narwhals._typing import EagerAllowed, _LazyOnly, _SparkLike
     from narwhals.typing import FileSource
@@ -208,57 +207,44 @@ def test_scan_fail_spark_like_without_session(
         getattr(nw, scan_method)("unused.csv", backend=backend)
 
 
-@pytest.mark.parametrize("csv_path", ["str"], indirect=True)
-def test_read_csv_raise_sep_multiple_lazy(csv_path: FileSource) -> None:
-    pytest.importorskip("duckdb")
-    pytest.importorskip("pandas")
-    pytest.importorskip("pyarrow")
-    pytest.importorskip("sqlframe")
-    import duckdb
-    import pandas as pd
-    import pyarrow as pa
-    import sqlframe
+def _pyarrow_parse_options() -> dict[str, Any]:
     from pyarrow import csv
-    from sqlframe.duckdb import DuckDBSession
 
-    msg = "do not match:"
-    with pytest.raises(TypeError, match=msg):
-        nw.read_csv(
-            csv_path,
-            backend=pa,
-            separator="|",
-            parse_options=csv.ParseOptions(delimiter=";"),
-        )
-    with pytest.raises(TypeError, match=msg):
-        nw.scan_csv(
-            csv_path,
-            backend=pa,
-            separator="|",
-            parse_options=csv.ParseOptions(delimiter=";"),
-        )
-    with pytest.raises(TypeError, match=msg):
-        nw.read_csv(csv_path, backend=pd, separator="|", sep=";")
-    with pytest.raises(TypeError, match=msg):
-        nw.scan_csv(csv_path, backend=pd, separator="|", sep=";")
-    with pytest.raises(TypeError, match=msg):
-        nw.scan_csv(csv_path, backend=duckdb, separator="|", delimiter=";")
-    with pytest.raises(TypeError, match=msg):
-        nw.scan_csv(csv_path, backend=duckdb, separator="|", delim=";")
-    with pytest.raises(TypeError, match=msg):
-        nw.scan_csv(
-            csv_path,
-            backend=sqlframe,
-            separator="|",
-            sep=";",
-            session=DuckDBSession(),
-            inferSchema=True,
-        )
-    with pytest.raises(TypeError, match=msg):
-        nw.scan_csv(
-            csv_path,
-            backend=sqlframe,
-            separator="|",
-            delimiter=";",
-            session=DuckDBSession(),
-            inferSchema=True,
-        )
+    return {"parse_options": csv.ParseOptions(delimiter=";")}
+
+
+@pytest.mark.parametrize(
+    ("backend", "into_kwargs"),
+    [("pyarrow", _pyarrow_parse_options), ("pandas", lambda: {"sep": ";"})],
+)
+def test_read_csv_raise_on_conflicting_separator(
+    backend: Literal["pandas", "pyarrow"], into_kwargs: Callable[[], dict[str, Any]]
+) -> None:
+    pytest.importorskip(backend)
+    kwargs = into_kwargs()
+    with pytest.raises(TypeError, match="do not match:"):
+        nw.read_csv("unused.csv", backend=backend, separator="|", **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("backend", "into_kwargs"),
+    [
+        ("pyarrow", _pyarrow_parse_options),
+        ("pandas", lambda: {"sep": ";"}),
+        ("duckdb", lambda: {"delimiter": ";"}),
+        ("duckdb", lambda: {"delim": ";"}),
+        ("sqlframe", lambda: {"sep": ";"}),
+        ("sqlframe", lambda: {"delimiter": ";"}),
+    ],
+)
+def test_scan_csv_raise_on_conflicting_separator(
+    backend: Literal["duckdb", "pandas", "pyarrow", "sqlframe"],
+    into_kwargs: Callable[[], dict[str, Any]],
+) -> None:
+    # Separator validation raises before the source is read (and, for spark-like
+    # backends, before a session is required), so a literal path and a string
+    # backend are enough. Backend objects are imported lazily via `into_kwargs`.
+    pytest.importorskip(backend)
+    kwargs = into_kwargs()
+    with pytest.raises(TypeError, match="do not match:"):
+        nw.scan_csv("unused.csv", backend=backend, separator="|", **kwargs)
