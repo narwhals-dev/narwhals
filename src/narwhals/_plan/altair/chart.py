@@ -10,17 +10,18 @@ from typing import TYPE_CHECKING, Any, Final
 
 import altair as alt
 import altair.utils
+from altair.utils.schemapi import UndefinedType
 
 import narwhals._plan as nw
 import narwhals.stable.v1 as stable_v1
 from narwhals._plan.altair import encode
 from narwhals._plan.altair.aggregate import aggregate_transform, window_transform
 from narwhals._plan.altair.calculate import calculate_transform
+from narwhals._plan.altair.expression import parse_into_alt_expr
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from _typeshed import Incomplete
     from altair.typing import ChartType as AltChart, Optional
     from altair.vegalite.v6.schema._config import ThemeConfig as _ChartKwds
     from altair.vegalite.v6.schema._typing import StackOffset_T
@@ -30,6 +31,10 @@ if TYPE_CHECKING:
     from narwhals._plan.altair.typing import EncodeKwds, FieldName, IntoAltExpr
 
 _EMPTY_SCHEMA: Final = stable_v1.Schema()
+
+
+_TP_FILTER_PASSTHROUGH_0 = (dict, alt.PredicateComposition, UndefinedType)
+_TP_FILTER_PASSTHROUGH_1 = (alt.PredicateComposition,)
 
 
 class Chart:
@@ -97,10 +102,10 @@ class Chart:
 
     def transform_filter(
         self,
-        predicate: Optional[nw.Expr | Incomplete] = alt.Undefined,
-        *more_predicates: nw.Expr | Incomplete,
+        predicate: Optional[nw.Expr | alt.api._PredicateType] = alt.Undefined,
+        *more_predicates: nw.Expr | alt.api._ComposablePredicateType,
         empty: Optional[bool] = alt.Undefined,
-        **constraints: nw.Expr | Incomplete,
+        **constraints: nw.Expr | alt.api._FieldEqualType,
     ) -> Self:
         """Add a filter to the chart.
 
@@ -115,8 +120,23 @@ class Chart:
             - but heavy parameter usage and pandas indexing
         - [all the features](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/multiple_interactions.py#L20-L33)
         """
-        msg = "TODO @dangotbanned: `transform_filter`"
-        raise NotImplementedError(msg)
+        # NOTE: Ultra-cursed!
+        parse = parse_into_alt_expr
+        pred_0 = (
+            predicate
+            if isinstance(predicate, _TP_FILTER_PASSTHROUGH_0)
+            else parse(predicate)
+        )
+        predicates = (
+            p if isinstance(p, _TP_FILTER_PASSTHROUGH_1) else parse(p)
+            for p in more_predicates
+        )
+        kwds = {
+            k: (parse(v) if isinstance(v, nw.Expr) else v) for k, v in constraints.items()
+        }
+        return self._from_altair(
+            self._chart.transform_filter(pred_0, *predicates, empty=empty, **kwds)
+        )
 
     # TODO @dangotbanned: Is there a reasonable parallel to lean on here?
     def transform_stack(

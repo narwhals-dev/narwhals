@@ -22,10 +22,7 @@ raw = base.encode(
     #   - This example is an edge case where that makes sense
     x=alt.X("IMDB Rating").title("IMDB Rating"),
     y=alt.Y("Rotten Tomatoes Rating").title("Rotten Tomatoes Rating"),
-).transform_filter(
-    # TODO @dangotbanned: Support `transform_filter`
-    alt.datum["IMDB Rating"] >= threshold
-)
+).transform_filter(alt.datum["IMDB Rating"] >= threshold)
 
 aggregated = base.encode(
     # TODO @dangotbanned: Support as:
@@ -35,10 +32,7 @@ aggregated = base.encode(
     y=alt.Y("Rotten Tomatoes Rating").bin(maxbins=10),
     # TODO @dangotbanned: Does narwhals have a way of representing this?
     size=alt.Size("count()").scale(domain=[0, 160]),
-).transform_filter(
-    # TODO @dangotbanned: Support `transform_filter`
-    alt.datum["IMDB Rating"] < threshold
-)
+).transform_filter(alt.datum["IMDB Rating"] < threshold)
 
 rule = (
     nw_alt.Chart()

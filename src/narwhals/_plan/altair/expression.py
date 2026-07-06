@@ -167,8 +167,47 @@ def _(expr: ir.TernaryExpr) -> AltExpr:
     return AltExprStr.call_fn("if", exprs)
 
 
+def parse_into_alt_expr(
+    expr: NwExpr | VegaExpr | alt.ExprRef | alt_ir.OperatorMixin | alt.Expr, /
+) -> AltExpr:
+    """Convert almost anything into a composable altair expression.
+
+    Convenience wrapper around [`into_vega_expr`][].
+
+    Arguments:
+        expr: An [`Expr`][narwhals._plan.Expr] or anything that is
+            currently accepted as an altair expression/predicate.
+    """
+    return _into_alt_expr(expr)
+
+
+def _identity_opaque(obj: Any, /) -> Any:
+    # Using an unbound type param is more accurate, but interacts badly with singledispatch
+    return obj
+
+
+@functools.singledispatch
+def _into_alt_expr(expr: Any, /) -> AltExpr:
+    msg = f"Cannot convert an {type(expr).__name__!r} a vega expression, got: {expr!r}"
+    raise TypeError(msg)
+
+
+@_into_alt_expr.register(NwExpr)
+def _(expr: NwExpr, /) -> AltExpr:
+    return _from_expr_ir(expr._ir)
+
+
+_into_alt_expr.register(str, AltExprStr)
+_into_alt_expr.register(alt.Expr, AltExprStr)
+_into_alt_expr.register(alt_ir.Expression, _identity_opaque)
+_into_alt_expr.register(alt.Parameter, lambda p: _into_alt_expr(p.name))
+# rewraps `alt.expr("...")` -> `AltExprStr("...")`
+_into_alt_expr.register(alt.ExprRef, lambda e: _into_alt_expr(e.expr))
+_into_alt_expr.register(alt_ir.OperatorMixin, lambda op: _into_alt_expr(op._to_expr()))
+
+
 def parse_into_vega_expr(expr: NwExpr | IntoAltExpr, /) -> VegaExpr:
-    """Convenience wrapper around [`into_vega_expr`][].
+    """Convenience wrapper around [`into_vega_expr`][], returning a string.
 
     Arguments:
         expr: An [`Expr`][narwhals._plan.Expr] or anything that is
@@ -188,7 +227,7 @@ def _(expr: NwExpr, /) -> VegaExpr:
     return into_vega_expr(expr._ir)
 
 
-_into_vega_expr.register(str, str)
+_into_vega_expr.register(str, _identity_opaque)
 _into_vega_expr.register(alt_ir.Expression, repr)
 
 
