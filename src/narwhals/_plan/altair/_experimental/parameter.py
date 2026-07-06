@@ -200,7 +200,7 @@ class _StateExchange(Protocol[_TD_co]):
     def _from_common(cls, state: Cloned[_CommonParam], /) -> Self: ...
 
 
-class _Param(_StateExchange[_CommonParam]):
+class _Param(_StateExchange["_CommonParam"]):
     """Experimental fluent parameter builder.
 
     ## Notes
