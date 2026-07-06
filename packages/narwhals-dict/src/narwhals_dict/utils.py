@@ -190,7 +190,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> type[Any]:
     dtypes = version.dtypes
     dtype = _as_instance(dtype)
     if isinstance(dtype, dtypes.Enum):
-        return enum.Enum("Enum", {category: category for category in dtype.categories})  # type: ignore[return-value]
+        return _enum_class(dtype.categories)
     if py_type := _nw_to_py_types(version).get(dtype.base_type()):
         return py_type
     if dtype.is_integer():
@@ -345,11 +345,23 @@ def _to_binary(value: Any) -> bytes:
     raise InvalidOperationError(msg)
 
 
-def _enum_caster(categories: tuple[str, ...]) -> Callable[[Any], enum.Enum]:
-    member_by_value = cast(
+@lru_cache(maxsize=16)
+def _enum_class(categories: tuple[str, ...]) -> type[enum.Enum]:
+    """Build (and memoize) the dynamic Enum class backing a set of categories.
+
+    Memoization is load-bearing: `enum.Enum` members compare by identity within
+    a single class, so two independent `cast(Enum([...]))` calls must resolve to
+    the *same* class or their members would never compare equal. Polars treats
+    equal-category Enums as equal, and caching reproduces that.
+    """
+    return cast(
         "type[enum.Enum]",
         enum.Enum("Enum", {category: category for category in categories}),
     )
+
+
+def _enum_caster(categories: tuple[str, ...]) -> Callable[[Any], enum.Enum]:
+    member_by_value = _enum_class(categories)
 
     def caster(value: Any) -> enum.Enum:
         raw = value.value if isinstance(value, enum.Enum) else value
@@ -416,6 +428,28 @@ def _struct_caster(
     return caster
 
 
+def _sequence_caster(dtype: DType, version: Version) -> Callable[[Any], list[Any]]:
+    """Build a caster for `List` or (fixed-size) `Array`.
+
+    Both are stored as plain lists (indistinguishable from each other once
+    inference runs). `Array` additionally validates the declared size on cast,
+    matching Polars; `List` accepts any length.
+    """
+    inner = dtype.inner  # type: ignore[attr-defined]
+    if not isinstance(dtype, version.dtypes.Array):
+        return lambda value: cast_values(value, inner, version)
+    size = dtype.size
+
+    def caster(value: Any) -> list[Any]:
+        result = cast_values(value, inner, version)
+        if len(result) != size:
+            msg = f"Cannot cast value of length {len(result)} to {dtype}."
+            raise ShapeError(msg)
+        return result
+
+    return caster
+
+
 @lru_cache(maxsize=4)
 def _simple_casters(version: Version) -> Mapping[type[DType], Callable[[Any], Any]]:
     dtypes = version.dtypes
@@ -450,9 +484,8 @@ def _caster_for(dtype: IntoDType, version: Version) -> Callable[[Any], Any]:
         return _duration_caster(dtype.time_unit, dtype)
     if isinstance(dtype, dtypes.Struct):
         return _struct_caster(dict(iter(dtype)), version)
-    if isinstance(dtype, dtypes.List):
-        inner = dtype.inner
-        return lambda value: cast_values(value, inner, version)
+    if isinstance(dtype, (dtypes.List, dtypes.Array)):
+        return _sequence_caster(dtype, version)
     msg = f"`cast` to {dtype} is not supported for the dict backend."
     raise NotImplementedError(msg)
 
