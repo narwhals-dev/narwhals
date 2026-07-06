@@ -115,7 +115,8 @@ class Chart:
             - but heavy parameter usage and pandas indexing
         - [all the features](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/multiple_interactions.py#L20-L33)
         """
-        raise NotImplementedError
+        msg = "TODO @dangotbanned: `transform_filter`"
+        raise NotImplementedError(msg)
 
     # TODO @dangotbanned: Is there a reasonable parallel to lean on here?
     def transform_stack(
