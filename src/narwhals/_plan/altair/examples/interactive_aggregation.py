@@ -25,11 +25,8 @@ raw = base.encode(
 ).transform_filter(alt.datum["IMDB Rating"] >= threshold)
 
 aggregated = base.encode(
-    # TODO @dangotbanned: Support as:
-    # - `nw.col("IMDB Rating").hist(bin_count=10)`
-    # - `nw.col("Rotten Tomatoes Rating").hist(bin_count=10)`
-    x=alt.X("IMDB Rating").bin(maxbins=10),
-    y=alt.Y("Rotten Tomatoes Rating").bin(maxbins=10),
+    x=nw.col("IMDB Rating").hist(bin_count=10),
+    y=nw.col("Rotten Tomatoes Rating").hist(bin_count=10),
     # TODO @dangotbanned: Does narwhals have a way of representing this?
     size=alt.Size("count()").scale(domain=[0, 160]),
 ).transform_filter(alt.datum["IMDB Rating"] < threshold)

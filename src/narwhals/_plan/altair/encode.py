@@ -260,8 +260,16 @@ def _function_expr(
     expr: ir.FunctionExpr, _: NwChart, channel: Channel | None, /
 ) -> Field | None:
     match expr:
-        case ir.FunctionExpr(function=F.NullCount(), args=(Col(name=name),)):
-            field: Field = {_FIELD: name, _AGG: "missing"}
+        case ir.FunctionExpr(function=func, args=(Col(name=name),)):
+            field: Field = {_FIELD: name, _AGG: Undefined}
+            if type(func) is F.NullCount:
+                field[_AGG] = "missing"
+            elif isinstance(func, F.HistBinCount):
+                field["bin"] = {"maxbins": func.bin_count}
+            elif isinstance(func, F.HistBins):
+                field["bin"] = {"steps": func.bins}
+            else:
+                return None
             if channel and channel in _SECONDARY_FIELD:
                 return field
             field[_TYPE] = _Q
