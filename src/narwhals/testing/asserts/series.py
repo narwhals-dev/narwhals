@@ -5,8 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._utils import qualified_type_name
 from narwhals.dependencies import is_narwhals_series
-from narwhals.dtypes import Array, Boolean, Categorical, List, String, Struct
-from narwhals.functions import new_series
+from narwhals.dtypes import Array, Categorical, List, String, Struct
 from narwhals.testing.asserts.utils import raise_series_assertion_error
 
 if TYPE_CHECKING:
@@ -14,9 +13,24 @@ if TYPE_CHECKING:
     from typing import TypeAlias
 
     from narwhals.series import Series
-    from narwhals.typing import IntoSeriesT, SeriesT
+    from narwhals.typing import IntoDType, IntoSeriesT, SeriesT
 
     CheckFn: TypeAlias = Callable[[Series[Any], Series[Any]], None]
+
+
+def _sibling_series(reference: SeriesT, values: Any, dtype: IntoDType | None) -> SeriesT:
+    """Build a Series from `values` using `reference`'s own backend.
+
+    The assert helpers need to materialize intermediate Series (e.g. the inner
+    values of a nested column). Routing through
+    `narwhals.new_series(backend=reference.implementation)` breaks for plugin
+    backends whose implementation is `Implementation.UNKNOWN`, which cannot be
+    resolved back to a namespace. Constructing straight from the reference's
+    own compliant series class works for every backend, built-in or plugin.
+    """
+    source = reference._compliant_series
+    compliant = type(source).from_iterable(values, name="", context=source, dtype=dtype)
+    return reference._with_compliant(compliant)
 
 
 def assert_series_equal(
@@ -161,7 +175,6 @@ def _check_exact_values(
     categorical_as_str: bool,
 ) -> None:
     """Check exact value equality for various data types."""
-    left_impl = left.implementation
     left_dtype, right_dtype = left.dtype, right.dtype
 
     is_not_equal_mask: Series[Any]
@@ -182,9 +195,9 @@ def _check_exact_values(
             abs_tol=abs_tol,
             categorical_as_str=categorical_as_str,
         )
+        # `_check_list_like` raises on the first mismatch; reaching here means equal.
         _check_list_like(left, right, left_dtype, right_dtype, check_fn=check_fn)
-        # If `_check_list_like` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)
+        return
     elif isinstance(left_dtype, Struct) and isinstance(right_dtype, Struct):
         check_fn = partial(
             assert_series_equal,
@@ -196,18 +209,15 @@ def _check_exact_values(
             abs_tol=abs_tol,
             categorical_as_str=categorical_as_str,
         )
+        # `_check_struct` raises on the first mismatch; reaching here means equal.
         _check_struct(left, right, left_dtype, right_dtype, check_fn=check_fn)
-        # If `_check_struct` didn't raise, then every nested element is equal
-        is_not_equal_mask = new_series("", [False], dtype=Boolean(), backend=left_impl)
+        return
     elif isinstance(left_dtype, Categorical) and isinstance(right_dtype, Categorical):
-        # If `_check_categorical` didn't raise, then the categories sources/encodings are
-        # the same, and we can use equality
-        _not_equal = _check_categorical(
-            left, right, categorical_as_str=categorical_as_str
-        )
-        is_not_equal_mask = new_series(
-            "", [_not_equal], dtype=Boolean(), backend=left_impl
-        )
+        # A raise from `_check_categorical` means the categories sources/encodings
+        # differ; otherwise it returns whether any element differs.
+        if _check_categorical(left, right, categorical_as_str=categorical_as_str):
+            raise_series_assertion_error("exact value mismatch", left, right)
+        return
     else:
         is_not_equal_mask = left != right
 
@@ -241,12 +251,11 @@ def _check_list_like(
     # Check row by row after transforming each array/list into a new series.
     # Notice that order within the array/list must be the same, regardless of
     # `check_order` value at the top level.
-    impl = left_vals.implementation
     try:
         for left_val, right_val in zip(left_vals, right_vals, strict=True):
             check_fn(
-                new_series("", values=left_val, dtype=left_dtype.inner, backend=impl),
-                new_series("", values=right_val, dtype=right_dtype.inner, backend=impl),
+                _sibling_series(left_vals, left_val, left_dtype.inner),
+                _sibling_series(right_vals, right_val, right_dtype.inner),
             )
     except AssertionError:
         raise_series_assertion_error("nested value mismatch", left_vals, right_vals)
