@@ -380,23 +380,17 @@ def test_categorical_as_str(
     categorical_as_str: bool,
     context: AbstractContextManager[Any],
 ) -> None:
-    if (
-        "polars" in str(constructor_eager)
-        and POLARS_VERSION >= (1, 32)
-        and not categorical_as_str
-    ):
+    name = str(constructor_eager)
+    if "polars" in name and POLARS_VERSION >= (1, 32) and not categorical_as_str:
         # https://github.com/pola-rs/polars/pull/23016 removed StringCache, it still
         # exists but it does nothing in python.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and not categorical_as_str:
+    if "pyarrow_table" in name and not categorical_as_str:
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        15,
-        0,
-    ):  # pragma: no cover
+    if "pyarrow_table" in name and PYARROW_VERSION < (15, 0):  # pragma: no cover
         reason = (
             "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
             "dictionary using function cast_dictionary"
@@ -415,3 +409,21 @@ def test_categorical_as_str(
         assert_series_equal(
             left, right, check_names=False, categorical_as_str=categorical_as_str
         )
+
+
+def test_categorical_as_str_value_mismatch(constructor_eager: ConstructorEager) -> None:
+    name = str(constructor_eager)
+    if "pyarrow_table" in name and PYARROW_VERSION < (15, 0):  # pragma: no cover
+        reason = (
+            "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
+            "dictionary using function cast_dictionary"
+        )
+        pytest.skip(reason=reason)
+
+    data = {"a": ["beluga", "orca", "orca", "beluga"]}
+    frame = nw.from_native(constructor_eager(data), eager_only=True)
+    s = frame["a"].cast(nw.Categorical())
+    left, right = s[:2], s[2:]
+
+    with _assertion_error("exact value mismatch"):
+        assert_series_equal(left, right)
