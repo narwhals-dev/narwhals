@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 import random
+from collections import Counter
 from collections.abc import Mapping
 from itertools import chain, compress, repeat
 from typing import TYPE_CHECKING, Any, Literal, overload
@@ -310,16 +311,32 @@ class DictDataFrame(
     def gather_every(self, n: int, offset: int) -> Self:
         return self._gather_slice(slice(offset, None, n))
 
-    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
-        if error := self._check_columns_exist(by):
-            raise error
-        flags = (
-            [descending] * len(by) if isinstance(descending, bool) else list(descending)
-        )
+    def _sorted_indices(
+        self, by: Sequence[str], *, descending: bool | Sequence[bool], nulls_last: bool
+    ) -> list[int]:
+        """Row indices ordered by `by`, ascending unless `descending` says otherwise."""
+        columns = [self.native[name] for name in by]
+        if isinstance(descending, bool):
+            # Uniform direction: sort once on a per-row tuple key, letting Python's
+            # tuple comparison do the work. A null can't be in the key directly
+            # as `None < value` raises, so each cell becomes a `(rank, value)` pair:
+            # non-nulls share rank 0 and compare by value, while nulls take a rank
+            # that floats them to the required end and a constant value
+            # (so null-vs-null never compares).
+            # `reverse` flips the null rank too, hence `nulls_last == descending`.
+            null_rank = -1 if nulls_last == descending else 1
+
+            def key(index: int) -> tuple[tuple[int, Any], ...]:
+                return tuple(
+                    (0, value) if (value := column[index]) is not None else (null_rank, 0)
+                    for column in columns
+                )
+
+            return sorted(range(len(self)), key=key, reverse=descending)
+        # Mixed per-column directions can't be a single tuple sort, so fall back
+        # to repeated stable sorts, from the least to the most significant key.
         indices = list(range(len(self)))
-        # Repeated stable sorts, from the least to the most significant key.
-        for name, desc in reversed(list(zip(by, flags, strict=True))):
-            column = self.native[name]
+        for column, desc in reversed(tuple(zip(columns, descending, strict=True))):
             nulls = [i for i in indices if column[i] is None]
             rest = sorted(
                 (i for i in indices if column[i] is not None),
@@ -327,7 +344,14 @@ class DictDataFrame(
                 reverse=desc,
             )
             indices = rest + nulls if nulls_last else nulls + rest
-        return self._gather(indices)
+        return indices
+
+    def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
+        if error := self._check_columns_exist(by):
+            raise error
+        return self._gather(
+            self._sorted_indices(by, descending=descending, nulls_last=nulls_last)
+        )
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         # TODO(FBruzzesi): Can we do better than sort + head?
@@ -344,24 +368,27 @@ class DictDataFrame(
         maintain_order: bool | None = None,
         order_by: Sequence[str] | None = None,
     ) -> Self:
-        if order_by:
-            msg = "`unique` with `order_by` is not supported for the dict backend."
-            raise NotImplementedError(msg)
+        if order_by and (error := self._check_columns_exist(order_by)):
+            raise error
         if subset is not None and (error := self._check_columns_exist(subset)):
             raise error
         columns = [self.native[name] for name in (subset or self.columns)]
         rows = list(zip(*columns, strict=True))
         if keep in {"any", "first", "last"}:
-            seen: dict[Any, int] = {}
-            iterable = (
-                enumerate(rows) if keep != "last" else reversed(list(enumerate(rows)))
+            # With `order_by`, "first"/"last" are defined by the order the rows
+            # take under the order-by columns (ascending, nulls first), not the
+            # frame order. Kept rows are still emitted in original order: that is
+            # what `maintain_order` expects, and lazy callers sort afterwards.
+            order = (
+                self._sorted_indices(order_by, descending=False, nulls_last=False)
+                if order_by
+                else range(len(self))
             )
-            for index, row in iterable:
-                seen.setdefault(row, index)
+            seen: dict[Any, int] = {}
+            for index in order if keep != "last" else reversed(list(order)):
+                seen.setdefault(rows[index], index)
             indices = sorted(seen.values())
         elif keep == "none":
-            from collections import Counter
-
             counts = Counter(rows)
             indices = [i for i, row in enumerate(rows) if counts[row] == 1]
         else:  # pragma: no cover
@@ -370,12 +397,18 @@ class DictDataFrame(
         return self._gather(indices)
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
-        if order_by:
-            msg = (
-                "`with_row_index` with `order_by` is not supported for the dict backend."
-            )
-            raise NotImplementedError(msg)
-        return self._with_native({name: list(range(len(self))), **self.native})
+        if not order_by:
+            index_column: list[Any] = list(range(len(self)))
+        else:
+            if error := self._check_columns_exist(order_by):
+                raise error
+            # Number the rows in order-by order, then scatter each rank back to
+            # its original position so the index column aligns with the frame.
+            index_column = [0] * len(self)
+            order = self._sorted_indices(order_by, descending=False, nulls_last=False)
+            for rank, original in enumerate(order):
+                index_column[original] = rank
+        return self._with_native({name: index_column, **self.native})
 
     # Conversions
     def clone(self) -> Self:
@@ -677,8 +710,6 @@ class DictDataFrame(
         raise NotImplementedError(msg)
 
     def is_unique(self) -> DictSeries:
-        from collections import Counter
-
         rows = list(zip(*self.native.values(), strict=True))
         counts = Counter(rows)
         return DictSeries(
