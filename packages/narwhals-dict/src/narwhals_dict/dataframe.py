@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 from narwhals._compliant import EagerDataFrame
 from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, check_column_names_are_unique, not_implemented
-from narwhals.exceptions import ShapeError
+from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.series import DictSeries
 from narwhals_dict.utils import is_native_frame
 
@@ -725,10 +725,48 @@ class DictDataFrame(
         result[value_name] = list(chain.from_iterable(native[name] for name in on))
         return self._with_native(result)
 
+    def explode(self, columns: Sequence[str]) -> Self:
+        dtypes = self._version.dtypes
+        for name in columns:
+            if not isinstance((dtype := self.get_column(name).dtype), dtypes.List):
+                msg = (
+                    f"`explode` operation not supported for dtype `{dtype}`, "
+                    "expected List type"
+                )
+                raise InvalidOperationError(msg)
+        # Per-row element count of the first exploded column, the anchor every
+        # other exploded column must match. A null list counts as `None` (its own
+        # value, distinct from any int) so it only matches another null, while an
+        # empty list counts as `0` -- both still explode to a single null row.
+        counts = [None if cell is None else len(cell) for cell in self.native[columns[0]]]
+        to_explode = set(columns)
+        for name in columns[1:]:
+            column = self.native[name]
+            if any(
+                (None if cell is None else len(cell)) != count
+                for cell, count in zip(column, counts, strict=True)
+            ):
+                msg = "exploded columns must have matching element counts"
+                raise ShapeError(msg)
+        result: DictFrame = {}
+        for name, column in self.native.items():
+            if name in to_explode:
+                # `if cell:` is False for both `None` and `[]`, which each yield a
+                # single null; a non-empty list contributes its elements as-is.
+                result[name] = [
+                    element for cell in column for element in (cell or (None,))
+                ]
+            else:
+                result[name] = [
+                    value
+                    for value, count in zip(column, counts, strict=True)
+                    for _ in range(count or 1)
+                ]
+        return self._with_native(result, validate_column_names=False)
+
     # Not implemented (yet): fill in incrementally.
     __array__ = not_implemented()
     estimated_size = not_implemented()
-    explode = not_implemented()
     from_arrow = not_implemented()
     join_asof = not_implemented()
     pivot = not_implemented()
