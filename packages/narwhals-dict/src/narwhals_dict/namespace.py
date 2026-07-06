@@ -9,7 +9,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, check_column_names_are_unique, not_implemented
+from narwhals._utils import Implementation, check_column_names_are_unique
 from narwhals_dict.dataframe import DictDataFrame
 from narwhals_dict.expr import DictExpr
 from narwhals_dict.selectors import DictSelectorNamespace
@@ -171,6 +171,8 @@ class DictNamespace(
 
         return self._horizontal(exprs, reducer)
 
+    # `when`/`then`/`otherwise` chains are desugared into nested `when_then` calls,
+    # which `EagerNamespace` implements on top of the `_if_then_else` hook.
     def _if_then_else(
         self,
         when: NativeSeries,
@@ -307,5 +309,3 @@ class DictNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
-
-    when = not_implemented()
