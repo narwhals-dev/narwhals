@@ -58,7 +58,8 @@ if TYPE_CHECKING:
     from typing_extensions import Required, Self
 
     import narwhals._plan as nw
-    from narwhals._plan.altair import stream, typing as alt_t
+    from narwhals._plan.altair import typing as alt_t
+    from narwhals._plan.altair._experimental import stream
     from narwhals._plan.altair.typing import Optional
 
     class _CommonBind(te.TypedDict, total=False, closed=True):  # type: ignore[call-arg]
