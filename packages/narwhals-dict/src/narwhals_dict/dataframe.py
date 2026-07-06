@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+import random
 from collections.abc import Mapping
 from itertools import chain, compress, repeat
 from typing import TYPE_CHECKING, Any, Literal, overload
@@ -764,12 +765,21 @@ class DictDataFrame(
                 ]
         return self._with_native(result, validate_column_names=False)
 
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
+        rng = random.Random(seed)  # noqa: S311
+        population = range(len(self))
+        indices = (
+            rng.choices(population, k=n)
+            if with_replacement
+            else rng.sample(population, k=n)
+        )
+        return self._gather(indices)
+
     # Not implemented (yet): fill in incrementally.
     __array__ = not_implemented()
     estimated_size = not_implemented()
     from_arrow = not_implemented()
     join_asof = not_implemented()
     pivot = not_implemented()
-    sample = not_implemented()
     write_csv = not_implemented()
     write_parquet = not_implemented()
