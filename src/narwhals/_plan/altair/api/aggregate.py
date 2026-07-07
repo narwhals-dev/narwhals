@@ -18,7 +18,6 @@ from narwhals._plan.altair.api.typing import (
     AggOrWindow,
     AggregateOp,
     FieldName,
-    IntoExprColumn,
     Optional,
     OutputName,
     WindowOp,
@@ -257,23 +256,6 @@ def window_field_def(
     return alt.WindowFieldDef(op=op, field=field, param=param, **kwds)
 
 
-def window_transform(
-    *exprs: IntoExprColumn,
-    frame: Optional[Sequence[float | None]] = alt.Undefined,
-    group_by: Optional[Sequence[FieldName]] = alt.Undefined,
-    sort: Optional[Sequence[alt.SortField | dict[str, str]]] = alt.Undefined,
-    **named_exprs: IntoExprColumn,
-) -> alt.WindowTransform:
-    """Parse into narwhals expressions and translate to a single window transform."""
-    parsed = parse_into_named_exprs(*exprs, **named_exprs)
-    return alt.WindowTransform(
-        [window_field_def(alias, expr) for alias, expr in parsed],
-        frame=frame,
-        groupby=group_by,
-        sort=sort,
-    )
-
-
 def _agg_field_def(alias: OutputName, expr: ir.ExprIR) -> alt.AggregatedFieldDef:
     result: AggField
     if isinstance(expr, ir.AggExpr):
@@ -309,6 +291,44 @@ def _agg_over_transform(alias: OutputName, expr: ir.Over) -> alt.AggregateTransf
     return alt.AggregateTransform([_agg_field_def(alias, expr.expr)], group_by)
 
 
+# TODO @dangotbanned: convert `over` -> `WindowTransform`
+# `alt.WindowTransform(window=expr.expr, frame=(...), groupby=expr.partition_by, sort=alt.SortField(field=order_by[i], order='descending'))`
+def _window_over_transform(
+    alias: OutputName,
+    expr: ir.Over | ir.OverOrdered,
+    frame: Optional[Sequence[float | None]],
+    sort: Optional[Sequence[alt.SortField | dict[str, str]]],
+) -> alt.WindowTransform:
+    msg = f"TODO: convert `over` -> `WindowTransform`, got {expr!r}.\n"
+    raise NotImplementedError(msg)
+
+
+def window_transform(
+    frame: Optional[Sequence[float | None]],
+    group_by: Optional[Sequence[FieldName]],
+    sort: Optional[Sequence[alt.SortField | dict[str, str]]],
+    **named_exprs: nw.Expr,
+) -> Iterator[alt.WindowTransform]:
+    # TODO @dangotbanned: (low-prio) Share more with `aggregate_transform`
+    parsed = parse_into_named_exprs(**named_exprs)
+    if group_by is alt.Undefined or not group_by:
+        non_over_fields: list[alt.WindowFieldDef] = []
+        for alias, expr in parsed:
+            if isinstance(expr, ir.Over):
+                yield _window_over_transform(alias, expr, frame, sort)
+            else:
+                non_over_fields.append(window_field_def(alias, expr))
+        if non_over_fields:
+            yield alt.WindowTransform(non_over_fields, frame=frame, sort=sort)
+    else:
+        yield alt.WindowTransform(
+            [window_field_def(alias, e) for alias, e in parsed],
+            frame=frame,
+            groupby=group_by,
+            sort=sort,
+        )
+
+
 def aggregate_transform(
     *exprs: nw.Expr,
     group_by: Optional[Sequence[FieldName]] = alt.Undefined,
@@ -331,12 +351,3 @@ def aggregate_transform(
             yield alt.AggregateTransform(non_over_fields)
     else:
         yield alt.AggregateTransform([_agg_field_def(alias, e) for alias, e in parsed])
-
-
-# TODO @dangotbanned: convert `over` -> `WindowTransform
-def over_window_transform(expr: ir.Over | ir.OverOrdered) -> alt.WindowTransform:
-    msg = (
-        f"TODO: convert `over` -> `WindowTransform`, got {expr!r}.\n"
-        "alt.WindowTransform(window=expr.expr, frame=(...), groupby=expr.partition_by, sort=alt.SortField(field=order_by[i], order='descending'))"
-    )
-    raise NotImplementedError(msg)

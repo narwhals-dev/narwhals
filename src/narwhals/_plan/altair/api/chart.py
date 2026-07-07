@@ -80,7 +80,7 @@ class Chart:
         """
         return self._from_altair(
             self._chart._add_transform(
-                window_transform(frame=frame, group_by=groupby, sort=sort, **named_exprs)
+                *window_transform(frame=frame, group_by=groupby, sort=sort, **named_exprs)
             )
         )
 
