@@ -25,8 +25,27 @@
 - Related issue #\<issue number\>
 - Closes #\<issue number\>
 
+## AI assistance
+
+<!--
+For transparency only.
+By submitting this PR you accept full responsibility for every line of code,
+regardless of how it was produced.
+See [AI-assisted contributions](https://github.com/narwhals-dev/narwhals/blob/main/CONTRIBUTING.md#ai-assisted-contributions).
+-->
+
+- [ ] No AI tools were used for this PR.
+- [ ] AI tools were used.
+
 ## Checklist
 
 - [ ] Code follows style guide (ruff)
 - [ ] Tests added
 - [ ] Documented the changes
+- [ ] If this is your first PR to narwhals, attach a screenshot of `pytest` passing locally (not CI):
+    
+    ```bash
+    PYTEST_ADDOPTS="--numprocesses=logical" \
+    make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn --group plugins" \
+    CMD="pytest tests --cov=src --cov=tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+    ```
