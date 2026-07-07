@@ -23,7 +23,6 @@ from __future__ import annotations
 # mypy: disable-error-code="typeddict-item"
 # > Non-required keys (...) not explicitly found in any ** item"
 # TODO @dangotbanned: Review after PEP 728 support
-import hashlib
 from copy import deepcopy
 from typing import (
     TYPE_CHECKING,
@@ -43,14 +42,12 @@ from altair import Undefined, theme
 from altair.theme import VariableParameterKwds as VariableParamKwds
 from altair.utils import is_undefined
 
-from narwhals._plan.altair._experimental.serde import serialize
 from narwhals._plan.altair.api.expression import parse_into_vega_expr
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     import typing_extensions as te
-    from _typeshed import SupportsItemAccess
     from altair.vegalite.v6.schema._typing import (
         SelectionResolution_T,
         SingleDefUnitChannel_T,
@@ -61,8 +58,6 @@ if TYPE_CHECKING:
     from narwhals._plan.altair._experimental import stream
     from narwhals._plan.altair.api import typing as alt_t
     from narwhals._plan.altair.api.typing import Optional
-
-    _KwdsT = TypeVar("_KwdsT", bound=SupportsItemAccess[Any, Any])
 
     class _CommonBind(te.TypedDict, total=False, closed=True):  # type: ignore[call-arg]
         debounce: float
@@ -523,6 +518,8 @@ class _BindBuilder(_BaseBindBuilder[_Param]):
         self, *, encodings: Sequence[SingleDefUnitChannel_T] = ("x", "y")
     ) -> alt.SelectionParameter:
         """Equivalent to `alt.Chart().interactive()`, but without adding the param to the chart."""
+        from narwhals._plan.altair.api.parameter import ensure_param_name
+
         _kwds: Any = self._param_builder._unwrap() | {
             "select": {"type": "interval", "encodings": encodings},
             "bind": "scales",
@@ -532,6 +529,8 @@ class _BindBuilder(_BaseBindBuilder[_Param]):
     def legend_encoding(
         self, encoding: SingleDefUnitChannel_T = "color", /
     ) -> alt.SelectionParameter:
+        from narwhals._plan.altair.api.parameter import ensure_param_name
+
         _kwds: Any = self._param_builder._unwrap() | {
             "select": {"type": "point", "encodings": [encoding]},
             "bind": "scales",
@@ -539,6 +538,8 @@ class _BindBuilder(_BaseBindBuilder[_Param]):
         return alt.SelectionParameter(**ensure_param_name(_kwds))
 
     def legend_field(self, field: str, /) -> alt.SelectionParameter:
+        from narwhals._plan.altair.api.parameter import ensure_param_name
+
         _kwds: Any = self._param_builder._unwrap() | {
             "select": {"type": "point", "fields": [field]},
             "bind": "scales",
@@ -591,15 +592,3 @@ def misc_params() -> _Variable:
         _param().var("").bind.label("Search ").input("search", placeholder="Country")
     )
     return _search_box  # noqa: RET504
-
-
-def ensure_param_name(kwds: _KwdsT) -> _KwdsT:
-    """Generate a parameter name if we haven't got one yet."""
-    if "name" not in kwds:
-        encoded = serialize(kwds, deterministic=True, default=str)
-        # NOTE: https://github.com/vega/altair/pull/3291#issuecomment-1866999185
-        # - 256 vs 224 -> 64 vs 56 characters (only need 16)
-        # - not used for security
-        name = f"param_{hashlib.sha224(encoded, usedforsecurity=False).hexdigest()[:16]}"
-        kwds["name"] = name
-    return kwds

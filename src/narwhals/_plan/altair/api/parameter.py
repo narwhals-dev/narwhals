@@ -2,19 +2,21 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+import hashlib
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import altair as alt
 from altair import Undefined
 from altair.utils import is_undefined
 
-from narwhals._plan.altair._experimental import parameter as alt_p
+from narwhals._plan.altair._experimental.serde import serialize
 from narwhals._plan.altair.api import _parameter_ir
 from narwhals._plan.altair.api.expression import parse_into_vega_expr
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from _typeshed import SupportsItemAccess
     from altair import theme
     from altair.vegalite.v6.schema._typing import (
         SelectionResolution_T,
@@ -25,6 +27,8 @@ if TYPE_CHECKING:
     from narwhals._plan.altair.api import typing as alt_t
     from narwhals._plan.altair.api.typing import Optional
     from narwhals._plan.expr import Expr as NwExpr
+
+    _KwdsT = TypeVar("_KwdsT", bound=SupportsItemAccess[Any, Any])
 
 __all__ = ["param", "selection_interval", "selection_point"]
 
@@ -45,7 +49,7 @@ def param(
     if not is_undefined(expr):
         expr = parse_into_vega_expr(expr)
 
-    kwds = alt_p.ensure_param_name(
+    kwds = ensure_param_name(
         _keep_defined(
             name=name,
             expr=expr,
@@ -126,3 +130,15 @@ else:
 def _keep_defined(**kwds: Any) -> dict[str, Any]:
     """Too painful to have this working soundly."""
     return {k: v for k, v in kwds.items() if v is not Undefined}
+
+
+def ensure_param_name(kwds: _KwdsT) -> _KwdsT:
+    """Generate a parameter name if we haven't got one yet."""
+    if "name" not in kwds:
+        encoded = serialize(kwds, deterministic=True, default=str)
+        # NOTE: https://github.com/vega/altair/pull/3291#issuecomment-1866999185
+        # - 256 vs 224 -> 64 vs 56 characters (only need 16)
+        # - not used for security
+        name = f"param_{hashlib.sha224(encoded, usedforsecurity=False).hexdigest()[:16]}"
+        kwds["name"] = name
+    return kwds
