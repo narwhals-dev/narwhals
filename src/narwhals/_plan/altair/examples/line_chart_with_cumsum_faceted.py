@@ -5,8 +5,6 @@
 
 from __future__ import annotations
 
-import altair as alt
-
 import narwhals._plan as nw
 from narwhals._plan.altair import api
 
@@ -16,10 +14,7 @@ columns_sorted = ["Drought", "Epidemic", "Earthquake", "Flood"]
 chart = (
     api.Chart(source)
     .transform_filter(
-        nw.col("Entity").is_in(columns_sorted),
-        # TODO @dangotbanned: This is not working?
-        # TODO @dangotbanned: Use `col("Year").is_between(1900, 2000)`
-        alt.FieldRangePredicate(field="Year", range=[1900, 2000]),
+        nw.col("Entity").is_in(columns_sorted), nw.col("Year").is_between(1900, 2000)
     )
     # TODO @dangotbanned: Multiple gaps, goal is `col("Deaths").cum_sum().over("Entity")`
     # - [ ] Support `over` here (like `transform_aggregate`)
