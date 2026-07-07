@@ -6,9 +6,17 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
+import narwhals.stable.v1.dependencies as nw_v1_dependencies
+import narwhals.stable.v2.dependencies as nw_v2_dependencies
+from narwhals import dependencies as nw_dependencies
 from tests.utils import PYARROW_VERSION
 
 plugin_module = pytest.importorskip("test_plugin")
+
+from test_plugin.dataframe import DictDataFrame, DictLazyFrame  # noqa: E402
+from test_plugin.series import DictSeries  # noqa: E402
+
+DEPENDENCIES_MODULES = (nw_dependencies, nw_v1_dependencies, nw_v2_dependencies)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -240,3 +248,36 @@ def test_unknown_backend_raises() -> None:
     """A string matching neither a built-in backend nor an installed plugin."""
     with pytest.raises(ValueError, match="Unsupported backend: 'not-a-backend'"):
         nw.scan_csv("x.csv", backend="not-a-backend")  # type: ignore[arg-type]
+
+
+def test_from_native_unsupported_object() -> None:
+    """An object no installed plugin recognises falls through to the unsupported-type error."""
+    with pytest.raises(TypeError, match="Unsupported dataframe type"):
+        nw.from_native(object())  # type: ignore[call-overload]
+
+
+def test_is_into_lazyframe() -> None:
+    df_native = {"a": [1, 1, 2], "b": [4, 5, 6]}
+    for dependencies in DEPENDENCIES_MODULES:
+        assert dependencies.is_into_lazyframe(df_native)
+
+
+def test_is_into_dataframe() -> None:
+    df_native = {"a": [1, 1, 2], "b": [4, 5, 6]}
+    for dependencies in DEPENDENCIES_MODULES:
+        assert not dependencies.is_into_dataframe(df_native)
+
+
+@pytest.mark.parametrize(
+    ("compliant_cls", "expected_kind"),
+    [(DictDataFrame, "dataframe"), (DictLazyFrame, "lazyframe"), (DictSeries, "series")],
+)
+def test_is_into_mocked_plugin(compliant_cls: type, expected_kind: str) -> None:
+    for dependencies in DEPENDENCIES_MODULES:
+        assert dependencies.is_into_dataframe(compliant_cls) is (
+            expected_kind == "dataframe"
+        )
+        assert dependencies.is_into_lazyframe(compliant_cls) is (
+            expected_kind == "lazyframe"
+        )
+        assert dependencies.is_into_series(compliant_cls) is (expected_kind == "series")
