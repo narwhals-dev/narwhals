@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import altair as alt
 
+import narwhals._plan as nw
 from narwhals._plan.altair import api
 
 source = api.datasets.load("disasters", backend="polars")
@@ -15,8 +16,8 @@ columns_sorted = ["Drought", "Epidemic", "Earthquake", "Flood"]
 chart = (
     api.Chart(source)
     .transform_filter(
-        # TODO @dangotbanned: Use `col("Entity").is_in(columns_sorted)`
-        alt.FieldOneOfPredicate(field="Entity", oneOf=columns_sorted),
+        nw.col("Entity").is_in(columns_sorted),
+        # TODO @dangotbanned: This is not working?
         # TODO @dangotbanned: Use `col("Year").is_between(1900, 2000)`
         alt.FieldRangePredicate(field="Year", range=[1900, 2000]),
     )
