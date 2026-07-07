@@ -110,6 +110,27 @@ def from_native(native_object: Any, version: Version) -> CompliantAny | None:
     return next(_iter_from_native(native_object, version), None)
 
 
+def is_native_dataframe(native_object: Any) -> bool:
+    """Check whether an installed plugin converts `native_object` to an eager DataFrame."""
+    from narwhals._utils import Version, is_compliant_dataframe
+
+    return is_compliant_dataframe(from_native(native_object, Version.MAIN))
+
+
+def is_native_lazyframe(native_object: Any) -> bool:
+    """Check whether an installed plugin converts `native_object` to a LazyFrame."""
+    from narwhals._utils import Version, is_compliant_lazyframe
+
+    return is_compliant_lazyframe(from_native(native_object, Version.MAIN))
+
+
+def is_native_series(native_object: Any) -> bool:
+    """Check whether an installed plugin converts `native_object` to a Series."""
+    from narwhals._utils import Version, is_compliant_series
+
+    return is_compliant_series(from_native(native_object, Version.MAIN))
+
+
 def _show_suggestions(native_object_type: type) -> str | None:
     if _might_be(native_object_type, "daft"):  # pragma: no cover
         return (
