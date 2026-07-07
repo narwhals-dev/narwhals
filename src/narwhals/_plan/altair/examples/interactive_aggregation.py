@@ -10,11 +10,9 @@ from altair.datasets import load
 
 import narwhals._plan as nw
 
-# TODO @dangotbanned: Move the impl modules under a subpackage (next to `examples`)
-# - export `Chart`, `param`, `selection_interval`, `selection_point`, etc
-# - import that here as `api`
-from narwhals._plan.altair import chart as nw_alt
-from narwhals._plan.altair.parameter import param
+# TODO @dangotbanned: `from narwhals._plan.altair import api`
+from narwhals._plan.altair.api import chart as nw_alt
+from narwhals._plan.altair.api.parameter import param
 
 base = nw_alt.Chart(load("movies", backend="polars")).mark_circle()
 threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, step=0.1))

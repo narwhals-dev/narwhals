@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from altair.vegalite.v6.schema._typing import MarkType_T as MarkType
     from typing_extensions import LiteralString, Required
 
-    from narwhals._plan.altair.typing import VegaExpr
+    from narwhals._plan.altair.api.typing import VegaExpr
 else:
     import sys
 

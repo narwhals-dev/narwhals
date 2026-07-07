@@ -39,7 +39,7 @@ import altair as alt
 import polars as pl
 
 import narwhals._plan as nw
-from narwhals._plan.altair import chart as nw_alt
+from narwhals._plan.altair.api import chart as nw_alt
 
 data = [
     {"label": "Begin", "amount": 4000},

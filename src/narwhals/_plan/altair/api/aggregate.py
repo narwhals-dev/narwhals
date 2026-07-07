@@ -11,9 +11,9 @@ except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
 from narwhals._plan import expressions as ir
-from narwhals._plan.altair.exceptions import Target, unsupported_error
-from narwhals._plan.altair.parse import parse_into_named_exprs
-from narwhals._plan.altair.typing import (
+from narwhals._plan.altair.api.exceptions import Target, unsupported_error
+from narwhals._plan.altair.api.parse import parse_into_named_exprs
+from narwhals._plan.altair.api.typing import (
     AggField,
     AggOrWindow,
     AggregateOp,
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
     import narwhals._plan as nw
-    from narwhals._plan.altair import typing as alt_t
+    from narwhals._plan.altair.api import typing as alt_t
     from narwhals.typing import RankMethod
 
 

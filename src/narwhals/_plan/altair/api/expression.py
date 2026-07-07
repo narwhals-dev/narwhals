@@ -16,9 +16,9 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypeVar, final
 from altair.expr import core as alt_ir
 
 from narwhals._plan import _function, expressions as ir
-from narwhals._plan.altair._parameter_ir import _ParameterIR
-from narwhals._plan.altair.exceptions import unsupported_error
-from narwhals._plan.altair.typing import AltExpr, IntoAltExpr
+from narwhals._plan.altair.api._parameter_ir import _ParameterIR
+from narwhals._plan.altair.api.exceptions import unsupported_error
+from narwhals._plan.altair.api.typing import AltExpr, IntoAltExpr
 from narwhals._plan.expr import Expr as NwExpr
 from narwhals._plan.expressions import (
     aggregation as agg,
@@ -32,7 +32,7 @@ from narwhals._plan.expressions import (
 if TYPE_CHECKING:
     from altair.vegalite.v6.schema._typing import SingleTimeUnit_T
 
-    from narwhals._plan.altair.typing import VegaExpr
+    from narwhals._plan.altair.api.typing import VegaExpr
     from narwhals._plan.typing import Seq
     from narwhals.typing import PythonLiteral
 

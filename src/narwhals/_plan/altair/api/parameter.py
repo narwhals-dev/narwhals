@@ -8,9 +8,9 @@ import altair as alt
 from altair import Undefined
 from altair.utils import is_undefined
 
-from narwhals._plan.altair import _parameter_ir
 from narwhals._plan.altair._experimental import parameter as alt_p
-from narwhals._plan.altair.expression import parse_into_vega_expr
+from narwhals._plan.altair.api import _parameter_ir
+from narwhals._plan.altair.api.expression import parse_into_vega_expr
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,9 +21,9 @@ if TYPE_CHECKING:
         SingleDefUnitChannel_T,
     )
 
-    from narwhals._plan.altair import typing as alt_t
     from narwhals._plan.altair._experimental import stream
-    from narwhals._plan.altair.typing import Optional
+    from narwhals._plan.altair.api import typing as alt_t
+    from narwhals._plan.altair.api.typing import Optional
     from narwhals._plan.expr import Expr as NwExpr
 
 __all__ = ["param", "selection_interval", "selection_point"]

@@ -13,18 +13,18 @@ from altair import Undefined
 
 import narwhals.stable.v1 as stable_v1
 from narwhals._plan import expressions as ir
-from narwhals._plan.altair import _parameter_ir, aggregate, typing as alt_t
-from narwhals._plan.altair.exceptions import unsupported_error as _unsupported_error
-from narwhals._plan.altair.expression import into_vega_expr
-from narwhals._plan.altair.typing import Channel, Field, Value
+from narwhals._plan.altair.api import _parameter_ir, aggregate, typing as alt_t
+from narwhals._plan.altair.api.exceptions import unsupported_error as _unsupported_error
+from narwhals._plan.altair.api.expression import into_vega_expr
+from narwhals._plan.altair.api.typing import Channel, Field, Value
 from narwhals._plan.expressions import functions as F
 from narwhals._plan.expressions.expr import Col, LenStar
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired, TypedDict
 
-    from narwhals._plan.altair.chart import Chart as NwChart
-    from narwhals._plan.altair.typing import Optional, VegaType
+    from narwhals._plan.altair.api.chart import Chart as NwChart
+    from narwhals._plan.altair.api.typing import Optional, VegaType
     from narwhals.dtypes import DType
 else:
     from typing import TypedDict

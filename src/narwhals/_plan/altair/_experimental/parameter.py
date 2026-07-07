@@ -44,7 +44,7 @@ from altair.theme import VariableParameterKwds as VariableParamKwds
 from altair.utils import is_undefined
 
 from narwhals._plan.altair._experimental.serde import serialize
-from narwhals._plan.altair.expression import parse_into_vega_expr
+from narwhals._plan.altair.api.expression import parse_into_vega_expr
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -58,9 +58,9 @@ if TYPE_CHECKING:
     from typing_extensions import Required, Self
 
     import narwhals._plan as nw
-    from narwhals._plan.altair import typing as alt_t
     from narwhals._plan.altair._experimental import stream
-    from narwhals._plan.altair.typing import Optional
+    from narwhals._plan.altair.api import typing as alt_t
+    from narwhals._plan.altair.api.typing import Optional
 
     _KwdsT = TypeVar("_KwdsT", bound=SupportsItemAccess[Any, Any])
 

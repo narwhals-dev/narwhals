@@ -9,7 +9,7 @@ import altair as alt
 from altair.datasets import load
 
 import narwhals._plan as nw
-from narwhals._plan.altair import chart as nw_alt
+from narwhals._plan.altair.api import chart as nw_alt
 
 rank_cylinders = nw.col("rank_Cylinders")
 rank_origin = nw.col("rank_Origin")

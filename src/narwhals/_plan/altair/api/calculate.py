@@ -9,13 +9,13 @@ except ImportError as err:
 from typing import TYPE_CHECKING, Any, cast
 
 import narwhals._plan as nw
-from narwhals._plan.altair.expression import into_vega_expr
-from narwhals._plan.altair.parse import parse_into_named_exprs
+from narwhals._plan.altair.api.expression import into_vega_expr
+from narwhals._plan.altair.api.parse import parse_into_named_exprs
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan.altair.typing import IntoAltExpr
+    from narwhals._plan.altair.api.typing import IntoAltExpr
     from narwhals._plan.expr import Expr as NwExpr
 
 

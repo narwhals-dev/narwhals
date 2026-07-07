@@ -14,10 +14,10 @@ from altair.utils.schemapi import UndefinedType
 
 import narwhals._plan as nw
 import narwhals.stable.v1 as stable_v1
-from narwhals._plan.altair import _parameter_ir, encode
-from narwhals._plan.altair.aggregate import aggregate_transform, window_transform
-from narwhals._plan.altair.calculate import calculate_transform
-from narwhals._plan.altair.expression import parse_into_alt_expr
+from narwhals._plan.altair.api import _parameter_ir, encode
+from narwhals._plan.altair.api.aggregate import aggregate_transform, window_transform
+from narwhals._plan.altair.api.calculate import calculate_transform
+from narwhals._plan.altair.api.expression import parse_into_alt_expr
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from altair.vegalite.v6.schema.mixins import _MarkDef
     from typing_extensions import Self, Unpack
 
-    from narwhals._plan.altair.typing import EncodeKwds, FieldName, IntoAltExpr
+    from narwhals._plan.altair.api.typing import EncodeKwds, FieldName, IntoAltExpr
 
 _EMPTY_SCHEMA: Final = stable_v1.Schema()
 

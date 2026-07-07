@@ -9,7 +9,7 @@ from narwhals._plan.schema import FrozenSchema
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from narwhals._plan.altair.typing import IntoExprColumn, OutputName
+    from narwhals._plan.altair.api.typing import IntoExprColumn, OutputName
     from narwhals._plan.typing import OneOrIterable
 
 

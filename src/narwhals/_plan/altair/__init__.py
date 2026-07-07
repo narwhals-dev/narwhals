@@ -17,3 +17,9 @@ See Also:
 """
 
 from __future__ import annotations
+
+from importlib.util import find_spec as _find_spec
+
+if _find_spec("altair") is None:
+    msg = "`altair` is required to convert `ExprIR` to altair"
+    raise ModuleNotFoundError(msg)
