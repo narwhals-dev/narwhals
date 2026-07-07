@@ -6,7 +6,7 @@ A real integration would update these APIs to expect `narwhals._plan.Expr` objec
 from __future__ import annotations
 
 import functools
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 import altair as alt
 import altair.utils
@@ -21,7 +21,7 @@ from narwhals._plan.altair.api.calculate import calculate_transform
 from narwhals._plan.altair.api.expression import parse_into_alt_expr
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Collection, Sequence
 
     from altair.typing import ChartType as AltChart, Optional
     from altair.vegalite.v6.schema._config import ThemeConfig as _ChartKwds
@@ -210,6 +210,29 @@ class Chart:
 
     def __repr__(self) -> str:
         return self._chart.__repr__()
+
+    def to_dict(
+        self,
+        *,
+        validate: bool = True,
+        format: Literal["vega-lite", "vega"] = "vega-lite",
+        exclude: Collection[Literal["datasets", "data", "config", "spec"]] = (),
+    ) -> dict[str, Any]:
+        """Convert the `Chart` to a dictionary.
+
+        Arguments:
+            validate: Validate the result against the schema.
+            format: The chart specification format.
+                The `"vega"` format relies on the active Vega-Lite compiler plugin, which
+                by default requires the vl-convert-python package.
+            exclude: After conversion, omit these keys from the result.
+        """
+        # NOTE: idk why `ignore` doesn't do this
+        result = self._chart.to_dict(validate=validate, format=format)
+        if exclude:
+            include = result.keys() - frozenset(exclude)
+            return {k: v for k, v in result.items() if k in include}
+        return result
 
     if TYPE_CHECKING:
 
