@@ -9,21 +9,30 @@ from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerDataFrame
 from narwhals._typing_compat import assert_never
-from narwhals._utils import Implementation, check_column_names_are_unique, not_implemented
+from narwhals._utils import (
+    Implementation,
+    check_column_names_are_unique,
+    not_implemented,
+    scale_bytes,
+)
 from narwhals.exceptions import InvalidOperationError, ShapeError
 from narwhals_dict.series import DictSeries
 from narwhals_dict.utils import is_native_frame
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Iterator, Sequence
+    from io import BytesIO
+    from pathlib import Path
     from types import ModuleType
 
     import pandas as pd
     import polars as pl
     import pyarrow as pa
+    from _typeshed import SupportsWrite
     from typing_extensions import Self, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._translate import IntoArrowTable
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -31,6 +40,7 @@ if TYPE_CHECKING:
         JoinStrategy,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
+        SizeUnit,
         _2DArray,
         _SliceIndex,
         _SliceName,
@@ -124,6 +134,20 @@ class DictDataFrame(
         )
         native = {
             name: column.tolist() for name, column in zip(names, data.T, strict=True)
+        }
+        return cls(native, version=context._version)
+
+    # NOTE: Requires https://github.com/narwhals-dev/narwhals/pull/3753
+    @classmethod
+    def from_arrow(cls, data: IntoArrowTable, /, *, context: _LimitedContext) -> Self:
+        from narwhals._utils import _into_arrow_table
+
+        # Reuse narwhals' pyarrow bridge (handles both `pa.Table` and any
+        # `__arrow_c_stream__` object), then materialize columns as plain lists.
+        table = _into_arrow_table(data, context)
+        native: DictFrame = {
+            name: column.to_pylist()
+            for name, column in zip(table.column_names, table.columns, strict=True)
         }
         return cls(native, version=context._version)
 
@@ -747,6 +771,43 @@ class DictDataFrame(
     def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         return self.__array__(dtype, copy=copy)
 
+    def estimated_size(self, unit: SizeUnit) -> int | float:
+        from sys import getsizeof
+
+        # TODO(FBruzzesi): Is this the right/best approach?
+        total = sum(
+            getsizeof(column) + sum(map(getsizeof, column))
+            for column in self.native.values()
+        )
+        return scale_bytes(total, unit)
+
+    @overload
+    def write_csv(self, file: None) -> str: ...
+    @overload
+    def write_csv(self, file: str | Path | BytesIO) -> None: ...
+    def write_csv(self, file: str | Path | BytesIO | None = None) -> str | None:
+        import csv
+        from io import StringIO
+        from pathlib import Path
+
+        def dump(stream: SupportsWrite[str]) -> None:
+            writer = csv.writer(stream, lineterminator="\n")
+            writer.writerow(self.columns)
+            writer.writerows(self.iter_rows(named=False, buffer_size=512))
+
+        if file is None:
+            buffer = StringIO()
+            dump(buffer)
+            return buffer.getvalue()
+        if isinstance(file, (str, Path)):
+            with Path(file).open("w", newline="", encoding="utf-8") as stream:
+                dump(stream)
+        else:  # binary stream, e.g. `BytesIO`
+            buffer = StringIO()
+            dump(buffer)
+            file.write(buffer.getvalue().encode())
+        return None
+
     def unpivot(
         self,
         on: Sequence[str] | None,
@@ -816,9 +877,6 @@ class DictDataFrame(
         return self._gather(indices)
 
     # Not implemented (yet): fill in incrementally.
-    estimated_size = not_implemented()
-    from_arrow = not_implemented()
     join_asof = not_implemented()
     pivot = not_implemented()
-    write_csv = not_implemented()
     write_parquet = not_implemented()
