@@ -5,22 +5,19 @@
 
 from __future__ import annotations
 
-import altair as alt
-from altair.datasets import load
-
 import narwhals._plan as nw
+from narwhals._plan.altair import api
 
-# TODO @dangotbanned: `from narwhals._plan.altair import api`
-from narwhals._plan.altair.api import chart as nw_alt
-from narwhals._plan.altair.api.parameter import param
-
-base = nw_alt.Chart(load("movies", backend="polars")).mark_circle()
-threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, step=0.1))
+source = api.datasets.load("movies", backend="polars")
+base = api.Chart(source).mark_circle()
+threshold = api.param(
+    "threshold", value=5, bind=api.binding_range(min=0, max=10, step=0.1)
+)
 
 imdb = nw.col("IMDB Rating")
 tomatoes = nw.col("Rotten Tomatoes Rating")
 
-chart = nw_alt.layer(
+chart = api.layer(
     base.encode(x=imdb.name.keep(), y=tomatoes.name.keep()).transform_filter(
         imdb >= threshold
     ),
@@ -29,5 +26,5 @@ chart = nw_alt.layer(
         y=tomatoes.hist(bin_count=10),
         size=nw.len().clip(0, 160),
     ).transform_filter(imdb < threshold),
-    nw_alt.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6)),
+    api.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6)),
 ).add_params(threshold)

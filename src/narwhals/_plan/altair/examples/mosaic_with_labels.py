@@ -5,24 +5,23 @@
 
 from __future__ import annotations
 
-import altair as alt
-from altair.datasets import load
-
 import narwhals._plan as nw
-from narwhals._plan.altair.api import chart as nw_alt
+from narwhals._plan.altair import api
 
 rank_cylinders = nw.col("rank_Cylinders")
 rank_origin = nw.col("rank_Origin")
 distinct_cylinders = nw.col("distinct_Cylinders")
 
+source = api.datasets.load("cars", backend="polars")
+
 base = (
-    nw_alt.Chart(load("cars", backend="polars"))
+    api.Chart(source)
     .transform_aggregate(nw.len().over("Origin", "Cylinders"))
     .transform_stack(
         stack="len",
         as_=["stack_count_Origin1", "stack_count_Origin2"],
         offset="normalize",
-        sort=[alt.SortField("Origin", "ascending")],
+        sort=[api.SortField("Origin", "ascending")],
     )
     # TODO @dangotbanned: Add a similar API to `transform_aggregate`
     # - but this one is allowed to use `OverOrdered`
@@ -33,20 +32,20 @@ base = (
         distinct_Cylinders=nw.col("Cylinders").n_unique(),
         groupby=["Origin"],
         frame=[None, None],
-        sort=[alt.SortField("Cylinders", "ascending")],
+        sort=[api.SortField("Cylinders", "ascending")],
     )
     # TODO @dangotbanned: Maybe able to merge into the above call?
     .transform_window(
         rank_Origin=nw.col("Origin").rank("dense"),
         frame=[None, None],
-        sort=[alt.SortField("Origin", "ascending")],
+        sort=[api.SortField("Origin", "ascending")],
     )
     .transform_stack(
         stack="len",
         groupby=["Origin"],
         as_=["y", "y2"],
         offset="normalize",
-        sort=[alt.SortField("Cylinders", "ascending")],
+        sort=[api.SortField("Cylinders", "ascending")],
     )
     .transform_calculate(
         ny=nw.col("y") + (rank_cylinders - 1) * distinct_cylinders * 0.01 / 3,
@@ -60,29 +59,29 @@ base = (
 
 
 rect = base.mark_rect().encode(
-    x=alt.X("nx:Q").axis(None),
+    x=api.X("nx:Q").axis(None),
     x2="nx2",
     y="ny:Q",
     y2="ny2",
-    color=alt.Color("Origin:N").legend(None),
-    opacity=alt.Opacity("Cylinders:Q").legend(None),
+    color=api.Color("Origin:N").legend(None),
+    opacity=api.Opacity("Cylinders:Q").legend(None),
     tooltip=["Origin:N", "Cylinders:Q"],
 )
 
 
 text = base.mark_text(baseline="middle").encode(
-    alt.X("xc:Q").axis(None),
+    api.X("xc:Q").axis(None),
     # NOTE:`y=nwp.col("yc").alias("Cylinders").cast(nw.Int64)`?
     # Probably too long
-    alt.Y("yc:Q").title("Cylinders"),
+    api.Y("yc:Q").title("Cylinders"),
     text="Cylinders:N",
 )
 
 origin_labels = base.mark_text(baseline="middle", align="center").encode(
     # TODO @dangotbanned: Almost able to do this with `nw.min("xc").alias("Origin")`
     # The axis orient though may be a blocker
-    alt.X("min(xc):Q").title("Origin").axis(orient="top"),
-    alt.Color("Origin").legend(None),
+    api.X("min(xc):Q").title("Origin").axis(orient="top"),
+    api.Color("Origin").legend(None),
     text="Origin",
 )
 

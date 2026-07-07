@@ -35,11 +35,10 @@ Note:
 
 from __future__ import annotations
 
-import altair as alt
 import polars as pl
 
 import narwhals._plan as nw
-from narwhals._plan.altair.api import chart as nw_alt
+from narwhals._plan.altair import api
 
 data = [
     {"label": "Begin", "amount": 4000},
@@ -77,7 +76,7 @@ calc_amount = when_end.then(window_sum_amount).otherwise(amount)
 
 
 base = (
-    nw_alt.Chart(source)
+    api.Chart(source)
     .transform_window(window_sum_amount=amount.sum(), window_lead_label=label.shift(1))
     .transform_calculate(
         calc_lead=(
@@ -92,7 +91,7 @@ base = (
         calc_sum_dec=(nw.when(window_sum_amount < calc_prev_sum).then(window_sum_amount)),
         calc_sum_inc=(nw.when(window_sum_amount > calc_prev_sum).then(window_sum_amount)),
     )
-    .encode(x=alt.X("label:O", axis=alt.Axis(title="Months", labelAngle=0), sort=None))
+    .encode(x=api.X("label:O", axis=api.Axis(title="Months", labelAngle=0), sort=None))
 )
 
 
@@ -106,7 +105,7 @@ color = (
 
 
 bar = base.mark_bar(size=45).encode(
-    y=alt.Y("calc_prev_sum:Q", title="Amount"), y2="window_sum_amount:Q", color=color
+    y=api.Y("calc_prev_sum:Q", title="Amount"), y2="window_sum_amount:Q", color=color
 )
 
 # The "rule" chart is for the horizontal lines that connect the bars
@@ -115,7 +114,7 @@ rule = base.mark_rule(xOffset=-22.5, x2Offset=22.5).encode(
 )
 
 
-chart = nw_alt.layer(
+chart = api.layer(
     bar,
     rule,
     base.mark_text(baseline="bottom", dy=-4).encode(
