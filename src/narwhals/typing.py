@@ -311,10 +311,12 @@ Examples:
 
 # TODO @dangotbanned: fix this?
 # Constructor allows tuples, but we don't support that *everywhere* yet
-IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
+IntoSchema: TypeAlias = "Mapping[str, IntoDType] | Schema"
 """Anything that can be converted into a Narwhals Schema.
 
-Defined by column names and their associated *instantiated* Narwhals DType.
+Defined by column names and their associated Narwhals DType.
+Data types that take no required arguments may also be passed uninstantiated,
+e.g. `nw.UInt8` instead of `nw.UInt8()`.
 
 Examples:
     >>> import narwhals as nw
@@ -322,7 +324,7 @@ Examples:
     >>> data = {"a": [1, 2, 3], "b": [None, "hi", "howdy"], "c": [2.1, 2.0, None]}
     >>> nw.DataFrame.from_dict(
     ...     data,
-    ...     schema={"a": nw.UInt8(), "b": nw.String(), "c": nw.Float32()},
+    ...     schema={"a": nw.UInt8, "b": nw.String(), "c": nw.Float32},
     ...     backend="pyarrow",
     ... )
     ┌────────────────────────┐

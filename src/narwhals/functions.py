@@ -44,7 +44,6 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
@@ -239,7 +238,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -328,7 +327,7 @@ def _from_dict_no_backend(
 
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:

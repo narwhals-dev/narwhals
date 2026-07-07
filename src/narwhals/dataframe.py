@@ -72,11 +72,11 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
-    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrame,
@@ -556,7 +556,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -617,7 +617,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -741,7 +741,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not _is_into_schema(schema):
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
+                "IntoSchema | Sequence[str]. "
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)

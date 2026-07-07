@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         DTypeBackend,
+        IntoDType,
         IntoSchema,
         JoinStrategy,
         PivotAgg,
@@ -150,7 +151,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None,
     ) -> Self:
         implementation = context._implementation
         pdx = implementation.to_native_namespace()
@@ -198,7 +199,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None,
     ) -> Self:
         implementation = context._implementation
         ns = implementation.to_native_namespace()

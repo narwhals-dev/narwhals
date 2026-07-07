@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoDType,
         IntoSchema,
         JoinStrategy,
         SizedMultiIndexSelector,
@@ -121,7 +122,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None,
     ) -> Self:
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
@@ -159,7 +160,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
