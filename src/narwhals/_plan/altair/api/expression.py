@@ -303,15 +303,15 @@ def _rewrite_is_between(f: boolean.IsBetween, args: Seq[ir.ExprIR], /) -> AltExp
         expr_ir = f.to_function_expr(*args)
         raise unsupported_error(expr_ir, "expr", "non-default")
     root = args[0]
-    exprs = (_from_expr_ir(arg) for arg in args)
+    prev, lower, upper = (_from_expr_ir(arg) for arg in args)
     if isinstance(root, ir.FunctionExpr) and (
         time_unit := _TEMPORAL_TIME_UNIT.get(type(root.function))
     ):
-        prev, lower, upper = exprs
         return AltExprStr(
             f"inrange({prev!r}, [{time_unit}({lower!r}), {time_unit}({upper!r})])"
         )
-    return AltExprStr.call_fn("inrange", exprs)
+    # NOTE: 2-tuples as arguments, great
+    return AltExprStr(f"inrange({prev!r}, [{lower!r}, {upper!r}])")
 
 
 def _rewrite_is_in_seq(
