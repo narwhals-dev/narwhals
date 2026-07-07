@@ -68,9 +68,9 @@ class Chart:
     # TODO @dangotbanned: Need to accept and pass-through non-Expr inputs
     def transform_window(
         self,
-        frame: Optional[Sequence[float | None]] = alt.Undefined,
-        groupby: Optional[Sequence[FieldName]] = alt.Undefined,
-        sort: Optional[Sequence[alt.SortField | dict[str, str]]] = alt.Undefined,
+        frame: Sequence[float | None] = (),
+        groupby: Sequence[FieldName] = (),
+        sort: Sequence[alt.SortField | dict[str, str]] = (),
         **named_exprs: nw.Expr,
     ) -> Self:
         """Add named window aggregations to the chart.
@@ -111,8 +111,6 @@ class Chart:
         """Add a filter to the chart.
 
         ## Chart ideas
-        - [2x `FieldOneOfPredicate` 1](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/ranged_dot_plot.py#L15-L21)
-        - [2x `FieldOneOfPredicate` 2](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/line_chart_with_cumsum_faceted.py#L14-L19)
         - [calculate_residuals](https://github.com/vega/altair/blob/48b388f140c79d29056d6ea56e519b27e2ed8838/tests/examples_methods_syntax/calculate_residuals.py#L14-L32)
             - 2x filter: is_not_null + is_between/just use less than?
             - Also has some weird renaming on calculate that could be cleaner with positional + alias

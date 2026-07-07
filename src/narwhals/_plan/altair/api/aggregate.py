@@ -10,6 +10,8 @@ try:
 except ImportError as err:
     msg = "`altair` is required to convert `ExprIR`s to transformations."
     raise ModuleNotFoundError(msg) from err
+from altair import Undefined
+
 from narwhals._plan import expressions as ir
 from narwhals._plan.altair.api.exceptions import Target, unsupported_error
 from narwhals._plan.altair.api.parse import parse_into_named_exprs
@@ -92,12 +94,12 @@ WINDOW_ONLY_AGG_EXPR: Mapping[_AggExprKey, WindowOp] = {
 
 
 # NOTE: Need to enforce `alt.WindowTransform(frame=(None,0))`
-WINDOW_FUNC_CUM: Mapping[type[F.CumAgg], AggregateOp] = {
-    F.CumProd: "product",
-    F.CumMin: "min",
-    F.CumMax: "max",
-    F.CumSum: "sum",
-    F.CumCount: "count",
+WINDOW_FUNC_CUM: Mapping[type[F.CumAgg], WindowParam] = {
+    F.CumProd: ("product", Undefined),
+    F.CumMin: ("min", Undefined),
+    F.CumMax: ("max", Undefined),
+    F.CumSum: ("sum", Undefined),
+    F.CumCount: ("count", Undefined),
 }
 
 
@@ -143,6 +145,14 @@ def _function_window(f: ir.Function, /) -> WindowParam | None:  # noqa: ARG001
 
 for _tp in AGG_FUNC:
     _function_window.register(_tp, lambda f: (AGG_FUNC[type(f)], alt.Undefined))
+
+
+def _cum_to_window(f: F.CumAgg, /) -> WindowParam:
+    return WINDOW_FUNC_CUM[type(f)]
+
+
+for _tp in WINDOW_FUNC_CUM:
+    _function_window.register(_tp, _cum_to_window)
 
 
 @_function_window.register(F.Shift)
@@ -291,27 +301,52 @@ def _agg_over_transform(alias: OutputName, expr: ir.Over) -> alt.AggregateTransf
     return alt.AggregateTransform([_agg_field_def(alias, expr.expr)], group_by)
 
 
-# TODO @dangotbanned: convert `over` -> `WindowTransform`
-# `alt.WindowTransform(window=expr.expr, frame=(...), groupby=expr.partition_by, sort=alt.SortField(field=order_by[i], order='descending'))`
+# TODO @dangotbanned: `rolling_*` -> `frame` ...
 def _window_over_transform(
     alias: OutputName,
     expr: ir.Over | ir.OverOrdered,
-    frame: Optional[Sequence[float | None]],
-    sort: Optional[Sequence[alt.SortField | dict[str, str]]],
+    frame: Sequence[float | None],
+    sort: Sequence[alt.SortField | dict[str, str]],
 ) -> alt.WindowTransform:
-    msg = f"TODO: convert `over` -> `WindowTransform`, got {expr!r}.\n"
-    raise NotImplementedError(msg)
+    """Translate an `over` operation into a window transform.
+
+    ## Notes
+    - Supports a superset of [`_agg_over_transform`][]
+    """
+    by = expr.partition_by
+    if len(group_by := tuple(e.name for e in by if isinstance(e, Col))) != len(by):
+        what = "`partition_by` with expressions (excluding `col('name')`)"
+        msg = f"`transform_window` does not support {what}, got:\n    {expr!r}"
+        raise NotImplementedError(msg)
+
+    if isinstance(expr, ir.OverOrdered):
+        if sort:
+            msg = f"`transform_window(sort=...)` cannot be used in combination with `over`, got:\n    {expr!r}"
+            raise TypeError(msg)
+
+        if nulls_last := expr.nulls_last:
+            # NOTE: 80% sure that this means nulls first
+            # https://github.com/vega/vega/blob/3fcd2fa855139f2c5dd5859172f2a1fc40ff651f/packages/vega-util/src/compare.ts#L52-L60
+            what = f"`{nulls_last=}` inside `over`"
+            msg = f"`transform_window` does not support {what}, got:\n    {expr!r}"
+            raise NotImplementedError(msg)
+        order = "descending" if expr.descending else "ascending"
+        sort = [{"field": name, "order": order} for name in expr.order_by_names()]
+
+    return alt.WindowTransform(
+        [window_field_def(alias, expr.expr)], (frame or Undefined), group_by, sort=sort
+    )
 
 
 def window_transform(
-    frame: Optional[Sequence[float | None]],
-    group_by: Optional[Sequence[FieldName]],
-    sort: Optional[Sequence[alt.SortField | dict[str, str]]],
+    frame: Sequence[float | None],
+    group_by: Sequence[FieldName],
+    sort: Sequence[alt.SortField | dict[str, str]],
     **named_exprs: nw.Expr,
 ) -> Iterator[alt.WindowTransform]:
-    # TODO @dangotbanned: (low-prio) Share more with `aggregate_transform`
+    # TODO @dangotbanned: (low-prio) Share more code with `aggregate_transform`
     parsed = parse_into_named_exprs(**named_exprs)
-    if group_by is alt.Undefined or not group_by:
+    if not group_by:
         non_over_fields: list[alt.WindowFieldDef] = []
         for alias, expr in parsed:
             if isinstance(expr, ir.Over):
@@ -319,11 +354,13 @@ def window_transform(
             else:
                 non_over_fields.append(window_field_def(alias, expr))
         if non_over_fields:
-            yield alt.WindowTransform(non_over_fields, frame=frame, sort=sort)
+            yield alt.WindowTransform(
+                non_over_fields, frame=(frame or Undefined), sort=sort
+            )
     else:
         yield alt.WindowTransform(
             [window_field_def(alias, e) for alias, e in parsed],
-            frame=frame,
+            frame=(frame or Undefined),
             groupby=group_by,
             sort=sort,
         )

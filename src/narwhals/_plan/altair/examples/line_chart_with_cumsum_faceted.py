@@ -16,11 +16,7 @@ chart = (
     .transform_filter(
         nw.col("Entity").is_in(columns_sorted), nw.col("Year").is_between(1900, 2000)
     )
-    # TODO @dangotbanned: Multiple gaps, goal is `col("Deaths").cum_sum().over("Entity")`
-    # - [ ] Support `over` here (like `transform_aggregate`)
-    # - [ ] Support `cum_*` functions in `transform_window` only
-    #   - They need to split out with `frame=(None, 0)`
-    .transform_window(cumulative_deaths="sum(Deaths)", groupby=["Entity"])  # pyright: ignore[reportArgumentType]
+    .transform_window(cumulative_deaths=nw.col("Deaths").cum_sum().over("Entity"))
     .mark_line()
     .encode(
         api.X("Year:Q", title=None).axis(format="d"),
