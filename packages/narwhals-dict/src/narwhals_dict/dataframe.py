@@ -31,8 +31,10 @@ if TYPE_CHECKING:
     from _typeshed import SupportsWrite
     from typing_extensions import Self, TypeIs
 
-    from narwhals._compliant.typing import CompliantDataFrameAny
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
+    from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
+    from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -722,17 +724,101 @@ class DictDataFrame(
             return self._join_anti(other, left_on=left_on, right_on=right_on)
         assert_never(how)
 
-    def lazy(self, backend: Any = None, *, session: Any = None) -> Any:
-        if backend is None:
-            return self
-        msg = "`lazy` with a backend is not supported for the dict backend."
-        raise NotImplementedError(msg)
+    def lazy(
+        self,
+        backend: _LazyAllowedImpl | None = None,
+        *,
+        session: SparkSession | None = None,
+    ) -> CompliantLazyFrameAny:
+        match backend:
+            case None:
+                return self
+            case Implementation.POLARS:
+                from narwhals._polars.dataframe import PolarsLazyFrame
 
-    def collect(self, backend: Any, **kwargs: Any) -> CompliantDataFrameAny:
-        if backend is None:
-            return self
-        msg = "`collect` with a backend is not supported for the dict backend."
-        raise NotImplementedError(msg)
+                return PolarsLazyFrame(
+                    self.to_polars().lazy(),
+                    validate_backend_version=True,
+                    version=self._version,
+                )
+            case Implementation.DUCKDB:
+                import duckdb  # ignore-banned-import
+
+                from narwhals._duckdb.dataframe import DuckDBLazyFrame
+
+                _df = self.to_arrow()  # `duckdb.table` reads it from this frame
+                return DuckDBLazyFrame(
+                    duckdb.table("_df"),
+                    validate_backend_version=True,
+                    version=self._version,
+                )
+            case Implementation.DASK:
+                import dask.dataframe as dd  # ignore-banned-import
+
+                from narwhals._dask.dataframe import DaskLazyFrame
+
+                return DaskLazyFrame(
+                    dd.from_pandas(self.to_pandas()),
+                    validate_backend_version=True,
+                    version=self._version,
+                )
+            case Implementation.IBIS:
+                import ibis  # ignore-banned-import
+
+                from narwhals._ibis.dataframe import IbisLazyFrame
+
+                return IbisLazyFrame(
+                    ibis.memtable(self.to_arrow(), columns=self.columns),
+                    validate_backend_version=True,
+                    version=self._version,
+                )
+            case backend if backend.is_spark_like():
+                from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+
+                if session is None:
+                    msg = "Spark like backends require `session` to be not None."
+                    raise ValueError(msg)
+                return SparkLikeLazyFrame._from_compliant_dataframe(
+                    self, session=session, implementation=backend, version=self._version
+                )
+            case _:  # pragma: no cover
+                msg = f"Unsupported `backend` value: {backend}"
+                raise ValueError(msg)
+
+    def collect(
+        self, backend: _EagerAllowedImpl | None, **kwargs: Any
+    ) -> CompliantDataFrameAny:
+        match backend:
+            case None:
+                return self
+            case Implementation.PANDAS:
+                from narwhals._pandas_like.dataframe import PandasLikeDataFrame
+
+                return PandasLikeDataFrame(
+                    self.to_pandas(),
+                    implementation=Implementation.PANDAS,
+                    validate_backend_version=True,
+                    version=self._version,
+                    validate_column_names=False,
+                )
+            case Implementation.PYARROW:
+                from narwhals._arrow.dataframe import ArrowDataFrame
+
+                return ArrowDataFrame(
+                    self.to_arrow(),
+                    validate_backend_version=True,
+                    version=self._version,
+                    validate_column_names=False,
+                )
+            case Implementation.POLARS:
+                from narwhals._polars.dataframe import PolarsDataFrame
+
+                return PolarsDataFrame(
+                    self.to_polars(), validate_backend_version=True, version=self._version
+                )
+            case _:  # pragma: no cover
+                msg = f"Unsupported `backend` value: {backend}"
+                raise ValueError(msg)
 
     def is_unique(self) -> DictSeries:
         rows = list(zip(*self.native.values(), strict=True))
