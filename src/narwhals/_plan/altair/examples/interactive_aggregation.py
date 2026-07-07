@@ -27,11 +27,10 @@ raw = base.encode(x=imdb_rating.name.keep(), y=rt_rating.name.keep()).transform_
     imdb_rating >= threshold
 )
 
-# TODO @dangotbanned: Does narwhals have a way of representing `scale(domain=...)`?
 aggregated = base.encode(
     x=imdb_rating.hist(bin_count=10),
     y=rt_rating.hist(bin_count=10),
-    size=alt.Size("count()").scale(domain=[0, 160]),
+    size=nw.len().clip(0, 160),
 ).transform_filter(imdb_rating < threshold)
 
 rule = nw_alt.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6))

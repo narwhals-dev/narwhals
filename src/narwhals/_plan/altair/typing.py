@@ -16,6 +16,8 @@ from altair.typing import Optional as Optional  # noqa: PLC0414, TC002
 from altair.vegalite.v6.schema import _typing as alt_t
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import altair as alt
     from _typeshed import Incomplete
     from altair import typing as _alt_t
@@ -194,6 +196,32 @@ class Datum(HasType, MaybeTitle, TypedDict):
     """
 
 
+class Bin(TypedDict, total=False):
+    maxbins: float
+    steps: Sequence[float]
+
+
+class Scale(TypedDict, total=False):
+    """This guy has a lot of overlap with [`narwhals._plan.expressions.functions`][]."""
+
+    # TODO @dangotbanned: Support `ExprIR` -> `ExprRef` in clip args?
+    domain: tuple[NativeValue, NativeValue]
+    """`clip`"""
+
+    # TODO @dangotbanned: Support `clip_{lower,upper}`
+    domainMin: NativeValue
+    """`clip_lower`"""
+    domainMax: NativeValue
+    """`clip_upper`"""
+
+    # TODO @dangotbanned: Investigate `log`, `pow`, `sqrt`
+    type: alt_t.ScaleType_T
+    """https://vega.github.io/vega-lite/docs/scale.html#type"""
+
+    # TODO @dangotbanned: Investigate `round`
+    round: bool
+
+
 class FieldOpen(HasType, MaybeTitle, TypedDict):
     """Shared by all fields."""
 
@@ -201,9 +229,8 @@ class FieldOpen(HasType, MaybeTitle, TypedDict):
     field: FieldName  # | HasRepeat
     aggregate: Optional[Aggregate]
     timeUnit: NotRequired[TimeUnit]
-    # On all fields, but havent mapped expressions over - maybe:
-    # - hist?
-    bin: NotRequired[Incomplete]
+    bin: NotRequired[Bin]
+    scale: NotRequired[Scale]
 
 
 class ValueOpen(TypedDict):

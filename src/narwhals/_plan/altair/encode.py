@@ -282,28 +282,41 @@ def _(expr: ir.KeepName, chart: NwChart, channel: Channel | None, /) -> Field:
     return encoding
 
 
-# TODO @dangotbanned: Allow any root expression, not just `Col`
+# TODO @dangotbanned: It is time to split out dispatch on `Function`!
 @_from_expr.register(ir.FunctionExpr)
 def _function_expr(
-    expr: ir.FunctionExpr, _: NwChart, channel: Channel | None, /
+    expr: ir.FunctionExpr, chart: NwChart, channel: Channel | None, /
 ) -> Field | None:
-    match expr:
-        case ir.FunctionExpr(function=func, args=(Col(name=name),)):
-            field: Field = {_FIELD: name, _AGG: Undefined}
-            if type(func) is F.NullCount:
-                field[_AGG] = "missing"
-            elif isinstance(func, F.HistBinCount):
-                field["bin"] = {"maxbins": func.bin_count}
-            elif isinstance(func, F.HistBins):
-                field["bin"] = {"steps": func.bins}
-            else:
-                return None
-            if channel and channel in _SECONDARY_FIELD:
-                return field
-            field[_TYPE] = _Q
-            return field
-        case _:
+    func = expr.function
+    args = expr.args
+    field = _require_field(args[0], chart, channel, field_types=_TP_FIELD_ROOT)
+    if len(args) != 1:
+        # TODO @dangotbanned: Support `clip_{lower,upper}`
+        if not isinstance(func, F.Clip):
             return None
+        domain_values = tuple(
+            e.value
+            for e in args[1:]
+            if isinstance(e, ir.Lit) and isinstance(e.value, _TP_NATIVE_VALUE)
+        )
+        if len(domain_values) != 2:
+            msg = f"{func!r} support is limited to literal values with one of the following types:\n{[tp.__name__ for tp in _TP_NATIVE_VALUE]!r}\nBut got: {expr!r}"
+            raise NotImplementedError(msg)
+        field["scale"] = {"domain": domain_values}
+
+    elif type(func) is F.NullCount:
+        field[_AGG] = "missing"
+    elif isinstance(func, F.HistBinCount):
+        field["bin"] = {"maxbins": func.bin_count}
+    elif isinstance(func, F.HistBins):
+        field["bin"] = {"steps": func.bins}
+    else:
+        return None
+
+    if channel and channel in _SECONDARY_FIELD:
+        return field
+    field[_TYPE] = _Q
+    return field
 
 
 @_from_expr.register(ir.Lit)
@@ -328,9 +341,15 @@ def _(
     return datum
 
 
-def _require_field(expr: ir.ExprIR, chart: NwChart, channel: Channel | None) -> Field:
+def _require_field(
+    expr: ir.ExprIR,
+    chart: NwChart,
+    channel: Channel | None,
+    *,
+    field_types: tuple[type[_IntoField], ...] = _TP_FIELD,
+) -> Field:
     """Fail loudly if we can't encode `expr` into a `Field`."""
-    if not isinstance(expr, _TP_FIELD):
+    if not isinstance(expr, field_types):
         raise unsupported_error(expr)
     return from_expr(expr, chart, channel)
 
@@ -348,6 +367,10 @@ def _conditional_value(
     return {_COND: conditions, _VALUE: _value(otherwise)}
 
 
+# TODO @dangotbanned: Change this API so that you can pass in a function to avoid schema collected:
+# - Current: `default=...` -> `default(...)`
+# - Missing: `static("quantitative")`
+#   - LenStar, FunctionExpr, _ParameterIR
 def vegalite_type(
     field: str,
     chart: NwChart,
