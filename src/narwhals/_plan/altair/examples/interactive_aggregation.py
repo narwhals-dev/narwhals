@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import altair as alt
-from altair.datasets import Loader
+from altair.datasets import load
 
 import narwhals._plan as nw
 
@@ -16,8 +16,7 @@ import narwhals._plan as nw
 from narwhals._plan.altair import chart as nw_alt
 from narwhals._plan.altair.parameter import param
 
-load = Loader.from_backend("polars")
-base = nw_alt.Chart(load("movies")).mark_circle()
+base = nw_alt.Chart(load("movies", backend="polars")).mark_circle()
 threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, step=0.1))
 
 imdb = nw.col("IMDB Rating")
