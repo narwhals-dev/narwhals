@@ -4,7 +4,7 @@ import operator
 import random
 from collections import Counter
 from collections.abc import Mapping
-from itertools import chain, compress, repeat
+from itertools import chain, compress, product, repeat
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerDataFrame
@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoSchema,
         JoinStrategy,
+        PivotAgg,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
@@ -876,7 +877,113 @@ class DictDataFrame(
         )
         return self._gather(indices)
 
+    def _pivot_resolve(
+        self, on: Sequence[str], index: Sequence[str] | None, values: Sequence[str] | None
+    ) -> tuple[Sequence[str], Sequence[str]]:
+        """Fill in `index`/`values` defaults as the complementary columns."""
+        on_set = set(on)
+        if index is None:
+            excluded = on_set | set(values) if values else on_set
+            index = [name for name in self.columns if name not in excluded]
+        if values is None:
+            excluded = on_set | set(index)
+            values = [name for name in self.columns if name not in excluded]
+        return index, values
+
+    def _pivot_on_uniques(
+        self, on: Sequence[str], *, sort_columns: bool
+    ) -> Iterator[Iterable[Any]]:
+        """Distinct values of each `on` column; the output columns are their product."""
+        for name in on:
+            unique = dict.fromkeys(self.native[name])  # dedup, first-appearance order
+            if not sort_columns:
+                yield unique.keys()
+            else:
+                nulls = (value for value in unique if value is None)
+                yield (*nulls, *sorted(value for value in unique if value is not None))
+
+    @staticmethod
+    def _pivot_output_name(
+        value: str, on_combo: tuple[Any, ...], *, n_on: int, n_values: int, separator: str
+    ) -> str:
+        label = on_combo[0] if n_on == 1 else '{"' + '","'.join(on_combo) + '"}'
+        return f"{value}{separator}{label}" if n_values > 1 else label
+
+    def _pivot_aggregate(
+        self,
+        column: Sequence[Any],
+        rows: Sequence[int],
+        aggregate_function: PivotAgg | None,
+    ) -> Any:
+        # `rows` is the (non-empty) set of original row indices in this cell; only
+        # materialize the values when the aggregation actually needs them.
+        if aggregate_function == "len":
+            return len(rows)
+        if aggregate_function is None:
+            return column[rows[0]]  # exactly one element per cell (validated in `pivot`)
+        series = DictSeries([column[i] for i in rows], name="", version=self._version)
+        return getattr(series, aggregate_function)()
+
+    def pivot(
+        self,
+        on: Sequence[str],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        sort_columns: bool,
+        separator: str,
+    ) -> Self:
+        if error := self._check_columns_exist(on):
+            raise error
+        index, values = self._pivot_resolve(on, index, values)
+        if error := self._check_columns_exist([*index, *values]):
+            raise error
+
+        index_cols = [self.native[name] for name in index]
+        on_cols = [self.native[name] for name in on]
+        # Stream one (index-key, on-key) pair per row straight into `cells`.
+        # No intermediate per-row key lists. `cells` maps each pair to its original
+        # row indices in row order, so `first`/`last` see frame order.
+        index_keys: Iterator[tuple[Any, ...]] = (
+            zip(*index_cols, strict=True) if index_cols else repeat((), len(self))
+        )
+        cells: dict[tuple[tuple[Any, ...], tuple[Any, ...]], list[int]] = {}
+        for row, cell in enumerate(
+            zip(index_keys, zip(*on_cols, strict=True), strict=True)
+        ):
+            cells.setdefault(cell, []).append(row)
+        if aggregate_function is None and any(len(rows) > 1 for rows in cells.values()):
+            msg = (
+                "Found multiple elements for some combinations of `on` and `index` "
+                "values. Please pass an `aggregate_function`."
+            )
+            raise ValueError(msg)
+
+        # Distinct index rows in first-appearance order, recovered from the cell
+        # keys (their insertion order already follows row order).
+        index_rows = list(dict.fromkeys(index_key for index_key, _ in cells))
+        # Materialized once because it is reused for every `value` column.
+        on_combos = list(product(*self._pivot_on_uniques(on, sort_columns=sort_columns)))
+        n_on, n_values = len(on), len(values)
+        result: DictFrame = {
+            name: [row[position] for row in index_rows]
+            for position, name in enumerate(index)
+        }
+        for value in values:
+            column = self.native[value]
+            for combo in on_combos:
+                name = self._pivot_output_name(
+                    value, combo, n_on=n_on, n_values=n_values, separator=separator
+                )
+                result[name] = [
+                    self._pivot_aggregate(column, rows, aggregate_function)
+                    if (rows := cells.get((index_row, combo)))
+                    else None
+                    for index_row in index_rows
+                ]
+        return self._with_native(result)
+
     # Not implemented (yet): fill in incrementally.
     join_asof = not_implemented()
-    pivot = not_implemented()
     write_parquet = not_implemented()
