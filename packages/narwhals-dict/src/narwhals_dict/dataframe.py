@@ -733,10 +733,19 @@ class DictDataFrame(
 
         return pl.DataFrame(dict(self.native))
 
-    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+    def __array__(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
         import numpy as np  # ignore-banned-import
 
-        return np.column_stack(tuple(self.native.values()))
+        # Convert each column through the Series so time-zone-aware datetimes
+        # (-> UTC, naive `datetime64`) and numeric-with-null columns (-> float64
+        # NaN) are handled once, then stack the columns side by side.
+        columns = [series.__array__(dtype, copy=copy) for series in self.iter_columns()]
+        if not columns:
+            return np.empty((len(self), 0), dtype=dtype)
+        return np.column_stack(columns)
+
+    def to_numpy(self, dtype: Any = None, *, copy: bool | None = None) -> _2DArray:
+        return self.__array__(dtype, copy=copy)
 
     def unpivot(
         self,
@@ -807,7 +816,6 @@ class DictDataFrame(
         return self._gather(indices)
 
     # Not implemented (yet): fill in incrementally.
-    __array__ = not_implemented()
     estimated_size = not_implemented()
     from_arrow = not_implemented()
     join_asof = not_implemented()
