@@ -9,6 +9,7 @@ from functools import lru_cache
 from itertools import islice
 from typing import TYPE_CHECKING, Any, cast
 
+from narwhals.dependencies import get_numpy
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -211,6 +212,26 @@ def timedelta_to_us(value: timedelta, /) -> int:
     return (value.days * 86_400 + value.seconds) * MICROSECONDS_PER_UNIT[
         "s"
     ] + value.microseconds
+
+
+def duration_to_ns(value: Any, /) -> int | None:
+    """Whole nanoseconds for a duration value, or `None` for a missing value.
+
+    Handles both Python `datetime.timedelta` (microsecond resolution) and
+    `numpy.timedelta64`: sub-microsecond durations reach this backend as the
+    latter, since `list(np.array(..., "timedelta64[ns]"))` yields
+    `numpy.timedelta64` scalars that a `timedelta` cannot represent. `NaT`
+    (numpy's missing-value marker) maps to `None`.
+    """
+    if isinstance(value, timedelta):
+        return timedelta_to_us(value) * 1_000
+    if (np := get_numpy()) is not None:
+        return (
+            None
+            if np.isnat(value)
+            else int(value.astype("timedelta64[ns]").astype("int64"))
+        )
+    return None
 
 
 def _to_int(value: Any) -> int:
@@ -530,19 +551,52 @@ def _promote_decimal_mix(
     return left, right
 
 
+def kleene_and(lhs: Any, rhs: Any) -> bool | None:
+    """Three-valued logical AND, treating `None` as the unknown truth value."""
+    if lhs is False or rhs is False:
+        return False
+    if lhs is None or rhs is None:
+        return None
+    return True
+
+
+def kleene_or(lhs: Any, rhs: Any) -> bool | None:
+    """Three-valued logical OR, treating `None` as the unknown truth value."""
+    if lhs is True or rhs is True:
+        return True
+    if lhs is None or rhs is None:
+        return None
+    return False
+
+
 def binary_op(
-    op: Callable[[Any, Any], Any], left: NativeSeries, right: Any, *, is_scalar: bool
+    op: Callable[[Any, Any], Any],
+    left: NativeSeries,
+    right: Any,
+    *,
+    is_scalar: bool,
+    propagate_null: bool = True,
 ) -> list[Any]:
-    """Elementwise binary operation with null (`None`) propagation."""
+    """Elementwise binary operation.
+
+    By default any `None` (null) operand yields `None` without calling `op`.
+    Pass `propagate_null=False` for operators that define their own null
+    semantics (e.g. the Kleene `&`/`|` above), so `op` receives `None` operands
+    and decides the result.
+    """
     if is_scalar:
-        if right is None:
+        if right is None and propagate_null:
             return [None] * len(left)
         left, right = _promote_decimal_mix(left, right, is_scalar=True)
+        if not propagate_null:
+            return [op(lhs, right) for lhs in left]
         return [None if lhs is None else op(lhs, right) for lhs in left]
     if len(left) != len(right):
         msg = f"Expected object of length {len(left)}, got: {len(right)}."
         raise ShapeError(msg)
     left, right = _promote_decimal_mix(left, right, is_scalar=False)
+    if not propagate_null:
+        return [op(lhs, rhs) for lhs, rhs in zip(left, right, strict=True)]
     return [
         None if (lhs is None or rhs is None) else op(lhs, rhs)
         for lhs, rhs in zip(left, right, strict=True)

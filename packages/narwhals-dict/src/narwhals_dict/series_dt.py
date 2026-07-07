@@ -11,6 +11,7 @@ from narwhals_dict.utils import (
     EPOCH_NAIVE,
     MICROSECONDS_PER_UNIT,
     datetime_to_us,
+    duration_to_ns,
     timedelta_to_us,
     trunc_div,
 )
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
     from narwhals_dict.series import DictSeries
 
-_US_PER_MINUTE = 60_000_000
+_NS_PER_MINUTE = 60_000_000_000
 
 
 def _add_months(value: datetime | date, months: int) -> datetime | date:
@@ -118,23 +119,29 @@ class DictSeriesDateTimeNamespace(
     def weekday(self) -> DictSeries:
         return self._unary(lambda value: value.isoweekday())
 
-    def _total(self, us_per_unit: int) -> DictSeries:
-        return self._unary(lambda value: trunc_div(timedelta_to_us(value), us_per_unit))
+    def _total(self, ns_per_unit: int) -> DictSeries:
+        # Nanoseconds is the base unit so sub-microsecond (`timedelta64[ns]`)
+        # inputs survive; `NaT` maps to `None` via `duration_to_ns`.
+        def fn(value: Any) -> int | None:
+            ns = duration_to_ns(value)
+            return None if ns is None else trunc_div(ns, ns_per_unit)
+
+        return self._unary(fn)
 
     def total_minutes(self) -> DictSeries:
-        return self._total(_US_PER_MINUTE)
+        return self._total(_NS_PER_MINUTE)
 
     def total_seconds(self) -> DictSeries:
-        return self._total(1_000_000)
+        return self._total(1_000_000_000)
 
     def total_milliseconds(self) -> DictSeries:
-        return self._total(1_000)
+        return self._total(1_000_000)
 
     def total_microseconds(self) -> DictSeries:
-        return self._total(1)
+        return self._total(1_000)
 
     def total_nanoseconds(self) -> DictSeries:
-        return self._unary(lambda value: timedelta_to_us(value) * 1_000)
+        return self._unary(duration_to_ns)
 
     def truncate(self, every: str) -> DictSeries:
         interval = Interval.parse(every)

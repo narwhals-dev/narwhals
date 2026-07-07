@@ -12,7 +12,14 @@ from narwhals._compliant import EagerSeries
 from narwhals._typing_compat import assert_never
 from narwhals._utils import NO_DEFAULT, Implementation
 from narwhals.exceptions import InvalidOperationError, ShapeError
-from narwhals_dict.utils import binary_op, cast_values, infer_dtype, is_native_column
+from narwhals_dict.utils import (
+    binary_op,
+    cast_values,
+    infer_dtype,
+    is_native_column,
+    kleene_and,
+    kleene_or,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -159,18 +166,43 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             return other.native, False
         return other, True
 
-    def _with_binary(self, op: Callable[[Any, Any], Any], other: Any) -> Self:
+    def _with_binary(
+        self, op: Callable[[Any, Any], Any], other: Any, *, propagate_null: bool = True
+    ) -> Self:
         rhs, rhs_is_scalar = self._extract_comparand(other)
         preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         if self._broadcast and not rhs_is_scalar:
             # e.g. `nw.lit(1) + nw.col("a")`: broadcast the scalar left-hand side.
             lhs = self.native[0] if self.native else None
             result = binary_op(
-                lambda value, scalar: op(scalar, value), rhs, lhs, is_scalar=True
+                lambda value, scalar: op(scalar, value),
+                rhs,
+                lhs,
+                is_scalar=True,
+                propagate_null=propagate_null,
             )
         else:
-            result = binary_op(op, self.native, rhs, is_scalar=rhs_is_scalar)
+            result = binary_op(
+                op,
+                self.native,
+                rhs,
+                is_scalar=rhs_is_scalar,
+                propagate_null=propagate_null,
+            )
         return self._with_native(result, preserve_broadcast=preserve_broadcast)
+
+    def _with_logical(
+        self,
+        kleene: Callable[[Any, Any], Any],
+        bitwise: Callable[[Any, Any], Any],
+        other: Any,
+    ) -> Self:
+        # Polars-style: `&`/`|` are Kleene (three-valued) logic on booleans and
+        # null-propagating bitwise ops on integers. Both are commutative, so the
+        # reflected (`__rand__`/`__ror__`) forms reuse this directly.
+        if isinstance(self.dtype, self._version.dtypes.Boolean):
+            return self._with_binary(kleene, other, propagate_null=False)
+        return self._with_binary(bitwise, other)
 
     def _with_binary_right(self, op: Callable[[Any, Any], Any], other: Any) -> Self:
         return self._with_binary(lambda lhs, rhs: op(rhs, lhs), other)
@@ -203,16 +235,16 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_binary(operator.lt, other)
 
     def __and__(self, other: Any) -> Self:
-        return self._with_binary(operator.and_, other)
+        return self._with_logical(kleene_and, operator.and_, other)
 
     def __rand__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.and_, other)
+        return self._with_logical(kleene_and, operator.and_, other)
 
     def __or__(self, other: Any) -> Self:
-        return self._with_binary(operator.or_, other)
+        return self._with_logical(kleene_or, operator.or_, other)
 
     def __ror__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.or_, other)
+        return self._with_logical(kleene_or, operator.or_, other)
 
     def __add__(self, other: Any) -> Self:
         return self._with_binary(operator.add, other)
