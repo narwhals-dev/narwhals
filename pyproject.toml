@@ -585,6 +585,16 @@ project-excludes = [
     "src/narwhals/_plan/selectors.py",
     "src/narwhals/_plan/series.py",
     "src/narwhals/_plan/translate.py",
+    # Class that is generic over `TypedDict1 | TypedDict2` is not understood:
+    # > ERROR Cannot set item in `_SelectionKwdsT` [unsupported-operation]
+    # >   |
+    # >   |  state_next["name"] = name
+    # >   |  ^^^^^^^^^^^^^^^^^^
+    # >   |
+    # > Object of class `object` has no attribute `__setitem__`
+    # > Did you mean `__setattr__`?
+    # No, I didn't mean that!
+    "src/narwhals/_plan/altair/_experimental/parameter.py"
 ]
 ignore-missing-imports = [
     "cudf.*",
