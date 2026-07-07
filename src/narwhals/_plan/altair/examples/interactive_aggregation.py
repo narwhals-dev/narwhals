@@ -23,16 +23,14 @@ threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, st
 imdb_rating = nw.col("IMDB Rating")
 rt_rating = nw.col("Rotten Tomatoes Rating")
 
-raw = base.encode(x=imdb_rating.name.keep(), y=rt_rating.name.keep()).transform_filter(
-    imdb_rating >= threshold
-)
-
-aggregated = base.encode(
-    x=imdb_rating.hist(bin_count=10),
-    y=rt_rating.hist(bin_count=10),
-    size=nw.len().clip(0, 160),
-).transform_filter(imdb_rating < threshold)
-
-rule = nw_alt.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6))
-
-chart = nw_alt.layer(raw, aggregated, rule).add_params(threshold)
+chart = nw_alt.layer(
+    base.encode(x=imdb_rating.name.keep(), y=rt_rating.name.keep()).transform_filter(
+        imdb_rating >= threshold
+    ),
+    base.encode(
+        x=imdb_rating.hist(bin_count=10),
+        y=rt_rating.hist(bin_count=10),
+        size=nw.len().clip(0, 160),
+    ).transform_filter(imdb_rating < threshold),
+    nw_alt.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6)),
+).add_params(threshold)
