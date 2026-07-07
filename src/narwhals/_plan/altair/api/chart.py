@@ -125,7 +125,8 @@ class Chart:
         pred_0 = (
             predicate
             if isinstance(predicate, _TP_FILTER_PASSTHROUGH_0)
-            else parse(predicate)
+            # NOTE: https://discuss.python.org/t/spec-typeddict-and-isinstance-obj-dict-narrowing/107724
+            else parse(predicate)  # type: ignore[arg-type]
         )
         predicates = (
             p if isinstance(p, _TP_FILTER_PASSTHROUGH_1) else parse(p)
