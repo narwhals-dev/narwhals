@@ -273,11 +273,7 @@ def test_is_into_dataframe() -> None:
     [(DictDataFrame, "dataframe"), (DictLazyFrame, "lazyframe"), (DictSeries, "series")],
 )
 def test_is_into_mocked_plugin(compliant_cls: type, expected_kind: str) -> None:
-    for dependencies in DEPENDENCIES_MODULES:
-        assert dependencies.is_into_dataframe(compliant_cls) is (
-            expected_kind == "dataframe"
-        )
-        assert dependencies.is_into_lazyframe(compliant_cls) is (
-            expected_kind == "lazyframe"
-        )
-        assert dependencies.is_into_series(compliant_cls) is (expected_kind == "series")
+    for dep in DEPENDENCIES_MODULES:
+        assert dep.is_into_dataframe(compliant_cls) is (expected_kind == "dataframe")
+        assert dep.is_into_lazyframe(compliant_cls) is (expected_kind == "lazyframe")
+        assert dep.is_into_series(compliant_cls) is (expected_kind == "series")
