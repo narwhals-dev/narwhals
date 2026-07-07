@@ -991,7 +991,8 @@ def from_dict(
 
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            sequence of (name, type) tuples. If not
             specified, the schema will be inferred by the native library. If
             any `dtype` is `None`, the data type for that column will be inferred
             by the native library.
@@ -1027,7 +1028,8 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, a sequence
+            of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways

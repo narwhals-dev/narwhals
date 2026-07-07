@@ -24,19 +24,26 @@ from narwhals._utils import (
 from narwhals.dependencies import is_numpy_array_2d
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Iterator, KeysView, Sequence
+    from collections.abc import (
+        Collection,
+        Iterable,
+        Iterator,
+        KeysView,
+        Mapping,
+        Sequence,
+    )
     from typing import TypeAlias
 
     from typing_extensions import TypeIs
 
     from narwhals._compliant.selectors import CompliantSelectorNamespace
     from narwhals._utils import Implementation, Version
+    from narwhals.dtypes import DType
     from narwhals.typing import (
         ConcatMethod,
         CorrelationMethod,
         Into1DArray,
         IntoDType,
-        IntoSchema,
         NonNestedLiteral,
         _2DArray,
     )
@@ -136,8 +143,8 @@ class AlignDiagonal(Protocol[CompliantFrameT, CompliantExprT_co]):
     def _align_diagonal(
         self,
         frames: Iterable[CompliantFrameT],
-        schemas: Iterable[IntoSchema],
-        union_schema: IntoSchema,
+        schemas: Iterable[Mapping[str, DType]],
+        union_schema: Mapping[str, DType],
     ) -> Sequence[CompliantFrameT]:
         union_names = union_schema.keys()
         # Lazily populate null expressions as needed, shared across frames
@@ -271,14 +278,14 @@ class EagerNamespace(
 
     @overload
     def from_numpy(
-        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
+        self, data: _2DArray, /, schema: Mapping[str, IntoDType] | Sequence[str] | None
     ) -> EagerDataFrameT: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: IntoSchema | Sequence[str] | None = None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None = None,
     ) -> EagerDataFrameT | EagerSeriesT_co:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)

@@ -45,6 +45,23 @@ def test_from_dict_schema_uninstantiated_dtypes(eager_backend: EagerAllowed) -> 
     assert result.collect_schema() == {"c": nw.Int16(), "d": nw.Float32()}
 
 
+def test_from_dict_schema_pairs(eager_backend: EagerAllowed) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3257
+    expected = {"c": nw.Int16(), "d": nw.Float32()}
+    result = nw.from_dict(
+        {"c": [1, 2], "d": [5, 6]},
+        backend=eager_backend,
+        schema=[("c", nw.Int16), ("d", nw.Float32())],
+    )
+    assert result.collect_schema() == expected
+    result = nw.DataFrame.from_dict(
+        {"c": [1, 2], "d": [5, 6]},
+        backend=eager_backend,
+        schema=[("c", nw.Int16), ("d", nw.Float32())],
+    )
+    assert result.collect_schema() == expected
+
+
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
 def test_from_dict_without_backend(constructor: Constructor, backend: Polars) -> None:
     pytest.importorskip("polars")

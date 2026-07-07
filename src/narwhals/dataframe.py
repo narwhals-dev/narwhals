@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Mapping
 from functools import partial
 from itertools import chain
 from typing import (
@@ -39,6 +40,7 @@ from narwhals._utils import (
     is_lazy_allowed,
     is_list_of,
     is_sequence_like,
+    is_sequence_of,
     is_slice_none,
     predicates_contains_list_of_bool,
     qualified_type_name,
@@ -56,7 +58,7 @@ from narwhals.series import Series
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
     from io import BytesIO
     from pathlib import Path
     from types import ModuleType
@@ -571,7 +573,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Dictionary to create DataFrame from.
-            schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a
+                sequence of (name, type) tuples. If not
                 specified, the schema will be inferred by the native library. If
                 any `dtype` is `None`, the data type for that column will be inferred
                 by the native library.
@@ -600,6 +603,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if backend is None:
             data, backend = _from_dict_no_backend(data)
+        if schema is not None and not isinstance(schema, Mapping):
+            schema = dict(schema)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -629,7 +634,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
-            schema: The DataFrame schema as Schema or dict of {name: type}. If not
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a
+                sequence of (name, type) tuples. If not
                 specified, the schema will be inferred by the native library. If
                 any `dtype` is `None`, the data type for that column will be inferred
                 by the native library.
@@ -672,6 +678,8 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴────────┴───────┘|
             └──────────────────────────┘
         """
+        if schema is not None and not isinstance(schema, Mapping):
+            schema = dict(schema)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -703,7 +711,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Two-dimensional data represented as a NumPy ndarray.
-            schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+            schema: The DataFrame schema as Schema, dict of {name: type}, a sequence
+                of (name, type) tuples, or a sequence of str.
             backend: specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
@@ -745,6 +754,8 @@ class DataFrame(BaseFrame[DataFrameT]):
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
+        if is_sequence_of(schema, tuple):
+            schema = Schema(schema)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant

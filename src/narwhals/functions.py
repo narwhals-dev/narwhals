@@ -20,6 +20,7 @@ from narwhals._utils import (
     is_eager_allowed,
     is_nested_literal,
     is_sequence_but_not_str,
+    is_sequence_of,
     normalize_path,
     supports_arrow_c_stream,
     validate_laziness,
@@ -32,6 +33,7 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
+from narwhals.schema import Schema
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -254,7 +256,8 @@ def from_dict(
 
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            sequence of (name, type) tuples. If not
             specified, the schema will be inferred by the native library. If
             any `dtype` is `None`, the data type for that column will be inferred
             by the native library.
@@ -284,6 +287,8 @@ def from_dict(
     """
     if backend is None:
         data, backend = _from_dict_no_backend(data)
+    if schema is not None and not isinstance(schema, Mapping):
+        schema = dict(schema)
     if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
         msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
         raise InvalidOperationError(msg)
@@ -339,7 +344,8 @@ def from_dicts(
 
     Arguments:
         data: Sequence with dictionaries mapping column name to value.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            sequence of (name, type) tuples. If not
             specified, the schema will be inferred by the native library. If
             any `dtype` is `None`, the data type for that column will be inferred
             by the native library.
@@ -401,7 +407,8 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, a sequence
+            of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
@@ -442,6 +449,8 @@ def from_numpy(
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
+    if is_sequence_of(schema, tuple):
+        schema = Schema(schema)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         ns = Version.MAIN.namespace.from_backend(implementation).compliant
@@ -467,8 +476,6 @@ def from_numpy(
 
 
 def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
-    from narwhals.schema import Schema
-
     return (
         obj is None or isinstance(obj, (Mapping, Schema)) or is_sequence_but_not_str(obj)
     )

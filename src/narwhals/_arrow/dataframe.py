@@ -122,7 +122,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, IntoDType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
@@ -160,7 +160,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, IntoDType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -193,7 +193,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 

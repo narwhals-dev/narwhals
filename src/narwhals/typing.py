@@ -309,12 +309,13 @@ Examples:
 """
 
 
-# TODO @dangotbanned: fix this?
-# Constructor allows tuples, but we don't support that *everywhere* yet
-IntoSchema: TypeAlias = "Mapping[str, IntoDType] | Schema"
+IntoSchema: TypeAlias = (
+    "Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
+)
 """Anything that can be converted into a Narwhals Schema.
 
-Defined by column names and their associated Narwhals DType.
+Defined by column names and their associated Narwhals DType, either as a
+mapping or as a sequence of `(name, dtype)` tuples.
 Data types that take no required arguments may also be passed uninstantiated,
 e.g. `nw.UInt8` instead of `nw.UInt8()`.
 
@@ -325,6 +326,24 @@ Examples:
     >>> nw.DataFrame.from_dict(
     ...     data,
     ...     schema={"a": nw.UInt8, "b": nw.String(), "c": nw.Float32},
+    ...     backend="pyarrow",
+    ... )
+    ┌────────────────────────┐
+    |   Narwhals DataFrame   |
+    |------------------------|
+    |pyarrow.Table           |
+    |a: uint8                |
+    |b: string               |
+    |c: float                |
+    |----                    |
+    |a: [[1,2,3]]            |
+    |b: [[null,"hi","howdy"]]|
+    |c: [[2.1,2,null]]       |
+    └────────────────────────┘
+
+    >>> nw.DataFrame.from_dict(
+    ...     data,
+    ...     schema=[("a", nw.UInt8), ("b", nw.String()), ("c", nw.Float32)],
     ...     backend="pyarrow",
     ... )
     ┌────────────────────────┐
