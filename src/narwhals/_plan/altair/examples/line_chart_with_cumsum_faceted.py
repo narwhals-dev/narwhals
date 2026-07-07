@@ -16,11 +16,11 @@ chart = (
     .transform_filter(
         nw.col("Entity").is_in(columns_sorted), nw.col("Year").is_between(1900, 2000)
     )
-    .transform_window(cumulative_deaths=nw.col("Deaths").cum_sum().over("Entity"))
+    .transform_window(Deaths=nw.col("Deaths").cum_sum().over("Entity"))
     .mark_line()
     .encode(
         api.X("Year", title=None).axis(format="d"),
-        api.Y("cumulative_deaths:Q", title=None),
+        api.Y("Deaths", title=None),
         api.Color("Entity", legend=None),
     )
     .properties(width=300, height=150)
