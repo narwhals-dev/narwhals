@@ -15,13 +15,16 @@ columns_sorted = ["Drought", "Epidemic", "Earthquake", "Flood"]
 chart = (
     alt.Chart(source)
     .transform_filter(
+        # TODO @dangotbanned: Use `col("Entity").is_in(columns_sorted)`
         alt.FieldOneOfPredicate(field="Entity", oneOf=columns_sorted),
+        # TODO @dangotbanned: Use `col("Year").is_between(1900, 2000)`
         alt.FieldRangePredicate(field="Year", range=[1900, 2000]),
     )
-    .transform_window(
-        cumulative_deaths="sum(Deaths)",
-        groupby=["Entity"],  # Calculate cumulative sum of Deaths by Entity
-    )
+    # TODO @dangotbanned: Multiple gaps, goal is `col("Deaths").cum_sum().over("Entity")`
+    # - [ ] Support `over` here (like `transform_aggregate`)
+    # - [ ] Support `cum_*` functions in `transform_window` only
+    #   - They need to split out with `frame=(None, 0)`
+    .transform_window(cumulative_deaths="sum(Deaths)", groupby=["Entity"])
     .mark_line()
     .encode(
         alt.X("Year:Q", title=None).axis(format="d"),
@@ -29,6 +32,9 @@ chart = (
         alt.Color("Entity:N", legend=None),
     )
     .properties(width=300, height=150)
+    # TODO @dangotbanned: Add `Chart.facet`
+    # TODO @dangotbanned: Re-export `Facet`, `Header`, `Title` (although )
+    # TODO @dangotbanned: Consider re-wrapping `Title` as it can take `Parameter`s
     .facet(
         facet=alt.Facet(
             "Entity:N",
