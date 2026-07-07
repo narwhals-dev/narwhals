@@ -19,15 +19,15 @@ chart = (
     .transform_window(cumulative_deaths=nw.col("Deaths").cum_sum().over("Entity"))
     .mark_line()
     .encode(
-        api.X("Year:Q", title=None).axis(format="d"),
+        api.X("Year", title=None).axis(format="d"),
         api.Y("cumulative_deaths:Q", title=None),
-        api.Color("Entity:N", legend=None),
+        api.Color("Entity", legend=None),
     )
     .properties(width=300, height=150)
     # TODO @dangotbanned: Consider re-wrapping `Title` as it can take `Parameter`s
     .facet(
         api.Facet(
-            "Entity:N",
+            "Entity",
             title=None,
             sort=columns_sorted,
             header=api.Header(labelAnchor="start", labelFontStyle="italic"),
