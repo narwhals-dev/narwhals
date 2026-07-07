@@ -87,7 +87,22 @@ TestAny: TypeAlias = TestDatum | TestField | TestValue
 Encoded: TypeAlias = ConditionalValue | ConditionalField | Field | Value | alt_t.Datum
 """Anything that has been translated for `altair.Chart.encode`."""
 
-_TP_FIELD = (Col, LenStar, ir.AggExpr, ir.FunctionExpr)
+_TP_FIELD_ROOT: Final = Col, LenStar
+"""Root [`ExprIR`][narwhals._plan.expressions.ExprIR] that can be encoded as a [`Field`].
+
+[`Field`]: https://vega.github.io/vega-lite/docs/field.html
+"""
+
+_TP_FIELD: Final = (*_TP_FIELD_ROOT, ir.AggExpr, ir.FunctionExpr, ir.KeepName)
+"""[`ExprIR`][narwhals._plan.expressions.ExprIR] that can be encoded as a [`Field`].
+
+Typically, they are required to be a root expression, or aggregate/transform one.
+
+[`Field`]: https://vega.github.io/vega-lite/docs/field.html
+"""
+
+_IntoField: TypeAlias = Col | LenStar | ir.AggExpr | ir.FunctionExpr | ir.KeepName
+
 _TP_NATIVE_VALUE = (str, int, bool, float, dt.date, dt.datetime, type(None))
 
 _SECONDARY_FIELD: Final = frozenset(
@@ -113,6 +128,7 @@ _VALUE: Final = "value"
 _TYPE: Final = "type"
 _AGG: Final = "aggregate"
 _Q: Final = "quantitative"
+_TITLE: Final = "title"
 unsupported_error = functools.partial(_unsupported_error, target="encoding")
 
 
@@ -124,9 +140,7 @@ def from_expr(
 ) -> ConditionalValue | ConditionalField: ...
 @overload
 def from_expr(
-    expr: Col | LenStar | ir.AggExpr | ir.FunctionExpr,
-    chart: NwChart,
-    channel: Channel | None = None,
+    expr: _IntoField, chart: NwChart, channel: Channel | None = None
 ) -> Field: ...
 @overload
 def from_expr(
@@ -199,8 +213,10 @@ def ternary_expr(
             return _conditional_value(then_value, falsy)
         if isinstance(falsy, ir.TernaryExpr):
             return _ternary_chained(then_value, falsy, chart, channel)
-        return ConditionalField(condition=then_value, **_field(falsy, chart, channel))
-    then_field = _field(truthy, chart, channel)
+        return ConditionalField(
+            condition=then_value, **_require_field(falsy, chart, channel)
+        )
+    then_field = _require_field(truthy, chart, channel)
     if isinstance(falsy, ir.Lit):
         return _conditional_value({_TEST: when, **then_field}, falsy)
     if isinstance(falsy, _TP_FIELD):
@@ -229,7 +245,7 @@ def _ternary_chained(
         last = last.falsy
     if isinstance(last, ir.Lit):
         return _conditional_value(conditions, last)
-    return ConditionalField(condition=conditions, **_field(last, chart, channel))
+    return ConditionalField(condition=conditions, **_require_field(last, chart, channel))
 
 
 @_from_expr.register(Col)
@@ -255,6 +271,18 @@ def _len(_: LenStar, __: NwChart, channel: Channel | None, /) -> Field:
     return {_FIELD: "__count__", _AGG: "count", _TYPE: _Q}
 
 
+@_from_expr.register(ir.KeepName)
+def _(expr: ir.KeepName, chart: NwChart, channel: Channel | None, /) -> Field:
+    """Allow `keep.name()` to override auto-generated titles (see [example]).
+
+    [example]: https://altair-viz.github.io/gallery/interactive_aggregation.html
+    """
+    encoding = _require_field(expr.expr, chart, channel)
+    encoding[_TITLE] = encoding[_FIELD]
+    return encoding
+
+
+# TODO @dangotbanned: Allow any root expression, not just `Col`
 @_from_expr.register(ir.FunctionExpr)
 def _function_expr(
     expr: ir.FunctionExpr, _: NwChart, channel: Channel | None, /
@@ -300,7 +328,8 @@ def _(
     return datum
 
 
-def _field(expr: ir.ExprIR, chart: NwChart, channel: Channel | None) -> Field:
+def _require_field(expr: ir.ExprIR, chart: NwChart, channel: Channel | None) -> Field:
+    """Fail loudly if we can't encode `expr` into a `Field`."""
     if not isinstance(expr, _TP_FIELD):
         raise unsupported_error(expr)
     return from_expr(expr, chart, channel)

@@ -23,14 +23,9 @@ threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, st
 imdb_rating = nw.col("IMDB Rating")
 rt_rating = nw.col("Rotten Tomatoes Rating")
 
-# TODO @dangotbanned: Support these as either:
-# - `nw.col("IMDB Rating").alias("IMDB Rating")`
-# - `nw.col("IMDB Rating").name.keep()`
-#   - This example is an edge case where that makes sense
-raw = base.encode(
-    x=alt.X("IMDB Rating").title("IMDB Rating"),
-    y=alt.Y("Rotten Tomatoes Rating").title("Rotten Tomatoes Rating"),
-).transform_filter(imdb_rating >= threshold)
+raw = base.encode(x=imdb_rating.name.keep(), y=rt_rating.name.keep()).transform_filter(
+    imdb_rating >= threshold
+)
 
 # TODO @dangotbanned: Does narwhals have a way of representing `scale(domain=...)`?
 aggregated = base.encode(
