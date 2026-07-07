@@ -20,17 +20,17 @@ load = Loader.from_backend("polars")
 base = nw_alt.Chart(load("movies")).mark_circle()
 threshold = param("threshold", value=5, bind=alt.binding_range(min=0, max=10, step=0.1))
 
-imdb_rating = nw.col("IMDB Rating")
-rt_rating = nw.col("Rotten Tomatoes Rating")
+imdb = nw.col("IMDB Rating")
+tomatoes = nw.col("Rotten Tomatoes Rating")
 
 chart = nw_alt.layer(
-    base.encode(x=imdb_rating.name.keep(), y=rt_rating.name.keep()).transform_filter(
-        imdb_rating >= threshold
+    base.encode(x=imdb.name.keep(), y=tomatoes.name.keep()).transform_filter(
+        imdb >= threshold
     ),
     base.encode(
-        x=imdb_rating.hist(bin_count=10),
-        y=rt_rating.hist(bin_count=10),
+        x=imdb.hist(bin_count=10),
+        y=tomatoes.hist(bin_count=10),
         size=nw.len().clip(0, 160),
-    ).transform_filter(imdb_rating < threshold),
+    ).transform_filter(imdb < threshold),
     nw_alt.Chart().mark_rule(color="gray").encode(x=threshold, strokeWidth=nw.lit(6)),
 ).add_params(threshold)
