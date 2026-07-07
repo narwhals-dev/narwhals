@@ -125,10 +125,7 @@ chart = nw_alt.layer(
         text="calc_sum_dec:N", y="calc_sum_dec:Q"
     ),
     base.mark_text(baseline="middle").encode(
-        # TODO @dangotbanned: Enable `Lit` -> `Value` on `encode`
-        text="calc_text_amount:N",
-        y="calc_center:Q",
-        color=alt.value("white"),
+        text="calc_text_amount:N", y="calc_center:Q", color=nw.lit("white")
     ),
     width=800,
     height=450,
