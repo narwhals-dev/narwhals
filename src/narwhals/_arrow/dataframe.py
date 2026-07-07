@@ -9,6 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
     arange,
+    chunked_array,
     concat_tables,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -142,9 +143,9 @@ class ArrowDataFrame(
             raise NotImplementedError(msg)
         res = pa.table(
             {
-                name: pa.chunked_array(  # type: ignore[misc]
+                name: chunked_array(  # type: ignore[misc]
                     [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                    narwhals_to_native_dtype(nw_dtype, version=context._version)
                     if nw_dtype is not None
                     else None,
                 )
@@ -174,6 +175,19 @@ class ArrowDataFrame(
         )
         if pa_schema and not data:
             native = pa_schema.empty_table()
+        elif pa_schema is not None and any(
+            pa.types.is_dictionary(field.type) for field in pa_schema
+        ):
+            # `from_pylist` cannot build dictionary (Categorical) columns, and casting
+            # string -> dictionary is unsupported on older PyArrow, so pivot the rows to
+            # columns and let `from_pydict` build them with the requested schema.
+            native = pa.Table.from_pydict(
+                {
+                    field.name: [row.get(field.name) for row in data]
+                    for field in pa_schema
+                },
+                schema=pa_schema,
+            )
         else:
             native = pa.Table.from_pylist(data, schema=pa_schema)
         return cls.from_native(native, context=context)

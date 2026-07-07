@@ -96,3 +96,14 @@ def test_from_dicts_inconsistent_keys(
 
     result = nw.from_dicts(data, backend=eager_implementation)
     assert result.columns == ["a", "b"]
+
+
+def test_from_dicts_categorical(eager_backend: EagerAllowed) -> None:
+    # Building a `Categorical` column (a dictionary type on PyArrow) from row dicts used
+    # to raise `ArrowInvalid` for the pyarrow backend.
+    schema = {"a": nw.Categorical()}
+    result = nw.from_dicts(
+        [{"a": "x"}, {"a": "y"}, {"a": "x"}], backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert_equal_data(result, {"a": ["x", "y", "x"]})
