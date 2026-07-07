@@ -1,7 +1,20 @@
 from __future__ import annotations
 
 # NOTE: Convenience re-exports
-from altair import Axis, Color, Fill, Opacity, SortField, X, Y, binding_range, datasets
+from altair import (
+    Axis,
+    Color,
+    Facet,
+    Fill,
+    Header,
+    Opacity,
+    SortField,
+    Title,
+    X,
+    Y,
+    binding_range,
+    datasets,
+)
 
 # NOTE: APIs that require changes to support narwhals expressions
 from narwhals._plan.altair.api.chart import Chart, layer
@@ -11,9 +24,12 @@ __all__ = (
     "Axis",
     "Chart",
     "Color",
+    "Facet",
     "Fill",
+    "Header",
     "Opacity",
     "SortField",
+    "Title",
     "X",
     "Y",
     "binding_range",

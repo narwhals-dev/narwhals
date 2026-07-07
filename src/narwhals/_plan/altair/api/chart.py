@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import altair as alt
 import altair.utils
+from altair import Undefined
 from altair.utils.schemapi import UndefinedType
 
 import narwhals._plan as nw
@@ -238,10 +239,27 @@ class Chart:
         @altair.utils.use_signature(alt.ScaleResolveMap)
         def resolve_scale(self, **kwds: Any) -> Self: ...
 
+        def facet(
+            self,
+            facet: Optional[str | alt.Facet] = Undefined,
+            row: Optional[str | alt.FacetFieldDef | alt.Row] = Undefined,
+            column: Optional[str | alt.FacetFieldDef | alt.Column] = Undefined,
+            data: Optional[alt.ChartDataType] = Undefined,
+            columns: Optional[int] = Undefined,
+            **kwds: Any,
+        ) -> Self:
+            """Create a facet chart from the current chart.
+
+            Faceted charts require data to be specified at the top level; if `data`
+            is not specified, the data from the current chart will be used at the
+            top level.
+            """
+            ...
+
     else:
 
         def __getattr__(self, name: str) -> Callable[..., Chart]:
-            if not name.startswith(("mark_", "configure", "resolve_")):
+            if not name.startswith(("mark_", "configure", "resolve_", "facet")):
                 msg = f"{type(self).__name__!r} object has no attribute {name!r}"
                 raise AttributeError(msg)
             return _wrapper(self, name)
