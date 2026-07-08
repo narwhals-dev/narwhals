@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Mapping
 from functools import partial
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 from narwhals._utils import Implementation, Version, qualified_type_name
 from narwhals.dependencies import (
@@ -24,7 +24,7 @@ from narwhals.dependencies import (
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable
     from typing import Any, ClassVar
 
     import polars as pl
@@ -55,7 +55,7 @@ class Schema(OrderedDict[str, "DType"]):
 
     Arguments:
         schema: The schema definition given by column names and their associated
-            Narwhals data type. Accepts a mapping or a sequence of tuples.
+            Narwhals data type. Accepts a mapping or an iterable of tuples.
             Data types that take no required arguments may also be passed
             uninstantiated, e.g. `nw.Int8` instead of `nw.Int8()`; they are
             instantiated on construction.
@@ -83,15 +83,18 @@ class Schema(OrderedDict[str, "DType"]):
 
     _version: ClassVar[Version] = Version.MAIN
 
+    @overload
+    def __init__(self, schema: Mapping[str, IntoDType] | None = None) -> None: ...
+    @overload
+    def __init__(self, schema: Iterable[tuple[str, IntoDType]]) -> None: ...
     def __init__(
         self,
-        schema: Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | None = None,
+        schema: Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | None = None,
     ) -> None:
-        schema = schema or {}
-        items = schema.items() if isinstance(schema, Mapping) else schema
+        mapping: Mapping[str, IntoDType] = dict(schema) if schema else {}
         super().__init__(
             (name, dtype if isinstance(dtype, DType) else dtype())
-            for name, dtype in items
+            for name, dtype in mapping.items()
         )
 
     def names(self) -> list[str]:
@@ -148,10 +151,8 @@ class Schema(OrderedDict[str, "DType"]):
         from narwhals._arrow.utils import native_to_narwhals_dtype
 
         return cls(
-            {
-                field.name: native_to_narwhals_dtype(field.type, cls._version)
-                for field in schema
-            }
+            (field.name, native_to_narwhals_dtype(field.type, cls._version))
+            for field in schema
         )
 
     @classmethod
@@ -256,10 +257,8 @@ class Schema(OrderedDict[str, "DType"]):
         from narwhals._polars.utils import native_to_narwhals_dtype
 
         return cls(
-            {
-                name: native_to_narwhals_dtype(dtype, cls._version)
-                for name, dtype in schema.items()
-            }
+            (name, native_to_narwhals_dtype(dtype, cls._version))
+            for name, dtype in schema.items()
         )
 
     def to_arrow(self) -> pa.Schema:
@@ -388,10 +387,6 @@ class Schema(OrderedDict[str, "DType"]):
 
         impl = implementation
         return cls(
-            {
-                name: native_to_narwhals_dtype(
-                    dtype, cls._version, impl, allow_object=True
-                )
-                for name, dtype in schema.items()
-            }
+            (name, native_to_narwhals_dtype(dtype, cls._version, impl, allow_object=True))
+            for name, dtype in schema.items()
         )

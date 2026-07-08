@@ -19,7 +19,6 @@ from narwhals._utils import (
     flatten,
     is_eager_allowed,
     is_nested_literal,
-    is_sequence_but_not_str,
     is_sequence_of,
     normalize_path,
     supports_arrow_c_stream,
@@ -257,7 +256,7 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema, dict of {name: type}, or a
-            sequence of (name, type) tuples. If not
+            iterable of (name, type) tuples. If not
             specified, the schema will be inferred by the native library. If
             any `dtype` is `None`, the data type for that column will be inferred
             by the native library.
@@ -287,8 +286,7 @@ def from_dict(
     """
     if backend is None:
         data, backend = _from_dict_no_backend(data)
-    if schema is not None and not isinstance(schema, Mapping):
-        schema = dict(schema)
+    schema = dict(schema) if schema is not None else None
     if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
         msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
         raise InvalidOperationError(msg)
@@ -345,7 +343,7 @@ def from_dicts(
     Arguments:
         data: Sequence with dictionaries mapping column name to value.
         schema: The DataFrame schema as Schema, dict of {name: type}, or a
-            sequence of (name, type) tuples. If not
+            iterable of (name, type) tuples. If not
             specified, the schema will be inferred by the native library. If
             any `dtype` is `None`, the data type for that column will be inferred
             by the native library.
@@ -407,7 +405,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, a sequence
+        schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
             of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
@@ -449,7 +447,7 @@ def from_numpy(
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
-    if is_sequence_of(schema, tuple):
+    if not (schema is None or is_sequence_of(schema, str)):
         schema = Schema(schema)
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
@@ -477,7 +475,9 @@ def from_numpy(
 
 def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
     return (
-        obj is None or isinstance(obj, (Mapping, Schema)) or is_sequence_but_not_str(obj)
+        obj is None
+        or isinstance(obj, (Mapping, Schema))
+        or (isinstance(obj, Iterable) and not isinstance(obj, str))
     )
 
 

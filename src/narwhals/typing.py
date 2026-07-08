@@ -19,7 +19,7 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 if TYPE_CHECKING:
     import datetime as dt
     import os
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
     from decimal import Decimal
     from types import ModuleType
     from typing import TypeAlias
@@ -310,12 +310,12 @@ Examples:
 
 
 IntoSchema: TypeAlias = (
-    "Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | Schema"
+    "Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Schema"
 )
 """Anything that can be converted into a Narwhals Schema.
 
 Defined by column names and their associated Narwhals DType, either as a
-mapping or as a sequence of `(name, dtype)` tuples.
+mapping or as an iterable of `(name, dtype)` tuples.
 Data types that take no required arguments may also be passed uninstantiated,
 e.g. `nw.UInt8` instead of `nw.UInt8()`.
 

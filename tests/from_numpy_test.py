@@ -67,6 +67,20 @@ def test_from_numpy_schema_pairs(constructor_eager: ConstructorEager) -> None:
     assert result.collect_schema() == expected
 
 
+def test_from_numpy_schema_generator(constructor_eager: ConstructorEager) -> None:
+    expected = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
+    df = nw.from_native(constructor_eager(data))
+    backend = nw.get_native_namespace(df)
+    result = nw.from_numpy(
+        arr, backend=backend, schema=((name, dtype) for name, dtype in expected.items())
+    )
+    assert result.collect_schema() == expected
+    result = nw.DataFrame.from_numpy(
+        arr, backend=backend, schema=((name, dtype) for name, dtype in expected.items())
+    )
+    assert result.collect_schema() == expected
+
+
 def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)

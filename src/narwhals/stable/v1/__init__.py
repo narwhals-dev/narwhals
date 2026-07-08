@@ -500,7 +500,7 @@ class Schema(NwSchema):
     @inherit_doc(NwSchema)
     def __init__(
         self,
-        schema: Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | None = None,
+        schema: Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | None = None,
     ) -> None:
         super().__init__(schema)
 

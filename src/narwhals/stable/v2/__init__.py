@@ -354,7 +354,7 @@ class Schema(NwSchema):
     @inherit_doc(NwSchema)
     def __init__(
         self,
-        schema: Mapping[str, IntoDType] | Sequence[tuple[str, IntoDType]] | None = None,
+        schema: Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | None = None,
     ) -> None:
         super().__init__(schema)
 
@@ -992,7 +992,7 @@ def from_dict(
     Arguments:
         data: Dictionary to create DataFrame from.
         schema: The DataFrame schema as Schema, dict of {name: type}, or a
-            sequence of (name, type) tuples. If not
+            iterable of (name, type) tuples. If not
             specified, the schema will be inferred by the native library. If
             any `dtype` is `None`, the data type for that column will be inferred
             by the native library.
@@ -1028,7 +1028,7 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, a sequence
+        schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
             of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
