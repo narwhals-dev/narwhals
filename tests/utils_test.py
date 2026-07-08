@@ -681,4 +681,5 @@ def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:
     df = nw.from_native(
         pl.DataFrame({"a": [1, AlwaysEqual(), 2]}, schema={"a": pl.Object})
     )
-    assert_equal_data(df, {"a": [1, 2, 2]})
+    with pytest.raises(AssertionError, match="Mismatch at index 1"):
+        assert_equal_data(df, {"a": [1, 2, 2]})
