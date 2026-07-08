@@ -158,7 +158,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
                 are_equivalent_values = lhs == rhs
 
             if (np := get_numpy()) is not None and isinstance(
-                are_equivalent_values, np.bool
+                are_equivalent_values, np.bool_
             ):
                 are_equivalent_values = bool(are_equivalent_values)
 
