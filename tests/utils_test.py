@@ -672,7 +672,7 @@ def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:
     # special-case. For an object whose `__eq__` returns something truthy that
     # isn't a real equality result, this lets the assertion pass vacuously.
     class AlwaysEqual:
-        def __eq__(self, other: object) -> AlwaysEqual:
+        def __eq__(self, other: object) -> AlwaysEqual:  # type: ignore[override]
             return self
 
         def __bool__(self) -> bool:
