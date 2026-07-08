@@ -1238,3 +1238,11 @@ def test_any_value_series(constructor_eager: ConstructorEager) -> None:
 
     with pytest.warns(NarwhalsUnstableWarning):
         df["a"].any_value()
+
+
+def test_schema_from_generator() -> None:
+    schema = nw_v1.Schema(
+        (name, dtype()) for name, dtype in [("a", nw_v1.Int64), ("b", nw_v1.String)]
+    )
+    assert schema == nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.String()})
+    assert schema._version is Version.V1

@@ -578,3 +578,11 @@ def test_first_last() -> None:
     result = df.select(b=nw_v2.col("a").first(), c=nw_v2.col("a").last())
     expected = {"b": [0], "c": [-1]}
     assert_equal_data(result, expected)
+
+
+def test_schema_from_generator() -> None:
+    schema = nw_v2.Schema(
+        (name, dtype()) for name, dtype in [("a", nw_v2.Int64), ("b", nw_v2.String)]
+    )
+    assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
+    assert schema._version is Version.V2

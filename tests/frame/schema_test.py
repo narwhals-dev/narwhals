@@ -720,3 +720,10 @@ def test_schema_from_tuples_uninstantiated_dtypes() -> None:
     schema = nw.Schema([("a", nw.Int64), ("b", nw.String())])
     assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})
     assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_generator() -> None:
+    schema = nw.Schema(
+        (name, dtype()) for name, dtype in [("a", nw.Int64), ("b", nw.String)]
+    )
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})
