@@ -157,7 +157,7 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             else:
                 are_equivalent_values = lhs == rhs
 
-            assert are_equivalent_values, (
+            assert are_equivalent_values is True, (
                 f"Mismatch at index {i}, key {key}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
 
