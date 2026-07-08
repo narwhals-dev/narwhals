@@ -417,7 +417,7 @@ def test_not_implemented() -> None:
             pl_expr = cast("PolarsExpr", self)
             return PolarsExprStringNamespace(pl_expr)
 
-        dt: Any = not_implemented()
+        dt: not_implemented = not_implemented()
 
         # NOTE: Typing is happy w/ double property
         @property
