@@ -105,7 +105,6 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   {include-group = "plugins"},
 ]
 docs = [
-  "black>=26.3.1",  # required by mkdocstrings_handlers
   "jinja2>=3.1.6",
   "markdown-exec[ansi]>=1.12.1",
   "mkdocs-autorefs>=1.4.4",
