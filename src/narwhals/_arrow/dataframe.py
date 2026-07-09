@@ -178,16 +178,23 @@ class ArrowDataFrame(
         elif pa_schema is not None and any(
             pa.types.is_dictionary(field.type) for field in pa_schema
         ):
-            # `from_pylist` cannot build dictionary (Categorical) columns, and casting
-            # string -> dictionary is unsupported on older PyArrow, so pivot the rows to
-            # columns and let `from_pydict` build them with the requested schema.
-            native = pa.Table.from_pydict(
-                {
-                    field.name: [row.get(field.name) for row in data]
+            # `from_pylist` cannot build dictionary (Categorical) columns directly. Read
+            # the rows using the dictionaries' value types (so column selection and order
+            # follow the schema, like the branch below), then cast to the requested
+            # schema. Casting string -> dictionary needs PyArrow >=15; on older versions
+            # the backend raises, which is acceptable here.
+            pre_cast_schema = pa.schema(
+                [
+                    (
+                        field.name,
+                        field.type.value_type
+                        if pa.types.is_dictionary(field.type)
+                        else field.type,
+                    )
                     for field in pa_schema
-                },
-                schema=pa_schema,
+                ]
             )
+            native = pa.Table.from_pylist(data, schema=pre_cast_schema).cast(pa_schema)
         else:
             native = pa.Table.from_pylist(data, schema=pa_schema)
         return cls.from_native(native, context=context)
