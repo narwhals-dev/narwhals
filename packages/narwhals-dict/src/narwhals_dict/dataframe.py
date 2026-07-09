@@ -343,6 +343,19 @@ class DictDataFrame(
     ) -> list[int]:
         """Row indices ordered by `by`, ascending unless `descending` says otherwise."""
         columns = [self.native[name] for name in by]
+        if len(columns) == 1:
+            # Single key (the common case): sort the non-null positions directly
+            # on the column values and add nulls onto the requested end.
+            # Both passes and the stable sort preserve original order for ties.
+            column, size = columns[0], len(self)
+            desc = descending if isinstance(descending, bool) else descending[0]
+            non_null = sorted(
+                (i for i in range(size) if column[i] is not None),
+                key=column.__getitem__,
+                reverse=desc,
+            )
+            nulls = [i for i in range(size) if column[i] is None]
+            return non_null + nulls if nulls_last else nulls + non_null
         if isinstance(descending, bool):
             # Uniform direction: sort once on a per-row tuple key, letting Python's
             # tuple comparison do the work. A null can't be in the key directly
