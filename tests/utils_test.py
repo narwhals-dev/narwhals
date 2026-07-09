@@ -675,7 +675,7 @@ def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:
         def __eq__(self, other: object) -> AlwaysEqual:  # type: ignore[override]
             return self
 
-        def __bool__(self) -> bool:
+        def __bool__(self) -> bool:  # pragma: no cover
             return True
 
     df = nw.from_native(
