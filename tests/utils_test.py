@@ -20,7 +20,11 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import any_integer_like_floats, get_module_version_as_tuple
+from tests.utils import (
+    any_integer_like_floats,
+    assert_equal_data,
+    get_module_version_as_tuple,
+)
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -417,7 +421,7 @@ def test_not_implemented() -> None:
             pl_expr = cast("PolarsExpr", self)
             return PolarsExprStringNamespace(pl_expr)
 
-        dt: Any = not_implemented()
+        dt: not_implemented = not_implemented()
 
         # NOTE: Typing is happy w/ double property
         @property
@@ -658,3 +662,24 @@ def test_deferred_iterable() -> None:
 )
 def test_any_integer_like_floats(values: list[Any], expected: bool) -> None:  # noqa: FBT001
     assert any_integer_like_floats(values) is expected
+
+
+def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    # `assert_equal_data` falls back to plain `lhs == rhs` for values it doesn't
+    # special-case. For an object whose `__eq__` returns something truthy that
+    # isn't a real equality result, this lets the assertion pass vacuously.
+    class AlwaysEqual:
+        def __eq__(self, other: object) -> AlwaysEqual:  # type: ignore[override]
+            return self
+
+        def __bool__(self) -> bool:  # pragma: no cover
+            return True
+
+    df = nw.from_native(
+        pl.DataFrame({"a": [1, AlwaysEqual(), 2]}, schema={"a": pl.Object})
+    )
+    with pytest.raises(AssertionError, match="Mismatch at index 1"):
+        assert_equal_data(df, {"a": [1, 2, 2]})
