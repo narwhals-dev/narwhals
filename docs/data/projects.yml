@@ -1,0 +1,162 @@
+downstream:
+  - name: Altair
+    homepage: https://narwhals-dev.github.io/narwhals/
+    logo: https://altair-viz.github.io/_static/altair-logo-light.png
+
+  - name: Bokeh
+    homepage: https://bokeh.org/
+    logo: https://static.bokeh.org/branding/logos/bokeh-logo.png
+
+  - name: Darts
+    homepage: https://unit8co.github.io/darts/
+    logo: https://github.com/unit8co/darts/raw/master/static/images/darts-logo-trim.png
+
+  - name: Fairlearn
+    homepage: https://fairlearn.org/
+    logo: https://fairlearn.org/images/fairlearn_logo.svg
+
+  - name: Formulaic
+    homepage: https://matthew.wardrop.casa/formulaic/latest/
+    logo: https://raw.githubusercontent.com/matthewwardrop/formulaic/main/docsite/docs/assets/images/logo_with_text.png
+
+  - name: gt-extras
+    homepage: https://posit-dev.github.io/gt-extras/articles/intro.html
+    logo: https://img.shields.io/badge/gt--extras-informational?style=for-the-badge
+
+  - name: Hierarchical Forecast
+    homepage: https://nixtlaverse.nixtla.io/hierarchicalforecast
+    logo: https://raw.githubusercontent.com/Nixtla/neuralforecast/main/nbs/imgs_indx/logo_mid.png
+
+  - name: LightGBM
+    homepage: https://lightgbm.readthedocs.io/en/latest/
+    logo: https://github.com/lightgbm-org/LightGBM/raw/master/docs/logo/LightGBM_logo_black_text.svg
+
+  - name: marimo
+    homepage: https://marimo.io/
+    logo: https://marimo.io/logo.png
+
+  - name: MetaLearners
+    homepage: https://metalearners.readthedocs.io/en/latest/
+    logo: https://img.shields.io/badge/metalearners-informational?style=for-the-badge
+
+  - name: Mosaic
+    homepage: https://idl.uw.edu/mosaic/
+    logo: https://idl.uw.edu/mosaic/mosaic.svg
+
+  - name: Panel Graphic Walker
+    homepage: https://github.com/panel-extensions/panel-graphic-walker
+    logo: https://img.shields.io/badge/panel--graphic--walker-informational?style=for-the-badge
+
+  - name: Plotly
+    homepage: https://plotly.com/
+    logo: https://images.plot.ly/logo/new-branding/plotly-logomark.png
+
+  - name: Pointblank
+    homepage: https://posit-dev.github.io/pointblank/
+    logo: https://raw.githubusercontent.com/posit-dev/pointblank/refs/heads/main/assets/fav-logo.png
+
+  - name: pymarginaleffects
+    homepage: https://marginaleffects.com/
+    logo: https://marginaleffects.com/assets/marginaleffects_logo.svg
+
+  - name: pyreadstat
+    homepage: https://github.com/Roche/pyreadstat
+    logo: https://img.shields.io/badge/pyreadstat-informational?style=for-the-badge
+
+  - name: Shiny for Python
+    homepage: https://shiny.posit.co/py/
+    logo: https://img.shields.io/badge/py--shiny-informational?style=for-the-badge
+
+  - name: PySummaries
+    homepage: https://genentech.github.io/pysummaries/
+    logo: https://img.shields.io/badge/pysummaries-informational?style=for-the-badge
+
+  - name: Rio
+    homepage: https://rio.dev/
+    logo: https://raw.githubusercontent.com/rio-labs/rio/master/rio/assets/hosted/rio_logos/rio_logo_square.png
+
+  - name: scikit-learn
+    homepage: https://scikit-learn.org/
+    logo: https://raw.githubusercontent.com/scikit-learn/scikit-learn/main/doc/logos/scikit-learn-logo.png
+
+  - name: scikit-lego
+    homepage: https://koaning.github.io/scikit-lego/
+    logo: https://github.com/koaning/scikit-lego/raw/main/images/logo.png
+
+  - name: scikit-playtime
+    homepage: https://koaning.github.io/scikit-playtime/
+    logo: https://img.shields.io/badge/scikit--playtime-informational?style=for-the-badge
+
+  - name: tabmat
+    homepage: https://tabmat.readthedocs.io/
+    logo: https://img.shields.io/badge/tabmat-informational?style=for-the-badge
+
+  - name: tea-tasting
+    homepage: https://tea-tasting.e10v.me/
+    logo: https://raw.githubusercontent.com/e10v/tea-tasting/refs/heads/main/docs/assets/tea-cup-white-on-black.svg
+
+  - name: timebasedcv
+    homepage: https://fbruzzesi.github.io/timebasedcv/
+    logo: https://raw.githubusercontent.com/FBruzzesi/timebasedcv/main/docs/img/timebasedcv-logo.svg
+
+  - name: tubular
+    homepage: https://tubular.readthedocs.io/en/latest/index.html
+    logo: https://github.com/azukds/tubular/raw/main/logo.png
+
+  - name: Validoopsie
+    homepage: https://akmalsoliev.github.io/Validoopsie/
+    logo: https://raw.githubusercontent.com/akmalsoliev/Validoopsie/refs/heads/main/docs/assets/logo.png
+
+  - name: VegaFusion
+    homepage: https://vegafusion.io/
+    logo: https://vegafusion.io/_static/VegaFusionLogo-Color.svg
+
+  - name: Wimsey
+    homepage: https://benrutter.codeberg.page/wimsey-docs
+    logo: https://img.shields.io/badge/wimsey-informational?style=for-the-badge
+
+upstream:
+  - name: cuDF
+    homepage: https://docs.rapids.ai/api/cudf/stable/
+    logo: https://raw.githubusercontent.com/rapidsai/cudf/refs/heads/main/docs/cudf/source/_static/RAPIDS-logo-purple.png
+
+  - name: Dask
+    homepage: https://github.com/dask/dask
+    logo: https://docs.dask.org/en/stable/_images/dask_icon.svg
+
+  - name: DuckDB
+    homepage: http://www.duckdb.org/
+    logo: https://raw.githubusercontent.com/duckdb/duckdb/refs/heads/main/logo/DuckDB_Logo-stacked.svg
+
+  - name: Ibis
+    homepage: https://ibis-project.org/
+    logo: https://raw.githubusercontent.com/ibis-project/ibis/refs/heads/main/docs/logo.svg
+
+  - name: Modin
+    homepage: http://modin.readthedocs.io/
+    logo: https://raw.githubusercontent.com/modin-project/modin/refs/heads/main/docs/img/MODIN_ver2.png
+
+  - name: pandas
+    homepage: https://pandas.pydata.org/
+    logo: https://raw.githubusercontent.com/pandas-dev/pandas/refs/heads/main/web/pandas/static/img/pandas_secondary.svg
+
+  - name: Polars
+    homepage: https://docs.pola.rs/
+    logo: https://raw.githubusercontent.com/pola-rs/polars-static/refs/heads/master/logos/polars-logo-dark.svg
+
+  - name: PyArrow
+    homepage: https://arrow.apache.org/docs/python/index.html
+    logo: https://raw.githubusercontent.com/apache/arrow/refs/heads/main/docs/source/_static/arrow.png
+
+  - name: PySpark
+    homepage: https://spark.apache.org/docs/latest/api/python/index.html
+    logo: https://raw.githubusercontent.com/apache/spark/master/core/src/main/resources/org/apache/spark/ui/static/spark-logo.svg
+
+  - name: SQLFrame
+    homepage: https://sqlframe.readthedocs.io/en/stable/
+    logo: https://raw.githubusercontent.com/eakmanrq/sqlframe/refs/heads/main/docs/images/sqlframe_logo.png
+
+plugin:
+  - name: Daft
+    homepage: https://www.daft.ai/
+    logo: https://raw.githubusercontent.com/Eventual-Inc/Daft/refs/heads/main/docs/img/favicon.png

@@ -1,46 +1,57 @@
+---
+render_macros: true
+---
+
+{% from "cards.html" import project_card %}
+
 # Ecosystem
 
-## Used by
+The Narwhals Ecosystem is comprised of tools that rely on us and the tabular data packages we support either directly or through 
+the [plugins system](/narwhals/extending/)
 
-The following is a non-exhaustive list of libraries and tools that choose to use Narwhals
+## Narwhals is Used by
+
+The following is a non-exhaustive list of {{ projects.downstream | length }} libraries and tools that choose to use Narwhals
 for their dataframe interoperability needs:
 
-* [altair](https://github.com/vega/altair/)
-* [bokeh](https://github.com/bokeh/bokeh)
-* [darts](https://github.com/unit8co/darts)
-* [fairlearn](https://github.com/fairlearn/fairlearn)
-* [formulaic](https://github.com/matthewwardrop/formulaic)
-* [gt-extras](https://github.com/posit-dev/gt-extras)
-* [hierarchicalforecast](https://github.com/Nixtla/hierarchicalforecast)
-* [lightgbm](https://github.com/lightgbm-org/LightGBM)
-* [marimo](https://github.com/marimo-team/marimo)
-* [metalearners](https://github.com/Quantco/metalearners)
-* [mosaic](https://github.com/uwdata/mosaic)
-* [pandera](https://github.com/pandera-dev/pandera)
-* [panel-graphic-walker](https://github.com/panel-extensions/panel-graphic-walker)
-* [plotly](https://github.com/plotly/plotly.py)
-* [pointblank](https://github.com/posit-dev/pointblank)
-* [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
-* [pyreadstat](https://github.com/Roche/pyreadstat)
-* [py-shiny](https://github.com/posit-dev/py-shiny)
-* [pysummaries](https://github.com/Genentech/pysummaries)
-* [rio](https://github.com/rio-labs/rio)
-* [scikit-learn](https://github.com/scikit-learn/scikit-learn)
-* [scikit-lego](https://github.com/koaning/scikit-lego)
-* [scikit-playtime](https://github.com/koaning/scikit-playtime)
-* [tabmat](https://github.com/Quantco/tabmat)
-* [tea-tasting](https://github.com/e10v/tea-tasting)
-* [timebasedcv](https://github.com/FBruzzesi/timebasedcv)
-* [tubular](https://github.com/lvgig/tubular)
-* [Validoopsie](https://github.com/akmalsoliev/Validoopsie)
-* [vegafusion](https://github.com/vega/vegafusion)
-* [wimsey](https://github.com/benrutter/wimsey)
+<div class="project-grid">
+
+{% for project in projects.downstream %}
+    {{ project_card(project.name, project.homepage, project.logo) }}
+{% endfor %}
+
+</div>
 
 If your project is missing from the list, feel free to open a PR to add it.
 
 If you would like to chat with us, or if you need any support, please [join our Discord server](https://discord.gg/V3PqtB4VA4).
 
-## Related projects
+## Directly Supported Tabular Data Packages
+
+Narwhals directly provides support for {{ projects.upstream | length }} tabular data packages.
+
+<div class="project-grid">
+
+{% for project in projects.upstream %}
+    {{ project_card(project.name, project.homepage, project.logo) }}
+{% endfor %}
+
+</div>
+
+## Plugin Supported Tabular Data Packages
+
+Narwhals additionally provides support for {{ projects.plugin | length }} tabular data package(s), through plugins.
+See [Extensions and Plugins](/narwhals/extending/) for how to write your own plugin and bring Narwhals to another tabular data package.
+
+<div class="project-grid">
+
+{% for project in projects.plugin %}
+    {{ project_card(project.name, project.homepage, project.logo) }}
+{% endfor %}
+
+</div>
+
+## Other Related projects
 
 ### Array API
 
