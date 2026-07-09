@@ -708,11 +708,16 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         )
 
     def shift(self, n: int) -> Self:
+        # Clamp the gap to the length so `shift` stays length-preserving even when
+        # `abs(n)` exceeds it (e.g. `shift(-2)` on one row -> `[None]`, matching Polars).
+        gap = min(abs(n), len(self.native))
         if n == 0:
             return self._with_native(list(self.native))
         if n > 0:
-            return self._with_native([*repeat(None, n), *self.native[:-n]])
-        return self._with_native([*self.native[-n:], *repeat(None, -n)])
+            return self._with_native(
+                [*repeat(None, gap), *self.native[: len(self.native) - gap]]
+            )
+        return self._with_native([*self.native[gap:], *repeat(None, gap)])
 
     def diff(self) -> Self:
         deltas = binary_op(
