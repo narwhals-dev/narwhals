@@ -17,6 +17,23 @@ if TYPE_CHECKING:
     from narwhals_dict.typing import DictFrame
 
 
+def _bucket_by_keys(key_columns: Sequence[Sequence[Any]]) -> dict[Any, list[int]]:
+    """Map each partition key to its row indices, in first-appearance order.
+
+    A single key uses the raw column value directly rather than a tuple, multiple
+    keys use the value tuple.
+    """
+    groups: dict[Any, list[int]] = {}
+    it = (
+        enumerate(key_columns[0])
+        if len(key_columns) == 1
+        else enumerate(zip(*key_columns, strict=True))
+    )
+    for index, key in it:
+        groups.setdefault(key, []).append(index)
+    return groups
+
+
 class _GroupedRows:
     """Per-`agg` cache of grouped row indices, gathered columns, and sub-frames.
 
@@ -31,29 +48,42 @@ class _GroupedRows:
     def __init__(self, frame: DictDataFrame, keys: Sequence[str]) -> None:
         self._frame = frame
         self._key_columns = [frame.native[key] for key in keys]
-        base_groups: dict[tuple[Any, ...], list[int]] = {}
-        for index, key in enumerate(zip(*self._key_columns, strict=True)):
-            base_groups.setdefault(key, []).append(index)
-        self.keys: list[tuple[Any, ...]] = list(base_groups)
+        # Keys are raw values for a single key, value tuples for several -- see
+        # `_bucket_by_keys`. `row_keys` uses the matching representation so the
+        # `order_by` re-bucketing below looks them up consistently.
+        base_groups = _bucket_by_keys(self._key_columns)
+        self.keys: list[Any] = list(base_groups)
         self._indices: dict[tuple[str, ...], list[list[int]]] = {
             (): [base_groups[key] for key in self.keys]
         }
 
         # Row keys are only needed to re-bucket a non-trivial `order_by`, so they are built lazily
-        self._row_keys: list[tuple[Any, ...]] | None = None
+        self._row_keys: Sequence[Any] | None = None
         self._columns: dict[tuple[tuple[str, ...], str], list[list[Any]]] = {}
         self._frames: dict[tuple[str, ...], list[DictDataFrame]] = {}
 
     @property
-    def row_keys(self) -> list[tuple[Any, ...]]:
+    def row_keys(self) -> Sequence[tuple[Any, ...]]:
         if self._row_keys is None:
-            self._row_keys = list(zip(*self._key_columns, strict=True))
+            self._row_keys = (
+                self._key_columns[0]
+                if len(self._key_columns) == 1
+                else list(zip(*self._key_columns, strict=True))
+            )
         return self._row_keys
+
+    def key_column(self, position: int) -> list[Any]:
+        """The distinct key values for key-column `position`, in group order."""
+        return (
+            list(self.keys)
+            if len(self._key_columns) == 1
+            else [key[position] for key in self.keys]
+        )
 
     def indices(self, order_by: tuple[str, ...]) -> list[list[int]]:
         """Each group's row indices, ordered by `order_by` (ascending, nulls first)."""
         if (cached := self._indices.get(order_by)) is None:
-            buckets: dict[tuple[Any, ...], list[int]] = {key: [] for key in self.keys}
+            buckets: dict[Any, list[int]] = {key: [] for key in self.keys}
             for index in self._frame._sorted_indices(
                 order_by, descending=False, nulls_last=False
             ):
@@ -124,13 +154,9 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
         frame, self._keys, self._output_key_names = self._parse_keys(df, keys=keys)
         self._compliant_frame = frame.drop_nulls(self._keys) if drop_null_keys else frame
 
-    def _group_indices(self, frame: DictDataFrame) -> dict[tuple[Any, ...], list[int]]:
-        """Map each key tuple to its row indices, in order of first appearance."""
-        key_columns = [frame.native[key] for key in self._keys]
-        groups: dict[tuple[Any, ...], list[int]] = {}
-        for index, key in enumerate(zip(*key_columns, strict=True)):
-            groups.setdefault(key, []).append(index)
-        return groups
+    def _group_indices(self, frame: DictDataFrame) -> dict[Any, list[int]]:
+        """Map each key to its row indices, in order of first appearance."""
+        return _bucket_by_keys([frame.native[key] for key in self._keys])
 
     @staticmethod
     def _leaf_order_by(leaf: ExprNode) -> tuple[str, ...]:
@@ -193,7 +219,7 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
         frame = self.compliant
         groups = _GroupedRows(frame, self._keys)
         result: DictFrame = {
-            key_name: [key[position] for key in groups.keys]
+            key_name: groups.key_column(position)
             for position, key_name in enumerate(self._keys)
         }
         exclude = (*self._keys, *self._output_key_names)
@@ -224,7 +250,12 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
             dict(zip(self._keys, self._output_key_names, strict=True))
         )
 
-    def __iter__(self) -> Iterator[tuple[Any, DictDataFrame]]:
+    def __iter__(self) -> Iterator[tuple[tuple[Any, ...], DictDataFrame]]:
         frame = self.compliant
+        single_key = len(self._keys) == 1
         for key, indices in self._group_indices(frame).items():
-            yield key, frame._gather(indices).simple_select(*self._df.columns)
+            # Keys are always yielded as tuples, so wrap the single-key raw value.
+            yield (
+                (key,) if single_key else key,
+                frame._gather(indices).simple_select(*self._df.columns),
+            )
