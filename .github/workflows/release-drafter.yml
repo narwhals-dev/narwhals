@@ -5,10 +5,6 @@ on:
     # branches to consider in the event; optional, defaults to all
     branches:
       - main
-  # pull_request event is required only for autolabeler
-  pull_request:
-    # Only following types are handled by the action, but one can default to all as well
-    types: [opened, reopened, synchronize, edited]
 
 permissions:
   contents: read
@@ -36,16 +32,3 @@ jobs:
           config-name: release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Autolabels pull requests based on title/files/branch. Runs on pull_request
-  # (including from forks) so labels are applied as PRs are opened/updated.
-  autolabel:
-    if: github.event_name == 'pull_request'
-    permissions:
-      # write permission is required for autolabeler
-      pull-requests: write
-    runs-on: ubuntu-latest
-    steps:
-      - uses: release-drafter/release-drafter/autolabeler@4d75298e00d9e34c483e5ff8c68d0ea1c1940c1e # v7.5.1
-        with:
-          config-name: release-drafter.yml
