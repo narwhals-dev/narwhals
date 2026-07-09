@@ -52,7 +52,7 @@ class _GroupedRows:
         # `_bucket_by_keys`. `row_keys` uses the matching representation so the
         # `order_by` re-bucketing below looks them up consistently.
         base_groups = _bucket_by_keys(self._key_columns)
-        self.keys: list[Any] = list(base_groups)
+        self.keys: list[Any] = list(base_groups.keys())
         self._indices: dict[tuple[str, ...], list[list[int]]] = {
             (): [base_groups[key] for key in self.keys]
         }
@@ -75,7 +75,7 @@ class _GroupedRows:
     def key_column(self, position: int) -> list[Any]:
         """The distinct key values for key-column `position`, in group order."""
         return (
-            list(self.keys)
+            self.keys.copy()
             if len(self._key_columns) == 1
             else [key[position] for key in self.keys]
         )

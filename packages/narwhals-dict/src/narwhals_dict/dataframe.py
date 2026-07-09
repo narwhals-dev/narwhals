@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import heapq
 import operator
 import random
 from collections import Counter
 from collections.abc import Mapping
-from itertools import chain, compress, product, repeat
+from itertools import chain, compress, islice, product, repeat
 from typing import TYPE_CHECKING, Any, Literal, overload
 
 from narwhals._compliant import EagerDataFrame
@@ -404,9 +405,23 @@ class DictDataFrame(
         )
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        # TODO(FBruzzesi): Can we do better than sort + head?
+        by = list(by)
+        if error := self._check_columns_exist(by):
+            raise error
+        if len(by) == 1:
+            column = self.native[by[0]]
+            smallest = reverse if isinstance(reverse, bool) else reverse[0]
+            picker = heapq.nsmallest if smallest else heapq.nlargest
+            indices = (i for i in range(len(self)) if column[i] is not None)
+            top = picker(k, indices, key=column.__getitem__)
+            if len(top) < k:
+                # `k` exceeds the non-null count, so `sort(nulls_last=True).head(k)`
+                # would spill into the null rows (original order); match that.
+                nulls = (i for i in range(len(self)) if column[i] is None)
+                top += list(islice(nulls, k - len(top)))
+            return self._gather_positions(top)
         descending = (
-            not reverse if isinstance(reverse, bool) else [not flag for flag in reverse]
+            not reverse if isinstance(reverse, bool) else [not r for r in reverse]
         )
         return self.sort(*by, descending=descending, nulls_last=True).head(k)
 

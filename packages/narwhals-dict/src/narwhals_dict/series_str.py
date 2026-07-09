@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import operator
 import re
 from datetime import datetime, time
 from typing import TYPE_CHECKING, Any
@@ -77,7 +78,7 @@ class DictSeriesStringNamespace(
         stop = offset + length if length is not None else None
         if offset < 0 and stop is not None and stop >= 0:
             stop = None
-        return self._unary(lambda value: value[offset:stop])
+        return self._unary(operator.itemgetter(slice(offset, stop)))
 
     def split(self, by: str) -> DictSeries:
         return self._unary(lambda value: value.split(by))

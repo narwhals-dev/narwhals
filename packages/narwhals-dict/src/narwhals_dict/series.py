@@ -572,7 +572,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         self, value: Any, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
         if strategy is not None:
-            values = self.native if strategy == "forward" else self.native[::-1]
+            # `reversed(...)` is a no-copy iterator; only the (in-place) result
+            # is reversed back for the backward pass.
+            values = self.native if strategy == "forward" else reversed(self.native)
+            no_limit = limit is None
             result: list[Any] = []
             last: Any = None
             gap = 0
@@ -582,7 +585,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                     result.append(current)
                 else:
                     gap += 1
-                    result.append(last if limit is None or gap <= limit else None)
+                    result.append(last if no_limit or gap <= limit else None)
             if strategy == "backward":
                 result.reverse()
             return self._with_native(result, preserve_broadcast=True)
@@ -672,12 +675,13 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             key=operator.itemgetter(0),
             reverse=descending,
         )
+        size = len(ordered)
         result: list[Any] = [None] * len(self.native)
         start = 0
         dense_rank = 0
-        while start < len(ordered):
+        while start < size:
             end = start + 1
-            while end < len(ordered) and ordered[end][0] == ordered[start][0]:
+            while end < size and ordered[end][0] == ordered[start][0]:
                 end += 1
             dense_rank += 1
             for offset in range(end - start):
@@ -720,10 +724,14 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native([*self.native[gap:], *repeat(None, gap)])
 
     def diff(self) -> Self:
-        deltas = binary_op(
-            operator.sub, self.native[1:], self.native[:-1], is_scalar=False
+        # One pass over adjacent pairs, no `native[1:]`/`native[:-1]` slice copies;
+        # nulls propagate as in `binary_op` (either operand null -> null).
+        result: list[Any] = [None]
+        result.extend(
+            None if (prev is None or curr is None) else curr - prev
+            for prev, curr in pairwise(self.native)
         )
-        return self._with_native([None, *deltas])
+        return self._with_native(result)
 
     def _cum_agg(self, op: Callable[[Any, Any], Any], *, reverse: bool) -> Self:
         values = self.native[::-1] if reverse else self.native
