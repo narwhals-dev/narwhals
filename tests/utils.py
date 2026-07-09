@@ -13,7 +13,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version
-from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_numpy, get_pandas
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
@@ -157,7 +157,12 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             else:
                 are_equivalent_values = lhs == rhs
 
-            assert are_equivalent_values, (
+            if (np := get_numpy()) is not None and isinstance(
+                are_equivalent_values, np.bool_
+            ):
+                are_equivalent_values = bool(are_equivalent_values)
+
+            assert are_equivalent_values is True, (
                 f"Mismatch at index {i}, key {key}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
 
@@ -276,3 +281,8 @@ def xfail_if_pyspark_connect(  # pragma: no cover
 ) -> None:
     if is_pyspark_connect(constructor):
         request.applymarker(pytest.mark.xfail(reason=reason))
+
+
+def any_integer_like_floats(values: list[Any]) -> bool:
+    """Return True if any value is a float that represents an integer (e.g. 1.0, 2.0)."""
+    return any(isinstance(v, float) and v.is_integer() for v in values)
