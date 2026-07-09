@@ -111,6 +111,7 @@ docs = [
   "mkdocstrings-python>=2.0.3",
   "pandas>=1.3.4",
   "narwhals[duckdb,pyarrow,polars,sql,sqlframe]",
+  "ruff",
   "zensical>=0.0.38"
 ]
 dev = [
