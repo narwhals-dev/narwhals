@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerExpr
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._utils import Implementation, generate_temporary_column_name
 from narwhals_dict.series import DictSeries
+from narwhals_dict.window import GROUPED_WINDOW_LEAVES, apply_window_kernel
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -146,6 +148,34 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
             context=self,
         )
 
+    @staticmethod
+    def _partition_indices(
+        df: DictDataFrame, partition_by: Sequence[str], order_by: Sequence[str]
+    ) -> dict[Any, list[int]]:
+        """Group row indices by partition key, each group in `order_by` order.
+
+        One global sort (ascending, nulls first) replaces the per-group sorts:
+        iterating rows in sorted order and bucketing by key yields groups whose
+        indices are already ordered. Null keys work natively. Single-key
+        partitions skip the per-row tuple, mirroring `_iter_join_keys`.
+        """
+        key_columns = [df.native[name] for name in partition_by]
+        order: Sequence[int] = (
+            df._sorted_indices(order_by, descending=False, nulls_last=False)
+            if order_by
+            else range(len(df))
+        )
+        groups: dict[Any, list[int]] = {}
+
+        keys = (
+            key_columns[0]
+            if len(key_columns) == 1
+            else list(zip(*key_columns, strict=True))
+        )
+        for index in order:
+            groups.setdefault(keys[index], []).append(index)
+        return groups
+
     def _evaluate_per_partition(
         self,
         df: DictDataFrame,
@@ -158,28 +188,27 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
 
         Each result is scattered back to the partition's original row positions.
         """
-        key_columns = [df.native[name] for name in partition_by]
-        groups: dict[Any, list[int]] = {}
-        for index, key in enumerate(zip(*key_columns, strict=True)):
-            groups.setdefault(key, []).append(index)
+        groups = self._partition_indices(df, partition_by, order_by)
         if not groups:
             # Empty frame: evaluate once so output names and dtypes are right.
             return self(df)
 
-        order_columns = [df.native[name] for name in order_by]
+        # Column pruning: a `col`-rooted chain with no expressifiable arguments
+        # reads only its root columns, so gather just those into each sub-frame
+        # instead of every column. Any node carrying `exprs` (e.g.
+        # `fill_null(nw.col("b").mean())`) may reference other columns, so keep
+        # the whole frame in that case.
+        op_nodes = list(self._metadata.op_nodes_reversed())
+        if op_nodes[-1].name == "col" and not any(node.exprs for node in op_nodes):
+            source = df.simple_select(*self._evaluate_output_names(df))
+        else:
+            source = df
+
         num_rows = len(df)
         outputs: list[list[Any]] = []
         names: list[str] = []
         for indices in groups.values():
-            # Mirror `DictDataFrame.sort` semantics (ascending, nulls first) with
-            # repeated stable sorts from the least significant key.
-            for column in reversed(order_columns):
-                nulls = [i for i in indices if column[i] is None]
-                rest = sorted(
-                    (i for i in indices if column[i] is not None), key=column.__getitem__
-                )
-                indices = nulls + rest  # noqa: PLW2901
-            results = self(df._gather(indices))
+            results = self(source._gather(indices))
             if not outputs:
                 outputs = [[None] * num_rows for _ in results]
                 names = [s.name for s in results]
@@ -198,6 +227,54 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
             for name, values in zip(names, outputs, strict=True)
         ]
 
+    def _over_grouped_kernel(
+        self, partition_by: Sequence[str], order_by: Sequence[str]
+    ) -> Self | None:
+        """Fast path for `col(name).<window_leaf>(**kwargs).over(partition_by)`.
+
+        Returns `None` (fall back to `_evaluate_per_partition`) unless the whole
+        expression is a single supported window leaf reading stored columns as-is.
+        Mirrors `DictGroupBy.agg`'s: exactly leaf + `col` root, nothing in between
+        (a transforming node like `when/then` or arithmetic must take the general path),
+        and no expression-valued leaf kwargs.
+        """
+        op_nodes = list(self._metadata.op_nodes_reversed())
+        if not (
+            len(op_nodes) == 2
+            and op_nodes[0].name in GROUPED_WINDOW_LEAVES
+            and op_nodes[1].name == "col"
+        ):
+            return None
+        leaf = op_nodes[0]
+        if any(self._is_expr(value) for value in leaf.kwargs.values()):
+            return None
+        method_name, kwargs = leaf.name, leaf.kwargs
+
+        def func(df: DictDataFrame) -> Sequence[DictSeries]:
+            if not (groups := self._partition_indices(df, partition_by, order_by)):
+                return self(df)
+            output_names, aliases = evaluate_output_names_and_aliases(self, df, [])
+            version = df._version
+            kernel = partial(
+                apply_window_kernel,
+                method_name=method_name,
+                groups=groups,
+                num_rows=len(df),
+                kwargs=kwargs,
+                version=version,
+            )
+            return [
+                DictSeries(kernel(column=df.native[name]), name=alias, version=version)
+                for name, alias in zip(output_names, aliases, strict=True)
+            ]
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
+        )
+
     def over(self, partition_by: Sequence[str], order_by: Sequence[str]) -> Self:
         if not partition_by:
             return self._over_without_partition_by(order_by)
@@ -208,6 +285,11 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         if not self._metadata.current_node.kind.is_scalar_like:
             # Window leaf (e.g. `cum_sum`, `fill_null(strategy=...)`, `rank`):
             # one value per row, so a group-by cannot represent the result.
+            # Try the streaming grouped kernel first; it falls back to the
+            # general per-partition evaluation for anything it cannot handle.
+            if (fast := self._over_grouped_kernel(partition_by, order_by)) is not None:
+                return fast
+
             def window_func(df: DictDataFrame) -> Sequence[DictSeries]:
                 return self._evaluate_per_partition(
                     df, partition_by, order_by, broadcast=False
