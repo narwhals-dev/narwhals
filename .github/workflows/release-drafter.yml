@@ -14,13 +14,15 @@ permissions:
   contents: read
 
 jobs:
+  # Drafts your next Release notes as Pull Requests are merged into "main".
+  # Only runs on push, since the GITHUB_TOKEN is restricted to read-only
+  # permissions when a workflow is triggered by a pull_request from a fork,
+  # which breaks release creation (contents: write is needed).
   update_release_draft:
+    if: github.event_name == 'push'
     permissions:
       # write permission is required to create a github release
       contents: write
-      # write permission is required for autolabeler
-      # otherwise, read permission is required at least
-      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       # (Optional) GitHub Enterprise requires GHE_HOST variable set
@@ -28,11 +30,22 @@ jobs:
       #  run: |
       #    echo "GHE_HOST=${GITHUB_SERVER_URL##https:\/\/}" >> $GITHUB_ENV
 
-      # Drafts your next Release notes as Pull Requests are merged into "master"
       - uses: release-drafter/release-drafter@4d75298e00d9e34c483e5ff8c68d0ea1c1940c1e # v7.5.1
         # (Optional) specify config name to use, relative to .github/. Default: release-drafter.yml
         with:
-           config-name: release-drafter.yml
-        #   disable-autolabeler: true
+          config-name: release-drafter.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Autolabels pull requests based on title/files/branch. Runs on pull_request
+  # (including from forks) so labels are applied as PRs are opened/updated.
+  autolabel:
+    if: github.event_name == 'pull_request'
+    permissions:
+      # write permission is required for autolabeler
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter/autolabeler@4d75298e00d9e34c483e5ff8c68d0ea1c1940c1e # v7.5.1
+        with:
+          config-name: release-drafter.yml
