@@ -403,7 +403,7 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        def func(expr: dx.Series) -> dx.Series:
+        def func(expr: dx.Series, value: Self | None = None) -> dx.Series:
             if value is not None:
                 res_ser = expr.fillna(value)
             else:
@@ -414,6 +414,8 @@ class DaskExpr(
                 )
             return res_ser
 
+        if value is not None:
+            return self._with_callable(func, value=value)
         return self._with_callable(func)
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
