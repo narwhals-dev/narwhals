@@ -1,40 +1,42 @@
-exclude-labels:
-  - ignore
-  - release
-  - dependencies
 name-template: 'Narwhals unreleased'
 version-template: unreleased
 
-change-template: '- $TITLE (#$NUMBER)' 
+change-template: '- $TITLE (#$NUMBER)'
 
 categories:
+  - type: "pre-exclude"
+    when:
+      labels:
+        - ignore
+        - release
+        - dependencies
   - title: 🏆 Highlights
-    labels:
-      - highlight
+    when:
+      label: highlight
   - title: 💥 Breaking changes
-    labels:
-      - breaking
+    when:
+      label: breaking
   - title: ⚠️ Deprecations
-    labels:
-      - deprecation
+    when:
+      label: deprecation
   - title: 🚀 Performance improvements
-    labels:
-      - performance
+    when:
+      label: performance
   - title: ✨ Enhancements
-    labels:
-      - enhancement
+    when:
+      label: enhancement
   - title: 🐞 Bug fixes
-    labels:
-      - fix
+    when:
+      label: fix
   - title: 📖 Documentation
-    labels:
-      - documentation
+    when:
+      label: documentation
   - title: 📦 Build system
-    labels:
-      - build
+    when:
+      label: build
   - title: 🛠️ Other improvements
-    labels:
-      - internal
+    when:
+      label: internal
 
 template: |
   ## Changes
