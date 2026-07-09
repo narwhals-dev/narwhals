@@ -208,7 +208,7 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         outputs: list[list[Any]] = []
         names: list[str] = []
         for indices in groups.values():
-            results = self(source._gather(indices))
+            results = self(source._gather_positions(indices))
             if not outputs:
                 outputs = [[None] * num_rows for _ in results]
                 names = [s.name for s in results]

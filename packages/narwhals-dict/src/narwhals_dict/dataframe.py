@@ -293,7 +293,17 @@ class DictDataFrame(
         return self._mask_rows(mask) if columns else self
 
     def _gather(self, rows: SizedMultiIndexSelector[NativeSeries]) -> Self:
-        indices = tuple(operator.index(i) for i in rows)
+        # Public entry point (e.g. `df[indices]`): coerce arbitrary index objects
+        # (NumPy ints, ...) to `int` once, then reuse across every column.
+        return self._gather_positions([operator.index(i) for i in rows])
+
+    def _gather_positions(self, indices: Sequence[int]) -> Self:
+        """Gather rows at `indices`, which must already be plain `int` positions.
+
+        The trusted-int counterpart to `_gather`: internal callers that build
+        their own positions (`sort`, `unique`, `sample`, grouping) skip the
+        per-row `operator.index` coercion.
+        """
         return self._with_native(
             {name: [column[i] for i in indices] for name, column in self.native.items()},
             validate_column_names=False,
@@ -389,7 +399,7 @@ class DictDataFrame(
     def sort(self, *by: str, descending: bool | Sequence[bool], nulls_last: bool) -> Self:
         if error := self._check_columns_exist(by):
             raise error
-        return self._gather(
+        return self._gather_positions(
             self._sorted_indices(by, descending=descending, nulls_last=nulls_last)
         )
 
@@ -434,7 +444,7 @@ class DictDataFrame(
         else:  # pragma: no cover
             msg = f"Unsupported `keep` strategy: {keep}"
             raise ValueError(msg)
-        return self._gather(indices)
+        return self._gather_positions(indices)
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         if not order_by:
@@ -974,7 +984,7 @@ class DictDataFrame(
             if with_replacement
             else rng.sample(population, k=n)
         )
-        return self._gather(indices)
+        return self._gather_positions(indices)
 
     def _pivot_resolve(
         self, on: Sequence[str], index: Sequence[str] | None, values: Sequence[str] | None

@@ -257,5 +257,5 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
             # Keys are always yielded as tuples, so wrap the single-key raw value.
             yield (
                 (key,) if single_key else key,
-                frame._gather(indices).simple_select(*self._df.columns),
+                frame._gather_positions(indices).simple_select(*self._df.columns),
             )
