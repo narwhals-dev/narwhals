@@ -443,7 +443,7 @@ def from_numpy(
     if not _is_into_schema(schema):
         msg = (
             "`schema` is expected to be one of the following types: "
-            "IntoSchema | Sequence[str]. "
+            "Schema | Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Sequence[str].\n"
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
