@@ -201,12 +201,6 @@ conflicts = [
     { extra = "modin" },
     { extra = "pandas" },
   ],
-  # `typing` dependecy group pins "pyarrow" and, potentially, other
-  # dependencies for which we want to check latest versions during tests
-  [
-    { group = "core" },
-    { group = "typing" },
-  ],
   # The `extreme-*` groups pin mutually incompatible pyarrow/pandas/numpy
   # versions, and all pin `pyarrow-stubs<17` while `typing` pins ==19.2. `cudf`
   # is here because old pandas/numpy forces cudf-cu12==24.10.x, whose
