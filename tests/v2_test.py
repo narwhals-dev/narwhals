@@ -582,7 +582,7 @@ def test_first_last() -> None:
 
 def test_schema_from_generator() -> None:
     schema = nw_v2.Schema(
-        (name, dtype()) for name, dtype in [("a", nw_v2.Int64), ("b", nw_v2.String)]
+        (name, dtype()) for name, dtype in (("a", nw_v2.Int64), ("b", nw_v2.String))
     )
     assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
     assert schema._version is Version.V2

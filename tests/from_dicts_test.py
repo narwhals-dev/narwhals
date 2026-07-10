@@ -41,7 +41,7 @@ def test_from_dicts_schema_pairs(eager_backend: EagerAllowed) -> None:
     result = nw.from_dicts(
         [{"c": 1, "d": 5}, {"c": 2, "d": 6}],
         backend=eager_backend,
-        schema=[("c", nw.Int16), ("d", nw.Float32())],
+        schema=(("c", nw.Int16), ("d", nw.Float32())),
     )
     assert result.collect_schema() == {"c": nw.Int16(), "d": nw.Float32()}
 

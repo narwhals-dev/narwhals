@@ -56,19 +56,19 @@ def test_from_dict_schema_pairs(eager_backend: EagerAllowed) -> None:
     result = nw.from_dict(
         {"c": [1, 2], "d": [5, 6]},
         backend=eager_backend,
-        schema=[("c", nw.Int16), ("d", nw.Float32())],
+        schema=(("c", nw.Int16), ("d", nw.Float32())),
     )
     assert result.collect_schema() == expected
     result = nw.DataFrame.from_dict(
         {"c": [1, 2], "d": [5, 6]},
         backend=eager_backend,
-        schema=[("c", nw.Int16), ("d", nw.Float32())],
+        schema=(("c", nw.Int16), ("d", nw.Float32())),
     )
     assert result.collect_schema() == expected
 
 
 def test_from_dict_schema_generator(eager_backend: EagerAllowed) -> None:
-    schema = ((name, dtype()) for name, dtype in [("c", nw.Int16), ("d", nw.Float32)])
+    schema = ((name, dtype()) for name, dtype in (("c", nw.Int16), ("d", nw.Float32)))
     result = nw.from_dict(
         {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
     )

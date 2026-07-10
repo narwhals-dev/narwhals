@@ -1242,7 +1242,7 @@ def test_any_value_series(constructor_eager: ConstructorEager) -> None:
 
 def test_schema_from_generator() -> None:
     schema = nw_v1.Schema(
-        (name, dtype()) for name, dtype in [("a", nw_v1.Int64), ("b", nw_v1.String)]
+        (name, dtype()) for name, dtype in (("a", nw_v1.Int64), ("b", nw_v1.String))
     )
     assert schema == nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.String()})
     assert schema._version is Version.V1

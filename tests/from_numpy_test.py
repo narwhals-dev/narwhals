@@ -11,9 +11,7 @@ import narwhals as nw
 from tests.utils import ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from narwhals.typing import IntoDType, _2DArray
+    from narwhals.typing import _2DArray
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6]}
 arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
@@ -50,14 +48,7 @@ def test_from_numpy_schema_list(constructor_eager: ConstructorEager) -> None:
 
 
 def test_from_numpy_schema_pairs(constructor_eager: ConstructorEager) -> None:
-    # mypy needs the annotation to disambiguate `Sequence[tuple[...]]` from
-    # `Sequence[str]` when the pairs mix instantiated and uninstantiated dtypes
-    schema: Sequence[tuple[str, IntoDType]] = [
-        ("c", nw.Int16),
-        ("d", nw.Float32()),
-        ("e", nw.Int16()),
-        ("f", nw.Float64),
-    ]
+    schema = (("c", nw.Int16), ("d", nw.Float32()), ("e", nw.Int16()), ("f", nw.Float64))
     expected = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)
