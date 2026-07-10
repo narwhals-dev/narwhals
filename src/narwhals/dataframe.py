@@ -573,10 +573,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             data: Dictionary to create DataFrame from.
             schema: The DataFrame schema as Schema, dict of {name: type}, or a
-                iterable of (name, type) tuples. If not
-                specified, the schema will be inferred by the native library. If
-                any `dtype` is `None`, the data type for that column will be inferred
-                by the native library.
+                iterable of (name, type) tuples.
+                If not specified, the schema will be inferred by the native library.
+                If any `dtype` is `None`, the data type for that column will be
+                inferred by the native library.
             backend: specifies which eager backend instantiate to. Only
                 necessary if inputs are not Narwhals Series.
 
@@ -633,10 +633,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
             schema: The DataFrame schema as Schema, dict of {name: type}, or a
-                iterable of (name, type) tuples. If not
-                specified, the schema will be inferred by the native library. If
-                any `dtype` is `None`, the data type for that column will be inferred
-                by the native library.
+                iterable of (name, type) tuples.
+                If not specified, the schema will be inferred by the native library.
+                If any `dtype` is `None`, the data type for that column will be
+                inferred by the native library.
             backend: Specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
