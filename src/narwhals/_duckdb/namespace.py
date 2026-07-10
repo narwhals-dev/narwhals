@@ -252,3 +252,17 @@ class DuckDBNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             version=version,
         )
+
+    def list(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+        version = self._version
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [F("list_pack", *cols)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+        )

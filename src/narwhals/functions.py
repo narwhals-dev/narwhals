@@ -1981,3 +1981,43 @@ def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Ex
             ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, allow_multi_output=True
         )
     )
+
+
+def list_(*exprs: IntoExpr | Sequence[IntoExpr]) -> Expr:
+    """Collect columns into a list column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a list column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>>
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+        >>> df = nw.from_native(pl.DataFrame(data))
+        >>> df.with_columns(nw.list("a", "b").alias("a_b"))
+        ┌─────────────────────────┐
+        |   Narwhals DataFrame    |
+        |-------------------------|
+        |shape: (3, 3)            |
+        |┌─────┬─────┬───────────┐|
+        |│ a   ┆ b   ┆ a_b       │|
+        |│ --- ┆ --- ┆ ---       │|
+        |│ i64 ┆ i64 ┆ list[i64] │|
+        |╞═════╪═════╪═══════════╡|
+        |│ 1   ┆ 4   ┆ [1, 4]    │|
+        |│ 2   ┆ 5   ┆ [2, 5]    │|
+        |│ 3   ┆ 6   ┆ [3, 6]    │|
+        |└─────┴─────┴───────────┘|
+        └─────────────────────────┘
+    """
+    flat_exprs = [_parse_into_expr(e) for e in flatten(exprs)]
+    if not flat_exprs:
+        msg = "expected at least 1 expression in 'list'"
+        raise ValueError(msg)
+
+    return Expr(
+        ExprNode(ExprKind.ELEMENTWISE, "list", exprs=flat_exprs, allow_multi_output=True)
+    )

@@ -218,6 +218,18 @@ class PolarsNamespace:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
         return self._expr(pl.struct(pl_exprs), version=self._version)
 
+    def list(self, *exprs: PolarsExpr) -> PolarsExpr:
+        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
+
+        if self._backend_version < (2,):
+            length = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
+            to_concat = [e.implode().over(pl.int_range(length)) for e in pl_exprs]
+            expr = pl.concat_list(to_concat)
+        else:
+            expr = pl.list(pl_exprs)  # type: ignore[attr-defined]  # pragma: no cover
+
+        return self._expr(expr, version=self._version)
+
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
     ) -> PolarsExpr:
