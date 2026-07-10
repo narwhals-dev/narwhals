@@ -91,10 +91,9 @@ sklearn = [
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
   # Type checkers
   "mypy==2.1.0",
-  "pyrefly==1.0.0",
+  "pyrefly==1.1.1",
   "pyright",
   # Dependencies
-  "pyarrow<24", # temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3560
   "hypothesis>=6.0.0",
   "pytest>=9.0.3",
   "pandas-stubs==2.3.0.250703",
@@ -105,13 +104,13 @@ typing = [  # keep some of these pinned and bump periodically so there's fewer s
   {include-group = "plugins"},
 ]
 docs = [
-  "black>=26.3.1",  # required by mkdocstrings_handlers
   "jinja2>=3.1.6",
   "markdown-exec[ansi]>=1.12.1",
   "mkdocs-autorefs>=1.4.4",
   "mkdocstrings-python>=2.0.3",
   "pandas>=1.3.4",
   "narwhals[duckdb,pyarrow,polars,sql,sqlframe]",
+  "ruff",
   "zensical>=0.0.38"
 ]
 dev = [
@@ -402,6 +401,9 @@ filterwarnings = [
 
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
+
+  # pandas[pyarrow] raises it but we don't control pandas
+  "ignore:.*Specifying null_placement in RankOptions is deprecated as of 25.0.0. Specify null_placement per sort_key instead.*:FutureWarning",
 
   # numpy>=2.5 deprecates generic-unit timedeltas; pandas (>=2.3) trips this from
   # `pd.Timedelta(...)`. The warning is attributed to the caller's module (e.g. test
