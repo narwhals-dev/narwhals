@@ -488,8 +488,16 @@ class ArrowDataFrame(
 
         null_placement = "at_end" if nulls_last else "at_start"
 
+        if self._backend_version < (25,):  # pragma: no cover
+            return self._with_native(
+                self.native.sort_by(sorting, null_placement=null_placement),
+                validate_column_names=False,
+            )
+        # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+        # it must be specified per sort key instead.
+        keyed = [(key, order, null_placement) for key, order in sorting]
         return self._with_native(
-            self.native.sort_by(sorting, null_placement=null_placement),
+            self.native.sort_by(keyed),  # type: ignore[arg-type]
             validate_column_names=False,
         )
 
