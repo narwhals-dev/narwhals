@@ -64,3 +64,21 @@ def test_str_zfill_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].str.zfill(3)
     assert_equal_data({"a": result}, expected)
+
+
+def test_str_zfill_zero_width_pyarrow() -> None:
+    # A zero width is a no-op (every string is already at least 0 long). This used
+    # to crash on the pyarrow backend with `ArrowInvalid: Negative buffer resize`,
+    # because pc.case_when eagerly evaluated the utf8_lpad(width - 1) = -1 branch.
+    pytest.importorskip("pyarrow")
+    result = nw.from_dict(data, backend="pyarrow")["a"].str.zfill(0)
+    assert_equal_data({"a": result}, data)
+
+
+def test_str_zfill_negative_width_pyarrow_raises() -> None:
+    # A negative width is rejected, matching Polars (whose zfill width is unsigned),
+    # rather than crashing inside pyarrow's utf8_lpad.
+    pytest.importorskip("pyarrow")
+    s = nw.from_dict(data, backend="pyarrow")["a"]
+    with pytest.raises(nw.exceptions.InvalidOperationError):
+        s.str.zfill(-1)

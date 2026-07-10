@@ -14,6 +14,7 @@ from narwhals._arrow.utils import (
     parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -114,6 +115,16 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
+        if width < 0:
+            # Polars rejects a negative zfill width (its argument is unsigned).
+            # Match that here rather than letting pyarrow's utf8_lpad(width - 1)
+            # crash later with a negative pad width.
+            msg = f"zfill does not support a negative width, got {width}."
+            raise InvalidOperationError(msg)
+        if width == 0:
+            # Nothing to pad, and short-circuiting avoids pc.case_when eagerly
+            # evaluating the utf8_lpad(width - 1) = utf8_lpad(-1) branch.
+            return self.with_native(self.native)
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
