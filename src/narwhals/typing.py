@@ -312,12 +312,13 @@ Examples:
 IntoSchema: TypeAlias = (
     "Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Schema"
 )
-"""Anything that can be converted into a Narwhals Schema.
+"""Anything that can be converted into a [`narwhals.Schema`][].
 
-Defined by column names and their associated Narwhals DType, either as a
-mapping or as an iterable of `(name, dtype)` tuples.
-Data types that take no required arguments may also be passed uninstantiated,
-e.g. `nw.UInt8` instead of `nw.UInt8()`.
+Defined by column names and their associated [`DType`][narwhals.dtypes.DType],
+either as a mapping or as an iterable of `(name, dtype)` tuples.
+
+See Also:
+    [`IntoDType`][narwhals.typing.IntoDType]
 
 Examples:
     >>> import narwhals as nw
