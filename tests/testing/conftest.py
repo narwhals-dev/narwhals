@@ -10,12 +10,12 @@ import narwhals as nw
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals.typing import IntoDType
+    from narwhals.dtypes import DType
     from tests.conftest import Data
 
 
 @pytest.fixture(scope="module")
-def testing_schema() -> Mapping[str, IntoDType]:
+def testing_schema() -> Mapping[str, DType]:
     return {
         "int": nw.Int32(),
         "float": nw.Float32(),
