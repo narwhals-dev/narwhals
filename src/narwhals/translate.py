@@ -238,7 +238,7 @@ def _translate_if_compliant(  # noqa: C901,PLR0911
                 raise TypeError(msg)
             return compliant_object
         return version.dataframe(
-            compliant_object.__narwhals_dataframe__()._with_version(version), level="full"
+            compliant_object.__narwhals_dataframe__()._with_version(version)
         )
     if is_compliant_lazyframe(compliant_object):
         if series_only:
@@ -252,7 +252,7 @@ def _translate_if_compliant(  # noqa: C901,PLR0911
                 raise TypeError(msg)
             return compliant_object
         return version.lazyframe(
-            compliant_object.__narwhals_lazyframe__()._with_version(version), level="full"
+            compliant_object.__narwhals_lazyframe__()._with_version(version)
         )
     if is_compliant_series(compliant_object):
         if not allow_series:
@@ -261,7 +261,7 @@ def _translate_if_compliant(  # noqa: C901,PLR0911
                 raise TypeError(msg)
             return compliant_object
         return version.series(
-            compliant_object.__narwhals_series__()._with_version(version), level="full"
+            compliant_object.__narwhals_series__()._with_version(version)
         )
     # Object wasn't compliant, can't translate here.
     return None
@@ -465,7 +465,7 @@ def _from_native_impl(  # noqa: C901, PLR0911, PLR0912, PLR0915
                 )
                 raise TypeError(msg)
             return native_object
-        return Version.V1.dataframe(InterchangeFrame(native_object), level="interchange")
+        return Version.V1.dataframe(InterchangeFrame(native_object))
 
     if (compliant_object := plugins.from_native(native_object, version)) is not None:
         return _translate_if_compliant(

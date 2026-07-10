@@ -100,8 +100,8 @@ class DuckDBLazyFrame(
         if self._version is Version.V1:
             from narwhals.stable.v1 import DataFrame as DataFrameV1
 
-            return DataFrameV1(self, level="interchange")  # type: ignore[no-any-return]
-        return self._version.lazyframe(self, level="lazy")
+            return DataFrameV1(self)  # type: ignore[no-any-return]
+        return self._version.lazyframe(self)
 
     def __narwhals_dataframe__(self) -> Self:  # pragma: no cover
         # Keep around for backcompat.

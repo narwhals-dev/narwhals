@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from narwhals._duckdb.utils import DeferredTimeZone, narwhals_to_native_dtype
 from narwhals.dataframe import LazyFrame
@@ -29,10 +29,8 @@ TZ = DeferredTimeZone(
 class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
     """A LazyFrame with an additional `to_sql` method."""
 
-    def __init__(
-        self, df: CompliantLazyFrameAny, level: Literal["full", "interchange", "lazy"]
-    ) -> None:
-        super().__init__(df, level=level)
+    def __init__(self, df: CompliantLazyFrameAny) -> None:
+        super().__init__(df)
 
     def to_sql(self, *, pretty: bool = False) -> str:
         """Convert to SQL query.
@@ -99,7 +97,7 @@ def table(name: str, schema: IntoSchema) -> SQLTable:
         ({dtypes});
         """)
     lf = from_native(CONN.table(name))
-    return SQLTable(lf._compliant_frame, level=lf._level)
+    return SQLTable(lf._compliant_frame)
 
 
 __all__ = ["table"]

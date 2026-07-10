@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import enum
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol
 
-from narwhals._utils import Version, _hasattr_static, parse_version
+from narwhals._utils import Implementation, Version, _hasattr_static, parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -12,7 +12,10 @@ if TYPE_CHECKING:
 
     from narwhals._interchange.series import InterchangeSeries
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import DataFrameLike
+
+
+class DataFrameLike(Protocol):
+    def __dataframe__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 class DtypeKind(enum.IntEnum):
@@ -76,6 +79,7 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
 
 class InterchangeFrame:
     _version = Version.V1
+    _implementation: Final = Implementation.UNKNOWN
 
     def __init__(self, df: DataFrameLike) -> None:
         self._interchange_frame = df.__dataframe__()

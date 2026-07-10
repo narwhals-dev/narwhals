@@ -264,8 +264,6 @@ ModeKeepStrategy: TypeAlias = Literal["any", "all"]
 - *"any"*: Does not give any guarantee of which mode is kept.
 - *"all"*: Keeps all the mode's.
 """
-
-
 PandasLikeDType: TypeAlias = "pd.api.extensions.ExtensionDtype | np.dtype[Any]"
 
 

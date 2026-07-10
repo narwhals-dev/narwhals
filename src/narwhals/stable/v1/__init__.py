@@ -12,6 +12,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
+    ensure_type,
     generate_temporary_column_name,
     inherit_doc,
     is_ordered_categorical,
@@ -62,6 +63,7 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.stable.v1.typing import (
     DataFrameT,
+    Frame,
     IntoDataFrameT,
     IntoFrame,
     IntoLazyFrameT,
@@ -130,9 +132,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):  # type: ignore[type-var]
     _version = Version.V1
 
     @inherit_doc(NwDataFrame)
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+    def __init__(self, df: Any) -> None:
         assert df._version is Version.V1  # noqa: S101
-        super().__init__(df, level=level)
+        super().__init__(df)
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
@@ -262,9 +264,9 @@ class LazyFrame(NwLazyFrame[IntoLazyFrameT]):
     _version = Version.V1
 
     @inherit_doc(NwLazyFrame)
-    def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
+    def __init__(self, df: Any) -> None:
         assert df._version is Version.V1  # noqa: S101
-        super().__init__(df, level=level)
+        super().__init__(df)
 
     @property
     def _dataframe(self) -> type[DataFrame[Any]]:
@@ -314,11 +316,9 @@ class Series(NwSeries[IntoSeriesT]):
     _version = Version.V1
 
     @inherit_doc(NwSeries)
-    def __init__(
-        self, series: Any, *, level: Literal["full", "lazy", "interchange"]
-    ) -> None:
+    def __init__(self, series: Any) -> None:
         assert series._version is Version.V1  # noqa: S101
-        super().__init__(series, level=level)
+        super().__init__(series)
 
     # We need to override any method which don't return Self so that type
     # annotations are correct.
@@ -522,11 +522,11 @@ def _stableify(
     | NwExpr,
 ) -> DataFrame[IntoDataFrameT] | LazyFrame[IntoLazyFrameT] | Series[IntoSeriesT] | Expr:
     if isinstance(obj, NwDataFrame):
-        return DataFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
+        return DataFrame(obj._compliant_frame._with_version(Version.V1))
     if isinstance(obj, NwLazyFrame):
-        return LazyFrame(obj._compliant_frame._with_version(Version.V1), level=obj._level)
+        return LazyFrame(obj._compliant_frame._with_version(Version.V1))
     if isinstance(obj, NwSeries):
-        return Series(obj._compliant_series._with_version(Version.V1), level=obj._level)
+        return Series(obj._compliant_series._with_version(Version.V1))
     if isinstance(obj, NwExpr):
         return Expr(*obj._nodes)
     assert_never(obj)
@@ -910,9 +910,7 @@ def coalesce(exprs: IntoExpr | Iterable[IntoExpr], *more_exprs: IntoExpr) -> Exp
     return _stableify(nw.coalesce(exprs, *more_exprs))
 
 
-def get_level(
-    obj: DataFrame[Any] | LazyFrame[Any] | Series[IntoSeriesT],
-) -> Literal["full", "lazy", "interchange"]:
+def get_level(obj: Frame | Series[Any]) -> Literal["full", "lazy", "interchange"]:
     """Level of support Narwhals has for current object.
 
     Arguments:
@@ -926,7 +924,21 @@ def get_level(
               which involves iterating over rows in Python.
             - 'interchange': only metadata operations are supported (`df.schema`)
     """
-    return obj._level
+    from narwhals._interchange.dataframe import InterchangeFrame
+    from narwhals._interchange.series import InterchangeSeries
+
+    ensure_type(obj, DataFrame, Series, LazyFrame)
+    compliant = obj._compliant
+    impl = obj.implementation
+    if (
+        isinstance(compliant, (InterchangeFrame, InterchangeSeries))
+        or impl.is_duckdb()
+        or impl.is_ibis()
+    ):
+        return "interchange"
+    if isinstance(obj, LazyFrame) and impl.is_polars():
+        return "lazy"
+    return "full"
 
 
 class When(nw_f.When):
