@@ -51,7 +51,8 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          uv pip install -e ".[dev, all]"
+          uv sync --all-extras
+          uv pip install -e .
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -61,11 +62,11 @@ jobs:
       - name: Run pytest
         run: |
           cd altair
-          pytest tests
+          uv run --no-sync --all-extras pytest tests
       - name: Run mypy
         run: |
           cd altair
-          mypy altair tests
+          uv run --no-sync --all-extras mypy altair tests
 
   marimo:
     if: github.head_ref != 'bump-version'
