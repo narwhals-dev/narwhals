@@ -29,7 +29,8 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
+    from _typeshed import SupportsItems
+    from typing_extensions import Self, TypeIs
 
     from narwhals.typing import (
         DTypeBackend,
@@ -41,6 +42,13 @@ if TYPE_CHECKING:
 
 
 __all__ = ["Schema"]
+
+
+def _supports_items(obj: Any) -> TypeIs[SupportsItems[str, IntoDType]]:
+    # https://github.com/python/typeshed/blob/f76037a1eb3923c67a8bc0e302ee9c016ffb3431/stdlib/_typeshed/__init__.pyi#L163-L164
+    # - Performing this check inline complicates typing because `dict` is invariant
+    # - `SupportsItems` is covariant across keys & values
+    return isinstance(obj, (dict, Mapping))
 
 
 class Schema(OrderedDict[str, "DType"]):
@@ -91,11 +99,13 @@ class Schema(OrderedDict[str, "DType"]):
         self,
         schema: Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | None = None,
     ) -> None:
-        mapping: Mapping[str, IntoDType] = dict(schema) if schema else {}
-        super().__init__(
-            (name, dtype if isinstance(dtype, DType) else dtype())
-            for name, dtype in mapping.items()
-        )
+        if schema is None:
+            super().__init__()
+        else:
+            super().__init__(
+                (name, dtype if isinstance(dtype, DType) else dtype())
+                for name, dtype in (schema.items() if _supports_items(schema) else schema)
+            )
 
     def names(self) -> list[str]:
         """Get the column names of the schema.
