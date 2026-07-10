@@ -47,10 +47,17 @@ class DictSeriesStringNamespace(
             msg = "dict backend `.str.replace` with `n > 1` only supports str replacement values"
             raise TypeError(msg)
 
-        def fn(string: str, replacement: str) -> str:
-            if literal:
+        if literal:
+
+            def fn(string: str, replacement: str) -> str:
                 return string.replace(pattern, replacement, n)
-            return re.sub(pattern, replacement, string, count=max(n, 0))
+        else:
+            # `pattern` is a fixed regex, so compile it once rather than per row.
+            sub = re.compile(pattern).sub
+            count = max(n, 0)
+
+            def fn(string: str, replacement: str) -> str:
+                return sub(replacement, string, count=count)
 
         return self._with_other(fn, value)
 
@@ -69,10 +76,19 @@ class DictSeriesStringNamespace(
         return self._with_other(str.endswith, suffix)
 
     def contains(self, pattern: DictSeries, *, literal: bool) -> DictSeries:
-        def fn(string: str, pat: str) -> bool:
-            return pat in string if literal else re.search(pat, string) is not None
-
-        return self._with_other(fn, pattern)
+        if literal:
+            return self._with_other(lambda string, pat: pat in string, pattern)
+        values, is_scalar = self.compliant._extract_comparand(pattern)
+        if is_scalar:
+            # The common `str.contains("regex")`: compile once, not per row.
+            if values is None:
+                return self.with_native([None] * len(self.native))
+            search = re.compile(values).search
+            return self._unary(lambda string: search(string) is not None)
+        # Per-row patterns can't be precompiled; search each against its own.
+        return self._with_other(
+            lambda string, pat: re.search(pat, string) is not None, pattern
+        )
 
     def slice(self, offset: int, length: int | None) -> DictSeries:
         stop = offset + length if length is not None else None
