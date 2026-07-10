@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from narwhals.dependencies import get_numpy
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals_dict import _parallel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -587,14 +588,45 @@ def binary_op(
     if is_scalar:
         if right is None and propagate_null:
             return [None] * len(left)
-        left, right = _promote_decimal_mix(left, right, is_scalar=True)
+    elif len(left) != len(right):
+        msg = f"Expected object of length {len(left)}, got: {len(right)}."
+        raise ShapeError(msg)
+    left, right = _promote_decimal_mix(left, right, is_scalar=is_scalar)
+    if _parallel.should_parallelize(len(left)):
+        if is_scalar:
+            return _parallel.gather_chunks(
+                lambda start, stop: _binary_op_serial(
+                    op, left[start:stop], right, propagate_null=propagate_null
+                ),
+                len(left),
+            )
+        return _parallel.gather_chunks(
+            lambda start, stop: _binary_op_serial(
+                op,
+                left[start:stop],
+                right[start:stop],
+                propagate_null=propagate_null,
+                is_scalar=False,
+            ),
+            len(left),
+        )
+    return _binary_op_serial(
+        op, left, right, is_scalar=is_scalar, propagate_null=propagate_null
+    )
+
+
+def _binary_op_serial(
+    op: Callable[[Any, Any], Any],
+    left: NativeSeries,
+    right: Any,
+    *,
+    propagate_null: bool,
+    is_scalar: bool = True,
+) -> list[Any]:
+    if is_scalar:
         if not propagate_null:
             return [op(lhs, right) for lhs in left]
         return [None if lhs is None else op(lhs, right) for lhs in left]
-    if len(left) != len(right):
-        msg = f"Expected object of length {len(left)}, got: {len(right)}."
-        raise ShapeError(msg)
-    left, right = _promote_decimal_mix(left, right, is_scalar=False)
     if not propagate_null:
         return [op(lhs, rhs) for lhs, rhs in zip(left, right, strict=True)]
     return [

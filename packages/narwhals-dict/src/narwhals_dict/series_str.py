@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals_dict.utils import parse_datetime_format, parse_time_format
+from narwhals_dict import _parallel
+from narwhals_dict.utils import binary_op, parse_datetime_format, parse_time_format
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,8 +20,19 @@ class DictSeriesStringNamespace(
     EagerSeriesNamespace["DictSeries", Any], StringNamespace["DictSeries"]
 ):
     def _unary(self, fn: Callable[[str], Any]) -> DictSeries:
+        values = self.native
+        if _parallel.should_parallelize(len(values)):
+            return self.with_native(
+                _parallel.gather_chunks(
+                    lambda start, stop: [
+                        None if value is None else fn(value)
+                        for value in values[start:stop]
+                    ],
+                    len(values),
+                )
+            )
         return self.with_native(
-            [None if value is None else fn(value) for value in self.native]
+            [None if value is None else fn(value) for value in values]
         )
 
     def _with_other(self, fn: Callable[[str, str], Any], other: Any) -> DictSeries:
@@ -30,12 +42,7 @@ class DictSeriesStringNamespace(
             if values is None:
                 return self.with_native([None] * len(self.native))
             return self._unary(lambda value: fn(value, values))
-        return self.with_native(
-            [
-                None if (lhs is None or rhs is None) else fn(lhs, rhs)
-                for lhs, rhs in zip(self.native, values, strict=True)
-            ]
-        )
+        return self.with_native(binary_op(fn, self.native, values, is_scalar=False))
 
     def len_chars(self) -> DictSeries:
         return self._unary(len)

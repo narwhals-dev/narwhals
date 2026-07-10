@@ -17,6 +17,7 @@ from narwhals._utils import (
     scale_bytes,
 )
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals_dict import _parallel
 from narwhals_dict.series import DictSeries
 from narwhals_dict.utils import is_native_frame
 
@@ -273,10 +274,18 @@ class DictDataFrame(
         if len(mask) != len(self):
             msg = f"Expected mask of length {len(self)}, got: {len(mask)}."
             raise ShapeError(msg)
-        return self._with_native(
-            {name: list(compress(column, mask)) for name, column in self.native.items()},
-            validate_column_names=False,
-        )
+        native = self.native
+        result: DictFrame
+        if _parallel.should_parallelize(len(mask)) and len(native) > 1:
+            compressed = _parallel.map_tasks(
+                lambda column: list(compress(column, mask)), native.values()
+            )
+            result = dict(zip(native, compressed, strict=True))
+        else:
+            result = {
+                name: list(compress(column, mask)) for name, column in native.items()
+            }
+        return self._with_native(result, validate_column_names=False)
 
     def filter(self, predicate: DictExpr | Any) -> Self:
         if isinstance(predicate, list):
@@ -305,10 +314,18 @@ class DictDataFrame(
         their own positions (`sort`, `unique`, `sample`, grouping) skip the
         per-row `operator.index` coercion.
         """
-        return self._with_native(
-            {name: [column[i] for i in indices] for name, column in self.native.items()},
-            validate_column_names=False,
-        )
+        native = self.native
+        result: DictFrame
+        if _parallel.should_parallelize(len(indices)) and len(native) > 1:
+            gathered = _parallel.map_tasks(
+                lambda column: [column[i] for i in indices], native.values()
+            )
+            result = dict(zip(native, gathered, strict=True))
+        else:
+            result = {
+                name: [column[i] for i in indices] for name, column in native.items()
+            }
+        return self._with_native(result, validate_column_names=False)
 
     def _gather_slice(self, rows: _SliceIndex | range) -> Self:
         return self._with_native(
@@ -573,23 +590,51 @@ class DictDataFrame(
         """Gather values at `indices`, where a `None` index yields a null."""
         return [None if i is None else column[i] for i in indices]
 
-    def _iter_join_keys(self, keys: Sequence[str]) -> Iterator[Any]:
+    def _iter_join_keys(
+        self, keys: Sequence[str], start: int = 0, stop: int | None = None
+    ) -> Iterator[Any]:
         """Yields one hashable key per row, or `None` for rows with any null key.
 
         Single-key joins use the column values directly (no tuple per row);
         multi-key joins yield the value tuple. `None in row` checks identity
         first, so it only falls back to `==` for values that are not nulls.
+        Pass `start`/`stop` to restrict to a row range (parallel chunk tasks).
         """
         if len(keys) == 1:
-            yield from self.native[keys[0]]
-        else:
+            column = self.native[keys[0]]
+            yield from column if start == 0 and stop is None else column[start:stop]
+        elif start == 0 and stop is None:
             for row in self.simple_select(*keys).iter_rows(named=False, buffer_size=512):
+                yield None if None in row else row
+        else:
+            columns = (self.native[key][start:stop] for key in keys)
+            for row in zip(*columns, strict=True):
                 yield None if None in row else row
 
     def _join_key_index(self, keys: Sequence[str]) -> dict[Any, list[int]]:
         """Map each (non-null) key to the row indices where it appears."""
+        n_rows = len(self)
+        if _parallel.should_parallelize(n_rows):
+            # Chunks build disjoint per-range indices in parallel; merging
+            # preserves row order because chunks are consumed in row order.
+            parts = _parallel.run_chunks(
+                lambda start, stop: self._join_key_index_rows(keys, start, stop), n_rows
+            )
+            index = parts[0]
+            for part in parts[1:]:
+                for key, rows in part.items():
+                    if (existing := index.get(key)) is None:
+                        index[key] = rows
+                    else:
+                        existing.extend(rows)
+            return index
+        return self._join_key_index_rows(keys, 0, None)
+
+    def _join_key_index_rows(
+        self, keys: Sequence[str], start: int, stop: int | None
+    ) -> dict[Any, list[int]]:
         index: dict[Any, list[int]] = {}
-        for row, key in enumerate(self._iter_join_keys(keys)):
+        for row, key in enumerate(self._iter_join_keys(keys, start, stop), start=start):
             if key is not None:
                 index.setdefault(key, []).append(row)
         return index
@@ -629,24 +674,82 @@ class DictDataFrame(
         # per side buys the fast `map` gather for every column of that side.
         take_left = self._take_nullable if None in left_indices else self._take
         take_right = self._take_nullable if None in right_indices else self._take
-        result: DictFrame = {
-            name: take_left(column, left_indices) for name, column in self.native.items()
-        }
-        for name, output_name in right_names.items():
-            result[output_name] = take_right(other.native[name], right_indices)
+        output_names = [*self.native, *right_names.values()]
+        tasks = [(take_left, column, left_indices) for column in self.native.values()]
+        tasks += [(take_right, other.native[name], right_indices) for name in right_names]
+        if _parallel.should_parallelize(len(left_indices)) and len(tasks) > 1:
+            gathered = _parallel.map_tasks(lambda task: task[0](task[1], task[2]), tasks)
+        else:
+            gathered = [take(column, indices) for take, column, indices in tasks]
+        result: DictFrame = dict(zip(output_names, gathered, strict=True))
         return self._with_native(result, validate_column_names=False)
+
+    def _probe_join(
+        self,
+        right_index: dict[Any, list[int]],
+        left_on: Sequence[str],
+        *,
+        keep_unmatched: bool,
+    ) -> tuple[list[int | None], list[int | None]]:
+        """Probe `right_index` with every left row, in row order.
+
+        Chunk results only depend on their own row range, so parallel chunks
+        concatenated in chunk order match the serial output exactly.
+        """
+        n_rows = len(self)
+        if _parallel.should_parallelize(n_rows):
+            parts = _parallel.run_chunks(
+                lambda start, stop: self._probe_join_rows(
+                    right_index, left_on, start, stop, keep_unmatched=keep_unmatched
+                ),
+                n_rows,
+            )
+            left_indices: list[int | None] = []
+            right_indices: list[int | None] = []
+            for left_part, right_part in parts:
+                left_indices.extend(left_part)
+                right_indices.extend(right_part)
+            return left_indices, right_indices
+        return self._probe_join_rows(
+            right_index, left_on, 0, None, keep_unmatched=keep_unmatched
+        )
+
+    def _probe_join_rows(
+        self,
+        right_index: dict[Any, list[int]],
+        left_on: Sequence[str],
+        start: int,
+        stop: int | None,
+        *,
+        keep_unmatched: bool,
+    ) -> tuple[list[int | None], list[int | None]]:
+        left_indices: list[int | None] = []
+        right_indices: list[int | None] = []
+        get_matches = right_index.get
+        keys = enumerate(self._iter_join_keys(left_on, start, stop), start=start)
+        if keep_unmatched:
+            for row, key in keys:
+                matches = get_matches(key) if key is not None else None
+                if matches:
+                    left_indices.extend(repeat(row, len(matches)))
+                    right_indices.extend(matches)
+                else:
+                    left_indices.append(row)
+                    right_indices.append(None)
+        else:
+            for row, key in keys:
+                if key is not None and (matches := get_matches(key)) is not None:
+                    left_indices.extend(repeat(row, len(matches)))
+                    right_indices.extend(matches)
+        return left_indices, right_indices
 
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         right_index = other._join_key_index(right_on)
-        left_indices: list[int | None] = []
-        right_indices: list[int | None] = []
-        get_matches = right_index.get
-        for row, key in enumerate(self._iter_join_keys(left_on)):
-            if key is not None and (matches := get_matches(key)) is not None:
-                left_indices.extend(repeat(row, len(matches)))
-                right_indices.extend(matches)
+        left_indices, right_indices = self._probe_join(
+            right_index, left_on, keep_unmatched=False
+        )
         return self._join_gather(
             other, left_indices, right_indices, exclude_right=set(right_on), suffix=suffix
         )
@@ -655,17 +758,9 @@ class DictDataFrame(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
         right_index = other._join_key_index(right_on)
-        left_indices: list[int | None] = []
-        right_indices: list[int | None] = []
-        get_matches = right_index.get
-        for row, key in enumerate(self._iter_join_keys(left_on)):
-            matches = get_matches(key) if key is not None else None
-            if matches:
-                left_indices.extend(repeat(row, len(matches)))
-                right_indices.extend(matches)
-            else:
-                left_indices.append(row)
-                right_indices.append(None)
+        left_indices, right_indices = self._probe_join(
+            right_index, left_on, keep_unmatched=True
+        )
         return self._join_gather(
             other, left_indices, right_indices, exclude_right=set(right_on), suffix=suffix
         )

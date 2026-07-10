@@ -12,6 +12,7 @@ from narwhals._compliant import EagerSeries
 from narwhals._typing_compat import assert_never
 from narwhals._utils import NO_DEFAULT, Implementation
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals_dict import _parallel
 from narwhals_dict.utils import (
     binary_op,
     cast_values,
@@ -210,10 +211,17 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
     def _with_unary(
         self, fn: Callable[[Any], Any], *, preserve_broadcast: bool = True
     ) -> Self:
-        return self._with_native(
-            [None if value is None else fn(value) for value in self.native],
-            preserve_broadcast=preserve_broadcast,
-        )
+        values = self.native
+        if _parallel.should_parallelize(len(values)):
+            result = _parallel.gather_chunks(
+                lambda start, stop: [
+                    None if value is None else fn(value) for value in values[start:stop]
+                ],
+                len(values),
+            )
+        else:
+            result = [None if value is None else fn(value) for value in values]
+        return self._with_native(result, preserve_broadcast=preserve_broadcast)
 
     # Binary operations
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
@@ -575,7 +583,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             # `reversed(...)` is a no-copy iterator; only the (in-place) result
             # is reversed back for the backward pass.
             values = self.native if strategy == "forward" else reversed(self.native)
-            no_limit = limit is None
+            max_gap = math.inf if limit is None else limit
             result: list[Any] = []
             last: Any = None
             gap = 0
@@ -585,7 +593,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                     result.append(current)
                 else:
                     gap += 1
-                    result.append(last if no_limit or gap <= limit else None)
+                    result.append(last if gap <= max_gap else None)
             if strategy == "backward":
                 result.reverse()
             return self._with_native(result, preserve_broadcast=True)

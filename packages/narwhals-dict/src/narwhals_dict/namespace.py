@@ -10,6 +10,7 @@ from narwhals._expression_parsing import (
     combine_evaluate_output_names,
 )
 from narwhals._utils import Implementation, check_column_names_are_unique
+from narwhals_dict import _parallel
 from narwhals_dict.dataframe import DictDataFrame
 from narwhals_dict.expr import DictExpr
 from narwhals_dict.selectors import DictSelectorNamespace
@@ -90,7 +91,19 @@ class DictNamespace(
                 and not any(None in column for column in columns)
                 else reducer
             )
-            result = list(map(func, zip(*columns, strict=True)))
+            n_rows = len(columns[0]) if columns else 0
+            if _parallel.should_parallelize(n_rows):
+                result = _parallel.gather_chunks(
+                    lambda start, stop: list(
+                        map(
+                            func,
+                            zip(*(column[start:stop] for column in columns), strict=True),
+                        )
+                    ),
+                    n_rows,
+                )
+            else:
+                result = list(map(func, zip(*columns, strict=True)))
             return [aligned[0]._with_native(result)]
 
         return self._expr._from_callable(
