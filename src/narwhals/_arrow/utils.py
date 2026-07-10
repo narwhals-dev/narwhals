@@ -577,11 +577,18 @@ def list_sort(
     exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )
-    sorted_indices = pc.sort_indices(
-        exploded,
-        sort_keys=[(idx, "ascending"), (v, sort_direction)],
-        null_placement=nulls_position,
-    )
+    if BACKEND_VERSION < (25,):  # pragma: no cover
+        sorted_indices = pc.sort_indices(
+            exploded,
+            sort_keys=[(idx, "ascending"), (v, sort_direction)],
+            null_placement=nulls_position,
+        )
+    else:
+        # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+        # it must be specified per sort key instead.
+        keyed = [(idx, "ascending", nulls_position), (v, sort_direction, nulls_position)]
+        sorted_indices = pc.sort_indices(exploded, sort_keys=keyed)  # type: ignore[arg-type]
+
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
     sorted_imploded = pa.ListArray.from_arrays(
         offsets, pa.array(exploded.take(sorted_indices).column(v))
