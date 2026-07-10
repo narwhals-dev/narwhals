@@ -95,7 +95,6 @@ if TYPE_CHECKING:
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
-    from narwhals.stable.v2.dtypes import DType
     from narwhals.typing import (
         IntoDType,
         IntoExpr,
@@ -135,7 +134,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
@@ -146,7 +145,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -157,7 +156,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_numpy(
         cls,
         data: _2DArray,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -351,12 +350,6 @@ class Expr(NwExpr):
 
 class Schema(NwSchema):
     _version = Version.V2
-
-    @inherit_doc(NwSchema)
-    def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
-    ) -> None:
-        super().__init__(schema)
 
 
 @overload
@@ -976,7 +969,7 @@ def from_arrow(
 
 def from_dict(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
 ) -> DataFrame[Any]:
@@ -991,10 +984,11 @@ def from_dict(
 
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library. If
-            any `dtype` is `None`, the data type for that column will be inferred
-            by the native library.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            iterable of (name, type) tuples.
+            If not specified, the schema will be inferred by the native library.
+            If any `dtype` is `None`, the data type for that column will be
+            inferred by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
@@ -1013,7 +1007,7 @@ from_dicts: Final = DataFrame.from_dicts
 
 def from_numpy(
     data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    schema: IntoSchema | Sequence[str] | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
@@ -1027,7 +1021,8 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
+            of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
