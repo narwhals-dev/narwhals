@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import OrderedDict
 from collections.abc import Mapping
 from functools import partial
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, overload
 
 from narwhals._utils import Implementation, Version, qualified_type_name
 from narwhals.dependencies import (
@@ -21,6 +21,7 @@ from narwhals.dependencies import (
     is_pyarrow_data_type,
     is_pyarrow_schema,
 )
+from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -28,18 +29,26 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Self
+    from _typeshed import SupportsItems
+    from typing_extensions import Self, TypeIs
 
-    from narwhals.dtypes import DType
     from narwhals.typing import (
         DTypeBackend,
         IntoArrowSchema,
+        IntoDType,
         IntoPandasSchema,
         IntoPolarsSchema,
     )
 
 
 __all__ = ["Schema"]
+
+
+def _supports_items(obj: Any) -> TypeIs[SupportsItems[str, IntoDType]]:
+    # https://github.com/python/typeshed/blob/f76037a1eb3923c67a8bc0e302ee9c016ffb3431/stdlib/_typeshed/__init__.pyi#L163-L164
+    # - Performing this check inline complicates typing because `dict` is invariant
+    # - `SupportsItems` is covariant across keys & values
+    return isinstance(obj, (dict, Mapping))
 
 
 class Schema(OrderedDict[str, "DType"]):
@@ -54,13 +63,14 @@ class Schema(OrderedDict[str, "DType"]):
 
     Arguments:
         schema: The schema definition given by column names and their associated
-            *instantiated* Narwhals data type. Accepts a mapping or an iterable of tuples.
+            Narwhals data type. Accepts a mapping or an iterable of tuples.
+            Data types that take no required arguments may also be passed
+            uninstantiated, e.g. `nw.Int8` instead of `nw.Int8()`; they are
+            instantiated on construction.
 
     Examples:
-        Define a schema by passing *instantiated* data types.
-
         >>> import narwhals as nw
-        >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String()})
+        >>> schema = nw.Schema({"foo": nw.Int8(), "bar": nw.String})
         >>> schema
         Schema({'foo': Int8, 'bar': String})
 
@@ -81,11 +91,21 @@ class Schema(OrderedDict[str, "DType"]):
 
     _version: ClassVar[Version] = Version.MAIN
 
+    @overload
+    def __init__(self, schema: Mapping[str, IntoDType] | None = None) -> None: ...
+    @overload
+    def __init__(self, schema: Iterable[tuple[str, IntoDType]]) -> None: ...
     def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
+        self,
+        schema: Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | None = None,
     ) -> None:
-        schema = schema or {}
-        super().__init__(schema)
+        if schema is None:
+            super().__init__()
+        else:
+            super().__init__(
+                (name, dtype if isinstance(dtype, DType) else dtype())
+                for name, dtype in (schema.items() if _supports_items(schema) else schema)
+            )
 
     def names(self) -> list[str]:
         """Get the column names of the schema.
