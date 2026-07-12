@@ -99,6 +99,7 @@ nav = [
         ]},
         "api-reference-plan/selectors.md", 
         "api-reference-plan/series.md", 
+        "api-reference-plan/plugins.md", 
         { "IR" = [
             "api-reference-plan/ir/index.md",
             { "ExprIR" = [
@@ -198,7 +199,8 @@ filters = [
     "^__",
     # above are default filters, everything after refines from them
     # https://mkdocstrings.github.io/python/usage/configuration/members/#filters
-    "!^_+(repr|slots|all)"
+    "!^_+(repr|slots|all|delattr|setattr)", # exclude these dunders (or similar private methods)
+    "!^__\\w+[^_]$", # exclude name mangling
 ]
 extensions = [
   { "utils/griffe_extension.py:ImplNotesExtension" = { begin = "<!--BEGIN: IMPL NOTES-->", end = "<!--END: IMPL NOTES-->" } },
