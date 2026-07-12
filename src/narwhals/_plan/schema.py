@@ -65,7 +65,8 @@ class FrozenSchema(_BaseSchema):
         **schema: Keywords mapping column names to datatypes.
 
     Note:
-        Besides the caching, there's also some methods inspired by [`polars-schema::schema::Schema`].
+        Besides the caching, there's also some methods inspired by
+        [`polars-schema::schema::Schema`]( https://github.com/pola-rs/polars/blob/5ee71f3ee4dd1573b45f44714da7843a6205895c/crates/polars-schema/src/schema.rs).
 
     Examples:
         >>> import narwhals as nw
@@ -114,8 +115,6 @@ class FrozenSchema(_BaseSchema):
         True
         >>> schema is FrozenSchema(frame._compliant)
         True
-
-    [`polars-schema::schema::Schema`]: https://github.com/pola-rs/polars/blob/5ee71f3ee4dd1573b45f44714da7843a6205895c/crates/polars-schema/src/schema.rs
     """
 
     __slots__ = (_HASH_NAME, "_mapping")
@@ -219,15 +218,15 @@ class FrozenSchema(_BaseSchema):
             exprs: Expressions that were projected in this schema.
 
         Notes:
+            [Missing step]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/utils.rs#L218-L245
+            [(#3396)]: https://github.com/narwhals-dev/narwhals/pull/3396
+
             [Missing step] at the end of `_expansion.prepare_projection`:
 
             - *Eager*: not required, uses placeholders
                 - `.select()`, `.with_columns()`
             - *Lazy*: required to propagate schema changes between plan steps
-                - True understanding needs [`get_supertype` (#3396)]
-
-        [Missing step]: https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/utils.rs#L218-L245
-        [`get_supertype` (#3396)]: https://github.com/narwhals-dev/narwhals/pull/3396
+                - True understanding needs [(#3396)]
         """
         return FrozenSchema((expr.name, expr.resolve_dtype(self)) for expr in exprs)
 
@@ -407,7 +406,10 @@ IntoFrozenSchema: TypeAlias = IntoSchema | FrozenSchema | HasSchema
 """A schema to freeze, or an already frozen one.
 
 As `DType` instances (`.values()`) are hashable, we can coerce the schema
-into a cache-safe proxy structure (`FrozenSchema`).
+into a cache-safe proxy structure.
+
+See Also:
+    [`FrozenSchema`][narwhals._plan.schema.FrozenSchema]
 """
 
 

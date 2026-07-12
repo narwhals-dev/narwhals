@@ -56,10 +56,17 @@ if TYPE_CHECKING:
     from narwhals._plan.expressions import ExprIR, FunctionExpr, HorizontalExpr
     from narwhals._plan.schema import FrozenSchema
 
-__all__ = ("Function", "HorizontalFunction")
-
-# NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-ELEMENTWISE = FunctionFlags.ELEMENTWISE
+__all__ = (
+    "Aggregation",
+    "Binary",
+    "Elementwise",
+    "Function",
+    "Horizontal",
+    "LengthPreserving",
+    "RowSeparable",
+    "Ternary",
+    "Unary",
+)
 
 
 class Function(Immutable):
@@ -126,12 +133,6 @@ class Function(Immutable):
 
     And that's the main nugget we can use to answer the question:
     > Is this function valid *here*?
-
-    To customize the behavior, use the `flags` **parameter** [when subclassing]:
-
-        class FillNull(Function, flags=FunctionFlags.ELEMENTWISE): ...
-
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
 
     See Also:
         [`FunctionFlags`][narwhals._plan._flags.FunctionFlags]
@@ -207,7 +208,6 @@ class Function(Immutable):
         *,
         dispatch: DispatcherOptions | Literal["skip"] | None = None,
         dtype: IntoResolveDType[Self] | None = None,
-        flags: FunctionFlags | None = None,
         **_: Any,
     ) -> None:
         """Hook to [customize a new subclass] of `Function`.
@@ -225,16 +225,11 @@ class Function(Immutable):
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 
-            flags: Defines how a function transforms the shape of it's input.
-                Stored in `__function_flags__`.
-
         See Also:
             - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
             - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
         """
         super().__init_subclass__(**_)
-        if flags is not None:
-            cls.__function_flags__ = flags
         if dispatch != "skip":
             cls.__expr_ir_dispatch__ = FunctionDispatch.from_type(cls, dispatch)
         if dtype is not None:
@@ -276,10 +271,37 @@ class Function(Immutable):
         return node
 
 
-class HorizontalFunction(Function, flags=ELEMENTWISE):
-    """Transformations *across* columns.
+class Elementwise(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.ELEMENTWISE]] = (
+        FunctionFlags.ELEMENTWISE
+    )
 
-    Special cases of [fold] or [reduce].
+
+class Aggregation(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.AGGREGATION]] = (
+        FunctionFlags.AGGREGATION
+    )
+
+
+class RowSeparable(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.ROW_SEPARABLE]] = (
+        FunctionFlags.ROW_SEPARABLE
+    )
+
+
+class LengthPreserving(Function, dispatch="skip"):
+    __function_flags__: ClassVar[Literal[FunctionFlags.LENGTH_PRESERVING]] = (
+        FunctionFlags.LENGTH_PRESERVING
+    )
+
+
+class Horizontal(Elementwise):
+    """An elementwise function that takes a variable number of expression arguments.
+
+    Notes:
+        - Operates *across* columns.
+        - Special cases of [fold](https://docs.pola.rs/user-guide/expressions/folds/) or
+          [reduce](https://mathspp.com/blog/pydonts/the-power-of-reduce).
 
     [fold]: https://docs.pola.rs/user-guide/expressions/folds/
     [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
@@ -292,15 +314,21 @@ class HorizontalFunction(Function, flags=ELEMENTWISE):
         return _import_horizontal_expr()
 
 
-class UnaryFunction(Function, dispatch="skip"):
+class Unary(Function, dispatch="skip"):
+    """A function that takes one expression argument."""
+
     __function_parameters__: ClassVar[params.Unary] = params.Unary()
 
 
-class BinaryFunction(Function, dispatch="skip"):
+class Binary(Function, dispatch="skip"):
+    """A function that takes two expression arguments."""
+
     __function_parameters__: ClassVar[params.Binary] = params.Binary()
 
 
-class TernaryFunction(Function, dispatch="skip"):
+class Ternary(Function, dispatch="skip"):
+    """A function that takes three expression arguments."""
+
     __function_parameters__: ClassVar[params.Ternary] = params.Ternary()
 
 

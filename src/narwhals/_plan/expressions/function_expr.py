@@ -45,14 +45,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._plan import _function as _f
     from narwhals._plan._expansion import Expander
-    from narwhals._plan._function import (
-        BinaryFunction,
-        Function,
-        HorizontalFunction,
-        TernaryFunction,
-        UnaryFunction,
-    )
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions.functions import AsStruct, MapBatches  # noqa: F401
     from narwhals._plan.expressions.struct import StructFunction
@@ -61,13 +55,10 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType, Struct
 
 FunctionT_co = TypeVar(
-    "FunctionT_co", bound="Function", default="Function", covariant=True
+    "FunctionT_co", bound="_f.Function", default="_f.Function", covariant=True
 )
 HorizontalT_co = TypeVar(
-    "HorizontalT_co",
-    bound="HorizontalFunction",
-    default="HorizontalFunction",
-    covariant=True,
+    "HorizontalT_co", bound="_f.Horizontal", default="_f.Horizontal", covariant=True
 )
 StructT_co = TypeVar(
     "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
@@ -207,7 +198,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(args=(root, *children))
 
     def dispatch_arg(
-        self: FunctionExpr[UnaryFunction],
+        self: FunctionExpr[_f.Unary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
@@ -230,28 +221,28 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 
     @overload
     def dispatch_args(
-        self: FunctionExpr[UnaryFunction],
+        self: FunctionExpr[_f.Unary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq1[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[BinaryFunction],
+        self: FunctionExpr[_f.Binary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq2[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[TernaryFunction],
+        self: FunctionExpr[_f.Ternary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq3[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[Function],
+        self: FunctionExpr[_f.Function],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
@@ -316,7 +307,7 @@ class AnonymousExpr(FunctionExpr["MapBatches"]):
     def flags(self) -> FunctionFlags:
         # NOTE: Why another `FunctionExpr` subclass?
         # - Every other `Function` has it's flags defined in `type[Function].__dict__`
-        # - `MapBatches` haccepts these hints from the caller and stores on the instance
+        # - `MapBatches` accepts these hints from the caller and stores on the instance
         #   so a common property at a higher level avoids a `__slots__` conflict
         return self.function.flags
 

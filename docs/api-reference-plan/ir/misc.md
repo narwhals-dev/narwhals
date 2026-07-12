@@ -47,10 +47,6 @@ somewhere less private
       members:
         - FunctionFlags
 
-<!-- 
-TODO @dangotbanned: Fix formatting
-TODO @dangotbanned: Docs contain an idea for rewriting them ffs
--->
 
 ::: narwhals._plan._dispatch
     options:
@@ -65,33 +61,17 @@ TODO @dangotbanned: Docs contain an idea for rewriting them ffs
           - NoDispatch
           - get_dispatch_name
 
-<!-- 
-TODO @dangotbanned: Fix formatting
--->
-
 ::: narwhals._plan._dtype
     options:
+      group_by_category: false
+      members_order: source
       members:
           - ResolveDType
           - _FunctionAccessor
           - _ExprIRAccessor
-          - GetDType
-          - JustDType
-          - ExprIRSameDType
-          - ExprIRMapFirst
-          - ExprIRVisitor
-          - FunctionVisitor
-          - FunctionSameDType
-          - FunctionMapFirst
-          - FunctionMapAll
           - IntoResolveDType
           - Visitor
 
-<!-- 
-TODO @dangotbanned: Module doc was due to be deleted, has bad formatting too
-TODO @dangotbanned: Fix `Expander`
-TODO @dangotbanned: Fix `prepare_projection`
--->
 
 ::: narwhals._plan._expansion
     options:
@@ -101,9 +81,6 @@ TODO @dangotbanned: Fix `prepare_projection`
         - parse_expand_selectors
         - Expander
 
-<!-- 
-TODO @dangotbanned: Fix formatting
--->
 
 ::: narwhals._plan._parameters
     options:
@@ -116,19 +93,11 @@ TODO @dangotbanned: Fix formatting
         - Constraint
         - Arity
 
-<!-- 
-TODO @dangotbanned: Fix formatting `closed_kwds` lists
--->
-
 ::: narwhals._plan.common
     options:
       members:
         - temp
         - closed_kwds
-
-<!-- 
-TODO @dangotbanned: Fix formatting `EWMOptions`, `VConcatOptions`
--->
 
 
 ::: narwhals._plan.options
@@ -148,9 +117,6 @@ TODO @dangotbanned: Fix formatting `EWMOptions`, `VConcatOptions`
         - JoinAsofOptions
         - UnpivotOptions
 
-<!-- 
-TODO @dangotbanned: Fix formatting `FrozenSchema` links
--->
 
 ::: narwhals._plan.schema
     options:
@@ -159,25 +125,3 @@ TODO @dangotbanned: Fix formatting `FrozenSchema` links
         - IntoSchema
         - IntoFrozenSchema
         - HasSchema
-
-<!-- 
-TODO @dangotbanned: Fix formatting `Plugin`
--->
-
-::: narwhals._plan.plugins
-    options:
-      members:
-        - Builtin
-        - Plugin
-        - manager
-        - load_plugin
-
-
-<!-- 
-TODO @dangotbanned: Remove misc notes
--->
-
-::: narwhals._plan.plugins._manager
-    options:
-      members:
-        - PluginManager

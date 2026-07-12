@@ -156,13 +156,13 @@ This is ~~supported~~ planned to be supported wherever a `backend` parameter is 
 IntoPlugin: TypeAlias = IntoBackend[Backend] | PluginName | Implementation
 """Anything that can be used to load a `Plugin`.
 
-This is a superset of [`IntoBackend`], adding support for external plugin names.
+This is a superset of [`narwhals.typing.IntoBackend`][], adding support for external plugin names.
 
 Important:
     `Implementation.UNKNOWN` is not accepted at runtime and *eventually* the
     *opaque* `Implementation` should be removed from this definition.
 
-[`IntoBackend`]: https://narwhals-dev.github.io/narwhals/api-reference/typing/#narwhals.typing.IntoBackend
+[`narwhals.typing.IntoBackend`]: https://narwhals-dev.github.io/narwhals/api-reference/typing/#narwhals.typing.IntoBackend
 """
 
 BuiltinAny: TypeAlias = "ArrowPlugin | PolarsPlugin"
