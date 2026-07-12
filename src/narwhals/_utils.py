@@ -60,6 +60,7 @@ from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
     InvalidOperationError,
+    PluginError,
     ShapeError,
 )
 
@@ -1626,25 +1627,25 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
-def _ensure_eager_capable(
+def _ensure_eager_allowed(
     namespace: Any, /, *, source: str, function_name: str
 ) -> EagerNamespaceAny:
-    """Duck-check that `namespace` implements the `EagerNamespace` protocol.
-
-    `_series` and `_dataframe` may be regular properties, missing entirely, or
-    `not_implemented` descriptors (which raise on instance access).
-    """
-    try:
-        eager_capable = namespace._series is not None and namespace._dataframe is not None
-    except (AttributeError, NotImplementedError):
-        eager_capable = False
-    if not eager_capable:
+    """Duck-check that `namespace` implements the `EagerNamespace` protocol."""
+    # NOTE: `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
+    # `not_implemented` descriptors, which exist statically but raise on instance
+    # access, so the statically-retrieved attribute is checked against `not_implemented`.
+    eager_allowed = all(
+        (attr := getattr_static(namespace, name, None)) is not None
+        and not isinstance(attr, not_implemented)
+        for name in ("_series", "_dataframe")
+    )
+    if not eager_allowed:
         msg = (
             f"Plugin backend {source!r} does not provide eager support (its "
             "compliant namespace does not implement the `EagerNamespace` protocol), "
             f"but `{function_name}` is an eager-only function."
         )
-        raise ValueError(msg)
+        raise PluginError(msg)
     return cast("EagerNamespaceAny", namespace)
 
 
@@ -1656,7 +1657,7 @@ def eager_namespace(
     function_name: str,
     hint_example: str,
 ) -> EagerNamespaceAny:
-    """Resolve `backend` to an eager-capable compliant namespace.
+    """Resolve `backend` to an eager-allowed compliant namespace.
 
     Built-in eager backends resolve directly. Anything unknown to `Implementation` is
     resolved via the plugin entry-point registry, in which case the plugin's
@@ -1683,7 +1684,7 @@ def eager_namespace(
 
     module = _backend_namespace(backend)
     namespace = _plugin_hook(module, "__narwhals_namespace__")(version=version)
-    return _ensure_eager_capable(
+    return _ensure_eager_allowed(
         namespace, source=module.__name__, function_name=function_name
     )
 
@@ -1697,7 +1698,7 @@ def eager_namespace_from_compliant(
     internally construct series use the namespace of the compliant object itself.
     """
     namespace = compliant_object.__narwhals_namespace__()
-    return _ensure_eager_capable(
+    return _ensure_eager_allowed(
         namespace, source=type(namespace).__name__, function_name=function_name
     )
 

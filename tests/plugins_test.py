@@ -9,6 +9,7 @@ import narwhals as nw
 import narwhals.stable.v1.dependencies as nw_v1_dependencies
 import narwhals.stable.v2.dependencies as nw_v2_dependencies
 from narwhals import dependencies as nw_dependencies
+from narwhals.exceptions import PluginError
 from tests.utils import PYARROW_VERSION
 
 plugin_module = pytest.importorskip("test_plugin")
@@ -198,9 +199,9 @@ def test_dataframe_filter_mask_plugin() -> None:
 def test_plugin_missing_io_hook(
     hook: str, call: Callable[[types.ModuleType], Any]
 ) -> None:
-    """A module without the required IO hook raises an informative AttributeError."""
+    """A module without the required IO hook raises an informative PluginError."""
     empty_namespace = types.ModuleType("empty_plugin")
-    with pytest.raises(AttributeError, match=f"expected to implement `{hook}` function"):
+    with pytest.raises(PluginError, match=f"expected to implement `{hook}` function"):
         call(empty_namespace)
 
 
@@ -208,7 +209,7 @@ def test_plugin_missing_narwhals_namespace() -> None:
     """Eager functions require the plugin to implement `__narwhals_namespace__`."""
     empty_namespace = types.ModuleType("empty_plugin")
     with pytest.raises(
-        AttributeError, match="expected to implement `__narwhals_namespace__`"
+        PluginError, match="expected to implement `__narwhals_namespace__`"
     ):
         nw.from_dict(DATA, backend=empty_namespace)
 
@@ -234,13 +235,13 @@ def _not_implemented_namespace() -> Any:
         lambda backend: nw.DataFrame.from_dict(DATA, backend=backend),
     ],
 )
-def test_plugin_not_eager_capable(
+def test_plugin_not_eager_allowed(
     call: Callable[[types.ModuleType], Any], make_namespace: Callable[[], Any]
 ) -> None:
     """Eager functions require an `EagerNamespace`-compliant plugin namespace."""
     lazy_plugin = types.ModuleType("lazy_plugin")
     lazy_plugin.__narwhals_namespace__ = lambda version: make_namespace()  # type: ignore[attr-defined]  # noqa: ARG005
-    with pytest.raises(ValueError, match="does not provide eager support"):
+    with pytest.raises(PluginError, match="does not provide eager support"):
         call(lazy_plugin)
 
 

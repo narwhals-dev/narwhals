@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._typing_compat import TypeVar
+from narwhals.exceptions import PluginError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -94,8 +95,8 @@ def _backend_namespace(backend: IntoBackend[Backend], /) -> ModuleType:
 def _plugin_hook(native_namespace: ModuleType, name: str, /) -> Any:
     """Fetch extension hook `name` from a plugin namespace, raising if missing."""
     if (hook := getattr(native_namespace, name, None)) is None:
-        msg = f"Unknown namespace is expected to implement `{name}` function."
-        raise AttributeError(msg)
+        msg = f"Plugin backend {native_namespace.__name__!r} is expected to implement `{name}` function."
+        raise PluginError(msg)
     return hook
 
 

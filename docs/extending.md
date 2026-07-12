@@ -78,7 +78,8 @@ There are two mechanisms, depending on the function:
     - `read_csv(source, separator=",", **kwargs)`, `scan_csv(source, separator=",", **kwargs)`
     - `read_parquet(source, **kwargs)`, `scan_parquet(source, **kwargs)`
 
-    If the required hook is missing, an informative `AttributeError` is raised.
+    If the required hook is missing, an informative
+    [`PluginError`](api-reference/exceptions.md) is raised.
 
 2. **Eager constructors** (`from_dict`, `from_dicts`, `from_numpy`, `from_arrow`,
    `new_series`, as well as the `DataFrame.from_*` and `Series.from_*` classmethods):
@@ -87,7 +88,8 @@ There are two mechanisms, depending on the function:
    (in particular the `_dataframe` and `_series` properties, and the `from_dict`,
    `from_dicts`, `from_numpy`, `from_arrow` and `from_iterable` constructors on the
    respective compliant classes), these functions work with no extra plugin code.
-   Lazy-only plugins get an informative `ValueError` instead.
+   Lazy-only plugins get an informative
+   [`PluginError`](api-reference/exceptions.md) instead.
 
 Methods which internally construct Series (for example `Series.scatter`, or
 `DataFrame.filter` with a list of booleans) use the compliant namespace of the object
