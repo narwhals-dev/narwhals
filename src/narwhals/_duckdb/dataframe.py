@@ -369,23 +369,43 @@ class DuckDBLazyFrame(
             msg = "Only 'backward' and 'forward' strategies are currently supported for DuckDB"
             raise NotImplementedError(msg)
         condition: Expression = reduce(and_, conditions)
-        select = ["lhs.*"]
-        for name in rhs.columns:
-            if name in lhs.columns and (
-                right_on is None or name not in {right_on, *by_right}
-            ):
-                select.append(f'rhs."{name}" as "{name}{suffix}"')
-            elif right_on is None or name not in {right_on, *by_right}:
-                select.append(str(col(name)))
-        # Replace with Python API call once
-        # https://github.com/duckdb/duckdb/discussions/16947 is addressed.
+
+        # DuckDB's relational API has no support for asof joins, so the join
+        # itself still has to go through raw SQL (replace with a Python API
+        # call once https://github.com/duckdb/duckdb/discussions/16947 is
+        # addressed). Columns from `rhs` that would collide with `lhs` are
+        # given a temporary unique name here, so that the suffixing below can
+        # be expressed the same way as in `join`, via `.select()` + `.alias()`,
+        # rather than by formatting the alias into the SQL text.
+        keep_cols = [name for name in rhs.columns if name not in {right_on, *by_right}]
+        tmp_names = {
+            name: generate_temporary_column_name(8, [*lhs.columns, *rhs.columns])
+            for name in keep_cols
+            if name in lhs.columns
+        }
+        rhs_select = ["lhs.*"]
+        rhs_select.extend(
+            f'rhs."{name}" as "{tmp_names[name]}"'
+            if name in tmp_names
+            else f'rhs."{name}"'
+            for name in keep_cols
+        )
         query = f"""
-            SELECT {",".join(select)}
+            SELECT {",".join(rhs_select)}
             FROM lhs
             ASOF LEFT JOIN rhs
             ON {condition}
             """  # noqa: S608
-        return self._with_native(duckdb.sql(query))
+        joined = duckdb.sql(query)
+
+        select = [col(name) for name in lhs.columns]
+        select.extend(
+            col(tmp_names[name]).alias(f"{name}{suffix}")
+            if name in tmp_names
+            else col(name)
+            for name in keep_cols
+        )
+        return self._with_native(joined.select(*select))
 
     def collect_schema(self) -> dict[str, DType]:
         return self.schema
