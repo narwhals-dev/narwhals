@@ -707,3 +707,23 @@ def test_schema_from_to_roundtrip() -> None:
     assert nw_schema_1 == nw_schema_2
     assert nw_schema_2 == nw_schema_3
     assert py_schema_1 == py_schema_2
+
+
+def test_schema_uninstantiated_dtypes() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3257
+    schema = nw.Schema({"a": nw.Int64, "b": nw.String(), "c": nw.Datetime})
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String(), "c": nw.Datetime()})
+    assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_tuples_uninstantiated_dtypes() -> None:
+    schema = nw.Schema([("a", nw.Int64), ("b", nw.String())])
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})
+    assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_generator() -> None:
+    schema = nw.Schema(
+        (name, dtype()) for name, dtype in [("a", nw.Int64), ("b", nw.String)]
+    )
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})

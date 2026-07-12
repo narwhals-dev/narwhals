@@ -37,6 +37,7 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     corr: Any = not_implemented()
     cov: Any = not_implemented()
     len: Any = not_implemented()
+    list: Any = not_implemented()
     lit: Any = not_implemented()
     all_horizontal: Any = not_implemented()
     any_horizontal: Any = not_implemented()

@@ -19,7 +19,7 @@ from narwhals._utils import (
     eager_namespace,
     flatten,
     is_nested_literal,
-    is_sequence_but_not_str,
+    is_sequence_of,
     normalize_path,
     supports_arrow_c_stream,
     validate_laziness,
@@ -33,6 +33,7 @@ from narwhals.dependencies import (
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.plugins import _backend_namespace, _plugin_hook
+from narwhals.schema import Schema
 from narwhals.translate import from_native, to_native
 
 if TYPE_CHECKING:
@@ -45,7 +46,6 @@ if TYPE_CHECKING:
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.dataframe import DataFrame, LazyFrame
-    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ConcatMethod,
@@ -227,7 +227,7 @@ def _new_series_impl(
 @deprecate_native_namespace(warn_version="1.26.0")
 def from_dict(
     data: Mapping[str, Any],
-    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
@@ -243,10 +243,11 @@ def from_dict(
 
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library. If
-            any `dtype` is `None`, the data type for that column will be inferred
-            by the native library.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            iterable of (name, type) tuples.
+            If not specified, the schema will be inferred by the native library.
+            If any `dtype` is `None`, the data type for that column will be
+            inferred by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
@@ -273,6 +274,7 @@ def from_dict(
     """
     if backend is None:
         data, backend = _from_dict_no_backend(data)
+    schema = dict(schema) if schema is not None else None
     if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
         msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
         raise InvalidOperationError(msg)
@@ -301,7 +303,7 @@ def _from_dict_no_backend(
 
 def from_dicts(
     data: Sequence[Mapping[str, Any]],
-    schema: IntoSchema | Mapping[str, DType | None] | None = None,
+    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
     backend: IntoBackend[EagerAllowed],
 ) -> DataFrame[Any]:
@@ -313,10 +315,11 @@ def from_dicts(
 
     Arguments:
         data: Sequence with dictionaries mapping column name to value.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library. If
-            any `dtype` is `None`, the data type for that column will be inferred
-            by the native library.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            iterable of (name, type) tuples.
+            If not specified, the schema will be inferred by the native library.
+            If any `dtype` is `None`, the data type for that column will be
+            inferred by the native library.
         backend: Specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
@@ -375,7 +378,8 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
+            of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
@@ -412,10 +416,12 @@ def from_numpy(
     if not _is_into_schema(schema):
         msg = (
             "`schema` is expected to be one of the following types: "
-            "IntoSchema | Sequence[str]. "
+            "Schema | Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Sequence[str].\n"
             f"Got {type(schema)}."
         )
         raise TypeError(msg)
+    if not (schema is None or is_sequence_of(schema, str)):
+        schema = Schema(schema)
     ns = eager_namespace(
         backend,
         version=Version.MAIN,
@@ -426,10 +432,10 @@ def from_numpy(
 
 
 def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
-    from narwhals.schema import Schema
-
     return (
-        obj is None or isinstance(obj, (Mapping, Schema)) or is_sequence_but_not_str(obj)
+        obj is None
+        or isinstance(obj, (Mapping, Schema))
+        or (isinstance(obj, Iterable) and not isinstance(obj, str))
     )
 
 
@@ -1917,4 +1923,44 @@ def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Ex
         ExprNode(
             ExprKind.ELEMENTWISE, "struct", exprs=flat_exprs, allow_multi_output=True
         )
+    )
+
+
+def list_(*exprs: IntoExpr | Sequence[IntoExpr]) -> Expr:
+    """Collect columns into a list column.
+
+    Arguments:
+        *exprs: Column(s) to collect into a list column, specified as
+            positional arguments. Accepts only expression input. Strings are parsed
+            as column names, other non-expression inputs are not allowed.
+
+    Examples:
+        >>> import polars as pl
+        >>> import narwhals as nw
+        >>>
+        >>> data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+        >>> df = nw.from_native(pl.DataFrame(data))
+        >>> df.with_columns(nw.list("a", "b").alias("a_b"))
+        ┌─────────────────────────┐
+        |   Narwhals DataFrame    |
+        |-------------------------|
+        |shape: (3, 3)            |
+        |┌─────┬─────┬───────────┐|
+        |│ a   ┆ b   ┆ a_b       │|
+        |│ --- ┆ --- ┆ ---       │|
+        |│ i64 ┆ i64 ┆ list[i64] │|
+        |╞═════╪═════╪═══════════╡|
+        |│ 1   ┆ 4   ┆ [1, 4]    │|
+        |│ 2   ┆ 5   ┆ [2, 5]    │|
+        |│ 3   ┆ 6   ┆ [3, 6]    │|
+        |└─────┴─────┴───────────┘|
+        └─────────────────────────┘
+    """
+    flat_exprs = [_parse_into_expr(e) for e in flatten(exprs)]
+    if not flat_exprs:
+        msg = "expected at least 1 expression in 'list'"
+        raise ValueError(msg)
+
+    return Expr(
+        ExprNode(ExprKind.ELEMENTWISE, "list", exprs=flat_exprs, allow_multi_output=True)
     )
