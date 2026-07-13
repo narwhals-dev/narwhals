@@ -73,6 +73,7 @@ class Series(Generic[NativeSeriesT_co]):
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
+    # TODO @dangotbanned: Introduce `PluginName` to `backend`
     @classmethod
     def from_iterable(
         cls: type[Series[Any]],
