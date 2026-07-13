@@ -569,10 +569,4 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.select(expr, StarExpression()))
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
-        _rel = self.native
-        query = f"""
-            COPY (SELECT * FROM _rel)
-            TO '{file}'
-            (FORMAT parquet)
-            """  # noqa: S608
-        duckdb.sql(query)
+        self.native.write_parquet(str(file))
