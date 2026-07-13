@@ -63,6 +63,7 @@ sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 [project.entry-points.'narwhals.plugins.plan']
 polars = "narwhals._plan.polars:plugin"
 pyarrow = "narwhals._plan.arrow:plugin"
+duckdb = "narwhals._plan.duckdb:plugin"
 
 [dependency-groups]
 core = [
