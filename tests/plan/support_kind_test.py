@@ -89,14 +89,13 @@ if TYPE_CHECKING:
         nwp.Series.from_iterable(name=n, values=v, backend=implementation_unknown)  # type: ignore[arg-type]
         nwp.Series.from_iterable(name=n, values=v, backend=fully_unknown)
 
-    # TODO @dangotbanned: Introduce `PluginName` to `backend`
     def typing_dataframe_from_dict(
         plugin_only: PluginName,  # OK
         eager_allowed: EagerAllowed,  # OK
-        eager_allowed_or_plugin: EagerAllowed | PluginName,  # OK (missing overload)
+        eager_allowed_or_plugin: EagerAllowed | PluginName,  # OK
         into_eager_allowed: IntoBackend[EagerAllowed],  # OK
         into_eager_allowed_or_plugin: IntoBackend[EagerAllowed]
-        | PluginName,  # OK (missing overload)
+        | PluginName,  # OK
         lazy_single: Literal["duckdb"],  # E
         lazy_only: LazyOnly,  # E
         lazy_only_literal: LazyOnlyLiteral,  # E
@@ -115,9 +114,9 @@ if TYPE_CHECKING:
 
         nwp.DataFrame.from_dict(data, backend=plugin_only)
         nwp.DataFrame.from_dict(data, backend=eager_allowed)
-        nwp.DataFrame.from_dict(data, backend=eager_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=eager_allowed_or_plugin)
         nwp.DataFrame.from_dict(data, backend=into_eager_allowed)
-        nwp.DataFrame.from_dict(data, backend=into_eager_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=into_eager_allowed_or_plugin)
         nwp.DataFrame.from_dict(data, backend=lazy_single)  # type: ignore[call-overload]
         nwp.DataFrame.from_dict(data, backend=lazy_only)  # type: ignore[call-overload]
         nwp.DataFrame.from_dict(data, backend=lazy_only_literal)  # type: ignore[call-overload]

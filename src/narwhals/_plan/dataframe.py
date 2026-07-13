@@ -357,7 +357,6 @@ class DataFrame(
     ) -> DataFrame[Any, Any]:
         return cls(translate.from_native_dataframe(native, version=cls._version))
 
-    # TODO @dangotbanned: Introduce `PluginName` to `backend`
     @overload
     @classmethod
     def from_dict(
@@ -399,7 +398,7 @@ class DataFrame(
         data: Mapping[str, Any],
         schema: IntoSchema | None = ...,
         *,
-        backend: PluginName,
+        backend: IntoBackend[EagerAllowed] | PluginName,
     ) -> DataFrame[Any, Any]: ...
     @classmethod
     def from_dict(
