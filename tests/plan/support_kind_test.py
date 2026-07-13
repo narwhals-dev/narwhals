@@ -30,7 +30,7 @@ def test_series_from_iterable_lazy_only() -> None:
     with pytest.raises(
         NotImplementedError, match=re.escape("`Series()` is not supported for 'duckdb'")
     ):
-        nwp.Series.from_iterable([1, 2, 3], backend=backend)  # type: ignore[arg-type]
+        nwp.Series.from_iterable([1, 2, 3], backend=backend)  # type: ignore[call-overload]
 
 
 # NOTE: We want this to continue warning
@@ -44,49 +44,52 @@ def test_dataframe_from_dict_lazy_only() -> None:
         nwp.DataFrame.from_dict({"a": (1, 2), "b": (3, 4)}, backend=backend)  # type: ignore[call-overload]
 
 
-# TODO @dangotbanned: All of this requires updating the source
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoPlugin, PluginName
     from narwhals._typing import LazyOnly, _LazyOnly as LazyOnlyLiteral
     from narwhals._utils import Implementation
     from narwhals.typing import EagerAllowed, IntoBackend, LazyAllowed
 
-    # TODO @dangotbanned: Introduce `PluginName` to `backend`
-    # TODO @dangotbanned: Add overloads like all the other constructors
     def typing_series_from_iterable(
-        plugin_only: PluginName,
-        eager_allowed: EagerAllowed,
-        eager_allowed_or_plugin: EagerAllowed | PluginName,
-        into_eager_allowed: IntoBackend[EagerAllowed],
-        into_eager_allowed_or_plugin: IntoBackend[EagerAllowed] | PluginName,
-        lazy_allowed: LazyAllowed,
-        lazy_allowed_or_plugin: LazyAllowed | PluginName,
-        into_lazy_allowed: IntoBackend[LazyAllowed],
+        plugin_only: PluginName,  # OK
+        eager_allowed: EagerAllowed,  # OK
+        eager_allowed_or_plugin: EagerAllowed | PluginName,  # OK
+        into_eager_allowed: IntoBackend[EagerAllowed],  # OK
+        into_eager_allowed_or_plugin: IntoBackend[EagerAllowed] | PluginName,  # OK
+        lazy_single: Literal["duckdb"],  # E
+        lazy_only: LazyOnly,  # E
+        lazy_only_literal: LazyOnlyLiteral,  # E
+        lazy_allowed: LazyAllowed,  # E
+        lazy_allowed_or_plugin: LazyAllowed | PluginName,  # E (caller must narrow first)
+        into_lazy_allowed: IntoBackend[LazyAllowed],  # E
         into_lazy_allowed_or_plugin: IntoBackend[LazyAllowed] | PluginName,
-        into_plugin: IntoPlugin,
-        dynamic_string: str,
-        disjoint_type: int,
-        implementation_opaque: Implementation,
-        implementation_unknown: Literal[Implementation.UNKNOWN],
-        fully_unknown: Any,
+        into_plugin: IntoPlugin,  # E (caller must narrow first)
+        dynamic_string: str,  # E
+        disjoint_type: int,  # E
+        implementation_opaque: Implementation,  # E (caller must narrow first)
+        implementation_unknown: Literal[Implementation.UNKNOWN],  # E
+        fully_unknown: Any,  # OK
     ) -> None:
         v = [1, 2, 3]
         n = "name"
 
-        nwp.Series.from_iterable(name=n, values=v, backend=plugin_only)  # type: ignore[arg-type]
+        nwp.Series.from_iterable(name=n, values=v, backend=plugin_only)
         nwp.Series.from_iterable(name=n, values=v, backend=eager_allowed)
-        nwp.Series.from_iterable(name=n, values=v, backend=eager_allowed_or_plugin)  # type: ignore[arg-type]
+        nwp.Series.from_iterable(name=n, values=v, backend=eager_allowed_or_plugin)
         nwp.Series.from_iterable(name=n, values=v, backend=into_eager_allowed)
-        nwp.Series.from_iterable(name=n, values=v, backend=into_eager_allowed_or_plugin)  # type: ignore[arg-type]
+        nwp.Series.from_iterable(name=n, values=v, backend=into_eager_allowed_or_plugin)
+        nwp.Series.from_iterable(name=n, values=v, backend=lazy_single)  # type: ignore[call-overload]
+        nwp.Series.from_iterable(name=n, values=v, backend=lazy_only)  # type: ignore[call-overload]
+        nwp.Series.from_iterable(name=n, values=v, backend=lazy_only_literal)  # type: ignore[call-overload]
         nwp.Series.from_iterable(name=n, values=v, backend=lazy_allowed)  # type: ignore[arg-type]
         nwp.Series.from_iterable(name=n, values=v, backend=lazy_allowed_or_plugin)  # type: ignore[arg-type]
         nwp.Series.from_iterable(name=n, values=v, backend=into_lazy_allowed)  # type: ignore[arg-type]
         nwp.Series.from_iterable(name=n, values=v, backend=into_lazy_allowed_or_plugin)  # type: ignore[arg-type]
         nwp.Series.from_iterable(name=n, values=v, backend=into_plugin)  # type: ignore[arg-type]
-        nwp.Series.from_iterable(name=n, values=v, backend=dynamic_string)  # type: ignore[arg-type]
-        nwp.Series.from_iterable(name=n, values=v, backend=disjoint_type)  # type: ignore[arg-type]
-        nwp.Series.from_iterable(name=n, values=v, backend=implementation_opaque)  # type: ignore[arg-type]
-        nwp.Series.from_iterable(name=n, values=v, backend=implementation_unknown)  # type: ignore[arg-type]
+        nwp.Series.from_iterable(name=n, values=v, backend=dynamic_string)  # type: ignore[call-overload]
+        nwp.Series.from_iterable(name=n, values=v, backend=disjoint_type)  # type: ignore[call-overload]
+        nwp.Series.from_iterable(name=n, values=v, backend=implementation_opaque)  # type: ignore[call-overload]
+        nwp.Series.from_iterable(name=n, values=v, backend=implementation_unknown)  # type: ignore[call-overload]
         nwp.Series.from_iterable(name=n, values=v, backend=fully_unknown)
 
     def typing_dataframe_from_dict(
@@ -94,8 +97,7 @@ if TYPE_CHECKING:
         eager_allowed: EagerAllowed,  # OK
         eager_allowed_or_plugin: EagerAllowed | PluginName,  # OK
         into_eager_allowed: IntoBackend[EagerAllowed],  # OK
-        into_eager_allowed_or_plugin: IntoBackend[EagerAllowed]
-        | PluginName,  # OK
+        into_eager_allowed_or_plugin: IntoBackend[EagerAllowed] | PluginName,  # OK
         lazy_single: Literal["duckdb"],  # E
         lazy_only: LazyOnly,  # E
         lazy_only_literal: LazyOnlyLiteral,  # E

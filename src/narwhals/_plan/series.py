@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, overload
 
 from narwhals._plan import plugins, translate
 from narwhals._plan._guards import is_series
@@ -10,6 +10,7 @@ from narwhals._plan.typing import (
     NativeSeriesT,
     NativeSeriesT_co,
     OneOrIterable,
+    PluginName,
     SeriesT,
 )
 from narwhals._utils import (
@@ -26,11 +27,12 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     import polars as pl
+    import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.dataframe import DataFrame
-    from narwhals._typing import EagerAllowed, IntoBackend
+    from narwhals._typing import Arrow, EagerAllowed, IntoBackend, Polars
     from narwhals.dtypes import DType
     from narwhals.schema import Schema
     from narwhals.typing import (
@@ -73,7 +75,36 @@ class Series(Generic[NativeSeriesT_co]):
     def __repr__(self) -> str:
         return generate_repr(f"nw.{type(self).__name__}", self.to_native().__repr__())
 
-    # TODO @dangotbanned: Introduce `PluginName` to `backend`
+    @overload
+    @classmethod
+    def from_iterable(
+        cls: type[Series[Any]],
+        values: Iterable[Any],
+        *,
+        name: str = ...,
+        dtype: IntoDType | None = ...,
+        backend: Arrow,
+    ) -> Series[pa.ChunkedArray[Any]]: ...
+    @overload
+    @classmethod
+    def from_iterable(
+        cls: type[Series[Any]],
+        values: Iterable[Any],
+        *,
+        name: str = ...,
+        dtype: IntoDType | None = ...,
+        backend: Polars,
+    ) -> Series[pl.Series]: ...
+    @overload
+    @classmethod
+    def from_iterable(
+        cls: type[Series[Any]],
+        values: Iterable[Any],
+        *,
+        name: str = ...,
+        dtype: IntoDType | None = ...,
+        backend: IntoBackend[EagerAllowed] | PluginName,
+    ) -> Series[Any]: ...
     @classmethod
     def from_iterable(
         cls: type[Series[Any]],
@@ -81,7 +112,7 @@ class Series(Generic[NativeSeriesT_co]):
         *,
         name: str = "",
         dtype: IntoDType | None = None,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed] | PluginName,
     ) -> Series[Any]:
         return cls(
             plugins.manager()
