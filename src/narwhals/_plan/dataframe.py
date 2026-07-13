@@ -379,15 +379,6 @@ class DataFrame(
     @classmethod
     def from_dict(
         cls: type[DataFrame[Any, Any]],
-        data: Mapping[str, Any],
-        schema: IntoSchema | None = ...,
-        *,
-        backend: IntoBackend[EagerAllowed],
-    ) -> DataFrame[Any, Any]: ...
-    @overload
-    @classmethod
-    def from_dict(
-        cls: type[DataFrame[Any, Any]],
         data: Mapping[str, Series[NativeSeriesT]],
         schema: IntoSchema | None = ...,
     ) -> DataFrame[Any, NativeSeriesT]: ...
