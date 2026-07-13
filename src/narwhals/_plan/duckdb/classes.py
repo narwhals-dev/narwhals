@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, TypeAlias
 
+from narwhals._plan.common import todo
 from narwhals._utils import Version
 
 if TYPE_CHECKING:
     from narwhals._plan.duckdb.expr import DuckDBExpr
     from narwhals._plan.duckdb.lazyframe import DuckDBEvaluator, DuckDBLazyFrame
+
 Incomplete: TypeAlias = Any
 
 
@@ -36,10 +38,5 @@ class DuckDBClasses:
     def scalar(self) -> type[DuckDBExpr]:
         return self.expr
 
-    @property
-    def v1(self) -> Any:
-        raise NotImplementedError
-
-    @property
-    def v2(self) -> Any:
-        raise NotImplementedError
+    v1: Incomplete = todo()
+    v2: Incomplete = todo()

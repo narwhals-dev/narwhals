@@ -254,7 +254,7 @@ def can_eager(obj: EagerClasses[DF, S, E, SC] | Any) -> TypeIs[EagerClasses[DF, 
 def can_eager(
     obj: EagerClasses[DF, S, E, SC] | EagerClassesVAll[C1, C2, DF, S, E, SC] | Any,
 ) -> TypeIs[EagerClasses[DF, S, E, SC]] | TypeIs[EagerClassesVAll[C1, C2, DF, S, E, SC]]:
-    return hasattrs_static(obj, "dataframe", "series")
+    return hasattrs_static(obj, "dataframe", "series", check_compliant_descriptors=True)
 
 
 # fmt: off
@@ -266,7 +266,9 @@ def can_lazy(obj: LazyClasses[LF, PE, E, SC] | Any) -> TypeIs[LazyClasses[LF, PE
 def can_lazy(
     obj: LazyClasses[LF, PE, E, SC] | LazyClassesVAll[C1, C2, LF, PE, E, SC] | Any,
 ) -> TypeIs[LazyClasses[LF, PE, E, SC]] | TypeIs[LazyClassesVAll[C1, C2, LF, PE, E, SC]]:
-    return hasattrs_static(obj, "lazyframe", "evaluator")
+    return hasattrs_static(
+        obj, "lazyframe", "evaluator", check_compliant_descriptors=True
+    )
 
 
 if MYPY:
@@ -282,7 +284,7 @@ if MYPY:
     def can_v1(
         obj: HasV1[C1] | HasV1[CB1] | Any,
     ) -> TypeIs[HasV1[C1]] | TypeIs[HasV1[CB1]]:
-        return hasattrs_static(obj, "v1")
+        return hasattrs_static(obj, "v1", check_compliant_descriptors=True)
 else:
 
     @overload
@@ -294,7 +296,7 @@ else:
     def can_v1(
         obj: HasV1[C1] | HasV1[CB1] | Any,
     ) -> TypeIs[HasV1[C1]] | TypeIs[HasV1[CB1]] | HasV1[C1 | CB1]:
-        return hasattrs_static(obj, "v1")
+        return hasattrs_static(obj, "v1", check_compliant_descriptors=True)
 
 
 if MYPY:
@@ -308,7 +310,7 @@ if MYPY:
     def can_v2(
         obj: HasV2[C2] | HasV2[CB2] | Any,
     ) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]]:
-        return hasattrs_static(obj, "v2")
+        return hasattrs_static(obj, "v2", check_compliant_descriptors=True)
 else:
 
     @overload
@@ -320,4 +322,4 @@ else:
     def can_v2(
         obj: HasV2[C2] | HasV2[CB2] | Any,
     ) -> TypeIs[HasV2[C2]] | TypeIs[HasV2[CB2]] | TypeIs[HasV2[C2 | CB2]]:
-        return hasattrs_static(obj, "v2")
+        return hasattrs_static(obj, "v2", check_compliant_descriptors=True)

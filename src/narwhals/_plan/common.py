@@ -11,7 +11,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Literal, TypeVar, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
-from narwhals._utils import qualified_type_name
+from narwhals._utils import not_implemented, qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
 from narwhals.typing import NonNestedDType
@@ -61,19 +61,32 @@ Important:
 
 
 def hasattrs_static(
-    obj: object | type, *attrs: Unpack[tuple[str, Unpack[tuple[str, ...]]]]
+    obj: object | type,
+    *attrs: Unpack[tuple[str, Unpack[tuple[str, ...]]]],
+    check_compliant_descriptors: bool = False,
 ) -> bool:
     """Check attributes exist without triggering dynamic lookup [^1].
 
     Arguments:
         obj: Target object or type.
         *attrs: One or more attribute names.
+        check_compliant_descriptors: If an attribute was returned, treat [`not_implemented`][narwhals._utils.not_implemented]
+            and [`todo`][] as is the name could not be found.
+
+            **Use this option only when `obj` is expected to be a `Compliant*` object.**
 
     Note:
         Reimplements `_utils._hasattr_static` to inline the `getattr_static` usage.
 
     [^1]: via `__get__`, `__getattr__` or `__getattribute__`
     """
+    if check_compliant_descriptors:
+        tps = (todo, not_implemented)
+        return all(
+            (member := (_getattr_static(obj, name, _SENTINEL))) is not _SENTINEL
+            and not (isinstance(member, tps))
+            for name in attrs
+        )
     return all(_getattr_static(obj, name, _SENTINEL) is not _SENTINEL for name in attrs)
 
 
