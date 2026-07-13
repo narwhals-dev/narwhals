@@ -564,7 +564,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """Instantiate DataFrame from dictionary.
 
         Indexes (if present, for pandas-like backends) are aligned following
-        the [left-hand-rule](../concepts/pandas_index.md/).
+        the [left-hand-rule](../concepts/pandas_index.md).
 
         Notes:
             For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -2077,7 +2077,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -2556,7 +2556,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import duckdb
