@@ -41,7 +41,7 @@ def test_dataframe_from_dict_lazy_only() -> None:
         NotImplementedError,
         match=re.escape("`DataFrame()` is not supported for 'duckdb'"),
     ):
-        nwp.DataFrame.from_dict({"a": (1, 2), "b": (3, 4)}, backend=backend)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict({"a": (1, 2), "b": (3, 4)}, backend=backend)  # type: ignore[call-overload]
 
 
 # TODO @dangotbanned: All of this requires updating the source
@@ -91,42 +91,43 @@ if TYPE_CHECKING:
 
     # TODO @dangotbanned: Introduce `PluginName` to `backend`
     def typing_dataframe_from_dict(
-        plugin_only: PluginName,
-        eager_allowed: EagerAllowed,
-        eager_allowed_or_plugin: EagerAllowed | PluginName,
-        into_eager_allowed: IntoBackend[EagerAllowed],
-        into_eager_allowed_or_plugin: IntoBackend[EagerAllowed] | PluginName,
-        lazy_single: Literal["duckdb"],
-        lazy_only: LazyOnly,
-        lazy_only_literal: LazyOnlyLiteral,
-        lazy_allowed: LazyAllowed,
-        lazy_allowed_or_plugin: LazyAllowed | PluginName,
-        into_lazy_allowed: IntoBackend[LazyAllowed],
+        plugin_only: PluginName,  # OK
+        eager_allowed: EagerAllowed,  # OK
+        eager_allowed_or_plugin: EagerAllowed | PluginName,  # OK (missing overload)
+        into_eager_allowed: IntoBackend[EagerAllowed],  # OK
+        into_eager_allowed_or_plugin: IntoBackend[EagerAllowed]
+        | PluginName,  # OK (missing overload)
+        lazy_single: Literal["duckdb"],  # E
+        lazy_only: LazyOnly,  # E
+        lazy_only_literal: LazyOnlyLiteral,  # E
+        lazy_allowed: LazyAllowed,  # E
+        lazy_allowed_or_plugin: LazyAllowed | PluginName,  # E (caller must narrow first)
+        into_lazy_allowed: IntoBackend[LazyAllowed],  # E
         into_lazy_allowed_or_plugin: IntoBackend[LazyAllowed] | PluginName,
-        into_plugin: IntoPlugin,
-        dynamic_string: str,
-        disjoint_type: int,
-        implementation_opaque: Implementation,
-        implementation_unknown: Literal[Implementation.UNKNOWN],
-        fully_unknown: Any,
+        into_plugin: IntoPlugin,  # E (caller must narrow first)
+        dynamic_string: str,  # E
+        disjoint_type: int,  # E
+        implementation_opaque: Implementation,  # E (caller must narrow first)
+        implementation_unknown: Literal[Implementation.UNKNOWN],  # E
+        fully_unknown: Any,  # OK
     ) -> None:
         data: dict[str, tuple[int, int]] = {"a": (1, 2), "b": (3, 4)}
 
-        nwp.DataFrame.from_dict(data, backend=plugin_only)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=plugin_only)
         nwp.DataFrame.from_dict(data, backend=eager_allowed)
         nwp.DataFrame.from_dict(data, backend=eager_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
         nwp.DataFrame.from_dict(data, backend=into_eager_allowed)
         nwp.DataFrame.from_dict(data, backend=into_eager_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=lazy_single)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=lazy_only)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=lazy_only_literal)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=lazy_allowed)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=lazy_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=into_lazy_allowed)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=into_lazy_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=into_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=dynamic_string)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=disjoint_type)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=implementation_opaque)  # pyright: ignore[reportArgumentType, reportCallIssue]
-        nwp.DataFrame.from_dict(data, backend=implementation_unknown)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=lazy_single)  # type: ignore[call-overload]
+        nwp.DataFrame.from_dict(data, backend=lazy_only)  # type: ignore[call-overload]
+        nwp.DataFrame.from_dict(data, backend=lazy_only_literal)  # type: ignore[call-overload]
+        nwp.DataFrame.from_dict(data, backend=lazy_allowed)  # type: ignore[arg-type]
+        nwp.DataFrame.from_dict(data, backend=lazy_allowed_or_plugin)  # type: ignore[arg-type]
+        nwp.DataFrame.from_dict(data, backend=into_lazy_allowed)  # type: ignore[arg-type]
+        nwp.DataFrame.from_dict(data, backend=into_lazy_allowed_or_plugin)  # type: ignore[arg-type]
+        nwp.DataFrame.from_dict(data, backend=into_plugin)  # type: ignore[arg-type]
+        nwp.DataFrame.from_dict(data, backend=dynamic_string)  # type: ignore[call-overload]
+        nwp.DataFrame.from_dict(data, backend=disjoint_type)  # type: ignore[call-overload]
+        nwp.DataFrame.from_dict(data, backend=implementation_opaque)  # type: ignore[call-overload]
+        nwp.DataFrame.from_dict(data, backend=implementation_unknown)  # type: ignore[call-overload]
         nwp.DataFrame.from_dict(data, backend=fully_unknown)

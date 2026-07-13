@@ -29,6 +29,7 @@ from narwhals._plan.typing import (
     NonCrossJoinStrategy,
     OneOrIterable,
     PartialSeries,
+    PluginName,
     Seq,
 )
 from narwhals._utils import (
@@ -391,13 +392,22 @@ class DataFrame(
         data: Mapping[str, Series[NativeSeriesT]],
         schema: IntoSchema | None = ...,
     ) -> DataFrame[Any, NativeSeriesT]: ...
+    @overload
+    @classmethod
+    def from_dict(
+        cls: type[DataFrame[Any, Any]],
+        data: Mapping[str, Any],
+        schema: IntoSchema | None = ...,
+        *,
+        backend: PluginName,
+    ) -> DataFrame[Any, Any]: ...
     @classmethod
     def from_dict(
         cls: type[DataFrame[Any, Any]],
         data: Mapping[str, Any],
         schema: IntoSchema | None = None,
         *,
-        backend: IntoBackend[EagerAllowed] | None = None,
+        backend: IntoBackend[EagerAllowed] | PluginName | None = None,
     ) -> DataFrame[Any, Any]:
         if backend is None:
             unwrapped: dict[str, NativeSeries | Any] = {}

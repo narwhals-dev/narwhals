@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import types
 from collections.abc import Callable, Container, Iterable
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, NewType
 
 from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
 from narwhals._typing import LazyOnly, PandasLike, _EagerAllowedImpl, _LazyAllowedImpl
@@ -12,8 +12,6 @@ from narwhals.typing import Backend, IntoBackend
 
 if TYPE_CHECKING:
     from typing import TypeAlias
-
-    from typing_extensions import LiteralString
 
     from narwhals._plan._expr_ir import ExprIR
     from narwhals._plan.arrow import ArrowPlugin
@@ -141,7 +139,7 @@ The excluded modules are equivalent to the names excluded in `narwhals._plan.typ
 This [isn't representable in the current type system](https://github.com/python/typing/issues/1039)
 """
 
-PluginName: TypeAlias = "LiteralString"
+PluginName = NewType("PluginName", str)
 """Name of a backend's [entry point].
 
 This is ~~supported~~ planned to be supported wherever a `backend` parameter is requested.
