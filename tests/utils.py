@@ -111,15 +111,13 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
         result = result.collect(**kwargs.get(result.implementation, {}))
 
-    if hasattr(result, "columns"):
-        for idx, (col, key) in enumerate(
-            zip(result.columns, list(expected.keys()), strict=True)
-        ):
-            assert col == key, f"Expected column name {key} at index {idx}, found {col}"
-    result = {key: _to_comparable_list(result[key]) for key in expected}
-    assert list(result.keys()) == list(expected.keys()), (
-        f"Result keys {result.keys()}, expected keys: {expected.keys()}"
+    result_keys = (
+        list(result.columns) if hasattr(result, "columns") else list(result.keys())
     )
+    assert result_keys == list(expected.keys()), (
+        f"Result keys {result_keys}, expected keys: {list(expected.keys())}"
+    )
+    result = {key: _to_comparable_list(result[key]) for key in expected}
 
     for key, expected_value in expected.items():
         result_value = result[key]
