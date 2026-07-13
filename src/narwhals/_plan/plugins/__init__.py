@@ -12,12 +12,9 @@ from narwhals._plan.compliant.plugins import Builtin, Plugin
 from narwhals._plan.plugins import _manager
 
 if TYPE_CHECKING:
-    from typing_extensions import Never
-
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import (
-        BackendTodo,
         BuiltinAny,
         IntoPlugin,
         NativeModuleType,
@@ -36,8 +33,6 @@ manager = _manager.PluginManager
 def load_plugin(backend: Arrow, /) -> ArrowPlugin: ...
 @overload
 def load_plugin(backend: Polars, /) -> PolarsPlugin: ...
-@overload
-def load_plugin(backend: BackendTodo, /) -> Never: ...
 @overload
 def load_plugin(backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
 @overload

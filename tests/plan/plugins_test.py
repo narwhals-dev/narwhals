@@ -9,8 +9,8 @@ import narwhals as nw
 import narwhals._plan as nwp
 import narwhals._plan.compliant.typing as ct
 from narwhals._plan.plugins import load_plugin, manager
+from narwhals._plan.typing import PluginName
 from narwhals._typing import Arrow, Polars
-from narwhals._typing_compat import assert_never
 from narwhals._utils import Implementation, Version
 from tests.plan.utils import re_compile
 from tests.utils import POLARS_VERSION
@@ -19,15 +19,16 @@ if TYPE_CHECKING:
     from collections.abc import Generator
     from typing import TypeAlias
 
-    from typing_extensions import LiteralString, assert_type
+    from typing_extensions import assert_type
 
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import CompliantDataFrame
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import BuiltinAny, IntoPlugin, PluginAny
+    from narwhals._typing_compat import assert_never
     from narwhals.typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 
-
+# pyright: reportUnnecessaryTypeIgnoreComment = error
 SupportedBackend: TypeAlias = Literal[Arrow, Polars]
 BuiltinName: TypeAlias = Literal["polars", "pyarrow"]
 BUILTIN_NAMES = ("polars", "pyarrow")
@@ -80,11 +81,15 @@ def test_load_builtin(eager: BuiltinName) -> None:
 
 def test_load_plugin_invalid() -> None:
     with pytest.raises(NotImplementedError, match=r"not yet"):
-        assert_never(load_plugin("modin"))
-    with pytest.raises(
-        TypeError, match=re_compile(r"Unsupported `backend` .+got: 'i dont exist'")
-    ):
-        load_plugin("i dont exist")
+        load_plugin("modin")  # type: ignore[call-overload]
+
+    pattern_bad = re_compile(r"Unsupported `backend` .+got: 'i dont exist'")
+    with pytest.raises(TypeError, match=pattern_bad):
+        load_plugin("i dont exist")  # type: ignore[call-overload]
+
+    # Should type check, but still fail at runtime
+    with pytest.raises(TypeError, match=pattern_bad):
+        load_plugin(PluginName("i dont exist"))
 
 
 def test_plugin_is_imported(plugin_unsafe: BuiltinAny) -> None:
@@ -225,7 +230,7 @@ if TYPE_CHECKING:
     from narwhals._plan.polars.classes import PolarsClasses
 
     def typing_load_plugin(
-        never_builtin: LiteralString,
+        never_builtin: PluginName,
         always_builtin_1: ModuleType,
         always_builtin_2: SupportedBackend,
         always_polars: Polars,
@@ -242,9 +247,7 @@ if TYPE_CHECKING:
         assert_type(manager().plugin(always_polars), PolarsPlugin)
         assert_type(manager().plugin(always_pyarrow), ArrowPlugin)
 
-        # Until `mypy` supports PEP 675 it won't report anything
-        # https://github.com/python/mypy/issues/12554
-        manager().plugin(too_dynamic)  # pyright: ignore[reportArgumentType, reportCallIssue] # pyrefly: ignore [no-matching-overload]
+        manager().plugin(too_dynamic)  # type: ignore[call-overload] # pyrefly: ignore [no-matching-overload]
 
         MYPY: Final = False  # noqa: N806
 
@@ -302,11 +305,11 @@ if TYPE_CHECKING:
     def typing_plugin_dogfood_implementation() -> None:
         polars_1 = manager().plugin("polars").implementation
         polars_2 = manager().plugin(polars_1)
-        assert_type(polars_2, Literal[Implementation.POLARS])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
+        assert_type(polars_2, Literal[Implementation.POLARS])  # type: ignore[assert-type]
 
         pyarrow_1 = manager().plugin("polars").implementation
         pyarrow_2 = manager().plugin(pyarrow_1)
-        assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type] # pyright: ignore[reportAssertTypeFailure]
+        assert_type(pyarrow_2, Literal[Implementation.PYARROW])  # type: ignore[assert-type]
 
     def typing_versioned_classes_lazy(backend: IntoPlugin) -> None:
         """`mypy` can only handle `assert_type` correctly on this one.

@@ -5,7 +5,7 @@ from collections.abc import Callable, Container, Iterable
 from typing import TYPE_CHECKING, Any, Literal, NewType
 
 from narwhals._native import NativeDataFrame, NativeFrame, NativeSeries
-from narwhals._typing import LazyOnly, PandasLike, _EagerAllowedImpl, _LazyAllowedImpl
+from narwhals._typing import _EagerAllowedImpl, _LazyAllowedImpl
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation
 from narwhals.typing import Backend, IntoBackend
@@ -110,7 +110,6 @@ On `main`, this works fine when running a type checker from the CLI - but causes
 intermittent warnings when running in a language server.
 """
 
-
 IncompleteVarianceLie: TypeAlias = Any
 """Placeholder for typing that would make a type parameter be [inferred] as invariant.
 
@@ -126,10 +125,6 @@ Defining `__init__` in a protocol is buggy, so `from_native` uses `Incomplete`.
 
 KnownImpl: TypeAlias = _EagerAllowedImpl | _LazyAllowedImpl
 """Equivalent to `Backend - BackendName`."""
-
-
-BackendTodo: TypeAlias = PandasLike | LazyOnly
-"""Backends that are not *yet* implemented in `narwhals._plan`."""
 
 NativeModuleType: TypeAlias = types.ModuleType
 """*Represents* a strict subset of what is accepted by `Implementation.from_native_namespace(...)`.

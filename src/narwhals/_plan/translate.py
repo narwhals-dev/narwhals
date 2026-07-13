@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         from_native_dispatch as singledispatch,
     )
     from narwhals._plan.typing import PluginAny, PluginName
+    from narwhals._typing import BackendName
 
 
 else:
@@ -94,7 +95,9 @@ class _FromNative(Generic[P, R_co]):
         raise TypeError(msg)
 
     @classmethod
-    def _rewrap_constructor(cls, plugin_name: PluginName) -> Callable[P, R_co]:
+    def _rewrap_constructor(
+        cls, plugin_name: PluginName | BackendName
+    ) -> Callable[P, R_co]:
         """Allows the new constructor to be generic over `Version`."""
         manager = PluginManager()
 

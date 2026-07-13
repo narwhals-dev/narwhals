@@ -15,7 +15,7 @@ from __future__ import annotations
 import functools
 import sys
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from narwhals._plan.common import hasattrs_static
 from narwhals._plan.compliant.classes import CB, C, HasClasses
@@ -28,20 +28,11 @@ from narwhals._utils import Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-    from typing import TypeAlias
 
     from typing_extensions import TypeIs
 
     from narwhals._plan.typing import KnownImpl, PluginName
     from narwhals._typing import BackendName
-
-    MYPY: Final = False
-    if MYPY:
-        # NOTE: Use this to avoid mypy's PEP 675 hack from blocking the feature
-        # https://github.com/python/mypy/issues/12554
-        LiteralString_: TypeAlias = Any
-    else:
-        from typing_extensions import LiteralString as LiteralString_
 
 
 __all__ = ("Builtin", "Implementation", "Plugin")
@@ -54,12 +45,12 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
     """
 
     __slots__ = ()
-    requirements: ClassVar[tuple[LiteralString_, ...]]
+    requirements: ClassVar[tuple[str, ...]]
     """One or more native package/module names which must be available to use this plugin."""
 
     # TODO @dangotbanned: (low-priority) Populate using `EntryPoint.name`?
     @property
-    def name(self) -> PluginName: ...
+    def name(self) -> PluginName | BackendName: ...
 
     def __hash__(self) -> int:
         # Each plugin must have a unique name

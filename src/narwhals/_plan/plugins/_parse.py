@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.typing import PluginAny, PluginName, Seq, VersionName
+    from narwhals._typing import BackendName
 
 
 Incomplete: TypeAlias = Any
@@ -90,7 +91,7 @@ class Unsupported(Immutable):
 
     __slots__ = ("feature", "plugin")
     feature: cc.PropertyName | VersionName
-    plugin: PluginName
+    plugin: PluginName | BackendName
     __repr__ = Immutable.__str__
     _REMAP_ERRORS: ClassVar[Mapping[cc.PropertyName | VersionName, LiteralString]] = {
         "dataframe": "DataFrame",
@@ -118,7 +119,7 @@ class Unsupported(Immutable):
 
     @staticmethod
     def fill_version(
-        version: VersionName, plugin: PluginName, /
+        version: VersionName, plugin: PluginName | BackendName, /
     ) -> ClassesProxyTD:  # pragma: no cover
         obj = Unsupported(feature=version, plugin=plugin)
         m: Any = dict.fromkeys(get_args(cc.PropertyName), obj)
@@ -155,7 +156,7 @@ class ClassesIR(Immutable):
         )
 
     def to_accessors(
-        self, plugin: PluginName, version: VersionName | None = None
+        self, plugin: PluginName | BackendName, version: VersionName | None = None
     ) -> ClassesProxyTD:
         """Convert this representation into a mapping of accessor functions."""
         it = cast("Iterator[tuple[cc.PropertyName, bool]]", self.__immutable_items__)
@@ -177,7 +178,7 @@ class PluginIR(Immutable):
     """Feature flags for a plugin, documenting class/version support."""
 
     __slots__ = ("name", "main", "v1", "v2", "translate")  # noqa: RUF023
-    name: PluginName
+    name: PluginName | BackendName
     main: ClassesIR
     v1: ClassesIR | Literal[False]
     v2: ClassesIR | Literal[False]

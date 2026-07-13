@@ -18,13 +18,12 @@ if TYPE_CHECKING:
 
     import polars as pl
     import pyarrow as pa
-    from typing_extensions import Never, TypeIs
+    from typing_extensions import TypeIs
 
     from narwhals._plan.arrow import ArrowPlugin
     from narwhals._plan.compliant import classes as cc, typing as ct
     from narwhals._plan.polars import PolarsPlugin
     from narwhals._plan.typing import (
-        BackendTodo,
         BuiltinAny,
         IntoPlugin,
         NativeModuleType,
@@ -34,6 +33,8 @@ if TYPE_CHECKING:
     )
     from narwhals._typing import Arrow, BackendName, Polars
     from narwhals.typing import Backend, IntoBackend
+
+    PluginNameAny: TypeAlias = BackendName | PluginName
 
 Incomplete: TypeAlias = Any
 
@@ -79,13 +80,13 @@ class PluginManager:
     # TODO @dangotbanned: Explain that `_discovered` is used destructively
     # NOTE: Maybe explain the flow/relationship between
     #   - `_discovered` -> `_loaded` -> `_parsed` -> `_registry`
-    _discovered: dict[PluginName, EntryPoint]
-    _loaded: dict[PluginName, PluginAny | BuiltinAny]
+    _discovered: dict[PluginNameAny, EntryPoint]
+    _loaded: dict[PluginNameAny, PluginAny | BuiltinAny]
 
-    _parsed: dict[PluginName, _parse.PluginIR]
+    _parsed: dict[PluginNameAny, _parse.PluginIR]
     """Details on what each plugin supports."""
 
-    _registry: dict[PluginName, _parse.RegEntry]
+    _registry: dict[PluginNameAny, _parse.RegEntry]
     """Rewrapped plugins, with error handling on unsupported features."""
 
     def __new__(cls) -> PluginManager:
@@ -95,7 +96,7 @@ class PluginManager:
             self = object.__new__(PluginManager)
             # NOTE: Need to lie about `LiteralString` because `str` leaks to all other usage
             _eps = {ep.name: ep for ep in _entry_points()}
-            self._discovered = cast("dict[PluginName, EntryPoint]", _eps)  # type: ignore[redundant-cast]
+            self._discovered = cast("dict[PluginNameAny, EntryPoint]", _eps)
             self._loaded = {}
             self._parsed = {}
             self._registry = {}
@@ -103,20 +104,20 @@ class PluginManager:
             return self
         return instance
 
-    def _plugin_load(self, name: PluginName, entry_point: EntryPoint, /) -> PluginAny:
+    def _plugin_load(self, name: PluginNameAny, entry_point: EntryPoint, /) -> PluginAny:
         # NOTE: Keeps `_plugin` and `_iter_plugins` in sync
         plugin: PluginAny
         self._loaded[name] = plugin = entry_point.load()
         return plugin
 
-    def _plugin_parse(self, name: PluginName, /) -> _parse.PluginIR:
+    def _plugin_parse(self, name: PluginNameAny, /) -> _parse.PluginIR:
         """Discover features supported by a plugin, without invoking native imports."""
         if parsed := self._parsed.get(name):
             return parsed
         self._parsed[name] = ir = _parse.PluginIR.from_plugin(self._plugin(name))
         return ir
 
-    def _plugin_entry(self, name: PluginName, /) -> _parse.RegEntry:
+    def _plugin_entry(self, name: PluginNameAny, /) -> _parse.RegEntry:
         """Lower a plugin into a proxy, providing error wrapping for missing features."""
         registry = self._registry
         if entry := registry.get(name):
@@ -125,7 +126,7 @@ class PluginManager:
         return entry
 
     # TODO @dangotbanned: Fix coverage sensitivity to test order
-    def _plugin(self, name: PluginName, /) -> PluginAny:
+    def _plugin(self, name: PluginNameAny, /) -> PluginAny:
         """Retrieve the plugin matching `name`.
 
         Raises:
@@ -167,8 +168,6 @@ class PluginManager:
     def plugin(self, backend: Arrow, /) -> ArrowPlugin: ...
     @overload
     def plugin(self, backend: Polars, /) -> PolarsPlugin: ...
-    @overload
-    def plugin(self, backend: BackendTodo, /) -> Never: ...
     @overload
     def plugin(self, backend: NativeModuleType | Arrow | Polars, /) -> BuiltinAny: ...
     @overload
