@@ -116,7 +116,7 @@ def test_plugin_can_import(plugin_unsafe: BuiltinAny) -> None:
 
 
 def test_plugin_manager_known() -> None:
-    assert sorted(manager().known()) == ["polars", "pyarrow"]
+    assert sorted(manager().known()) == ["polars", "pyarrow", "duckdb"]
 
 
 @pytest.mark.parametrize("version", Version)
