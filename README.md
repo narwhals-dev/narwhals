@@ -238,6 +238,7 @@ provided some funding / development time:
 - [OpenTeams](https://www.openteams.com)
 - [POSSEE initiative](https://possee.org)
 - [BYU-Idaho](https://www.byui.edu)
+- [Intella](https://www.intella.tech/)
 
 If you contribute to Narwhals on your organization's time, please let us know. We'd be happy to add your employer
 to this list!
