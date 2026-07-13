@@ -47,6 +47,7 @@ def test_dataframe_from_dict_lazy_only() -> None:
 # TODO @dangotbanned: All of this requires updating the source
 if TYPE_CHECKING:
     from narwhals._plan.typing import IntoPlugin, PluginName
+    from narwhals._typing import LazyOnly, _LazyOnly as LazyOnlyLiteral
     from narwhals._utils import Implementation
     from narwhals.typing import EagerAllowed, IntoBackend, LazyAllowed
 
@@ -95,6 +96,9 @@ if TYPE_CHECKING:
         eager_allowed_or_plugin: EagerAllowed | PluginName,
         into_eager_allowed: IntoBackend[EagerAllowed],
         into_eager_allowed_or_plugin: IntoBackend[EagerAllowed] | PluginName,
+        lazy_single: Literal["duckdb"],
+        lazy_only: LazyOnly,
+        lazy_only_literal: LazyOnlyLiteral,
         lazy_allowed: LazyAllowed,
         lazy_allowed_or_plugin: LazyAllowed | PluginName,
         into_lazy_allowed: IntoBackend[LazyAllowed],
@@ -113,6 +117,9 @@ if TYPE_CHECKING:
         nwp.DataFrame.from_dict(data, backend=eager_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
         nwp.DataFrame.from_dict(data, backend=into_eager_allowed)
         nwp.DataFrame.from_dict(data, backend=into_eager_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=lazy_single)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=lazy_only)  # pyright: ignore[reportArgumentType, reportCallIssue]
+        nwp.DataFrame.from_dict(data, backend=lazy_only_literal)  # pyright: ignore[reportArgumentType, reportCallIssue]
         nwp.DataFrame.from_dict(data, backend=lazy_allowed)  # pyright: ignore[reportArgumentType, reportCallIssue]
         nwp.DataFrame.from_dict(data, backend=lazy_allowed_or_plugin)  # pyright: ignore[reportArgumentType, reportCallIssue]
         nwp.DataFrame.from_dict(data, backend=into_lazy_allowed)  # pyright: ignore[reportArgumentType, reportCallIssue]
