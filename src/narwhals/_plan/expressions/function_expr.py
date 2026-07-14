@@ -1,5 +1,6 @@
 """`FunctionExpr` and friends.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 The default for implementing new expressions should be to add a new `Function`.
 It becomes an `ExprIR` when wrapping it via `FunctionExpr`.
@@ -22,6 +23,7 @@ Tip:
     If it doesn't look like one of those, it is probably a function
 
 [the remaining variants]: https://github.com/pola-rs/polars/blob/346a793589efd552a6c10c857e0f0434f7e9a7d4/crates/polars-plan/src/dsl/expr/mod.rs#L98-L224
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations
@@ -35,15 +37,7 @@ from narwhals._plan._dispatch import FunctionExprDispatch
 from narwhals._plan._expr_ir import ExprIR
 from narwhals._plan._flags import FunctionFlags
 from narwhals._plan._nodes import nodes
-from narwhals._plan.typing import (
-    FunctionT_co,
-    HorizontalT_co,
-    Seq,
-    Seq1,
-    Seq2,
-    Seq3,
-    StructT_co,
-)
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import unstable
 
 if TYPE_CHECKING:
@@ -51,17 +45,24 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from narwhals._plan import _function as _f
     from narwhals._plan._expansion import Expander
-    from narwhals._plan._function import (
-        BinaryFunction,
-        Function,
-        TernaryFunction,
-        UnaryFunction,
-    )
     from narwhals._plan.compliant import typing as ct
     from narwhals._plan.expressions.functions import AsStruct, MapBatches  # noqa: F401
+    from narwhals._plan.expressions.struct import StructFunction
     from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import Seq, Seq1, Seq2, Seq3
     from narwhals.dtypes import DType, Struct
+
+FunctionT_co = TypeVar(
+    "FunctionT_co", bound="_f.Function", default="_f.Function", covariant=True
+)
+HorizontalT_co = TypeVar(
+    "HorizontalT_co", bound="_f.Horizontal", default="_f.Horizontal", covariant=True
+)
+StructT_co = TypeVar(
+    "StructT_co", bound="StructFunction", default="StructFunction", covariant=True
+)
 
 
 class FunctionExpr(ExprIR, Generic[FunctionT_co]):
@@ -78,7 +79,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
         `function.to_function_expr(*args)`.
 
     See Also:
-        `narwhals._plan._function.Function`
+        [`Function`][narwhals._plan._function.Function]
 
     Examples:
         Typically, you'll create `FunctionExpr`s indirectly when calling methods on `Expr`:
@@ -197,7 +198,7 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
             yield self.__replace__(args=(root, *children))
 
     def dispatch_arg(
-        self: FunctionExpr[UnaryFunction],
+        self: FunctionExpr[_f.Unary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
@@ -220,28 +221,28 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 
     @overload
     def dispatch_args(
-        self: FunctionExpr[UnaryFunction],
+        self: FunctionExpr[_f.Unary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq1[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[BinaryFunction],
+        self: FunctionExpr[_f.Binary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq2[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[TernaryFunction],
+        self: FunctionExpr[_f.Ternary],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
     ) -> Seq3[ct.E | ct.SC]: ...
     @overload
     def dispatch_args(
-        self: FunctionExpr[Function],
+        self: FunctionExpr[_f.Function],
         ctx: ct.Caller[ct.E, ct.SC],
         frame: ct.FrameAny,
         name: str,
@@ -265,20 +266,24 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
     def explain(self, *, format: Literal["short", "long"] = "short") -> str:
         """Create a rich string representation of the expression.
 
-        >>> import narwhals._plan as nw
-        >>> a = nw.col("a")
-        >>> print(a.shift(5)._ir.explain())
-        FunctionExpr[Shift(n=5)]
-          Unary(DEFAULT)
-            col('a')
-          LENGTH_PRESERVING
+        Arguments:
+            format: _description_
 
-        >>> print(nw.int_range(nw.col("a").max())._ir.explain(format="long"))
-        FunctionExpr[IntRange(step=1, dtype=Int64)]
-          Binary(Constraint.SCALAR, Constraint.SCALAR)
-            lit(0)
-            col('a').max()
-          FunctionFlags.DEFAULT
+        Examples:
+            >>> import narwhals._plan as nw
+            >>> a = nw.col("a")
+            >>> print(a.shift(5)._ir.explain())
+            FunctionExpr[Shift(n=5)]
+              Unary(DEFAULT)
+                col('a')
+              LENGTH_PRESERVING
+
+            >>> print(nw.int_range(nw.col("a").max())._ir.explain(format="long"))
+            FunctionExpr[IntRange(step=1, dtype=Int64)]
+              Binary(Constraint.SCALAR, Constraint.SCALAR)
+                lit(0)
+                col('a').max()
+              FunctionFlags.DEFAULT
         """
         nl, parens = "\n", "()"
         indent = " " * 2
@@ -295,16 +300,14 @@ class FunctionExpr(ExprIR, Generic[FunctionT_co]):
 class AnonymousExpr(FunctionExpr["MapBatches"]):
     """A user-defined function expression.
 
-    Represents `map_batches`, but could later be adapted to support [`map_elements`].
-
-    [`map_elements`]: https://github.com/narwhals-dev/narwhals/issues/3512
+    Represents `map_batches`, but could later be adapted to support [`map_elements`](https://github.com/narwhals-dev/narwhals/issues/3512).
     """
 
     @property
     def flags(self) -> FunctionFlags:
         # NOTE: Why another `FunctionExpr` subclass?
         # - Every other `Function` has it's flags defined in `type[Function].__dict__`
-        # - `MapBatches` haccepts these hints from the caller and stores on the instance
+        # - `MapBatches` accepts these hints from the caller and stores on the instance
         #   so a common property at a higher level avoids a `__slots__` conflict
         return self.function.flags
 
@@ -314,36 +317,38 @@ class HorizontalExpr(FunctionExpr[HorizontalT_co]):
 
     Special cases of [fold] or [reduce].
 
+    [fold]: https://docs.pola.rs/user-guide/expressions/folds/
+    [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
+
     ## Examples
     Horizontal functions use different semantics when expanding selectors.
 
     Say we have the following schema:
-    >>> from tests.plan.utils import Frame
-    >>> import narwhals._plan as nw
 
-    >>> df = Frame.from_names("a", "b", "c")
-    >>> dict(df.schema)
-    {'a': Int64, 'b': Int64, 'c': Int64}
+        >>> from tests.plan.utils import Frame
+        >>> import narwhals._plan as nw
+        >>> df = Frame.from_names("a", "b", "c")
+        >>> dict(df.schema)
+        {'a': Int64, 'b': Int64, 'c': Int64}
 
     We expand multiple inputs into a single output:
-    >>> before = nw.sum_horizontal(nw.all())
-    >>> (reduced,) = df.project(before)
-    >>> before._ir
-    ncs.all().sum_horizontal()
-    >>> reduced
-    a=col('a').sum_horizontal([col('b'), col('c')])
+
+        >>> before = nw.sum_horizontal(nw.all())
+        >>> (reduced,) = df.project(before)
+        >>> before._ir
+        ncs.all().sum_horizontal()
+        >>> reduced
+        a=col('a').sum_horizontal([col('b'), col('c')])
 
     Whereas the more common form of expansion produces multiple outputs:
-    >>> before = nw.all().clip("b")
-    >>> before._ir
-    ncs.all().clip_lower([col('b')])
-    >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
-    (a=col('a').clip_lower([col('b')]),
-     b=col('b').clip_lower([col('b')]),
-     c=col('c').clip_lower([col('b')]))
 
-    [fold]: https://docs.pola.rs/user-guide/expressions/folds/
-    [reduce]: https://mathspp.com/blog/pydonts/the-power-of-reduce
+        >>> before = nw.all().clip("b")
+        >>> before._ir
+        ncs.all().clip_lower([col('b')])
+        >>> df.project(before)  # doctest: +NORMALIZE_WHITESPACE
+        (a=col('a').clip_lower([col('b')]),
+         b=col('b').clip_lower([col('b')]),
+         c=col('c').clip_lower([col('b')]))
     """
 
     iter_expand = ExprIR.iter_expand
@@ -368,36 +373,45 @@ class AsStructExpr(HorizontalExpr["AsStruct"]):
     r"""An expression that creates a new struct column.
 
     ## Examples
-    >>> import narwhals as nw
-    >>> import narwhals._plan as nwp
-    >>> from tests.plan.utils import Frame
-    >>> frame = Frame.from_mapping({"a": nw.Int64(), "b": nw.String(), "c": nw.Boolean()})
-    >>> expr = nwp.struct(nwp.col("a").alias("a_1"), nwp.nth(1).name.suffix("_2")).alias(
-    ...     "outer"
-    ... )
+    This one requires some ceremony to get started:
+
+        >>> import narwhals as nw
+        >>> import narwhals._plan as nwp
+        >>> from tests.plan.utils import Frame
+        >>> frame = Frame.from_mapping(
+        ...     {"a": nw.Int64(), "b": nw.String(), "c": nw.Boolean()}
+        ... )
+        >>> expr = nwp.struct(
+        ...     nwp.col("a").alias("a_1"), nwp.nth(1).name.suffix("_2")
+        ... ).alias("outer")
 
     `struct` is unique as it has two contexts:
-    >>> expr._ir
-    struct(col('a').alias('a_1'), ncs.by_index([1]).name.suffix('_2')).alias('outer')
+
+        >>> expr._ir
+        struct(col('a').alias('a_1'), ncs.by_index([1]).name.suffix('_2')).alias('outer')
 
     We start in a similar place to other variadic functions:
-    >>> print(type(expr._ir.expr).__name__)
-    HorizontalExpr
+
+        >>> print(type(expr._ir.expr).__name__)
+        HorizontalExpr
 
     But after expansion, we need to handle the inner and outer contexts independently:
-    >>> named_ir = frame.project(expr)[0]
-    >>> named_ir
-    outer=struct(col('a'), col('b'))
+
+        >>> named_ir = frame.project(expr)[0]
+        >>> named_ir
+        outer=struct(col('a'), col('b'))
 
     Our outer context resolves into a different class:
-    >>> resolved = named_ir.expr
-    >>> print(type(resolved).__name__)
-    AsStructExpr
+
+        >>> resolved = named_ir.expr
+        >>> print(type(resolved).__name__)
+        AsStructExpr
 
     And the output names of the fields are encoded into the dtype:
-    >>> print(*zip(resolved.args, resolved.dtype.fields), sep="\n")
-    (col('a'), Field('a_1', Int64))
-    (col('b'), Field('b_2', String))
+
+        >>> print(*zip(resolved.args, resolved.dtype.fields), sep="\n")
+        (col('a'), Field('a_1', Int64))
+        (col('b'), Field('b_2', String))
     """
 
     __slots__ = ("dtype",)

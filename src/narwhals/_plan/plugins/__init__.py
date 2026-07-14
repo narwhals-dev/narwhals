@@ -1,4 +1,8 @@
-"""Plugins API."""
+"""Plugins API.
+
+- All backends are implemented as a [`Plugin`][narwhals._plan.plugins.Plugin]
+- A plugin defined inside of Narwhals is a [`Builtin`][narwhals._plan.plugins.Builtin]
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,7 @@ if TYPE_CHECKING:
     )
     from narwhals._typing import Arrow, Polars
 
-__all__ = ("Builtin", "Plugin", "load_plugin", "manager")
+__all__ = ("Plugin", "Builtin", "load_plugin", "manager")  # noqa: RUF022
 
 manager = _manager.PluginManager
 
@@ -42,6 +46,11 @@ def load_plugin(backend: IntoPlugin, /) -> PluginAny:
     """Load the entry point to a backend.
 
     The returned object can be used to query availability.
-    For built-ins, this is always safe and *does not* import the native package.
+
+    Arguments:
+        backend: Anything that can be used to load a `Plugin`.
+
+    Important:
+        For built-ins, this is always safe and *does not* import the native package.
     """
     return manager().plugin(backend)

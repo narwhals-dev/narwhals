@@ -1,19 +1,13 @@
-# TODO @dangotbanned: (medium-priority) Module doc is a bit dated
-# - Does this still reflect current narwhals?
-# - Is this content useful to see here?
 """Expanding expressions/selectors.
 
-Based on [polars-plan/src/plans/conversion/expr_expansion.rs].
-
-## Notes
-- Goal is to expand every selection into a named column.
-- Most will require only the column names of the schema.
+<!-- NOTE: Very dated doc that I should probably turn into a *Why?* section
 
 ## Current `narwhals`
 As of [6e57eff4f059c748cf84ddcae276a74318720b85], many of the problems
 this module would solve *currently* have solutions distributed throughout `narwhals`.
 
 Their dependencies are **quite** complex, with the main ones being:
+
 - `CompliantExpr`
   - _evaluate_output_names
     - `CompliantSelector.__(sub|or|and|invert)__`
@@ -38,6 +32,7 @@ Their dependencies are **quite** complex, with the main ones being:
 
 [polars-plan/src/plans/conversion/expr_expansion.rs]: https://github.com/pola-rs/polars/blob/df4d21c30c2b383b651e194f8263244f2afaeda3/crates/polars-plan/src/plans/conversion/expr_expansion.rs
 [6e57eff4f059c748cf84ddcae276a74318720b85]: https://github.com/narwhals-dev/narwhals/commit/6e57eff4f059c748cf84ddcae276a74318720b85
+-->
 """
 
 from __future__ import annotations
@@ -75,13 +70,15 @@ def prepare_projection(
 
     Entry-point for a [projection context], which will execute the resolved expressions.
 
+    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
+
     Arguments:
         exprs: Expressions to project.
         ignored: Names of `group_by` key columns.
-            Required for projecting aggregations in `group_by`.
-        schema: Scope to expand selectors, validate selections and resolve renaming operations.
 
-    [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
+            Required when projecting aggregations in `group_by`.
+
+        schema: Scope to expand selectors, validate selections and resolve renaming operations.
     """
     expander = Expander(schema, ignored)
     projected, _ = expander.prepare_projection(exprs)
@@ -97,14 +94,18 @@ def expand_selectors(
 ) -> OutputNames:
     """Expand selectors into the column names that match.
 
-    Provides selector-support (widely) across frame-level APIs, where the full scope of
-    `prepare_projection` is not required.
+    Provides selector-support (widely) across frame-level APIs.
 
     Arguments:
         selectors: Exclusively selector-only input.
         schema: Scope to expand selectors in.
         require_any: If True (default) raise if the entire expansion selected zero columns.
             If False, we can always defer iterator collection until finishing expansion.
+
+    Tip:
+        As this is cheaper, prefer it to [`prepare_projection`][narwhals._plan._expansion.prepare_projection] when
+        all you need is fancy selection.
+
     """
     return Expander(schema).expand_selectors(selectors, require_any=require_any)
 
@@ -152,9 +153,7 @@ class Expander:
         ignored: Names of `group_by` key columns.
 
     Important:
-        Adapted from [upstream].
-
-    [upstream]: https://github.com/pola-rs/polars/blob/3291151b5a0e6fa82658cbad5f9b9c6aec3905a6/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs
+        Adapted from [upstream](https://github.com/pola-rs/polars/blob/3291151b5a0e6fa82658cbad5f9b9c6aec3905a6/crates/polars-plan/src/plans/conversion/dsl_to_ir/expr_expansion.rs).
     """
 
     __slots__ = ("ignored", "schema")

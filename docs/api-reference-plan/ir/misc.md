@@ -12,10 +12,23 @@ somewhere less private
         - ImmutableMeta
         - ExprIRMeta
 
-::: narwhals._plan._immutable
+::: narwhals._plan._immutable.Immutable
     options:
+      show_root_heading: true
+      show_root_full_path: false
       members:
-        - Immutable
+        - __immutable_keys__
+        - __immutable_values__
+        - __immutable_items__
+        - __immutable_hash__
+        - __copy__
+        - __deepcopy__
+        - __eq__
+        - __hash__
+        - __init__
+        -  __replace__
+        - __str__
+        - to_dict
 
 ::: narwhals._plan._nodes
     options:
@@ -34,6 +47,7 @@ somewhere less private
       members:
         - FunctionFlags
 
+
 ::: narwhals._plan._dispatch
     options:
       members_order: source
@@ -47,22 +61,14 @@ somewhere less private
           - NoDispatch
           - get_dispatch_name
 
-
 ::: narwhals._plan._dtype
     options:
+      group_by_category: false
+      members_order: source
       members:
           - ResolveDType
           - _FunctionAccessor
           - _ExprIRAccessor
-          - GetDType
-          - JustDType
-          - ExprIRSameDType
-          - ExprIRMapFirst
-          - ExprIRVisitor
-          - FunctionVisitor
-          - FunctionSameDType
-          - FunctionMapFirst
-          - FunctionMapAll
           - IntoResolveDType
           - Visitor
 
@@ -75,6 +81,7 @@ somewhere less private
         - parse_expand_selectors
         - Expander
 
+
 ::: narwhals._plan._parameters
     options:
       members:
@@ -85,7 +92,6 @@ somewhere less private
         - Variadic
         - Constraint
         - Arity
-
 
 ::: narwhals._plan.common
     options:
@@ -111,6 +117,7 @@ somewhere less private
         - JoinAsofOptions
         - UnpivotOptions
 
+
 ::: narwhals._plan.schema
     options:
       members:
@@ -118,17 +125,3 @@ somewhere less private
         - IntoSchema
         - IntoFrozenSchema
         - HasSchema
-
-
-::: narwhals._plan.plugins
-    options:
-      members:
-        - Builtin
-        - Plugin
-        - manager
-        - load_plugin
-
-::: narwhals._plan.plugins._manager
-    options:
-      members:
-        - PluginManager

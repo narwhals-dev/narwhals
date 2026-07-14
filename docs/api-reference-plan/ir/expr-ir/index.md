@@ -1,10 +1,10 @@
 # ExprIR
 
-<!-- TODO @dangotbanned: Fix examples markdown-->
 <!-- TODO @dangotbanned: Use `Col`, `LenStar` directly (aliases display without docs)-->
 ::: narwhals._plan.expressions
     options:
       group_by_category: false
+      members_order: source
       members:
         - ExprIR
         - Column

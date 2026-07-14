@@ -4,15 +4,11 @@
 https://github.com/narwhals-dev/narwhals/blob/d58d05a9b1435f01d3497571f1869bf6e890b12a/src/narwhals/_plan/expressions/functions.py#L3-L5
 -->
 
+<!-- TODO @dangotbanned: The trick for no parameters isn't working for inherited `**kwds`-->
+
 ::: narwhals._plan._function
     options:
       members_order: source
-      members:
-        - Function
-        - UnaryFunction
-        - BinaryFunction
-        - TernaryFunction
-        - HorizontalFunction
 
 
 ::: narwhals._plan.expressions.functions

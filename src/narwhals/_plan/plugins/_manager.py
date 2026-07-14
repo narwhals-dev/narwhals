@@ -71,15 +71,7 @@ def _entry_points() -> EntryPoints:
 # TODO @dangotbanned: Add somewhere for unreachable plugins to live (and exclude from collecting more info)
 @final
 class PluginManager:
-    """Singleton plugin manager.
-
-    ## Notes
-    - if there is state, how can we avoid knowledge of that leaking everywhere?
-    - it's okay for state to exist
-    - but shouldn't be something the caller has to deal with
-        - parsing/error handling stays within it
-        - maybe allow providing an error message on fail
-    """
+    """Singleton plugin manager."""
 
     __slots__ = ("_discovered", "_loaded", "_parsed", "_registry")
     __instance: ClassVar[Any | None] = None
@@ -190,7 +182,6 @@ class PluginManager:
 
         Arguments:
             backend: Anything that can be used to load a `Plugin`.
-                See `IntoPlugin`, `IntoBackend`.
 
         Raises:
             NotImplementedError: If a `Implementation | ModuleType` produced `Implementation.UNKNOWN`.
@@ -224,7 +215,12 @@ class PluginManager:
     def dataframe(
         self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.DataFrameAny]:
-        """Import the `CompliantDataFrame` class from `backend` at `version`."""
+        """Import the `CompliantDataFrame` class from `backend` at `version`.
+
+        Arguments:
+            backend: Anything that can be used to load a `Plugin`.
+            version: The version of the class to use.
+        """
         return self._import_class("dataframe", backend, version)
 
     @overload
@@ -238,7 +234,12 @@ class PluginManager:
     @overload
     def series(self, backend: IntoPlugin, /, version: Version) -> type[ct.SeriesAny]: ...
     def series(self, backend: IntoPlugin, /, version: Version) -> type[ct.SeriesAny]:
-        """Import the `CompliantSeries` class from `backend` at `version`."""
+        """Import the `CompliantSeries` class from `backend` at `version`.
+
+        Arguments:
+            backend: Anything that can be used to load a `Plugin`.
+            version: The version of the class to use.
+        """
         return self._import_class("series", backend, version)
 
     @overload
@@ -252,7 +253,12 @@ class PluginManager:
     def lazyframe(
         self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.LazyFrameAny]:
-        """Import the `LazyFrame` class from `backend` at `version`."""
+        """Import the `LazyFrame` class from `backend` at `version`.
+
+        Arguments:
+            backend: Anything that can be used to load a `Plugin`.
+            version: The version of the class to use.
+        """
         return self._import_class("lazyframe", backend, version)
 
     @overload
@@ -266,11 +272,20 @@ class PluginManager:
     def evaluator(
         self, backend: IntoPlugin, /, version: Version
     ) -> type[ct.PlanEvaluatorAny]:
-        """Import the `PlanEvaluator` class from `backend` at `version`."""
+        """Import the `PlanEvaluator` class from `backend` at `version`.
+
+        Arguments:
+            backend: Anything that can be used to load a `Plugin`.
+            version: The version of the class to use.
+        """
         return self._import_class("evaluator", backend, version)
 
     def import_modules(self, backend: IntoPlugin, /) -> None:
-        """Import the requirements for `backend`."""
+        """Import the requirements for `backend`.
+
+        Arguments:
+            backend: Anything that can be used to load a `Plugin`.
+        """
         plugin = self.plugin(backend)
         if not plugin.is_imported():
             if not plugin.can_import():
