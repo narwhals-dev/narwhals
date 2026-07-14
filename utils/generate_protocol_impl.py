@@ -35,13 +35,18 @@ IMPORT_DESCRIPTOR: Mapping[PlaceholderDescriptor, LiteralString] = {
 #   - [ ] Even better, use classes
 # TODO @dangotbanned: Option for running through `ruff`
 # - Adapt what was started in `simplify-check-docstrings`
+# TODO @dangotbanned: Account for inherited implementations
+# TODO @dangotbanned: Default `version = Version.MAIN`
+# TODO @dangotbanned: Option for `implementation` (maybe default to `Implementation.Unknown`)
 def generate_protocol_impl(
     target_name: LiteralString,
     tp_protocol: type,
     /,
     *,
-    placeholder_descriptor: PlaceholderDescriptor = "not_implemented",
+    placeholder_descriptor: PlaceholderDescriptor = "todo",
     placeholder_alias: LiteralString = "Incomplete",
+    type_ignore_property: LiteralString = "# pyright: ignore[reportIncompatibleMethodOverride, reportAssignmentType]",
+    slots: Literal["empty", "none"] | tuple[str, ...] = "empty",
 ) -> str:
     """Generate the boilerplate for a new protocol implementation.
 
@@ -53,6 +58,8 @@ def generate_protocol_impl(
         tp_protocol: Protocol to implement (`typing_extensions.TypeForm[<Protocol?>]`)
         placeholder_descriptor: Name of existing descriptor to mark unimplemented members.
         placeholder_alias: Name of new type alias to mark unimplemented types.
+        type_ignore_property: Comment to add when overriding a property with a placeholder descriptor.
+        slots: Add an empty `__slots__` definition (default), add specific slots, or do not define them.
 
     Returns:
         The module definition as a string.
@@ -66,14 +73,16 @@ def generate_protocol_impl(
     sections["runtime"].extend(("from __future__ import annotations", ""))
     if params := getattr(tp_protocol, "__parameters__", ()):
         sections["runtime"].append("from typing import TYPE_CHECKING, Any")
-        sections["typing"].append("from typing_extensions import TypeAlias")
+        sections["typing"].append("from typing import TypeAlias")
         aliases[placeholder_alias] = "Any"
         tp_params_subscript = f"[{', '.join((placeholder_alias,) * len(params))}]"
     import_protocol = f"from {tp_protocol.__module__} import {tp_protocol.__name__}"
     descriptor = placeholder_descriptor
     sections["runtime"].extend((import_protocol, IMPORT_DESCRIPTOR[descriptor]))
 
-    if impl := NL.join(_iter_members_lines(tp_protocol, descriptor)):
+    if impl := NL.join(
+        _iter_members_lines(tp_protocol, descriptor, type_ignore_property, slots=slots)
+    ):
         impl = f"\n{impl}"
     return (
         f"{NL.join(_iter_import_lines(sections))}\n\n"
@@ -96,7 +105,11 @@ def _iter_alias_lines(aliases: Mapping[str, str]) -> Iterator[str]:
 
 
 def _iter_members_lines(
-    tp_protocol: type, placeholder_descriptor: PlaceholderDescriptor
+    tp_protocol: type,
+    placeholder_descriptor: PlaceholderDescriptor,
+    type_ignore_property: LiteralString,
+    *,
+    slots: Literal["empty", "none"] | tuple[str, ...],
 ) -> Iterator[str]:
     # inline import so this module is safe to import from anywhere
     if sys.version_info >= (3, 13):
@@ -106,6 +119,10 @@ def _iter_members_lines(
 
     members = get_protocol_members(tp_protocol)
     template = f"{INDENT}{{name}} = {placeholder_descriptor}()"
+    if slots == "empty":
+        yield f"{INDENT}__slots__ = ()"
+    elif slots != "none":
+        yield f"{INDENT}__slots__ = {slots!r}"
     if members_property := inspect.getmembers(
         tp_protocol, lambda x: isinstance(x, property)
     ):
@@ -114,7 +131,7 @@ def _iter_members_lines(
             yield template.format(name=name)
         yield ""
         for name in prop_names:
-            yield f"{INDENT}{name} = {placeholder_descriptor}()  # type: ignore[assignment]"
+            yield f"{INDENT}{name} = {placeholder_descriptor}()  {type_ignore_property}"
     else:
         for name in sorted(members):
             yield template.format(name=name)
