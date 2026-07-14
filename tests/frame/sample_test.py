@@ -73,5 +73,10 @@ def test_sample_with_seed(constructor_eager: ConstructorEager) -> None:
     r2 = nw.to_native(df.sample(n=n, seed=123))
     r3 = nw.to_native(df.sample(n=n, seed=42))
 
-    assert r1.equals(r2)  # type: ignore[attr-defined]
-    assert not r1.equals(r3)  # type: ignore[attr-defined]
+    if isinstance(r1, dict):
+        # plain-dict natives (e.g. the narwhals-dict plugin) compare by value
+        assert r1 == r2
+        assert r1 != r3
+    else:
+        assert r1.equals(r2)  # type: ignore[attr-defined]
+        assert not r1.equals(r3)  # type: ignore[attr-defined]

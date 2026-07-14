@@ -291,6 +291,21 @@ class DictNamespace(
 
         return self._binary_scalar_expr(a, b, covariance)
 
+    def list(self, *exprs: DictExpr) -> DictExpr:
+        def func(df: DictDataFrame) -> list[DictSeries]:
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            aligned = self._series._align_full_broadcast(*series)
+            columns = [s.native for s in aligned]
+            result = [list(row) for row in zip(*columns, strict=True)]
+            return [aligned[0]._with_native(result)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def struct(self, *exprs: DictExpr) -> DictExpr:
         def func(df: DictDataFrame) -> list[DictSeries]:
             series = list(chain.from_iterable(expr(df) for expr in exprs))

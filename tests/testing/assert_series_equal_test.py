@@ -393,6 +393,11 @@ def test_categorical_as_str(
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
+    if "dict" in str(constructor_eager) and not categorical_as_str:
+        # the dict plugin stores categoricals as plain strings: there is no
+        # physical encoding to differ.
+        request.applymarker(pytest.mark.xfail)
+
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
         15,
         0,

@@ -9,13 +9,13 @@ from functools import lru_cache
 from itertools import islice
 from typing import TYPE_CHECKING, Any, cast
 
+from narwhals._utils import Version, isinstance_or_issubclass
 from narwhals.dependencies import get_numpy
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from narwhals._utils import Version
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType, TimeUnit
     from narwhals_dict.typing import NativeSeries
@@ -97,7 +97,11 @@ def native_to_narwhals_dtype(native_dtype: type[Any], version: Version) -> DType
     for py_type, dtype_name in _PY_TYPE_TO_DTYPE_NAME:
         if issubclass(native_dtype, py_type):
             return getattr(dtypes, dtype_name)()
-    return dtypes.Unknown()
+    # Unrecognized Python types are still valid *values* (e.g. arbitrary user
+    # classes), which every backend reports as Object. `Unknown` is reserved
+    # for columns where no type information exists at all (empty/all-null) or
+    # where the sampled values disagree (`infer_dtype`).
+    return dtypes.Object()
 
 
 def _dtype_of_value(value: Any, version: Version) -> DType:
@@ -186,12 +190,30 @@ def _nw_to_py_types(version: Version) -> Mapping[type[DType], type[Any]]:
     }
 
 
+def _enum_categories(dtype: Any, version: Version) -> tuple[str, ...]:
+    """Validate an `Enum` cast target (instance or bare class) and return its categories.
+
+    Mirrors the checks every narwhals backend performs before touching the
+    dtype: `stable.v1` has no parametrized `Enum`, and the bare `Enum` class
+    carries no categories to cast to.
+    """
+    if version is Version.V1:
+        msg = "Converting to Enum is not supported in narwhals.stable.v1"
+        raise NotImplementedError(msg)
+    if isinstance(dtype, type):
+        # ValueError (not TypeError) to match the message every other backend
+        # raises for a bare `Enum` cast target.
+        msg = "Can not cast / initialize Enum without categories present"
+        raise ValueError(msg)  # noqa: TRY004
+    return dtype.categories
+
+
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> type[Any]:
     """Map a Narwhals dtype to the native (Python) type used to represent it."""
     dtypes = version.dtypes
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        return _enum_class(_enum_categories(dtype, version))
     dtype = _as_instance(dtype)
-    if isinstance(dtype, dtypes.Enum):
-        return _enum_class(dtype.categories)
     if py_type := _nw_to_py_types(version).get(dtype.base_type()):
         return py_type
     if dtype.is_integer():
@@ -253,23 +275,23 @@ def _to_str(value: Any) -> str:
     return str(value)
 
 
-def _check_time_unit(time_unit: TimeUnit, dtype: DType) -> int:
-    if time_unit not in MICROSECONDS_PER_UNIT:
-        msg = (
-            f"Casting to {dtype} is not supported for the dict backend: "
-            "Python datetime objects are microsecond-precision."
-        )
-        raise NotImplementedError(msg)
-    return MICROSECONDS_PER_UNIT[time_unit]
+def _int_to_us(value: int, time_unit: TimeUnit) -> int:
+    """Whole microseconds for an integer timestamp/duration expressed in `time_unit`.
+
+    Nanoseconds truncate toward zero, like Polars' temporal downscaling.
+    """
+    if time_unit == "ns":
+        return trunc_div(value, 1_000)
+    return value * MICROSECONDS_PER_UNIT[time_unit]
 
 
-def _coerce_to_datetime(value: Any, us_per_unit: int, dtype: DType) -> datetime:
+def _coerce_to_datetime(value: Any, time_unit: TimeUnit, dtype: DType) -> datetime:
     if isinstance(value, datetime):
         return value
     if isinstance(value, date):
         return datetime(value.year, value.month, value.day)
     if isinstance(value, int):
-        return EPOCH_NAIVE + timedelta(microseconds=value * us_per_unit)
+        return EPOCH_NAIVE + timedelta(microseconds=_int_to_us(value, time_unit))
     if isinstance(value, str):
         try:
             return datetime.fromisoformat(value)
@@ -294,11 +316,10 @@ def _datetime_caster(
 ) -> Callable[[Any], datetime]:
     from zoneinfo import ZoneInfo
 
-    us_per_unit = _check_time_unit(time_unit, dtype)
     target_tz = ZoneInfo(time_zone) if time_zone is not None else None
 
     def caster(value: Any) -> datetime:
-        result = _coerce_to_datetime(value, us_per_unit, dtype)
+        result = _coerce_to_datetime(value, time_unit, dtype)
         # Physical values are UTC-based: attaching/removing a time zone converts.
         if target_tz is not None:
             result = (
@@ -314,14 +335,15 @@ def _datetime_caster(
 
 
 def _duration_caster(time_unit: TimeUnit, dtype: DType) -> Callable[[Any], timedelta]:
-    us_per_unit = _check_time_unit(time_unit, dtype)
+    # `ns` is finer than the stored microseconds: nothing to truncate.
+    us_per_unit = MICROSECONDS_PER_UNIT.get(time_unit, 1)
 
     def caster(value: Any) -> timedelta:
         if isinstance(value, timedelta):
             us = trunc_div(timedelta_to_us(value), us_per_unit) * us_per_unit
             return timedelta(microseconds=us)
         if isinstance(value, int):
-            return timedelta(microseconds=value * us_per_unit)
+            return timedelta(microseconds=_int_to_us(value, time_unit))
         msg = f"Casting {type(value).__name__!r} values to {dtype} is not supported."
         raise InvalidOperationError(msg)
 
@@ -488,6 +510,10 @@ def _simple_casters(version: Version) -> Mapping[type[DType], Callable[[Any], An
 
 def _caster_for(dtype: IntoDType, version: Version) -> Callable[[Any], Any]:
     dtypes = version.dtypes
+    if isinstance_or_issubclass(dtype, dtypes.Enum):
+        # Before `_as_instance`: the bare `Enum` class cannot be instantiated
+        # without categories, and must raise the shared narwhals messages.
+        return _enum_caster(_enum_categories(dtype, version))
     dtype = _as_instance(dtype)
     if caster := _simple_casters(version).get(dtype.base_type()):
         return caster
@@ -497,8 +523,6 @@ def _caster_for(dtype: IntoDType, version: Version) -> Callable[[Any], Any]:
         return float
     if isinstance(dtype, dtypes.Decimal):
         return _decimal_caster(dtype.precision, dtype.scale)
-    if isinstance(dtype, dtypes.Enum):
-        return _enum_caster(dtype.categories)
     if isinstance(dtype, dtypes.Datetime):
         return _datetime_caster(dtype.time_unit, dtype.time_zone, dtype)
     if isinstance(dtype, dtypes.Duration):
