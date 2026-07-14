@@ -585,6 +585,9 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        if length < 0:
+            msg = f"`length` must be non-negative, got: {length}"
+            raise InvalidOperationError(msg)
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -615,6 +618,9 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        if length < 0:
+            msg = f"`length` must be non-negative, got: {length}"
+            raise InvalidOperationError(msg)
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char
