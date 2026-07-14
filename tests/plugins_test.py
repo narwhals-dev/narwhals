@@ -8,10 +8,12 @@ import narwhals as nw
 import narwhals.stable.v1.dependencies as nw_v1_dependencies
 import narwhals.stable.v2.dependencies as nw_v2_dependencies
 from narwhals import dependencies as nw_dependencies
+from narwhals._typing import PluginName
 
 if TYPE_CHECKING:
     from typing_extensions import Self
 
+    from narwhals._typing import IntoBackendEager
     from narwhals.plugins import Plugin
     from narwhals.utils import Version
 
@@ -132,3 +134,40 @@ def test_typing() -> None:
     import test_plugin
 
     _plugin: Plugin = test_plugin
+
+
+def test_plugin_name_runtime() -> None:
+    # `PluginName` is a `NewType`: identity at runtime, nominal for type checkers.
+    name = PluginName("some-plugin")
+    assert name == "some-plugin"
+    assert nw.Implementation.from_backend(name) is nw.Implementation.UNKNOWN
+
+
+if TYPE_CHECKING:
+    # Static-only regression guards for `PluginName`
+    def typing_backend_plugin_name(
+        plugin_name: PluginName,
+        dynamic_string: str,
+        eager_or_plugin: IntoBackendEager,
+        df: nw.DataFrame[Any],
+    ) -> None:
+        data = {"a": [1, 2]}
+
+        # Accepted: an explicitly wrapped plugin name, everything `IntoBackendEager` covers.
+        nw.from_dict(data, backend=plugin_name)
+        nw.from_dict(data, backend=eager_or_plugin)
+        nw.new_series("a", [1, 2], backend=plugin_name)
+        nw.scan_csv("file.csv", backend=plugin_name)
+        nw.DataFrame.from_dict(data, backend=plugin_name)
+        nw.Implementation.from_backend(plugin_name)
+
+        # Rejected: opaque strings do not satisfy `PluginName`.
+        nw.from_dict(data, backend=dynamic_string)  # type: ignore[arg-type]
+        nw.new_series("a", [1, 2], backend=dynamic_string)  # type: ignore[arg-type]
+        nw.Implementation.from_backend(dynamic_string)  # type: ignore[arg-type]
+
+        # Rejected: lazy-only literals on eager constructors (no regression).
+        nw.from_dict(data, backend="duckdb")  # type: ignore[arg-type]
+
+        # Rejected: `.lazy` does not dispatch to plugins (yet).
+        df.lazy(plugin_name)  # type: ignore[arg-type]

@@ -98,8 +98,7 @@ if TYPE_CHECKING:
     )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals._typing import (
-        Backend,
-        IntoBackend,
+        IntoBackendAny,
         _ArrowImpl,
         _CuDFImpl,
         _DaskImpl,
@@ -139,8 +138,6 @@ if TYPE_CHECKING:
         _SliceName,
         _SliceNone,
     )
-
-    UnknownBackendName: TypeAlias = str
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=LazyFrame[Any] | DataFrame[Any] | Series[Any]
@@ -394,9 +391,7 @@ class Implementation(NoAutoEnum):
             return Implementation.UNKNOWN
 
     @classmethod
-    def from_backend(
-        cls: type[Self], backend: IntoBackend[Backend] | UnknownBackendName
-    ) -> Implementation:
+    def from_backend(cls: type[Self], backend: IntoBackendAny) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:
