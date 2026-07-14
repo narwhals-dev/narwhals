@@ -3,6 +3,7 @@ from __future__ import annotations
 import heapq
 import operator
 import random
+from bisect import bisect_left, bisect_right
 from collections import Counter
 from collections.abc import Mapping
 from itertools import chain, compress, islice, product, repeat
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        AsofJoinStrategy,
         IntoSchema,
         JoinStrategy,
         PivotAgg,
@@ -762,6 +764,82 @@ class DictDataFrame(
             return self._join_anti(other, left_on=left_on, right_on=right_on)
         assert_never(how)
 
+    def _asof_candidates(
+        self, on: str, by: Sequence[str] | None
+    ) -> dict[Any, tuple[list[Any], list[int]]]:
+        """Sorted `(keys, row indices)` per `by` group, for bisecting.
+
+        Rows with a null asof key (or any null `by` key) are never match
+        candidates. Keys are sorted here rather than validated as sorted, so
+        the probe side needs no ordering assumptions at all.
+        """
+        groups: dict[Any, list[tuple[Any, int]]] = {}
+        by_keys: Iterator[Any] = repeat(None) if by is None else self._iter_join_keys(by)
+        for row, (key, by_key) in enumerate(zip(self.native[on], by_keys, strict=False)):
+            if key is None or (by is not None and by_key is None):
+                continue
+            groups.setdefault(by_key, []).append((key, row))
+        result: dict[Any, tuple[list[Any], list[int]]] = {}
+        for by_key, pairs in groups.items():
+            pairs.sort(key=operator.itemgetter(0))
+            result[by_key] = ([key for key, _ in pairs], [row for _, row in pairs])
+        return result
+
+    def join_asof(
+        self,
+        other: Self,
+        *,
+        left_on: str,
+        right_on: str,
+        by_left: Sequence[str] | None,
+        by_right: Sequence[str] | None,
+        strategy: AsofJoinStrategy,
+        suffix: str,
+    ) -> Self:
+        if error := self._check_columns_exist([left_on, *(by_left or ())]):
+            raise error
+        if error := other._check_columns_exist([right_on, *(by_right or ())]):
+            raise error
+        candidates = other._asof_candidates(right_on, by_right)
+        by_keys: Iterator[Any] = (
+            repeat(None) if by_left is None else self._iter_join_keys(by_left)
+        )
+        right_indices: list[int | None] = []
+        for key, by_key in zip(self.native[left_on], by_keys, strict=False):
+            if (group := candidates.get(by_key) if key is not None else None) is None:
+                right_indices.append(None)
+                continue
+            keys, rows = group
+            backward = bisect_right(keys, key) - 1  # last right key <= left key
+            forward = bisect_left(keys, key)  # first right key >= left key
+            if strategy == "backward":
+                match = rows[backward] if backward >= 0 else None
+            elif strategy == "forward":
+                match = rows[forward] if forward < len(rows) else None
+            elif forward >= len(rows):
+                match = rows[backward] if backward >= 0 else None
+            elif backward >= 0 and (
+                keys[backward] == key or key - keys[backward] < keys[forward] - key
+            ):
+                # nearest resolving backward: `backward` is already the last
+                # row holding the winning value (exact match included).
+                match = rows[backward]
+            else:
+                # nearest resolving forward (equidistant ties included): among
+                # duplicates of the winning value polars takes the last row.
+                match = rows[bisect_right(keys, keys[forward]) - 1]
+            right_indices.append(match)
+        # One output row per left row: left columns pass through untouched, the
+        # asof key is coalesced and right `by` columns are dropped (like polars).
+        right_names = self._join_output_names(
+            other, exclude_right={right_on, *(by_right or ())}, suffix=suffix
+        )
+        take_right = self._take_nullable if None in right_indices else self._take
+        result: DictFrame = dict(self.native)
+        for name, output_name in right_names.items():
+            result[output_name] = take_right(other.native[name], right_indices)
+        return self._with_native(result, validate_column_names=False)
+
     def lazy(
         self,
         backend: _LazyAllowedImpl | None = None,
@@ -1109,5 +1187,4 @@ class DictDataFrame(
         return self._with_native(result)
 
     # Not implemented (yet): fill in incrementally.
-    join_asof = not_implemented()
     write_parquet = not_implemented()
