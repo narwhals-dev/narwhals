@@ -23,95 +23,108 @@ _OBJ_SETATTR = object.__setattr__
 
 
 class Immutable(metaclass=ImmutableMeta):
-    """A poor man's [frozen `dataclass`].
+    """A poor man's frozen `dataclass`.
 
     `Immutable` is used as a base class *very heavily* in this code base:
+
     - writing a constructor shouldn't be a barrier to using a class
     - mutability is hard to reason about in *arbitrarily* nested objects
     - the ability to enable caching **anywhere** is fun 🙂
 
     Note:
-        Examples adapted from [`dataclasses_transform_meta.py`] conformance suite.
+        Examples adapted from [`dataclasses_transform_meta.py`](https://github.com/python/typing/blob/1df1565c69730d88ce6877009d268ba1d602af1e/conformance/tests/dataclasses_transform_meta.py).
 
     An `Immutable` class declares it's fields via `__slots__`:
-    >>> class Customer1(Immutable):
-    ...     __slots__ = ("id", "name", "name2")
-    ...     id: int
-    ...     name: str
-    ...     name2: str
 
-    These names are accepted in the synthesized constructor (thanks to [`@dataclass_transform`]):
-    >>> c1_1 = Customer1(id=3, name="Sue", name2="Susan")
-    >>> print(c1_1)
-    Customer1(id=3, name='Sue', name2='Susan')
+        >>> class Customer1(Immutable):
+        ...     __slots__ = ("id", "name", "name2")
+        ...     id: int
+        ...     name: str
+        ...     name2: str
+
+    These names are accepted in the synthesized constructor (thanks to [`typing.dataclass_transform`][]):
+
+        >>> c1_1 = Customer1(id=3, name="Sue", name2="Susan")
+        >>> print(c1_1)
+        Customer1(id=3, name='Sue', name2='Susan')
 
     All fields are required:
-    >>> Customer1(id=3, name="John")
-    Traceback (most recent call last):
-    TypeError...
+
+        >>> Customer1(id=3, name="John")
+        Traceback (most recent call last):
+        TypeError...
 
     And must be passed as keywords:
-    >>> Customer1(3, "Sue", "Susan")
-    Traceback (most recent call last):
-    TypeError...
+
+        >>> Customer1(3, "Sue", "Susan")
+        Traceback (most recent call last):
+        TypeError...
 
     Default values are not supported:
-    >>> class Customer2(Immutable):
-    ...     __slots__ = ("id", "name", "name2")
-    ...     id: int
-    ...     name: str
-    ...     name2: str = "None"
-    Traceback (most recent call last):
-    ValueError...
+
+        >>> class Customer2(Immutable):
+        ...     __slots__ = ("id", "name", "name2")
+        ...     id: int
+        ...     name: str
+        ...     name2: str = "None"
+        Traceback (most recent call last):
+        ValueError...
 
     Assignment is quite frowned upon:
-    >>> c1_1.id = 4
-    Traceback (most recent call last):
-    AttributeError: 'Customer1' is immutable, 'id' cannot be set.
+
+        >>> c1_1.id = 4
+        Traceback (most recent call last):
+        AttributeError: 'Customer1' is immutable, 'id' cannot be set.
 
     But you can create a new instance by [replacing] the values of one or more fields:
-    >>> c1_2 = c1_1.__replace__(id=4)
-    >>> print(c1_2)
-    Customer1(id=4, name='Sue', name2='Susan')
+
+        >>> c1_2 = c1_1.__replace__(id=4)
+        >>> print(c1_2)
+        Customer1(id=4, name='Sue', name2='Susan')
 
     Instances compare equal if all fields do:
-    >>> c1_1 == Customer1(name="Sue", id=3, name2="Susan")
-    True
-    >>> c1_1 == c1_2
-    False
-    >>> c1_2 == Customer1(id=4, name="Sue", name2="Susan")
-    True
+
+        >>> c1_1 == Customer1(name="Sue", id=3, name2="Susan")
+        True
+        >>> c1_1 == c1_2
+        False
+        >>> c1_2 == Customer1(id=4, name="Sue", name2="Susan")
+        True
 
     When fields use [atomic] or `Immutable` types, instances are hash-friendly:
-    >>> customers = {
-    ...     c1_1,
-    ...     c1_2,
-    ...     Customer1(name="Sue", id=3, name2="Susan"),
-    ...     Customer1(id=4, name="Sue", name2="Susan"),
-    ... }
-    >>> len(customers) == 2
-    True
-    >>> customers == {c1_1, c1_2}
-    True
+
+        >>> customers = {
+        ...     c1_1,
+        ...     c1_2,
+        ...     Customer1(name="Sue", id=3, name2="Susan"),
+        ...     Customer1(id=4, name="Sue", name2="Susan"),
+        ... }
+        >>> len(customers) == 2
+        True
+        >>> customers == {c1_1, c1_2}
+        True
 
     A subclass can extend the fields of a parent:
-    >>> class Customer1Sub(Customer1):
-    ...     __slots__ = ("salary",)
-    ...     salary: float
-    >>> print(Customer1Sub(id=3, name="Sue", name2="Susan", salary=1))
-    Customer1Sub(id=3, name='Sue', name2='Susan', salary=1)
+
+        >>> class Customer1Sub(Customer1):
+        ...     __slots__ = ("salary",)
+        ...     salary: float
+        >>> print(Customer1Sub(id=3, name="Sue", name2="Susan", salary=1))
+        Customer1Sub(id=3, name='Sue', name2='Susan', salary=1)
 
     Although this does break the [Liskov substitution principle]:
-    >>> Customer1Sub(id=3, name="Sue", name2="Susan")
-    Traceback (most recent call last):
-    TypeError...
 
-    [frozen `dataclass`]: https://docs.python.org/3/library/dataclasses.html#frozen-instances
-    [`dataclasses_transform_meta.py`]: https://github.com/python/typing/blob/1df1565c69730d88ce6877009d268ba1d602af1e/conformance/tests/dataclasses_transform_meta.py
-    [`@dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#the-dataclass-transform-decorator
+        >>> Customer1Sub(id=3, name="Sue", name2="Susan")
+        Traceback (most recent call last):
+        TypeError...
+
+    [`typing.dataclass_transform`]: https://typing.python.org/en/latest/spec/dataclasses.html#the-dataclass-transform-decorator
     [replacing]: https://docs.python.org/3.13/library/copy.html#copy.replace
     [atomic]: https://github.com/python/cpython/blob/656abe3c9a228d20b2455f216a5a94b1a752495f/Lib/copy.py#L103-L107
     [Liskov substitution principle]: https://en.wikipedia.org/wiki/Liskov_substitution_principle
+
+    See Also:
+        [Frozen `dataclass`](https://docs.python.org/3/library/dataclasses.html#frozen-instances)
     """
 
     __slots__ = (_HASH_NAME,)
@@ -170,10 +183,11 @@ class Immutable(metaclass=ImmutableMeta):
     def to_dict(self) -> dict[str, Any]:
         """Convert this instance's fields to a dictionary.
 
-        Similar to [`dataclasses.asdict`], but **non-recursive**.
+        Similar to [`dataclasses.asdict`][], but **non-recursive**.
 
         Tip:
-            Unless you plan to use `**to_dict()`, prefer iterating over `__immutable_items__` instead.
+            Unless you plan to use `**to_dict()`, prefer iterating over
+            [`__immutable_items__`][narwhals._plan._immutable.Immutable.__immutable_items__] instead.
 
         [`dataclasses.asdict`]: https://docs.python.org/3/library/dataclasses.html#dataclasses.asdict
         """
@@ -186,17 +200,19 @@ class Immutable(metaclass=ImmutableMeta):
         return self
 
     def __hash__(self) -> int:
-        """Do not override [`__hash__`] in an `Immutable` subclass.
+        """🚨 Do not override `__hash__` in an `Immutable` subclass.
 
-        If you want to:
-        - Omit specific values from the hash?
-          - override `__immutable_values__`
-        - Override `__eq__` in a subclass, but now [`__hash__`] is broken?
-          - use `__hash__ = Immutable.__hash__`
-        - Change how the write-once hash value is stored?
-          - override `__immutable_hash__`
+        > But I want to omit specific values from the hash?
 
-        [`__hash__`]: https://docs.python.org/3/reference/datamodel.html#object.__hash__
+        *Instead*, override [`__immutable_values__`][narwhals._plan._immutable.Immutable.__immutable_values__]
+
+        > But I've overridden `__eq__` in a subclass, and now [`__hash__`](https://docs.python.org/3/reference/datamodel.html#object.__hash__) is broken?
+
+        *Instead*, use `__hash__ = Immutable.__hash__`
+
+        > But I want to store the *write-once* hash value is differently?
+
+        *Instead*, override [`__immutable_hash__`][narwhals._plan._immutable.Immutable.__immutable_hash__]
         """
         return self.__immutable_hash__
 

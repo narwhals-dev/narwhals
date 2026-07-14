@@ -12,23 +12,25 @@ from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import Constructor
 from narwhals._plan._guards import is_python_literal_type
 from narwhals._plan.exceptions import literal_type_error
-from narwhals._plan.typing import (
-    NativeSeriesT,
-    NativeSeriesT_co,
-    PythonLiteralT,
-    PythonLiteralT_co,
-)
+from narwhals._plan.typing import NativeSeriesT, NativeSeriesT_co
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version
 from narwhals.dtypes import Field, List, Struct, Unknown
+from narwhals.typing import PythonLiteral
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from narwhals._plan.series import Series
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, NonNestedDType, PythonLiteral
+    from narwhals.typing import IntoDType, NonNestedDType
 
 __all__ = ("Lit", "LitSeries", "lit", "lit_series")
+
+PythonLiteralT = TypeVar("PythonLiteralT", bound=PythonLiteral, default=PythonLiteral)
+PythonLiteralT_co = TypeVar(
+    "PythonLiteralT_co", bound=PythonLiteral, covariant=True, default=PythonLiteral
+)
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
@@ -39,16 +41,18 @@ get_dtype = ResolveDType.get_dtype
 # - Will break some doctests on a change
 @final
 class Lit(Constructor, Generic[PythonLiteralT_co], dtype=get_dtype(), dispatch="Scalar"):
-    """An expression representing a scalar literal value.
+    """An expression representing a scalar value.
 
-    >>> import narwhals._plan as nw
-    >>> expr = nw.lit(1)
-    >>> expr._ir
-    lit(1)
-    >>> expr.meta.is_literal()
-    True
-    >>> expr._ir.is_scalar()
-    True
+    `Lit` is always both literal and scalar:
+
+        >>> import narwhals._plan as nw
+        >>> expr = nw.lit(1)
+        >>> expr._ir
+        lit(1)
+        >>> expr.meta.is_literal()
+        True
+        >>> expr._ir.is_scalar()
+        True
     """
 
     __slots__ = ("dtype", "value")
@@ -100,22 +104,31 @@ class LitSeries(
 ):
     """An expression representing a series literal.
 
-    >>> import narwhals._plan as nw
-    >>> series = nw.Series.from_iterable([1], backend="pyarrow")
-    >>> expr = nw.lit(series)
-    >>> expr._ir
-    lit(Series[pa.ChunkedArray])
-    >>> expr.meta.is_literal()
-    True
+    A series of any length is a literal:
 
-    A length-1 series literal is not considered scalar
-    >>> expr._ir.is_scalar()
-    False
+        >>> import narwhals._plan as nw
+        >>> series = nw.Series.from_iterable([1], backend="pyarrow")
+        >>> expr = nw.lit(series)
+        >>> expr._ir
+        lit(Series[pa.ChunkedArray])
+        >>> expr.meta.is_literal()
+        True
+
+    But never scalar:
+
+        >>> expr._ir.is_scalar()
+        False
     """
 
     __slots__ = ("dtype", "value")
     value: Series[NativeSeriesT_co]
+    """A Narwhals-level Series."""
     dtype: DType
+    """The data type of the series.
+
+    Note:
+        Eagerly retrieved and converted at construction time.
+    """
 
     def is_scalar(self) -> bool:
         return False

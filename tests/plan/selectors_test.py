@@ -29,7 +29,7 @@ from tests.plan.utils import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
 
-    from narwhals._plan.typing import IntoExpr, OperatorFn
+    from narwhals._plan.typing import IntoExpr
     from narwhals.dtypes import DType
 
 
@@ -569,11 +569,11 @@ def test_selector_set_ops(schema_non_nested: nw.Schema, schema_mixed: nw.Schema)
     df.assert_selects(selector, "l", "m", "n", "o", "p", "q", "r", "s", "u")
 
 
-def _is_binary_operator(function: OperatorFn) -> bool:
+def _is_binary_operator(function: Callable[[Any, Any], Any]) -> bool:
     return function in {operator.and_, operator.or_, operator.xor}
 
 
-def _is_selector_operator(function: OperatorFn) -> bool:
+def _is_selector_operator(function: Callable[[Any, Any], Any]) -> bool:
     return function in {operator.and_, operator.or_, operator.xor, operator.sub}
 
 
@@ -590,7 +590,7 @@ def is_selector(obj: Any) -> bool:
     "function", [operator.and_, operator.or_, operator.xor, operator.add, operator.sub]
 )
 def test_selector_arith_binary_ops(
-    arg_2: IntoExpr | Selector, function: OperatorFn
+    arg_2: IntoExpr | Selector, function: Callable[[Any, Any], Any]
 ) -> None:
     # NOTE: These are the `polars.selectors` semantics
     # Parts of it may change with `polars>=2.0`, due to how confusing they are

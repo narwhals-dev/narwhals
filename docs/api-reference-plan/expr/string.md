@@ -1,0 +1,23 @@
+# String
+
+::: narwhals._plan.expr.ExprStringNamespace
+    options:
+      show_bases: false
+      members:
+        - contains
+        - ends_with
+        - head
+        - len_chars
+        - replace
+        - replace_all
+        - slice
+        - split
+        - starts_with
+        - strip_chars
+        - tail
+        - to_date
+        - to_datetime
+        - to_lowercase
+        - to_titlecase
+        - to_uppercase
+        - zfill

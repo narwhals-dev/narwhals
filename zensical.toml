@@ -82,6 +82,37 @@ nav = [
         "api-reference/typing.md",
         "api-reference/utils.md",
     ]},
+    { "API Reference (Experimental)" = [
+        "api-reference-plan/index.md", 
+        "api-reference-plan/functions.md",
+        "api-reference-plan/dataframe.md",
+        "api-reference-plan/lazyframe.md",
+        { "Expressions" = [
+            "api-reference-plan/expr/index.md",
+            "api-reference-plan/expr/categorical.md",
+            "api-reference-plan/expr/list.md",
+            "api-reference-plan/expr/meta.md",
+            "api-reference-plan/expr/name.md",
+            "api-reference-plan/expr/string.md",
+            "api-reference-plan/expr/struct.md",
+            "api-reference-plan/expr/temporal.md",
+        ]},
+        "api-reference-plan/selectors.md", 
+        "api-reference-plan/series.md", 
+        "api-reference-plan/plugins.md", 
+        { "IR" = [
+            "api-reference-plan/ir/index.md",
+            { "ExprIR" = [
+                "api-reference-plan/ir/expr-ir/index.md",
+                "api-reference-plan/ir/expr-ir/agg_expr.md",
+                "api-reference-plan/ir/expr-ir/function_expr.md",
+                "api-reference-plan/ir/expr-ir/function.md",
+                "api-reference-plan/ir/expr-ir/selectors.md",
+            ]},
+            "api-reference-plan/ir/named-ir.md",
+        ]},
+        "api-reference-plan/typing.md",
+    ] },
     {"This" = "this.md"}
 ]
 
@@ -111,6 +142,9 @@ features = [
     "navigation.top",
     "search.highlight",
     "toc.follow",
+    # NOTE: Fixes a bug where a `<span ...>` got injected into the `title` string?
+    # Also looks nice
+    "content.tooltips"
 ]
 
 [project.theme.font]
@@ -131,8 +165,22 @@ toggle.name = "Switch to light mode"
 icon = "fontawesome/brands/github"
 link = "https://github.com/narwhals-dev/narwhals"
 
+[project.plugins.mkdocstrings]
+# - 2-column "Parameters:" table `/python/material/docstring/parameters.html.jinja`
+custom_templates = "docs/templates"
+
 [project.plugins.mkdocstrings.handlers.python]
-inventories = ["https://docs.python.org/3/objects.inv"]
+# https://mkdocstrings.github.io/usage/#cross-references-to-other-projects-inventories
+inventories = [
+    "https://docs.python.org/3/objects.inv", 
+    "https://docs.pola.rs/py-polars/html/objects.inv",  # https://github.com/pola-rs/polars/issues/7027
+    "https://pandas.pydata.org/docs/objects.inv",
+    "https://arrow.apache.org/docs/objects.inv",
+    "https://numpy.org/doc/stable/objects.inv",
+    "https://typing-extensions.readthedocs.io/en/latest/objects.inv",
+    # https://github.com/ibis-project/ibis/issues/11723
+    # TODO @dangotbanned: cudf, dask, duckdb, pyspark, sqlframe
+]
 paths = ["narwhals"]
 
 [project.plugins.mkdocstrings.handlers.python.options]
@@ -140,6 +188,28 @@ docstring_style = "google"
 members_order = "alphabetical"
 separate_signature = true
 show_signature_annotations = true
+show_source = false
+docstring_options.trim_doctest_flags = true
+show_if_no_docstring = true  # remember to turn this off after listing members everywhere
+signature_crossrefs = true
+type_parameter_headings = true
+line_length = 90  # (default: 60) this matches our ruff config
+filters = [
+    "!^_",
+    "^__",
+    # above are default filters, everything after refines from them
+    # https://mkdocstrings.github.io/python/usage/configuration/members/#filters
+    "!^_+(repr|slots|all|delattr|setattr)", # exclude these dunders (or similar private methods)
+    "!^__\\w+[^_]$", # exclude name mangling
+]
+extensions = [
+  { "utils/griffe_extension.py:ImplNotesExtension" = { begin = "<!--BEGIN: IMPL NOTES-->", end = "<!--END: IMPL NOTES-->" } },
+  { "utils/griffe_extension.py:NewAsInitExtension" = { paths = ["narwhals._plan.schema.FrozenSchema"] } },
+  "utils/griffe_extension.py:PEP681Extension",
+]
+merge_init_into_class = true
+# TODO @dangotbanned: Major need for user guide
+# https://zensical.org/docs/setup/extensions/python-markdown-extensions/#snippets
 
 [project.markdown_extensions.admonition]
 [project.markdown_extensions.md_in_html]
@@ -157,3 +227,17 @@ emoji_generator = "zensical.extensions.emoji.to_svg"
 
 [project.markdown_extensions.pymdownx.arithmatex]
 generic = true
+
+[project.markdown_extensions.pymdownx.tilde]
+[project.markdown_extensions.pymdownx.highlight]
+# https://mkdocstrings.github.io/recipes/#automatic-highlighting-for-indented-code-blocks-in-docstrings
+pygments_lang_class = true
+default_lang = "python"
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.zensical.extensions.preview]
+# https://zensical.org/docs/setup/navigation/#automatic-previews
+configurations = [
+    { targets.include = ["api-reference-plan/**/*.md"] }
+]

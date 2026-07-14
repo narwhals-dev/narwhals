@@ -1,0 +1,48 @@
+{% extends "_base/docstring/parameters.html.jinja" %}
+
+{# Overrides the `docstring_section_style = "table"` mkdocstrings template
+
+Removes "Type" and "Default" columns, which are already rendered in a richer format via the signature.
+
+https://github.com/mkdocstrings/python/blob/dc6aa93b1c956bc02904f33d1f6f635b275175d9/src/mkdocstrings_handlers/python/templates/material/_base/docstring/parameters.html.jinja#L21-78
+#}
+
+{% block table_style scoped %}
+<p><span class="doc-section-title">{{ section.title or lang.t("Parameters:") }}</span></p>
+<table>
+    <thead>
+        <tr>
+            <th>{{ lang.t("Name") }}</th>
+            <th>{{ lang.t("Description") }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for parameter in section.value %}
+        <tr class="doc-section-item">
+            <td>
+                {% if config.parameter_headings %}
+                {% filter heading(
+                heading_level + 1,
+                role="param",
+                id=html_id ~ "(" ~ parameter.name ~ ")",
+                class="doc doc-heading doc-heading-parameter",
+                toc_label=('<code class="doc-symbol doc-symbol-toc doc-symbol-parameter"></code>&nbsp;'|safe if
+                config.show_symbol_type_toc else '') + parameter.name,
+                skip_inventory=config.skip_local_inventory,
+                ) %}
+                <code>{{ parameter.name }}</code>
+                {% endfilter %}
+                {% else %}
+                <code>{{ parameter.name }}</code>
+                {% endif %}
+            </td>
+            <td>
+                <div class="doc-md-description">
+                    {{ parameter.description|convert_markdown(heading_level, html_id, autoref_hook=autoref_hook) }}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock table_style %}

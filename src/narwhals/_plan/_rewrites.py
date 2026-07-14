@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from narwhals._plan import _parse
+from narwhals._plan import _parse, expressions as ir
 from narwhals._plan._expansion import prepare_projection
 from narwhals._plan._guards import (
     is_aggregation,
@@ -19,7 +19,9 @@ if TYPE_CHECKING:
 
     from narwhals._plan.expressions import ExprIR, NamedIR
     from narwhals._plan.schema import IntoFrozenSchema
-    from narwhals._plan.typing import IntoExpr, MapIR, NamedOrExprIRT, OneOrIterable, Seq
+    from narwhals._plan.typing import IntoExpr, MapIR, OneOrIterable, Seq
+
+NamedOrExprIRT = TypeVar("NamedOrExprIRT", ir.NamedIR[Any], ir.ExprIR)
 
 
 def rewrite_all(

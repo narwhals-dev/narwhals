@@ -8,30 +8,24 @@ from inspect import getattr_static as _getattr_static
 from io import BytesIO
 from secrets import token_hex
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, cast, overload
 
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._utils import qualified_type_name
 from narwhals.dtypes import DType
 from narwhals.exceptions import NarwhalsError
+from narwhals.typing import NonNestedDType
 
 if TYPE_CHECKING:
     import reprlib
     from collections.abc import Iterator
-    from typing import Any, ClassVar, Final, TypeAlias, TypeVar
+    from typing import Any, ClassVar, Final, TypeAlias
 
     from typing_extensions import TypeIs, Unpack
 
     from narwhals._plan.compliant.series import CompliantSeries
     from narwhals._plan.series import Series
-    from narwhals._plan.typing import (
-        ClosedKwds,
-        ColumnNameOrSelector,
-        DTypeT,
-        NonNestedDTypeT,
-        OneOrIterable,
-        Seq,
-    )
+    from narwhals._plan.typing import ClosedKwds, ColumnNameOrSelector, OneOrIterable, Seq
     from narwhals._utils import _StoresColumns
     from narwhals.typing import FileSource
 
@@ -51,6 +45,8 @@ else:  # pragma: no cover
         return func(obj, **changes)  # type: ignore[no-any-return]
 
 
+DTypeT = TypeVar("DTypeT", bound=DType)
+NonNestedDTypeT = TypeVar("NonNestedDTypeT", bound=NonNestedDType)
 _SENTINEL: Final = object()
 
 NW_DEV_ENV_NAME: Final = "NARWHALS_DEV_HINTS"
@@ -362,10 +358,8 @@ def closed_kwds(
         >>> f = closed_kwds(a={"mutable": [1, 2, 3]}, b=[4, 5, 6])
         >>> hash(f) == hash(f)
         True
-
         >>> f == f
         True
-
         >>> f()
         mappingproxy({'a': {'mutable': [1, 2, 3]}, 'b': [4, 5, 6]})
 
@@ -385,8 +379,9 @@ def closed_kwds(
         ...     print("Second result   :", function())
 
         `"zero_copy"` may be reasonable if any of these apply:
+
         - all arguments are immutable
-        - their types do not support `copy.deepcopy`
+        - their types do not support [`copy.deepcopy`][]
         - making a single copy would be prohibitive
 
         >>> show_mutation("zero_copy", [1])
@@ -396,6 +391,7 @@ def closed_kwds(
         Second result   : {'a': 'dog', 'b': [1, 2, 3]}
 
         `"single_copy"` provides some extra safety and should be considered if:
+
         - at least one argument may be mutable
         - the returned function will only be called once
         - the result of the function will not be mutated
@@ -407,10 +403,11 @@ def closed_kwds(
         Second result   : {'a': 'dog', 'b': [1, 3]}
 
         `"reusable"` is both the safest and most expensive strategy, consider if:
+
         - both mutable arguments and updates to them are expected
         - the returned function will be called multiple times, and each should
             be isolated from previous calls
-        - the cost of `copy.deepcopy`(s) is small/irrelevant
+        - the cost of [`copy.deepcopy`][](s) is small/irrelevant
 
         >>> show_mutation("reusable", [1])
         First result    : {'a': 'dog', 'b': [1]}

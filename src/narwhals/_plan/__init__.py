@@ -46,7 +46,9 @@ from narwhals._plan.selectors import Selector
 from narwhals._plan.series import Series
 from narwhals._plan.when_then import when
 
+# NOTE: `mkdocstrings` is able to use this to crossref the classmethod
 from_dict: _t.Final = DataFrame.from_dict
+"""Alias of `DataFrame.from_dict`"""
 
 __all__ = (
     "DataFrame",

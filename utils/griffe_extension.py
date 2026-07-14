@@ -1,0 +1,490 @@
+"""Hoping to add better support for [PEP 681].
+
+See [Supporting custom decorators], [extensions/dataclasses.py], [griffe_pydantic]
+
+Run with:
+
+    uvx griffe dump --extensions utils/griffe_extension.py src/narwhals
+
+[PEP 681]: https://peps.python.org/pep-0681/
+[Supporting custom decorators]: https://mkdocstrings.github.io/griffe/guide/users/how-to/support-decorators/
+[extensions/dataclasses.py]: https://github.com/mkdocstrings/griffe/blob/5dc97b78f318ac97016fbaee83a574ff15516f58/packages/griffelib/src/griffe/_internal/extensions/dataclasses.py
+[griffe_pydantic]: https://github.com/mkdocstrings/griffe-pydantic/blob/9df87609b4edc2e548d15691e4d6c26710861daa/src/griffe_pydantic/_internal/extension.py
+"""
+
+from __future__ import annotations
+
+import ast
+import copy
+import datetime as dt
+import logging
+import pathlib
+
+# ruff: noqa: DTZ005, G004
+from functools import cache
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, TypeAlias, cast
+
+import griffe
+from griffe import Attribute, Class, ExprName, Function, Module, Parameter, Parameters
+
+if TYPE_CHECKING:
+    from ast import AST
+    from collections.abc import Iterable, Iterator, Mapping
+
+    from typing_extensions import LiteralString
+
+    from narwhals.typing import FileSource
+
+    logger = logging.getLogger(__name__)
+else:
+    # NOTE: griff's logger has a `__getattr__`
+    logger = griffe.get_logger(__name__)
+
+
+__all__ = ("NewAsInitExtension", "PEP681Extension")
+
+
+NEEDS_FIX = "OverOrdered"
+CANONICAL_PATH_PLAN = "narwhals._plan"
+CANONICAL_PATH_IMMUTABLE = f"{CANONICAL_PATH_PLAN}._immutable.Immutable"
+"""The metaclass of `Immutable` is decorated with `@dataclass_transform`.
+
+- The simple check is to see if `Immutable` is in our mro.
+- A more complex alternative would be using [`griffe.get_class_keyword`] to find `metaclass=ImmutableMeta`
+    - Would make sense here if I'd used any variations other besides
+      `@dataclass_transform(kw_only_default=True, frozen_default=True)`
+
+[`griffe.get_class_keyword`]: https://mkdocstrings.github.io/griffe/reference/api/expressions/#griffe.get_class_keyword
+"""
+
+positional_or_keyword: Final = griffe.ParameterKind.positional_or_keyword
+"""`self`."""
+keyword_only: Final = griffe.ParameterKind.keyword_only
+"""All fields are keyword-only."""
+
+Member: TypeAlias = griffe.Object | griffe.Alias
+
+HERE: Path = Path(__file__)
+REPO_ROOT = HERE.parent.parent
+HELP_ME = "https://mkdocstrings.github.io/griffe/guide/users/extending/#using-extensions"
+ISSUE_320 = "https://github.com/mkdocstrings/griffe/issues/320"
+
+
+class ImplNotesExtension(griffe.Extension):
+    """Module doc transformer.
+
+    ## Examples
+    Takes a docstring like:
+    ```md
+    ...
+
+    <!--BEGIN: IMPL NOTES-->
+    ## Implementation Notes
+    super important blabbing
+    ...
+    <!--END: IMPL NOTES-->
+    ```
+
+    And outputs:
+    ```md
+    ...
+
+    ??? "Implementation Notes"
+
+        super important blabbing
+        ...
+    ```
+
+    ## Why?
+    - Some private modules that have more to say use a `## Implementation Notes` section.
+    - This is useful information, but becomes too visible in the API reference
+        - The modules are private and docstrings are collapsible - so it isn't an issue in the source
+    - Therefore, this takes those docstrings and puts them in a [collapsible block](https://zensical.org/docs/authoring/admonitions/#collapsible-blocks)
+        - Using html comments in the source, which are unseen when rendered in an IDE
+    """
+
+    def __init__(self, *, begin: str, end: str) -> None:
+        super().__init__()
+        self._marker_begin: str = begin
+        self._marker_end: str = end
+        self._seen: set[str] = set()
+
+    def _validate_directive(self, doc: str, canonical_path: str) -> None:
+        if self._marker_end not in doc:
+            msg = f"Found begin marker:\n{self._marker_begin}\n for {canonical_path!r},\nbut it was not closed with a:\n{self._marker_end}"
+            raise ValueError(msg)
+        if doc.count(self._marker_begin) != 1:
+            msg = f"Found multiple begin markers:\n{self._marker_begin}\n for {canonical_path!r},\nbut only 1 is supported"
+            raise NotImplementedError(msg)
+
+    def on_module_instance(
+        self,
+        *,
+        node: ast.AST | griffe.ObjectNode,
+        mod: Module,
+        agent: griffe.Visitor | griffe.Inspector,
+        **kwargs: Any,
+    ) -> None:
+        if (docstring := mod.docstring) is None or (
+            (path := mod.canonical_path) in self._seen
+        ):
+            return
+        self._seen.add(path)
+        if self._marker_begin not in docstring.value:
+            return
+
+        self._validate_directive(docstring.value, path)
+        logger.info(
+            "%s: Starting docstring directive replacement for %r",
+            type(self).__name__,
+            path,
+        )
+
+        lines = docstring.lines
+        idx_begin = lines.index(self._marker_begin)
+        idx_end = lines.index(self._marker_end, idx_begin)
+        replaced = copy.deepcopy(lines)
+        # kinda wild that you can do this with a `list`
+        replaced[idx_begin : idx_end + 1] = admonition(
+            content=lines[(idx_begin + 2) : idx_end],
+            title=lines[idx_begin + 1].lstrip("# "),
+            collapse="collapsed",
+        )
+
+        docstring.value = "\n".join(replaced)
+        logger.info(
+            "%s: Finished docstring directive replacement for %r",
+            type(self).__name__,
+            path,
+        )
+
+
+AdmonitionKind: TypeAlias = Literal[
+    "note",
+    "abstract",
+    "info",
+    "tip",
+    "success",
+    "question",
+    "warning",
+    "failure",
+    "danger",
+    "bug",
+    "example",
+    "quote",
+]
+"""https://zensical.org/docs/authoring/admonitions/#supported-types"""
+
+Collapse: TypeAlias = Literal["never", "collapsed", "expanded"]
+"""https://zensical.org/docs/authoring/admonitions/#collapsible-blocks"""
+
+
+_COLLAPSE_SYNTAX: Mapping[Collapse, LiteralString] = {
+    "never": "!!!",
+    "collapsed": "???",
+    "expanded": "???+",
+}
+
+
+def admonition(
+    content: list[str],
+    kind: AdmonitionKind = "note",
+    title: str = "",
+    *,
+    collapse: Collapse = "never",
+) -> tuple[str, ...]:
+    start_block = f"{_COLLAPSE_SYNTAX[collapse]} {kind}"
+    if title:
+        start_block = f'{start_block} "{title}"'
+    indent = " " * 4
+    return start_block, *(indent + s for s in content), ""
+
+
+class NewAsInitExtension(griffe.Extension):
+    """Patch to fix [mkdocstrings/griffe#320](https://github.com/mkdocstrings/griffe/issues/320).
+
+    Warning:
+        This was a huge timesink!
+
+    The end result allows `__new__` to be used like `__init__` and get merged into the class docstring.
+
+    For `FrozenSchema`, that gives us this
+
+    ## FrozenSchema
+
+
+    ```py
+    FrozenSchema(iterable: IntoFrozenSchema = (), /, **named: DType)
+    ```
+
+    Bases: `_BaseSchema`
+
+    *summary ...*
+
+    **Parameters:**
+
+    | Name       | Description |
+    |------------|-------------|
+    | `iterable` | ...         |
+    | `**schema` | ...         |
+    """
+
+    def __init__(self, *, paths: list[str] | tuple[str, ...] = ()) -> None:
+        super().__init__()
+        if not (isinstance(paths, (list, tuple)) and paths and isinstance(paths[0], str)):
+            raise self._generate_error(paths)
+
+        self.paths: frozenset[str] = frozenset(paths)
+        self._name_class = [p.rsplit(".", 1)[-1] for p in self.paths]
+        self._name_module = [p.rsplit(".", 1)[0] for p in self.paths]
+        self._orig_parser: Any
+        self._orig_parser_options: Any
+
+    def on_class_node(
+        self,
+        *,
+        node: AST | griffe.ObjectNode | ast.ClassDef,
+        agent: griffe.Visitor | griffe.Inspector,
+        **kwargs: Any,
+    ) -> None:
+        # NOTE: Took an entire day to work this disaster out
+        # The warnings are false positives, as the parameters refer to arguments to `__new__`
+        # https://github.com/mkdocstrings/griffe/blob/5dc97b78f318ac97016fbaee83a574ff15516f58/packages/griffelib/src/griffe/_internal/docstrings/google.py#L237-L244
+        if not self.paths:
+            return
+        if (
+            isinstance(node, ast.ClassDef)
+            and (name := node.name) in self._name_class
+            and isinstance(agent.current, Module)
+            and (module := agent.current.canonical_path) in self._name_module
+            and f"{module}.{name}" in self.paths
+        ):
+            logger.info(
+                f"NewAsInitExtension: Disabling class docstring warnings for '{module}.{name}'"
+            )
+            self._orig_parser = copy.deepcopy(agent.docstring_parser)
+            self._orig_parser_options = copy.deepcopy(agent.docstring_options)
+            agent.docstring_parser = "google"
+            agent.docstring_options = {
+                "warnings": False,
+                "warn_unknown_params": False,
+                "warn_missing_types": False,
+            }
+            self._name_class.remove(name)
+            self._name_module.remove(module)
+
+    def on_class_members(
+        self,
+        *,
+        node: AST | griffe.ObjectNode,
+        cls: Class,
+        agent: griffe.Visitor | griffe.Inspector,
+        **kwargs: Any,
+    ) -> None:
+        if not ((paths := self.paths) and cls.path in paths):
+            return
+        agent.docstring_parser = self._orig_parser
+        agent.docstring_options = self._orig_parser_options
+        logger.info("NewAsInitExtension: Restored class docstring warnings")
+        self.paths = self.paths.difference({cls.path})
+        logger.info("NewAsInitExtension: Visiting %r", cls.path)
+        self._convert_new_to_init(self._reject_unsupported(cls))
+        logger.info("NewAsInitExtension: Finished %r", cls.path)
+
+    def _reject_unsupported(self, cls: Class) -> Class:
+        if "__init__" in cls.members:
+            msg = f"Classes that define both `__new__` and `__init__` are not yet supported,\n see: {ISSUE_320}"
+            raise NotImplementedError(msg)
+        return cls
+
+    def _convert_new_to_init(self, cls: Class) -> Class:
+        """The meat of the extension is this simple fix."""
+        method: Function = cls.get_member("__new__")
+        params = iter(method.parameters)
+        # skip `cls` parameter
+        next(params)
+        converted = init_fn(cls, params)
+        cls.del_member("__new__")
+        cls.set_member("__init__", converted)
+        return cls
+
+    def _generate_error(self, paths: Any) -> TypeError:
+        name = type(self).__name__
+        extension_module = HERE.relative_to(REPO_ROOT).as_posix()
+        extension_name = f"{extension_module}:{name}"
+        lb, rb = "{", "}"
+        msg = (
+            f"{name!r} requires a list of qualified type names as paths,\nbut got `paths = {paths!r}`.\n\n"
+            f"Hint: Try this incantation in `zensical.toml` instead?:\n"
+            f'    {lb} "{extension_name}" = {lb} paths = ["narwhals.path.to.thing"] {rb} {rb}\n'
+            f"See also:\n"
+            f"    {HELP_ME}"
+        )
+        return TypeError(msg)
+
+
+class PEP681Extension(griffe.Extension):
+    """An extension to support `@dataclass_transform`.
+
+    Important:
+        Worked backwards from [`extensions/dataclasses.py`](https://github.com/mkdocstrings/griffe/blob/5dc97b78f318ac97016fbaee83a574ff15516f58/packages/griffelib/src/griffe/_internal/extensions/dataclasses.py)
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def on_package(self, *, pkg: Module, **kwargs: Any) -> None:
+        path = pkg.canonical_path
+        logger.info("Starting: %r", path)
+        _apply_recursively(pkg, set())
+        logger.info("Finished: %r", path)
+
+
+def iter_members(obj: griffe.Object) -> Iterator[Member]:
+    yield from obj.members.values()
+
+
+def _apply_recursively(mod_cls: Member, seen: set[str]) -> None:
+    """`griffe._internal.extensions.dataclasses._apply_recursively`."""
+    if mod_cls.canonical_path in seen:
+        return
+    seen.add(mod_cls.canonical_path)
+    if isinstance(mod_cls, Class):
+        if "__init__" not in mod_cls.members:
+            _set_dataclass_init(mod_cls)
+        for member in iter_members(mod_cls):
+            if not member.is_alias and member.is_class:
+                _apply_recursively(member, seen)
+    elif isinstance(mod_cls, Module):
+        for member in iter_members(mod_cls):
+            if not member.is_alias and (member.is_module or member.is_class):
+                _apply_recursively(member, seen)
+
+
+# TODO @dangotbanned: the cases with `Parameter.default is None` (node(s)) still need labels fixed
+# Bad: `class-attribute`, `instance-attribute`
+# Good: `instance-attribute`
+def _set_dataclass_init(class_: Class) -> None:
+    """`griffe._internal.extensions.dataclasses._set_dataclass_init`."""
+    # Retrieve parameters from all parent dataclasses.
+    parameters: list[Parameter] = []
+    for parent in reversed(class_.mro()):
+        if inherits_immutable(parent):
+            parameters.extend(_dataclass_parameters(parent))
+            class_.labels.add("dataclass")
+
+    if not inherits_immutable(class_):
+        return
+
+    _logger = logger.info if class_.name == NEEDS_FIX else logger.debug
+    _logger("Handling: %r", class_.canonical_path.removeprefix(CANONICAL_PATH_PLAN))
+
+    # Add current class parameters.
+    parameters.extend(_dataclass_parameters(class_))
+    if not parameters:
+        _logger("|   Skipped (no params)")
+        return
+
+    _logger(
+        f"|   Parameters(*, {', '.join(f'{p.name}: {p.annotation}' for p in parameters)})"
+    )
+
+    init = init_fn(class_, parameters)
+    class_.set_member("__init__", init)
+    _logger(f"|   {init.signature(name=class_.name + '.__init__')}")
+
+
+def init_fn(cls: Class, parameters: Iterable[Parameter]) -> Function:
+    self = Parameter("self", kind=positional_or_keyword)
+    p = Parameters(self, *parameters)
+    return Function(
+        "__init__", lineno=0, endlineno=0, parent=cls, parameters=p, returns="None"
+    )
+
+
+@cache
+def inherits_immutable(cls: Class) -> bool:
+    root = CANONICAL_PATH_IMMUTABLE
+    if any(
+        (base if isinstance(base, str) else base.canonical_path) == root
+        for base in cls.bases
+    ):
+        return True
+    return any(
+        inherits_immutable(parent)
+        for parent in cls.mro()
+        if parent.canonical_path.startswith(CANONICAL_PATH_PLAN)
+    )
+
+
+@cache
+def _dataclass_parameters(class_: Class) -> tuple[Parameter, ...]:
+    if class_.name == NEEDS_FIX and logger.isEnabledFor(logging.DEBUG):
+        write_griffe(class_)
+    return tuple(iter_dataclass_parameters(class_))
+
+
+def iter_dataclass_parameters(cls: Class) -> Iterator[Parameter]:
+    members = cast("Iterable[Attribute]", iter_members(cls))
+    for member in members:
+        if member.is_attribute and is_dataclass_field(member):
+            yield Parameter(
+                member.name,
+                annotation=member.annotation,
+                kind=keyword_only,
+                docstring=member.docstring,
+            )
+
+
+def is_dataclass_field(member: Attribute) -> bool:
+    """Fixes logic from upstream inference of `ClassVar`.
+
+    ([mkdocstrings/griffe#253]) handled the `ClassVar[<type>]` case, but following ([python/typing#1931])
+    we can write a "bare" `ClassVar` too.
+
+    [mkdocstrings/griffe#253]: https://github.com/mkdocstrings/griffe/pull/253
+    [python/typing#1931]: https://github.com/python/typing/pull/1931
+    """
+    if (annotation := member.annotation) is None:
+        return False
+    labels = member.labels
+    return not (
+        "property" in labels
+        or ("class-attribute" in labels and "instance-attribute" not in labels)
+        or (isinstance(annotation, ExprName) and "ClassVar" in annotation.name)
+    )
+
+
+class GriffeExportable(Protocol):
+    def as_json(self, **kwds: Any) -> str: ...
+
+
+def write_griffe(
+    obj: GriffeExportable, file: FileSource | None = None, **kwds: Any
+) -> None:
+    """Export a `griffe` object as json.
+
+    This is a quick debugging tool to help see what a specific slice of the ast look like.
+
+    Arguments:
+        obj: An object from `griffe` that supports `as_json`.
+        file: File path to write to.
+            By default, writes to the cwd using a best-effort name, followed by a timestamp.
+        **kwds: Arguments forwarded to `json.dumps`
+    """
+    serde = obj.as_json(**kwds)
+    if file is None:
+        if (
+            name := getattr(
+                obj, "canonical_path", getattr(obj, "path", getattr(obj, "name", None))
+            )
+        ) is None:
+            name = type(obj).__name__
+        now = dt.datetime.now(tz=None).isoformat(timespec="seconds").replace(":", "-")
+        file = f"{name.removeprefix(CANONICAL_PATH_PLAN + '.')}_{now}.json"
+
+    path = pathlib.Path(file)
+    path.touch()
+    path.write_text(serde, "utf8")
+    logger.info(f"Exported: {path.as_posix()}")
