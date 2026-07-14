@@ -25,16 +25,19 @@ And then we'll close things out with a hopeful look towards new upstream backend
     - https://github.com/vega/altair/pull/3664
     - https://github.com/vega/altair/pull/3668
 
-An idea that's got stuck in my head is providing an alternative to [`altair.expr`][]-based expressions [^2].  
+An idea that's got stuck in my head is providing an alternative to [`altair.expr`][]-based expressions.  
 *What if* you could write Narwhals expressions directly in an [`altair.Chart`][] instead? 
 
 Considering that we now have a fully-typed [ExprIR](../api-reference-plan/expr-ir/index.md) it should be possible to 
-transpile one into the equivalent [string expression syntax] - without using any of the `Compliant*` machinery
+transpile one into the equivalent [string expression syntax] - **without** using any of the `Compliant*` machinery
+
+[string expression syntax]: https://altair-viz.github.io/user_guide/interactions/expressions.html
 
 ### Why?
 
 Although discovery of [Vega Expressions] became *easier* following improved IDE integration (vega/altair#3600), the ergonomics are still not great.
 
+[Vega Expressions]: https://vega.github.io/vega/docs/expressions/
 [User Guide/Transform/Calculate]: https://altair-viz.github.io/user_guide/transform/calculate.html
 
 Let's look at the comparison in [User Guide/Transform/Calculate]:
@@ -108,177 +111,212 @@ chart
 
 ### What?
 
-I got a bit carried away and mapped out what parts of the API can be translated and how:
-
-<!-- TODO @dangotbanned: Replace with a coarser view -->
-<!-- TODO @dangotbanned: Maybe have a table for translations? -->
-
-<!-- TODO @dangotbanned: Mention that this describes purely the expression syntax
-
-- Much more is possible via other APIs (`transform_{window,aggregate}`, `encode`)
-    - They would use a different set of conversion rules
-    - The target is a `SchemaBase` subclass (nested dict vs a string)
--->
-
-```mermaid
-stateDiagram-v2
-    direction LR
-
-    parse: narwhals._plan._parse
-    in_expr: Expr
-    in_str: str
-    in_lit: PythonLiteral
-    out_str: str
-    
-
-    [*] --> parse
-    %% inputs -> ExprIR
-    parse --> in_expr
-    parse --> in_lit
-    parse --> in_str
-    
-
-    in_expr --> ExprIR
-    in_lit --> Lit
-    in_str --> Col
-    
-    
-    %% ExprIR -> altair/python
-    Col --> datum
-    Lit --> out_str
-    BinaryExpr --> alt_binop
-    TernaryExpr --> alt_func
-    Len --> alt_func
-    Sort --> alt_func
-    Last --> alt_func
-    First --> alt_getitem
-
-    AllHorizontal --> alt_binop: reduce(and_, ...)
-    AnyHorizontal --> alt_binop: reduce(or_, ...)
-    SumHorizontal --> alt_binop: reduce(add, ...)
-    MaxHorizontal --> alt_func
-    MinHorizontal --> alt_func
-    ConcatStr --> alt_func
-
-    %% TODO link up FunctionExpr
+If we target translating `ExprIR` -> [Vega Expressions] for the general case [^1], there is already support for large chunks of Narwhals.  
 
 
-    %% Most things will be in here
-    state ExprIR {
-        
-        %% Use a bare name nothing too interesting happens
-        %% Define the io beforehand
-        Col 
-        
-        TernaryExpr
-        First
-        Last
-        Len
-        Sort
+[^1]: Roughly, any expression accepted by [`transform_calculate`] or [`transform_filter`].
+[^2]: [encode] supports aggregation; [`transform_aggregate`] and [`transform_window`] support a wider range of aggregates and window functions.
 
-        state BinaryExpr {
-            FloorDivide
-            ExclusiveOr
-            rewrite_xor: (left & ~right) | (~left & right)
+??? info "Diagram"
 
-            [*] --> ExclusiveOr
-            [*] --> Operator
-            [*] --> FloorDivide
-            ExclusiveOr --> rewrite_xor
-            rewrite_xor --> Operator
-            Operator
-            FloorDivide --> Error
-        }
+    <!-- TODO @dangotbanned: Replace with a coarser view -->
+    <!-- TODO @dangotbanned: Maybe have a table for translations? -->
 
-        %% Use a state when there's complexity
-        state Lit {
-            list: list[Any] | tuple[Any, ...]
-            dict: dict[str, Any]
-            js_repr: _js_repr (vendored)
-            
+    ```mermaid
+    stateDiagram-v2
+        direction LR
 
-            [*] --> NonNestedLiteral
-            [*] --> list
-            [*] --> dict
-            NonNestedLiteral --> js_repr
-            list --> array
-            dict --> object
+        parse: narwhals._plan._parse
+        in_expr: Expr
+        in_str: str
+        in_lit: PythonLiteral
+        out_str: str
 
-            js_repr --> [*]
-            array --> [*]
-            object --> [*]
-        }
+
+        [*] --> parse
+        %% inputs -> ExprIR
+        parse --> in_expr
+        parse --> in_lit
+        parse --> in_str
+
+
+        in_expr --> ExprIR
+        in_lit --> Lit
+        in_str --> Col
+
+
+        %% ExprIR -> altair/python
+        Col --> datum
+        Lit --> out_str
+        BinaryExpr --> alt_binop
+        TernaryExpr --> alt_func
+        Len --> alt_func
+        Sort --> alt_func
+        Last --> alt_func
+        First --> alt_getitem
+
+        AllHorizontal --> alt_binop: reduce(and_, ...)
+        AnyHorizontal --> alt_binop: reduce(or_, ...)
+        SumHorizontal --> alt_binop: reduce(add, ...)
+        MaxHorizontal --> alt_func
+        MinHorizontal --> alt_func
+        ConcatStr --> alt_func
 
         %% TODO link up FunctionExpr
-        state FunctionExpr {
-            Abs
-            Ceil
-            Exp
-            Floor
-            Sqrt
-            Log
-            Round
-            IsInSeq
-            IsNull
-            IsNotNull
-            IsNan
-            IsNotNan
-            IsFinite
-            Not
-            struct.FieldByName
+
+
+        %% Most things will be in here
+        state ExprIR {
+
+            %% Use a bare name nothing too interesting happens
+            %% Define the io beforehand
+            Col 
+
+            TernaryExpr
+            First
+            Last
+            Len
+            Sort
+
+            state BinaryExpr {
+                FloorDivide
+                ExclusiveOr
+                rewrite_xor: (left & ~right) | (~left & right)
+
+                [*] --> ExclusiveOr
+                [*] --> Operator
+                [*] --> FloorDivide
+                ExclusiveOr --> rewrite_xor
+                rewrite_xor --> Operator
+                Operator
+                FloorDivide --> Error
+            }
+
+            %% Use a state when there's complexity
+            state Lit {
+                list: list[Any] | tuple[Any, ...]
+                dict: dict[str, Any]
+                js_repr: _js_repr (vendored)
+
+
+                [*] --> NonNestedLiteral
+                [*] --> list
+                [*] --> dict
+                NonNestedLiteral --> js_repr
+                list --> array
+                dict --> object
+
+                js_repr --> [*]
+                array --> [*]
+                object --> [*]
+            }
+
+            %% TODO link up FunctionExpr
+            state FunctionExpr {
+                Abs
+                Ceil
+                Exp
+                Floor
+                Sqrt
+                Log
+                Round
+                IsInSeq
+                IsNull
+                IsNotNull
+                IsNan
+                IsNotNan
+                IsFinite
+                Not
+                struct.FieldByName
+            }
+
+            state HorizontalExpr {
+                AllHorizontal
+                AnyHorizontal
+                SumHorizontal
+                MaxHorizontal
+                MinHorizontal
+                ConcatStr
+            }
+
         }
 
-        state HorizontalExpr {
-            AllHorizontal
-            AnyHorizontal
-            SumHorizontal
-            MaxHorizontal
-            MinHorizontal
-            ConcatStr
+        state Altair {
+            datum: datum[Col.name]
+            alt_binop: core.expr.BinaryExpression
+            alt_func: core.expr.FunctionExpression
+            alt_getitem: core.expr.GetItemExpression
         }
 
-    }
+    ```
 
-    state Altair {
-        datum: datum[Col.name]
-        alt_binop: core.expr.BinaryExpression
-        alt_func: core.expr.FunctionExpression
-        alt_getitem: core.expr.GetItemExpression
-    }
-    
-```
+More kinds of `ExprIR` can be supported in different contexts [^2], which is exactly where having an [Intermediate representation] shines.  
+A single user-facing API for writing expressions can be translated to a range of targets. Each kind of translation can restrict the subset of 
+expressions that are supported and extend that through target-specific expression rewrites.  
+
+
+[`transform_calculate`]: https://altair-viz.github.io/user_guide/transform/calculate.html
+[`transform_filter`]: https://altair-viz.github.io/user_guide/transform/filter.html
+[`transform_aggregate`]: https://altair-viz.github.io/user_guide/transform/aggregate.html
+[`encode`]: https://altair-viz.github.io/user_guide/encodings/index.html
+[`transform_window`]: https://altair-viz.github.io/user_guide/transform/window.html
+[Intermediate representation]: https://en.wikipedia.org/wiki/Intermediate_representation
 
 ### Prior art
+[Quansight/ibis-vega-transform]: https://github.com/Quansight/ibis-vega-transform
+[vega/vegafusion]: https://github.com/vega/vegafusion
+
+Altair has some history with external projects performing transformations.
+
+#### [Quansight/ibis-vega-transform]
 
 [existing syntax]: https://github.com/Quansight/ibis-vega-transform/blob/50e70ad49de1e388b3b852f042553e7dda6499d8/examples/ibis-altair-extraction.ipynb
-[just one]: https://github.com/Quansight/ibis-vega-transform/blob/50e70ad49de1e388b3b852f042553e7dda6499d8/ibis_vega_transform/vegaexpr.py
 
-This idea contrasts with another that came before ([Quansight/ibis-vega-transform]).
+> A JupyterLab extension for performing Vega transforms lazily using Ibis.  
+> Python evaluation of Vega transforms using Ibis expressions.
 
-There, everything was still written using [existing syntax] and really the aim was to improve performance by offloading 
-the compute to a database.
+Everything was written using [existing syntax] and broadly the goal is improved performance with large datasets.
 
-That project is an interesting read, but the scope of it dwarfs this idea.
-Which is roughly the inverse of [just one] module.
+The project is an interesting read, but the scope of it dwarfs this idea.  
+I'd consider [`ibis_vega_transform/vegaexpr.py`](https://github.com/Quansight/ibis-vega-transform/blob/50e70ad49de1e388b3b852f042553e7dda6499d8/ibis_vega_transform/vegaexpr.py) 
+very close to the *inverse* of this proposal.
+
+The project is no longer under development.
+
+#### [vega/vegafusion]
+[how the project compares]: https://vegafusion.io/about/related_projects.html#ibis-vega-transform
+[depends on Narwhals]: https://github.com/vega/vegafusion/blob/7a40b506fb16be6e9423723d3ffa5539a9cccd15/vegafusion-python/pyproject.toml#L17
+[exposing a LogicalPlan]: https://github.com/narwhals-dev/narwhals/discussions/2816
+
+> Serverside scaling for Vega and Altair visualizations 
+
+The VegaFusion docs describe [how the project compares] to [Quansight/ibis-vega-transform].  
+While the technology behind them differ, they both operate in the space of **optimizing complete chart specifications**.  
+Whereas translating Narwhals expressions to Altair would work **with** VegaFusion, since they are never part of final spec.  
+But who knows, given that VegaFusion [depends on Narwhals] and the author has shown interest in us [exposing a LogicalPlan] - 
+maybe `ExprIR` will find another use case there too? 😏
 
 
+### Example
+<!--TODO @dangotbanned: Section starts way too abruptly-->
 
-### Concrete example
 The [Waterfall Chart] from Altair's example gallery is a glimpse into 
 how far you can stretch a few primitives.  
 
-It is impressive, but I don't think how to get there was intuitive [^1]
+It *is* impressive, but I don't think how to get there was intuitive [^3]
 
-[^1]: I was the the last one to [refactor it](https://github.com/vega/altair/pull/3544/commits/a681ec53cb57524f1fd347200df94c88c1d151ef) too 😅
-
-
-!!! tip
-    The syntax takes some getting used-to, so check the annotations for Narwhals-equivalent operations
+[^3]: I was the the last one to [refactor it](https://github.com/vega/altair/pull/3544/commits/a681ec53cb57524f1fd347200df94c88c1d151ef) too 😅
 
 
 [Waterfall Chart]: https://altair-viz.github.io/gallery/waterfall_chart.html
 
 === "Current"
+
+    !!! tip
+
+        The syntax takes some getting used-to, so check the annotations for Narwhals-equivalent operations
+
+    [Go to source](https://github.com/vega/altair/blob/5cf3b9042703c46e1bace75a515353a2c35b7fc6/tests/examples_arguments_syntax/waterfall_chart.py)
 
     ``` py linenums="1"
     import altair as alt
@@ -373,10 +411,10 @@ It is impressive, but I don't think how to get there was intuitive [^1]
 
     1.  Our input schema is `{"label": String, "amount": Int64}`
     2.  Selecting a column from the input `col("amount")`
-    3.  This looks like [`col("amount")`](#__codelineno-3-23), but is a forward reference to [`col("amount").rolling_sum(1).alias("window_sum_amount")`](#__codelineno-3-39)
+    3.  This looks like [`col("amount")`](#__codelineno-3-23), but is a forward reference to [`col("amount").cum_sum().alias("window_sum_amount")`](#__codelineno-3-39)
     4.  A conditional expression  
         `when(col("label") == lit("End")).then(0).otherwise(col("window_sum_amount") - col("amount"))`
-    5.  `col("amount").rolling_sum(1).alias("window_sum_amount")`
+    5.  `col("amount").cum_sum(1).alias("window_sum_amount")`
     6.  Expressions in this block are similar to `with_columns(**named_exprs)`
     7.  I'm responsible for introducing this and it is a bit frankenstein-esque.  
         
@@ -390,18 +428,107 @@ It is impressive, but I don't think how to get there was intuitive [^1]
 
 === "With Narwhals"
 
-    <!-- TODO @dangotbanned: Add this after cleaning up the experiments from this branch -->
-    ``` py
-    ...
+    [Go to source](https://github.com/narwhals-dev/narwhals/blob/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair/examples/waterfall_chart.py)
+
+
+    ``` py linenums="1"
+    import polars as pl
+    import narwhals._plan as nw
+    from narwhals._plan.altair import api
+
+    data = [
+        {"label": "Begin", "amount": 4000},
+        {"label": "Jan", "amount": 1707},
+        {"label": "Feb", "amount": -1425},
+        {"label": "Mar", "amount": -1030},
+        {"label": "Apr", "amount": 1812},
+        {"label": "May", "amount": -1067},
+        {"label": "Jun", "amount": -1481},
+        {"label": "Jul", "amount": 1228},
+        {"label": "Aug", "amount": 1176},
+        {"label": "Sep", "amount": 1146},
+        {"label": "Oct", "amount": 1205},
+        {"label": "Nov", "amount": -1388},
+        {"label": "Dec", "amount": 1492},
+        {"label": "End", "amount": 0},
+    ]
+    source = pl.DataFrame(data)
+
+    # Define frequently referenced fields
+    amount = nw.col("amount")
+    label = nw.col("label")
+    window_lead_label = nw.col("window_lead_label")
+    window_sum_amount = nw.col("window_sum_amount")
+
+    # Define frequently referenced expressions
+    when_end = nw.when(label=nw.lit("End"))
+    begin_or_end = label.is_in(["Begin", "End"])
+    calc_prev_sum = when_end.then(0).otherwise(window_sum_amount - amount)
+    calc_amount = when_end.then(window_sum_amount).otherwise(amount)
+
+    base = (
+        api.Chart(source)
+        .transform_window(window_sum_amount=amount.sum(), window_lead_label=label.shift(1))
+        .transform_calculate(
+            calc_lead=(
+                nw.when(window_lead_label.is_null()).then(label).otherwise(window_lead_label)
+            ),
+            calc_prev_sum=calc_prev_sum,
+            calc_amount=calc_amount,
+            calc_text_amount=(
+                nw.when(~begin_or_end, calc_amount > 0).then(nw.lit("+")) + calc_amount
+            ),
+            calc_center=(window_sum_amount + calc_prev_sum) / 2,
+            calc_sum_dec=(nw.when(window_sum_amount < calc_prev_sum).then(window_sum_amount)),
+            calc_sum_inc=(nw.when(window_sum_amount > calc_prev_sum).then(window_sum_amount)),
+        )
+        .encode(x=api.X("label:O", axis=api.Axis(title="Months", labelAngle=0), sort=None))
+    )
+
+    color = (
+        nw.when(begin_or_end)
+        .then(nw.lit("#878d96"))
+        .when(calc_amount < 0)
+        .then(nw.lit("#fa4d56"))
+        .otherwise(nw.lit("#24a148"))
+    )
+
+    bar = base.mark_bar(size=45).encode(
+        y=api.Y("calc_prev_sum:Q", title="Amount"), y2="window_sum_amount:Q", color=color
+    )
+    rule = base.mark_rule(xOffset=-22.5, x2Offset=22.5).encode(
+        y="window_sum_amount:Q", x2="calc_lead"
+    )
+    chart_waterfall = api.layer(
+        bar,
+        rule,
+        base.mark_text(baseline="bottom", dy=-4).encode(
+            text="calc_sum_inc:N", y="calc_sum_inc:Q"
+        ),
+        base.mark_text(baseline="top", dy=4).encode(
+            text="calc_sum_dec:N", y="calc_sum_dec:Q"
+        ),
+        base.mark_text(baseline="middle").encode(
+            text="calc_text_amount:N", y="calc_center:Q", color=nw.lit("white")
+        ),
+    ).properties(width=800, height=450)
     ```
 
+### One example is great but ...
+[Experimental implementation]: https://github.com/narwhals-dev/narwhals/tree/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair
+[5 translated examples]: https://github.com/narwhals-dev/narwhals/tree/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair/examples
+[Waterfall]: #concrete-example
 
-[string expression syntax]: https://altair-viz.github.io/user_guide/interactions/expressions.html
-[Vega Expressions]: https://vega.github.io/vega/docs/expressions/
-[Quansight/ibis-vega-transform]: https://github.com/Quansight/ibis-vega-transform
+I had too much fun with this idea, so there's also an [Experimental implementation].  
+Including [Waterfall], there are [5 translated examples] using [`Expr`][narwhals._plan.expr.Expr] across various Altair APIs.  
 
-[^2]: See also [Vega Expressions]
+Some light docs are included as a bonus:
 
+- [Why here?]
+- [Implementation constraints]
+
+[Why here?]: https://github.com/narwhals-dev/narwhals/blob/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair/__init__.py
+[Implementation constraints]: https://github.com/narwhals-dev/narwhals/blob/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair/examples/__init__.py
 
 ## Strings -> Narwhals
 
