@@ -75,10 +75,16 @@ def test_str_zfill_zero_width_pyarrow() -> None:
     assert_equal_data({"a": result}, data)
 
 
-def test_str_zfill_negative_width_pyarrow_raises() -> None:
-    # A negative width is rejected, matching Polars (whose zfill width is unsigned),
-    # rather than crashing inside pyarrow's utf8_lpad.
-    pytest.importorskip("pyarrow")
-    s = nw.from_dict(data, backend="pyarrow")["a"]
+def test_str_zfill_negative_width_raises(constructor_eager: ConstructorEager) -> None:
+    # A negative width is rejected in the public layer, so every backend gives the same
+    # error. Before, pandas returned the string unchanged, Polars surfaced an internal
+    # "conversion from `i128` to `u64` failed", and pyarrow crashed inside utf8_lpad.
+    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     with pytest.raises(nw.exceptions.InvalidOperationError):
         s.str.zfill(-1)
+
+
+def test_str_zfill_negative_width_expr_raises(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    with pytest.raises(nw.exceptions.InvalidOperationError):
+        df.select(nw.col("a").str.zfill(-1))
