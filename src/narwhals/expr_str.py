@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -553,6 +554,9 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
+        if width < 0:
+            msg = f"`width` must be non-negative, got: {width}"
+            raise InvalidOperationError(msg)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
