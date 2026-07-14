@@ -520,6 +520,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        if length < 0:
+            msg = f"`length` must be non-negative, got: {length}"
+            raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_start(
                 length=length, fill_char=fill_char
@@ -550,6 +553,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        if length < 0:
+            msg = f"`length` must be non-negative, got: {length}"
+            raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_end(
                 length=length, fill_char=fill_char
