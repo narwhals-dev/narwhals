@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -106,3 +108,14 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     expected = {"a": ["Café日日", "345日日日", "東京日日日日", None]}
 
     assert_equal_data(result, expected)
+
+
+def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> None:
+    # A negative length is rejected in the public layer, so every backend gives the same error.
+    # Before, pandas returned the string unchanged, Polars surfaced an internal "conversion from
+    # `i128` to `u64` failed", and pyarrow leaked `ArrowInvalid: Negative buffer resize`.
+    s = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)["a"]
+    with pytest.raises(nw.exceptions.InvalidOperationError):
+        s.str.pad_start(-1)
+    with pytest.raises(nw.exceptions.InvalidOperationError):
+        s.str.pad_end(-1)
