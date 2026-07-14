@@ -8,7 +8,7 @@ from inspect import getattr_static as _getattr_static
 from io import BytesIO
 from secrets import token_hex
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Literal, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Literal, TypeVar, overload
 
 from narwhals._plan._guards import is_iterable_reject
 from narwhals._utils import not_implemented, qualified_type_name
@@ -95,9 +95,8 @@ def into_dtype(dtype: type[NonNestedDTypeT], /) -> NonNestedDTypeT: ...
 @overload
 def into_dtype(dtype: DTypeT, /) -> DTypeT: ...
 def into_dtype(dtype: DTypeT | type[NonNestedDTypeT], /) -> DTypeT | NonNestedDTypeT:
-    # NOTE: `mypy` needs to learn intersections
     if isinstance(dtype, type) and issubclass(dtype, DType):
-        return cast("NonNestedDTypeT", dtype())
+        return dtype()
     return dtype
 
 

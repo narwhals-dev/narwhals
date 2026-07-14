@@ -160,9 +160,9 @@ def test_immutable_invalid_constructor() -> None:
     with pytest.raises(TypeError):
         TwoSlot(a=1, b="two", c="huh?")  # type: ignore[call-arg]
     with pytest.raises(TypeError):
-        OneSlot(1)  # type: ignore[misc]
+        OneSlot(1)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
-        OneSlot(1, 2, 3)  # type: ignore[call-arg, misc]
+        OneSlot(1, 2, 3)  # type: ignore[call-arg]
     with pytest.raises(TypeError):
         OneSlot(1, a=1)  # type: ignore[misc]
 
