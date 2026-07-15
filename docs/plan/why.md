@@ -11,7 +11,7 @@
 
 1 year and many lines of code **read** later - I know we have more to learn from those that came before us.
 
-Despite *another rewrite* that followed ([#2483]) in ([#3152]) - the internals of [`narwhals.expr.Expr`][] [^1] and [`CompliantExpr`] [^2] 
+Despite *another rewrite* that followed ([#2483]) in ([#3152]) - the internals of [`narwhals.expr.Expr`][] [^1] and [`CompliantExpr`](https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_compliant/expr.py) [^2] 
 are unlike what you'll find reading the source of [related projects].
 
 [^1]: See [how it works](./how_it_works.md#nodes)
@@ -20,7 +20,6 @@ are unlike what you'll find reading the source of [related projects].
 [#2483]: https://github.com/narwhals-dev/narwhals/pull/2483
 [#3152]: https://github.com/narwhals-dev/narwhals/pull/3152
 [related projects]: ./inspired.md
-[`CompliantExpr`]: https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_compliant/expr.py
 
 ### Isn't being different what makes Narwhals popular?
 There's no doubt that Narwhals is popular, this is indeed wild 🙌
