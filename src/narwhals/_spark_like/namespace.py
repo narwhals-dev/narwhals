@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -20,6 +20,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
+    from narwhals._spark_like.utils import SparkReader, SparkSession
     from narwhals._utils import Implementation, Version
     from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
 
@@ -67,6 +69,34 @@ class SparkLikeNamespace(
     @property
     def _lazyframe(self) -> type[SparkLikeLazyFrame]:
         return SparkLikeLazyFrame
+
+    def _session_reader(self, fmt: str, kwds: dict[str, Any]) -> SparkReader:
+        if (session := kwds.pop("session", None)) is None:
+            msg = "Spark like backends require a session object to be passed in `kwargs`."
+            raise ValueError(msg)
+
+        return cast("SparkSession", session).read.format(fmt)
+
+    def scan_csv(
+        self, source: str, *, separator: str = ",", **kwds: Any
+    ) -> SparkLikeLazyFrame:
+        validate_separators(separator, ("sep", "delimiter"), kwds)
+        reader = self._session_reader("csv", kwds)
+        native = (
+            reader.load(source, sep=separator)
+            if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
+            else reader.options(sep=separator, **kwds).load(source)
+        )
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: str, **kwds: Any) -> SparkLikeLazyFrame:
+        reader = self._session_reader("parquet", kwds)
+        native = (
+            reader.load(source)
+            if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
+            else reader.options(**kwds).load(source)
+        )
+        return self._lazyframe.from_native(native, context=self)
 
     @property
     def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202

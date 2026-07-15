@@ -17,16 +17,18 @@ if TYPE_CHECKING:
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
+    from sqlframe.base.readerwriter import _BaseDataFrameReader
     from sqlframe.base.session import _BaseSession as Session
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
-    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame, SQLFrameDataFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
     SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]
+    SparkReader = _BaseDataFrameReader[SparkSession, SQLFrameDataFrame, Any]
 
 UNITS_DICT = {
     "y": "year",

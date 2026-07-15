@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -47,6 +47,27 @@ class ArrowNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def read_csv(
+        self, source: str, *, separator: str = ",", **kwds: Any
+    ) -> ArrowDataFrame:
+        from pyarrow import csv
+
+        if (parse_options := kwds.get("parse_options")) is not None:
+            if cast("csv.ParseOptions", parse_options).delimiter != separator:
+                msg = (
+                    "`separator` and `parse_options.delimiter` do not match: "
+                    f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
+                )
+                raise TypeError(msg)
+        else:
+            kwds["parse_options"] = csv.ParseOptions(delimiter=separator)
+        return self._dataframe.from_native(csv.read_csv(source, **kwds), context=self)
+
+    def read_parquet(self, source: str, **kwds: Any) -> ArrowDataFrame:
+        from pyarrow import parquet as pq
+
+        return self._dataframe.from_native(pq.read_table(source, **kwds), context=self)
 
     def extract_native(
         self, *series: ArrowSeries

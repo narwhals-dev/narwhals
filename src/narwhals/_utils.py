@@ -2118,6 +2118,19 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
+def validate_separators(
+    separator: str, native_separators: tuple[str, ...], kwds: Mapping[str, Any], /
+) -> None:
+    """Ensure `separator` does not conflict with backend-native aliases passed via `kwds`."""
+    for native_separator in native_separators:
+        if native_separator in kwds and kwds[native_separator] != separator:
+            msg = (
+                f"`separator` and `{native_separator}` do not match: "
+                f"`separator`={separator} and `{native_separator}`={kwds[native_separator]}."
+            )
+            raise TypeError(msg)
+
+
 if sys.platform != "win32":
 
     def normalize_path(source: FileSource, /) -> str:

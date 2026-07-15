@@ -19,6 +19,7 @@ from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
 from narwhals._pandas_like.utils import is_dtype_pyarrow, is_non_nullable_boolean
+from narwhals._utils import validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -68,6 +69,18 @@ class PandasLikeNamespace(
     def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
         self._version = version
+
+    def read_csv(
+        self, source: str, *, separator: str = ",", **kwds: Any
+    ) -> PandasLikeDataFrame:
+        validate_separators(separator, ("sep",), kwds)
+        ns = self._implementation.to_native_namespace()
+        native = ns.read_csv(source, sep=separator, **kwds)
+        return self._dataframe.from_native(native, context=self)
+
+    def read_parquet(self, source: str, **kwds: Any) -> PandasLikeDataFrame:
+        ns = self._implementation.to_native_namespace()
+        return self._dataframe.from_native(ns.read_parquet(source, **kwds), context=self)
 
     def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:

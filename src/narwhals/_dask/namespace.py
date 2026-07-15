@@ -4,7 +4,7 @@ import operator
 from datetime import date, datetime
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -22,7 +22,12 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, is_nested_literal, not_implemented
+from narwhals._utils import (
+    Implementation,
+    is_nested_literal,
+    not_implemented,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -58,6 +63,16 @@ class DaskNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def scan_csv(
+        self, source: str, *, separator: str = ",", **kwds: Any
+    ) -> DaskLazyFrame:
+        validate_separators(separator, ("sep",), kwds)
+        native = dd.read_csv(source, sep=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: str, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(dd.read_parquet(source, **kwds), context=self)
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):

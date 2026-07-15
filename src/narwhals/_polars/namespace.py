@@ -115,6 +115,24 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
+    def read_csv(
+        self, source: str, *, separator: str = ",", **kwds: Any
+    ) -> PolarsDataFrame:
+        native = pl.read_csv(source, separator=separator, **kwds)
+        return self._dataframe.from_native(native, context=self)
+
+    def scan_csv(
+        self, source: str, *, separator: str = ",", **kwds: Any
+    ) -> PolarsLazyFrame:
+        native = pl.scan_csv(source, separator=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def read_parquet(self, source: str, **kwds: Any) -> PolarsDataFrame:
+        return self._dataframe.from_native(pl.read_parquet(source, **kwds), context=self)
+
+    def scan_parquet(self, source: str, **kwds: Any) -> PolarsLazyFrame:
+        return self._lazyframe.from_native(pl.scan_parquet(source, **kwds), context=self)
+
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."
     )
