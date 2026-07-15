@@ -517,7 +517,7 @@ It *is* impressive, but I don't think how to get there was intuitive [^3]
 ### One example is great but ...
 [Experimental implementation]: https://github.com/narwhals-dev/narwhals/tree/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair
 [5 translated examples]: https://github.com/narwhals-dev/narwhals/tree/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair/examples
-[Waterfall]: #concrete-example
+[Waterfall]: #example
 
 I had too much fun with this idea, so there's also an [Experimental implementation].  
 Including [Waterfall], there are [5 translated examples] using [`Expr`][narwhals._plan.expr.Expr] across various Altair APIs.  
