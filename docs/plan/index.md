@@ -19,12 +19,12 @@
 
 ## On the surface
 - Extended/new APIs
-- Richer error messages
+- Improved error messages
 - Increased API completeness for PyArrow
 - Closer behavior alignment to Polars
 
 ## Behind the scenes
-- ...
-- ...
-- ...
-- ...
+- A rich representation for expressions
+- Fine-grained protocols, which compose to provide useful defaults
+- First-class scalars
+- Every backend is a plugin
