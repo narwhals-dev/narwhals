@@ -91,7 +91,25 @@ backend (either eager or lazy).
 - An Implementation, such as: `Implementation.DASK`, `Implementation.PYSPARK`, ...
 """
 
-BackendT = TypeVar("BackendT", bound=Backend)
+PluginName = NewType("PluginName", str)
+"""Name of a plugin backend's [entry point](https://packaging.python.org/en/latest/specifications/entry-points/).
+
+Plugin backends are discovered at runtime, so their names cannot join the
+`Literal` unions that describe the built-in backends. `PluginName` is a
+[`NewType`](https://typing.python.org/en/latest/spec/aliases.html#newtype):
+type checkers treat it as a distinct subtype of `str`, meaning
+
+- an arbitrary `str` is still rejected where a `backend` is expected, and
+- a value explicitly wrapped as `PluginName("...")` is accepted.
+
+The contract is that a wrapped string **must** name an installed plugin's
+entry point in the `narwhals.plugins` group.
+
+Signatures that dispatch to plugins include it in the `IntoBackend`
+parameter, e.g. `IntoBackend[EagerAllowed | PluginName]`.
+"""
+
+BackendT = TypeVar("BackendT", bound=Backend | PluginName)
 IntoBackend: TypeAlias = BackendT | ModuleType
 """Anything that can be converted into a [`narwhals.Implementation`][].
 
@@ -151,23 +169,8 @@ Examples:
     └──────────────────┘
 """
 
-PluginName = NewType("PluginName", str)
-"""Name of a plugin backend's [entry point](https://packaging.python.org/en/latest/specifications/entry-points/).
-
-Plugin backends are discovered at runtime, so their names cannot join the
-`Literal` unions that describe the built-in backends. `PluginName` is a
-[`NewType`](https://typing.python.org/en/latest/spec/aliases.html#newtype):
-type checkers treat it as a distinct subtype of `str`, meaning
-
-- an arbitrary `str` is still rejected where a `backend` is expected, and
-- a value explicitly wrapped as `PluginName("...")` is accepted.
-
-The contract is that a wrapped string **must** name an installed plugin's
-entry point in the `narwhals.plugins` group.
-"""
-
-IntoBackendAny: TypeAlias = "IntoBackend[Backend] | PluginName"
-IntoBackendEager: TypeAlias = "IntoBackend[EagerAllowed] | PluginName"
+IntoBackendAny: TypeAlias = IntoBackend[Backend]
+IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
 
 NoDefault: TypeAlias = Literal[_NoDefault.no_default]

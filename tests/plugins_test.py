@@ -13,7 +13,7 @@ from narwhals._typing import PluginName
 if TYPE_CHECKING:
     from typing_extensions import Self
 
-    from narwhals._typing import IntoBackendEager
+    from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.plugins import Plugin
     from narwhals.utils import Version
 
@@ -148,12 +148,12 @@ if TYPE_CHECKING:
     def typing_backend_plugin_name(
         plugin_name: PluginName,
         dynamic_string: str,
-        eager_or_plugin: IntoBackendEager,
+        eager_or_plugin: IntoBackend[EagerAllowed | PluginName],
         df: nw.DataFrame[Any],
     ) -> None:
         data = {"a": [1, 2]}
 
-        # Accepted: an explicitly wrapped plugin name, everything `IntoBackendEager` covers.
+        # Accepted: an explicitly wrapped plugin name, everything `IntoBackend[EagerAllowed | PluginName]` covers.
         nw.from_dict(data, backend=plugin_name)
         nw.from_dict(data, backend=eager_or_plugin)
         nw.new_series("a", [1, 2], backend=plugin_name)

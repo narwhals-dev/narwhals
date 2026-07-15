@@ -87,11 +87,12 @@ if TYPE_CHECKING:
     )
     from narwhals._typing import (
         Arrow,
+        Backend,
+        EagerAllowed,
         IntoBackend,
-        IntoBackendAny,
-        IntoBackendEager,
         LazyAllowed,
         Pandas,
+        PluginName,
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
@@ -125,7 +126,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: IntoBackendEager
+        cls,
+        native_frame: IntoArrowTable,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         result = super().from_arrow(native_frame, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -136,7 +140,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         data: Mapping[str, Any],
         schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackendEager | None = None,
+        backend: IntoBackend[EagerAllowed | PluginName] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -147,7 +151,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         data: Sequence[Mapping[str, Any]],
         schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackendEager,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         result = super().from_dicts(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -158,7 +162,7 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: IntoBackendEager,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         result = super().from_numpy(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -282,7 +286,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackendEager,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -294,7 +298,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackendEager,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_iterable(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -923,7 +927,11 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
 
 
 def new_series(
-    name: str, values: Any, dtype: IntoDType | None = None, *, backend: IntoBackendEager
+    name: str,
+    values: Any,
+    dtype: IntoDType | None = None,
+    *,
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -945,7 +953,7 @@ def new_series(
 
 
 def from_arrow(
-    native_frame: IntoArrowTable, *, backend: IntoBackendEager
+    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed | PluginName]
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -967,7 +975,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
-    backend: IntoBackendEager | None = None,
+    backend: IntoBackend[EagerAllowed | PluginName] | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
@@ -1005,7 +1013,7 @@ def from_numpy(
     data: _2DArray,
     schema: IntoSchema | Sequence[str] | None = None,
     *,
-    backend: IntoBackendEager,
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -1032,7 +1040,11 @@ def from_numpy(
 
 
 def read_csv(
-    source: str, *, backend: IntoBackendEager, separator: str = ",", **kwargs: Any
+    source: str,
+    *,
+    backend: IntoBackend[EagerAllowed | PluginName],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
@@ -1056,7 +1068,11 @@ def read_csv(
 
 
 def scan_csv(
-    source: str, *, backend: IntoBackendAny, separator: str = ",", **kwargs: Any
+    source: str,
+    *,
+    backend: IntoBackend[Backend | PluginName],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1083,7 +1099,7 @@ def scan_csv(
 
 
 def read_parquet(
-    source: str, *, backend: IntoBackendEager, **kwargs: Any
+    source: str, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -1104,7 +1120,7 @@ def read_parquet(
 
 
 def scan_parquet(
-    source: str, *, backend: IntoBackendAny, **kwargs: Any
+    source: str, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 

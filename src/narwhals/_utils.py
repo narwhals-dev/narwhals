@@ -98,7 +98,9 @@ if TYPE_CHECKING:
     )
     from narwhals._translate import ArrowStreamExportable, IntoArrowTable, ToNarwhalsT_co
     from narwhals._typing import (
-        IntoBackendAny,
+        Backend,
+        IntoBackend,
+        PluginName,
         _ArrowImpl,
         _CuDFImpl,
         _DaskImpl,
@@ -391,7 +393,9 @@ class Implementation(NoAutoEnum):
             return Implementation.UNKNOWN
 
     @classmethod
-    def from_backend(cls: type[Self], backend: IntoBackendAny) -> Implementation:
+    def from_backend(
+        cls: type[Self], backend: IntoBackend[Backend | PluginName]
+    ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
         Arguments:

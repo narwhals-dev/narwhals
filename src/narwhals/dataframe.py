@@ -72,7 +72,13 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import IntoBackend, IntoBackendEager, LazyAllowed, Polars
+    from narwhals._typing import (
+        EagerAllowed,
+        IntoBackend,
+        LazyAllowed,
+        PluginName,
+        Polars,
+    )
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
@@ -502,7 +508,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: IntoBackendEager
+        cls,
+        native_frame: IntoArrowTable,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -559,7 +568,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: Mapping[str, Any],
         schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackendEager | None = None,
+        backend: IntoBackend[EagerAllowed | PluginName] | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
@@ -622,7 +631,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: Sequence[Mapping[str, Any]],
         schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackendEager,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
@@ -696,7 +705,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: IntoBackendEager,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         """Construct a DataFrame from a NumPy ndarray.
 
