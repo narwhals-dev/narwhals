@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.23.0"
+version = "2.24.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -200,12 +200,6 @@ conflicts = [
     { extra = "cudf" },
     { extra = "modin" },
     { extra = "pandas" },
-  ],
-  # `typing` dependecy group pins "pyarrow" and, potentially, other
-  # dependencies for which we want to check latest versions during tests
-  [
-    { group = "core" },
-    { group = "typing" },
   ],
   # The `extreme-*` groups pin mutually incompatible pyarrow/pandas/numpy
   # versions, and all pin `pyarrow-stubs<17` while `typing` pins ==19.2. `cudf`

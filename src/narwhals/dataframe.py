@@ -39,6 +39,7 @@ from narwhals._utils import (
     is_lazy_allowed,
     is_list_of,
     is_sequence_like,
+    is_sequence_of,
     is_slice_none,
     predicates_contains_list_of_bool,
     qualified_type_name,
@@ -72,11 +73,11 @@ if TYPE_CHECKING:
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
-    from narwhals.dtypes import DType
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrame,
@@ -556,14 +557,14 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed] | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
         Indexes (if present, for pandas-like backends) are aligned following
-        the [left-hand-rule](../concepts/pandas_index.md/).
+        the [left-hand-rule](../concepts/pandas_index.md).
 
         Notes:
             For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -571,10 +572,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Dictionary to create DataFrame from.
-            schema: The DataFrame schema as Schema or dict of {name: type}. If not
-                specified, the schema will be inferred by the native library. If
-                any `dtype` is `None`, the data type for that column will be inferred
-                by the native library.
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a
+                iterable of (name, type) tuples.
+                If not specified, the schema will be inferred by the native library.
+                If any `dtype` is `None`, the data type for that column will be
+                inferred by the native library.
             backend: specifies which eager backend instantiate to. Only
                 necessary if inputs are not Narwhals Series.
 
@@ -600,6 +602,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if backend is None:
             data, backend = _from_dict_no_backend(data)
+        schema = dict(schema) if schema is not None else None
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -617,7 +620,7 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
         backend: IntoBackend[EagerAllowed],
     ) -> DataFrame[Any]:
@@ -629,10 +632,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
-            schema: The DataFrame schema as Schema or dict of {name: type}. If not
-                specified, the schema will be inferred by the native library. If
-                any `dtype` is `None`, the data type for that column will be inferred
-                by the native library.
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a
+                iterable of (name, type) tuples.
+                If not specified, the schema will be inferred by the native library.
+                If any `dtype` is `None`, the data type for that column will be
+                inferred by the native library.
             backend: Specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
@@ -672,6 +676,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴────────┴───────┘|
             └──────────────────────────┘
         """
+        schema = dict(schema) if schema is not None else None
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -703,7 +708,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Two-dimensional data represented as a NumPy ndarray.
-            schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+            schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
+                of (name, type) tuples, or a sequence of str.
             backend: specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
@@ -741,10 +747,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not _is_into_schema(schema):
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
+                "Schema | Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Sequence[str].\n"
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
+        if not (schema is None or is_sequence_of(schema, str)):
+            schema = Schema(schema)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -2069,7 +2077,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -2548,7 +2556,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import duckdb

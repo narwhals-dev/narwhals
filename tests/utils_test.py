@@ -683,3 +683,22 @@ def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:
     )
     with pytest.raises(AssertionError, match="Mismatch at index 1"):
         assert_equal_data(df, {"a": [1, 2, 2]})
+
+
+def test_assert_equal_data_more_keys_in_result() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2], "b": [3, 4], "c": [5, 6]}))
+    with pytest.raises(AssertionError):
+        assert_equal_data(df, {"a": [1, 2], "b": [3, 4]})
+
+
+def test_assert_equal_data_wrong_key_order() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    with pytest.raises(AssertionError):
+        assert_equal_data(df, {"b": [3, 4], "a": [1, 2]})
+
+
+def test_assert_equal_data_more_keys_in_result_dict() -> None:
+    # `result` need not be a narwhals object with `.columns` -- plain dicts
+    # are also a supported input, and must be checked the same way.
+    with pytest.raises(AssertionError):
+        assert_equal_data({"a": [1, 2], "b": [3, 4]}, {"a": [1, 2]})

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Literal
 
 from narwhals._duckdb.utils import DeferredTimeZone, narwhals_to_native_dtype
 from narwhals.dataframe import LazyFrame
+from narwhals.schema import Schema
 from narwhals.translate import from_native
 from narwhals.utils import Version
 
@@ -91,7 +92,7 @@ def table(name: str, schema: IntoSchema) -> SQLTable:
     """
     column_mapping = {
         col: narwhals_to_native_dtype(dtype, Version.MAIN, TZ)
-        for col, dtype in schema.items()
+        for col, dtype in Schema(schema).items()
     }
     dtypes = ", ".join(f'"{col}" {dtype}' for col, dtype in column_mapping.items())
     CONN.sql(f"""

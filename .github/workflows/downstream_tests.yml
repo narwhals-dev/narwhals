@@ -695,6 +695,12 @@ jobs:
           sh ./build-python.sh install
       - name: install-deps
         run: |
+          # scikit-learn's dev floor can briefly outpace the nightly wheel index
+          # right after a stable release, so install it separately from plain
+          # PyPI first; the rest of the file then installs against it as already
+          # satisfied, while numpy/pandas/pyarrow/etc still resolve as nightlies.
+          sklearn_spec=$(grep -E '^scikit-learn' LightGBM/.ci/pip-envs/requirements-latest.txt)
+          uv pip install "$sklearn_spec"
           uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt
       - name: install-narwhals-dev
         run: |
