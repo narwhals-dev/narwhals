@@ -11,8 +11,8 @@
 
 1 year and many lines of code **read** later - I know we have more to learn from those that came before us.
 
-Despite *another rewrite* that followed ([#2483]) in ([#3152]) - the internals of [`narwhals.expr.Expr`][] [^1] and [`CompliantExpr`](https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_compliant/expr.py) [^2] 
-are unlike what you'll find reading the source of [related projects].
+Since ([#2483]) we've had another rewrite in ([#3152]) that updated the internals of [`narwhals.expr.Expr`][] [^1] and [`CompliantExpr`](https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_compliant/expr.py) [^2].  
+*But* these internals are still quite different to what you'll find reading the source of [related projects].
 
 [^1]: See [how it works](./how_it_works.md#nodes)
 [^2]: See [`_expression_parsing.py`](https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_expression_parsing.py)
