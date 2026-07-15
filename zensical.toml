@@ -193,7 +193,10 @@ inventories = [
     "https://numpy.org/doc/stable/objects.inv",
     "https://typing-extensions.readthedocs.io/en/latest/objects.inv",
     # https://github.com/ibis-project/ibis/issues/11723
-    # TODO @dangotbanned: cudf, dask, duckdb, pyspark, sqlframe
+    "https://docs.dask.org/en/stable/objects.inv",
+    "https://duckdb.org/docs/current/clients/python/reference/objects.inv",
+    "https://spark.apache.org/docs/latest/api/python/objects.inv",
+    "https://docs.rapids.ai/api/cudf/stable/objects.inv",
     "https://altair-viz.github.io/objects.inv",
 ]
 paths = ["narwhals"]
@@ -251,6 +254,7 @@ pygments_lang_class = true
 default_lang = "python"
 anchor_linenums = true
 line_spans = "__span"
+[project.markdown_extensions.pymdownx.inlinehilite]
 [project.markdown_extensions.pymdownx.tasklist]
 custom_checkbox = true
 [project.markdown_extensions.footnotes]
