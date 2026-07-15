@@ -184,7 +184,7 @@ class ArrowNamespace:
 Woah. That was ... almost entirely unrelated to both queries, wasn't it?  
 Here's what stood out to me:
 
-- PyArrow natively supports scalars ([`pa.Scalar`][pyarrow.Scalar]) -  but as we saw earlier - it does not have a named Series-concept
+- PyArrow natively supports scalars ([`pa.Scalar`][pyarrow.Scalar]), but we don't use it
 - Why are we creating 3 functions each time we want to wrap a scalar?
     - And why are we passing a dataframe where it is never used?
 - Why are we providing the name `"literal"` here, and why was it twice?
