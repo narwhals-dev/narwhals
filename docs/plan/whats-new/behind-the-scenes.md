@@ -2,6 +2,14 @@
 
 ## A rich representation for expressions
 
+### Immutable
+
+### ExprIR
+
+### Function
+
+### NamedIR
+
 ## Fine-grained protocols, which compose to provide useful defaults
 
 ## First-class scalars
