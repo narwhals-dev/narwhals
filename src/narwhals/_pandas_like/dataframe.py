@@ -13,6 +13,7 @@ from narwhals._pandas_like.utils import (
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    is_object_native_dtype,
     iter_dtype_backends,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -424,12 +425,12 @@ class PandasLikeDataFrame(
     def schema(self) -> dict[str, DType]:
         native_dtypes = self.native.dtypes
         return {
-            col: native_to_narwhals_dtype(
-                native_dtypes[col], self._version, self._implementation
-            )
-            if native_dtypes[col] != "object"
-            else object_native_to_narwhals_dtype(
+            col: object_native_to_narwhals_dtype(
                 self.native[col], self._version, self._implementation
+            )
+            if is_object_native_dtype(native_dtypes[col])
+            else native_to_narwhals_dtype(
+                native_dtypes[col], self._version, self._implementation
             )
             for col in self.native.columns
         }

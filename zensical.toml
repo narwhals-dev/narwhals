@@ -24,6 +24,7 @@ nav = [
         "concepts/column_names.md",
         "concepts/boolean.md",
         "concepts/null_handling.md",
+        "concepts/sparse.md",
     ]},
     {"Overhead" = "overhead.md"},
     {"Perfect backwards compatibility policy" = "backcompat.md"},
