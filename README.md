@@ -213,6 +213,7 @@ Join the party!
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [pysummaries](https://github.com/Genentech/pysummaries)
 - [rio](https://github.com/rio-labs/rio)
+- [scikit-learn](https://github.com/scikit-learn/scikit-learn)
 - [scikit-lego](https://github.com/koaning/scikit-lego)
 - [scikit-playtime](https://github.com/koaning/scikit-playtime)
 - [tabmat](https://github.com/Quantco/tabmat)
@@ -237,6 +238,7 @@ provided some funding / development time:
 - [OpenTeams](https://www.openteams.com)
 - [POSSEE initiative](https://possee.org)
 - [BYU-Idaho](https://www.byui.edu)
+- [Intella](https://www.intella.tech/)
 
 If you contribute to Narwhals on your organization's time, please let us know. We'd be happy to add your employer
 to this list!

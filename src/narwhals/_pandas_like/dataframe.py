@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         DTypeBackend,
-        IntoSchema,
+        IntoDType,
         JoinStrategy,
         PivotAgg,
         SizedMultiIndexSelector,
@@ -150,7 +150,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         implementation = context._implementation
         pdx = implementation.to_native_namespace()
@@ -198,7 +198,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         implementation = context._implementation
         ns = implementation.to_native_namespace()
@@ -246,7 +246,7 @@ class PandasLikeDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -1207,18 +1207,9 @@ class PandasLikeDataFrame(
 
         return pa.Table.from_pandas(self.native)
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         return self._with_native(
-            self.native.sample(
-                n=n, frac=fraction, replace=with_replacement, random_state=seed
-            ),
+            self.native.sample(n=n, replace=with_replacement, random_state=seed),
             validate_column_names=False,
         )
 

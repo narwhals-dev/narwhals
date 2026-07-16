@@ -110,6 +110,24 @@ def test_when_then() -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
+def test_when_then_otherwise_stable_expr() -> None:
+    # `Then.otherwise` and chained `Then.when` must stay the stable `Expr` subclass
+    a = nw_v2.col("a")
+    otherwise = nw_v2.when(a.is_null()).then(nw_v2.lit(0)).otherwise(a)
+    otherwise_alias = otherwise.alias("a")
+    then = nw_v2.when(a > 1).then("b").when(a > 2).then("c")
+    then_alias = then.alias("d")
+
+    if TYPE_CHECKING:
+        assert_type(otherwise, nw_v2.Expr)
+        assert_type(otherwise_alias, nw_v2.Expr)
+        assert_type(then, nw_v2.Then)
+        assert_type(then_alias, nw_v2.Then)
+
+    for expr in (otherwise, otherwise_alias, then, then_alias):
+        assert isinstance(expr, nw_v2.Expr)
+
+
 def test_constructors() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
@@ -560,3 +578,11 @@ def test_first_last() -> None:
     result = df.select(b=nw_v2.col("a").first(), c=nw_v2.col("a").last())
     expected = {"b": [0], "c": [-1]}
     assert_equal_data(result, expected)
+
+
+def test_schema_from_generator() -> None:
+    schema = nw_v2.Schema(
+        (name, dtype()) for name, dtype in (("a", nw_v2.Int64), ("b", nw_v2.String))
+    )
+    assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
+    assert schema._version is Version.V2

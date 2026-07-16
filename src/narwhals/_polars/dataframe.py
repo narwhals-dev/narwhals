@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import (
-        IntoSchema,
+        IntoDType,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -110,7 +110,6 @@ NativePolarsFrame = TypeVar("NativePolarsFrame", pl.DataFrame, pl.LazyFrame)
 class PolarsBaseFrame(Generic[NativePolarsFrame]):
     drop_nulls: Method[Self]
     equals: Method[bool]
-    explode: Method[Self]
     filter: Method[Self]
     gather_every: Method[Self]
     head: Method[Self]
@@ -238,6 +237,12 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             )
         )
 
+    def explode(self, columns: Sequence[str]) -> Self:
+        if self._backend_version < (1, 36):
+            return self._with_native(self.native.explode(columns))
+        res = self.native.explode(columns, empty_as_null=True, keep_nulls=True)
+        return self._with_native(res)
+
     def top_k(
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
     ) -> Self:
@@ -325,7 +330,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         pl_schema = (
             {
@@ -346,7 +351,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         pl_schema = (
             {
@@ -381,7 +386,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -390,7 +395,8 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
             if isinstance(schema, (Mapping, Schema))
             else schema
         )
-        return cls.from_native(pl.from_numpy(data, pl_schema), context=context)
+        native = pl.from_numpy(data, pl_schema, orient="row")
+        return cls.from_native(native, context=context)
 
     def to_narwhals(self) -> DataFrame[pl.DataFrame]:
         return self._version.dataframe(self, level="full")

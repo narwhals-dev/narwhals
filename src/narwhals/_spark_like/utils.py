@@ -152,6 +152,7 @@ UNSUPPORTED_DTYPES = (
     dtypes.Enum,
     dtypes.Categorical,
     dtypes.Time,
+    dtypes.Float16,
 )
 
 

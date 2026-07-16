@@ -637,24 +637,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         cond = mask.native.combine_chunks()
         return self._with_native(pc.if_else(cond, self.native, other.native))
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         import numpy as np  # ignore-banned-import
 
-        num_rows = len(self)
-        if n is None and fraction is not None:
-            n = int(num_rows * fraction)
-
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(num_rows)
-        mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._with_native(self.native.take(mask))
+        indices = rng.choice(np.arange(n), size=n, replace=with_replacement)
+        return self._with_native(self.native.take(pa.array(indices, type=pa.uint64())))
 
     def fill_nan(self, value: float | None) -> Self:
         result = pc.if_else(pc.is_nan(self.native), value, self.native)

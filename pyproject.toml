@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.22.1"
+version = "2.24.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -51,12 +51,11 @@ pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
-ibis = ["ibis-framework>=6.0.0", "rich>=12.4.4", "packaging>=21.3", "pyarrow_hotfix>=0.7"]
-# TODO(FBruzzesi): Investigate if dependencies other than ibis-framework itself
-# can be moved to constraint-dependencies section. See:
-#  * docs.astral.sh/uv/reference/settings#constraint-dependencies
-#  * https://github.com/narwhals-dev/narwhals/pull/3608#discussion_r3252827624
-
+ibis = [
+    "ibis-framework>=6.0.0",
+    "packaging>=21.3",  # runtime import at ibis/backends/duckdb and others
+    "pyarrow_hotfix>=0.7",  # runtime import anytime pyarrow is imported
+  ]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
 sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
@@ -92,26 +91,26 @@ sklearn = [
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
   # Type checkers
   "mypy==2.1.0",
-  "pyrefly==1.0.0",
+  "pyrefly==1.1.1",
   "pyright",
   # Dependencies
-  "pyarrow<24", # temporary pin due to https://github.com/narwhals-dev/narwhals/issues/3560
   "hypothesis>=6.0.0",
   "pytest>=9.0.3",
   "pandas-stubs==2.3.0.250703",
   "pyarrow-stubs==19.2",
+  "rich>=12.4.4",  # type import to resolve ibis
   "typing-extensions==4.15.0",
   "narwhals[dask,duckdb,ibis,pandas,polars,pyarrow,sql,sqlframe]",
   {include-group = "plugins"},
 ]
 docs = [
-  "black>=26.3.1",  # required by mkdocstrings_handlers
   "jinja2>=3.1.6",
   "markdown-exec[ansi]>=1.12.1",
   "mkdocs-autorefs>=1.4.4",
   "mkdocstrings-python>=2.0.3",
   "pandas>=1.3.4",
   "narwhals[duckdb,pyarrow,polars,sql,sqlframe]",
+  "ruff",
   "zensical>=0.0.38"
 ]
 dev = [
@@ -201,12 +200,6 @@ conflicts = [
     { extra = "cudf" },
     { extra = "modin" },
     { extra = "pandas" },
-  ],
-  # `typing` dependecy group pins "pyarrow" and, potentially, other
-  # dependencies for which we want to check latest versions during tests
-  [
-    { group = "core" },
-    { group = "typing" },
   ],
   # The `extreme-*` groups pin mutually incompatible pyarrow/pandas/numpy
   # versions, and all pin `pyarrow-stubs<17` while `typing` pins ==19.2. `cudf`
@@ -396,6 +389,14 @@ filterwarnings = [
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
 
+  # pandas[pyarrow] raises it but we don't control pandas
+  "ignore:.*Specifying null_placement in RankOptions is deprecated as of 25.0.0. Specify null_placement per sort_key instead.*:FutureWarning",
+
+  # numpy>=2.5 deprecates generic-unit timedeltas; pandas (>=2.3) trips this from
+  # `pd.Timedelta(...)`. The warning is attributed to the caller's module (e.g. test
+  # code), so it cannot be scoped to `pandas`; keep it unscoped for this exact message.
+  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning",
+
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 
@@ -403,7 +404,6 @@ filterwarnings = [
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 
   # raised internally by Dask
-  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
   "ignore:.*Downcasting behavior in Series and DataFrame methods 'where', 'mask', and 'clip' is deprecated.*:FutureWarning:dask",
   "ignore:.*inplace keyword .* is deprecated*:Warning:dask",
 

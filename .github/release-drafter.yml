@@ -9,24 +9,32 @@ change-template: '- $TITLE (#$NUMBER)'
 
 categories:
   - title: 🏆 Highlights
-    labels: highlight
+    labels:
+      - highlight
   - title: 💥 Breaking changes
     labels:
       - breaking
   - title: ⚠️ Deprecations
-    labels: deprecation
+    labels:
+      - deprecation
   - title: 🚀 Performance improvements
-    labels: performance
+    labels:
+      - performance
   - title: ✨ Enhancements
-    labels: enhancement
+    labels:
+      - enhancement
   - title: 🐞 Bug fixes
-    labels: fix
+    labels:
+      - fix
   - title: 📖 Documentation
-    labels: documentation
+    labels:
+      - documentation
   - title: 📦 Build system
-    labels: build
+    labels:
+      - build
   - title: 🛠️ Other improvements
-    labels: internal
+    labels:
+      - internal
 
 template: |
   ## Changes

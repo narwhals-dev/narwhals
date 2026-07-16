@@ -11,6 +11,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
+    _resolve_sample_size,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
@@ -1019,7 +1020,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1207,9 +1208,12 @@ class Series(Generic[IntoSeriesT]):
                4
             ]
         """
+        size = _resolve_sample_size(
+            n=n, fraction=fraction, height=len(self), with_replacement=with_replacement
+        )
         return self._with_compliant(
             self._compliant_series.sample(
-                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+                n=size, with_replacement=with_replacement, seed=seed
             )
         )
 
@@ -1402,7 +1406,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1428,7 +1432,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1458,7 +1462,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             - pandas handles null values differently from other libraries.
-              See [null_handling](../concepts/null_handling.md/)
+              See [null_handling](../concepts/null_handling.md)
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
@@ -1509,7 +1513,7 @@ class Series(Generic[IntoSeriesT]):
         Notes:
             This function only fills `'NaN'` values, not null ones, except for pandas
             which doesn't distinguish between them.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1845,7 +1849,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa

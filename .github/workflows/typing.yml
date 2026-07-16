@@ -2,6 +2,11 @@ name: Type checking
 
 on:
   pull_request:
+    paths:
+      - "**.py"
+      - .github/workflows/typing.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:
@@ -21,7 +26,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
@@ -41,7 +46,6 @@ jobs:
         run: uv pip freeze
       - name: Run mypy and pyright
         run: make typing
-      - name: Run pyright type completeness
+      - name: Check type-completeness
         run: |
-          uv pip install -U pyright-cov
-          pyright-cov --verifytypes narwhals --ignoreexternal --fail-under 100
+          uv run pyrefly coverage check src/narwhals --public-only

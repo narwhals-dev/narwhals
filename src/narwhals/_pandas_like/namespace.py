@@ -6,6 +6,8 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
+import pandas as pd
+
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -16,13 +18,11 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_non_nullable_boolean
+from narwhals._pandas_like.utils import is_dtype_pyarrow, is_non_nullable_boolean
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import TypeAlias
-
-    import pandas as pd
 
     from narwhals._utils import Implementation, Version
     from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
@@ -396,6 +396,48 @@ class PandasLikeNamespace(
                 index=series[0].native.index,
             )
             return [self._series(result_native, implementation=impl, version=version)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def list(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
+        def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
+            try:
+                import pyarrow as pa  # ignore-banned-import
+            except ImportError as exc:  # pragma: no cover
+                msg = (
+                    "list requires pyarrow to be installed for pandas backend. "
+                    "Please install pyarrow: pip install pyarrow"
+                )
+                raise ImportError(msg) from exc
+
+            from narwhals._arrow.utils import build_list_array
+
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            arrays = [
+                (
+                    s.native.array._pa_array.combine_chunks()
+                    if is_dtype_pyarrow(s.native.dtype)
+                    else pa.array(s.native, from_pandas=True)
+                )
+                for s in series
+            ]
+            result = build_list_array(arrays)
+
+            impl = self._implementation
+            result_native = impl.to_native_namespace().Series(
+                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                name=series[0].name,
+                index=series[0].native.index,
+            )
+            return [
+                self._series(result_native, implementation=impl, version=self._version)
+            ]
 
         return self._expr._from_callable(
             func=func,

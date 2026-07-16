@@ -56,7 +56,12 @@ from narwhals.dependencies import (
     is_pandas_like_dataframe,
     is_pandas_like_series,
 )
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    ShapeError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -1423,6 +1428,38 @@ def _validate_rolling_arguments(
         min_samples = window_size
 
     return window_size, min_samples
+
+
+def _resolve_sample_size(
+    *, n: int | None, fraction: float | None, height: int, with_replacement: bool
+) -> int:
+    """Resolve the concrete number of rows to draw for `DataFrame.sample`/`Series.sample`.
+
+    At most one of `n` or `fraction` may be set; if neither is given a single row is
+    sampled. `fraction` is interpreted relative to `height` and truncated towards zero.
+
+    Raises:
+        ValueError: If both `n` and `fraction` are specified.
+        InvalidOperationError: If the resolved size is negative.
+        ShapeError: If the resolved size exceeds `height` and `with_replacement` is False.
+    """
+    if n is not None and fraction is not None:
+        msg = "cannot specify both `n` and `fraction`"
+        raise ValueError(msg)
+    if n is not None:
+        size = n
+    elif fraction is not None:
+        size = int(height * fraction)
+    else:
+        size = 1
+
+    if size < 0:
+        msg = f"sample size must be a positive integer, found {size}"
+        raise InvalidOperationError(msg)
+    if size > height and not with_replacement:
+        msg = "cannot take a larger sample than the total population when `with_replacement=false`"
+        raise ShapeError(msg)
+    return size
 
 
 def generate_repr(header: str, native_repr: str) -> str:

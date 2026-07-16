@@ -11,7 +11,13 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
-from tests.utils import ID_PANDAS_LIKE, PANDAS_VERSION, pyspark_session, sqlframe_session
+from tests.utils import (
+    ID_PANDAS_LIKE,
+    PANDAS_VERSION,
+    any_integer_like_floats,
+    pyspark_session,
+    sqlframe_session,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -102,14 +108,29 @@ def pandas_constructor(obj: Data) -> pd.DataFrame:
 def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="numpy_nullable")
+    return pd.DataFrame(
+        {
+            k: pd.Series(v).convert_dtypes(
+                convert_integer=not any_integer_like_floats(v),
+                dtype_backend="numpy_nullable",
+            )
+            for k, v in obj.items()
+        }
+    )
 
 
 def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     pytest.importorskip("pyarrow")
     import pandas as pd
 
-    return pd.DataFrame(obj).convert_dtypes(dtype_backend="pyarrow")
+    return pd.DataFrame(
+        {
+            k: pd.Series(v).convert_dtypes(
+                convert_integer=not any_integer_like_floats(v), dtype_backend="pyarrow"
+            )
+            for k, v in obj.items()
+        }
+    )
 
 
 def modin_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
@@ -124,7 +145,14 @@ def modin_pyarrow_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
     import pandas as pd
 
-    df = mpd.DataFrame(pd.DataFrame(obj)).convert_dtypes(dtype_backend="pyarrow")
+    df = mpd.DataFrame(
+        {
+            k: pd.Series(v).convert_dtypes(
+                convert_integer=not any_integer_like_floats(v), dtype_backend="pyarrow"
+            )
+            for k, v in obj.items()
+        }
+    )
     return cast("IntoDataFrame", df)
 
 
@@ -355,6 +383,7 @@ def eager_implementation(request: pytest.FixtureRequest) -> EagerAllowed:
         nw.Datetime,
         nw.Decimal,
         nw.Duration,
+        nw.Float16,
         nw.Float32,
         nw.Float64,
         nw.Int8,
