@@ -94,6 +94,7 @@ nav = [
         "plan/use-cases.md",
         "plan/mind-the-gap.md",
         "plan/inspired.md",
+        "plan/future.md",
     ] },
     { "API Reference (Experimental)" = [
         "api-reference-plan/index.md", 
