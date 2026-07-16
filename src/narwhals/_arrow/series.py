@@ -1039,8 +1039,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def __iter__(self) -> Iterator[Any]:
-        for x in self.native:
-            yield maybe_extract_py_scalar(x, return_py_scalar=True)
+        for chunk in self.native.chunks:
+            yield from chunk.to_pylist()
 
     def __contains__(self, other: Any) -> bool:
         from pyarrow import (

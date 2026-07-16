@@ -390,22 +390,27 @@ class ArrowDataFrame(
         return pa.chunked_array([pa.repeat(value, length)])
 
     def with_columns(self, *exprs: ArrowExpr) -> Self:
-        # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
-        # All `pyarrow` data is immutable, so this is fine
-        native_frame = self.native
         new_columns = self._evaluate_exprs(*exprs)
-        columns = self.columns
+        if not new_columns:
+            return self._with_native(self.native, validate_column_names=False)
 
-        for col_value in new_columns:
-            col_name = col_value.name
-            column = self._extract_comparand(col_value)
-            native_frame = (
-                native_frame.set_column(columns.index(col_name), col_name, column=column)
-                if col_name in columns
-                else native_frame.append_column(col_name, column=column)
+        # Build the final column list once instead of reconstructing the table
+        # (`set_column`/`append_column` copy schema + column metadata) per column
+        native_frame = self.native
+        new_map = {s.name: self._extract_comparand(s) for s in new_columns}
+        names: list[str] = []
+        arrays: list[ChunkedArrayAny] = []
+        for i, name in enumerate(self.columns):
+            names.append(name)
+            arrays.append(
+                new_map.pop(name) if name in new_map else native_frame.column(i)
             )
+        # Brand-new columns are appended in evaluation order
+        names.extend(new_map.keys())
+        arrays.extend(new_map.values())
 
-        return self._with_native(native_frame, validate_column_names=False)
+        df = pa.Table.from_arrays(arrays, names=names)
+        return self._with_native(df, validate_column_names=False)
 
     def group_by(
         self, keys: Sequence[str] | Sequence[ArrowExpr], *, drop_null_keys: bool

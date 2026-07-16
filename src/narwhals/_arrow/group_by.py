@@ -1,19 +1,16 @@
 from __future__ import annotations
 
 import collections
-from typing import TYPE_CHECKING, Any, ClassVar
+from itertools import pairwise
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import (
-    BACKEND_VERSION,
-    cast_to_comparable_string_types,
-    extract_py_scalar,
-)
+from narwhals._arrow.utils import BACKEND_VERSION, cast_to_comparable_string_types
 from narwhals._compliant import EagerGroupBy
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
-from narwhals._utils import generate_temporary_column_name, requires
+from narwhals._utils import requires
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -23,6 +20,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         AggregateOptions,
         Aggregation,
+        ChunkedArrayAny,
         Incomplete,
     )
     from narwhals._compliant.typing import NarwhalsAggregation
@@ -190,9 +188,6 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         )
 
     def __iter__(self) -> Iterator[tuple[Any, ArrowDataFrame]]:
-        col_token = generate_temporary_column_name(
-            n_bytes=8, columns=self.compliant.columns
-        )
         null_token: str = "__null_token_value__"  # noqa: S105
 
         table = self.compliant.native
@@ -202,17 +197,32 @@ class ArrowGroupBy(EagerGroupBy["ArrowDataFrame", "ArrowExpr", "Aggregation"]):
         # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
         # Reality: `str` is fine
         concat_str: Incomplete = pc.binary_join_element_wise
-        key_values = concat_str(
+        key_values: ChunkedArrayAny = concat_str(
             *it, separator_scalar, null_handling="replace", null_replacement=null_token
         )
-        table = table.add_column(i=0, field_=col_token, column=key_values)
-
-        for v in pc.unique(key_values):
-            t = self.compliant._with_native(
-                table.filter(pc.equal(table[col_token], v)).drop([col_token])
-            )
-            row = t.simple_select(*self._keys).row(0)
+        # `sort_indices` is stable, so rows within each group keep their original order;
+        # one stable sort + one slice per group replaces a full-table filter per group
+        sort_indices = pc.sort_indices(key_values)
+        sorted_table = table.take(sort_indices)
+        sorted_keys = key_values.take(sort_indices).combine_chunks()
+        if (n := len(sorted_keys)) == 0:
+            return
+        changed = pc.not_equal(sorted_keys.slice(1), sorted_keys.slice(0, n - 1))
+        starts = [
+            0,
+            *(
+                i + 1
+                for i in cast("Sequence[int]", pc.indices_nonzero(changed).to_pylist())
+            ),
+            n,
+        ]
+        key_rows = sorted_table.select(list(self._keys)).take(starts[:-1]).to_pylist()
+        compliant = self.compliant
+        columns = self._df.columns
+        for (start, end), key_row in zip(pairwise(starts), key_rows, strict=False):
             yield (
-                tuple(extract_py_scalar(el) for el in row),
-                t.simple_select(*self._df.columns),
+                tuple(key_row[key] for key in self._keys),
+                compliant._with_native(
+                    sorted_table.slice(start, end - start)
+                ).simple_select(*columns),
             )
