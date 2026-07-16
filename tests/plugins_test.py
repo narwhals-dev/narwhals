@@ -8,7 +8,7 @@ import narwhals as nw
 import narwhals.stable.v1.dependencies as nw_v1_dependencies
 import narwhals.stable.v2.dependencies as nw_v2_dependencies
 from narwhals import dependencies as nw_dependencies
-from narwhals._typing import PluginName
+from narwhals.plugins import PluginName
 
 if TYPE_CHECKING:
     from typing_extensions import Self
@@ -171,3 +171,6 @@ if TYPE_CHECKING:
 
         # Rejected: `.lazy` does not dispatch to plugins (yet).
         df.lazy(plugin_name)  # type: ignore[arg-type]
+        lf = df.lazy()
+        # Rejected: `.collect` does not dispatch to plugins (yet).
+        lf.collect(plugin_name)  # type: ignore[arg-type]

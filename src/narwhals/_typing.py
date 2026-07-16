@@ -1,3 +1,14 @@
+"""Type aliases describing the backends Narwhals dispatches to.
+
+Built-in backends are enumerated as `Literal` unions (`Backend`, `EagerAllowed`, `LazyAllowed`, ...).
+Plugin backends are discovered at runtime and cannot join those unions, so `PluginName` uses a
+[`NewType`](https://typing.python.org/en/latest/spec/aliases.html#newtype) instead:
+type checkers treat it as a distinct subtype of `str`, therefore:
+
+- an arbitrary `str` is still rejected where a `backend` is expected, and
+- a value explicitly wrapped as `PluginName("...")` is accepted.
+"""
+
 from __future__ import annotations
 
 from types import ModuleType
@@ -92,21 +103,13 @@ backend (either eager or lazy).
 """
 
 PluginName = NewType("PluginName", str)
-"""Name of a plugin backend's [entry point](https://packaging.python.org/en/latest/specifications/entry-points/).
+"""Name of a plugin's [entry point](https://packaging.python.org/en/latest/specifications/entry-points/).
 
-Plugin backends are discovered at runtime, so their names cannot join the
-`Literal` unions that describe the built-in backends. `PluginName` is a
-[`NewType`](https://typing.python.org/en/latest/spec/aliases.html#newtype):
-type checkers treat it as a distinct subtype of `str`, meaning
+- Wrap an entry point name to pass it wherever a `backend` is expected, e.g. `PluginName("my-plugin")`.
+- Add it to a signature's `IntoBackend` parameter to advertise plugin support, e.g. `IntoBackend[EagerAllowed | PluginName]`.
 
-- an arbitrary `str` is still rejected where a `backend` is expected, and
-- a value explicitly wrapped as `PluginName("...")` is accepted.
-
-The contract is that a wrapped string **must** name an installed plugin's
-entry point in the `narwhals.plugins` group.
-
-Signatures that dispatch to plugins include it in the `IntoBackend`
-parameter, e.g. `IntoBackend[EagerAllowed | PluginName]`.
+See the `narwhals.plugins` module for how plugin authors register entry points
+and the contract a wrapped name must satisfy.
 """
 
 BackendT = TypeVar("BackendT", bound=Backend | PluginName)
