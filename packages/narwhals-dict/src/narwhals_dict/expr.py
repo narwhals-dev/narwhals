@@ -157,7 +157,7 @@ class DictExpr(EagerExpr["DictDataFrame", DictSeries]):
         One global sort (ascending, nulls first) replaces the per-group sorts:
         iterating rows in sorted order and bucketing by key yields groups whose
         indices are already ordered. Null keys work natively. Single-key
-        partitions skip the per-row tuple, mirroring `_iter_join_keys`.
+        partitions skip the per-row tuple, mirroring `_join_keys`.
         """
         key_columns = [df.native[name] for name in partition_by]
         order: Sequence[int] = (

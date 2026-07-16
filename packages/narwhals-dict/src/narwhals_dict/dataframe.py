@@ -300,7 +300,7 @@ class DictDataFrame(
         # (NumPy ints, ...) to `int` once, then reuse across every column.
         return self._gather_positions([operator.index(i) for i in rows])
 
-    def _gather_positions(self, indices: Sequence[int]) -> Self:
+    def _gather_positions(self, indices: Iterable[int]) -> Self:
         """Gather rows at `indices`, which must already be plain `int` positions.
 
         The trusted-int counterpart to `_gather`: internal callers that build
@@ -440,24 +440,30 @@ class DictDataFrame(
         if subset is not None and (error := self._check_columns_exist(subset)):
             raise error
         columns = [self.native[name] for name in (subset or self.columns)]
-        rows = list(zip(*columns, strict=True))
         if keep in {"any", "first", "last"}:
-            # With `order_by`, "first"/"last" are defined by the order the rows
-            # take under the order-by columns (ascending, nulls first), not the
-            # frame order. Kept rows are still emitted in original order: that is
-            # what `maintain_order` expects, and lazy callers sort afterwards.
-            order = (
-                self._sorted_indices(order_by, descending=False, nulls_last=False)
-                if order_by
-                else range(len(self))
-            )
             seen: dict[Any, int] = {}
-            for index in order if keep != "last" else reversed(list(order)):
-                seen.setdefault(rows[index], index)
+            if order_by:
+                rows = list(zip(*columns, strict=True))
+                order = self._sorted_indices(order_by, descending=False, nulls_last=False)
+                for index in order if keep != "last" else reversed(order):
+                    seen.setdefault(rows[index], index)
+            elif keep == "last":
+                size = len(self)
+                reversed_rows = zip(*map(reversed, columns), strict=True)
+                for index, row in enumerate(reversed_rows):
+                    seen.setdefault(row, size - 1 - index)
+            else:
+                for index, row in enumerate(zip(*columns, strict=True)):
+                    seen.setdefault(row, index)
+
             indices = sorted(seen.values())
         elif keep == "none":
-            counts = Counter(rows)
-            indices = [i for i, row in enumerate(rows) if counts[row] == 1]
+            counts = Counter(zip(*columns, strict=True))
+            indices = [
+                index
+                for index, row in enumerate(zip(*columns, strict=True))
+                if counts[row] == 1
+            ]
         else:  # pragma: no cover
             msg = f"Unsupported `keep` strategy: {keep}"
             raise ValueError(msg)
@@ -575,30 +581,32 @@ class DictDataFrame(
         """Gather values at `indices`, where a `None` index yields a null."""
         return [None if i is None else column[i] for i in indices]
 
-    def _iter_join_keys(self, keys: Sequence[str]) -> Iterator[Any]:
-        """Yields one hashable key per row, or `None` for rows with any null key.
+    def _join_keys(self, keys: Sequence[str]) -> Iterable[Any]:
+        """One hashable key per row, with `None` for rows with any null key.
 
-        Single-key joins use the column values directly (no tuple per row);
-        multi-key joins yield the value tuple. `None in row` checks identity
-        first, so it only falls back to `==` for values that are not nulls.
+        Single-key joins reuse the column itself (no copy, no tuple per row);
+        multi-key joins yield one value tuple per row.
         """
         if len(keys) == 1:
-            yield from self.native[keys[0]]
-        else:
-            for row in self.simple_select(*keys).iter_rows(named=False, buffer_size=512):
-                yield None if None in row else row
+            return self.native[keys[0]]
+        columns = [self.native[key] for key in keys]
+        return (None if None in row else row for row in zip(*columns, strict=True))
 
     def _join_key_index(self, keys: Sequence[str]) -> dict[Any, list[int]]:
-        """Map each (non-null) key to the row indices where it appears."""
+        """Map each (non-null) key to the row indices where it appears.
+
+        Null keys are left out, so probing with `index.get` makes them miss
+        without a per-row null check (`None` is never a stored key).
+        """
         index: dict[Any, list[int]] = {}
-        for row, key in enumerate(self._iter_join_keys(keys)):
+        for row, key in enumerate(self._join_keys(keys)):
             if key is not None:
                 index.setdefault(key, []).append(row)
         return index
 
     def _join_key_set(self, keys: Sequence[str]) -> set[Any]:
         """Distinct non-null keys; enough for `semi`/`anti`, cheaper than the index."""
-        key_set = set(self._iter_join_keys(keys))
+        key_set = set(self._join_keys(keys))
         key_set.discard(None)
         return key_set
 
@@ -618,22 +626,47 @@ class DictDataFrame(
     def _join_gather(
         self,
         other: Self,
-        left_indices: Sequence[int | None],
+        left_rows: Sequence[int],
+        counts: Sequence[int],
         right_indices: Sequence[int | None],
         *,
+        left_tail: int,
         exclude_right: Collection[str],
         suffix: str,
     ) -> Self:
+        """Assemble the joined frame from a run-length left selection.
+
+        The output has one row per entry of `right_indices`: first the matched block,
+        where left row `left_rows[i]` repeats `counts[i]` times, then `left_tail` rows
+        whose left side is all null (unmatched right rows of a full join).
+        """
         right_names = self._join_output_names(
             other, exclude_right=exclude_right, suffix=suffix
         )
-        # `None in list` is a single identity-first C-speed scan; paying it once
-        # per side buys the fast `map` gather for every column of that side.
-        take_left = self._take_nullable if None in left_indices else self._take
+        # Runs are all length 1 only if the lengths match *and* no run is empty
+        # (`counts` may hold zeros for unmatched inner-join rows, and e.g. one 0
+        # and one 2 also keep the lengths equal).
+        n_left = len(left_rows)
+        all_single = (n_left == len(right_indices) - left_tail) and (0 not in counts)
+        if all_single and left_tail == 0 and n_left == len(self):
+            # Every left row kept exactly once, in order: reuse the columns
+            # as-is (native lists are shared freely, never mutated in place).
+            result: DictFrame = dict(self.native)
+        else:
+            left_indices: Sequence[int | None] = (
+                left_rows
+                if all_single
+                else list(chain.from_iterable(map(repeat, left_rows, counts)))
+            )
+            take_left = self._take
+            if left_tail:
+                left_indices = (*left_indices, *repeat(None, left_tail))
+                take_left = self._take_nullable
+            result = {
+                name: take_left(column, left_indices)
+                for name, column in self.native.items()
+            }
         take_right = self._take_nullable if None in right_indices else self._take
-        result: DictFrame = {
-            name: take_left(column, left_indices) for name, column in self.native.items()
-        }
         for name, output_name in right_names.items():
             result[output_name] = take_right(other.native[name], right_indices)
         return self._with_native(result, validate_column_names=False)
@@ -641,35 +674,49 @@ class DictDataFrame(
     def _join_inner(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
-        right_index = other._join_key_index(right_on)
-        left_indices: list[int | None] = []
-        right_indices: list[int | None] = []
-        get_matches = right_index.get
-        for row, key in enumerate(self._iter_join_keys(left_on)):
-            if key is not None and (matches := get_matches(key)) is not None:
-                left_indices.extend(repeat(row, len(matches)))
-                right_indices.extend(matches)
+        get_matches = other._join_key_index(right_on).get
+        # `get_matches` misses on null keys directly (see `_join_key_index`);
+        # row positions stay implicit: `range` plus zero-length runs for misses.
+        # `filter(None)` drops the misses; match buckets are never empty, so no
+        # falsy value is lost.
+        matches_per_row = list(map(get_matches, self._join_keys(left_on)))
+        counts = [0 if matches is None else len(matches) for matches in matches_per_row]
+        right_indices: list[int | None] = list(
+            chain.from_iterable(filter(None, matches_per_row))
+        )
         return self._join_gather(
-            other, left_indices, right_indices, exclude_right=set(right_on), suffix=suffix
+            other,
+            range(len(counts)),
+            counts,
+            right_indices,
+            left_tail=0,
+            exclude_right=set(right_on),
+            suffix=suffix,
         )
 
     def _join_left(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
     ) -> Self:
-        right_index = other._join_key_index(right_on)
-        left_indices: list[int | None] = []
+        get_matches = other._join_key_index(right_on).get
+        counts: list[int] = []
         right_indices: list[int | None] = []
-        get_matches = right_index.get
-        for row, key in enumerate(self._iter_join_keys(left_on)):
-            matches = get_matches(key) if key is not None else None
-            if matches:
-                left_indices.extend(repeat(row, len(matches)))
-                right_indices.extend(matches)
+        add_count = counts.append
+        add_null, add_matches = right_indices.append, right_indices.extend
+        for matches in map(get_matches, self._join_keys(left_on)):
+            if matches is None:
+                add_count(1)
+                add_null(None)
             else:
-                left_indices.append(row)
-                right_indices.append(None)
+                add_count(len(matches))
+                add_matches(matches)
         return self._join_gather(
-            other, left_indices, right_indices, exclude_right=set(right_on), suffix=suffix
+            other,
+            range(len(self)),  # every left row is kept, in order
+            counts,
+            right_indices,
+            left_tail=0,
+            exclude_right=set(right_on),
+            suffix=suffix,
         )
 
     def _join_full(
@@ -677,26 +724,30 @@ class DictDataFrame(
     ) -> Self:
         # Keys are not coalesced: both sides' keys stay in the output, and rows
         # unmatched on either side get nulls for the opposite side's columns.
-        right_index = other._join_key_index(right_on)
-        left_indices: list[int | None] = []
+        get_matches = other._join_key_index(right_on).get
+        counts: list[int] = []
         right_indices: list[int | None] = []
         matched_right: set[int] = set()
-        get_matches = right_index.get
-        for row, key in enumerate(self._iter_join_keys(left_on)):
-            matches = get_matches(key) if key is not None else None
-            if matches:
-                left_indices.extend(repeat(row, len(matches)))
-                right_indices.extend(matches)
-                matched_right.update(matches)
+        add_count = counts.append
+        add_null, add_matches = right_indices.append, right_indices.extend
+        for matches in map(get_matches, self._join_keys(left_on)):
+            if matches is None:
+                add_count(1)
+                add_null(None)
             else:
-                left_indices.append(row)
-                right_indices.append(None)
-        for row in range(len(other)):
-            if row not in matched_right:
-                left_indices.append(None)
-                right_indices.append(row)
+                add_count(len(matches))
+                add_matches(matches)
+                matched_right.update(matches)
+        unmatched_right = [row for row in range(len(other)) if row not in matched_right]
+        right_indices.extend(unmatched_right)
         return self._join_gather(
-            other, left_indices, right_indices, exclude_right=(), suffix=suffix
+            other,
+            range(len(self)),
+            counts,
+            right_indices,
+            left_tail=len(unmatched_right),
+            exclude_right=(),
+            suffix=suffix,
         )
 
     def _join_cross(self, other: Self, *, suffix: str) -> Self:
@@ -716,17 +767,15 @@ class DictDataFrame(
     def _join_semi(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
-        right_keys = other._join_key_set(right_on)
-        return self._mask_rows(
-            [key in right_keys for key in self._iter_join_keys(left_on)]
-        )
+        contains = other._join_key_set(right_on).__contains__
+        return self._mask_rows(list(map(contains, self._join_keys(left_on))))
 
     def _join_anti(
         self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
     ) -> Self:
-        right_keys = other._join_key_set(right_on)
+        contains = other._join_key_set(right_on).__contains__
         return self._mask_rows(
-            [key not in right_keys for key in self._iter_join_keys(left_on)]
+            list(map(operator.not_, map(contains, self._join_keys(left_on))))
         )
 
     def join(
@@ -774,7 +823,7 @@ class DictDataFrame(
         the probe side needs no ordering assumptions at all.
         """
         groups: dict[Any, list[tuple[Any, int]]] = {}
-        by_keys: Iterator[Any] = repeat(None) if by is None else self._iter_join_keys(by)
+        by_keys: Iterable[Any] = repeat(None) if by is None else self._join_keys(by)
         for row, (key, by_key) in enumerate(zip(self.native[on], by_keys, strict=False)):
             if key is None or (by is not None and by_key is None):
                 continue
@@ -801,8 +850,8 @@ class DictDataFrame(
         if error := other._check_columns_exist([right_on, *(by_right or ())]):
             raise error
         candidates = other._asof_candidates(right_on, by_right)
-        by_keys: Iterator[Any] = (
-            repeat(None) if by_left is None else self._iter_join_keys(by_left)
+        by_keys: Iterable[Any] = (
+            repeat(None) if by_left is None else self._join_keys(by_left)
         )
         right_indices: list[int | None] = []
         for key, by_key in zip(self.native[left_on], by_keys, strict=False):
@@ -937,10 +986,11 @@ class DictDataFrame(
                 raise ValueError(msg)
 
     def is_unique(self) -> DictSeries:
-        rows = list(zip(*self.native.values(), strict=True))
-        counts = Counter(rows)
+        counts = Counter(zip(*self.native.values(), strict=True))
         return DictSeries(
-            [counts[row] == 1 for row in rows], name="", version=self._version
+            [counts[row] == 1 for row in zip(*self.native.values(), strict=True)],
+            name="",
+            version=self._version,
         )
 
     def to_arrow(self) -> pa.Table:
