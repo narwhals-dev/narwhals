@@ -574,12 +574,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         except pa.lib.ArrowNotImplementedError:
             return False
 
+        try:
+            both_nan = pc.fill_null(pc.and_(pc.is_nan(lhs), pc.is_nan(rhs)), False)
+            values_or_nan_equal = pc.fill_null(pc.or_(values_equal, both_nan), False)
+        except pa.lib.ArrowNotImplementedError:
+            values_or_nan_equal = pc.fill_null(values_equal, False)
+
         if null_equal:
             both_null = pc.and_(pc.is_null(lhs), pc.is_null(rhs))
-            result = pc.if_else(both_null, True, values_equal)
+            result = pc.if_else(both_null, True, values_or_nan_equal)
             return bool(pc.all(result, skip_nulls=False).as_py())
 
-        return bool(pc.all(values_equal).as_py())
+        return bool(pc.all(values_or_nan_equal).as_py())
 
     def head(self, n: int) -> Self:
         if n >= 0:

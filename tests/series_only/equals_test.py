@@ -10,9 +10,6 @@ if TYPE_CHECKING:
     from tests.utils import ConstructorEager
 
 TBD = None
-_NAN_HANDLING = pytest.mark.xfail(
-    strict=True, reason="NaN/null disambiguation not yet decided"
-)
 _CHECK_NAMES = pytest.mark.xfail(
     strict=True,
     reason=(
@@ -63,14 +60,8 @@ def test_series_equals(
         ([1, None], [1, None], True, True),
         ([1, None], [1, None], False, False),
         # --- NaN vs NaN ---
-        # pandas: True, polars: True, pyarrow: False
-        pytest.param(
-            [1.0, float("nan")], [1.0, float("nan")], True, TBD, marks=_NAN_HANDLING
-        ),
-        # pandas: True, polars: True, pyarrow: False
-        pytest.param(
-            [1.0, float("nan")], [1.0, float("nan")], False, TBD, marks=_NAN_HANDLING
-        ),
+        ([1.0, float("nan")], [1.0, float("nan")], True, True),
+        ([1.0, float("nan")], [1.0, float("nan")], False, True),
         # --- NaN vs value ---
         # pandas: False, polars: False, pyarrow: False
         ([1.0, float("nan")], [1.0, 2.0], True, False),
