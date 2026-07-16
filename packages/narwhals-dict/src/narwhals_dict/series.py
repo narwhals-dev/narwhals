@@ -578,7 +578,6 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
             # `reversed(...)` is a no-copy iterator; only the (in-place) result
             # is reversed back for the backward pass.
             values = self.native if strategy == "forward" else reversed(self.native)
-            no_limit = limit is None
             result: list[Any] = []
             last: Any = None
             gap = 0
@@ -588,7 +587,7 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
                     result.append(current)
                 else:
                     gap += 1
-                    result.append(last if no_limit or gap <= limit else None)
+                    result.append(last if limit is None or gap <= limit else None)
             if strategy == "backward":
                 result.reverse()
             return self._with_native(result, preserve_broadcast=True)

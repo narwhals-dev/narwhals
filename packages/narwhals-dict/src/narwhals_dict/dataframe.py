@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import (
         AsofJoinStrategy,
-        IntoSchema,
+        IntoDType,
         JoinStrategy,
         PivotAgg,
         SizedMultiIndexSelector,
@@ -95,7 +95,7 @@ class DictDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         names = list(schema) if schema else list(data)
         native: DictFrame = {name: list(data[name]) if data else [] for name in names}
@@ -118,7 +118,7 @@ class DictDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         names = list(schema) if schema else (list(data[0]) if data else [])
         native: DictFrame = {name: [row.get(name) for row in data] for name in names}
@@ -131,7 +131,7 @@ class DictDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         names = (
             list(schema)
