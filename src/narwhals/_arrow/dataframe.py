@@ -353,8 +353,9 @@ class ArrowDataFrame(
     def equals(self, other: Self, *, null_equal: bool) -> bool:
         if self.shape != other.shape:
             return False
-        if self.columns != other.columns:
+        if self.schema != other.schema:
             return False
+
         return all(
             self.get_column(name).equals(
                 other.get_column(name),
