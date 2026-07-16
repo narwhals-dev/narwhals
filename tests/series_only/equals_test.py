@@ -13,9 +13,6 @@ TBD = None
 _NAN_HANDLING = pytest.mark.xfail(
     strict=True, reason="NaN/null disambiguation not yet decided"
 )
-_CROSS_TYPE = pytest.mark.xfail(
-    strict=True, reason="Inconsistent behavior across backends for incompatible types"
-)
 _CHECK_NAMES = pytest.mark.xfail(
     strict=True,
     reason=(
@@ -38,8 +35,7 @@ _CHECK_NAMES = pytest.mark.xfail(
         ([1.0, 2.0], [1, 2], True),
         ([1.1, 2.2], [1, 2], False),
         # --- Cross-supertype: int vs string ---
-        # pandas: False, polars: False, pyarrow: raises
-        pytest.param([1, 2], ["1", "2"], TBD, marks=_CROSS_TYPE),
+        ([1, 2], ["1", "2"], False),
     ],
 )
 def test_series_equals(

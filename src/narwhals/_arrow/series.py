@@ -556,22 +556,30 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def equals(
         self, other: Self, *, check_dtypes: bool, check_names: bool, null_equal: bool
     ) -> bool:
-        if check_names and self._name != other._name:
+        if (
+            (check_names and self._name != other._name)
+            or (check_dtypes and self.dtype != other.dtype)
+            or len(self) != len(other)
+        ):
             return False
-        if check_dtypes and self.dtype != other.dtype:
-            return False
-        if len(self) != len(other):
-            return False
+
         lhs = self.native
         rhs = other.native
+
+        if not null_equal and (lhs.null_count or rhs.null_count):
+            return False
+
+        try:
+            values_equal = pc.equal(lhs, rhs)
+        except pa.lib.ArrowNotImplementedError:
+            return False
+
         if null_equal:
             both_null = pc.and_(pc.is_null(lhs), pc.is_null(rhs))
-            values_equal = pc.equal(lhs, rhs)
             result = pc.if_else(both_null, True, values_equal)
             return bool(pc.all(result, skip_nulls=False).as_py())
-        if lhs.null_count or rhs.null_count:
-            return False
-        return bool(pc.all(pc.equal(lhs, rhs)).as_py())
+
+        return bool(pc.all(values_equal).as_py())
 
     def head(self, n: int) -> Self:
         if n >= 0:
