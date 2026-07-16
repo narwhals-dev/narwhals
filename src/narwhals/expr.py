@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
@@ -64,7 +63,10 @@ class Expr:
     def _with_over_node(self, node: ExprNode) -> Self:
         # insert `over` before any elementwise operations.
         # check "how it works" page in docs for why we do this.
-        new_nodes = deepcopy(list(self._nodes))
+        # Nodes are shared between `Expr` instances and the push-down below rebinds
+        # `exprs` on the nodes it visits, so clone the elementwise tail and share
+        # the untouched prefix by reference.
+        new_nodes = list(self._nodes)
         kwargs_no_order_by = {
             key: value if key != "order_by" else []
             for (key, value) in node.kwargs.items()
@@ -72,8 +74,9 @@ class Expr:
         node_without_order_by = node._with_kwargs(**kwargs_no_order_by)
         n = len(new_nodes)
         i = n
-        while i > 0 and (_node := new_nodes[i - 1]).kind is ExprKind.ELEMENTWISE:
+        while i > 0 and new_nodes[i - 1].kind is ExprKind.ELEMENTWISE:
             i -= 1
+            new_nodes[i] = _node = new_nodes[i]._clone()
             _node._push_down_over_node_in_place(node, node_without_order_by)
         if i == n:
             # node could not be pushed down, just append as-is

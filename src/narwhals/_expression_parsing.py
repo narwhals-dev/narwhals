@@ -276,6 +276,19 @@ class ExprNode:
             self.kind, self.name, exprs=self.exprs, str_as_lit=self.str_as_lit, **kwargs
         )
 
+    def _clone(self) -> ExprNode:
+        # Fresh caches on purpose: callers rebind `exprs` after cloning
+        # (`_push_down_over_node_in_place`), which can invalidate
+        # `is_orderable`/`is_elementwise` results.
+        return self.__class__(
+            self.kind,
+            self.name,
+            exprs=self.exprs,
+            str_as_lit=self.str_as_lit,
+            allow_multi_output=self.allow_multi_output,
+            **self.kwargs,
+        )
+
     def _push_down_over_node_in_place(
         self, over_node: ExprNode, over_node_without_order_by: ExprNode
     ) -> None:
