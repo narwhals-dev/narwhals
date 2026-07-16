@@ -156,7 +156,10 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return result
 
     def _non_null(self) -> list[Any]:
-        return [value for value in self.native if value is not None]
+        # Defensive check to avoid iterating and copying the list if there is no null
+        if None in (values := self.native):
+            return [value for value in values if value is not None]
+        return values
 
     def _extract_comparand(self, other: Any) -> tuple[Any, bool]:
         """Return `(values_or_scalar, is_scalar)` for use in elementwise operations."""
