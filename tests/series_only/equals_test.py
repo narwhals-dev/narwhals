@@ -16,10 +16,6 @@ _NAN_HANDLING = pytest.mark.xfail(
 _CROSS_TYPE = pytest.mark.xfail(
     strict=True, reason="Inconsistent behavior across backends for incompatible types"
 )
-_DTYPE_INFERENCE = pytest.mark.xfail(
-    strict=True,
-    reason="Constructor dtype inference is backend-dependent for whole-number floats",
-)
 _CHECK_NAMES = pytest.mark.xfail(
     strict=True,
     reason=(
@@ -108,8 +104,7 @@ def test_series_equals_null_equal(
         # --- Whole-number floats, check_dtypes=False ---
         ([1.0, 2.0], [1, 2], False, True),
         # --- Whole-number floats, check_dtypes=True ---
-        # pandas: False, polars: False, pyarrow: False, pandas[pyarrow]: True (infers Int64)
-        pytest.param([1.0, 2.0], [1, 2], True, TBD, marks=_DTYPE_INFERENCE),
+        ([1.0, 2.0], [1, 2], True, False),
     ],
 )
 def test_series_equals_check_dtypes(
