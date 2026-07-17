@@ -182,9 +182,7 @@ class BaseFrame(Generic[_FrameT]):
         return Schema(self._compliant_frame.schema.items())
 
     def collect_schema(self) -> Schema:
-        native_schema = dict(self._compliant_frame.collect_schema())
-
-        return Schema(native_schema)
+        return Schema(self._compliant_frame.collect_schema())
 
     def pipe(
         self,
