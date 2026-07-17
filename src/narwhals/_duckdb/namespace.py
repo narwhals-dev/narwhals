@@ -96,8 +96,8 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
         items = list(items)
+        native_items = [item._native_frame for item in items]
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):

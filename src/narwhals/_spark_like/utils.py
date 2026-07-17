@@ -223,6 +223,17 @@ def evaluate_exprs(
     return native_results
 
 
+@lru_cache(maxsize=18)
+def _import_sqlframe_module(dialect: str, submodule: str, /) -> ModuleType:
+    return import_module(f"sqlframe.{dialect}.{submodule}")
+
+
+def _sqlframe_dialect() -> str:
+    from sqlframe.base.session import _BaseSession
+
+    return _BaseSession().execution_dialect_name
+
+
 def import_functions(implementation: Implementation, /) -> ModuleType:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import functions
@@ -232,9 +243,7 @@ def import_functions(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql.connect import functions
 
         return functions
-    from sqlframe.base.session import _BaseSession
-
-    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
+    return _import_sqlframe_module(_sqlframe_dialect(), "functions")
 
 
 def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
@@ -246,9 +255,7 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql.connect import types
 
         return types
-    from sqlframe.base.session import _BaseSession
-
-    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
+    return _import_sqlframe_module(_sqlframe_dialect(), "types")
 
 
 def import_window(implementation: Implementation, /) -> type[Any]:
@@ -261,11 +268,7 @@ def import_window(implementation: Implementation, /) -> type[Any]:
         from pyspark.sql.connect.window import Window
 
         return Window
-    from sqlframe.base.session import _BaseSession
-
-    return import_module(
-        f"sqlframe.{_BaseSession().execution_dialect_name}.window"
-    ).Window
+    return _import_sqlframe_module(_sqlframe_dialect(), "window").Window
 
 
 @overload

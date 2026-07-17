@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from itertools import islice
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol
 
@@ -229,7 +230,7 @@ class DepthTrackingExpr(
         Elementary expressions are the only ones supported properly in
         pandas, PyArrow, and Dask.
         """
-        return len(list(self._metadata.op_nodes_reversed())) <= 2
+        return len(list(islice(self._metadata.op_nodes_reversed(), 3))) <= 2
 
 
 class EagerExpr(

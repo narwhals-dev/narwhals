@@ -254,10 +254,6 @@ class EagerNamespace(
             if otherwise is None:
                 predicate_s, then_s = align(predicate_s, then_s)
                 result = self._if_then_else(predicate_s.native, then_s.native)
-
-            if otherwise is None:
-                predicate_s, then_s = align(predicate_s, then_s)
-                result = self._if_then_else(predicate_s.native, then_s.native)
             else:
                 otherwise_s = df._evaluate_single_output_expr(otherwise)
                 predicate_s, then_s, otherwise_s = align(predicate_s, then_s, otherwise_s)
