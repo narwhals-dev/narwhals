@@ -236,7 +236,7 @@ class DuckDBLazyFrame(
             # Note: prefer `self._cached_native_schema` over `functools.cached_property`
             # due to Python3.13 failures.
             self._cached_native_schema = dict(
-                zip(self.columns, self.native.types, strict=False)
+                zip(self.columns, self.native.types, strict=True)
             )
 
         deferred_time_zone = DeferredTimeZone(self.native)
@@ -244,9 +244,7 @@ class DuckDBLazyFrame(
             column_name: native_to_narwhals_dtype(
                 duckdb_dtype, self._version, deferred_time_zone
             )
-            for column_name, duckdb_dtype in zip(
-                self.native.columns, self.native.types, strict=True
-            )
+            for column_name, duckdb_dtype in self._cached_native_schema.items()
         }
 
     @property
