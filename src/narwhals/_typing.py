@@ -1,7 +1,18 @@
+"""Type aliases describing the backends Narwhals dispatches to.
+
+Built-in backends are enumerated as `Literal` unions (`Backend`, `EagerAllowed`, `LazyAllowed`, ...).
+Plugin backends are discovered at runtime and cannot join those unions, so `PluginName` uses a
+[`NewType`](https://typing.python.org/en/latest/spec/aliases.html#newtype) instead:
+type checkers treat it as a distinct subtype of `str`, therefore:
+
+- an arbitrary `str` is still rejected where a `backend` is expected, and
+- a value explicitly wrapped as `PluginName("...")` is accepted.
+"""
+
 from __future__ import annotations
 
 from types import ModuleType
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, NewType
 
 from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, _NoDefault
@@ -91,7 +102,17 @@ backend (either eager or lazy).
 - An Implementation, such as: `Implementation.DASK`, `Implementation.PYSPARK`, ...
 """
 
-BackendT = TypeVar("BackendT", bound=Backend)
+PluginName = NewType("PluginName", str)
+"""Name of a plugin's [entry point](https://packaging.python.org/en/latest/specifications/entry-points/).
+
+- Wrap an entry point name to pass it wherever a `backend` is expected, e.g. `PluginName("my-plugin")`.
+- Add it to a signature's `IntoBackend` parameter to advertise plugin support, e.g. `IntoBackend[EagerAllowed | PluginName]`.
+
+See the `narwhals.plugins` module for how plugin authors register entry points
+and the contract a wrapped name must satisfy.
+"""
+
+BackendT = TypeVar("BackendT", bound=Backend | PluginName)
 IntoBackend: TypeAlias = BackendT | ModuleType
 """Anything that can be converted into a [`narwhals.Implementation`][].
 
