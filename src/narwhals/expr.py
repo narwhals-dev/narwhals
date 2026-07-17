@@ -64,8 +64,8 @@ class Expr:
         # insert `over` before any elementwise operations.
         # check "how it works" page in docs for why we do this.
         #
-        # NOTE: The only mutation happens in `_push_down_over_node_in_place`, which
-        # replaces the Expr's sequence entirely.
+        # NOTE: nodes are shared across `Expr`s, so the tail is cloned before the only
+        # mutation, `_push_down_over_node_in_place`, which rebinds the node's `exprs`.
         new_nodes = list(self._nodes)
         kwargs_no_order_by = {
             key: value if key != "order_by" else []
