@@ -278,9 +278,11 @@ class ExprNode:
         )
 
     def _clone(self) -> ExprNode:
-        # Fresh caches on purpose: callers rebind `exprs` after cloning
-        # (`_push_down_over_node_in_place`), which can invalidate
-        # `is_orderable`/`is_elementwise` results.
+        # NOTE: Cloning with the same `self.exprs` (and the child `Expr`s inside it)
+        # is safe as the push-down (`_push_down_over_node_in_place`) replaces the
+        # sequence entirely and nothing mutates it in place.
+        # Caches intentionally start fresh: rebinding `exprs` can change
+        # `is_orderable`/`is_elementwise`.
         return self.__class__(
             self.kind,
             self.name,

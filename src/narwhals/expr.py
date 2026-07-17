@@ -63,9 +63,9 @@ class Expr:
     def _with_over_node(self, node: ExprNode) -> Self:
         # insert `over` before any elementwise operations.
         # check "how it works" page in docs for why we do this.
-        # Nodes are shared between `Expr` instances and the push-down below rebinds
-        # `exprs` on the nodes it visits, so clone the elementwise tail and share
-        # the untouched prefix by reference.
+        #
+        # NOTE: The only mutation happens in `_push_down_over_node_in_place`, which
+        # replaces the Expr's sequence entirely.
         new_nodes = list(self._nodes)
         kwargs_no_order_by = {
             key: value if key != "order_by" else []
