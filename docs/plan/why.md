@@ -325,9 +325,11 @@ def polars(series: Series) -> Series: ...  # (1)!
 
     I know the bar is high to change the world.
 
+[^22]: besides Polars
+
 To put it bluntly, we *don't* have expression expansion.  
-Because we don't have it - yet have APIs that look like we do - it means every expression method 
-checks if it is "multi-output" and does many different dances around carrying unresolved selections everywhere.
+Because we have APIs that *look like* we do, a large chunk of Narwhals is dedicated to carrying partially resolved expressions around
+and dealing the consequences in every backend [^22] for every expression method.
 
 This extra complexity is created by Narwhals, but it doesn't have to be this way since Polars shows us how fix it.
 
