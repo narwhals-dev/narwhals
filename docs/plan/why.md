@@ -112,26 +112,41 @@ If the only issue were the name, we could simply tweak the docs and be home in t
 
 I'll save you the blabbing about LazyFrame, that's too easy!
 
-The interesting part is how much we need to do to squeeze every backend into this `Callable[[Frame], Sequence[Series]]` shape:
+The interesting part is how much we need to do to squeeze every backend into this shape:
 
-<!--TODO @dangotbanned: oh boy, docs are hard 
+```py
+def expr(frame: Frame) -> Sequence[Series]: ... # (1)!
+```
 
-- Pandas - do homework
-- PyArrow - Just focus on `pyarrow.compute`
-- DuckDB, PySpark - Lean into how they compare to PyArrow
-- Ibis - idk, this is correct but how useful is it here?
+1. [`CompliantExpr.__call__`](https://github.com/narwhals-dev/narwhals/blob/7a9e5b9c622c762b180fda043b9550801fdce748/src/narwhals/_compliant/expr.py#L109-L111) and [`EvalSeries`](https://github.com/narwhals-dev/narwhals/blob/7a9e5b9c622c762b180fda043b9550801fdce748/src/narwhals/_compliant/typing.py#L164-L170)
 
--->
+##### Expr/Series
 
-| Backend         | Notes                                                                                                                                                                              |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pandas(-Like)   | You can apply functions to dataframes, but we don't use any of those APIs AFAICT.<br> There's also horizontal with `axis=1` (but same dealio).                                     |
-| PyArrow         | Best to think of it as array-first + some table operations.<br> In terms of expressions, the majority of the API we use is `pyarrow.compute` (most of those are scalar functions). |
-| DuckDB, PySpark | APIs where functions are applied to expressions and they have no inherent context until you put them in one.                                                                       |
-| Ibis            | More table-bound, but every function results in 1 output.<br> Also supports selectors, but unlike Polars they are not first-class expressions.                                     |
+[inspired by]: https://github.com/alexander-beedie/polars/blob/251128d6ff7c36428ece0f435b1d1f7c34de0a72/py-polars/polars/selectors.py#L86
+[Ibis selectors]: https://ibis-project.org/reference/selectors#ibis.selectors.of_type
+[limited support for expressions]: https://arrow.apache.org/docs/python/compute.html#filtering-by-expressions
+[ibis.ir.Scalar]: https://ibis-project.org/reference/expression-generic#ibis.expr.types.generic.Scalar
+[table-bound]: https://github.com/ibis-project/ibis/blob/4556dad2c2a9f04468b12237ade271c2e708db4a/ibis/expr/types/relations.py#L1166-L1204
 
-I do not see a connection between what we do and how our backends work.  
-They all support `Callable[[Column], Column]` and we use this for none of them.
+
+[^13]: We make use of it very rarely.
+[^14]: 90% sure that Polars selectors were [inspired by] [Ibis selectors].  
+       But they differ by not being first-class expressions.
+[^15]: The same functions also have [limited support for expressions].
+[^16]: If you squint really hard, maybe [`pandas.DataFrame.select_dtypes`][].  
+       But this would be considerably more limited than Ibis.
+[^17]: The set operations are limited, but [`COLUMNS`](https://duckdb.org/docs/current/sql/expressions/star#columns-expression) is very similar to expression expansion.
+
+API(s) we can/do use for implementing each concept vary:
+
+| Backend | "Expressions"                                                                                                                              | "Selectors"                         |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| DuckDB  | Functions applied to expressions objects.<br>Column expressions are unbound.                                                               | :lucide-check: [^17]                |
+| Ibis    | [ibis.ir.Column], [ibis.ir.Scalar] methods.<br>Column expressions are [table-bound].                                                       | :lucide-circle-question-mark: [^14] |
+| Pandas  | [`pd.Series`][pandas.Series] methods ([excluding `over`](#window-functions)).<br>You can apply functions to dataframes with `axis=1`[^13]. | :lucide-circle-question-mark: [^16] |
+| PyArrow | Functions applied to [`pa.ChunkedArray`][pyarrow.ChunkedArray], [`pa.Scalar`][pyarrow.Scalar] [^15].                                       | :lucide-x:                          |
+| PySpark | Functions applied to expressions objects.<br>Column expressions are unbound.                                                               | :lucide-x:                          |
+
 
 ##### What about scalars?
 Consider these two queries:
