@@ -77,15 +77,15 @@ What began as just [pl.Series] and [`pd.Series`][pandas.Series], has grown to me
 
 Let's see how each backend compares to [pl.Series]:
 
-| Backend       | Class [^1]                                 | Named? [^2]     | Order? [^3]                   | Row-separable? [^4]           | Columnar? [^5]                     |
-| ------------- | ------------------------------------------ | --------------- | ----------------------------- | ----------------------------- | ---------------------------------- |
-| Polars        | [pl.Series]                                | :lucide-check:  | :lucide-check:                | :lucide-check:                | :lucide-check:                     |
-| Pandas(-Like) | [`pd.Series`][pandas.Series]               | :lucide-check:  | :lucide-check:                | :lucide-triangle-alert: [^6]  | :lucide-check:                     |
-| PyArrow       | [`pa.ChunkedArray`][pyarrow.ChunkedArray]  | :lucide-x: [^7] | :lucide-check:                | :lucide-check:                | :lucide-check:                     |
-| DuckDB        | [`duckdb.Expression`][]                    | :lucide-check:  | :lucide-x:                    | :lucide-x:                    | :lucide-check:                     |
-| PySpark       | [`pyspark.sql.Column`][]                   | :lucide-check:  | :lucide-x:                    | :lucide-x:                    | :lucide-x:                         |
-| Ibis          | [ibis.ir.Column] [^8]                      | :lucide-check:  | :lucide-x:                    | :lucide-x:                    | :lucide-circle-question-mark: [^9] |
-| Dask          | [`dx.Series`][dask.dataframe.Series] [^10] | :lucide-check:  | :lucide-circle-question-mark: | :lucide-circle-question-mark: | :lucide-circle-question-mark:      |
+| Backend       | Class [^3]                                 | Named? [^4]     | Order? [^5]                   | Row-separable? [^6]           | Columnar? [^7]                      |
+| ------------- | ------------------------------------------ | --------------- | ----------------------------- | ----------------------------- | ----------------------------------- |
+| Polars        | [pl.Series]                                | :lucide-check:  | :lucide-check:                | :lucide-check:                | :lucide-check:                      |
+| Pandas(-Like) | [`pd.Series`][pandas.Series]               | :lucide-check:  | :lucide-check:                | :lucide-triangle-alert: [^8]  | :lucide-check:                      |
+| PyArrow       | [`pa.ChunkedArray`][pyarrow.ChunkedArray]  | :lucide-x: [^9] | :lucide-check:                | :lucide-check:                | :lucide-check:                      |
+| DuckDB        | [`duckdb.Expression`][]                    | :lucide-check:  | :lucide-x:                    | :lucide-x:                    | :lucide-check:                      |
+| PySpark       | [`pyspark.sql.Column`][]                   | :lucide-check:  | :lucide-x:                    | :lucide-x:                    | :lucide-x:                          |
+| Ibis          | [ibis.ir.Column] [^10]                     | :lucide-check:  | :lucide-x:                    | :lucide-x:                    | :lucide-circle-question-mark: [^11] |
+| Dask          | [`dx.Series`][dask.dataframe.Series] [^12] | :lucide-check:  | :lucide-circle-question-mark: | :lucide-circle-question-mark: | :lucide-circle-question-mark:       |
 
 Some backends are clearly more *Series-like* than others.  
 If the only issue were the name, we could simply tweak the docs and be home in time for dinner:
@@ -97,16 +97,16 @@ If the only issue were the name, we could simply tweak the docs and be home in t
 [pl.Series]: https://docs.pola.rs/api/python/stable/reference/series/index.html
 [ibis.ir.Column]: https://ibis-project.org/reference/expression-generic#ibis.expr.types.generic.Column
 
-[^1]: What class(es) do we use?
-[^2]: Does it have an accessible name?
-[^3]: Is order guaranteed?
-[^4]: See [`FunctionFlags.ROW_SEPARABLE`][narwhals._plan._flags.FunctionFlags.ROW_SEPARABLE]
-[^5]: See https://en.wikipedia.org/wiki/Data_orientation#Column-oriented
-[^6]: When careful with [`pd.Index`][pandas.Index]
-[^7]: Maps directly to the lower-level [polars `#!rust ChunkedArray`](https://docs.rs/polars/latest/polars/#chunkedarray), which is unnamed
-[^8]: [`*Scalar`](https://ibis-project.org/concepts/datatypes) classes are also user-facing
-[^9]: Backend-dependent
-[^10]: Just a very fancy expression, only a "Series" in name
+[^3]: What class(es) do we use?
+[^4]: Does it have an accessible name?
+[^5]: Is order guaranteed?
+[^6]: See [`FunctionFlags.ROW_SEPARABLE`][narwhals._plan._flags.FunctionFlags.ROW_SEPARABLE]
+[^7]: See https://en.wikipedia.org/wiki/Data_orientation#Column-oriented
+[^8]: When careful with [`pd.Index`][pandas.Index]
+[^9]: Maps directly to the lower-level [polars `#!rust ChunkedArray`](https://docs.rs/polars/latest/polars/#chunkedarray), which is unnamed
+[^10]: [`*Scalar`](https://ibis-project.org/concepts/datatypes) classes are also user-facing
+[^11]: Backend-dependent
+[^12]: Just a very fancy expression, only a "Series" in name
 
 #### A function from a ~~Data~~ Frame?
 
@@ -261,12 +261,12 @@ def polars(series: Series) -> Series: ...  # (1)!
 
 1.  yes, just like all other backends support natively
 
+[^21]: `v1.1.0` and `v1.31.0` are meaningful events *to me*, but you could pick any version really 😅
+
 ??? info "A trip down memory lane"
 
-    [^13]: `v1.1.0` and `v1.31.0` are meaningful events *to me*, but you could pick any version really 😅
-
     If we take a step back, what's interesting is that this concept has been in Narwhals since before it was *Narwhals*.  
-    Here's 4 snapshots of what that signature describes [^13]:
+    Here's 4 snapshots of what that signature describes [^21]:
 
     - (v0.1.0) [`polars_api_compat` is born](https://github.com/narwhals-dev/narwhals/blob/4add1be80a5a6d553e22a3375ea61695ab4f5843/polars_api_compat/utils.py#L180-L217)
     - (v1.1.0) [Altair adopts Narwhals](https://github.com/narwhals-dev/narwhals/blob/6e0c3adb95ddf5324b29a2c1453e5139e2936263/narwhals/_expression_parsing.py#L176-L224)
