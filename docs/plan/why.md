@@ -1,5 +1,17 @@
 # Why?
 
+??? info "Important"
+
+    This is not a critique of Narwhals, nor a critique of contributors to it.  
+    I am fond of both.
+
+    My aim is to be objective where possible and be clear when sharing my own opinion. 
+    But I am human, this is written by hand and I expect I will not pull this off without ruffling at least 1 feather.
+
+    Many people have put considerable chunks of their own time into making Narwhals what it is. 
+    Please know that nothing I have to say changes how special that is. I'm grateful to have been swimming in this ocean with you.
+
+
 ## Background
 [This sentiment] has been a driving force behind this project:
 
