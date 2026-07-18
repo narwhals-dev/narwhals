@@ -147,6 +147,41 @@ API(s) we can/do use for implementing each concept vary:
 | PyArrow | Functions applied to [`pa.ChunkedArray`][pyarrow.ChunkedArray], [`pa.Scalar`][pyarrow.Scalar] [^15].                                       | :lucide-x:                          |
 | PySpark | Functions applied to expressions objects.<br>Column expressions are unbound.                                                               | :lucide-x:                          |
 
+[^20]: allowing it to support a wider range of features
+
+??? note "Window functions"
+
+    [1]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_pandas_like/expr.py#L218-L400
+    [2]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_pandas_like/expr.py#L29-L124
+    [3]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_arrow/expr.py#L101-L237
+    [4]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_arrow/expr.py#L184
+    [5]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_arrow/expr.py#L222
+    [6]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_arrow/group_by.py#L32-L190
+
+
+    On `main`, Pandas ([1], [2]) and PyArrow [3] implement `CompliantExpr.over` in unique ways.  
+    Pandas is operating almost entirely natively [^20], whereas PyArrow reuses ([4], [5]) our `group_by` [6] support.
+
+    I want to acknowledge that:
+
+    1. it is impressive that we can even model expressions like this in the first place.
+    2. this code is very complex (#2491) due to stretching `ExprMetadata` and `CompliantExpr` beyond what they can reasonably express.
+    3. **in the case of multi-output `over` for these backends - I believe there will be a performance benefit on `main` vs my current solution.**
+    
+    It is difficult to know how many users would be impacted by **3.**.  
+    But I do consider it a problem that **needs** solving before declaring Pandas as supported [learn more](./future/window-expansion.md).
+
+
+Despite these differences, they all support a shape like this:
+
+```py
+def expr(column: Column) -> Column: ...
+```
+
+Every backend supports this signature.  
+The signature we have now is disconnected from how they work.  
+
+
 
 ##### What about scalars?
 Consider these two queries:

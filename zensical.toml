@@ -94,7 +94,10 @@ nav = [
         "plan/use-cases.md",
         "plan/mind-the-gap.md",
         "plan/inspired.md",
-        "plan/future.md",
+        { "Future work" = [
+            "plan/future/index.md",
+            "plan/future/window-expansion.md",
+        ] },
     ] },
     { "API Reference (Experimental)" = [
         "api-reference-plan/index.md", 
