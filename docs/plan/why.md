@@ -127,7 +127,8 @@ I'll save you the blabbing about LazyFrame, that's too easy!
 The interesting part is how much we need to do to squeeze every backend into this shape:
 
 ```py
-def expr(frame: Frame) -> Sequence[Series]: ... # (1)!
+def expr(frame: Frame) -> Sequence[Series]:  # (1)!
+    ...
 ```
 
 1. [`CompliantExpr.__call__`](https://github.com/narwhals-dev/narwhals/blob/7a9e5b9c622c762b180fda043b9550801fdce748/src/narwhals/_compliant/expr.py#L109-L111) and [`EvalSeries`](https://github.com/narwhals-dev/narwhals/blob/7a9e5b9c622c762b180fda043b9550801fdce748/src/narwhals/_compliant/typing.py#L164-L170)
@@ -187,7 +188,8 @@ API(s) we can/do use for implementing each concept vary:
 Despite these differences, they all support a shape like this:
 
 ```py
-def expr(column: Column) -> Column: ...
+def expr(column: Column) -> Column:
+    ...
 ```
 
 Every backend supports this signature.  
@@ -220,17 +222,17 @@ But don't take my word for it, let's look at how trying to fit `lit` into this b
 ``` py
 class ArrowNamespace:
     def lit(self, value: PythonLiteral, dtype: IntoDType | None) -> ArrowExpr:
-        def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries: # (1)!
-            arrow_series = ArrowSeries.from_iterable( # (2)!
-                data=[value], name="literal", context=self # (3)!
+        def _lit_arrow_series(_: ArrowDataFrame) -> ArrowSeries:  # (1)!
+            arrow_series = ArrowSeries.from_iterable(  # (2)!
+                data=[value], name="literal", context=self  # (3)!
             )
             if dtype:
-                return arrow_series.cast(dtype) # (4)!
+                return arrow_series.cast(dtype)  # (4)!
             return arrow_series
 
         return self._expr(
-            lambda df: [_lit_arrow_series(df)], # (5)!
-            evaluate_output_names=lambda _df: ["literal"], # (6)!
+            lambda df: [_lit_arrow_series(df)],  # (5)!
+            evaluate_output_names=lambda _df: ["literal"],  # (6)!
             alias_output_names=None,
             version=self._version,
         )
@@ -317,8 +319,12 @@ So the first thing you might say is
 This is **not** a subtle difference, these guys are barely related
 
 ```py
-def narwhals(frame: Frame) -> Sequence[Series]: ...
-def polars(series: Series) -> Series: ...  # (1)!
+def narwhals(frame: Frame) -> Sequence[Series]:
+    ...
+
+
+def polars(series: Series) -> Series:  # (1)!
+    ...
 ```
 
 1.  yes, just like all other backends support natively
