@@ -210,3 +210,17 @@ class IbisNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             version=version,
         )
+
+    def list(self, *exprs: IbisExpr) -> IbisExpr:
+        version = self._version
+
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [ibis.array(cols)]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+        )

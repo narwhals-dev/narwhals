@@ -85,8 +85,8 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
         items = list(items)
+        native_items = [item._native_frame for item in items]
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
@@ -245,6 +245,20 @@ class DuckDBNamespace(
                 f'"{name}" := {col}' for name, col in names_to_cols.items()
             )
             return [sql_expression(f"struct_pack({field_args})")]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+        )
+
+    def list(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+        version = self._version
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [F("list_pack", *cols)]
 
         return self._expr(
             call=func,

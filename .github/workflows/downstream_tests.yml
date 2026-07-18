@@ -51,7 +51,8 @@ jobs:
       - name: install-altair-dev
         run: |
           cd altair
-          uv pip install -e ".[dev, all]"
+          uv sync --all-extras
+          uv pip install -e .
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
@@ -61,11 +62,11 @@ jobs:
       - name: Run pytest
         run: |
           cd altair
-          pytest tests
+          uv run --no-sync --all-extras pytest tests
       - name: Run mypy
         run: |
           cd altair
-          mypy altair tests
+          uv run --no-sync --all-extras mypy altair tests
 
   marimo:
     if: github.head_ref != 'bump-version'
@@ -690,10 +691,16 @@ jobs:
       - name: install-lightgbm
         run: |
           cd LightGBM
-          uv pip install pip
+          uv pip install pip build
           sh ./build-python.sh install
       - name: install-deps
         run: |
+          # scikit-learn's dev floor can briefly outpace the nightly wheel index
+          # right after a stable release, so install it separately from plain
+          # PyPI first; the rest of the file then installs against it as already
+          # satisfied, while numpy/pandas/pyarrow/etc still resolve as nightlies.
+          sklearn_spec=$(grep -E '^scikit-learn' LightGBM/.ci/pip-envs/requirements-latest.txt)
+          uv pip install "$sklearn_spec"
           uv pip install -r LightGBM/.ci/pip-envs/requirements-latest.txt
       - name: install-narwhals-dev
         run: |

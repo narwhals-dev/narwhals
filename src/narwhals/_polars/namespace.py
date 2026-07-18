@@ -17,7 +17,7 @@ from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
     from typing_extensions import TypeIs
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -102,14 +102,14 @@ class PolarsNamespace:
 
     @overload
     def from_numpy(
-        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
+        self, data: _2DArray, /, schema: Mapping[str, IntoDType] | Sequence[str] | None
     ) -> PolarsDataFrame: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: IntoSchema | Sequence[str] | None = None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None = None,
     ) -> PolarsDataFrame | PolarsSeries:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
@@ -217,6 +217,18 @@ class PolarsNamespace:
     def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
         return self._expr(pl.struct(pl_exprs), version=self._version)
+
+    def list(self, *exprs: PolarsExpr) -> PolarsExpr:
+        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
+
+        if self._backend_version < (2,):
+            length = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
+            to_concat = [e.implode().over(pl.int_range(length)) for e in pl_exprs]
+            expr = pl.concat_list(to_concat)
+        else:
+            expr = pl.list(pl_exprs)  # type: ignore[attr-defined]  # pragma: no cover
+
+        return self._expr(expr, version=self._version)
 
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
