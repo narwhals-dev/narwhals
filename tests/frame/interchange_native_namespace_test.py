@@ -56,6 +56,7 @@ def test_ibis(
     assert series.__native_namespace__() == ibis
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb

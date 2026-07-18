@@ -140,6 +140,8 @@ jobs:
         python-version: ["3.14t"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    # Backstop against deadlocks in multithreaded tests: fail instead of hanging.
+    timeout-minutes: 10
     env:
         PYTHON_GIL: 0
         UV_LOCKED: 0
@@ -152,5 +154,21 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
+      # polars and sql (duckdb + sqlparse) are included so that the concurrency
+      # stress tests in tests/free_threading_test.py run instead of skipping.
+      # duckdb does not yet declare free-threading support (its import would re-enable the GIL),
+      # so it only runs here because PYTHON_GIL=0 forces the GIL off;
+      # it is deliberately kept out of --constructors.
       - name: Run pytest
-        run: make run-ci DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
+        run: make run-ci DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow --extra polars --extra sql" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
+      # Run the suite again with every test executed by 4 threads at once
+      # with pytest-run-parallel to surface thread-safety issues.
+      # This catches global-state races across the whole suite; shared-object races
+      # are covered by the dedicated tests in tests/free_threading_test.py.
+      # Tests marked `thread_unsafe` run single-threaded.
+      - name: Run pytest (parallel threads)
+        env:
+          # NOTE: Clear PYTEST_ADDOPTS since xdist forks processes,
+          # and the point here is threads within one process
+          PYTEST_ADDOPTS: ""
+        run: make run-ci DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow --extra polars --extra sql" RUN_ONLY="--with pytest-run-parallel" CMD="pytest tests --parallel-threads=4 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb"

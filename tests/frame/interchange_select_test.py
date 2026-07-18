@@ -77,6 +77,7 @@ def test_interchange_ibis(
     assert out_cols == ["a", "z"]
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_interchange_duckdb() -> None:
     pytest.importorskip("polars")
     pytest.importorskip("duckdb")

@@ -251,6 +251,7 @@ def test_validate_not_duplicated_columns_arrow() -> None:
         nw.from_native(table, eager_only=True)
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_validate_not_duplicated_columns_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb

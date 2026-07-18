@@ -22,9 +22,15 @@ except ImportError as _exc:  # pragma: no cover
     raise ModuleNotFoundError(msg) from _exc
 
 CONN = duckdb.connect()
-TZ = DeferredTimeZone(
-    CONN.sql("select value from duckdb_settings() where name = 'TimeZone'")
-)
+
+
+def _cursor() -> duckdb.DuckDBPyConnection:
+    # DuckDB connections must not be used concurrently from multiple threads.
+    # Each cursor shares `CONN`'s catalog but executes independently.
+    # Citing from [Multiple Python Threads](https://duckdb.org/docs/current/guides/python/multiple_threads)
+    # > Each thread must use the `.cursor()` method to create a thread-local
+    # > connection to the same DuckDB file based on the original connection
+    return CONN.cursor()
 
 
 class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
@@ -90,16 +96,20 @@ def table(name: str, schema: IntoSchema) -> SQLTable:
         |           0 rows           |
         └────────────────────────────┘
     """
+    cursor = _cursor()
+    tz = DeferredTimeZone(
+        cursor.sql("select value from duckdb_settings() where name = 'TimeZone'")
+    )
     column_mapping = {
-        col: narwhals_to_native_dtype(dtype, Version.MAIN, TZ)
+        col: narwhals_to_native_dtype(dtype, Version.MAIN, tz)
         for col, dtype in Schema(schema).items()
     }
     dtypes = ", ".join(f'"{col}" {dtype}' for col, dtype in column_mapping.items())
-    CONN.sql(f"""
+    cursor.sql(f"""
         CREATE TABLE "{name}"
         ({dtypes});
         """)
-    lf = from_native(CONN.table(name))
+    lf = from_native(cursor.table(name))
     return SQLTable(lf._compliant_frame, level=lf._level)
 
 

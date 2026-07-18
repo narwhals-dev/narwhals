@@ -136,6 +136,7 @@ def test_convert_time_zone_to_none_series(constructor_eager: ConstructorEager) -
         df["a"].dt.convert_time_zone(None)  # type: ignore[arg-type]
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_convert_time_zone_to_connection_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
 

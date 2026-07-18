@@ -578,6 +578,9 @@ def test_dtypes() -> None:
         (False, does_not_raise()),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_strict(strict: Any, context: Any) -> None:
     pytest.importorskip("numpy")
     import numpy as np

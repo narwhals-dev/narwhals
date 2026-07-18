@@ -51,6 +51,7 @@ def test_interchange_ibis_to_arrow(
     assert isinstance(result, pa.Table)
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_interchange_duckdb_to_arrow() -> None:
     pytest.importorskip("duckdb")
 

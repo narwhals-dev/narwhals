@@ -205,6 +205,9 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
         ),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_rolling_sum_expr_invalid_params(
     constructor_eager: ConstructorEager,
     window_size: int,
@@ -258,6 +261,9 @@ def test_rolling_sum_expr_invalid_params(
             pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
         ),
     ],
+)
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_rolling_sum_series_invalid_params(
     constructor_eager: ConstructorEager,

@@ -199,6 +199,7 @@ def test_pandas_numpy_nat() -> None:
     assert result.item(1, 0) is pd.NaT
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_truncate_tz_aware_duckdb() -> None:
     pytest.importorskip("duckdb")
 

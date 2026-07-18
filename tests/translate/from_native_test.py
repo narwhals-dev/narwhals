@@ -128,6 +128,9 @@ all_frames = [*eager_frames, *lazy_frames]
         (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_eager_only_lazy(dframe: Any, eager_only: Any, context: Any) -> None:
     with context:
         res = nw.from_native(dframe, eager_only=eager_only)
@@ -153,6 +156,9 @@ def test_eager_only_eager(dframe: Any, eager_only: Any) -> None:
         *[(series, does_not_raise()) for series in all_series],
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_series_only(obj: Any, context: Any) -> None:
     with context:
         res = nw.from_native(obj, series_only=True)
@@ -174,6 +180,9 @@ def test_series_only(obj: Any, context: Any) -> None:
             ),
         ),
     ],
+)
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
     with context:

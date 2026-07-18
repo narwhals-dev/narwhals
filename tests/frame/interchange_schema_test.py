@@ -164,6 +164,7 @@ def test_interchange_schema_ibis(
     assert df.collect_schema() == expected
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_interchange_schema_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb

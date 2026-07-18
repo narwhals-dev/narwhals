@@ -150,6 +150,9 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
         ),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_check_schema_mismatch(
     constructor: Constructor,
     left_schema: Mapping[str, IntoDType],

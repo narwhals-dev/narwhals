@@ -124,6 +124,7 @@ def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> N
     assert_equal_data(result_str, expected)
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_replace_time_zone_to_connection_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
 

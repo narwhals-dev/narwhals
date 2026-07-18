@@ -24,6 +24,9 @@ if TYPE_CHECKING:
         ),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_to_native(
     constructor_eager: ConstructorEager, method: str, *, pass_through: bool, context: Any
 ) -> None:

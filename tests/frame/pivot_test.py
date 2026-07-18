@@ -145,6 +145,9 @@ def test_pivot(
         (data, pytest.raises((ValueError, NarwhalsError))),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_pivot_no_agg(
     request: Any, constructor_eager: ConstructorEager, data_: Any, context: Any
 ) -> None:

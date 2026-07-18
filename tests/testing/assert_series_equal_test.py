@@ -141,6 +141,9 @@ def test_metadata_checks_with_flags(
         (nw.Int32(), True, does_not_raise()),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_check_order(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
@@ -190,6 +193,9 @@ def test_null_mismatch(constructor_eager: ConstructorEager, null_data: Data) -> 
         (False, 1e-3, 1e-3, _assertion_error("values not within tolerance")),
         (False, 2e-1, 2e-1, does_not_raise()),
     ],
+)
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_numeric(
     constructor_eager: ConstructorEager,
@@ -258,6 +264,9 @@ def test_numeric(
         ),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_list_like(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
@@ -318,6 +327,9 @@ def test_list_like(
             does_not_raise(),
         ),
     ],
+)
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_struct(
     request: pytest.FixtureRequest,

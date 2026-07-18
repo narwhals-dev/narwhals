@@ -276,6 +276,7 @@ def from_native_collect_schema(native: IntoFrame) -> nw.Schema:
     return nw.from_native(native).collect_schema()
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_huge_int() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -454,6 +455,7 @@ def test_dtype_is_x() -> None:
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_huge_int_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -652,6 +654,7 @@ def test_dtype_repr_versioned(dtype_name: str) -> None:
     assert repr(dtype_class_main) != repr(dtype_class_v1)
 
 
+@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb

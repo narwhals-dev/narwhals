@@ -110,6 +110,9 @@ def test_shift_multi_chunk_pyarrow() -> None:
         (0, nullcontext()),
     ],
 )
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
+)
 def test_shift_expr_invalid_params(n: Any, context: Any) -> None:
     with context:
         nw.col("a").shift(n)
@@ -124,6 +127,9 @@ def test_shift_expr_invalid_params(n: Any, context: Any) -> None:
         (1, nullcontext()),
         (0, nullcontext()),
     ],
+)
+@pytest.mark.thread_unsafe(
+    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_shift_series_invalid_params(
     constructor_eager: ConstructorEager, n: Any, context: Any
