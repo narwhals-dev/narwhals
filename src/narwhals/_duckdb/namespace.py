@@ -5,7 +5,6 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
-import duckdb
 from duckdb import CoalesceOperator, Expression
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -20,6 +19,7 @@ from narwhals._duckdb.utils import (
     lit,
     narwhals_to_native_dtype,
     sql_expression,
+    temporary_view_name,
     when,
     window_expression,
 )
@@ -96,9 +96,13 @@ class DuckDBNamespace(
             res = first.native
             for _item in native_items[1:]:
                 # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
-                res = duckdb.sql("""
-                    from res select * union all by name from _item select *
-                """)
+                # `_item` is resolved via replacement scan.
+                # `rel.query` creates a view, so this fails on read-only databases (#3567).
+                view = temporary_view_name()
+                res = res.query(
+                    view,
+                    f"from {view} select * union all by name from _item select *",  # noqa: S608
+                )
             return first._with_native(res)
         res = reduce(lambda x, y: x.union(y), native_items)
         return first._with_native(res)
