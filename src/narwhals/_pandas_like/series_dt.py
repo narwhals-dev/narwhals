@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 from narwhals._compliant.any_namespace import DateTimeNamespace
 from narwhals._constants import (
-    EPOCH_YEAR,
     MS_PER_SECOND,
     NS_PER_SECOND,
     SECONDS_PER_DAY,
@@ -89,15 +88,7 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.microsecond() * 1_000 + self.native.dt.nanosecond
 
     def ordinal_day(self) -> PandasLikeSeries:
-        year_start = self.native.dt.year
-        result = (
-            self.native.to_numpy().astype("datetime64[D]")
-            - (year_start.to_numpy() - EPOCH_YEAR).astype("datetime64[Y]")
-        ).astype("int32") + 1
-        dtype = "Int64[pyarrow]" if self._is_pyarrow() else "int32"
-        return self.with_native(
-            type(self.native)(result, dtype=dtype, name=year_start.name)
-        )
+        return self.with_native(self.native.dt.dayofyear)
 
     def weekday(self) -> PandasLikeSeries:
         # Pandas is 0-6 while Polars is 1-7
