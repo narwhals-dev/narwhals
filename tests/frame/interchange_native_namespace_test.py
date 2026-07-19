@@ -56,14 +56,13 @@ def test_ibis(
     assert series.__native_namespace__() == ibis
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
     df_pl = pl.DataFrame(data)  # noqa: F841
 
-    rel = duckdb.sql("select * from df_pl")
+    rel = duckdb.connect().sql("select * from df_pl")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     series = df["a"]
 

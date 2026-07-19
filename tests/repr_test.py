@@ -53,7 +53,7 @@ def test_repr(request: pytest.FixtureRequest) -> None:
         "└─────────────────────┘"
     )
     assert result == expected
-    result = nw.from_native(duckdb.table("df")).__repr__()
+    result = nw.from_native(duckdb.connect().table("df")).__repr__()
     expected = (
         "┌───────────────────┐\n"
         "|Narwhals LazyFrame |\n"
@@ -71,7 +71,7 @@ def test_repr(request: pytest.FixtureRequest) -> None:
     assert result == expected
     # Make something wider than the terminal size
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["fdaf" * 100, "fda", "cf"]})
-    result = nw.from_native(duckdb.table("df")).__repr__()
+    result = nw.from_native(duckdb.connect().table("df")).__repr__()
     expected = (
         "┌───────────────────────────────────────┐\n"
         "|          Narwhals LazyFrame           |\n"

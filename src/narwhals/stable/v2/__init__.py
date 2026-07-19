@@ -1079,6 +1079,23 @@ def scan_csv(
     For the libraries that do not support lazy dataframes, the function reads
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
+    Note:
+        Spark-like backends require a `session` object to be passed in `kwargs`.
+
+        For instance:
+
+        ```py
+        import narwhals as nw
+        from sqlframe.duckdb import DuckDBSession
+
+        nw.scan_csv(source, backend="sqlframe", session=DuckDBSession())
+        ```
+
+    Note:
+        For the DuckDB backend, a `connection` object can be passed in `kwargs`
+        to read through a specific `DuckDBPyConnection` instead of the
+        process-global default connection.
+
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
@@ -1128,7 +1145,7 @@ def scan_parquet(
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Note:
-        Spark like backends require a session object to be passed in `kwargs`.
+        Spark like backends require a `session` object to be passed in `kwargs`.
 
         For instance:
 
@@ -1138,6 +1155,12 @@ def scan_parquet(
 
         nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
         ```
+
+    Note:
+        For the DuckDB backend, a `connection` object can be passed in `kwargs`
+        to read through a specific `DuckDBPyConnection` instead of the
+        process-global default connection.
+
 
     Arguments:
         source: Path to a file.

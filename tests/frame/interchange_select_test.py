@@ -77,7 +77,6 @@ def test_interchange_ibis(
     assert out_cols == ["a", "z"]
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_interchange_duckdb() -> None:
     pytest.importorskip("polars")
     pytest.importorskip("duckdb")
@@ -86,7 +85,7 @@ def test_interchange_duckdb() -> None:
     import polars as pl
 
     df_pl = pl.DataFrame(data)  # noqa: F841
-    rel = duckdb.sql("select * from df_pl")
+    rel = duckdb.connect().sql("select * from df_pl")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
 
     out_cols = df.select("a", "z").schema.names()

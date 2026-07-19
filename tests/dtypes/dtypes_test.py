@@ -276,7 +276,6 @@ def from_native_collect_schema(native: IntoFrame) -> nw.Schema:
     return nw.from_native(native).collect_schema()
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_huge_int() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -300,7 +299,8 @@ def test_huge_int() -> None:
     else:  # pragma: no cover
         pass
 
-    rel = duckdb.sql("""
+    conn = duckdb.connect()
+    rel = conn.sql("""
         select cast(a as int128) as a
         from df
                      """)
@@ -308,7 +308,7 @@ def test_huge_int() -> None:
         result = nw.from_native(rel).schema
     assert result["a"] == nw.Int128
 
-    rel = duckdb.sql("""
+    rel = conn.sql("""
         select cast(a as uint128) as a
         from df
                      """)
@@ -381,7 +381,7 @@ def test_decimal() -> None:
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal
-    rel = duckdb.sql("""
+    rel = duckdb.connect().sql("""
         select *
         from df
                      """)
@@ -455,7 +455,6 @@ def test_dtype_is_x() -> None:
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_huge_int_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -469,7 +468,7 @@ def test_huge_int_to_native() -> None:
     )
     assert df_casted.schema["a_int"] == pl.Int128
 
-    rel = duckdb.sql("""
+    rel = duckdb.connect().sql("""
         select cast(a as int64) as a
         from df
                      """)
@@ -654,23 +653,23 @@ def test_dtype_repr_versioned(dtype_name: str) -> None:
     assert repr(dtype_class_main) != repr(dtype_class_v1)
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_datetime_w_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
+    conn = duckdb.connect()
+    conn.sql("""set timezone = 'Europe/Amsterdam'""")
     df = nw.from_native(
-        duckdb.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
+        conn.sql("""select * from values (timestamptz '2020-01-01')df(a)""")
     )
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Europe/Amsterdam")
-    duckdb.sql("""set timezone = 'Asia/Kathmandu'""")
+    conn.sql("""set timezone = 'Asia/Kathmandu'""")
     result = df.collect_schema()
     assert result["a"] == nw.Datetime("us", "Asia/Kathmandu")
 
     df = nw.from_native(
-        duckdb.sql(
+        conn.sql(
             """select * from values (timestamptz '2020-01-01', [[timestamptz '2020-01-02']])df(a,b)"""
         )
     )

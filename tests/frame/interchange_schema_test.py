@@ -164,7 +164,6 @@ def test_interchange_schema_ibis(
     assert df.collect_schema() == expected
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_interchange_schema_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
@@ -207,7 +206,7 @@ def test_interchange_schema_duckdb() -> None:
             "p": pl.Boolean,
         },
     )
-    rel = duckdb.sql("select * from df_pl")
+    rel = duckdb.connect().sql("select * from df_pl")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     result = df.schema
     expected = {

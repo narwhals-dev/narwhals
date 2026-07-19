@@ -51,7 +51,7 @@ def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
         request.applymarker(pytest.mark.xfail)
 
     df_raw = pd.DataFrame(data)
-    rel = duckdb.sql("select * from df_raw")
+    rel = duckdb.connect().sql("select * from df_raw")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
 
     assert df.to_pandas().equals(df_raw)

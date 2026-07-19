@@ -251,12 +251,11 @@ def test_validate_not_duplicated_columns_arrow() -> None:
         nw.from_native(table, eager_only=True)
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_validate_not_duplicated_columns_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    rel = duckdb.sql("SELECT 1 AS a, 2 AS a")
+    rel = duckdb.connect().sql("SELECT 1 AS a, 2 AS a")
     with pytest.raises(
         ValueError, match="Expected unique column names, got:\n- 'a' 2 times"
     ):
@@ -302,7 +301,7 @@ def test_nested_dtypes() -> None:
         "b": nw.Array(nw.Int64, 2),
         "c": nw.Struct({"a": nw.Int64, "b": nw.String, "c": nw.Float64}),
     }
-    rel = duckdb.sql("select * from df_pa")
+    rel = duckdb.connect().sql("select * from df_pa")
     nwdf = nw.from_native(rel)
     assert nwdf.collect_schema() == {
         "a": nw.List(nw.Int64),

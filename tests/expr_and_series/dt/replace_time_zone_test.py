@@ -124,14 +124,14 @@ def test_replace_time_zone_none_series(constructor_eager: ConstructorEager) -> N
     assert_equal_data(result_str, expected)
 
 
-@pytest.mark.thread_unsafe(reason="uses the process-global duckdb default connection")
 def test_replace_time_zone_to_connection_tz_duckdb() -> None:
     pytest.importorskip("duckdb")
 
     import duckdb
 
-    duckdb.sql("set timezone = 'Asia/Kolkata'")
-    rel = duckdb.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
+    conn = duckdb.connect()
+    conn.sql("set timezone = 'Asia/Kolkata'")
+    rel = conn.sql("""select * from values (timestamptz '2020-01-01') df(a)""")
     result = nw.from_native(rel).with_columns(
         nw.col("a").dt.replace_time_zone("Asia/Kolkata")
     )

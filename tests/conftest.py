@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 import uuid
 from copy import deepcopy
 from functools import lru_cache
@@ -176,16 +177,29 @@ def polars_lazy_constructor(obj: Data) -> pl.LazyFrame:
     return pl.LazyFrame(obj)
 
 
+_duckdb_local = threading.local()
+
+
 def duckdb_lazy_constructor(obj: dict[str, Any]) -> NativeDuckDB:
+    """One DuckDB connection per thread.
+
+    DuckDB connections are not safe for concurrent use, and pytest-run-parallel runs
+    the same test in several threads at once. Relations from different connections
+    cannot be combined, so frames built within one test (thread) must share a connection.
+
+    See: https://duckdb.org/docs/lts/guides/python/multiple_threads
+    """
     pytest.importorskip("duckdb")
     pytest.importorskip("pyarrow")
     import duckdb
     import pyarrow as pa
 
-    duckdb.sql("""set timezone = 'UTC'""")
+    if (conn := getattr(_duckdb_local, "conn", None)) is None:
+        conn = _duckdb_local.conn = duckdb.connect()
+        conn.sql("""set timezone = 'UTC'""")
 
     _df = pa.table(obj)
-    return duckdb.sql("select * from _df")
+    return conn.sql("select * from _df")
 
 
 def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
