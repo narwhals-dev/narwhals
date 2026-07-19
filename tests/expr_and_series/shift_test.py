@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from functools import partial
 from typing import Any
 
 import pytest
@@ -20,6 +21,8 @@ data = {
     "b": [1, 2, 3, 5, 3],
     "c": [5, 4, 3, 2, 1],
 }
+
+TYPE_ERROR_MSG = r"Expected '.+?', got: '.+?'\s+n="
 
 
 def test_shift(constructor_eager: ConstructorEager) -> None:
@@ -103,37 +106,31 @@ def test_shift_multi_chunk_pyarrow() -> None:
 @pytest.mark.parametrize(
     ("n", "context"),
     [
-        (1.0, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
-        ("1", pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
-        (None, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
-        (1, nullcontext()),
-        (0, nullcontext()),
+        (1.0, partial(pytest.raises, TypeError, match=TYPE_ERROR_MSG)),
+        ("1", partial(pytest.raises, TypeError, match=TYPE_ERROR_MSG)),
+        (None, partial(pytest.raises, TypeError, match=TYPE_ERROR_MSG)),
+        (1, nullcontext),
+        (0, nullcontext),
     ],
 )
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
-)
 def test_shift_expr_invalid_params(n: Any, context: Any) -> None:
-    with context:
+    with context():
         nw.col("a").shift(n)
 
 
 @pytest.mark.parametrize(
     ("n", "context"),
     [
-        (1.0, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
-        ("1", pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
-        (None, pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+n=")),
-        (1, nullcontext()),
-        (0, nullcontext()),
+        (1.0, partial(pytest.raises, TypeError, match=TYPE_ERROR_MSG)),
+        ("1", partial(pytest.raises, TypeError, match=TYPE_ERROR_MSG)),
+        (None, partial(pytest.raises, TypeError, match=TYPE_ERROR_MSG)),
+        (1, nullcontext),
+        (0, nullcontext),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_shift_series_invalid_params(
     constructor_eager: ConstructorEager, n: Any, context: Any
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
-    with context:
+    with context():
         df["a"].shift(n)

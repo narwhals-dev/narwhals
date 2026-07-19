@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -14,18 +15,15 @@ if TYPE_CHECKING:
 @pytest.mark.parametrize(
     ("method", "pass_through", "context"),
     [
-        ("head", False, does_not_raise()),
-        ("head", True, does_not_raise()),
-        ("to_numpy", True, does_not_raise()),
+        ("head", False, does_not_raise),
+        ("head", True, does_not_raise),
+        ("to_numpy", True, does_not_raise),
         (
             "to_numpy",
             False,
-            pytest.raises(TypeError, match="Expected Narwhals object, got"),
+            partial(pytest.raises, TypeError, match="Expected Narwhals object, got"),
         ),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_to_native(
     constructor_eager: ConstructorEager, method: str, *, pass_through: bool, context: Any
@@ -34,10 +32,10 @@ def test_to_native(
         pytest.importorskip("numpy")
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
 
-    with context:
+    with context():
         nw.to_native(getattr(df, method)(), pass_through=pass_through)
 
     s = df["a"]
 
-    with context:
+    with context():
         nw.to_native(getattr(s, method)(), pass_through=pass_through)

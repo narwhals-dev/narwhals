@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from functools import partial
 from typing import Any
 
 import hypothesis.strategies as st
@@ -174,21 +175,26 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
         (
             -1,
             None,
-            pytest.raises(
-                ValueError, match="window_size must be greater or equal than 1"
+            partial(
+                pytest.raises,
+                ValueError,
+                match="window_size must be greater or equal than 1",
             ),
         ),
         (
             2,
             -1,
-            pytest.raises(
-                ValueError, match="min_samples must be greater or equal than 1"
+            partial(
+                pytest.raises,
+                ValueError,
+                match="min_samples must be greater or equal than 1",
             ),
         ),
         (
             1,
             2,
-            pytest.raises(
+            partial(
+                pytest.raises,
                 InvalidOperationError,
                 match="`min_samples` must be less or equal than `window_size`",
             ),
@@ -196,17 +202,22 @@ def test_rolling_sum_series(constructor_eager: ConstructorEager) -> None:
         (
             4.2,
             None,
-            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+window_size="),
+            partial(
+                pytest.raises,
+                TypeError,
+                match=r"Expected '.+?', got: '.+?'\s+window_size=",
+            ),
         ),
         (
             2,
             4.2,
-            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
+            partial(
+                pytest.raises,
+                TypeError,
+                match=r"Expected '.+?', got: '.+?'\s+min_samples=",
+            ),
         ),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_rolling_sum_expr_invalid_params(
     constructor_eager: ConstructorEager,
@@ -216,7 +227,7 @@ def test_rolling_sum_expr_invalid_params(
 ) -> None:
     df = nw.from_native(constructor_eager(data))
 
-    with context:
+    with context():
         df.select(
             nw.col("a").rolling_sum(window_size=window_size, min_samples=min_samples)
         )
@@ -231,21 +242,26 @@ def test_rolling_sum_expr_invalid_params(
         (
             -1,
             None,
-            pytest.raises(
-                ValueError, match="window_size must be greater or equal than 1"
+            partial(
+                pytest.raises,
+                ValueError,
+                match="window_size must be greater or equal than 1",
             ),
         ),
         (
             2,
             -1,
-            pytest.raises(
-                ValueError, match="min_samples must be greater or equal than 1"
+            partial(
+                pytest.raises,
+                ValueError,
+                match="min_samples must be greater or equal than 1",
             ),
         ),
         (
             1,
             2,
-            pytest.raises(
+            partial(
+                pytest.raises,
                 InvalidOperationError,
                 match="`min_samples` must be less or equal than `window_size`",
             ),
@@ -253,17 +269,22 @@ def test_rolling_sum_expr_invalid_params(
         (
             4.2,
             None,
-            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+window_size="),
+            partial(
+                pytest.raises,
+                TypeError,
+                match=r"Expected '.+?', got: '.+?'\s+window_size=",
+            ),
         ),
         (
             2,
             4.2,
-            pytest.raises(TypeError, match=r"Expected '.+?', got: '.+?'\s+min_samples="),
+            partial(
+                pytest.raises,
+                TypeError,
+                match=r"Expected '.+?', got: '.+?'\s+min_samples=",
+            ),
         ),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_rolling_sum_series_invalid_params(
     constructor_eager: ConstructorEager,
@@ -273,7 +294,7 @@ def test_rolling_sum_series_invalid_params(
 ) -> None:
     df = nw.from_native(constructor_eager(data))
 
-    with context:
+    with context():
         df["a"].rolling_sum(window_size=window_size, min_samples=min_samples)
 
 

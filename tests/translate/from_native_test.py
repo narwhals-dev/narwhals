@@ -22,6 +22,7 @@ from __future__ import annotations
 # Using pyright's assert type instead
 # mypy: disallow-any-generics=false, disable-error-code="assert-type"
 from contextlib import nullcontext as does_not_raise
+from functools import partial
 from importlib.util import find_spec
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -124,15 +125,12 @@ all_frames = [*eager_frames, *lazy_frames]
 @pytest.mark.parametrize(
     ("eager_only", "context"),
     [
-        (False, does_not_raise()),
-        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
+        (False, does_not_raise),
+        (True, partial(pytest.raises, TypeError, match="Cannot only use `eager_only`")),
     ],
 )
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
-)
 def test_eager_only_lazy(dframe: Any, eager_only: Any, context: Any) -> None:
-    with context:
+    with context():
         res = nw.from_native(dframe, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
     if eager_only:
@@ -150,17 +148,17 @@ def test_eager_only_eager(dframe: Any, eager_only: Any) -> None:
     ("obj", "context"),
     [
         *[
-            (frame, pytest.raises(TypeError, match="Cannot only use `series_only`"))
+            (
+                frame,
+                partial(pytest.raises, TypeError, match="Cannot only use `series_only`"),
+            )
             for frame in all_frames
         ],
-        *[(series, does_not_raise()) for series in all_series],
+        *[(series, does_not_raise) for series in all_series],
     ],
 )
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
-)
 def test_series_only(obj: Any, context: Any) -> None:
-    with context:
+    with context():
         res = nw.from_native(obj, series_only=True)
         assert isinstance(res, nw.Series)
     assert nw.from_native(obj, series_only=True, pass_through=True) is obj or isinstance(
@@ -172,20 +170,19 @@ def test_series_only(obj: Any, context: Any) -> None:
 @pytest.mark.parametrize(
     ("allow_series", "context"),
     [
-        (True, does_not_raise()),
+        (True, does_not_raise),
         (
             False,
-            pytest.raises(
-                TypeError, match="Please set `allow_series=True` or `series_only=True`"
+            partial(
+                pytest.raises,
+                TypeError,
+                match="Please set `allow_series=True` or `series_only=True`",
             ),
         ),
     ],
 )
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
-)
 def test_allow_series(series: Any, allow_series: Any, context: Any) -> None:
-    with context:
+    with context():
         res = nw.from_native(series, allow_series=allow_series)
         assert isinstance(res, nw.Series)
     if not allow_series:
@@ -284,8 +281,8 @@ def test_series_only_dask() -> None:
 @pytest.mark.parametrize(
     ("eager_only", "context"),
     [
-        (False, does_not_raise()),
-        (True, pytest.raises(TypeError, match="Cannot only use `eager_only`")),
+        (False, does_not_raise),
+        (True, partial(pytest.raises, TypeError, match="Cannot only use `eager_only`")),
     ],
 )
 def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
@@ -294,7 +291,7 @@ def test_eager_only_lazy_dask(eager_only: Any, context: Any) -> None:
 
     dframe = dd.from_pandas(df_pd)
 
-    with context:
+    with context():
         res = nw.from_native(dframe, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
     if eager_only:
@@ -312,10 +309,11 @@ def test_series_only_sqlframe() -> None:  # pragma: no cover
 @pytest.mark.parametrize(
     ("eager_only", "context"),
     [
-        (False, does_not_raise()),
+        (False, does_not_raise),
         (
             True,
-            pytest.raises(
+            partial(
+                pytest.raises,
                 TypeError,
                 match="Cannot only use `series_only`, `eager_only` or `eager_or_interchange_only` with sqlframe DataFrame",
             ),
@@ -326,7 +324,7 @@ def test_eager_only_sqlframe(eager_only: Any, context: Any) -> None:  # pragma: 
     pytest.importorskip("sqlframe")
     df = sqlframe_pyspark_lazy_constructor(data)
 
-    with context:
+    with context():
         res = nw.from_native(df, eager_only=eager_only)
         assert isinstance(res, nw.LazyFrame)
 

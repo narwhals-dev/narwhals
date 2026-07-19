@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from contextlib import AbstractContextManager, nullcontext as does_not_raise
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -135,14 +136,11 @@ def test_metadata_checks_with_flags(
 @pytest.mark.parametrize(
     ("dtype", "check_order", "context"),
     [
-        (nw.List(nw.Int32()), False, pytest.raises(NotImplementedError)),
-        (nw.List(nw.Int32()), True, does_not_raise()),
-        (nw.Int32(), False, does_not_raise()),
-        (nw.Int32(), True, does_not_raise()),
+        (nw.List(nw.Int32()), False, partial(pytest.raises, NotImplementedError)),
+        (nw.List(nw.Int32()), True, does_not_raise),
+        (nw.Int32(), False, does_not_raise),
+        (nw.Int32(), True, does_not_raise),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_check_order(
     request: pytest.FixtureRequest,
@@ -150,7 +148,7 @@ def test_check_order(
     dtype: nw.dtypes.DType,
     *,
     check_order: bool,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
 ) -> None:
     """Test check_order behavior with nested and simple data."""
     if "cudf" in str(constructor_eager) and dtype.is_nested():
@@ -167,7 +165,7 @@ def test_check_order(
     frame = nw.from_native(constructor_eager({"a": data}), eager_only=True)
     left = right = frame["a"].cast(dtype)
 
-    with context:
+    with context():
         assert_series_equal(left, right, check_order=check_order, check_names=False)
 
 
@@ -189,13 +187,10 @@ def test_null_mismatch(constructor_eager: ConstructorEager, null_data: Data) -> 
 @pytest.mark.parametrize(
     ("check_exact", "abs_tol", "rel_tol", "context"),
     [
-        (True, 1e-3, 1e-3, _assertion_error("exact value mismatch")),
-        (False, 1e-3, 1e-3, _assertion_error("values not within tolerance")),
-        (False, 2e-1, 2e-1, does_not_raise()),
+        (True, 1e-3, 1e-3, partial(_assertion_error, "exact value mismatch")),
+        (False, 1e-3, 1e-3, partial(_assertion_error, "values not within tolerance")),
+        (False, 2e-1, 2e-1, does_not_raise),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_numeric(
     constructor_eager: ConstructorEager,
@@ -203,7 +198,7 @@ def test_numeric(
     check_exact: bool,
     abs_tol: float,
     rel_tol: float,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
 ) -> None:
     data = {
         "left": [1.0, float("nan"), float("inf"), None, 1.1],
@@ -212,7 +207,7 @@ def test_numeric(
 
     frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"], frame["right"]
-    with context:
+    with context():
         assert_series_equal(
             left,
             right,
@@ -230,42 +225,39 @@ def test_numeric(
             [["foo", "bar"]],
             [["foo", None]],
             True,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
             nw.List(nw.String()),
         ),
         (
             [["foo", "bar"]],
             [["foo", None]],
             True,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
             nw.Array(nw.String(), 2),
         ),
         (
             [[0.0, 0.1]],
             [[0.1, 0.1]],
             True,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
             nw.List(nw.Float32()),
         ),
         (
             [[0.0, 0.1]],
             [[0.1, 0.1]],
             True,
-            _assertion_error("nested value mismatch"),
+            partial(_assertion_error, "nested value mismatch"),
             nw.Array(nw.Float32(), 2),
         ),
-        ([[0.0, 1e-10]], [[1e-10, 0.0]], False, does_not_raise(), nw.List(nw.Float64())),
+        ([[0.0, 1e-10]], [[1e-10, 0.0]], False, does_not_raise, nw.List(nw.Float64())),
         (
             [[0.0, 1e-10]],
             [[1e-10, 0.0]],
             False,
-            does_not_raise(),
+            does_not_raise,
             nw.Array(nw.Float64(), 2),
         ),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_list_like(
     request: pytest.FixtureRequest,
@@ -274,7 +266,7 @@ def test_list_like(
     r_vals: list[list[Any]],
     *,
     check_exact: bool,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
     dtype: nw.dtypes.DType,
 ) -> None:
     if "cudf" in str(constructor_eager):
@@ -301,7 +293,7 @@ def test_list_like(
     data = {"left": l_vals, "right": r_vals}
     frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
-    with context:
+    with context():
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
 
 
@@ -312,24 +304,21 @@ def test_list_like(
             [{"a": 0.0, "b": ["orca"]}, None],
             [{"a": 1e-10, "b": ["orca"]}, None],
             True,
-            _assertion_error("exact value mismatch"),
+            partial(_assertion_error, "exact value mismatch"),
         ),
         (
             [{"a": 0.0, "b": ["beluga"]}, None],
             [{"a": 0.0, "b": ["orca"]}, None],
             False,
-            _assertion_error("exact value mismatch"),
+            partial(_assertion_error, "exact value mismatch"),
         ),
         (
             [{"a": 0.0, "b": ["orca"]}, None],
             [{"a": 1e-10, "b": ["orca"]}, None],
             False,
-            does_not_raise(),
+            does_not_raise,
         ),
     ],
-)
-@pytest.mark.thread_unsafe(
-    reason="a shared parametrized `pytest.raises` context is entered by all threads at once"
 )
 def test_struct(
     request: pytest.FixtureRequest,
@@ -338,7 +327,7 @@ def test_struct(
     r_vals: list[dict[str, Any]],
     *,
     check_exact: bool,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
 ) -> None:
     if "cudf" in str(constructor_eager):
         reason = "NotImplementedError"
@@ -354,7 +343,7 @@ def test_struct(
     data = {"left": l_vals, "right": r_vals}
     frame = nw.from_native(constructor_eager(data), eager_only=True)
     left, right = frame["left"].cast(dtype), frame["right"].cast(dtype)
-    with context:
+    with context():
         assert_series_equal(left, right, check_names=False, check_exact=check_exact)
 
 
@@ -375,10 +364,11 @@ def test_non_nw_series() -> None:
 @pytest.mark.parametrize(
     ("categorical_as_str", "context"),
     [
-        (True, does_not_raise()),
+        (True, does_not_raise),
         (
             False,
-            pytest.raises(
+            partial(
+                pytest.raises,
                 AssertionError,
                 match="Cannot compare categoricals coming from different sources",
             ),
@@ -390,7 +380,7 @@ def test_categorical_as_str(
     constructor_eager: ConstructorEager,
     *,
     categorical_as_str: bool,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
 ) -> None:
     if (
         "polars" in str(constructor_eager)
@@ -423,7 +413,7 @@ def test_categorical_as_str(
     left = frame["left"].cast(nw.Categorical())[2:]
     right = frame["right"].cast(nw.Categorical())[2:]
 
-    with context:
+    with context():
         assert_series_equal(
             left, right, check_names=False, categorical_as_str=categorical_as_str
         )
