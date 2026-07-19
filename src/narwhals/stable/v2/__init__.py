@@ -1161,7 +1161,6 @@ def scan_parquet(
         to read through a specific `DuckDBPyConnection` instead of the
         process-global default connection.
 
-
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
