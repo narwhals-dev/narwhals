@@ -68,21 +68,94 @@ If we exclude all variants that we've implemented, everything that is left **are
 Still here? Okay, let's try defining a new subclass of [ExprIR].
 
 ## Defining an expression
-On the menu today is [`pl.Expr.explode`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.explode.html#polars.Expr.explode), which is described as:
+On the menu today is [`pl.Expr.explode`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.explode.html#polars.Expr.explode) which is described as:
 
-> Explode a list expression.
+> Explode a list expression.  
 > This means that every item is expanded to a new row.
 
-[`Explode`](https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/expr/mod.rs#L115-L119)
+
+[^3]: Later, we will see that you cannot rely on the docs!
+
+That description is short, yet gives us a lot of clues to what we need to model:
+
+1. We take a single expression argument
+2. That expression *should be* [^3] [`List`][narwhals.dtypes.List]-typed
+3. We should expect `explode` to change the length of the output column
+
+Now, we could jump into creating a subclass - but it would be a better idea to check if Polars can do any of the work for us:
+
+=== "Python"
+
+    [Python definition]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/py-polars/src/polars/expr/expr.py#L5383-L5386
+
+    Starting with the most familiar, the [Python definition] gives us the signature we need for `Expr.explode`:
+
+    ```py
+    class Expr:
+        def explode(self, *, empty_as_null: bool = True, keep_nulls: bool = True) -> Expr: ...
+    ```
+
+=== "Rust (PyO3)"
+
+    Before we reach the promised land, we need to [go through](https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-python/src/expr/general.rs#L474-L483) [PyO3](https://pyo3.rs/).
+
+    This step is usually not very exciting, but today it ~~is!~~ helps explain what an `ExplodeOptions` is:
+
+    ```rs
+    impl PyExpr {
+        fn explode(&self, empty_as_null: bool, keep_nulls: bool) -> Self {
+            self.inner  // (1)!
+                .clone()
+                .explode(ExplodeOptions {
+                    empty_as_null,
+                    keep_nulls,
+                })
+                .into()
+        }
+    }
+    ```
+
+    1. [`PyExpr.inner`](https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-python/src/expr/mod.rs#L41)
+
+=== "Rust"
+
+    [we made it!]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/expr/mod.rs#L115-L118
+    [current expression]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L226
+
+    Ah [we made it!] Along the way, some keyword-only arguments got packaged up into `ExplodeOptions` and the [current expression] became the `input`.
+
+    While not the most common, [`input`][] is a python builtin function - so we will generally use `expr` in it's place:
+
+    ```rs
+    pub enum Expr {
+        Explode {
+            input: Arc<Expr>,
+            options: ExplodeOptions,
+        },
+    }
+
+    /// Explode the String/List column.
+    impl Expr {  // (1)!
+        pub fn explode(self, options: ExplodeOptions) -> Self {
+            Expr::Explode {
+                input: Arc::new(self),
+                options,
+            }
+        }
+    }
+    ```
+
+    1. I warned you about relying on the docs 😉, so we can use String too?
 
 
-<!---TODO: python (polars)/rust code blocks
+??? question "But what did X mean?"
 
-- What can we learn from each?
-  - Takes a single expression (1x `expr: ExprIR = node()`)
-- What is different and why?
-  - 2x bool -> ExplodeOptions (introduces immutable options that can share logic between expr/series/*frame)
---->
+    If you saw anything in rust along the way that wasn't mentioned - consider it noise.
+    You will not be required to write or even fully understand the rust code that is shown.  
+    It is here to help illustrate where ideas come from and where to look for answers when needed. 
+
+    The rust codebase is enormous. The skill we need is cutting through the noise to *just the bits that help us*.
+
 
 
 <!---TODO: Describing the expression
@@ -90,7 +163,10 @@ On the menu today is [`pl.Expr.explode`](https://docs.pola.rs/api/python/stable/
 - `is_length_preserving`?
 - `changes_length`?
 - dtype?
+    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L220
+    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/aexpr/schema.rs#L87-L98
 - repr
+    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/format.rs#L68-L84
 --->
 
 <!---TODO: Add an `Expr` method to create it
