@@ -586,3 +586,33 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
     assert schema._version is Version.V2
+
+
+@pytest.mark.parametrize(
+    ("values", "expected_uniqs", "expected_codes"),
+    [
+        ([], [], []),
+        ([*"abc"], [*"abc"], [0, 1, 2]),
+        ([*"abcabc"], [*"abc"], [0, 1, 2, 0, 1, 2]),
+        ([*"aaabbbccc"], [*"abc"], [0, 0, 0, 1, 1, 1, 2, 2, 2]),
+        ([*"abcabc", None], [*"abc"], [0, 1, 2, 0, 1, 2, -1]),
+    ],
+)
+def test_factorize(
+    values: list[Any],
+    expected_uniqs: list[Any],
+    expected_codes: list[int],
+    constructor_eager: ConstructorEager,
+) -> None:
+    if "polars" in str(constructor_eager) and (POLARS_VERSION < (1, 0, 0)):
+        pytest.skip(reason="replace_strict only available after 1.0")
+
+    df_native = constructor_eager({"a": values})
+    df = nw_v2.from_native(df_native)
+    codes, uniqs = nw_v2.factorize(df["a"], sort=True)
+
+    assert_equal_series(uniqs, expected_uniqs, name="a")
+    assert_equal_series(codes, expected_codes, name="a")
+
+    assert codes._version is Version.V2
+    assert uniqs._version is Version.V2
