@@ -168,7 +168,7 @@ def test_interchange_schema_duckdb() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    df_pl = pl.DataFrame(  # noqa: F841
+    _df = pl.DataFrame(
         {
             "a": [1, 1, 2],
             "b": [4, 5, 6],
@@ -206,7 +206,8 @@ def test_interchange_schema_duckdb() -> None:
             "p": pl.Boolean,
         },
     )
-    rel = duckdb.connect().sql("select * from df_pl")
+    con = duckdb.connect()
+    rel = con.sql("select * from _df")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     result = df.schema
     expected = {

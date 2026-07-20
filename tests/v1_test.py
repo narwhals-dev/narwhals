@@ -370,12 +370,13 @@ def test_v1_enum_duckdb_2550() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
+    con = duckdb.connect()
     result_v1 = nw_v1.from_native(
-        duckdb.connect().sql("select 'a'::enum('a', 'b', 'c') as a")
+        con.sql("select 'a'::enum('a', 'b', 'c') as a")
     ).collect_schema()
     assert result_v1 == {"a": nw_v1.Enum()}
     result = nw.from_native(
-        duckdb.connect().sql("select 'a'::enum('a', 'b', 'c') as a")
+        con.sql("select 'a'::enum('a', 'b', 'c') as a")
     ).collect_schema()
     assert result == {"a": nw.Enum(("a", "b", "c"))}
 

@@ -381,7 +381,8 @@ def test_decimal() -> None:
     df = pl.DataFrame({"a": [1]}, schema={"a": pl.Decimal})
     result = nw.from_native(df).schema
     assert result["a"] == nw.Decimal
-    rel = duckdb.connect().sql("""
+    con = duckdb.connect()
+    rel = con.sql("""
         select *
         from df
                      """)
@@ -468,7 +469,8 @@ def test_huge_int_to_native() -> None:
     )
     assert df_casted.schema["a_int"] == pl.Int128
 
-    rel = duckdb.connect().sql("""
+    con = duckdb.connect()
+    rel = con.sql("""
         select cast(a as int64) as a
         from df
                      """)

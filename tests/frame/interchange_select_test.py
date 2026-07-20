@@ -84,8 +84,9 @@ def test_interchange_duckdb() -> None:
     import duckdb
     import polars as pl
 
-    df_pl = pl.DataFrame(data)  # noqa: F841
-    rel = duckdb.connect().sql("select * from df_pl")
+    _df = pl.DataFrame(data)
+    con = duckdb.connect()
+    rel = con.sql("select * from _df")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
 
     out_cols = df.select("a", "z").schema.names()
