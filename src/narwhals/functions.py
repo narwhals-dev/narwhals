@@ -736,6 +736,23 @@ def scan_csv(
     For the libraries that do not support lazy dataframes, the function reads
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
+    Note:
+        Spark-like backends require a `session` object to be passed in `kwargs`.
+
+        For instance:
+
+        ```py
+        import narwhals as nw
+        from sqlframe.duckdb import DuckDBSession
+
+        nw.scan_csv(source, backend="sqlframe", session=DuckDBSession())
+        ```
+
+    Note:
+        For the DuckDB backend, a `connection` object can be passed in `kwargs`
+        to read through a specific `DuckDBPyConnection` instead of the
+        process-global default connection.
+
     Arguments:
         source: Path to a file.
         backend: The eager backend for DataFrame creation.
@@ -781,7 +798,10 @@ def scan_csv(
         native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
     elif implementation is Implementation.DUCKDB:
         _validate_separators(separator, ("delimiter", "delim", "sep"), **kwargs)
-        native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        reader = kwargs.pop("connection", None) or native_namespace
+        native_frame = reader.read_csv(source, delimiter=separator, **kwargs)
     elif implementation is Implementation.PYARROW:
         kwargs = _validate_separator_pyarrow(separator, **kwargs)
         from pyarrow import csv  # ignore-banned-import
@@ -894,7 +914,7 @@ def scan_parquet(
     a parquet file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Note:
-        Spark like backends require a session object to be passed in `kwargs`.
+        Spark like backends require a `session` object to be passed in `kwargs`.
 
         For instance:
 
@@ -904,6 +924,11 @@ def scan_parquet(
 
         nw.scan_parquet(source, backend="sqlframe", session=DuckDBSession())
         ```
+
+    Note:
+        For the DuckDB backend, a `connection` object can be passed in `kwargs`
+        to read through a specific `DuckDBPyConnection` instead of the
+        process-global default connection.
 
     Arguments:
         source: Path to a file.
@@ -958,10 +983,14 @@ def scan_parquet(
         Implementation.MODIN,
         Implementation.CUDF,
         Implementation.DASK,
-        Implementation.DUCKDB,
         Implementation.IBIS,
     }:
         native_frame = native_namespace.read_parquet(source, **kwargs)
+    elif implementation is Implementation.DUCKDB:
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        reader = kwargs.pop("connection", None) or native_namespace
+        native_frame = reader.read_parquet(source, **kwargs)
     elif implementation is Implementation.PYARROW:
         import pyarrow.parquet as pq  # ignore-banned-import
 

@@ -411,7 +411,12 @@ filterwarnings = [
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
 ]
 xfail_strict = true
-markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  # Registered manually so the mark is valid even when pytest-run-parallel is not installed;
+  # the plugin (python-314t job) uses it to run marked tests single-threaded.
+  "thread_unsafe(reason): marks tests that must not run in multiple threads at once",
+]
 env = [
   "MODIN_ENGINE=python",
   "PYARROW_IGNORE_TIMEZONE=1",

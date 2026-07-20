@@ -137,6 +137,10 @@ def test_scan_csv(
         kwargs = {"session": sqlframe_session(), "inferSchema": True, "header": True}
     elif "pyspark" in str(constructor):
         kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
+    elif "duckdb" in str(constructor):
+        import duckdb
+
+        kwargs = {"connection": duckdb.connect()}
     else:
         kwargs = {}
     backend = native_namespace(constructor)
@@ -181,10 +185,26 @@ def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> Non
         kwargs = {"session": sqlframe_session(), "inferSchema": True}
     elif "pyspark" in str(constructor):
         kwargs = {"session": pyspark_session(), "inferSchema": True, "header": True}
+    elif "duckdb" in str(constructor):
+        import duckdb
+
+        kwargs = {"connection": duckdb.connect()}
     else:
         kwargs = {}
     backend = native_namespace(constructor)
     assert_equal_lazy(nw.scan_parquet(parquet_path, backend=backend, **kwargs))
+
+
+# NOTE: Marked thread_unsafe on purpose
+@pytest.mark.thread_unsafe(
+    reason="reads through the process-global duckdb default connection"
+)
+def test_scan_duckdb_default_connection(
+    csv_path: FileSource, parquet_path: FileSource
+) -> None:
+    pytest.importorskip("duckdb")
+    assert_equal_lazy(nw.scan_csv(csv_path, backend="duckdb"))
+    assert_equal_lazy(nw.scan_parquet(parquet_path, backend="duckdb"))
 
 
 @skipif_pandas_lt_1_5

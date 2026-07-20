@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 from duckdb import Expression
 
-from narwhals._utils import Implementation, Version, extend_bool, isinstance_or_issubclass
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    generate_temporary_column_name,
+    isinstance_or_issubclass,
+)
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -335,6 +341,26 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 def join_column_names(*names: str) -> str:
     return ", ".join(str(col(name)) for name in names)
+
+
+def temporary_view_name() -> str:
+    """Unique name for `DuckDBPyRelation.query`'s `virtual_table_name`.
+
+    `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
+    `rel`'s own connection (see [relational api]). We prefer it to `duckdb.sql(statement)`,
+    which uses the global default connection and cannot see relations from other
+    connections (see [using connections in parallel pythonprograms]).
+
+    The name must be unique per call: views persist and the lazy result re-binds by
+    name on execution, so a reused name shadows earlier views and corrupts their plans.
+    `rel.query` must also run in the frame whose locals the SQL references, as
+    [replacement scans] only see the caller's frame [3].
+
+    [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
+    [using connections in parallel pythonprograms]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
+    [replacement scans]: https://duckdb.org/docs/current/clients/c/replacement_scans
+    """
+    return generate_temporary_column_name(8, [], prefix="_narwhals_")
 
 
 def generate_order_by_sql(
