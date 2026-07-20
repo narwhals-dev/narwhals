@@ -90,6 +90,10 @@ nav = [
             "plan/whats-new/behind-the-scenes.md",
         ] },
         "plan/why.md",
+        { "How to" = [
+            "plan/how-to/define-an-expression.md",
+            "plan/how-to/define-a-function.md",
+        ] },
         "plan/related-issues.md",
         "plan/use-cases.md",
         "plan/mind-the-gap.md",
