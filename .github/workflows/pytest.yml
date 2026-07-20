@@ -2,6 +2,11 @@ name: PyTest
 
 on:
   pull_request:
+    paths:
+      - "**.py"
+      - .github/workflows/pytest.yml
+      - pyproject.toml
+      - uv.lock
   workflow_call:
 
 env:
@@ -22,7 +27,7 @@ jobs:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -42,7 +47,7 @@ jobs:
         os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -53,7 +58,7 @@ jobs:
       # we are not testing pyspark, modin, or dask on Windows here because nobody got time for that
       - name: Run pytest
         shell: bash
-        run: make run-ci DEPS="--group core-tests --group extra --group plugins --extra pandas" CMD="pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
+        run: make run-ci DEPS="--group core-tests --group sklearn --group plugins --extra pandas" CMD="pytest tests --cov=src --cov=tests --runslow --cov-fail-under=95 --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],duckdb,sqlframe"
 
   pytest-full-coverage:
     if: github.head_ref != 'bump-version'
@@ -68,7 +73,7 @@ jobs:
     env:
       NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -77,11 +82,11 @@ jobs:
           cache-suffix: pytest-full-coverage-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
       - name: Run pytest
-        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
       - name: Run doctests
         # reprs differ between versions, so we only run doctests on the latest Python
         if: matrix.python-version == '3.13'
-        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group extra" CMD="pytest src --doctest-modules"
+        run: make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn" CMD="pytest src --doctest-modules"
 
   # Test against smaller dependency set, used e.g. on Gentoo.
   pytest-narrower-dependencies:
@@ -94,7 +99,7 @@ jobs:
     env:
       UV_LOCKED: 0
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -117,7 +122,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
@@ -139,7 +144,7 @@ jobs:
         PYTHON_GIL: 0
         UV_LOCKED: 0
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:

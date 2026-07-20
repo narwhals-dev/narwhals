@@ -267,7 +267,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             return CoalesceOperator(expr, value)
 
         assert value is not None  # noqa: S101
-        return self._with_elementwise(_fill_constant, value=value)
+        return self._with_elementwise(_fill_constant, expression_args={"value": value})
 
     def cast(self, dtype: IntoDType) -> Self:
         def func(df: DuckDBLazyFrame) -> list[Expression]:

@@ -80,6 +80,76 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    "selector",
+    [ncs.enum(), ncs.by_dtype(nw.Enum), ncs.by_dtype(nw.Enum(["a", "b", "c"]))],
+)
+def test_enum(
+    request: pytest.FixtureRequest, constructor: Constructor, selector: ncs.Selector
+) -> None:
+    # Backends that do not (yet) support the Enum dtype.
+    if any(
+        backend in str(constructor)
+        for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+        reason = "Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6."
+        pytest.skip(reason=reason)
+
+    categories = ["a", "b", "c"]
+    result = (
+        nw.from_native(constructor(data))
+        .with_columns(nw.col("b").cast(nw.Enum(categories)))
+        .select(selector)
+        .collect_schema()
+        .names()
+    )
+
+    assert result == ["b"]
+
+
+@pytest.mark.parametrize(
+    ("selector", "expected"),
+    [
+        (ncs.categorical(), ["cat"]),
+        (ncs.enum(), ["enum"]),
+        (ncs.by_dtype(nw.Categorical, nw.Enum), ["cat", "enum"]),
+        (ncs.categorical() | ncs.enum(), ["cat", "enum"]),
+    ],
+)
+def test_enum_distinct_from_categorical(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    selector: ncs.Selector,
+    expected: list[str],
+) -> None:
+    # `enum` and `categorical` are intentionally distinct selectors: neither
+    # matches the other's dtype.
+    # See https://github.com/narwhals-dev/narwhals/issues/3720
+    if any(
+        backend in str(constructor)
+        for backend in ("pyarrow_table", "duckdb", "sqlframe", "pyspark", "ibis")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+        # Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6.
+        pytest.skip()
+
+    result = (
+        nw.from_native(constructor(data))
+        .with_columns(
+            cat=nw.col("b").cast(nw.Categorical),
+            enum=nw.col("b").cast(nw.Enum(["a", "b", "c"])),
+        )
+        .select(selector)
+        .collect_schema()
+        .names()
+    )
+
+    assert result == expected
+
+
 def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if (
         "pyspark" in str(constructor)

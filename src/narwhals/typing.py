@@ -19,7 +19,7 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 if TYPE_CHECKING:
     import datetime as dt
     import os
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
     from decimal import Decimal
     from types import ModuleType
     from typing import TypeAlias
@@ -66,6 +66,8 @@ if TYPE_CHECKING:
         def Float64(self) -> type[dtypes.Float64]: ...
         @property
         def Float32(self) -> type[dtypes.Float32]: ...
+        @property
+        def Float16(self) -> type[dtypes.Float16]: ...
         @property
         def String(self) -> type[dtypes.String]: ...
         @property
@@ -307,12 +309,16 @@ Examples:
 """
 
 
-# TODO @dangotbanned: fix this?
-# Constructor allows tuples, but we don't support that *everywhere* yet
-IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
-"""Anything that can be converted into a Narwhals Schema.
+IntoSchema: TypeAlias = (
+    "Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Schema"
+)
+"""Anything that can be converted into a [`narwhals.Schema`][].
 
-Defined by column names and their associated *instantiated* Narwhals DType.
+Defined by column names and their associated [`DType`][narwhals.dtypes.DType],
+either as a mapping or as an iterable of `(name, dtype)` tuples.
+
+See Also:
+    [`IntoDType`][narwhals.typing.IntoDType]
 
 Examples:
     >>> import narwhals as nw
@@ -320,7 +326,25 @@ Examples:
     >>> data = {"a": [1, 2, 3], "b": [None, "hi", "howdy"], "c": [2.1, 2.0, None]}
     >>> nw.DataFrame.from_dict(
     ...     data,
-    ...     schema={"a": nw.UInt8(), "b": nw.String(), "c": nw.Float32()},
+    ...     schema={"a": nw.UInt8, "b": nw.String(), "c": nw.Float32},
+    ...     backend="pyarrow",
+    ... )
+    ┌────────────────────────┐
+    |   Narwhals DataFrame   |
+    |------------------------|
+    |pyarrow.Table           |
+    |a: uint8                |
+    |b: string               |
+    |c: float                |
+    |----                    |
+    |a: [[1,2,3]]            |
+    |b: [[null,"hi","howdy"]]|
+    |c: [[2.1,2,null]]       |
+    └────────────────────────┘
+
+    >>> nw.DataFrame.from_dict(
+    ...     data,
+    ...     schema=[("a", nw.UInt8), ("b", nw.String()), ("c", nw.Float32)],
     ...     backend="pyarrow",
     ... )
     ┌────────────────────────┐

@@ -36,11 +36,14 @@ class SQLExprStringNamespace(
             if isinstance(pattern, str)
             else pattern
         )
-        return self.compliant._with_elementwise(func, pattern=compliant_pattern)
+        return self.compliant._with_elementwise(
+            func, expression_args={"pattern": compliant_pattern}
+        )
 
     def ends_with(self, suffix: SQLExprT) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr, suffix: self._function("ends_with", expr, suffix), suffix=suffix
+            lambda expr, suffix: self._function("ends_with", expr, suffix),
+            expression_args={"suffix": suffix},
         )
 
     def len_chars(self) -> SQLExprT:
@@ -58,7 +61,7 @@ class SQLExprStringNamespace(
             lambda expr, value: self._function(
                 fname, expr, self._lit(pattern), value, *options
             ),
-            value=value,
+            expression_args={"value": value},
         )
 
     def slice(self, offset: int, length: int | None) -> SQLExprT:
@@ -87,7 +90,7 @@ class SQLExprStringNamespace(
     def starts_with(self, prefix: SQLExprT) -> SQLExprT:
         return self.compliant._with_elementwise(
             lambda expr, prefix: self._function("starts_with", expr, prefix),
-            prefix=prefix,
+            expression_args={"prefix": prefix},
         )
 
     def strip_chars(self, characters: str | None) -> SQLExprT:

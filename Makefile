@@ -19,6 +19,10 @@ typing: ## Run type checkers
 	uv run --group typing mypy
 	uv run --group typing pyrefly check
 
+.PHONY: typing-coverage
+typing-coverage: ## Run type checkers
+	uv run --group typing pyrefly coverage check src/narwhals --public-only
+
 .PHONY: docs-serve
 docs-serve: ## Build and serve the docs locally
 	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py

@@ -17,7 +17,6 @@ from narwhals._arrow.utils import (
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
-    Version,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
@@ -54,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoDType,
         IntoSchema,
         JoinStrategy,
         SizedMultiIndexSelector,
@@ -122,7 +122,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
@@ -160,7 +160,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -193,7 +193,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -488,8 +488,16 @@ class ArrowDataFrame(
 
         null_placement = "at_end" if nulls_last else "at_start"
 
+        if self._backend_version < (25,):  # pragma: no cover
+            return self._with_native(
+                self.native.sort_by(sorting, null_placement=null_placement),
+                validate_column_names=False,
+            )
+        # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+        # it must be specified per sort key instead.
+        keyed = [(key, order, null_placement) for key, order in sorting]
         return self._with_native(
-            self.native.sort_by(sorting, null_placement=null_placement),
+            self.native.sort_by(keyed),  # type: ignore[arg-type]
             validate_column_names=False,
         )
 
@@ -796,23 +804,15 @@ class ArrowDataFrame(
     def to_arrow(self) -> pa.Table:
         return self.native
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         import numpy as np  # ignore-banned-import
 
-        num_rows = len(self)
-        if n is None and fraction is not None:
-            n = int(num_rows * fraction)
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(num_rows)
-        mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._with_native(self.native.take(mask), validate_column_names=False)
+        indices = rng.choice(np.arange(n), size=n, replace=with_replacement)
+        return self._with_native(
+            self.native.take(pa.array(indices, type=pa.uint64())),
+            validate_column_names=False,
+        )
 
     def unpivot(
         self,

@@ -132,6 +132,9 @@ class CompliantSelectorNamespace(Protocol[FrameT, SeriesOrExprT]):
     def categorical(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(self._version.dtypes.Categorical)
 
+    def enum(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
+        return self._is_dtype(self._version.dtypes.Enum)
+
     def string(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self._is_dtype(self._version.dtypes.String)
 
@@ -242,15 +245,17 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                rhs_set = frozenset(rhs_names)
                 return [
                     x
                     for x, name in zip(self(df), lhs_names, strict=True)
-                    if name not in rhs_names
+                    if name not in rhs_set
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [x for x in lhs_names if x not in rhs_names]
+                rhs_set = frozenset(rhs_names)
+                return [x for x in lhs_names if x not in rhs_set]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() - other
@@ -268,18 +273,20 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                rhs_set = frozenset(rhs_names)
                 return [
                     *(
                         x
                         for x, name in zip(self(df), lhs_names, strict=True)
-                        if name not in rhs_names
+                        if name not in rhs_set
                     ),
                     *other(df),
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
+                rhs_set = frozenset(rhs_names)
+                return [*(x for x in lhs_names if x not in rhs_set), *rhs_names]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() | other
@@ -297,15 +304,17 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                rhs_set = frozenset(rhs_names)
                 return [
                     x
                     for x, name in zip(self(df), lhs_names, strict=True)
-                    if name in rhs_names
+                    if name in rhs_set
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [x for x in lhs_names if x in rhs_names]
+                rhs_set = frozenset(rhs_names)
+                return [x for x in lhs_names if x in rhs_set]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() & other

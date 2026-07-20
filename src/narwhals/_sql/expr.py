@@ -3,13 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from narwhals._compliant.expr import LazyExpr
-from narwhals._compliant.typing import (
-    AliasNames,
-    EvalNames,
-    EvalSeries,
-    NativeExprT,
-    WindowFunction,
-)
+from narwhals._compliant.typing import EvalNames, EvalSeries, NativeExprT
 from narwhals._compliant.window import WindowInputs
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -64,13 +58,16 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     ) -> SQLNamespace[SQLLazyFrameT, Self, Any, NativeExprT]: ...
 
     def _callable_to_eval_series(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self
+        self,
+        call: Callable[..., NativeExprT],
+        /,
+        expression_args: dict[str, Self] | None = None,
     ) -> EvalSeries[SQLLazyFrameT, NativeExprT]:
         def func(df: SQLLazyFrameT) -> list[NativeExprT]:
             native_series_list = self(df)
             other_native_series = {
                 key: df._evaluate_single_output_expr(value)
-                for key, value in expressifiable_args.items()
+                for key, value in (expression_args or {}).items()
             }
             return [
                 call(native_series, **other_native_series)
@@ -80,7 +77,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return func
 
     def _push_down_window_function(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self
+        self,
+        call: Callable[..., NativeExprT],
+        /,
+        expression_args: dict[str, Self] | None = None,
     ) -> WindowFunction[SQLLazyFrameT, NativeExprT]:
         def window_f(
             df: SQLLazyFrameT, window_inputs: WindowInputs[NativeExprT]
@@ -93,7 +93,7 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             native_series_list = self.window_function(df, window_inputs)
             other_native_series = {
                 key: df._evaluate_window_expr(value, window_inputs)
-                for key, value in expressifiable_args.items()
+                for key, value in (expression_args or {}).items()
             }
             return [
                 call(native_series, **other_native_series)
@@ -119,10 +119,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         call: Callable[..., NativeExprT],
         window_func: WindowFunction[SQLLazyFrameT, NativeExprT] | None = None,
         /,
-        **expressifiable_args: Self,
+        expression_args: dict[str, Self] | None = None,
     ) -> Self:
         return self.__class__(
-            self._callable_to_eval_series(call, **expressifiable_args),
+            self._callable_to_eval_series(call, expression_args),
             window_func,
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
@@ -131,11 +131,14 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         )
 
     def _with_elementwise(
-        self, call: Callable[..., NativeExprT], /, **expressifiable_args: Self
+        self,
+        call: Callable[..., NativeExprT],
+        /,
+        expression_args: dict[str, Self] | None = None,
     ) -> Self:
         return self.__class__(
-            self._callable_to_eval_series(call, **expressifiable_args),
-            self._push_down_window_function(call, **expressifiable_args),
+            self._callable_to_eval_series(call, expression_args),
+            self._push_down_window_function(call, expression_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
@@ -143,9 +146,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         )
 
     def _with_binary(self, op: Callable[..., NativeExprT], other: Self) -> Self:
+        expression_args = {"other": other}
         return self.__class__(
-            self._callable_to_eval_series(op, other=other),
-            self._push_down_window_function(op, other=other),
+            self._callable_to_eval_series(op, expression_args),
+            self._push_down_window_function(op, expression_args),
             evaluate_output_names=self._evaluate_output_names,
             alias_output_names=self._alias_output_names,
             version=self._version,
@@ -577,20 +581,21 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             )
 
         return self._with_elementwise(
-            _clip, lower_bound=lower_bound, upper_bound=upper_bound
+            _clip,
+            expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
         def _clip(expr: NativeExprT, lower_bound: NativeExprT) -> NativeExprT:
             return self._function("greatest", expr, lower_bound)
 
-        return self._with_elementwise(_clip, lower_bound=lower_bound)
+        return self._with_elementwise(_clip, expression_args={"lower_bound": lower_bound})
 
     def clip_upper(self, upper_bound: Self) -> Self:
         def _clip(expr: NativeExprT, upper_bound: NativeExprT) -> NativeExprT:
             return self._function("least", expr, upper_bound)
 
-        return self._with_elementwise(_clip, upper_bound=upper_bound)
+        return self._with_elementwise(_clip, expression_args={"upper_bound": upper_bound})
 
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("isnull", expr))

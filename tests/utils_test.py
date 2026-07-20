@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import string
 from dataclasses import dataclass
+from datetime import date, datetime
 from itertools import chain
 from typing import TYPE_CHECKING, Any, ClassVar, Protocol, cast
 
@@ -19,7 +20,11 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
-from tests.utils import get_module_version_as_tuple
+from tests.utils import (
+    any_integer_like_floats,
+    assert_equal_data,
+    get_module_version_as_tuple,
+)
 
 pytest.importorskip("pandas")
 import pandas as pd
@@ -416,7 +421,7 @@ def test_not_implemented() -> None:
             pl_expr = cast("PolarsExpr", self)
             return PolarsExprStringNamespace(pl_expr)
 
-        dt: Any = not_implemented()
+        dt: not_implemented = not_implemented()
 
         # NOTE: Typing is happy w/ double property
         @property
@@ -626,3 +631,74 @@ def test_deferred_iterable() -> None:
     assert next(iter(deferred_1)) == "h"
     assert list(deferred_1) == list("hello")
     assert "".join(chain(deferred_1, deferred_2)) == "helloHELLO"
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        pytest.param([1, 2, 3], False, id="all_ints"),
+        pytest.param([1.5, 2.2, 3.1], False, id="no_integer_like_floats"),
+        pytest.param([1.0, 2.0, 3.5], True, id="some_integer_like_floats"),
+        pytest.param([1.0, 2.0, 3.0], True, id="all_integer_like_floats"),
+        pytest.param([1, 2.0, 3], True, id="mixed_int_and_float"),
+        pytest.param([], False, id="empty_list"),
+        pytest.param([-1.0, -2.0], True, id="negative_integer_like_floats"),
+        pytest.param([1.0, 2.5, 3.0, 4.1], True, id="mixed_floats"),
+        # mixed non-numeric types
+        pytest.param(["a", "b", "c"], False, id="all_strings"),
+        pytest.param([1.0, "a", 2.0], True, id="floats_and_strings"),
+        pytest.param([1, "a", 2], False, id="ints_and_strings_no_floats"),
+        # datetime / date objects
+        pytest.param([date(2024, 1, 1), date(2024, 1, 2)], False, id="all_dates"),
+        pytest.param(
+            [datetime(2024, 1, 1), 1.0, datetime(2024, 1, 2)],
+            True,
+            id="floats_and_datetimes",
+        ),
+        # None / null handling
+        pytest.param([None, None], False, id="all_none"),
+        pytest.param([1.0, None, 2.0], True, id="floats_and_none"),
+    ],
+)
+def test_any_integer_like_floats(values: list[Any], expected: bool) -> None:  # noqa: FBT001
+    assert any_integer_like_floats(values) is expected
+
+
+def test_assert_equal_data_object_dtype_eq_returns_truthy_non_bool() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    # `assert_equal_data` falls back to plain `lhs == rhs` for values it doesn't
+    # special-case. For an object whose `__eq__` returns something truthy that
+    # isn't a real equality result, this lets the assertion pass vacuously.
+    class AlwaysEqual:
+        def __eq__(self, other: object) -> AlwaysEqual:  # type: ignore[override]
+            return self
+
+        def __bool__(self) -> bool:  # pragma: no cover
+            return True
+
+    df = nw.from_native(
+        pl.DataFrame({"a": [1, AlwaysEqual(), 2]}, schema={"a": pl.Object})
+    )
+    with pytest.raises(AssertionError, match="Mismatch at index 1"):
+        assert_equal_data(df, {"a": [1, 2, 2]})
+
+
+def test_assert_equal_data_more_keys_in_result() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2], "b": [3, 4], "c": [5, 6]}))
+    with pytest.raises(AssertionError):
+        assert_equal_data(df, {"a": [1, 2], "b": [3, 4]})
+
+
+def test_assert_equal_data_wrong_key_order() -> None:
+    df = nw.from_native(pd.DataFrame({"a": [1, 2], "b": [3, 4]}))
+    with pytest.raises(AssertionError):
+        assert_equal_data(df, {"b": [3, 4], "a": [1, 2]})
+
+
+def test_assert_equal_data_more_keys_in_result_dict() -> None:
+    # `result` need not be a narwhals object with `.columns` -- plain dicts
+    # are also a supported input, and must be checked the same way.
+    with pytest.raises(AssertionError):
+        assert_equal_data({"a": [1, 2], "b": [3, 4]}, {"a": [1, 2]})
