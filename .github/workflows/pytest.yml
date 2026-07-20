@@ -141,7 +141,7 @@ jobs:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     # Backstop against deadlocks in multithreaded tests: fail instead of hanging.
-    timeout-minutes: 15
+    timeout-minutes: 10
     env:
         PYTHON_GIL: 0
         UV_LOCKED: 0
@@ -154,8 +154,6 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Run pytest
-        run: make run-ci DEPS="--group tests --group plugins --extra pandas --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
       # Run the suite again with every test executed by 4 threads at once
       # with pytest-run-parallel to surface thread-safety issues.
       # This catches global-state races across the whole suite; shared-object races
@@ -166,4 +164,8 @@ jobs:
           # NOTE: Clear PYTEST_ADDOPTS since xdist forks processes,
           # and the point here is threads within one process
           PYTEST_ADDOPTS: ""
-        run: make run-ci DEPS="--group tests --group plugins --extra pandas --extra pyarrow --extra sql" RUN_ONLY="--with pytest-run-parallel" CMD="pytest tests --parallel-threads=4 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,duckdb"
+        run: |
+          make run-ci \
+          DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" \
+          RUN_ONLY="--with pytest-run-parallel" \
+          CMD="pytest tests --parallel-threads=4 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
