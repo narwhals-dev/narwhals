@@ -115,7 +115,18 @@ def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> 
     # Before, pandas returned the string unchanged, Polars surfaced an internal "conversion from
     # `i128` to `u64` failed", and pyarrow leaked `ArrowInvalid: Negative buffer resize`.
     s = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)["a"]
-    with pytest.raises(nw.exceptions.InvalidOperationError):
+    msg = r"`length` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         s.str.pad_start(-1)
-    with pytest.raises(nw.exceptions.InvalidOperationError):
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         s.str.pad_end(-1)
+
+
+def test_str_pad_negative_length_expr_raises(constructor: Constructor) -> None:
+    # Separate from the series test so the lazy backends are covered too.
+    df = nw.from_native(constructor({"a": ["abc"]}))
+    msg = r"`length` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df.select(nw.col("a").str.pad_start(-1))
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df.select(nw.col("a").str.pad_end(-1))

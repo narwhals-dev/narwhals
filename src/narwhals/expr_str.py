@@ -555,7 +555,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └──────────────────┘
         """
         if width < 0:
-            msg = f"`width` must be non-negative, got: {width}"
+            msg = f"`width` must be non-negative but got {width}"
             raise InvalidOperationError(msg)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
@@ -586,7 +586,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └─────────────────────────────┘
         """
         if length < 0:
-            msg = f"`length` must be non-negative, got: {length}"
+            msg = f"`length` must be non-negative but got {length}"
             raise InvalidOperationError(msg)
         return self._expr._append_node(
             ExprNode(
@@ -619,7 +619,7 @@ class ExprStringNamespace(Generic[ExprT]):
             └─────────────────────────────┘
         """
         if length < 0:
-            msg = f"`length` must be non-negative, got: {length}"
+            msg = f"`length` must be non-negative but got {length}"
             raise InvalidOperationError(msg)
         return self._expr._append_node(
             ExprNode(

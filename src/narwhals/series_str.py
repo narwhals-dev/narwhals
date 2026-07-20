@@ -490,7 +490,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             dtype: str
         """
         if width < 0:
-            msg = f"`width` must be non-negative, got: {width}"
+            msg = f"`width` must be non-negative but got {width}"
             raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
@@ -521,7 +521,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         └───────────────────┘
         """
         if length < 0:
-            msg = f"`length` must be non-negative, got: {length}"
+            msg = f"`length` must be non-negative but got {length}"
             raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_start(
@@ -554,7 +554,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         └───────────────────┘
         """
         if length < 0:
-            msg = f"`length` must be non-negative, got: {length}"
+            msg = f"`length` must be non-negative but got {length}"
             raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_end(
