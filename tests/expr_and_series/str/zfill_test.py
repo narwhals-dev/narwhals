@@ -76,9 +76,10 @@ def test_str_zfill_zero_width_pyarrow() -> None:
 
 
 def test_str_zfill_negative_width_raises(constructor_eager: ConstructorEager) -> None:
-    # A negative width is rejected in the public layer, so every backend gives the same
-    # error. Before, pandas returned the string unchanged, Polars surfaced an internal
+    # Before, pandas returned the string unchanged, Polars raised its own
     # "conversion from `i128` to `u64` failed", and pyarrow crashed inside utf8_lpad.
+    # The message is pinned rather than just the exception type because Polars already
+    # raised InvalidOperationError, so a type-only check passes against unfixed code.
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     msg = r"`width` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
@@ -86,8 +87,8 @@ def test_str_zfill_negative_width_raises(constructor_eager: ConstructorEager) ->
 
 
 def test_str_zfill_negative_width_expr_raises(constructor: Constructor) -> None:
-    # Separate from the series test so the lazy backends are covered too: the check
-    # lives in the expression layer, so it raises at select() rather than at collect().
+    # Separate from the series test: Series.str goes straight to the compliant series,
+    # so this is the only one of the two that covers the lazy backends.
     df = nw.from_native(constructor(data))
     msg = r"`width` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
