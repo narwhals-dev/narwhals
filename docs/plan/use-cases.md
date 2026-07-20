@@ -28,7 +28,7 @@ And then we'll close things out with a hopeful look towards new upstream backend
 An idea that's got stuck in my head is providing an alternative to [`altair.expr`][]-based expressions.  
 *What if* you could write Narwhals expressions directly in an [`altair.Chart`][] instead? 
 
-Considering that we now have a fully-typed [ExprIR](../api-reference-plan/expr-ir/index.md) it should be possible to 
+Considering that we now have a fully-typed [ExprIR](../api-reference-plan/ir/expr-ir/index.md) it should be possible to 
 transpile one into the equivalent [string expression syntax] - **without** using any of the `Compliant*` machinery
 
 [string expression syntax]: https://altair-viz.github.io/user_guide/interactions/expressions.html
