@@ -6,7 +6,15 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
+from tests.utils import (
+    POLARS_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+    assert_equal_series,
+)
+
+polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
+pl_skip_reason = "replace_strict only available after 1.0"
 
 
 @pytest.mark.parametrize(
@@ -23,6 +31,9 @@ from tests.utils import ConstructorEager, assert_equal_data, assert_equal_series
 def test_factorize_invariants(
     values: list[Any], expected_n_unique: int, constructor_eager: ConstructorEager
 ) -> None:
+    if "polars" in str(constructor_eager) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
     has_null = any(x is None for x in values)
 
     df_native = constructor_eager({"a": values})
@@ -60,6 +71,9 @@ def test_factorize_sort(
     expected_codes: list[int],
     constructor_eager: ConstructorEager,
 ) -> None:
+    if "polars" in str(constructor_eager) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
     codes, uniqs = nw.factorize(df["a"], sort=True)
@@ -79,7 +93,10 @@ def test_factorize_sort(
 def test_factorize_nan_semantics(
     values: list[float], constructor_eager: ConstructorEager
 ) -> None:
-    is_pandas_backend = "pandas" in str(constructor_eager)
+    if "polars" in str(constructor_eager) and polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    is_pandas_backend = any(x in str(constructor_eager) for x in ("pandas", "modin"))
 
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
