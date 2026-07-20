@@ -73,16 +73,19 @@ On the menu today is [`pl.Expr.explode`](https://docs.pola.rs/api/python/stable/
 > Explode a list expression.  
 > This means that every item is expanded to a new row.
 
-
 [^3]: Later, we will see that you cannot rely on the docs!
 
-That description is short, yet gives us a lot of clues to what we need to model:
+That description is short, yet gives us a lot of clues to what we need to model.
 
+### Facts (1)
 1. We take a single expression argument
 2. That expression *should be* [^3] [`List`][narwhals.dtypes.List]-typed
 3. We should expect `explode` to change the length of the output column
 
-Now, we could jump into creating a subclass - but it would be a better idea to check if Polars can do any of the work for us:
+
+### Collecting more details
+Now, we could jump into creating a subclass - but it would be a better idea to check if Polars has more to tell us.  
+We got three details from the docstring, but the best way to understand what *makes an expression* is by reading the source:
 
 === "Python"
 
@@ -122,9 +125,15 @@ Now, we could jump into creating a subclass - but it would be a better idea to c
     [we made it!]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/expr/mod.rs#L115-L118
     [current expression]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L226
 
-    Ah [we made it!] Along the way, some keyword-only arguments got packaged up into `ExplodeOptions` and the [current expression] became the `input`.
+    Ah [we made it!] 
+    
+    Along the way, some keyword-only arguments got packaged up into `ExplodeOptions`.
+    If this name looks familiar it is because we have [`ExplodeOptions`][narwhals._plan.options.ExplodeOptions] at home.
+    A nice thing about Polars is consistent APIs across multiple classes. On the rust side, that is made possible through these shared `*Options` structs.
+    We lean on this concept for sharing conversion logic.
 
-    While not the most common, [`input`][] is a python builtin function - so we will generally use `expr` in it's place:
+    We already suspected that `explode` took a single expression argument, but here we can see the [current expression] became the `input`. 
+    While not the most common, [`input`][] is a python builtin function. Instead we will generally use name `expr` in it's place:
 
     ```rs
     pub enum Expr {
@@ -156,6 +165,174 @@ Now, we could jump into creating a subclass - but it would be a better idea to c
 
     The rust codebase is enormous. The skill we need is cutting through the noise to *just the bits that help us*.
 
+Surprised at what we found? Let's update our facts:
+
+### Facts (2)
+1. We take a single expression argument, `expr: ExprIR`
+2. That expression *should be* ~~`List`~~ `List | String`-typed
+3. We should expect `explode` to change the length of the output column
+4. We take a single non-expression argument, `options: ExplodeOptions`
+
+### Show me the class already!
+Fine, fine, enough stalling - lets encode our facts into an expression:
+
+=== "Attempt 1"
+
+    ```py
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING
+
+    from narwhals._plan._expr_ir import ExprIR
+
+    if TYPE_CHECKING:
+        from narwhals._plan.options import ExplodeOptions
+
+
+    class Explode(ExprIR):
+        expr: ExprIR
+        options: ExplodeOptions
+    ```
+
+    Looking good, except typing and runtime disagree about where the problem is:
+
+    ```py
+    >>> explode = Explode()  # Arguments missing for parameters "expr", "options" Pylance(reportCallIssue)
+    >>> explode.expr
+    AttributeError: 'Explode' object has no attribute 'expr'
+    ```
+
+
+=== "Attempt 2"
+
+    ```py
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING
+
+    from narwhals._plan._expr_ir import ExprIR
+
+    if TYPE_CHECKING:
+        from narwhals._plan.options import ExplodeOptions
+
+
+    class Explode(ExprIR):
+        __slots__ = ("expr", "options")
+        expr: ExprIR
+        options: ExplodeOptions
+    ```
+
+    That's better! Since [ExprIR] is built on top of [`Immutable`][narwhals._plan._immutable.Immutable], we define a class in a similar way.
+
+    ```py
+    >>> Explode()
+    TypeError: 'Explode' missing required arguments: 'expr', 'options'
+    ```
+
+    `Explode` has the correct constructor, but we haven't defined where to get the output name from:
+
+    ```py
+    >>> from narwhals._plan.expressions import col
+    >>> options = ExplodeOptions(empty_as_null=True, keep_nulls=True)
+    >>> explode = Explode(expr=col("values"), options=options)
+    >>> explode.meta.output_name()
+    ComputeError: unable to find root column name for expr '<...Explode object at ...>' when calling 'output_name'
+    ```
+
+=== "Attempt 3"
+
+    ```py
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING
+
+    from narwhals._plan._expr_ir import ExprIR
+    from narwhals._plan._nodes import node
+
+    if TYPE_CHECKING:
+        from narwhals._plan.options import ExplodeOptions
+
+
+    class Explode(ExprIR):
+        __slots__ = ("expr", "options")
+        expr: ExprIR = node()
+        options: ExplodeOptions
+    ```
+
+    [ExprIR] is more than just [`Immutable`][narwhals._plan._immutable.Immutable], we also need to declare which fields store
+    expressions using [`node`][narwhals._plan._nodes.node] or [`nodes`][narwhals._plan._nodes.nodes]:
+
+    ```py
+    >>> from narwhals._plan.expressions import col
+    >>> options = ExplodeOptions(empty_as_null=True, keep_nulls=True)
+    >>> explode = Explode(expr=col("values"), options=options)
+    >>> explode.meta.output_name()
+    'values'
+    ```
+
+    Almost there, but this won't do!
+
+    ```py
+    >>> explode
+    <narwhals._plan.expressions.explode.Explode object at ...>
+    ```
+
+=== "Attempt 4"
+
+    ```py
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING
+
+    from narwhals._plan._expr_ir import ExprIR
+    from narwhals._plan._nodes import node
+
+    if TYPE_CHECKING:
+        from narwhals._plan.options import ExplodeOptions
+
+
+    class Explode(ExprIR):
+        __slots__ = ("expr", "options")
+        expr: ExprIR = node()
+        options: ExplodeOptions
+
+        def __repr__(self) -> str:
+            opts = []
+            if not self.options.empty_as_null:
+                opts.append("empty_as_null=False")
+            if not self.options.keep_nulls:
+                opts.append("keep_nulls=False")
+            return f"{self.expr!r}.explode({', '.join(opts)})"
+    ```
+
+    Nice! We can borrow the `__repr__` [directly from Polars](https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/format.rs#L68-L83), since we share similar internals
+
+    ```py
+    >>> from narwhals._plan.expressions import col
+    >>> options = ExplodeOptions(empty_as_null=True, keep_nulls=True)
+    >>> explode = Explode(expr=col("values"), options=options)
+    >>> explode
+    col('values').explode()
+    ```
+
+To review what we have done so far:
+
+- Subclassed `ExprIR`, using a `@dataclass`-like syntax
+- Added `__slots__`, which are required by `Immutable` for a constructor
+- Declared our expression input using a field specifier `node`
+- Added a `__repr__`, which we didn't even have to think up ourselves
+
+
+All expressions begin with steps like this and sometimes very little else is required to get started.
+
+To review our facts again:
+
+- 1 & 4 are now part of the expression
+- 2 & 3 have not yet been described
+
+There is still work left to do!
+
+### Getting more exotic
 
 
 <!---TODO: Describing the expression
