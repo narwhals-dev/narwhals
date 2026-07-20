@@ -88,7 +88,11 @@ class PandasLikeSeriesDateTimeNamespace(
         return self.microsecond() * 1_000 + self.native.dt.nanosecond
 
     def ordinal_day(self) -> PandasLikeSeries:
-        return self.with_native(self.native.dt.dayofyear)
+        # Use ``day_of_year`` rather than the ``dayofyear`` alias: the two are
+        # equivalent on all supported pandas versions (the alias exists since
+        # 1.1.0), but ``dayofyear`` is deprecated on pandas' main branch, which
+        # turns the nightly CI (warnings-as-errors) red.
+        return self.with_native(self.native.dt.day_of_year)
 
     def weekday(self) -> PandasLikeSeries:
         # Pandas is 0-6 while Polars is 1-7
