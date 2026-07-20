@@ -30,47 +30,46 @@ def run_threaded(
     func: Callable[..., None],
     max_workers: int = 8,
     *,
-    pass_count: bool = False,
-    pass_barrier: bool = False,
     outer_iterations: int = 1,
     prepare_args: Callable[[], list[Any]] | None = None,
 ) -> None:
-    """Runs a function many times in parallel.
+    """Run `func` in `max_workers` threads at once, `outer_iterations` times.
 
-    Ported from NumPy's `run_threaded` test helper, the pattern recommended by
-    https://py-free-threading.github.io/testing/. Only type hints and
-    keyword-only booleans were added.
+    Each thread receives a shared `threading.Barrier` as its final positional argument,
+    so callers can line every thread up on the racy window with `barrier.wait()` before proceeding.
+    `prepare_args`, when given, is called once per iteration to build the arguments that precede
+    the barrier (e.g. to reset caches).
+
+    Adapted from NumPy's `run_threaded` test helper, the pattern recommended by
+    https://py-free-threading.github.io/testing/.
     Source: https://github.com/numpy/numpy/blob/7e1f94485495485c5cc3a408ab9e945940f1b91f/numpy/testing/_private/utils.py#L2831
     Copyright (c) 2005-2025, NumPy Developers. License: BSD 3-Clause.
     """
     for _ in range(outer_iterations):
         with ThreadPoolExecutor(max_workers=max_workers) as tpe:
             args = [] if prepare_args is None else prepare_args()
-            barrier = threading.Barrier(max_workers) if pass_barrier else None
-            if barrier is not None:
-                args.append(barrier)
-            if pass_count:
-                all_args = [(i, *args) for i in range(max_workers)]
-            else:
-                all_args = [tuple(args) for _ in range(max_workers)]
+            barrier = threading.Barrier(max_workers)
+            args.append(barrier)
             futures: list[Future[None]] = []
             try:
-                futures.extend(tpe.submit(func, *arg) for arg in all_args)
+                futures.extend(tpe.submit(func, *args) for _ in range(max_workers))
             except RuntimeError as e:  # pragma: no cover
+                # Release any threads already blocked on the barrier so the pool can
+                # shut down instead of deadlocking, then skip.
+                barrier.abort()
                 pytest.skip(
                     f"Spawning {max_workers} threads failed with error {e!r} "
                     "(likely due to resource limits on the system running the tests)"
                 )
-            finally:
-                if len(futures) < max_workers and barrier is not None:
-                    barrier.abort()
             for f in futures:
                 f.result()
 
 
-def test_gil_stays_disabled_on_free_threaded_build() -> None:
+def test_gil_stays_disabled_on_free_threaded_build() -> None:  # pragma: no cover
     if not sysconfig.get_config_var("Py_GIL_DISABLED"):
         pytest.skip("not a free-threaded build")
+    # NOTE: Only reached on a free-threaded build, never on the GIL-enabled coverage jobs.
+    # Because of this, the entire function is flagged as "pragma: no cover"
     is_gil_enabled = getattr(sys, "_is_gil_enabled", lambda: True)
     assert not is_gil_enabled(), (
         "The GIL was re-enabled, likely by importing an extension module "
@@ -79,12 +78,12 @@ def test_gil_stays_disabled_on_free_threaded_build() -> None:
 
 
 def test_from_native_cold_caches() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
     from narwhals import _utils
 
-    df = pl.DataFrame({"a": [1, 2, 3]})
+    tbl = pa.table({"a": [1, 2, 3]})
 
     def clear_caches() -> list[Any]:
         _utils.backend_version.cache_clear()
@@ -98,10 +97,10 @@ def test_from_native_cold_caches() -> None:
 
     def check(barrier: threading.Barrier) -> None:
         barrier.wait()
-        nw_df = nw.from_native(df, eager_only=True)
+        nw_df = nw.from_native(tbl, eager_only=True)
         assert nw_df["a"].sum() == 6
 
-    run_threaded(check, pass_barrier=True, outer_iterations=3, prepare_args=clear_caches)
+    run_threaded(check, outer_iterations=3, prepare_args=clear_caches)
 
 
 def test_plugin_discovery_cold_cache() -> None:
@@ -115,7 +114,7 @@ def test_plugin_discovery_cold_cache() -> None:
         barrier.wait()
         assert plugins._discover_entrypoints() is not None
 
-    run_threaded(check, pass_barrier=True, outer_iterations=3, prepare_args=clear_caches)
+    run_threaded(check, outer_iterations=3, prepare_args=clear_caches)
 
 
 def test_shared_expr_over_push_down() -> None:
@@ -134,7 +133,7 @@ def test_shared_expr_over_push_down() -> None:
         assert repr(result) == expected_over
         assert repr(base) == expected_base
 
-    run_threaded(check, pass_barrier=True, outer_iterations=5)
+    run_threaded(check, outer_iterations=5)
 
 
 def test_enum_deferred_categories() -> None:
@@ -156,14 +155,15 @@ def test_enum_deferred_categories() -> None:
         assert isinstance(dtype, nw.Enum)
         assert dtype.categories == categories
 
-    run_threaded(check, pass_barrier=True, outer_iterations=3, prepare_args=clear_caches)
+    run_threaded(check, outer_iterations=3, prepare_args=clear_caches)
 
 
 def test_shared_lazyframe_schema() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    rel = duckdb.connect().sql("select 1::BIGINT as a, 'x' as b")
+    con = duckdb.connect()
+    rel = con.sql("select 1::BIGINT as a, 'x' as b")
     lf = nw.from_native(rel)
     expected = {"a": nw.Int64(), "b": nw.String()}
 
@@ -172,7 +172,7 @@ def test_shared_lazyframe_schema() -> None:
         assert lf.collect_schema() == expected
         assert lf.columns == ["a", "b"]
 
-    run_threaded(check, pass_barrier=True, outer_iterations=5)
+    run_threaded(check, outer_iterations=5)
 
 
 def test_sql_table_concurrent() -> None:
@@ -188,4 +188,4 @@ def test_sql_table_concurrent() -> None:
         assert result.collect_schema() == {"a": nw.Int64(), "b": nw.String()}
         assert name in result.to_sql()
 
-    run_threaded(check, pass_barrier=True, outer_iterations=5)
+    run_threaded(check, outer_iterations=5)
