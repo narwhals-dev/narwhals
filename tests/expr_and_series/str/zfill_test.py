@@ -80,11 +80,15 @@ def test_str_zfill_negative_width_raises(constructor_eager: ConstructorEager) ->
     # error. Before, pandas returned the string unchanged, Polars surfaced an internal
     # "conversion from `i128` to `u64` failed", and pyarrow crashed inside utf8_lpad.
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
-    with pytest.raises(nw.exceptions.InvalidOperationError):
+    msg = r"`width` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         s.str.zfill(-1)
 
 
 def test_str_zfill_negative_width_expr_raises(constructor: Constructor) -> None:
+    # Separate from the series test so the lazy backends are covered too: the check
+    # lives in the expression layer, so it raises at select() rather than at collect().
     df = nw.from_native(constructor(data))
-    with pytest.raises(nw.exceptions.InvalidOperationError):
+    msg = r"`width` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         df.select(nw.col("a").str.zfill(-1))
