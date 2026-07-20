@@ -93,8 +93,6 @@ def test_datetime_attributes_series(
 
 
 def test_ordinal_day_preserves_null(constructor: Constructor) -> None:
-    # ordinal_day previously dropped nulls on the pandas-like backend (it
-    # returned 1 for NaT), unlike every other datetime attribute.
     data_with_null = {"a": [datetime(2021, 3, 1), None]}
     df = nw.from_native(constructor(data_with_null))
     result = df.select(nw.col("a").dt.ordinal_day())
