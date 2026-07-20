@@ -16,6 +16,7 @@ Here are the top-level functions available in Narwhals.
         - corr
         - cov
         - exclude
+        - factorize
         - format
         - from_arrow
         - from_dict
