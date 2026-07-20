@@ -111,9 +111,8 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> None:
-    # A negative length is rejected in the public layer, so every backend gives the same error.
-    # Before, pandas returned the string unchanged, Polars surfaced an internal "conversion from
-    # `i128` to `u64` failed", and pyarrow leaked `ArrowInvalid: Negative buffer resize`.
+    # Same divergence as zfill, since the length reaches the same backend calls. See
+    # the note in zfill_test.py for why the message is pinned and not just the type.
     s = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)["a"]
     msg = r"`length` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
