@@ -161,3 +161,14 @@ def test_alignment() -> None:
     ).to_native()
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [3, 2, 1]})
     pd.testing.assert_frame_equal(result, expected)
+
+
+def test_from_dict_categorical(eager_backend: EagerAllowed) -> None:
+    # Building a `Categorical` column (a dictionary type on PyArrow) from Python values
+    # used to raise `ArrowTypeError` ("Array chunks must all be same type") for pyarrow.
+    schema = {"a": nw.Categorical(), "b": nw.Int64()}
+    result = nw.from_dict(
+        {"a": ["x", "y", "x"], "b": [1, 2, 3]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert_equal_data(result, {"a": ["x", "y", "x"], "b": [1, 2, 3]})

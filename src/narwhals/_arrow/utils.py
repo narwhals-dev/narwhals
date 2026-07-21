@@ -127,6 +127,13 @@ def chunked_array(
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
+        if dtype is not None and pa.types.is_dictionary(dtype):
+            # `pa.chunked_array` cannot build a dictionary-typed (Categorical) array from
+            # Python values, so build each chunk from the values with the target type.
+            # TODO(unassigned): once the minimum PyArrow is >=15.0.0, simplify to
+            # `pc.cast(pa.chunked_array(arr), dtype)` (string -> dictionary cast is
+            # supported from 15.0.0).
+            return pa.chunked_array([pa.array(chunk, dtype) for chunk in arr])
         return pa.chunked_array(arr, dtype)
     return pa.chunked_array([arr], dtype)
 

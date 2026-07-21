@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import qualified_type_name
-from tests.utils import assert_equal_data
+from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
@@ -96,3 +96,34 @@ def test_from_dicts_inconsistent_keys(
 
     result = nw.from_dicts(data, backend=eager_implementation)
     assert result.columns == ["a", "b"]
+
+
+def test_from_dicts_categorical(
+    request: pytest.FixtureRequest, eager_backend: EagerAllowed
+) -> None:
+    # Building a `Categorical` column (a dictionary type on PyArrow) from row dicts used
+    # to raise `ArrowInvalid` for the pyarrow backend.
+    if "pyarrow" in str(eager_backend) and PYARROW_VERSION < (15,):
+        # string -> dictionary cast is only supported from pyarrow 15
+        request.applymarker(pytest.mark.xfail)
+    schema = {"a": nw.Categorical()}
+    result = nw.from_dicts(
+        [{"a": "x"}, {"a": "y"}, {"a": "x"}], backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert_equal_data(result, {"a": ["x", "y", "x"]})
+
+
+def test_from_dicts_categorical_reordered_pyarrow() -> None:
+    # Regression for the pyarrow Categorical path: it must follow the schema even when
+    # the row keys are in a different order. A bare `from_pylist(data).cast(schema)`
+    # would raise here, since `from_pylist` infers column order from the data.
+    pytest.importorskip("pyarrow")
+    if PYARROW_VERSION < (15,):
+        pytest.skip("string -> dictionary cast needs pyarrow >= 15")
+    schema = {"a": nw.Categorical(), "b": nw.Int64()}
+    result = nw.from_dicts(
+        [{"b": 1, "a": "x"}, {"b": 2, "a": "y"}], backend="pyarrow", schema=schema
+    )
+    assert result.collect_schema() == schema
+    assert_equal_data(result, {"a": ["x", "y"], "b": [1, 2]})

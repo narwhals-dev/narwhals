@@ -29,3 +29,15 @@ def test_new_series_dask() -> None:
     df = nw.from_native(dd.from_pandas(pd.DataFrame({"a": [1, 2, 3]})))
     with pytest.raises(ValueError, match="lazy-only"):
         nw.new_series("a", [1, 2, 3], backend=nw.get_native_namespace(df))
+
+
+def test_new_series_categorical(constructor_eager: ConstructorEager) -> None:
+    # `new_series` with the `Categorical` dtype used to raise `ArrowTypeError`
+    # ("Array chunks must all be same type") for the pyarrow backend, because the
+    # dictionary type was passed straight to `pa.chunked_array` without casting.
+    s = nw.from_native(constructor_eager({"a": [1]}), eager_only=True)["a"]
+    result = nw.new_series(
+        "b", ["x", "y", "x"], nw.Categorical, backend=nw.get_native_namespace(s)
+    )
+    assert result.dtype == nw.Categorical
+    assert_equal_data(result.to_frame(), {"b": ["x", "y", "x"]})
