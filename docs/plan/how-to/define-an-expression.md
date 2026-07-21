@@ -336,19 +336,178 @@ To review our facts again:
 
 There is still work left to do!
 
-### Getting more exotic
+
+### Shape
+> 3 We should expect `explode` to change the length of the output column
+
+Here is a good place to look at why I *did not* describe the detail as:
+
+> 3 We should expect `explode` to ~~change~~ increase the length of the output column
+
+Perhaps this part is obvious, but `explode` can change the shape in lots of ways:
+
+```py
+import polars as pl
+
+expr = pl.col.a.explode(keep_nulls=False)
+```
+
+=== "1"
+
+    ```py
+    >>> df = pl.DataFrame({"a": [[1], [2]], "b": [3, 4]})
+    >>> df.with_columns(expr)
+    shape: (2, 2)
+    ┌─────┬─────┐
+    │ a   ┆ b   │
+    │ --- ┆ --- │
+    │ i64 ┆ i64 │
+    ╞═════╪═════╡
+    │ 1   ┆ 3   │
+    │ 2   ┆ 4   │
+    └─────┴─────┘
+
+    ```
+
+=== "2"
+
+    ```py   
+    >>> df = pl.DataFrame({"a": [[1, 10], [2, 20]], "b": [3, 4]})
+    >>> df.select(expr)
+    shape: (4, 1)
+    ┌─────┐
+    │ a   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 1   │
+    │ 10  │
+    │ 2   │
+    │ 20  │
+    └─────┘
+    ```
+
+=== "3"
+
+    ```py  
+    >>> df = pl.DataFrame({"a": [[1, 10], None], "b": [3, 4]})
+    >>> df.with_columns(expr)
+    shape: (2, 2)
+    ┌─────┬─────┐
+    │ a   ┆ b   │
+    │ --- ┆ --- │
+    │ i64 ┆ i64 │
+    ╞═════╪═════╡
+    │ 1   ┆ 3   │
+    │ 10  ┆ 4   │
+    └─────┴─────┘
+    ```
+
+=== "4"
+
+    ```py 
+    >>> df = pl.DataFrame({"a": [[1], None], "b": [3, 4]})
+    >>> df.select(expr)
+    shape: (1, 1)
+    ┌─────┐
+    │ a   │
+    │ --- │
+    │ i64 │
+    ╞═════╡
+    │ 1   │
+    └─────┘
+    ```
+
+=== "5"
+
+    ```py 
+    >>> df = pl.DataFrame({"a": [[1], None], "b": [3, 4]})
+    >>> df.with_columns(expr)
+    Traceback (most recent call last):
+    InvalidOperationError: Series a, length 1 doesn't match the DataFrame height of 2
+    ```
 
 
-<!---TODO: Describing the expression
-- `is_scalar`?
-- `is_length_preserving`?
-- `changes_length`?
-- dtype?
+<!---TODO: Fix flow--->
+
+`explode`-trivia-aside - from the perspective of an expression all we care about is whether:
+
+1. The output length is what we started with
+2. The output length is guaranteed to be 1
+3. The output length is not known without seeing the data
+
+We've seen that `explode` can only be described by **3.**. 
+We need to model this because many expressions require inputs to be **1.** or **2.**. 
+Even when this is not the case, length changing expressions can still produce columns that do not match the height the frame they're intended for.
+
+The tools we have at our disposal are methods that we can override in `Explode`:
+
+- [`ExprIR.is_length_preserving`][narwhals._plan.expressions.ExprIR.is_length_preserving]
+- [`ExprIR.is_scalar`][narwhals._plan.expressions.ExprIR.is_scalar]
+- [`ExprIR.changes_length`][narwhals._plan.expressions.ExprIR.changes_length]
+
+They correspond to the 3 shape-based properties, which we will answer as:
+
+- False
+- False
+- True
+
+<!---TODO: Show default behavior with:
+
+- column = col("values")
+- literal = lit([1, 2, 3])
+- aggregation = First(expr=column)
+--->
+
+
+<!---TODO: Show updated `Explode`--->
+
+```py
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan._nodes import node
+
+if TYPE_CHECKING:
+    from narwhals._plan.options import ExplodeOptions
+
+
+class Explode(ExprIR):
+    __slots__ = ("expr", "options")
+    expr: ExprIR = node(observe_scalar=False)
+    options: ExplodeOptions
+
+    def __repr__(self) -> str:
+        opts = []
+        if not self.options.empty_as_null:
+            opts.append("empty_as_null=False")
+        if not self.options.keep_nulls:
+            opts.append("keep_nulls=False")
+        return f"{self.expr!r}.explode({', '.join(opts)})"
+
+    def is_length_preserving(self) -> bool:
+        return False
+
+    def changes_length(self) -> bool:
+        return True
+```
+
+<!---TODO: Show updated results of checks
+
+"`Explode` is one of the rare cases where an expression has inputs, but they do not contribute the output shape."
+--->
+
+### DType
+> 2. That expression *should be* ~~`List`~~ `List | String`-typed
+- rust
     - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L220
     - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/aexpr/schema.rs#L87-L98
-- repr
-    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/format.rs#L68-L84
---->
+- notes
+    - `List | Array | String`
+    - we need to make a decision on `String`, which may/may not be supported in other backends
+
 
 <!---TODO: Add an `Expr` method to create it
 
