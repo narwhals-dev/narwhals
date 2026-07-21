@@ -59,7 +59,54 @@ handle plugins. For this integration to work, any plugin architecture must conta
   
     Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
     signatures.
-  
+
+## IO functions: the namespace contract
+
+The Narwhals IO functions (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
+dispatch to same-named methods on the compliant namespace. This is a single mechanism,
+shared by built-in backends and extensions alike: to support these functions, a
+compliant namespace implements (a subset of):
+
+```py
+from narwhals.typing import NormalizedPath
+
+
+def read_csv(
+    self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+) -> CompliantDataFrame:
+    ...
+
+
+def scan_csv(
+    self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+) -> CompliantFrame:
+    ...
+
+
+def read_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantDataFrame:
+    ...
+
+
+def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrame:
+    ...
+```
+
+In all cases:
+
+- `source` is a plain string at runtime: `NormalizedPath` is a `str`
+  [`NewType`](https://docs.python.org/3/library/typing.html#newtype) tagging that
+  Narwhals has already normalized `Path` and path-like inputs before dispatching to the
+  namespace.
+- `kwds` are forwarded to the native reader, and it is the namespace's responsibility
+  to translate `separator` into whatever its native CSV reader expects (and to raise if
+  the two conflict).
+- `read_*` methods are eager-only, so they are only ever called on namespaces of eager
+  backends. `scan_*` methods are called for any backend: lazy namespaces return a
+  compliant LazyFrame, while eager ones may simply read eagerly. Namespaces complying
+  with the `EagerNamespace` protocol only need to implement `read_csv` and
+  `read_parquet`, as they inherit `scan_*` default implementations which fall back to
+  the corresponding `read_*` method.
+
 ## Can I see an example?
 
 Yes! For a reference plugin, please check out [narwhals-daft](https://github.com/narwhals-dev/narwhals-daft).

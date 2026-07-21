@@ -129,6 +129,7 @@ if TYPE_CHECKING:
         IntoSeriesT,
         MultiIndexSelector,
         NestedLiteral,
+        NormalizedPath,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -2142,10 +2143,25 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
+def validate_separators(
+    separator: str, native_separators: tuple[str, ...], kwds: Mapping[str, Any], /
+) -> None:
+    """Ensure `separator` does not conflict with backend-native aliases passed via `kwds`."""
+    for native_separator in native_separators:
+        if native_separator in kwds and kwds[native_separator] != separator:
+            msg = (
+                f"`separator` and `{native_separator}` do not match: "
+                f"`separator`={separator} and `{native_separator}`={kwds[native_separator]}."
+            )
+            raise TypeError(msg)
+
+
 if sys.platform != "win32":
 
-    def normalize_path(source: FileSource, /) -> str:
-        return source if isinstance(source, str) else str(Path(source))
+    def normalize_path(source: FileSource, /) -> NormalizedPath:
+        from narwhals.typing import NormalizedPath
+
+        return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
@@ -2153,8 +2169,10 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    def normalize_path(source: FileSource, /) -> str:
-        return Path(source).as_posix()
+    def normalize_path(source: FileSource, /) -> NormalizedPath:
+        from narwhals.typing import NormalizedPath
+
+        return NormalizedPath(Path(source).as_posix())
 
 
 def extend_bool(
