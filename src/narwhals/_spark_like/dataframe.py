@@ -25,7 +25,6 @@ from narwhals._utils import (
     parse_columns_to_drop,
     to_pyarrow_table,
 )
-from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -463,71 +462,92 @@ class SparkLikeLazyFrame(
             self.native.join(other_native, on=on_, how=how_native).select(col_order)
         )
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = self._version.dtypes
-
-        schema = self.collect_schema()
-        for col_to_explode in columns:
-            dtype = schema[col_to_explode]
-
-            if dtype != dtypes.List:
-                msg = (
-                    f"`explode` operation not supported for dtype `{dtype}`, "
-                    "expected List type"
-                )
-                raise InvalidOperationError(msg)
-
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        explode_col = self._validate_explode_columns(columns)
         column_names = self.columns
 
-        if len(columns) != 1:
-            msg = (
-                "Exploding on multiple columns is not supported with SparkLike backend since "
-                "we cannot guarantee that the exploded columns have matching element counts."
-            )
-            raise NotImplementedError(msg)
-
         if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
+            # `explode_outer` emits a single null row for both empty and null lists.
+            # Drop the rows we don't want kept *before* exploding so they produce no row.
+            native = self.native
+            if not empty_as_null:
+                # `array_size` is null for null rows; keep them here (via `keep_nulls`).
+                native = native.filter(
+                    self._F.col(explode_col).isNull()
+                    | (self._F.array_size(explode_col) > 0)
+                )
+            if not keep_nulls:
+                native = native.filter(self._F.col(explode_col).isNotNull())
             return self._with_native(
-                self.native.select(
+                native.select(
                     *[
                         self._F.col(col_name).alias(col_name)
-                        if col_name != columns[0]
+                        if col_name != explode_col
                         else self._F.explode_outer(col_name).alias(col_name)
                         for col_name in column_names
                     ]
                 )
             )
         if self._implementation.is_sqlframe():
-            # Not every sqlframe dialect supports `explode_outer` function
-            # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
-            # therefore we simply explode the array column which will ignore nulls and
-            # zero sized arrays, and append these specific condition with nulls (to
-            # match polars behavior).
-
-            def null_condition(col_name: str) -> Column:
-                return self._F.isnull(col_name) | (self._F.array_size(col_name) == 0)
-
-            return self._with_native(
-                self.native.select(
-                    *[
-                        self._F.col(col_name).alias(col_name)
-                        if col_name != columns[0]
-                        else self._F.explode(col_name).alias(col_name)
-                        for col_name in column_names
-                    ]
-                ).union(
-                    self.native.filter(null_condition(columns[0])).select(
-                        *[
-                            self._F.col(col_name).alias(col_name)
-                            if col_name != columns[0]
-                            else self._F.lit(None).alias(col_name)
-                            for col_name in column_names
-                        ]
-                    )
-                )
+            return self._explode_sqlframe(
+                explode_col,
+                column_names,
+                empty_as_null=empty_as_null,
+                keep_nulls=keep_nulls,
             )
         msg = "Unreachable code, please report an issue at https://github.com/narwhals-dev/narwhals/issues"  # pragma: no cover
         raise AssertionError(msg)
+
+    def _explode_sqlframe(
+        self,
+        explode_col: str,
+        column_names: Sequence[str],
+        *,
+        empty_as_null: bool,
+        keep_nulls: bool,
+    ) -> Self:
+        # Not every sqlframe dialect supports `explode_outer` function
+        # (see https://github.com/eakmanrq/sqlframe/blob/3cb899c515b101ff4c197d84b34fae490d0ed257/sqlframe/base/functions.py#L2288-L2289)
+        # therefore we simply explode the array column which ignores nulls and
+        # zero sized arrays, and append the rows that should become a single null
+        # row (depending on `empty_as_null` / `keep_nulls`).
+        exploded = self.native.select(
+            *[
+                self._F.col(col_name).alias(col_name)
+                if col_name != explode_col
+                else self._F.explode(col_name).alias(col_name)
+                for col_name in column_names
+            ]
+        )
+
+        null_condition: Column | None = None
+        if keep_nulls:
+            null_condition = self._F.isnull(explode_col)
+        if empty_as_null:
+            is_empty = ~self._F.isnull(explode_col) & (
+                self._F.array_size(explode_col) == 0
+            )
+            null_condition = (
+                is_empty if null_condition is None else (null_condition | is_empty)
+            )
+
+        if null_condition is None:
+            return self._with_native(exploded)
+
+        return self._with_native(
+            exploded.union(
+                self.native.filter(null_condition).select(
+                    *[
+                        self._F.col(col_name).alias(col_name)
+                        if col_name != explode_col
+                        else self._F.lit(None).alias(col_name)
+                        for col_name in column_names
+                    ]
+                )
+            )
+        )
 
     def unpivot(
         self,
