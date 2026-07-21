@@ -286,12 +286,17 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(_fill_null, expression_args={"value": value})
 
     def cast(self, dtype: IntoDType) -> Self:
-        def _func(expr: ir.Column) -> ir.Value:
+        def func(df: IbisLazyFrame) -> list[ir.Value]:
+            self._validate_temporal_to_numeric_cast(df, dtype)
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            # ibis `cast` overloads do not include DataType, only literals
-            return expr.cast(native_dtype)  # type: ignore[unused-ignore]
+            return [expr.cast(native_dtype) for expr in self(df)]  # pyright: ignore[reportArgumentType, reportCallIssue]
 
-        return self._with_callable(_func)
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def is_unique(self) -> Self:
         return self._with_callable(

@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     )
     from narwhals._spark_like.dataframe import SparkLikeLazyFrame
     from narwhals._spark_like.namespace import SparkLikeNamespace
+    from narwhals._spark_like.utils import _NativeDType
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import (
@@ -249,19 +250,21 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(neg)
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
-            spark_dtype = narwhals_to_native_dtype(
+        def native_dtype(df: SparkLikeLazyFrame) -> _NativeDType:
+            self._validate_temporal_to_numeric_cast(df, dtype)
+            return narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes, df.native.sparkSession
             )
-            return [expr.cast(spark_dtype) for expr in self(df)]
+
+        def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
+            dtype_ = native_dtype(df)
+            return [expr.cast(dtype_) for expr in self(df)]
 
         def window_f(
             df: SparkLikeLazyFrame, inputs: SparkWindowInputs
         ) -> Sequence[Column]:
-            spark_dtype = narwhals_to_native_dtype(
-                dtype, self._version, self._native_dtypes, df.native.sparkSession
-            )
-            return [expr.cast(spark_dtype) for expr in self.window_function(df, inputs)]
+            dtype_ = native_dtype(df)
+            return [expr.cast(dtype_) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,

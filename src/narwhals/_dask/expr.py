@@ -619,11 +619,17 @@ class DaskExpr(
         )
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(expr: dx.Series) -> dx.Series:
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            self._validate_temporal_to_numeric_cast(df, dtype)
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            return expr.astype(native_dtype)
+            return [expr.astype(native_dtype) for expr in self._call(df)]
 
-        return self._with_callable(func)
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def is_finite(self) -> Self:
         import dask.array as da
