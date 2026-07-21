@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Generic
 
 from narwhals.dependencies import is_narwhals_series
+from narwhals.exceptions import InvalidOperationError
 from narwhals.typing import SeriesT
 
 
@@ -488,6 +489,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
             3    123456
             dtype: str
         """
+        if width < 0:
+            msg = f"`width` must be non-negative but got {width}"
+            raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
         )
@@ -516,6 +520,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        if length < 0:
+            msg = f"`length` must be non-negative but got {length}"
+            raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_start(
                 length=length, fill_char=fill_char
@@ -546,6 +553,9 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        if length < 0:
+            msg = f"`length` must be non-negative but got {length}"
+            raise InvalidOperationError(msg)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_end(
                 length=length, fill_char=fill_char

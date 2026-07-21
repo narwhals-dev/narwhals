@@ -64,3 +64,32 @@ def test_str_zfill_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].str.zfill(3)
     assert_equal_data({"a": result}, expected)
+
+
+def test_str_zfill_zero_width_pyarrow() -> None:
+    # A zero width is a no-op (every string is already at least 0 long). This used
+    # to crash on the pyarrow backend with `ArrowInvalid: Negative buffer resize`,
+    # because pc.case_when eagerly evaluated the utf8_lpad(width - 1) = -1 branch.
+    pytest.importorskip("pyarrow")
+    result = nw.from_dict(data, backend="pyarrow")["a"].str.zfill(0)
+    assert_equal_data({"a": result}, data)
+
+
+def test_str_zfill_negative_width_raises(constructor_eager: ConstructorEager) -> None:
+    # Before, pandas returned the string unchanged, Polars raised its own
+    # "conversion from `i128` to `u64` failed", and pyarrow crashed inside utf8_lpad.
+    # The message is pinned rather than just the exception type because Polars already
+    # raised InvalidOperationError, so a type-only check passes against unfixed code.
+    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    msg = r"`width` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        s.str.zfill(-1)
+
+
+def test_str_zfill_negative_width_expr_raises(constructor: Constructor) -> None:
+    # Separate from the series test: Series.str goes straight to the compliant series,
+    # so this is the only one of the two that covers the lazy backends.
+    df = nw.from_native(constructor(data))
+    msg = r"`width` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df.select(nw.col("a").str.zfill(-1))
