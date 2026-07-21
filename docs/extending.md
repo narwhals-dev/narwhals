@@ -67,16 +67,37 @@ dispatch to same-named methods on the compliant namespace. This is a single mech
 shared by built-in backends and extensions alike: to support these functions, a
 compliant namespace implements (a subset of):
 
-- `read_csv(source, *, separator=",", **kwargs)`, returning a compliant DataFrame.
-- `read_parquet(source, **kwargs)`, returning a compliant DataFrame.
-- `scan_csv(source, *, separator=",", **kwargs)`, returning a compliant frame.
-- `scan_parquet(source, **kwargs)`, returning a compliant frame.
+```py
+from narwhals.typing import NormalizedPath
+
+
+def read_csv(
+    self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+) -> CompliantDataFrame:
+    ...
+
+
+def scan_csv(
+    self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+) -> CompliantFrame:
+    ...
+
+
+def read_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantDataFrame:
+    ...
+
+
+def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrame:
+    ...
+```
 
 In all cases:
 
-- `source` is a plain string: Narwhals normalizes `Path` and path-like inputs before
-  dispatching to the namespace.
-- `kwargs` are forwarded to the native reader, and it is the namespace's responsibility
+- `source` is a plain string at runtime: `NormalizedPath` is a `str`
+  [`NewType`](https://docs.python.org/3/library/typing.html#newtype) tagging that
+  Narwhals has already normalized `Path` and path-like inputs before dispatching to the
+  namespace. Implementations are free to annotate `source: str` instead.
+- `kwds` are forwarded to the native reader, and it is the namespace's responsibility
   to translate `separator` into whatever its native CSV reader expects (and to raise if
   the two conflict).
 - `read_*` methods are eager-only, so they are only ever called on namespaces of eager
