@@ -11,19 +11,19 @@ By the end of this guide, you should be able to answer:
 - (TODO)
 
 ## Is [ExprIR] the right tool?
+
 The default for implementing new expressions should be to add a new [`Function`][narwhals._plan._function.Function].
-A [`Function`][narwhals._plan._function.Function] is representable as an expression when wrapping it with [`FunctionExpr`][narwhals._plan.expressions.function_expr.FunctionExpr]. 
+A [`Function`][narwhals._plan._function.Function] is representable as an expression when wrapping it with [`FunctionExpr`][narwhals._plan.expressions.function_expr.FunctionExpr].
 
 Knowing when to use each *can be* reduced to **looking at what Polars does** and following along.
 
 [where Polars defines the Expr enum]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/expr/mod.rs#L57-L185
 [^1]: the rust term is an [Enum variant](https://doc.rust-lang.org/rust-by-example/custom_types/enum.html)
 
-First we find [where Polars defines the Expr enum] in rust. 
+First we find [where Polars defines the Expr enum] in rust.
 What this code means is not important - so do not worry if rust is unfamiliar - just think of this as a fancy [`enum.Enum`][] where members[^1] take arguments.
 
 If we exclude all variants that we've implemented, everything that is left **are candidates** for [ExprIR]:
-
 
 | Variant            | API                                           |
 | ------------------ | --------------------------------------------- |
@@ -58,16 +58,18 @@ If we exclude all variants that we've implemented, everything that is left **are
         - Length-changing expressions, where the [height is independent of input column(s)] ([see also](https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/aexpr/projection_height.rs#L110-L200))
 
     There are common themes, but the main questions to ask are:
-    
+
     1. **What did Polars do?**
+
     2. Can we describe the operation using the tools [`Function`][narwhals._plan._function.Function] provides?
+
     3. If we extended [`Function`][narwhals._plan._function.Function] for some new operation, will this ever be reusable?
         1. Conversely, if the operation is unique, can we benefit from identifying it more easily? [^2]
-
 
 Still here? Okay, let's try defining a new subclass of [ExprIR].
 
 ## Defining an expression
+
 On the menu today is [`pl.Expr.explode`](https://docs.pola.rs/api/python/stable/reference/expressions/api/polars.Expr.explode.html#polars.Expr.explode) which is described as:
 
 > Explode a list expression.  
@@ -78,12 +80,13 @@ On the menu today is [`pl.Expr.explode`](https://docs.pola.rs/api/python/stable/
 That description is short, yet gives us a lot of clues to what we need to model.
 
 ### Facts (1)
+
 1. We take a single expression argument
 2. That expression *should be* [^3] [`List`][narwhals.dtypes.List]-typed
 3. We should expect `explode` to change the length of the output column
 
-
 ### Collecting more details
+
 Now, we could jump into creating a subclass - but it would be a better idea to check if Polars has more to tell us.  
 We got three details from the docstring, but the best way to understand what *makes an expression* is by reading the source:
 
@@ -125,14 +128,14 @@ We got three details from the docstring, but the best way to understand what *ma
     [we made it!]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/expr/mod.rs#L115-L118
     [current expression]: https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L226
 
-    Ah [we made it!] 
-    
+    Ah [we made it!]
+
     Along the way, some keyword-only arguments got packaged up into `ExplodeOptions`.
     If this name looks familiar it is because we have [`ExplodeOptions`][narwhals._plan.options.ExplodeOptions] at home.
     A nice thing about Polars is consistent APIs across multiple classes. On the rust side, that is made possible through these shared `*Options` structs.
     We lean on this concept for sharing conversion logic.
 
-    We already suspected that `explode` took a single expression argument, but here we can see the [current expression] became the `input`. 
+    We already suspected that `explode` took a single expression argument, but here we can see the [current expression] became the `input`.
     While not the most common, [`input`][] is a python builtin function. Instead we will generally use name `expr` in it's place:
 
     ```rs
@@ -168,12 +171,13 @@ We got three details from the docstring, but the best way to understand what *ma
 Surprised at what we found? Let's update our facts:
 
 ### Facts (2)
+
 1. We take a single expression argument, `expr: ExprIR`
 2. That expression *should be* ~~`List`~~ `List | String`-typed
 3. We should expect `explode` to change the length of the output column
 4. We take a single non-expression argument, `options: ExplodeOptions`
 
-### Show me the class already!
+### Show me the class already
 Fine, fine, enough stalling - lets encode our facts into an expression:
 
 === "Attempt 1"
