@@ -14,6 +14,7 @@ Here are the top-level functions available in Narwhals.
         - concat
         - concat_str
         - corr
+        - cov
         - exclude
         - format
         - from_arrow
@@ -25,6 +26,7 @@ Here are the top-level functions available in Narwhals.
         - get_native_namespace
         - is_ordered_categorical
         - len
+        - list
         - lit
         - max
         - max_horizontal

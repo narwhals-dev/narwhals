@@ -21,6 +21,7 @@ from narwhals._duckdb.utils import (
     narwhals_to_native_dtype,
     sql_expression,
     when,
+    window_expression,
 )
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -31,7 +32,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import Implementation, requires
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Callable, Iterable, Mapping
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -84,8 +85,8 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
         items = list(items)
+        native_items = [item._native_frame for item in items]
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
@@ -187,6 +188,45 @@ class DuckDBNamespace(
             version=self._version,
         )
 
+    def cov(self, a: DuckDBExpr, b: DuckDBExpr, *, ddof: int) -> DuckDBExpr:
+        def _cov(
+            a_: Expression, b_: Expression, wrap: Callable[[Expression], Expression]
+        ) -> list[Expression]:
+            # `wrap` adds the window frame to each aggregate in a window context and
+            # is the identity otherwise. A compound expression can't be wrapped as a
+            # single window function, so each aggregate is wrapped individually.
+            if ddof == 0:
+                return [wrap(F("covar_pop", a_, b_))]
+            if ddof == 1:
+                return [wrap(F("covar_samp", a_, b_))]
+            is_valid = (a_.isnotnull() & b_.isnotnull()).cast(duckdb_dtypes.BIGINT)
+            n_samples = wrap(F("sum", is_valid))
+            denominator = n_samples - lit(ddof)
+            rescaled = wrap(F("covar_samp", a_, b_)) * (
+                (n_samples - lit(1)) / denominator
+            )
+            return [when(denominator <= lit(0), lit(None)).otherwise(rescaled)]
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return _cov(a_, b_, lambda e: e)
+
+        def window_f(
+            df: DuckDBLazyFrame, inputs: WindowInputs[Expression]
+        ) -> list[Expression]:
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            return _cov(a_, b_, lambda e: window_expression(e, inputs.partition_by))
+
+        return self._expr(
+            call=func,
+            window_function=window_f,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            version=self._version,
+        )
+
     @requires.backend_version((1, 3))
     def struct(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         version = self._version
@@ -205,6 +245,20 @@ class DuckDBNamespace(
                 f'"{name}" := {col}' for name, col in names_to_cols.items()
             )
             return [sql_expression(f"struct_pack({field_args})")]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+        )
+
+    def list(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+        version = self._version
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [F("list_pack", *cols)]
 
         return self._expr(
             call=func,

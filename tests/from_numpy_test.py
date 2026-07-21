@@ -47,6 +47,31 @@ def test_from_numpy_schema_list(constructor_eager: ConstructorEager) -> None:
     assert result.columns == schema
 
 
+def test_from_numpy_schema_pairs(constructor_eager: ConstructorEager) -> None:
+    schema = (("c", nw.Int16), ("d", nw.Float32()), ("e", nw.Int16()), ("f", nw.Float64))
+    expected = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
+    df = nw.from_native(constructor_eager(data))
+    backend = nw.get_native_namespace(df)
+    result = nw.from_numpy(arr, backend=backend, schema=schema)
+    assert result.collect_schema() == expected
+    result = nw.DataFrame.from_numpy(arr, backend=backend, schema=schema)
+    assert result.collect_schema() == expected
+
+
+def test_from_numpy_schema_generator(constructor_eager: ConstructorEager) -> None:
+    expected = {"c": nw.Int16(), "d": nw.Float32(), "e": nw.Int16(), "f": nw.Float64()}
+    df = nw.from_native(constructor_eager(data))
+    backend = nw.get_native_namespace(df)
+    result = nw.from_numpy(
+        arr, backend=backend, schema=((name, dtype) for name, dtype in expected.items())
+    )
+    assert result.collect_schema() == expected
+    result = nw.DataFrame.from_numpy(
+        arr, backend=backend, schema=((name, dtype) for name, dtype in expected.items())
+    )
+    assert result.collect_schema() == expected
+
+
 def test_from_numpy_schema_notvalid(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data))
     backend = nw.get_native_namespace(df)
@@ -65,3 +90,32 @@ def test_from_numpy_not2d(constructor_eager: ConstructorEager) -> None:
     backend = nw.get_native_namespace(df)
     with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):
         nw.from_numpy(np.array([0]), backend=backend)  # pyright: ignore[reportArgumentType]
+
+
+@pytest.mark.parametrize("schema", [None, ["x", "y", "z"]])
+def test_from_numpy_square(
+    constructor_eager: ConstructorEager, schema: list[str] | None
+) -> None:
+    # See https://github.com/narwhals-dev/narwhals/issues/3716:
+    # Fortran-contiguous square array (as returned by polars' `to_numpy`) used to be
+    # silently transposed on the polars backend, since polars infers column
+    # orientation when the schema length matches both axes.
+    rows = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    columns = [f"column_{i}" for i in range(3)] if schema is None else schema
+    expected = {name: values for name, *values in zip(columns, *rows, strict=True)}
+
+    square_arr = np.asfortranarray(rows)
+    backend = nw.get_native_namespace(
+        nw.from_native(constructor_eager(data), eager_only=True)
+    )
+
+    result = nw.from_numpy(square_arr, backend=backend, schema=schema)
+    assert_equal_data(result, expected)
+
+
+def test_from_numpy_square_roundtrip(constructor_eager: ConstructorEager) -> None:
+    square_data = {"a": [0, 3, 6], "b": [1, 4, 7], "c": [2, 5, 8]}
+    df = nw.from_native(constructor_eager(square_data), eager_only=True)
+    backend = nw.get_native_namespace(df)
+    result = nw.from_numpy(df.to_numpy(), backend=backend, schema=df.columns)
+    assert_equal_data(result, square_data)

@@ -12,7 +12,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import cast_to_comparable_string_types
+from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -264,6 +264,20 @@ class ArrowNamespace(
             context=self,
         )
 
+    def list(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            # pa.concat_arrays requires Array, not ChunkedArray
+            result = build_list_array([s.native.combine_chunks() for s in series])
+            return [ArrowSeries(result, name=series[0].name, version=self._version)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
     def _if_then_else(
         self,
         when: ChunkedArrayAny,
@@ -282,11 +296,12 @@ class ArrowNamespace(
             a_series = df._evaluate_single_output_expr(a)
             arr1 = a_series.native
             arr2 = df._evaluate_single_output_expr(b).native
-            mean1 = pc.mean(arr1)
-            mean2 = pc.mean(arr2)
+            valid = pc.and_(pc.is_valid(arr1), pc.is_valid(arr2))
+            arr1 = pc.filter(arr1, valid)
+            arr2 = pc.filter(arr2, valid)
 
-            dev1 = pc.subtract(arr1, mean1)
-            dev2 = pc.subtract(arr2, mean2)
+            dev1 = pc.subtract(arr1, pc.mean(arr1))
+            dev2 = pc.subtract(arr2, pc.mean(arr2))
 
             covariance = pc.mean(pc.multiply(dev1, dev2))
 
@@ -297,6 +312,37 @@ class ArrowNamespace(
             return [
                 ArrowSeries.from_iterable(
                     data=[correlation], name=a_series.name, context=self
+                )
+            ]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(a, b),
+            alias_output_names=combine_alias_output_names(a, b),
+            context=self,
+        )
+
+    def cov(self, a: ArrowExpr, b: ArrowExpr, *, ddof: int) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            a_series = df._evaluate_single_output_expr(a)
+            arr1 = a_series.native
+            arr2 = df._evaluate_single_output_expr(b).native
+            valid = pc.and_(pc.is_valid(arr1), pc.is_valid(arr2))
+            arr1 = pc.filter(arr1, valid)
+            arr2 = pc.filter(arr2, valid)
+            n = len(arr1)
+            if n - ddof <= 0:
+                # Matches pandas/Polars. A single valid pair with ddof=0 falls
+                # through and yields 0.0, as the deviations are then zero.
+                covariance = pa.scalar(None, type=pa.float64())
+            else:
+                dev1 = pc.subtract(arr1, pc.mean(arr1))
+                dev2 = pc.subtract(arr2, pc.mean(arr2))
+                numerator = pc.sum(pc.multiply(dev1, dev2))
+                covariance = pc.divide(numerator, pa.scalar(n - ddof))
+            return [
+                ArrowSeries.from_iterable(
+                    data=[covariance], name=a_series.name, context=self
                 )
             ]
 

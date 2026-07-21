@@ -237,6 +237,8 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.Float64()
     if dtype in {"float32", "Float32"}:
         return dtypes.Float32()
+    if dtype == "float16":
+        return dtypes.Float16()
     if is_dtype_non_pyarrow_string(native_dtype):
         return dtypes.String()
     if dtype in {"bool", "boolean"}:
@@ -397,6 +399,13 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         "pyarrow": "Float32[pyarrow]",
         "numpy_nullable": "Float32",
         None: "float32",
+    },
+    dtypes.Float16: {
+        # pandas has no nullable (extension) `Float16`, so `numpy_nullable` falls
+        # back to the NumPy `float16` (nulls become `NaN`).
+        "pyarrow": "Float16[pyarrow]",
+        "numpy_nullable": "float16",
+        None: "float16",
     },
     dtypes.Int64: {"pyarrow": "Int64[pyarrow]", "numpy_nullable": "Int64", None: "int64"},
     dtypes.Int32: {"pyarrow": "Int32[pyarrow]", "numpy_nullable": "Int32", None: "int32"},
@@ -611,7 +620,9 @@ def select_columns_by_name(
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1] and (df.columns == column_names).all():
+    if len(column_names) == df.shape[1] and all(
+        x == y for x, y in zip(df.columns, column_names, strict=True)
+    ):
         return df
     if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS

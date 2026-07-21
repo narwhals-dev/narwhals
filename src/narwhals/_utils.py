@@ -56,7 +56,12 @@ from narwhals.dependencies import (
     is_pandas_like_dataframe,
     is_pandas_like_series,
 )
-from narwhals.exceptions import ColumnNotFoundError, DuplicateError, InvalidOperationError
+from narwhals.exceptions import (
+    ColumnNotFoundError,
+    DuplicateError,
+    InvalidOperationError,
+    ShapeError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
@@ -95,6 +100,7 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Backend,
         IntoBackend,
+        PluginName,
         _ArrowImpl,
         _CuDFImpl,
         _DaskImpl,
@@ -134,8 +140,6 @@ if TYPE_CHECKING:
         _SliceName,
         _SliceNone,
     )
-
-    UnknownBackendName: TypeAlias = str
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=LazyFrame[Any] | DataFrame[Any] | Series[Any]
@@ -252,73 +256,98 @@ class Version(Enum):
 
     @property
     def namespace(self) -> type[Namespace[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1._namespace import Namespace as NamespaceV1
-
-            return NamespaceV1
-        if self is Version.V2:
-            from narwhals.stable.v2._namespace import Namespace as NamespaceV2
-
-            return NamespaceV2
-        from narwhals._namespace import Namespace
-
-        return Namespace
+        return _version_namespace(self)
 
     @property
     def dtypes(self) -> DTypes:
-        if self is Version.V1:
-            from narwhals.stable.v1 import dtypes as dtypes_v1
-
-            return dtypes_v1
-        if self is Version.V2:
-            from narwhals.stable.v2 import dtypes as dtypes_v2
-
-            return dtypes_v2
-        from narwhals import dtypes
-
-        return dtypes
+        return _version_dtypes(self)
 
     @property
     def dataframe(self) -> type[DataFrame[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-            return DataFrameV1
-        if self is Version.V2:
-            from narwhals.stable.v2 import DataFrame as DataFrameV2
-
-            return DataFrameV2
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame
+        return _version_dataframe(self)
 
     @property
     def lazyframe(self) -> type[LazyFrame[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1 import LazyFrame as LazyFrameV1
-
-            return LazyFrameV1
-        if self is Version.V2:
-            from narwhals.stable.v2 import LazyFrame as LazyFrameV2
-
-            return LazyFrameV2
-        from narwhals.dataframe import LazyFrame
-
-        return LazyFrame
+        return _version_lazyframe(self)
 
     @property
     def series(self) -> type[Series[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1 import Series as SeriesV1
+        return _version_series(self)
 
-            return SeriesV1
-        if self is Version.V2:
-            from narwhals.stable.v2 import Series as SeriesV2
 
-            return SeriesV2
-        from narwhals.series import Series
+@lru_cache(maxsize=3)
+def _version_namespace(version: Version, /) -> type[Namespace[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1._namespace import Namespace as NamespaceV1
 
-        return Series
+        return NamespaceV1
+    if version is Version.V2:
+        from narwhals.stable.v2._namespace import Namespace as NamespaceV2
+
+        return NamespaceV2
+    from narwhals._namespace import Namespace
+
+    return Namespace
+
+
+@lru_cache(maxsize=3)
+def _version_dtypes(version: Version, /) -> DTypes:
+    if version is Version.V1:
+        from narwhals.stable.v1 import dtypes as dtypes_v1
+
+        return dtypes_v1
+    if version is Version.V2:
+        from narwhals.stable.v2 import dtypes as dtypes_v2
+
+        return dtypes_v2
+    from narwhals import dtypes
+
+    return dtypes
+
+
+@lru_cache(maxsize=3)
+def _version_dataframe(version: Version, /) -> type[DataFrame[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1
+    if version is Version.V2:
+        from narwhals.stable.v2 import DataFrame as DataFrameV2
+
+        return DataFrameV2
+    from narwhals.dataframe import DataFrame
+
+    return DataFrame
+
+
+@lru_cache(maxsize=3)
+def _version_lazyframe(version: Version, /) -> type[LazyFrame[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1
+    if version is Version.V2:
+        from narwhals.stable.v2 import LazyFrame as LazyFrameV2
+
+        return LazyFrameV2
+    from narwhals.dataframe import LazyFrame
+
+    return LazyFrame
+
+
+@lru_cache(maxsize=3)
+def _version_series(version: Version, /) -> type[Series[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1
+    if version is Version.V2:
+        from narwhals.stable.v2 import Series as SeriesV2
+
+        return SeriesV2
+    from narwhals.series import Series
+
+    return Series
 
 
 class Implementation(NoAutoEnum):
@@ -390,7 +419,7 @@ class Implementation(NoAutoEnum):
 
     @classmethod
     def from_backend(
-        cls: type[Self], backend: IntoBackend[Backend] | UnknownBackendName
+        cls: type[Self], backend: IntoBackend[Backend | PluginName]
     ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
@@ -1423,6 +1452,38 @@ def _validate_rolling_arguments(
         min_samples = window_size
 
     return window_size, min_samples
+
+
+def _resolve_sample_size(
+    *, n: int | None, fraction: float | None, height: int, with_replacement: bool
+) -> int:
+    """Resolve the concrete number of rows to draw for `DataFrame.sample`/`Series.sample`.
+
+    At most one of `n` or `fraction` may be set; if neither is given a single row is
+    sampled. `fraction` is interpreted relative to `height` and truncated towards zero.
+
+    Raises:
+        ValueError: If both `n` and `fraction` are specified.
+        InvalidOperationError: If the resolved size is negative.
+        ShapeError: If the resolved size exceeds `height` and `with_replacement` is False.
+    """
+    if n is not None and fraction is not None:
+        msg = "cannot specify both `n` and `fraction`"
+        raise ValueError(msg)
+    if n is not None:
+        size = n
+    elif fraction is not None:
+        size = int(height * fraction)
+    else:
+        size = 1
+
+    if size < 0:
+        msg = f"sample size must be a positive integer, found {size}"
+        raise InvalidOperationError(msg)
+    if size > height and not with_replacement:
+        msg = "cannot take a larger sample than the total population when `with_replacement=false`"
+        raise ShapeError(msg)
+    return size
 
 
 def generate_repr(header: str, native_repr: str) -> str:
