@@ -1311,6 +1311,9 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().drop_nulls(subset=subset)
 
+    def equals(self, other: Self, *, null_equal: bool = True) -> bool:
+        return self._compliant_frame.equals(other._compliant_frame, null_equal=null_equal)
+
     def with_row_index(
         self, name: str = "index", *, order_by: str | Sequence[str] | None = None
     ) -> Self:

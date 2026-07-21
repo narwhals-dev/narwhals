@@ -1218,6 +1218,25 @@ class PandasLikeSeries(EagerSeries[Any]):
             raise TypeError(msg)
         return PandasLikeSeriesStructNamespace(self)
 
+    def equals(
+        self, other: Self, *, check_dtypes: bool, check_names: bool, null_equal: bool
+    ) -> bool:
+        if check_names and self._name != other._name:
+            return False
+        if check_dtypes and self.dtype != other.dtype:
+            return False
+        if not null_equal:
+            if len(self) != len(other):
+                return False  # not needed but can short-circuit the isna() checks below
+            if self.native.isna().any() or other.native.isna().any():
+                return False
+        other_native = (
+            other.native.astype(self.native.dtype)
+            if not check_dtypes and self.native.dtype != other.native.dtype
+            else other.native
+        )
+        return self.native.equals(other_native)
+
 
 class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
     _series: PandasLikeSeries
