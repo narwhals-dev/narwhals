@@ -7,12 +7,12 @@ Here's where the more important one's will incubate[^1].
 
 ## `ExprIR` & `Function`
 - [ ] Remove [`ir.Column` and `ir.Len` aliases](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/docs/api-reference-plan/ir/expr-ir/index.md#L3)
-- [ ] Rename `ExprIR` -> `Expr`, `NamedIR` -> `NamedExpr` ([cudf-polars](./inspired.md#cudf-polars))
+- [ ] Rename `ExprIR` -> `Expr`, `NamedIR` -> `NamedExpr` ([cudf-polars](../inspired.md#cudf-polars))
 - [ ] Rename [`RenameAlias` -> `MapAlias`](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/src/narwhals/_plan/expressions/name.py#L43-L44)
 - [ ] Rename [`OverOrdered.sort_options` -> `OverOrdered.options`](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/src/narwhals/_plan/expressions/expr.py#L280-L283)
 - [ ] More ergonomic module/sub-package namespacing
     - [ ] [`Function` and friends](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/src/narwhals/_plan/expressions/functions.py#L3-L5)
-    - [ ] `_build` for many things in [misc](../api-reference-plan/ir/misc.md)
+    - [ ] `_build` for many things in [misc](../../api-reference-plan/ir/misc.md)
 - [ ] Split and finish [`MetaNamespace` -> (`IRMetaNamespace`, `ExprMetaNamespace`)](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/src/narwhals/_plan/meta.py#L124-L141)
 - [ ] Opening up [`_parse.py`](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/src/narwhals/_plan/_parse.py) for extension
     - **PandasLike pre-requisite** ([because why use names for column names?](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/docs/plan/related-issues.md?plain=1#L105-L109))

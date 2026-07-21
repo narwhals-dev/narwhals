@@ -1,6 +1,6 @@
 # Improve Eager-only window expansion
 
-The performance problem mentioned in [Window functions](./why.md#exprseries) can be solved, but first we need to understand it.
+The performance problem mentioned in [Window functions](../why.md#exprseries) can be solved, but first we need to understand it.
 
 ## Example
 

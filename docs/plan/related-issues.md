@@ -111,7 +111,7 @@
 
 
 [`narwhals/_plan/_parse.py`]: https://github.com/narwhals-dev/narwhals/blob/958094160d8a48bf1041ee62d0979bf66b1eec17/src/narwhals/_plan/_parse.py
-[Plugins]: ../api-reference-plan/plugins.md#plugins
+[Plugins]: ../api-reference-plan/plugins.md
 
 ## Cross-polination
 Ideas that have already filtered back in some form

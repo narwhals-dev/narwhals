@@ -28,7 +28,7 @@
 Since ([#2483]) we've had another rewrite in ([#3152]) that updated the internals of [`narwhals.expr.Expr`][] [^1] and [`CompliantExpr`](https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_compliant/expr.py) [^2].  
 *But* these internals are still quite different to what you'll find reading the source of [related projects].
 
-[^1]: See [how it works](./how_it_works.md#nodes)
+[^1]: See [how it works](../how_it_works.md#nodes)
 [^2]: See [`_expression_parsing.py`](https://github.com/narwhals-dev/narwhals/blob/967e6108416b532314d6f2b2b47bdc7b6442662c/src/narwhals/_expression_parsing.py)
 
 [#2483]: https://github.com/narwhals-dev/narwhals/pull/2483
@@ -73,7 +73,7 @@ But when they collide, it tends to be something like:
 ## The problem(s)
 ### *"An expression is a function from a DataFrame to a sequence of Series."*
 
-In [How it works - theory](./how_it_works.md#theory), this quote is hard to miss but how true is it?
+In [How it works - theory](../how_it_works.md#theory), this quote is hard to miss but how true is it?
 
 We'll explore a few angles:
 
@@ -171,7 +171,7 @@ API(s) we can/do use for implementing each concept vary:
     [5]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_arrow/expr.py#L222
     [6]: https://github.com/narwhals-dev/narwhals/blob/d43b9e110c5b322fd1c94bd99ae4a6a958a28adb/src/narwhals/_arrow/group_by.py#L32-L190
 
-
+    ###### Window functions
     On `main`, Pandas ([1], [2]) and PyArrow [3] implement `CompliantExpr.over` in unique ways.  
     Pandas is operating almost entirely natively [^20], whereas PyArrow reuses ([4], [5]) our `group_by` [6] support.
 
