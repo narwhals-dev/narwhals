@@ -1,0 +1,9 @@
+{% macro project_card(name, homepage, logo) %}
+<div class="project-card">
+  <a href="{{ homepage }}" aria-label="{{ name }} homepage">
+    <img src="{{ logo }}" alt="{{ name }}">
+    <hr/>
+    <h3>{{ name }}</h3>
+  </a>
+</div>
+{% endmacro %}

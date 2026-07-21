@@ -87,6 +87,7 @@ nav = [
 
 extra_css = [
     "css/extra.css",
+    "css/cards.css",
     "https://unpkg.com/katex@0/dist/katex.min.css",
 ]
 extra_javascript = [
@@ -152,8 +153,14 @@ custom_fences = [
 ]
 
 [project.markdown_extensions.pymdownx.emoji]
-emoji_index = "zensical.extensions.emoji.twemoji" 
+emoji_index = "zensical.extensions.emoji.twemoji"
 emoji_generator = "zensical.extensions.emoji.to_svg"
 
 [project.markdown_extensions.pymdownx.arithmatex]
 generic = true
+
+[project.markdown_extensions.zensical.extensions.macros]
+include_dir = "docs/includes"
+
+[project.markdown_extensions.zensical.extensions.macros.include_yaml]
+projects = "docs/data/projects.yml"
