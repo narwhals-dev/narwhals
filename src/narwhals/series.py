@@ -991,6 +991,14 @@ class Series(Generic[IntoSeriesT]):
               ]
             ]
         """
+        if (
+            isinstance(other, Iterable)
+            and not isinstance(other, (str, bytes))
+            and iter(other) is other
+        ):
+            # One-shot iterators (e.g. generators) can only be consumed once,
+            # which some backends don't handle; materialise so they can reuse it.
+            other = list(other)
         return self._with_compliant(
             self._compliant_series.is_in(to_native(other, pass_through=True))
         )

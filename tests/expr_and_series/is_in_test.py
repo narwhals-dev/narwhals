@@ -1,13 +1,26 @@
 from __future__ import annotations
 
 import re
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 data = {"a": [1, 4, 2, 5]}
+
+# `is_in` documents and accepts any non-str/bytes `Iterable`, but only `list` was
+# tested. One-shot iterators (e.g. generators) used to raise on some backends.
+iterable_factories: list[Callable[[], Any]] = [
+    lambda: (4, 5),
+    lambda: {4, 5},
+    lambda: range(4, 6),
+    lambda: (x for x in (4, 5)),  # one-shot generator (the regression)
+]
 
 
 def test_expr_is_in(constructor: Constructor) -> None:
@@ -29,6 +42,28 @@ def test_expr_is_in_empty_list(constructor: Constructor) -> None:
 def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": ser.is_in([4, 5])}
+    expected = {"a": [False, True, False, True]}
+
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("make_other", iterable_factories)
+def test_expr_is_in_iterables(
+    constructor: Constructor, make_other: Callable[[], Any]
+) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").is_in(make_other()))
+    expected = {"a": [False, True, False, True]}
+
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("make_other", iterable_factories)
+def test_ser_is_in_iterables(
+    constructor_eager: ConstructorEager, make_other: Callable[[], Any]
+) -> None:
+    ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = {"a": ser.is_in(make_other())}
     expected = {"a": [False, True, False, True]}
 
     assert_equal_data(result, expected)
