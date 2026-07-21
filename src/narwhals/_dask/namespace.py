@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
+        NormalizedPath,
     )
 
 
@@ -65,13 +66,13 @@ class DaskNamespace(
         self._version = version
 
     def scan_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> DaskLazyFrame:
         validate_separators(separator, ("sep",), kwds)
         native = dd.read_csv(source, sep=separator, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: str, **kwds: Any) -> DaskLazyFrame:
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DaskLazyFrame:
         return self._lazyframe.from_native(dd.read_parquet(source, **kwds), context=self)
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:

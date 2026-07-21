@@ -25,7 +25,13 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 
 class IbisNamespace(
@@ -50,13 +56,13 @@ class IbisNamespace(
         return IbisLazyFrame
 
     def scan_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> IbisLazyFrame:
         validate_separators(separator, ("sep",), kwds)
         native = ibis.read_csv(source, sep=separator, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: str, **kwds: Any) -> IbisLazyFrame:
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> IbisLazyFrame:
         native = ibis.read_parquet(source, **kwds)
         return self._lazyframe.from_native(native, context=self)
 

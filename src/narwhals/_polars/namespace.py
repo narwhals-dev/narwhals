@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, TimeUnit, _2DArray
+    from narwhals.typing import Into1DArray, IntoDType, NormalizedPath, TimeUnit, _2DArray
 
 
 class PolarsNamespace:
@@ -116,21 +116,21 @@ class PolarsNamespace:
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
     def read_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> PolarsDataFrame:
         native = pl.read_csv(source, separator=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
     def scan_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> PolarsLazyFrame:
         native = pl.scan_csv(source, separator=separator, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
-    def read_parquet(self, source: str, **kwds: Any) -> PolarsDataFrame:
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PolarsDataFrame:
         return self._dataframe.from_native(pl.read_parquet(source, **kwds), context=self)
 
-    def scan_parquet(self, source: str, **kwds: Any) -> PolarsLazyFrame:
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> PolarsLazyFrame:
         return self._lazyframe.from_native(pl.scan_parquet(source, **kwds), context=self)
 
     @requires.backend_version(

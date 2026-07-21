@@ -26,7 +26,12 @@ if TYPE_CHECKING:
     from typing import TypeAlias
 
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 
 Incomplete: TypeAlias = Any
@@ -71,14 +76,14 @@ class PandasLikeNamespace(
         self._version = version
 
     def read_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> PandasLikeDataFrame:
         validate_separators(separator, ("sep",), kwds)
         ns = self._implementation.to_native_namespace()
         native = ns.read_csv(source, sep=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
-    def read_parquet(self, source: str, **kwds: Any) -> PandasLikeDataFrame:
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PandasLikeDataFrame:
         ns = self._implementation.to_native_namespace()
         return self._dataframe.from_native(ns.read_parquet(source, **kwds), context=self)
 

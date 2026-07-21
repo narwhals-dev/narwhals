@@ -25,7 +25,12 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
     from narwhals._utils import Version
-    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 
 class ArrowNamespace(
@@ -49,7 +54,7 @@ class ArrowNamespace(
         self._version = version
 
     def read_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> ArrowDataFrame:
         from pyarrow import csv
 
@@ -64,7 +69,7 @@ class ArrowNamespace(
             kwds["parse_options"] = csv.ParseOptions(delimiter=separator)
         return self._dataframe.from_native(csv.read_csv(source, **kwds), context=self)
 
-    def read_parquet(self, source: str, **kwds: Any) -> ArrowDataFrame:
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> ArrowDataFrame:
         from pyarrow import parquet as pq
 
         return self._dataframe.from_native(pq.read_table(source, **kwds), context=self)

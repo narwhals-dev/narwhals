@@ -31,7 +31,13 @@ if TYPE_CHECKING:
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
     from narwhals._spark_like.utils import SparkReader, SparkSession
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 # Adjust slight SQL vs PySpark differences
 FUNCTION_REMAPPINGS = {
@@ -78,7 +84,7 @@ class SparkLikeNamespace(
         return cast("SparkSession", session).read.format(fmt)
 
     def scan_csv(
-        self, source: str, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> SparkLikeLazyFrame:
         validate_separators(separator, ("sep", "delimiter"), kwds)
         reader = self._session_reader("csv", kwds)
@@ -89,7 +95,7 @@ class SparkLikeNamespace(
         )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: str, **kwds: Any) -> SparkLikeLazyFrame:
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> SparkLikeLazyFrame:
         reader = self._session_reader("parquet", kwds)
         native = (
             reader.load(source)
