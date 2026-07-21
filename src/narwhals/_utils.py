@@ -129,6 +129,7 @@ if TYPE_CHECKING:
         IntoSeriesT,
         MultiIndexSelector,
         NestedLiteral,
+        NormalizedPath,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -2157,8 +2158,10 @@ def validate_separators(
 
 if sys.platform != "win32":
 
-    def normalize_path(source: FileSource, /) -> str:
-        return source if isinstance(source, str) else str(Path(source))
+    def normalize_path(source: FileSource, /) -> NormalizedPath:
+        from narwhals.typing import NormalizedPath
+
+        return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
@@ -2166,8 +2169,10 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    def normalize_path(source: FileSource, /) -> str:
-        return Path(source).as_posix()
+    def normalize_path(source: FileSource, /) -> NormalizedPath:
+        from narwhals.typing import NormalizedPath
+
+        return NormalizedPath(Path(source).as_posix())
 
 
 def extend_bool(
