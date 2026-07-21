@@ -24,6 +24,9 @@ Here's where the more important one's will incubate[^1].
     - [narwhals/_plan/altair/api/aggregate.py](https://github.com/narwhals-dev/narwhals/blob/0a614b4f2f04cdadcc9e6a7bf177ba87945ca546/src/narwhals/_plan/altair/api/aggregate.py)
 - [ ] Explore `ExtensionFunction` support ([hinted at](https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/src/narwhals/_plan/expressions/function_expr.py#L300-L305))
     - Main concerns: managing a registry; support user-implementation *for* builtin backends; minimizing the number of dances you need to do
+- [ ] Make sense of `is_scalar`, `changes_length`, `is_length_preserving` ([1](https://github.com/narwhals-dev/narwhals/blob/88a15e51efa2ff11092bdd87fe4a30cbd042aa43/src/narwhals/_plan/_nodes.py#L54-L63), [2](https://github.com/narwhals-dev/narwhals/blob/88a15e51efa2ff11092bdd87fe4a30cbd042aa43/src/narwhals/_plan/_expr_ir.py#L302-L356))
+    - [ ] Review upstream changes in (https://github.com/pola-rs/polars/issues/27198), which replaced  `is_scalar`, `is_length_preserving`
+    - [ ] **Ensure the next solution can be explained!**
 
 ## Compliant
 [more flexible signatures for CompliantColumn methods]: https://github.com/narwhals-dev/narwhals/blob/68fb935cac85b5f69ef0232922611fe9df98c6c9/docs/plan/whats-new/behind-the-scenes.md?plain=1#L36-L38
