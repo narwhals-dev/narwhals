@@ -96,7 +96,7 @@ In all cases:
 - `source` is a plain string at runtime: `NormalizedPath` is a `str`
   [`NewType`](https://docs.python.org/3/library/typing.html#newtype) tagging that
   Narwhals has already normalized `Path` and path-like inputs before dispatching to the
-  namespace. Implementations are free to annotate `source: str` instead.
+  namespace.
 - `kwds` are forwarded to the native reader, and it is the namespace's responsibility
   to translate `separator` into whatever its native CSV reader expects (and to raise if
   the two conflict).
