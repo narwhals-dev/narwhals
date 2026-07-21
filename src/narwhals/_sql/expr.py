@@ -398,6 +398,15 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __or__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__or__(other), other)
 
+    def __xor__(self, other: Self) -> Self:
+        # SQL backends lack a native `^`; emulate via (a | b) & ~(a & b).
+        return self._with_binary(
+            lambda expr, other: expr.__or__(other).__and__(
+                expr.__and__(other).__invert__()
+            ),
+            other,
+        )
+
     def __floordiv__(self, other: Self) -> Self:
         def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
             return self._when(

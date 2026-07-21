@@ -277,6 +277,10 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
         (ncs.boolean() & True, ["d"]),
         (ncs.boolean() | True, ["d"]),
         (ncs.numeric() - 1, ["a", "c"]),
+        (ncs.numeric() ^ ncs.boolean(), ["a", "c", "d"]),
+        (ncs.numeric() ^ ncs.by_dtype(nw.Int64), ["c"]),
+        (ncs.by_dtype(nw.Int64) ^ ncs.numeric(), ["c"]),
+        (ncs.numeric() ^ ncs.numeric(), []),
         (ncs.all(), ["a", "b", "c", "d"]),
     ],
 )
@@ -309,6 +313,13 @@ def test_subtract_expr(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_xor_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(ncs.boolean() ^ nw.col("d"))
+    expected = {"d": [False, False, False]}
+    assert_equal_data(result, expected)
+
+
 def test_set_ops_invalid(constructor: Constructor) -> None:
     df = nw.from_native(constructor(data))
     with pytest.raises((NotImplementedError, ValueError)):
@@ -317,6 +328,8 @@ def test_set_ops_invalid(constructor: Constructor) -> None:
         df.select(1 | ncs.numeric())
     with pytest.raises((NotImplementedError, ValueError)):
         df.select(1 & ncs.numeric())
+    with pytest.raises((NotImplementedError, TypeError, ValueError)):
+        df.select(1 ^ ncs.numeric())
 
     with pytest.raises(
         TypeError,
