@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 from narwhals._expression_parsing import ExprKind, ExprNode
@@ -13,10 +12,11 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     _validate_rolling_arguments,
+    eager_namespace,
+    eager_namespace_from_compliant,
     ensure_type,
     generate_repr,
     is_compliant_series,
-    is_eager_allowed,
     is_index_selector,
     qualified_type_name,
     supports_arrow_c_stream,
@@ -165,19 +165,16 @@ class Series(Generic[IntoSeriesT]):
             raise ValueError(msg)
         if dtype:
             _validate_into_dtype(dtype)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns.from_numpy(values).alias(name)
-            if dtype:
-                return cls(compliant.cast(dtype), level="full")
-            return cls(compliant, level="full")
-        msg = (  # pragma: no cover
-            f"{implementation} support in Narwhals is lazy-only, but `Series.from_numpy` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.Series.from_numpy(arr, backend='pyarrow').to_frame().lazy('{implementation}')"
+        ns = eager_namespace(
+            backend,
+            version=cls._version,
+            function_name="Series.from_numpy",
+            hint_example="nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
         )
-        raise ValueError(msg)  # pragma: no cover
+        compliant = ns._series.from_numpy(values, context=ns).alias(name)
+        if dtype:
+            return cls(compliant.cast(dtype), level="full")
+        return cls(compliant, level="full")
 
     @classmethod
     def from_iterable(
@@ -227,19 +224,14 @@ class Series(Generic[IntoSeriesT]):
         if not isinstance(values, Iterable):
             msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
             raise TypeError(msg)
-        implementation = Implementation.from_backend(backend)
-        if is_eager_allowed(implementation):
-            ns = cls._version.namespace.from_backend(implementation).compliant
-            compliant = ns._series.from_iterable(
-                values, context=ns, name=name, dtype=dtype
-            )
-            return cls(compliant, level="full")
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `Series.from_iterable` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
+        ns = eager_namespace(
+            backend,
+            version=cls._version,
+            function_name="Series.from_iterable",
+            hint_example="nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
         )
-        raise ValueError(msg)
+        compliant = ns._series.from_iterable(values, context=ns, name=name, dtype=dtype)
+        return cls(compliant, level="full")
 
     implementation: _Implementation = _Implementation()
     """Return [`narwhals.Implementation`][] of native Series.
@@ -433,9 +425,18 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
-        into_series = partial(
-            type(self).from_iterable, name="", backend=self.implementation
-        )
+        impl = self.implementation
+
+        def into_series(values: Any, dtype: IntoDType | None = None) -> Series[Any]:
+            if impl is Implementation.UNKNOWN:  # type: ignore[comparison-overlap]
+                ns = eager_namespace_from_compliant(
+                    self._compliant_series, function_name="Series.scatter"
+                )
+                compliant = ns._series.from_iterable(
+                    values, context=ns, name="", dtype=dtype
+                )
+                return self._with_compliant(compliant)
+            return type(self).from_iterable("", values, dtype, backend=impl)
 
         if not isinstance(indices, Series):
             if not isinstance(indices, Iterable):
