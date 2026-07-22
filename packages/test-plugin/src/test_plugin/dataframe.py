@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals import DataFrame, LazyFrame  # noqa: F401
+    from narwhals import DataFrame, LazyFrame
     from narwhals._utils import _LimitedContext
 
 DictFrame: TypeAlias = dict[str, list[Any]]
@@ -109,6 +109,9 @@ class DictLazyFrame(
     def __narwhals_lazyframe__(self) -> Self:
         return self
 
+    def to_narwhals(self) -> LazyFrame[Any]:
+        return self._version.lazyframe(self, level="lazy")
+
     @property
     def columns(self) -> list[str]:  # pragma: no cover
         return list(self._native_frame.keys())
@@ -150,7 +153,6 @@ class DictLazyFrame(
     sink_parquet = not_implemented()
     sort = not_implemented()
     tail = not_implemented()
-    to_narwhals = not_implemented()
     unique = not_implemented()
     unpivot = not_implemented()
     with_columns = not_implemented()
