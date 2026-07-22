@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, NewType, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
 from narwhals._native import (
@@ -374,6 +374,13 @@ Either a string or an object that implements [`__fspath__`], such as [`pathlib.P
 [`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
 """
 
+NormalizedPath = NewType("NormalizedPath", str)
+"""A [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_path`.
+
+The compliant-namespace IO methods (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
+take an already-normalized path and forward `kwds` to the native reader.
+"""
+
 
 # Annotations for `__getitem__` methods
 _T = TypeVar("_T")
@@ -406,6 +413,7 @@ __all__ = [
     "CompliantSeries",
     "DataFrameT",
     "EagerAllowed",
+    "FileSource",
     "Frame",
     "FrameT",
     "IntoBackend",
@@ -419,4 +427,5 @@ __all__ = [
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",
+    "NormalizedPath",
 ]

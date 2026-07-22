@@ -18,6 +18,7 @@ from narwhals._utils import (
     deprecate_native_namespace,
     eager_namespace,
     flatten,
+    is_eager_allowed,
     is_nested_literal,
     is_sequence_of,
     normalize_path,
@@ -32,9 +33,9 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.plugins import _backend_namespace, _plugin_hook
+from narwhals.plugins import _plugin_io_namespace
 from narwhals.schema import Schema
-from narwhals.translate import from_native, to_native
+from narwhals.translate import to_native
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -42,9 +43,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self, TypeIs
 
-    from narwhals._native import NativeDataFrame, NativeLazyFrame
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import Backend, EagerAllowed, IntoBackend
+    from narwhals._typing import Backend, EagerAllowed, IntoBackend, PluginName
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -170,7 +170,7 @@ def new_series(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -212,7 +212,7 @@ def _new_series_impl(
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> Series[Any]:
     ns = eager_namespace(
         backend,
@@ -229,7 +229,7 @@ def from_dict(
     data: Mapping[str, Any],
     schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
-    backend: IntoBackend[EagerAllowed] | None = None,
+    backend: IntoBackend[EagerAllowed | PluginName] | None = None,
     native_namespace: ModuleType | None = None,  # noqa: ARG001
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
@@ -305,7 +305,7 @@ def from_dicts(
     data: Sequence[Mapping[str, Any]],
     schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
@@ -366,7 +366,7 @@ def from_numpy(
     data: _2DArray,
     schema: IntoSchema | Sequence[str] | None = None,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -440,7 +440,7 @@ def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
 
 
 def from_arrow(
-    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
+    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed | PluginName]
 ) -> DataFrame[Any]:  # pragma: no cover
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -567,37 +567,10 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
-def _validate_separators(
-    separator: str, native_separators: tuple[str, ...], **kwargs: Any
-) -> None:
-    for native_separator in native_separators:
-        if native_separator in kwargs and kwargs[native_separator] != separator:
-            msg = (
-                f"`separator` and `{native_separator}` do not match: "
-                f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
-            )
-            raise TypeError(msg)
-
-
-def _validate_separator_pyarrow(separator: str, **kwargs: Any) -> Any:
-    if "parse_options" in kwargs:
-        parse_options = kwargs.pop("parse_options")
-        if parse_options.delimiter != separator:
-            msg = (
-                "`separator` and `parse_options.delimiter` do not match: "
-                f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
-            )
-            raise TypeError(msg)
-        return kwargs
-    from pyarrow import csv  # ignore-banned-import
-
-    return {"parse_options": csv.ParseOptions(delimiter=separator)}
-
-
 def read_csv(
     source: FileSource,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
     separator: str = ",",
     **kwargs: Any,
 ) -> DataFrame[Any]:
@@ -629,50 +602,28 @@ def read_csv(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
-    native_namespace = (
-        _backend_namespace(backend)
-        if impl is Implementation.UNKNOWN
-        else impl.to_native_namespace()
+    if is_eager_allowed(impl):
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+        frame = ns.read_csv(normalize_path(source), separator=separator, **kwargs)
+        return frame.to_narwhals()
+    if impl is Implementation.UNKNOWN:
+        plugin_ns = _plugin_io_namespace(backend, "read_csv", version=Version.MAIN)
+        plugin_frame = plugin_ns.read_csv(
+            normalize_path(source), separator=separator, **kwargs
+        )
+        result: DataFrame[Any] = plugin_frame.to_narwhals()
+        return result
+    msg = (
+        f"Expected eager backend, found {impl}.\n\n"
+        f"Hint: use nw.scan_csv(source={source}, backend={backend})"
     )
-    native_frame: NativeDataFrame
-    if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
-        _validate_separators(separator, ("sep",), **kwargs)
-        native_frame = native_namespace.read_csv(
-            normalize_path(source), sep=separator, **kwargs
-        )
-    elif impl is Implementation.POLARS:
-        native_frame = native_namespace.read_csv(
-            normalize_path(source), separator=separator, **kwargs
-        )
-    elif impl is Implementation.PYARROW:
-        kwargs = _validate_separator_pyarrow(separator, **kwargs)
-        from pyarrow import csv  # ignore-banned-import
-
-        native_frame = csv.read_csv(source, **kwargs)
-    elif impl in {
-        Implementation.PYSPARK,
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    }:
-        msg = (
-            f"Expected eager backend, found {impl}.\n\n"
-            f"Hint: use nw.scan_csv(source={source}, backend={backend})"
-        )
-        raise ValueError(msg)
-    else:
-        native_frame = _plugin_hook(native_namespace, "read_csv")(
-            normalize_path(source), separator=separator, **kwargs
-        )
-    return from_native(native_frame, eager_only=True)
+    raise ValueError(msg)
 
 
 def scan_csv(
     source: FileSource,
     *,
-    backend: IntoBackend[Backend],
+    backend: IntoBackend[Backend | PluginName],
     separator: str = ",",
     **kwargs: Any,
 ) -> LazyFrame[Any]:
@@ -709,56 +660,18 @@ def scan_csv(
         │ z       │     3 │
         └─────────┴───────┘
     """
-    implementation = Implementation.from_backend(backend)
-    native_namespace = (
-        _backend_namespace(backend)
-        if implementation is Implementation.UNKNOWN
-        else implementation.to_native_namespace()
-    )
-    native_frame: NativeDataFrame | NativeLazyFrame
-    source = normalize_path(source)
-    if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-        Implementation.DASK,
-        Implementation.IBIS,
-    }:
-        _validate_separators(separator, ("sep",), **kwargs)
-        native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
-    elif implementation is Implementation.DUCKDB:
-        _validate_separators(separator, ("delimiter", "delim", "sep"), **kwargs)
-        native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
-    elif implementation is Implementation.PYARROW:
-        kwargs = _validate_separator_pyarrow(separator, **kwargs)
-        from pyarrow import csv  # ignore-banned-import
-
-        native_frame = csv.read_csv(source, **kwargs)
-    elif implementation.is_spark_like():
-        _validate_separators(separator, ("sep", "delimiter"), **kwargs)
-        if (session := kwargs.pop("session", None)) is None:
-            msg = "Spark like backends require a session object to be passed in `kwargs`."
-            raise ValueError(msg)
-        csv_reader = session.read.format("csv")
-        native_frame = (
-            csv_reader.load(source, sep=separator)
-            if (
-                implementation is Implementation.SQLFRAME
-                and implementation._backend_version() < (3, 27, 0)
-            )
-            else csv_reader.options(sep=separator, **kwargs).load(source)
-        )
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.UNKNOWN:
+        ns: Any = _plugin_io_namespace(backend, "scan_csv", version=Version.MAIN)
     else:
-        native_frame = _plugin_hook(native_namespace, "scan_csv")(
-            source, separator=separator, **kwargs
-        )
-    return from_native(native_frame).lazy()
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+    frame = ns.scan_csv(normalize_path(source), separator=separator, **kwargs)
+    result: LazyFrame[Any] = frame.to_narwhals().lazy()
+    return result
 
 
 def read_parquet(
-    source: FileSource, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
@@ -792,46 +705,24 @@ def read_parquet(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
-    native_namespace = (
-        _backend_namespace(backend)
-        if impl is Implementation.UNKNOWN
-        else impl.to_native_namespace()
+    if is_eager_allowed(impl):
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+        frame = ns.read_parquet(normalize_path(source), **kwargs)
+        return frame.to_narwhals()
+    if impl is Implementation.UNKNOWN:
+        plugin_ns = _plugin_io_namespace(backend, "read_parquet", version=Version.MAIN)
+        plugin_frame = plugin_ns.read_parquet(normalize_path(source), **kwargs)
+        result: DataFrame[Any] = plugin_frame.to_narwhals()
+        return result
+    msg = (
+        f"Expected eager backend, found {impl}.\n\n"
+        f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
     )
-    native_frame: NativeDataFrame
-    if impl in {
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
-        source = normalize_path(source)
-        native_frame = native_namespace.read_parquet(source, **kwargs)
-    elif impl is Implementation.PYARROW:
-        import pyarrow.parquet as pq  # ignore-banned-import
-
-        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
-    elif impl in {
-        Implementation.PYSPARK,
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    }:
-        msg = (
-            f"Expected eager backend, found {impl}.\n\n"
-            f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
-        )
-        raise ValueError(msg)
-    else:
-        native_frame = _plugin_hook(native_namespace, "read_parquet")(
-            normalize_path(source), **kwargs
-        )
-    return from_native(native_frame, eager_only=True)
+    raise ValueError(msg)
 
 
 def scan_parquet(
-    source: FileSource, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -892,46 +783,14 @@ def scan_parquet(
         |  b: [[4,5]]      |
         └──────────────────┘
     """
-    implementation = Implementation.from_backend(backend)
-    native_namespace = (
-        _backend_namespace(backend)
-        if implementation is Implementation.UNKNOWN
-        else implementation.to_native_namespace()
-    )
-    native_frame: NativeDataFrame | NativeLazyFrame
-    source = normalize_path(source)
-    if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_parquet(source, **kwargs)
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-    }:
-        native_frame = native_namespace.read_parquet(source, **kwargs)
-    elif implementation is Implementation.PYARROW:
-        import pyarrow.parquet as pq  # ignore-banned-import
-
-        native_frame = pq.read_table(source, **kwargs)
-    elif implementation.is_spark_like():
-        if (session := kwargs.pop("session", None)) is None:
-            msg = "Spark like backends require a session object to be passed in `kwargs`."
-            raise ValueError(msg)
-        pq_reader = session.read.format("parquet")
-        native_frame = (
-            pq_reader.load(source)
-            if (
-                implementation is Implementation.SQLFRAME
-                and implementation._backend_version() < (3, 27, 0)
-            )
-            else pq_reader.options(**kwargs).load(source)
-        )
-
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.UNKNOWN:
+        ns: Any = _plugin_io_namespace(backend, "scan_parquet", version=Version.MAIN)
     else:
-        native_frame = _plugin_hook(native_namespace, "scan_parquet")(source, **kwargs)
-    return from_native(native_frame).lazy()
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+    frame = ns.scan_parquet(normalize_path(source), **kwargs)
+    result: LazyFrame[Any] = frame.to_narwhals().lazy()
+    return result
 
 
 def col(*names: str | Iterable[str]) -> Expr:

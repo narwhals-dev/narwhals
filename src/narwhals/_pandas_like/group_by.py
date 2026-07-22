@@ -369,11 +369,11 @@ class PandasLikeGroupBy(
 
         def fn(df: pd.DataFrame) -> pd.Series[Any]:
             compliant = self.compliant._with_native(df)
-            results = (
+            results = [
                 (keys.native.iloc[0], keys.name)
                 for expr in exprs
                 for keys in expr(compliant)
-            )
+            ]
             out_group, out_names = zip(*results, strict=True) if results else ([], [])
             return into_series(out_group, index=out_names, context=ns).native
 

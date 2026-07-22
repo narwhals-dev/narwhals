@@ -102,6 +102,7 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Backend,
         IntoBackend,
+        PluginName,
         _ArrowImpl,
         _CuDFImpl,
         _DaskImpl,
@@ -130,6 +131,7 @@ if TYPE_CHECKING:
         IntoSeriesT,
         MultiIndexSelector,
         NestedLiteral,
+        NormalizedPath,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -141,8 +143,6 @@ if TYPE_CHECKING:
         _SliceName,
         _SliceNone,
     )
-
-    UnknownBackendName: TypeAlias = str
 
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=LazyFrame[Any] | DataFrame[Any] | Series[Any]
@@ -259,73 +259,98 @@ class Version(Enum):
 
     @property
     def namespace(self) -> type[Namespace[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1._namespace import Namespace as NamespaceV1
-
-            return NamespaceV1
-        if self is Version.V2:
-            from narwhals.stable.v2._namespace import Namespace as NamespaceV2
-
-            return NamespaceV2
-        from narwhals._namespace import Namespace
-
-        return Namespace
+        return _version_namespace(self)
 
     @property
     def dtypes(self) -> DTypes:
-        if self is Version.V1:
-            from narwhals.stable.v1 import dtypes as dtypes_v1
-
-            return dtypes_v1
-        if self is Version.V2:
-            from narwhals.stable.v2 import dtypes as dtypes_v2
-
-            return dtypes_v2
-        from narwhals import dtypes
-
-        return dtypes
+        return _version_dtypes(self)
 
     @property
     def dataframe(self) -> type[DataFrame[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1 import DataFrame as DataFrameV1
-
-            return DataFrameV1
-        if self is Version.V2:
-            from narwhals.stable.v2 import DataFrame as DataFrameV2
-
-            return DataFrameV2
-        from narwhals.dataframe import DataFrame
-
-        return DataFrame
+        return _version_dataframe(self)
 
     @property
     def lazyframe(self) -> type[LazyFrame[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1 import LazyFrame as LazyFrameV1
-
-            return LazyFrameV1
-        if self is Version.V2:
-            from narwhals.stable.v2 import LazyFrame as LazyFrameV2
-
-            return LazyFrameV2
-        from narwhals.dataframe import LazyFrame
-
-        return LazyFrame
+        return _version_lazyframe(self)
 
     @property
     def series(self) -> type[Series[Any]]:
-        if self is Version.V1:
-            from narwhals.stable.v1 import Series as SeriesV1
+        return _version_series(self)
 
-            return SeriesV1
-        if self is Version.V2:
-            from narwhals.stable.v2 import Series as SeriesV2
 
-            return SeriesV2
-        from narwhals.series import Series
+@lru_cache(maxsize=3)
+def _version_namespace(version: Version, /) -> type[Namespace[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1._namespace import Namespace as NamespaceV1
 
-        return Series
+        return NamespaceV1
+    if version is Version.V2:
+        from narwhals.stable.v2._namespace import Namespace as NamespaceV2
+
+        return NamespaceV2
+    from narwhals._namespace import Namespace
+
+    return Namespace
+
+
+@lru_cache(maxsize=3)
+def _version_dtypes(version: Version, /) -> DTypes:
+    if version is Version.V1:
+        from narwhals.stable.v1 import dtypes as dtypes_v1
+
+        return dtypes_v1
+    if version is Version.V2:
+        from narwhals.stable.v2 import dtypes as dtypes_v2
+
+        return dtypes_v2
+    from narwhals import dtypes
+
+    return dtypes
+
+
+@lru_cache(maxsize=3)
+def _version_dataframe(version: Version, /) -> type[DataFrame[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1 import DataFrame as DataFrameV1
+
+        return DataFrameV1
+    if version is Version.V2:
+        from narwhals.stable.v2 import DataFrame as DataFrameV2
+
+        return DataFrameV2
+    from narwhals.dataframe import DataFrame
+
+    return DataFrame
+
+
+@lru_cache(maxsize=3)
+def _version_lazyframe(version: Version, /) -> type[LazyFrame[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1 import LazyFrame as LazyFrameV1
+
+        return LazyFrameV1
+    if version is Version.V2:
+        from narwhals.stable.v2 import LazyFrame as LazyFrameV2
+
+        return LazyFrameV2
+    from narwhals.dataframe import LazyFrame
+
+    return LazyFrame
+
+
+@lru_cache(maxsize=3)
+def _version_series(version: Version, /) -> type[Series[Any]]:
+    if version is Version.V1:
+        from narwhals.stable.v1 import Series as SeriesV1
+
+        return SeriesV1
+    if version is Version.V2:
+        from narwhals.stable.v2 import Series as SeriesV2
+
+        return SeriesV2
+    from narwhals.series import Series
+
+    return Series
 
 
 class Implementation(NoAutoEnum):
@@ -397,7 +422,7 @@ class Implementation(NoAutoEnum):
 
     @classmethod
     def from_backend(
-        cls: type[Self], backend: IntoBackend[Backend] | UnknownBackendName
+        cls: type[Self], backend: IntoBackend[Backend | PluginName]
     ) -> Implementation:
         """Instantiate from native namespace module, string, or Implementation.
 
@@ -1650,7 +1675,7 @@ def _ensure_eager_allowed(
 
 
 def eager_namespace(
-    backend: IntoBackend[Backend],
+    backend: IntoBackend[Backend | PluginName],
     /,
     *,
     version: Version,
@@ -2196,10 +2221,25 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
+def validate_separators(
+    separator: str, native_separators: tuple[str, ...], kwds: Mapping[str, Any], /
+) -> None:
+    """Ensure `separator` does not conflict with backend-native aliases passed via `kwds`."""
+    for native_separator in native_separators:
+        if native_separator in kwds and kwds[native_separator] != separator:
+            msg = (
+                f"`separator` and `{native_separator}` do not match: "
+                f"`separator`={separator} and `{native_separator}`={kwds[native_separator]}."
+            )
+            raise TypeError(msg)
+
+
 if sys.platform != "win32":
 
-    def normalize_path(source: FileSource, /) -> str:
-        return source if isinstance(source, str) else str(Path(source))
+    def normalize_path(source: FileSource, /) -> NormalizedPath:
+        from narwhals.typing import NormalizedPath
+
+        return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
@@ -2207,8 +2247,10 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    def normalize_path(source: FileSource, /) -> str:
-        return Path(source).as_posix()
+    def normalize_path(source: FileSource, /) -> NormalizedPath:
+        from narwhals.typing import NormalizedPath
+
+        return NormalizedPath(Path(source).as_posix())
 
 
 def extend_bool(
