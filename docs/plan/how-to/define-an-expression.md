@@ -338,13 +338,16 @@ There is still work left to do!
 
 
 ### Shape
+#### What is it?
 > 3 We should expect `explode` to change the length of the output column
 
-Here is a good place to look at why I *did not* describe the detail as:
+Now is a good point to look at why we **didn't** describe the detail as:
 
 > 3 We should expect `explode` to ~~change~~ increase the length of the output column
 
 Perhaps this part is obvious, but `explode` can change the shape in lots of ways:
+
+<!---TODO: Replace with markdown_exec--->
 
 ```py
 import polars as pl
@@ -427,80 +430,182 @@ expr = pl.col.a.explode(keep_nulls=False)
     InvalidOperationError: Series a, length 1 doesn't match the DataFrame height of 2
     ```
 
+[^4]: We would need to see the data to know the answer, which an expression cannot do.
 
-<!---TODO: Fix flow--->
+To answer questions about shapes, we have three methods. Our goal is to return `True` for the last one:
 
-`explode`-trivia-aside - from the perspective of an expression all we care about is whether:
+| The output length is ... | Method                                                                                  | `Explode` |
+| ------------------------ | --------------------------------------------------------------------------------------- | --------- |
+| what we started with     | [`ExprIR.is_length_preserving`][narwhals._plan.expressions.ExprIR.is_length_preserving] | `False`   |
+| guaranteed to be `1`     | [`ExprIR.is_scalar`][narwhals._plan.expressions.ExprIR.is_scalar]                       | `False`   |
+| not known[^4] or `>=2`   | [`ExprIR.changes_length`][narwhals._plan.expressions.ExprIR.changes_length]             | `True`    |
 
-1. The output length is what we started with
-2. The output length is guaranteed to be 1
-3. The output length is not known without seeing the data
+??? question "Why are they important?"
 
-We've seen that `explode` can only be described by **3.**. 
-We need to model this because many expressions require inputs to be **1.** or **2.**. 
-Even when this is not the case, length changing expressions can still produce columns that do not match the height the frame they're intended for.
+    Length-changing expressions must be used with care to avoid shape mismatch errors.
 
-The tools we have at our disposal are methods that we can override in `Explode`:
+#### Changing shape
+We'll look at what an `ExprIR` will do by default and the changes we need to make in `Explode` to correct it.
 
-- [`ExprIR.is_length_preserving`][narwhals._plan.expressions.ExprIR.is_length_preserving]
-- [`ExprIR.is_scalar`][narwhals._plan.expressions.ExprIR.is_scalar]
-- [`ExprIR.changes_length`][narwhals._plan.expressions.ExprIR.changes_length]
+<!-- # TODO @dangotbanned: Clean up the setup code!-->
 
-They correspond to the 3 shape-based properties, which we will answer as:
+=== "Setup"
 
-- False
-- False
-- True
+    Let's add a way to see what's happening:
 
-<!---TODO: Show default behavior with:
+    ```python exec="on" source="above" session="shape"
+    from __future__ import annotations
 
-- column = col("values")
-- literal = lit([1, 2, 3])
-- aggregation = First(expr=column)
---->
+    from collections import defaultdict
+    from collections.abc import Iterable
+    from typing import Any
 
+    import polars as pl
 
-<!---TODO: Show updated `Explode`--->
-
-```py
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from narwhals._plan._expr_ir import ExprIR
-from narwhals._plan._nodes import node
-
-if TYPE_CHECKING:
+    from narwhals._plan import expressions as ir
+    from narwhals._plan._expr_ir import ExprIR
+    from narwhals._plan._nodes import node
     from narwhals._plan.options import ExplodeOptions
 
 
-class Explode(ExprIR):
-    __slots__ = ("expr", "options")
-    expr: ExprIR = node(observe_scalar=False)
-    options: ExplodeOptions
+    def describe_shapes(exprs: Iterable[ExprIR]) -> None:
+        columns = defaultdict[str, list[Any]](list)
+        fail = ':lucide-x:'
+        success=':lucide-check:'
+        for e in exprs:
+            columns["Expr"].append(f"`{e!r}`")
+            length_preserving = e.is_length_preserving()
+            columns["`is_length_preserving`"].append(
+                f"{length_preserving!r} {fail if length_preserving else success}"
+            )
+            is_scalar = e.is_scalar()
+            columns["`is_scalar`"].append(f"{is_scalar!r} {fail if is_scalar else success}")
+            changes_length = e.changes_length()
+            columns["`changes_length`"].append(
+                f"{changes_length!r} {success if changes_length else fail}"
+            )
+            df = pl.DataFrame(columns)
+        df = df.vstack(
+            df.select(
+                pl.lit("**Correct**").alias("Expr"),
+                pl.nth(1, 2, 3)
+                .implode()
+                .list.join("")
+                .str.count_matches(success, literal=True)
+                .cast(str),
+            )
+        )
+        with pl.Config(
+            tbl_formatting="MARKDOWN",
+            tbl_hide_dataframe_shape=True,
+            tbl_hide_column_data_types=True,
+            fmt_str_lengths=40,
+        ):
+            print(repr(df))
 
-    def __repr__(self) -> str:
-        opts = []
-        if not self.options.empty_as_null:
-            opts.append("empty_as_null=False")
-        if not self.options.keep_nulls:
-            opts.append("keep_nulls=False")
-        return f"{self.expr!r}.explode({', '.join(opts)})"
 
-    def is_length_preserving(self) -> bool:
-        return False
+    column = ir.col("values")
+    literal = ir.lit([1, 2, 3])
+    aggregation = ir.aggregation.First(expr=column)
+    options = ExplodeOptions(empty_as_null=True, keep_nulls=True)
+    ```
 
-    def changes_length(self) -> bool:
-        return True
-```
+=== "Default"
 
-<!---TODO: Show updated results of checks
+    Although it *may* look like we didn't define anything related to shapes, our usage of [`node`][narwhals._plan._nodes.node] *did*.
 
-"`Explode` is one of the rare cases where an expression has inputs, but they do not contribute the output shape."
---->
+    ```python exec="on" source="above" session="shape"
+    class Explode(ExprIR):
+        __slots__ = ("expr", "options")
+        expr: ExprIR = node()  # (1)!
+        options: ExplodeOptions
+
+        def __repr__(self) -> str:
+            return f"{self.expr!r}.explode()"  # (2)!
+    ```
+
+    1.  Equivalent to `node(observe_scalar=True)`
+    2.  Simplified `__repr__` for this example
+
+    The default is not a good fit for `Explode` because it says *use this input to* evaluate `is_scalar`. 
+    We want the result to always be `False`:
+
+    ```python exec="on" session="shape"
+    exprs = (Explode(expr=e, options=options) for e in (column, literal, aggregation))
+    describe_shapes(exprs)
+    ```
+
+=== "`observe_scalar=False`"
+
+    We'll start by saying *don't use this input to* evaluate `is_scalar`:
+
+    ```python exec="on" source="above" session="shape"
+    class Explode(ExprIR):
+        __slots__ = ("expr", "options")
+        expr: ExprIR = node(observe_scalar=False)
+        options: ExplodeOptions
+
+        def __repr__(self) -> str:
+            return f"{self.expr!r}.explode()"
+    ```
+
+    Now `is_scalar` is always correct, but the other two are always wrong!
+
+    ```python exec="on" session="shape"
+    exprs = (Explode(expr=e, options=options) for e in (column, literal, aggregation))
+    describe_shapes(exprs)
+    ```
+
+=== "Length, length, length"
+
+    Now we fix the other two by overriding from what `ExprIR` gave us:
+
+    ```python exec="on" source="above" session="shape"
+    class Explode(ExprIR):
+        __slots__ = ("expr", "options")
+        expr: ExprIR = node(observe_scalar=False)
+        options: ExplodeOptions
+
+        def __repr__(self) -> str:
+            return f"{self.expr!r}.explode()"
+
+        def is_length_preserving(self) -> bool:
+            return False
+
+        def changes_length(self) -> bool:
+            return True  # (1)!
+    ```
+
+    1.  Always assume the worst-case
+
+    Perfect score!
+
+    ```python exec="on" session="shape"
+    exprs = (Explode(expr=e, options=options) for e in (column, literal, aggregation))
+    describe_shapes(exprs)
+    ```
+
+??? question "How does it work?"
+
+    To learn more, check out:
+
+    - [`node`][narwhals._plan._nodes.node]
+    - [`nodes`][narwhals._plan._nodes.nodes]
+    - [`ExprIR.is_scalar`][narwhals._plan.expressions.ExprIR.is_scalar]
+    - [`ExprIR.__expr_ir_nodes__`][narwhals._plan.expressions.ExprIR.__expr_ir_nodes__]
+
 
 ### DType
-> 2. That expression *should be* ~~`List`~~ `List | String`-typed
+<!---TODO: 
+
+- Where to find in rust
+- Where to override in `ExprIR`
+    - `dtype` parameter for simple stuff
+    - `resolve_dtype` method for complex/one-off things (including raising an exception)
+-->
+
+> 2 That expression *should be* ~~`List`~~ `List | String`-typed
+
 - rust
     - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L220
     - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/aexpr/schema.rs#L87-L98

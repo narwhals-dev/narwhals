@@ -245,6 +245,7 @@ alternate_style = true
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
   { name = "python", class = "python", format = "markdown_exec.formatter", validator = "markdown_exec.validator"},
+  { name = "py", class = "python", format = "markdown_exec.formatter", validator = "markdown_exec.validator"},
   { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }
 ]
 
