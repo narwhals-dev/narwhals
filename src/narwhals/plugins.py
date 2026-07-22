@@ -140,17 +140,59 @@ def _plugin_io_namespace(
 
 
 class PluginNamespace(CompliantNamespace[FrameT, Any], Protocol[FrameT, FromNativeR_co]):
-    def from_native(self, data: Any, /) -> FromNativeR_co: ...
+    """A `CompliantNamespace` which can also wrap native objects via `from_native`."""
+
+    def from_native(self, data: Any, /) -> FromNativeR_co:
+        """Wrap a native object into a compliant DataFrame, LazyFrame, or Series."""
+        ...
 
 
 class Plugin(Protocol[FrameT, FromNativeR_co]):
+    """Top-level interface a plugin module is expected to implement.
+
+    A plugin is a module registered in the `narwhals.plugins`
+    [entry point](https://packaging.python.org/en/latest/specifications/entry-points/)
+    group:
+
+    ```toml
+    [project.entry-points.'narwhals.plugins']
+    narwhals-grizzlies = 'narwhals_grizzlies'
+    ```
+
+    Narwhals discovers installed plugins at runtime and uses this interface to
+    recognise their native objects (`NATIVE_PACKAGE`, `is_native`) and to obtain
+    a compliant namespace (`__narwhals_namespace__`), through which all further
+    dispatch happens.
+
+    See [extensions and plugins](../extending.md) for a complete walk-through.
+    """
+
     @property
-    def NATIVE_PACKAGE(self) -> LiteralString: ...  # noqa: N802
+    def NATIVE_PACKAGE(self) -> LiteralString:  # noqa: N802
+        """Name of the package providing the plugin's native objects, e.g. `"grizzlies"`.
+
+        Used as a cheap pre-check when converting native objects: the plugin is only
+        consulted if this package is already imported and the inspected object's class
+        might originate from it.
+        """
+        ...
 
     def __narwhals_namespace__(
         self, version: Version
-    ) -> PluginNamespace[FrameT, FromNativeR_co]: ...
-    def is_native(self, native_object: object, /) -> bool: ...
+    ) -> PluginNamespace[FrameT, FromNativeR_co]:
+        """Return a compliant namespace for the given Narwhals API version.
+
+        The returned namespace is the plugin's dispatch hub: its `from_native` method
+        wraps native objects, IO functions call its `scan_*`/`read_*` methods, and
+        eager constructors use its `_dataframe`/`_series` classes (see the
+        [`backend=...` section](../extending.md/#supporting-backend-in-narwhals-functions)
+        of the extension docs).
+        """
+        ...
+
+    def is_native(self, native_object: object, /) -> bool:
+        """Return whether `native_object` is a native object of the plugin's library."""
+        ...
 
 
 @cache
@@ -186,17 +228,19 @@ def from_native(native_object: Any, version: Version) -> CompliantAny | None:
         version: Narwhals API version.
 
     Returns:
-        If the following conditions are met
-            - at least 1 plugin is installed
-            - at least 1 installed plugin supports `type(native_object)`
+        If the following conditions are met:
 
-        Then for the **first matching plugin**, the result of the call below.
-        This *should* be an object accepted by a Narwhals Dataframe, Lazyframe, or Series:
+            * at least 1 plugin is installed
+            * at least 1 installed plugin supports `type(native_object)`
 
-            plugin: Plugin
-            plugin.__narwhals_namespace__(version).from_native(native_object)
+            Then for the **first matching plugin**, the result of the call below.
 
-        In all other cases, `None` is returned instead.
+            This *should* be an object accepted by a Narwhals Dataframe, Lazyframe, or Series:
+
+                plugin: Plugin
+                plugin.__narwhals_namespace__(version).from_native(native_object)
+
+            In all other cases, `None` is returned instead.
     """
     return next(_iter_from_native(native_object, version), None)
 
