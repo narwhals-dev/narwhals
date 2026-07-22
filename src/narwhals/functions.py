@@ -2035,37 +2035,41 @@ def factorize(
         sort: Whether to sort the unique values before assigning codes.
 
     Returns:
-        - codes: An integer series where each value represents the index
+        codes: An integer series where each value represents the index
           of the corresponding value in `uniques`. Null values are encoded
           as -1.
-        - uniques: A series containing the unique non-null values.
+        uniques: A series containing the unique non-null values.
 
     Examples:
         >>> import polars as pl
         >>> import narwhals as nw
         >>> df = pl.DataFrame({"groups": ["a", "b", "a", None]})
         >>> nw_df = nw.from_native(df)
-        >>> codes, uniques = nw.factorize(series["groups"], sort=True)
+        >>> codes, uniques = nw.factorize(nw_df["groups"], sort=True)
         >>> codes
-        ┌─────┐
-        |  a  |
-        |-----|
-        | i32 |
-        |-----|
-        |   0 |
-        |   1 |
-        |   0 |
-        |  -1 |
-        └─────┘
+        ┌──────────────────────┐
+        |   Narwhals Series    |
+        |----------------------|
+        |shape: (4,)           |
+        |Series: 'groups' [i32]|
+        |[                     |
+        |        0             |
+        |        1             |
+        |        0             |
+        |        -1            |
+        |]                     |
+        └──────────────────────┘
         >>> uniques
-        ┌─────┐
-        |  a  |
-        |-----|
-        | str |
-        |-----|
-        | b   |
-        | a   |
-        └─────┘
+        ┌──────────────────────┐
+        |   Narwhals Series    |
+        |----------------------|
+        |shape: (2,)           |
+        |Series: 'groups' [str]|
+        |[                     |
+        |        "a"           |
+        |        "b"           |
+        |]                     |
+        └──────────────────────┘
     """
     uniques = values.unique().drop_nulls()
     if sort:
