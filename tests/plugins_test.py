@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import types
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -11,27 +11,29 @@ import narwhals.stable.v2.dependencies as nw_v2_dependencies
 from narwhals import dependencies as nw_dependencies
 from narwhals.exceptions import PluginError
 from narwhals.plugins import PluginName
+from narwhals.utils import Version
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
     from types import ModuleType
+    from typing import TypeAlias
 
-    import numpy as np
     import pyarrow as pa
     from typing_extensions import Self
 
     from narwhals._typing import EagerAllowed, IntoBackend
     from narwhals.plugins import Plugin
-    from narwhals.typing import NormalizedPath
-    from narwhals.utils import Version
+    from narwhals.typing import NormalizedPath, _1DArray, _2DArray
+
+    _ConstructorData: TypeAlias = "Mapping[str, Any] | Sequence[Mapping[str, Any]] | Callable[[], _2DArray | pa.Table]"
 
 plugin_module = pytest.importorskip("test_plugin")
 
 DEPENDENCIES_MODULES = (nw_dependencies, nw_v1_dependencies, nw_v2_dependencies)
 
-BACKEND: Any = "test-plugin"
+BACKEND = PluginName("test-plugin")
 DATA: dict[str, Any] = {"a": [1, 1, 2], "b": [4, 5, 6]}
 ROWS = [{"a": 1, "b": 4}, {"a": 1, "b": 5}, {"a": 2, "b": 6}]
 
@@ -86,11 +88,29 @@ class FakeEntryPoint:
         return self._plugin
 
 
-def _np_array(data: Any) -> np.ndarray:
+def _plugin_module(name: str, make_namespace: Callable[[], object]) -> types.ModuleType:
+    """Build an ad-hoc plugin module whose `__narwhals_namespace__` returns `make_namespace()`."""
+    plugin = types.ModuleType(name)
+
+    def __narwhals_namespace__(version: Version) -> object:  # noqa: ARG001, N807
+        return make_namespace()
+
+    plugin.__narwhals_namespace__ = __narwhals_namespace__  # type: ignore[attr-defined]
+    return plugin
+
+
+def _np_2d_array() -> _2DArray:
     pytest.importorskip("numpy")
     import numpy as np
 
-    return np.asarray(data)  # type: ignore[no-any-return]
+    return cast("_2DArray", np.array([[1, 4], [1, 5], [2, 6]]))
+
+
+def _np_1d_array() -> _1DArray:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    return cast("_1DArray", np.array([1, 2, 3]))
 
 
 def _arrow_table() -> pa.Table:
@@ -157,7 +177,6 @@ def test_scan_plugin(
         ("read_csv", nw.read_csv, "csv_path"),
         ("read_parquet", nw.read_parquet, "parquet_path"),
     ],
-    ids=["read_csv", "read_parquet"],
 )
 def test_read_plugin_scan_only(
     request: pytest.FixtureRequest,
@@ -186,11 +205,10 @@ def _eager_io_plugin() -> types.ModuleType:
             data = self.scan_parquet(source, **kwds)._native_frame
             return DictDataFrame(data, version=self._version)
 
-    plugin = types.ModuleType("eager_io_plugin")
-    plugin.__narwhals_namespace__ = lambda version: EagerIODictNamespace(  # type: ignore[attr-defined]
-        version=version
-    )
-    return plugin
+    def make_namespace() -> EagerIODictNamespace:
+        return EagerIODictNamespace(version=Version.MAIN)
+
+    return _plugin_module("eager_io_plugin", make_namespace)
 
 
 def test_read_plugin_eager_namespace(csv_path: str, parquet_path: str) -> None:
@@ -205,50 +223,57 @@ def test_read_plugin_eager_namespace(csv_path: str, parquet_path: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "make_dataframe",
+    ("dataframe_constructor", "data", "kwargs"),
     [
-        lambda: nw.from_dict(DATA, backend=BACKEND),
-        lambda: nw.from_dicts(ROWS, backend=BACKEND),
-        lambda: nw.from_numpy(
-            _np_array([[1, 4], [1, 5], [2, 6]]), schema=["a", "b"], backend=BACKEND
-        ),
+        (nw.from_dict, DATA, {}),
+        (nw.from_dicts, ROWS, {}),
+        (nw.from_numpy, _np_2d_array, {"schema": ["a", "b"]}),
         pytest.param(
-            lambda: nw.from_arrow(_arrow_table(), backend=BACKEND),
+            nw.from_arrow,
+            _arrow_table,
+            {},
             marks=pytest.mark.skipif(PYARROW_VERSION < (14,), reason="too old"),
         ),
-        lambda: nw.DataFrame.from_dict(DATA, backend=BACKEND),
-        lambda: nw.DataFrame.from_dicts(ROWS, backend=BACKEND),
-        lambda: nw.DataFrame.from_numpy(
-            _np_array([[1, 4], [1, 5], [2, 6]]), schema=["a", "b"], backend=BACKEND
-        ),
+        (nw.DataFrame.from_dict, DATA, {}),
+        (nw.DataFrame.from_dicts, ROWS, {}),
+        (nw.DataFrame.from_numpy, _np_2d_array, {"schema": ["a", "b"]}),
         pytest.param(
-            lambda: nw.DataFrame.from_arrow(_arrow_table(), backend=BACKEND),
+            nw.DataFrame.from_arrow,
+            _arrow_table,
+            {},
             marks=pytest.mark.skipif(PYARROW_VERSION < (14,), reason="too old"),
         ),
     ],
 )
 def test_eager_dataframe_constructors_plugin(
-    make_dataframe: Callable[[], nw.DataFrame[Any]],
+    dataframe_constructor: Callable[..., nw.DataFrame[Any]],
+    data: _ConstructorData,
+    kwargs: dict[str, Any],
 ) -> None:
     """Eager constructors dispatch to the plugin's `EagerNamespace`-compliant namespace."""
-    df = make_dataframe()
+    # Factories are deferred, so that `importorskip` runs at test time.
+    native_data = data() if callable(data) else data
+    df = dataframe_constructor(native_data, backend=BACKEND, **kwargs)
     assert isinstance(df, nw.DataFrame)
     assert df.to_native() == DATA
 
 
 @pytest.mark.parametrize(
-    "make_series",
+    ("series_constructor", "values"),
     [
-        lambda: nw.new_series("a", [1, 2, 3], backend=BACKEND),
-        lambda: nw.Series.from_iterable("a", [1, 2, 3], backend=BACKEND),
-        lambda: nw.Series.from_numpy("a", _np_array([1, 2, 3]), backend=BACKEND),
+        (nw.new_series, [1, 2, 3]),
+        (nw.Series.from_iterable, [1, 2, 3]),
+        (nw.Series.from_numpy, _np_1d_array),
     ],
 )
 def test_eager_series_constructors_plugin(
-    make_series: Callable[[], nw.Series[Any]],
+    series_constructor: Callable[..., nw.Series[Any]],
+    values: list[int] | Callable[[], _1DArray],
 ) -> None:
     """Eager constructors dispatch to the plugin's `EagerNamespace`-compliant namespace."""
-    s = make_series()
+    # The factory is deferred, so that `importorskip` runs at test time.
+    native_values = values() if callable(values) else values
+    s = series_constructor("a", native_values, backend=BACKEND)
     assert isinstance(s, nw.Series)
     assert s.name == "a"
     assert s.to_native() == [1, 2, 3]
@@ -272,28 +297,27 @@ def test_dataframe_filter_mask_plugin() -> None:
 
 
 @pytest.mark.parametrize(
-    "call",
+    ("function", "args"),
     [
-        lambda backend: nw.scan_csv("x.csv", backend=backend),
-        lambda backend: nw.read_csv("x.csv", backend=backend),
-        lambda backend: nw.scan_parquet("x.parquet", backend=backend),
-        lambda backend: nw.read_parquet("x.parquet", backend=backend),
-        lambda backend: nw.from_dict(DATA, backend=backend),
+        (nw.scan_csv, ("x.csv",)),
+        (nw.read_csv, ("x.csv",)),
+        (nw.scan_parquet, ("x.parquet",)),
+        (nw.read_parquet, ("x.parquet",)),
+        (nw.from_dict, (DATA,)),
     ],
-    ids=["scan_csv", "read_csv", "scan_parquet", "read_parquet", "from_dict"],
 )
 def test_plugin_missing_narwhals_namespace(
-    call: Callable[[types.ModuleType], Any],
+    function: Callable[..., nw.DataFrame[Any] | nw.LazyFrame[Any]], args: tuple[Any, ...]
 ) -> None:
     """IO and eager functions require the plugin to implement `__narwhals_namespace__`."""
     empty_namespace = types.ModuleType("empty_plugin")
     with pytest.raises(
         PluginError, match="expected to implement `__narwhals_namespace__`"
     ):
-        call(empty_namespace)
+        function(*args, backend=empty_namespace)
 
 
-def _not_implemented_io_namespace() -> Any:
+def _not_implemented_io_namespace() -> object:
     from narwhals._utils import not_implemented
 
     class NotImplementedIONamespace:
@@ -305,32 +329,33 @@ def _not_implemented_io_namespace() -> Any:
     return NotImplementedIONamespace()
 
 
+@pytest.mark.parametrize("make_namespace", [object, _not_implemented_io_namespace])
 @pytest.mark.parametrize(
-    "make_namespace", [object, _not_implemented_io_namespace], ids=["absent", "stubbed"]
-)
-@pytest.mark.parametrize(
-    ("hook", "call"),
+    ("io_function", "source"),
     [
-        ("scan_csv", lambda backend: nw.scan_csv("x.csv", backend=backend)),
-        ("read_csv", lambda backend: nw.read_csv("x.csv", backend=backend)),
-        ("scan_parquet", lambda backend: nw.scan_parquet("x.parquet", backend=backend)),
-        ("read_parquet", lambda backend: nw.read_parquet("x.parquet", backend=backend)),
+        (nw.scan_csv, "x.csv"),
+        (nw.read_csv, "x.csv"),
+        (nw.scan_parquet, "x.parquet"),
+        (nw.read_parquet, "x.parquet"),
     ],
 )
 def test_plugin_missing_io_method(
-    hook: str, call: Callable[[types.ModuleType], Any], make_namespace: Callable[[], Any]
+    io_function: Callable[..., nw.DataFrame[Any] | nw.LazyFrame[Any]],
+    source: str,
+    make_namespace: Callable[[], object],
 ) -> None:
     """A plugin whose compliant namespace lacks the IO method raises an informative PluginError.
 
     Both a plainly absent method and a `not_implemented` placeholder count as missing.
     """
-    minimal_plugin = types.ModuleType("minimal_plugin")
-    minimal_plugin.__narwhals_namespace__ = lambda version: make_namespace()  # type: ignore[attr-defined]  # noqa: ARG005
-    with pytest.raises(PluginError, match=f"expected to implement `{hook}`"):
-        call(minimal_plugin)
+    minimal_plugin = _plugin_module("minimal_plugin", make_namespace)
+    with pytest.raises(
+        PluginError, match=f"expected to implement `{io_function.__name__}`"
+    ):
+        io_function(source, backend=minimal_plugin)
 
 
-def _not_implemented_namespace() -> Any:
+def _not_implemented_namespace() -> object:
     from narwhals._utils import not_implemented
 
     class LazyOnlyNamespace:
@@ -342,23 +367,24 @@ def _not_implemented_namespace() -> Any:
 
 @pytest.mark.parametrize("make_namespace", [object, _not_implemented_namespace])
 @pytest.mark.parametrize(
-    "call",
+    ("function", "args"),
     [
-        lambda backend: nw.from_dict(DATA, backend=backend),
-        lambda backend: nw.from_dicts(ROWS, backend=backend),
-        lambda backend: nw.new_series("a", [1], backend=backend),
-        lambda backend: nw.Series.from_iterable("a", [1], backend=backend),
-        lambda backend: nw.DataFrame.from_dict(DATA, backend=backend),
+        (nw.from_dict, (DATA,)),
+        (nw.from_dicts, (ROWS,)),
+        (nw.new_series, ("a", [1])),
+        (nw.Series.from_iterable, ("a", [1])),
+        (nw.DataFrame.from_dict, (DATA,)),
     ],
 )
 def test_plugin_not_eager_allowed(
-    call: Callable[[types.ModuleType], Any], make_namespace: Callable[[], Any]
+    function: Callable[..., nw.DataFrame[Any] | nw.Series[Any]],
+    args: tuple[Any, ...],
+    make_namespace: Callable[[], object],
 ) -> None:
     """Eager functions require an `EagerNamespace`-compliant plugin namespace."""
-    lazy_plugin = types.ModuleType("lazy_plugin")
-    lazy_plugin.__narwhals_namespace__ = lambda version: make_namespace()  # type: ignore[attr-defined]  # noqa: ARG005
+    lazy_plugin = _plugin_module("lazy_plugin", make_namespace)
     with pytest.raises(PluginError, match="does not provide eager support"):
-        call(lazy_plugin)
+        function(*args, backend=lazy_plugin)
 
 
 def test_unknown_backend_raises() -> None:
@@ -400,11 +426,10 @@ def test_is_into_mocked_plugin(
 ) -> None:
     from narwhals import plugins
 
-    monkeypatch.setattr(
-        plugins,
-        "_discover_entrypoints",
-        lambda: (FakeEntryPoint(FakePlugin(compliant_cls)),),
-    )
+    def fake_entrypoints() -> tuple[FakeEntryPoint, ...]:
+        return (FakeEntryPoint(FakePlugin(compliant_cls)),)
+
+    monkeypatch.setattr(plugins, "_discover_entrypoints", fake_entrypoints)
     native = FakeNative()
     for dependencies in DEPENDENCIES_MODULES:
         assert dependencies.is_into_dataframe(native) is (expected_kind == "dataframe")
