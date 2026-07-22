@@ -242,6 +242,9 @@ merge_init_into_class = true
 [project.markdown_extensions.pymdownx.details]
 [project.markdown_extensions.pymdownx.tabbed]
 alternate_style = true
+combine_header_slug = true
+slugify = { object = "pymdownx.slugs.slugify", kwds = { case = "lower" } }
+
 [project.markdown_extensions.pymdownx.superfences]
 custom_fences = [
   { name = "python", class = "python", format = "markdown_exec.formatter", validator = "markdown_exec.validator"},

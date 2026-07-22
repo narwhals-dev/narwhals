@@ -604,20 +604,121 @@ We'll look at what an `ExprIR` will do by default and the changes we need to mak
     - `resolve_dtype` method for complex/one-off things (including raising an exception)
 -->
 
+Our last "fact" went through a revision after we found (rust) Polars [telling a different story](#collecting-more-details-rust):
+
 > 2 That expression *should be* ~~`List`~~ `List | String`-typed
 
+We'll get to the bottom of that later!
+
+#### Why do we need to know the DType?
+
+For eager backends, we are already ticking all the boxes:
+
+```python exec="on" source="above" session="dtype"
+from __future__ import annotations
+
+import narwhals as nw
+import narwhals._plan as nwp
+from narwhals._plan._expansion import prepare_projection
+from narwhals._plan._expr_ir import ExprIR
+from narwhals._plan._nodes import node
+from narwhals._plan.options import ExplodeOptions
+
+
+class Explode(ExprIR):
+    __slots__ = ("expr", "options")
+    expr: ExprIR = node(observe_scalar=False)
+    options: ExplodeOptions
+
+    def __repr__(self) -> str:
+        return f"{self.expr!r}.explode()"
+
+    def is_length_preserving(self) -> bool:
+        return False
+
+    def changes_length(self) -> bool:
+        return True
+
+
+options = ExplodeOptions(empty_as_null=True, keep_nulls=True)
+explode_rename = (
+    Explode(expr=nwp.nth(0, 3)._ir, options=options)  # (1)!
+    .to_narwhals()
+    .name.suffix("_expand")
+    ._ir
+)
+```
+
+1.  We'll make this part more ergonomic in [Adding an Expr method](#adding-an-expr-method)
+
+
+`Explode` is integrated enough to take part in expression expansion:
+
+```python exec="on" source="above" session="dtype" result="python"
+input_schema = {
+    "a": nw.List(nw.String()),
+    "b": nw.List(nw.Int64()),
+    "c": nw.List(nw.Float32()),
+    "d": nw.Array(nw.Float64(), 2),
+}
+expanded, schema = prepare_projection([explode_rename], schema=input_schema)
+
+sep = "\n    "
+print(f"Before:{sep}{explode_rename!r}\nAfter:{sep}{sep.join(map(repr, expanded))}")
+```
+
+Kinda cool how that all just worked™, right?
+
+Well the bad news is we're not out of the woods yet. For lazy backends, we still need to determine the output schema.
+
+[^5]: Especially [`DTypeSelector`][narwhals._plan.expressions.selectors.DTypeSelector]
+
+??? question "Why?"
+    If we can't provide the schema at each `LazyFrame` method boundary, it means using selectors[^5] has a cost that we cannot control. 
+    [`pl.LazyFrame.collect_schema`](https://docs.pola.rs/api/python/stable/reference/lazyframe/api/polars.LazyFrame.collect_schema.html) warns about this cost, 
+    despite having an existing [caching mechanism](https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/ir/schema.rs#L134-L208).
+
+
+If we were using `LazyFrame.select`, the next dance move *should be* this, but ...
+
+```python
+schema.select_resolved(expanded)
+```
+
+```python exec="on" session="dtype" result="python"
+try:
+    schema.select_resolved(expanded)
+except NotImplementedError as err:
+    print(f"Traceback (most recent call last):\n{err.__class__.__name__}: {err.args[0]}")
+```
+
+#### How do we determine the DType?
+<!---TODO
+
+Would you be surprised to know **both** are wrong?
+--->
+
+#### Notes
+
 - rust
-    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/dsl/mod.rs#L219-L220
-    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/aexpr/schema.rs#L87-L98
+    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-plan/src/plans/aexpr/schema.rs#L87-L97
+        - Where we find answers for `resolve_dtype`
+    - https://github.com/pola-rs/polars/blob/0189b4682833082cf4dde3b263f564dcf4ae426a/crates/polars-core/src/series/mod.rs#L641-L649
+        - (Not a remotely common thing to do) Pure trivia to show `String` is a noop
+        - Has been since (https://github.com/pola-rs/polars/pull/9038) added `str.explode`
+        - and then (https://github.com/pola-rs/polars/pull/16508) removed/deprecated `str.explode`
 - notes
     - `List | Array | String`
     - we need to make a decision on `String`, which may/may not be supported in other backends
 
+
+## Adding an Expr method
 
 <!---TODO: Add an `Expr` method to create it
 
 End by attempting to use the method and showing the error telling us we haven't finished yet
 -->
 
+## Next steps
 
 <!---TODO: Next steps (shared page for Compliant)-->
