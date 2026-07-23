@@ -37,3 +37,5 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     selectors: Any = not_implemented()
     coalesce: Any = not_implemented()
     struct: Any = not_implemented()
+    scan_csv: Any = not_implemented()
+    scan_parquet: Any = not_implemented()
