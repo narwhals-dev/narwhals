@@ -38,7 +38,7 @@ def test_factorize_invariants(
 
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
-    codes, uniqs = nw.factorize(df["a"])
+    codes, uniqs = df["a"].factorize()
 
     reconstructed_values = {"a": [uniqs[i] if i >= 0 else None for i in codes]}
     assert_equal_data(df, reconstructed_values)
@@ -76,7 +76,7 @@ def test_factorize_sort(
 
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
-    codes, uniqs = nw.factorize(df["a"], sort=True)
+    codes, uniqs = df["a"].factorize(sort=True)
 
     assert_equal_series(uniqs, expected_uniqs, name="a")
     assert_equal_series(codes, expected_codes, name="a")
@@ -100,7 +100,7 @@ def test_factorize_nan_semantics(
 
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
-    codes, uniqs = nw.factorize(df["a"])
+    codes, uniqs = df["a"].factorize()
 
     reconstructed_values = {"a": [uniqs[i] if i >= 0 else None for i in codes]}
     assert_equal_data(df, reconstructed_values)

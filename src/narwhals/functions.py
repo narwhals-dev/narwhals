@@ -30,7 +30,6 @@ from narwhals.dependencies import (
     is_numpy_array_2d,
     is_pyarrow_table,
 )
-from narwhals.dtypes import Int32
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
 from narwhals.schema import Schema
@@ -55,7 +54,6 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
-        IntoSeriesT,
         NonNestedLiteral,
         PythonLiteral,
         _2DArray,
@@ -2023,59 +2021,3 @@ def list_(*exprs: IntoExpr | Sequence[IntoExpr]) -> Expr:
     return Expr(
         ExprNode(ExprKind.ELEMENTWISE, "list", exprs=flat_exprs, allow_multi_output=True)
     )
-
-
-def factorize(
-    values: Series[IntoSeriesT], *, sort: bool = False
-) -> tuple[Series[IntoSeriesT], Series[IntoSeriesT]]:
-    """Encode values as integer codes and unique values.
-
-    Arguments:
-        values: A series to factorize.
-        sort: Whether to sort the unique values before assigning codes.
-
-    Returns:
-        codes: An integer series where each value represents the index
-          of the corresponding value in `uniques`. Null values are encoded
-          as -1.
-        uniques: A series containing the unique non-null values.
-
-    Examples:
-        >>> import polars as pl
-        >>> import narwhals as nw
-        >>> df = pl.DataFrame({"groups": ["a", "b", "a", None]})
-        >>> nw_df = nw.from_native(df)
-        >>> codes, uniques = nw.factorize(nw_df["groups"], sort=True)
-        >>> codes
-        ┌──────────────────────┐
-        |   Narwhals Series    |
-        |----------------------|
-        |shape: (4,)           |
-        |Series: 'groups' [i32]|
-        |[                     |
-        |        0             |
-        |        1             |
-        |        0             |
-        |        -1            |
-        |]                     |
-        └──────────────────────┘
-        >>> uniques
-        ┌──────────────────────┐
-        |   Narwhals Series    |
-        |----------------------|
-        |shape: (2,)           |
-        |Series: 'groups' [str]|
-        |[                     |
-        |        "a"           |
-        |        "b"           |
-        |]                     |
-        └──────────────────────┘
-    """
-    uniques = values.unique().drop_nulls()
-    if sort:
-        uniques = uniques.sort()
-
-    codes = values.replace_strict(
-        uniques.to_list(), [*range(len(uniques))], default=-1, return_dtype=Int32()
-    )
-    return codes, uniques

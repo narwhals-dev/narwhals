@@ -609,7 +609,7 @@ def test_factorize(
 
     df_native = constructor_eager({"a": values})
     df = nw_v2.from_native(df_native)
-    codes, uniqs = nw_v2.factorize(df["a"], sort=True)
+    codes, uniqs = df["a"].factorize(sort=True)
 
     assert_equal_series(uniqs, expected_uniqs, name="a")
     assert_equal_series(codes, expected_codes, name="a")

@@ -1171,25 +1171,6 @@ def struct(*exprs: IntoExpr | Sequence[IntoExpr], **named_exprs: IntoExpr) -> Ex
     return _stableify(nw_f.struct(*exprs, **named_exprs))
 
 
-def factorize(
-    values: Series[IntoSeriesT], *, sort: bool = False
-) -> tuple[Series[IntoSeriesT], Series[IntoSeriesT]]:
-    """Encode values as integer codes and unique values.
-
-    Arguments:
-        values: A series to factorize.
-        sort: Whether to sort the unique values before assigning codes.
-
-    Returns:
-        - codes: An integer series where each value represents the index
-          of the corresponding value in `uniques`. Null values are encoded
-          as -1.
-        - uniques: A series containing the unique non-null values.
-    """
-    codes, uniques = nw_f.factorize(values, sort=sort)
-    return _stableify(codes), _stableify(uniques)
-
-
 __all__ = [
     "Array",
     "Binary",
@@ -1240,7 +1221,6 @@ __all__ = [
     "dtypes",
     "exceptions",
     "exclude",
-    "factorize",
     "format",
     "from_arrow",
     "from_dict",

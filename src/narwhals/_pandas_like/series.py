@@ -1163,6 +1163,15 @@ class PandasLikeSeries(EagerSeries[Any]):
         impl = self._implementation
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
 
+    def factorize(self, *, sort: bool = False) -> tuple[Self, Self]:
+        pdx = self.__native_namespace__()
+        name = self.native.name
+        codes, uniques = self.native.factorize(sort=sort)
+        return (
+            self._with_native(pdx.Series(codes, name=name)),
+            self._with_native(pdx.Series(uniques, name=name)),
+        )
+
     def _apply_pyarrow_compute_func(
         self, native: NativeSeriesT, pc_func: Callable[[ChunkedArrayAny], ChunkedArrayAny]
     ) -> NativeSeriesT:
