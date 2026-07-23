@@ -1039,17 +1039,29 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def factorize(self, *, sort: bool = False) -> tuple[Self, Self]:
-        dtypes = self._version.dtypes
-        uniques = self.unique().drop_nulls()
-        if sort:
-            uniques = uniques.sort(descending=False, nulls_last=True)
-        codes = self.replace_strict(
-            old=uniques.to_list(),
-            new=[*range(len(uniques))],
-            default=-1,
-            return_dtype=dtypes.Int32(),
+        if len(self.native) == 0:
+            codes = pa.chunked_array([[]], type=pa.int32())
+            uniques = pa.chunked_array([[]], type=self.native.type)
+            return (self._with_native(codes), self._with_native(uniques))
+
+        native_dict_encoded = pc.dictionary_encode(self.native).unify_dictionaries()
+        uniques = native_dict_encoded.chunks[0].dictionary
+        codes = pa.chunked_array(
+            [chunk.indices for chunk in native_dict_encoded.iterchunks()]
         )
-        return codes, uniques
+        if not sort:
+            return (
+                self._with_native(pc.fill_null(codes, -1)),
+                self._with_native(uniques),
+            )
+
+        sorted_uniques = pc.take(uniques, pc.sort_indices(uniques))
+        new_mapping = pc.index_in(uniques, value_set=sorted_uniques)
+        new_codes = pc.take(new_mapping, codes)
+        return (
+            self._with_native(pc.fill_null(new_codes, -1)),
+            self._with_native(sorted_uniques),
+        )
 
     def __iter__(self) -> Iterator[Any]:
         for x in self.native:
