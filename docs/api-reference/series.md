@@ -30,6 +30,7 @@
         - dtype
         - ewm_mean
         - exp
+        - factorize
         - fill_nan
         - fill_null
         - filter

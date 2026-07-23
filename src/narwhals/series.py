@@ -2905,6 +2905,52 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
+    def factorize(self, *, sort: bool = False) -> tuple[Self, Self]:
+        """Encode values as integer codes and unique values.
+
+        Arguments:
+            sort: Whether to sort the unique values before assigning codes.
+
+        Returns:
+            codes: An integer series where each value represents the index
+              of the corresponding value in `uniques`. Null values are encoded
+              as -1.
+            uniques: A series containing the unique non-null values.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = pl.DataFrame({"groups": ["a", "b", "a", None]})
+            >>> nw_df = nw.from_native(df)
+            >>> codes, uniques = nw_df["groups"].factorize(sort=True)
+            >>> codes
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |shape: (4,)           |
+            |Series: 'groups' [i32]|
+            |[                     |
+            |        0             |
+            |        1             |
+            |        0             |
+            |        -1            |
+            |]                     |
+            └──────────────────────┘
+            >>> uniques
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |shape: (2,)           |
+            |Series: 'groups' [str]|
+            |[                     |
+            |        "a"           |
+            |        "b"           |
+            |]                     |
+            └──────────────────────┘
+        """
+        codes, uniques = self._compliant_series.factorize(sort=sort)
+        return self._with_compliant(codes), self._with_compliant(uniques)
+
     @unstable
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
         """Get a random value from the column.

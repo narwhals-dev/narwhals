@@ -1038,6 +1038,19 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             .to_frame()
         )
 
+    def factorize(self, *, sort: bool = False) -> tuple[Self, Self]:
+        dtypes = self._version.dtypes
+        uniques = self.unique().drop_nulls()
+        if sort:
+            uniques = uniques.sort(descending=False, nulls_last=True)
+        codes = self.replace_strict(
+            old=uniques.to_list(),
+            new=[*range(len(uniques))],
+            default=-1,
+            return_dtype=dtypes.Int32(),
+        )
+        return codes, uniques
+
     def __iter__(self) -> Iterator[Any]:
         for x in self.native:
             yield maybe_extract_py_scalar(x, return_py_scalar=True)
