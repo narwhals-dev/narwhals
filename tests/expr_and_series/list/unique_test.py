@@ -65,8 +65,9 @@ maintain_order_expected = [[1, 2, 3, None], [3, 2, 1], None, []]
 def test_unique_maintain_order_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # `maintain_order=True` is currently only supported by the Polars backend.
-    if "polars" not in str(constructor):
+    if not any(
+        backend in str(constructor) for backend in ("polars", "pyspark", "sqlframe")
+    ):
         request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
