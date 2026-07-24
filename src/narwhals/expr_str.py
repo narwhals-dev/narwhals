@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals.exceptions import InvalidOperationError
+from narwhals._utils import validate_width
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -536,7 +536,6 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             width: The desired length of the string after padding. If the length of the
                 string is greater than `width`, no padding is applied.
-                If `width` is less than 0, no padding is applied.
 
         Examples:
             >>> import pandas as pd
@@ -554,9 +553,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
-        if width < 0:
-            msg = f"`width` must be non-negative but got {width}"
-            raise InvalidOperationError(msg)
+        validate_width(width)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
@@ -585,9 +582,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
-        if length < 0:
-            msg = f"`length` must be non-negative but got {length}"
-            raise InvalidOperationError(msg)
+        validate_width(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -618,9 +613,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
-        if length < 0:
-            msg = f"`length` must be non-negative but got {length}"
-            raise InvalidOperationError(msg)
+        validate_width(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char
