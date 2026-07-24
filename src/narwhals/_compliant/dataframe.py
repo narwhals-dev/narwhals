@@ -64,6 +64,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDType,
+        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -151,6 +152,7 @@ class CompliantFrame(
         suffix: str,
     ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self: ...
     def select(self, *exprs: CompliantExprT_contra) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
