@@ -247,6 +247,11 @@ class BaseFrame(Generic[_FrameT]):
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._with_compliant(self._compliant_frame.rename(mapping))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        if error := self._check_columns_exist(list(dtypes)):
+            raise error
+        return self._with_compliant(self._compliant_frame.cast(dtypes))
+
     def head(self, n: int) -> Self:
         return self._with_compliant(self._compliant_frame.head(n))
 
@@ -1571,6 +1576,27 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().rename(mapping)
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        """Cast columns to the given dtypes.
+
+        Arguments:
+            dtypes: Mapping from column name to the dtype to cast it to. Columns not
+                in the mapping are left unchanged.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
+            >>> nw.from_native(df_native).cast({"bar": nw.Int32}).to_native()
+            pyarrow.Table
+            foo: int64
+            bar: int32
+            ----
+            foo: [[1,2]]
+            bar: [[6,7]]
+        """
+        return super().cast(dtypes)
+
     def head(self, n: int = 5) -> Self:
         """Get the first `n` rows.
 
@@ -2785,6 +2811,32 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └────────────────────────┘
         """
         return super().rename(mapping)
+
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        r"""Cast columns to the given dtypes.
+
+        Arguments:
+            dtypes: Mapping from column name to the dtype to cast it to. Columns not
+                in the mapping are left unchanged.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
+            >>> nw.from_native(lf_native).cast({"a": nw.Int64, "b": nw.Float64})
+            ┌──────────────────┐
+            |Narwhals LazyFrame|
+            |------------------|
+            |┌───────┬────────┐|
+            |│   a   │   b    │|
+            |│ int64 │ double │|
+            |├───────┼────────┤|
+            |│     1 │    4.5 │|
+            |│     3 │    2.0 │|
+            |└───────┴────────┘|
+            └──────────────────┘
+        """
+        return super().cast(dtypes)
 
     def head(self, n: int = 5) -> Self:
         r"""Get `n` rows.
