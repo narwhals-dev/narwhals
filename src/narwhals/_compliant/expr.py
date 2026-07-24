@@ -1055,8 +1055,10 @@ class EagerExprListNamespace(
     def len(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "len")
 
-    def unique(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("list", "unique")
+    def unique(self, *, maintain_order: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "unique", maintain_order=maintain_order
+        )
 
     def contains(self, item: NonNestedLiteral) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "contains", item=item)

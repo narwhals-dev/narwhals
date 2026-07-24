@@ -50,9 +50,12 @@ class ExprListNamespace(Generic[ExprT]):
         Null values are included in the result.
 
         Arguments:
-            maintain_order: Keep the same order as the input data. Setting this to
-                `True` is only supported by the Polars backend; for the other
-                backends the order of the unique values is not guaranteed.
+            maintain_order: Keep the same order as the input data.
+
+        Notes:
+            `maintain_order=True` is not supported by all backends: backends whose
+            native distinct operation does not preserve order (e.g. DuckDB, Ibis)
+            raise `NotImplementedError`.
 
         Examples:
             >>> import polars as pl

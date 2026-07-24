@@ -20,6 +20,7 @@ class SparkLikeExprListNamespace(
         return self.compliant._with_elementwise(self.compliant._F.array_size)
 
     def unique(self, *, maintain_order: bool) -> SparkLikeExpr:
+        # NOTE: `maintain_order` is unused as `array_distinct` always maintains the order
         return self.compliant._with_elementwise(self.compliant._F.array_distinct)
 
     def contains(self, item: NonNestedLiteral) -> SparkLikeExpr:
