@@ -1167,7 +1167,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, *, null_as_value: bool = False, sort: bool = False
     ) -> tuple[Self, Self]:
         pdx = self.__native_namespace__()
-        name = self.native.name
 
         # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
         if self.native.dtype == "null[pyarrow]":
@@ -1182,17 +1181,14 @@ class PandasLikeSeries(EagerSeries[Any]):
                     pdx.Series([], dtype=self.native.dtype),
                 )
 
-            return (
-                self._with_native(codes.rename(name)),
-                self._with_native(uniques.rename(name)),
-            )
+            return (self._with_native(codes), self._with_native(uniques))
 
         codes, uniques = self.native.factorize(
             sort=sort, use_na_sentinel=not null_as_value
         )
         return (
-            self._with_native(pdx.Series(codes, name=name)),
-            self._with_native(pdx.Series(uniques, name=name)),
+            self._with_native(pdx.Series(codes)),
+            self._with_native(pdx.Series(uniques)),
         )
 
     def _apply_pyarrow_compute_func(

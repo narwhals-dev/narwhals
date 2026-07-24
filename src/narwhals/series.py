@@ -2962,7 +2962,10 @@ class Series(Generic[IntoSeriesT]):
         codes, uniques = self._compliant_series.factorize(
             null_as_value=null_as_value, sort=sort
         )
-        return self._with_compliant(codes), self._with_compliant(uniques)
+        return (
+            self._with_compliant(codes).alias("codes"),
+            self._with_compliant(uniques).alias("uniques"),
+        )
 
     @unstable
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:

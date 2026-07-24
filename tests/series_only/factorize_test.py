@@ -63,6 +63,9 @@ def test_factorize_invariants(
     assert (codes >= min_code).all()
     assert (codes == -1).any() == (has_null and not null_as_value)
 
+    assert codes.name == "codes"
+    assert uniqs.name == "uniques"
+
 
 @pytest.mark.parametrize(
     ("values", "null_as_value", "expected_uniqs", "expected_codes"),
@@ -104,8 +107,8 @@ def test_factorize_sort(
     df = nw.from_native(df_native)
     codes, uniqs = df["a"].factorize(null_as_value=null_as_value, sort=True)
 
-    assert_equal_series(uniqs, expected_uniqs, name="a")
-    assert_equal_series(codes, expected_codes, name="a")
+    assert_equal_series(uniqs, expected_uniqs, name="uniques")
+    assert_equal_series(codes, expected_codes, name="codes")
 
 
 @pytest.mark.parametrize(
@@ -159,4 +162,4 @@ def test_factorize_nan_semantics(
 
     reconstructed_values = {"a": [uniqs[i] if i >= 0 else None for i in codes]}
     assert_equal_data(df, reconstructed_values)
-    assert_equal_series(uniqs, expected, name="a")
+    assert_equal_series(uniqs, expected, name="uniques")
