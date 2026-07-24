@@ -675,8 +675,8 @@ class PolarsSeries:
         if sort:
             uniques = uniques.sort(descending=False, nulls_last=True)
         codes = self.native.replace_strict(
-            old=uniques.to_list(),
-            new=[*range(len(uniques))],
+            old=uniques.native,
+            new=range(len(uniques)),
             default=-1,
             return_dtype=pl.Int32(),
         )
