@@ -47,7 +47,8 @@ def test_factorize_invariants(
 
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
-    codes, uniqs = df["a"].factorize(null_as_value=null_as_value)
+    encoded_result = df["a"].factorize(null_as_value=null_as_value)
+    codes, uniqs = encoded_result
 
     reconstructed_values = {"a": [uniqs[i] if i >= 0 else None for i in codes]}
     assert_equal_data(df, reconstructed_values)
@@ -65,6 +66,10 @@ def test_factorize_invariants(
 
     assert codes.name == "codes"
     assert uniqs.name == "uniques"
+
+    assert isinstance(encoded_result, nw.series.Encoded)
+    assert [*encoded_result.mapping.keys()] == [*encoded_result.uniques]
+    assert [*encoded_result.mapping.values()] == [*range(len(encoded_result.uniques))]
 
 
 @pytest.mark.parametrize(

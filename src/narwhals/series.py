@@ -3,7 +3,16 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Generic,
+    Literal,
+    NamedTuple,
+    cast,
+    overload,
+)
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
@@ -2907,7 +2916,7 @@ class Series(Generic[IntoSeriesT]):
 
     def factorize(
         self, *, null_as_value: bool = False, sort: bool = False
-    ) -> tuple[Self, Self]:
+    ) -> Encoded[IntoSeriesT]:
         """Encode values as integer codes and unique values.
 
         The integer codes are index locations that map the unique values back to their
@@ -2962,7 +2971,7 @@ class Series(Generic[IntoSeriesT]):
         codes, uniques = self._compliant_series.factorize(
             null_as_value=null_as_value, sort=sort
         )
-        return (
+        return Encoded(
             self._with_compliant(codes).alias("codes"),
             self._with_compliant(uniques).alias("uniques"),
         )
@@ -3008,3 +3017,21 @@ class Series(Generic[IntoSeriesT]):
     @property
     def struct(self) -> SeriesStructNamespace[Self]:
         return SeriesStructNamespace(self)
+
+
+class Encoded(NamedTuple, Generic[IntoSeriesT]):
+    """Result of `factorize`. Unpacks as `(codes, uniques)` like pandas."""
+
+    codes: Series[IntoSeriesT]
+    uniques: Series[IntoSeriesT]
+
+    @property
+    def mapping(self) -> Mapping[Any, int]:
+        """Forward map as a joinable ``(value, code)`` frame; works for any dtype."""
+        name = self.uniques.name
+        return dict(
+            self.uniques.to_frame()
+            .with_row_index("code")
+            .select(name, "code")
+            .iter_rows()
+        )
