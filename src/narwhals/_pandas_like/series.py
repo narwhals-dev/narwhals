@@ -1163,10 +1163,33 @@ class PandasLikeSeries(EagerSeries[Any]):
         impl = self._implementation
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
 
-    def factorize(self, *, sort: bool = False) -> tuple[Self, Self]:
+    def factorize(
+        self, *, null_as_value: bool = False, sort: bool = False
+    ) -> tuple[Self, Self]:
         pdx = self.__native_namespace__()
         name = self.native.name
-        codes, uniques = self.native.factorize(sort=sort)
+
+        # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
+        if self.native.dtype == "null[pyarrow]":
+            if null_as_value:
+                codes, uniques = (
+                    pdx.Series(0, index=self.native.index),
+                    pdx.Series([None], dtype=self.native.dtype),
+                )
+            else:
+                codes, uniques = (
+                    pdx.Series(-1, index=self.native.index),
+                    pdx.Series([], dtype=self.native.dtype),
+                )
+
+            return (
+                self._with_native(codes.rename(name)),
+                self._with_native(uniques.rename(name)),
+            )
+
+        codes, uniques = self.native.factorize(
+            sort=sort, use_na_sentinel=not null_as_value
+        )
         return (
             self._with_native(pdx.Series(codes, name=name)),
             self._with_native(pdx.Series(uniques, name=name)),

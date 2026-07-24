@@ -2905,16 +2905,27 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
-    def factorize(self, *, sort: bool = False) -> tuple[Self, Self]:
+    def factorize(
+        self, *, null_as_value: bool = False, sort: bool = False
+    ) -> tuple[Self, Self]:
         """Encode values as integer codes and unique values.
 
+        The integer codes are index locations that map the unique values back to their
+        positions within the original array.
+
         Arguments:
+            null_as_value: Whether to treat null as a regular value. When False,
+                nulls are removed from the returned unique values and the code -1 is
+                used to indicate the location of null values in the original array.
+                When True, nulls are preserved in the returned unique values and a
+                positive integer is used to indicate their location in the original
+                array.
             sort: Whether to sort the unique values before assigning codes.
 
         Returns:
             codes: An integer series where each value represents the index
-              of the corresponding value in `uniques`. Null values are encoded
-              as -1.
+                of the corresponding value in `uniques`. Null values are encoded
+                as -1.
             uniques: A series containing the unique non-null values.
 
         Examples:
@@ -2948,7 +2959,9 @@ class Series(Generic[IntoSeriesT]):
             |]                     |
             └──────────────────────┘
         """
-        codes, uniques = self._compliant_series.factorize(sort=sort)
+        codes, uniques = self._compliant_series.factorize(
+            null_as_value=null_as_value, sort=sort
+        )
         return self._with_compliant(codes), self._with_compliant(uniques)
 
     @unstable
