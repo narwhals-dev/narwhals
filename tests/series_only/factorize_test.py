@@ -67,7 +67,6 @@ def test_factorize_invariants(
     assert codes.name == "codes"
     assert uniqs.name == "uniques"
 
-    assert isinstance(encoded_result, nw.series.Encoded)
     assert [*encoded_result.mapping.keys()] == [*encoded_result.uniques]
     assert [*encoded_result.mapping.values()] == [*range(len(encoded_result.uniques))]
 

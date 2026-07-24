@@ -2,17 +2,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from dataclasses import dataclass
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    ClassVar,
-    Generic,
-    Literal,
-    NamedTuple,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 from narwhals._utils import (
@@ -3019,11 +3011,16 @@ class Series(Generic[IntoSeriesT]):
         return SeriesStructNamespace(self)
 
 
-class Encoded(NamedTuple, Generic[IntoSeriesT]):
+@dataclass(frozen=True)
+class Encoded(Generic[IntoSeriesT]):
     """Result of `factorize`. Unpacks as `(codes, uniques)` like pandas."""
 
     codes: Series[IntoSeriesT]
     uniques: Series[IntoSeriesT]
+
+    def __iter__(self) -> Iterator[Series[IntoSeriesT]]:
+        yield self.codes
+        yield self.uniques
 
     @property
     def mapping(self) -> Mapping[Any, int]:
