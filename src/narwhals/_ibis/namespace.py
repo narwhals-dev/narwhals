@@ -19,13 +19,19 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
 
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 
 class IbisNamespace(
@@ -48,6 +54,17 @@ class IbisNamespace(
     @property
     def _lazyframe(self) -> type[IbisLazyFrame]:
         return IbisLazyFrame
+
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> IbisLazyFrame:
+        validate_separators(separator, ("sep",), kwds)
+        native = ibis.read_csv(source, sep=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> IbisLazyFrame:
+        native = ibis.read_parquet(source, **kwds)
+        return self._lazyframe.from_native(native, context=self)
 
     def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
         return function(name, *args)

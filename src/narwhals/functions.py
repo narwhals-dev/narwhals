@@ -622,33 +622,6 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
-def _validate_separators(
-    separator: str, native_separators: tuple[str, ...], **kwargs: Any
-) -> None:
-    for native_separator in native_separators:
-        if native_separator in kwargs and kwargs[native_separator] != separator:
-            msg = (
-                f"`separator` and `{native_separator}` do not match: "
-                f"`separator`={separator} and `{native_separator}`={kwargs[native_separator]}."
-            )
-            raise TypeError(msg)
-
-
-def _validate_separator_pyarrow(separator: str, **kwargs: Any) -> Any:
-    if "parse_options" in kwargs:
-        parse_options = kwargs.pop("parse_options")
-        if parse_options.delimiter != separator:
-            msg = (
-                "`separator` and `parse_options.delimiter` do not match: "
-                f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
-            )
-            raise TypeError(msg)
-        return kwargs
-    from pyarrow import csv  # ignore-banned-import
-
-    return {"parse_options": csv.ParseOptions(delimiter=separator)}
-
-
 def read_csv(
     source: FileSource,
     *,
@@ -684,44 +657,27 @@ def read_csv(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
-    native_namespace = impl.to_native_namespace()
-    native_frame: NativeDataFrame
-    if impl in {Implementation.PANDAS, Implementation.MODIN, Implementation.CUDF}:
-        _validate_separators(separator, ("sep",), **kwargs)
-        native_frame = native_namespace.read_csv(
-            normalize_path(source), sep=separator, **kwargs
-        )
-    elif impl is Implementation.POLARS:
-        native_frame = native_namespace.read_csv(
-            normalize_path(source), separator=separator, **kwargs
-        )
-    elif impl is Implementation.PYARROW:
-        kwargs = _validate_separator_pyarrow(separator, **kwargs)
-        from pyarrow import csv  # ignore-banned-import
-
-        native_frame = csv.read_csv(source, **kwargs)
-    elif impl in {
-        Implementation.PYSPARK,
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    }:
-        msg = (
-            f"Expected eager backend, found {impl}.\n\n"
-            f"Hint: use nw.scan_csv(source={source}, backend={backend})"
-        )
-        raise ValueError(msg)
-    else:  # pragma: no cover
+    if is_eager_allowed(impl):
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+        frame = ns.read_csv(normalize_path(source), separator=separator, **kwargs)
+        return frame.to_narwhals()
+    if impl is Implementation.UNKNOWN:  # pragma: no cover
+        native_namespace = impl.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `read_csv` function in the top-level namespace.
-            native_frame = native_namespace.read_csv(source=source, **kwargs)
+            native_frame: NativeDataFrame = native_namespace.read_csv(
+                source=source, **kwargs
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `read_csv` function."
             raise AttributeError(msg) from e
-    return from_native(native_frame, eager_only=True)
+        return from_native(native_frame, eager_only=True)
+    msg = (
+        f"Expected eager backend, found {impl}.\n\n"
+        f"Hint: use nw.scan_csv(source={source}, backend={backend})"
+    )
+    raise ValueError(msg)
 
 
 def scan_csv(
@@ -764,52 +720,23 @@ def scan_csv(
         │ z       │     3 │
         └─────────┴───────┘
     """
-    implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
-    native_frame: NativeDataFrame | NativeLazyFrame
-    source = normalize_path(source)
-    if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_csv(source, separator=separator, **kwargs)
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-        Implementation.DASK,
-        Implementation.IBIS,
-    }:
-        _validate_separators(separator, ("sep",), **kwargs)
-        native_frame = native_namespace.read_csv(source, sep=separator, **kwargs)
-    elif implementation is Implementation.DUCKDB:
-        _validate_separators(separator, ("delimiter", "delim", "sep"), **kwargs)
-        native_frame = native_namespace.read_csv(source, delimiter=separator, **kwargs)
-    elif implementation is Implementation.PYARROW:
-        kwargs = _validate_separator_pyarrow(separator, **kwargs)
-        from pyarrow import csv  # ignore-banned-import
-
-        native_frame = csv.read_csv(source, **kwargs)
-    elif implementation.is_spark_like():
-        _validate_separators(separator, ("sep", "delimiter"), **kwargs)
-        if (session := kwargs.pop("session", None)) is None:
-            msg = "Spark like backends require a session object to be passed in `kwargs`."
-            raise ValueError(msg)
-        csv_reader = session.read.format("csv")
-        native_frame = (
-            csv_reader.load(source, sep=separator)
-            if (
-                implementation is Implementation.SQLFRAME
-                and implementation._backend_version() < (3, 27, 0)
-            )
-            else csv_reader.options(sep=separator, **kwargs).load(source)
-        )
-    else:  # pragma: no cover
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.UNKNOWN:  # pragma: no cover
+        native_namespace = impl.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `scan_csv` function in the top-level namespace.
-            native_frame = native_namespace.scan_csv(source=source, **kwargs)
+            native_frame: NativeDataFrame | NativeLazyFrame = native_namespace.scan_csv(
+                source=source, **kwargs
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `scan_csv` function."
             raise AttributeError(msg) from e
-    return from_native(native_frame).lazy()
+        return from_native(native_frame).lazy()
+    ns = Version.MAIN.namespace.from_backend(impl).compliant
+    frame = ns.scan_csv(normalize_path(source), separator=separator, **kwargs)
+    result: LazyFrame[Any] = frame.to_narwhals().lazy()
+    return result
 
 
 def read_parquet(
@@ -847,42 +774,27 @@ def read_parquet(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
-    native_namespace = impl.to_native_namespace()
-    native_frame: NativeDataFrame
-    if impl in {
-        Implementation.POLARS,
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-    }:
-        source = normalize_path(source)
-        native_frame = native_namespace.read_parquet(source, **kwargs)
-    elif impl is Implementation.PYARROW:
-        import pyarrow.parquet as pq  # ignore-banned-import
-
-        native_frame = pq.read_table(source, **kwargs)  # type: ignore[arg-type]
-    elif impl in {
-        Implementation.PYSPARK,
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-        Implementation.SQLFRAME,
-        Implementation.PYSPARK_CONNECT,
-    }:
-        msg = (
-            f"Expected eager backend, found {impl}.\n\n"
-            f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
-        )
-        raise ValueError(msg)
-    else:  # pragma: no cover
+    if is_eager_allowed(impl):
+        ns = Version.MAIN.namespace.from_backend(impl).compliant
+        frame = ns.read_parquet(normalize_path(source), **kwargs)
+        return frame.to_narwhals()
+    if impl is Implementation.UNKNOWN:  # pragma: no cover
+        native_namespace = impl.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `read_parquet` function in the top-level namespace.
-            native_frame = native_namespace.read_parquet(source=source, **kwargs)
+            native_frame: NativeDataFrame = native_namespace.read_parquet(
+                source=source, **kwargs
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `read_parquet` function."
             raise AttributeError(msg) from e
-    return from_native(native_frame, eager_only=True)
+        return from_native(native_frame, eager_only=True)
+    msg = (
+        f"Expected eager backend, found {impl}.\n\n"
+        f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
+    )
+    raise ValueError(msg)
 
 
 def scan_parquet(
@@ -947,48 +859,23 @@ def scan_parquet(
         |  b: [[4,5]]      |
         └──────────────────┘
     """
-    implementation = Implementation.from_backend(backend)
-    native_namespace = implementation.to_native_namespace()
-    native_frame: NativeDataFrame | NativeLazyFrame
-    source = normalize_path(source)
-    if implementation is Implementation.POLARS:
-        native_frame = native_namespace.scan_parquet(source, **kwargs)
-    elif implementation in {
-        Implementation.PANDAS,
-        Implementation.MODIN,
-        Implementation.CUDF,
-        Implementation.DASK,
-        Implementation.DUCKDB,
-        Implementation.IBIS,
-    }:
-        native_frame = native_namespace.read_parquet(source, **kwargs)
-    elif implementation is Implementation.PYARROW:
-        import pyarrow.parquet as pq  # ignore-banned-import
-
-        native_frame = pq.read_table(source, **kwargs)
-    elif implementation.is_spark_like():
-        if (session := kwargs.pop("session", None)) is None:
-            msg = "Spark like backends require a session object to be passed in `kwargs`."
-            raise ValueError(msg)
-        pq_reader = session.read.format("parquet")
-        native_frame = (
-            pq_reader.load(source)
-            if (
-                implementation is Implementation.SQLFRAME
-                and implementation._backend_version() < (3, 27, 0)
-            )
-            else pq_reader.options(**kwargs).load(source)
-        )
-
-    else:  # pragma: no cover
+    impl = Implementation.from_backend(backend)
+    if impl is Implementation.UNKNOWN:  # pragma: no cover
+        native_namespace = impl.to_native_namespace()
         try:
             # implementation is UNKNOWN, Narwhals extension using this feature should
             # implement `scan_parquet` function in the top-level namespace.
-            native_frame = native_namespace.scan_parquet(source=source, **kwargs)
+            native_frame: NativeDataFrame | NativeLazyFrame = (
+                native_namespace.scan_parquet(source=source, **kwargs)
+            )
         except AttributeError as e:
             msg = "Unknown namespace is expected to implement `scan_parquet` function."
             raise AttributeError(msg) from e
-    return from_native(native_frame).lazy()
+        return from_native(native_frame).lazy()
+    ns = Version.MAIN.namespace.from_backend(impl).compliant
+    frame = ns.scan_parquet(normalize_path(source), **kwargs)
+    result: LazyFrame[Any] = frame.to_narwhals().lazy()
+    return result
 
 
 def col(*names: str | Iterable[str]) -> Expr:
