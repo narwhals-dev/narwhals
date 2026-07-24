@@ -19,6 +19,7 @@ from narwhals._utils import (
     Implementation,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
+    exclude_column_names,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoSchema,
         JoinStrategy,
+        PivotAgg,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
         SizeUnit,
@@ -77,6 +79,43 @@ if TYPE_CHECKING:
     ]
 
 MYPY: Final = False
+
+# narwhals aggregate -> pyarrow hash aggregate (len and None are handled separately).
+_PIVOT_TO_PYARROW: Final[Mapping[str, str]] = {
+    "min": "min",
+    "max": "max",
+    "first": "first",
+    "last": "last",
+    "sum": "sum",
+    "mean": "mean",
+    "median": "approximate_median",
+}
+
+
+def _pivot_format_value(value: Any, /, *, quote: bool) -> str:
+    # Format one `on` value like polars: null, true/false, strings quoted only inside {...}.
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if quote and isinstance(value, str):
+        return f'"{value}"'
+    return str(value)
+
+
+def _pivot_column_name(
+    value: str, on_values: tuple[Any, ...], n_values: int, separator: str, /
+) -> str:
+    # One `on`: the value. Several: `{"a","b"}`, or `null` if any is null. Extra `values`
+    # prefix the name with `{value}{separator}`.
+    if len(on_values) == 1:
+        suffix = _pivot_format_value(on_values[0], quote=False)
+    elif any(v is None for v in on_values):
+        suffix = "null"
+    else:
+        body = ",".join(_pivot_format_value(v, quote=True) for v in on_values)
+        suffix = f"{{{body}}}"
+    return f"{value}{separator}{suffix}" if n_values > 1 else suffix
 
 
 class ArrowDataFrame(
@@ -827,4 +866,147 @@ class ArrowDataFrame(
         )
         return self._with_native(concat_tables(tables, "permissive"))
 
-    pivot = not_implemented()
+    def _pivot_aggregate(
+        self, keys: list[str], values: list[str], aggregate_function: PivotAgg | None, /
+    ) -> tuple[pa.Table, dict[str, str]]:
+        # One row per index + on combination; pyarrow names each aggregate `{column}_{function}`.
+        native = self.native
+        if aggregate_function == "len":
+            specs: list[Any] = [
+                (value, "count", pc.CountOptions(mode="all")) for value in values
+            ]
+            names = {value: f"{value}_count" for value in values}
+        else:
+            if aggregate_function is None:
+                counts = native.group_by(keys, use_threads=False).aggregate(
+                    [([], "count_all")]
+                )
+                if counts.num_rows and pc.max(counts["count_all"]).as_py() > 1:
+                    msg = (
+                        "Found multiple elements for some combination of `index` and `on`.\n\n"
+                        "Please specify an `aggregate_function`."
+                    )
+                    raise ValueError(msg)
+                function = "first"
+            else:
+                function = _PIVOT_TO_PYARROW[aggregate_function]
+            if function in {"first", "last"}:
+                # polars keeps nulls in first/last (and the no-agg single value); pyarrow drops them.
+                keep_nulls = pc.ScalarAggregateOptions(skip_nulls=False)
+                specs = [(value, function, keep_nulls) for value in values]
+            else:
+                specs = [(value, function) for value in values]
+            names = {value: f"{value}_{function}" for value in values}
+        return native.group_by(keys, use_threads=False).aggregate(specs), names
+
+    def _pivot_distinct(self, columns: list[str], /) -> pa.Table:
+        # Distinct `columns` combinations, ordered by first appearance (group_by loses order).
+        native = self.native
+        token = generate_temporary_column_name(8, native.column_names)
+        return (
+            native.select(columns)
+            .append_column(token, pa.array(range(native.num_rows)))
+            .group_by(columns, use_threads=False)
+            .aggregate([(token, "min")])
+            .sort_by(f"{token}_min")
+            .select(columns)
+        )
+
+    def _pivot_combinations(
+        self, on: list[str], *, sort_columns: bool
+    ) -> list[tuple[Any, ...]]:
+        # One column per `on` combination that occurs (not the full product).
+        on_rows = self._pivot_distinct(on)
+        combinations = list(zip(*(on_rows[name].to_pylist() for name in on), strict=True))
+        if sort_columns:
+            # polars sorts ascending, nulls first.
+            combinations.sort(key=lambda combo: tuple((v is not None, v) for v in combo))
+        return combinations
+
+    def _pivot_reshape(
+        self,
+        grouped: pa.Table,
+        agg_names: dict[str, str],
+        base: pa.Table,
+        index: list[str],
+        on: list[str],
+        values: list[str],
+        combinations: list[tuple[Any, ...]],
+        separator: str,
+        /,
+    ) -> tuple[list[Any], list[str]]:
+        # Scatter each cell to its row and column. Tuples compare structurally, so nulls
+        # match here where a pyarrow join would not.
+        n_index = len(index)
+        height = base.num_rows
+        row_of = {
+            combo: position
+            for position, combo in enumerate(
+                zip(*(base[name].to_pylist() for name in index), strict=True)
+            )
+        }
+        block_of = {combo: position for position, combo in enumerate(combinations)}
+        keys = list(
+            zip(*(grouped[name].to_pylist() for name in (*index, *on)), strict=True)
+        )
+
+        arrays: list[Any] = [base.column(position) for position in range(n_index)]
+        output_names = list(index)
+        for value in values:
+            dtype = grouped.schema.field(agg_names[value]).type
+            blocks: list[list[Any]] = [[None] * height for _ in combinations]
+            for key, cell in zip(
+                keys, grouped[agg_names[value]].to_pylist(), strict=True
+            ):
+                blocks[block_of[key[n_index:]]][row_of[key[:n_index]]] = cell
+            for combination, block in zip(combinations, blocks, strict=True):
+                arrays.append(pa.array(block, type=dtype))
+                output_names.append(
+                    _pivot_column_name(value, combination, len(values), separator)
+                )
+        return arrays, output_names
+
+    @staticmethod
+    def _pivot_fill_empty(result: pa.Table, output_names: list[str], /) -> pa.Table:
+        for output in output_names:
+            position = result.column_names.index(output)
+            column = result.column(position)
+            filled = cast(
+                "ChunkedArrayAny", pc.fill_null(column, pa.scalar(0, column.type))
+            )
+            result = result.set_column(position, output, filled)
+        return result
+
+    def pivot(
+        self,
+        on: Sequence[str],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        sort_columns: bool,
+        separator: str,
+    ) -> Self:
+        on = list(on)
+        index = index or (
+            exclude_column_names(self, {*on, *values})
+            if values
+            else exclude_column_names(self, on)
+        )
+        values = values or exclude_column_names(self, {*on, *index})
+        index, values = list(index), list(values)
+
+        grouped, agg_names = self._pivot_aggregate(
+            [*index, *on], values, aggregate_function
+        )
+        base = self._pivot_distinct(index)
+        combinations = self._pivot_combinations(on, sort_columns=sort_columns)
+        arrays, output_names = self._pivot_reshape(
+            grouped, agg_names, base, index, on, values, combinations, separator
+        )
+
+        result = pa.Table.from_arrays(arrays, names=output_names)
+        # Empty cells are null; polars fills them with 0 for sum and len, null otherwise.
+        if aggregate_function in {"sum", "len"}:
+            result = self._pivot_fill_empty(result, output_names[len(index) :])
+        return self._with_native(result, validate_column_names=False)
