@@ -1271,8 +1271,8 @@ def test_factorize(
     df = nw_v1.from_native(df_native)
     codes, uniqs = df["a"].factorize(sort=True)
 
-    assert_equal_series(uniqs, expected_uniqs, name="a")
-    assert_equal_series(codes, expected_codes, name="a")
+    assert_equal_series(uniqs, expected_uniqs, name="uniques")
+    assert_equal_series(codes, expected_codes, name="codes")
 
     assert codes._version is Version.V1
     assert uniqs._version is Version.V1
