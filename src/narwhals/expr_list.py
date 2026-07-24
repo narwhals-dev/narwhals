@@ -44,10 +44,18 @@ class ExprListNamespace(Generic[ExprT]):
         """
         return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.len"))
 
-    def unique(self) -> ExprT:
+    def unique(self, *, maintain_order: bool = False) -> ExprT:
         """Get the unique/distinct values in the list.
 
-        Null values are included in the result. The order of unique values is not guaranteed.
+        Null values are included in the result.
+
+        Arguments:
+            maintain_order: Keep the same order as the input data.
+
+        Notes:
+            `maintain_order=True` is not supported by all backends: backends whose
+            native distinct operation does not preserve order (e.g. DuckDB, Ibis)
+            raise `NotImplementedError`.
 
         Examples:
             >>> import polars as pl
@@ -71,7 +79,9 @@ class ExprListNamespace(Generic[ExprT]):
             |└──────────────┴───────────┘|
             └────────────────────────────┘
         """
-        return self._expr._append_node(ExprNode(ExprKind.ELEMENTWISE, "list.unique"))
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "list.unique", maintain_order=maintain_order)
+        )
 
     def contains(self, item: NonNestedLiteral) -> ExprT:
         """Check if sublists contain the given item.
