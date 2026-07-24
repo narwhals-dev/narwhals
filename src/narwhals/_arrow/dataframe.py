@@ -421,6 +421,7 @@ class ArrowDataFrame(
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         how_to_join_map: dict[str, JoinType] = {
             "anti": "left anti",
@@ -450,6 +451,11 @@ class ArrowDataFrame(
                 .drop([key_token])
             )
 
+        if nulls_equal and left_on and right_on:
+            return self._join_nulls_equal(
+                other, how, left_on, right_on, suffix, how_to_join_map[how]
+            )
+
         coalesce_keys = how != "full"  # polars full join does not coalesce keys
         return self._with_native(
             self.native.join(
@@ -461,6 +467,57 @@ class ArrowDataFrame(
                 coalesce_keys=coalesce_keys,
             )
         )
+
+    def _join_nulls_equal(
+        self,
+        other: Self,
+        how: JoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str,
+        join_type: JoinType,
+        /,
+    ) -> Self:
+        # pyarrow drops null join keys, so join on a null-safe encoding per key: an
+        # `is_null` flag and the value cast to string, so a real "" stays distinct from null.
+        token = generate_temporary_column_name(8, [*self.columns, *other.columns])
+        left, right = self.native, other.native
+        keys: list[str] = []
+        for i, (left_key, right_key) in enumerate(zip(left_on, right_on, strict=True)):
+            filled, missing = f"{token}_v{i}", f"{token}_n{i}"
+            left_filled = pc.fill_null(
+                pc.cast(self.native[left_key], pa.large_string()),
+                "",  # type: ignore[type-var]  # pyright: ignore[reportArgumentType]
+            )
+            right_filled = pc.fill_null(
+                pc.cast(other.native[right_key], pa.large_string()),
+                "",  # type: ignore[type-var]  # pyright: ignore[reportArgumentType]
+            )
+            left = left.append_column(filled, left_filled).append_column(  # type: ignore[arg-type]
+                missing, pc.is_null(self.native[left_key])
+            )
+            right = right.append_column(filled, right_filled).append_column(  # type: ignore[arg-type]
+                missing, pc.is_null(other.native[right_key])
+            )
+            keys.extend((filled, missing))
+
+        joined = left.join(
+            right,
+            keys=keys,
+            right_keys=keys,
+            join_type=join_type,
+            right_suffix=suffix,
+            coalesce_keys=how != "full",
+        )
+        joined = joined.drop([c for c in joined.column_names if c.startswith(token)])
+        if how not in {"full", "anti", "semi"}:
+            # polars coalesces the key columns; drop the right key that pyarrow kept.
+            drop = dict.fromkeys(
+                f"{right_key}{suffix}" if right_key in self.columns else right_key
+                for right_key in right_on
+            )
+            joined = joined.drop(list(drop))
+        return self._with_native(joined)
 
     join_asof = not_implemented()
 

@@ -56,6 +56,15 @@ if TYPE_CHECKING:
     from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
 
 
+def _join_key_condition(
+    lhs: Expression, rhs: Expression, *, nulls_equal: bool
+) -> Expression:
+    # `IS NOT DISTINCT FROM` when nulls should match, plain equality otherwise.
+    if nulls_equal:
+        return (lhs == rhs) | (lhs.isnull() & rhs.isnull())  # noqa: PD003
+    return lhs == rhs
+
+
 class DuckDBLazyFrame(
     SQLLazyFrame[
         "DuckDBExpr",
@@ -296,6 +305,7 @@ class DuckDBLazyFrame(
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         native_how: Literal["inner", "left", "outer", "cross", "semi", "anti"] = (
             "outer" if how == "full" else how
@@ -311,7 +321,9 @@ class DuckDBLazyFrame(
             assert left_on is not None  # noqa: S101
             assert right_on is not None  # noqa: S101
             it = (
-                col(f'lhs."{left}"') == col(f'rhs."{right}"')
+                _join_key_condition(
+                    col(f'lhs."{left}"'), col(f'rhs."{right}"'), nulls_equal=nulls_equal
+                )
                 for left, right in zip(left_on, right_on, strict=True)
             )
             condition: Expression = reduce(and_, it)

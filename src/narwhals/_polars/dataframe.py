@@ -217,6 +217,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         how_native = (
             "outer" if (self._backend_version < (0, 20, 29) and how == "full") else how
@@ -225,6 +226,13 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         is_semi_or_anti = how in {"semi", "anti"}
         if is_semi_or_anti and not RESPECT_JOIN_NULL_SEMI_ANTI:  # pragma: no cover
             other_native = other_native.drop_nulls(subset=right_on)
+        extra: dict[str, Any] = {}
+        if nulls_equal:
+            # polars renamed `join_nulls` to `nulls_equal` in 1.24.
+            if self._backend_version >= (1, 24):
+                extra["nulls_equal"] = True
+            else:  # pragma: no cover
+                extra["join_nulls"] = True
         return self._with_native(
             self.native.join(
                 other=other_native,
@@ -232,6 +240,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 left_on=left_on,
                 right_on=right_on,
                 suffix=suffix,
+                **extra,
             )
         )
 
@@ -659,10 +668,16 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         try:
             return super().join(
-                other=other, how=how, left_on=left_on, right_on=right_on, suffix=suffix
+                other=other,
+                how=how,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
