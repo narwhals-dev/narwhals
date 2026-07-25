@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import types
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, final
 
 import pytest
 
@@ -9,6 +9,9 @@ import narwhals as nw
 import narwhals.stable.v1.dependencies as nw_v1_dependencies
 import narwhals.stable.v2.dependencies as nw_v2_dependencies
 from narwhals import dependencies as nw_dependencies
+from narwhals._compliant import CompliantNamespace
+from narwhals._compliant.typing import CompliantNamespaceAny
+from narwhals._utils import not_implemented
 from narwhals.exceptions import PluginError
 from narwhals.plugins import PluginName
 from narwhals.utils import Version
@@ -29,9 +32,15 @@ if TYPE_CHECKING:
 
     _ConstructorData: TypeAlias = "Mapping[str, Any] | Sequence[Mapping[str, Any]] | Callable[[], _2DArray | pa.Table]"
 
-plugin_module = pytest.importorskip("test_plugin")
+    import test_plugin as plugin_module
+else:
+    plugin_module = pytest.importorskip("test_plugin")
 
-DEPENDENCIES_MODULES = (nw_dependencies, nw_v1_dependencies, nw_v2_dependencies)
+
+from test_plugin.dataframe import DictDataFrame
+from test_plugin.namespace import DictNamespace
+
+DEPENDENCIES_MODULES: Final = (nw_dependencies, nw_v1_dependencies, nw_v2_dependencies)
 
 BACKEND = PluginName("test-plugin")
 DATA: dict[str, Any] = {"a": [1, 1, 2], "b": [4, 5, 6]}
@@ -88,15 +97,33 @@ class FakeEntryPoint:
         return self._plugin
 
 
-def _plugin_module(name: str, make_namespace: Callable[[], object]) -> types.ModuleType:
-    """Build an ad-hoc plugin module whose `__narwhals_namespace__` returns `make_namespace()`."""
-    plugin = types.ModuleType(name)
+R = TypeVar("R", bound=CompliantNamespaceAny, covariant=True)  # noqa: PLC0105
+_R = TypeVar("_R", bound=CompliantNamespaceAny, covariant=True)  # noqa: PLC0105
 
-    def __narwhals_namespace__(version: Version) -> object:  # noqa: ARG001, N807
-        return make_namespace()
 
-    plugin.__narwhals_namespace__ = __narwhals_namespace__  # type: ignore[attr-defined]
-    return plugin
+@final
+class PluginModule(types.ModuleType, Generic[R]):
+    _factory: Callable[[], R]
+
+    @classmethod
+    def from_factory(
+        cls: type[PluginModule[Any]], name: str, factory: Callable[[], _R]
+    ) -> PluginModule[_R]:
+        self = cls(name)
+        self._factory = factory
+        return self
+
+    def __narwhals_namespace__(self, version: Version) -> R:
+        return self._factory()
+
+
+class NotImplementedNamespace(CompliantNamespace[Any, Any]):
+    scan_csv = not_implemented()
+    read_csv = not_implemented()
+    scan_parquet = not_implemented()
+    read_parquet = not_implemented()
+    _series = not_implemented()
+    _dataframe = not_implemented()
 
 
 def _np_2d_array() -> _2DArray:
@@ -189,31 +216,33 @@ def test_read_plugin_scan_only(
         read_function(request.getfixturevalue(path_fixture), backend=BACKEND)
 
 
-def _eager_io_plugin() -> types.ModuleType:
+class EagerIODictNamespace(DictNamespace):
+    def read_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> DictDataFrame:
+        data = self.scan_csv(source, separator=separator, **kwds)._native_frame
+        return DictDataFrame(data, version=self._version)
+
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> DictDataFrame:
+        data = self.scan_parquet(source, **kwds)._native_frame
+        return DictDataFrame(data, version=self._version)
+
+
+@pytest.fixture
+def eager_io_plugin() -> PluginModule[EagerIODictNamespace]:
     """A plugin whose compliant namespace also implements the `read_*` methods."""
-    from test_plugin.dataframe import DictDataFrame
-    from test_plugin.namespace import DictNamespace
-
-    class EagerIODictNamespace(DictNamespace):
-        def read_csv(
-            self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-        ) -> DictDataFrame:
-            data = self.scan_csv(source, separator=separator, **kwds)._native_frame
-            return DictDataFrame(data, version=self._version)
-
-        def read_parquet(self, source: NormalizedPath, **kwds: Any) -> DictDataFrame:
-            data = self.scan_parquet(source, **kwds)._native_frame
-            return DictDataFrame(data, version=self._version)
 
     def make_namespace() -> EagerIODictNamespace:
         return EagerIODictNamespace(version=Version.MAIN)
 
-    return _plugin_module("eager_io_plugin", make_namespace)
+    return PluginModule.from_factory("eager_io_plugin", make_namespace)
 
 
-def test_read_plugin_eager_namespace(csv_path: str, parquet_path: str) -> None:
+def test_read_plugin_eager_namespace(
+    csv_path: str, parquet_path: str, eager_io_plugin: PluginModule[EagerIODictNamespace]
+) -> None:
     """A plugin namespace implementing `read_*` serves eager reads, per the IO contract."""
-    plugin = _eager_io_plugin()
+    plugin = eager_io_plugin
     df_csv = nw.read_csv(csv_path, backend=plugin)
     assert isinstance(df_csv, nw.DataFrame)
     assert df_csv.to_native() == {"a": ["1", "1", "2"], "b": ["4", "5", "6"]}
@@ -317,19 +346,7 @@ def test_plugin_missing_narwhals_namespace(
         function(*args, backend=empty_namespace)
 
 
-def _not_implemented_io_namespace() -> object:
-    from narwhals._utils import not_implemented
-
-    class NotImplementedIONamespace:
-        scan_csv = not_implemented()
-        read_csv = not_implemented()
-        scan_parquet = not_implemented()
-        read_parquet = not_implemented()
-
-    return NotImplementedIONamespace()
-
-
-@pytest.mark.parametrize("make_namespace", [object, _not_implemented_io_namespace])
+@pytest.mark.parametrize("make_namespace", [object, NotImplementedNamespace])
 @pytest.mark.parametrize(
     ("io_function", "source"),
     [
@@ -348,24 +365,14 @@ def test_plugin_missing_io_method(
 
     Both a plainly absent method and a `not_implemented` placeholder count as missing.
     """
-    minimal_plugin = _plugin_module("minimal_plugin", make_namespace)
+    minimal_plugin = PluginModule.from_factory("minimal_plugin", make_namespace)  # type: ignore[arg-type]
     with pytest.raises(
         PluginError, match=f"expected to implement `{io_function.__name__}`"
     ):
         io_function(source, backend=minimal_plugin)
 
 
-def _not_implemented_namespace() -> object:
-    from narwhals._utils import not_implemented
-
-    class LazyOnlyNamespace:
-        _series = not_implemented()
-        _dataframe = not_implemented()
-
-    return LazyOnlyNamespace()
-
-
-@pytest.mark.parametrize("make_namespace", [object, _not_implemented_namespace])
+@pytest.mark.parametrize("make_namespace", [object, NotImplementedNamespace])
 @pytest.mark.parametrize(
     ("function", "args"),
     [
@@ -382,7 +389,7 @@ def test_plugin_not_eager_allowed(
     make_namespace: Callable[[], object],
 ) -> None:
     """Eager functions require an `EagerNamespace`-compliant plugin namespace."""
-    lazy_plugin = _plugin_module("lazy_plugin", make_namespace)
+    lazy_plugin = PluginModule.from_factory("lazy_plugin", make_namespace)  # type: ignore[arg-type]
     with pytest.raises(PluginError, match="does not provide eager support"):
         function(*args, backend=lazy_plugin)
 
@@ -402,6 +409,7 @@ def test_from_native_unsupported_object() -> None:
 def test_is_into_lazyframe() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3714
     df_native = {"a": [1, 1, 2], "b": [4, 5, 6]}
+    assert nw_dependencies.is_into_lazyframe(df_native)
     for dependencies in DEPENDENCIES_MODULES:
         assert dependencies.is_into_lazyframe(df_native)
 
@@ -409,6 +417,7 @@ def test_is_into_lazyframe() -> None:
 def test_is_into_dataframe() -> None:
     # `test_plugin` converts to a LazyFrame, so `is_into_dataframe` should not match.
     df_native = {"a": [1, 1, 2], "b": [4, 5, 6]}
+    assert not nw_dependencies.is_into_dataframe(df_native)
     for dependencies in DEPENDENCIES_MODULES:
         assert not dependencies.is_into_dataframe(df_native)
 
@@ -422,7 +431,11 @@ def test_is_into_dataframe() -> None:
     ],
 )
 def test_is_into_mocked_plugin(
-    monkeypatch: pytest.MonkeyPatch, compliant_cls: type, expected_kind: str
+    monkeypatch: pytest.MonkeyPatch,
+    compliant_cls: type[
+        FakeCompliantDataFrame | FakeCompliantLazyFrame | FakeCompliantSeries
+    ],
+    expected_kind: str,
 ) -> None:
     from narwhals import plugins
 
@@ -431,6 +444,9 @@ def test_is_into_mocked_plugin(
 
     monkeypatch.setattr(plugins, "_discover_entrypoints", fake_entrypoints)
     native = FakeNative()
+    assert nw_dependencies.is_into_dataframe(native) is (expected_kind == "dataframe")
+    assert nw_dependencies.is_into_lazyframe(native) is (expected_kind == "lazyframe")
+    assert nw_dependencies.is_into_series(native) is (expected_kind == "series")
     for dependencies in DEPENDENCIES_MODULES:
         assert dependencies.is_into_dataframe(native) is (expected_kind == "dataframe")
         assert dependencies.is_into_lazyframe(native) is (expected_kind == "lazyframe")
