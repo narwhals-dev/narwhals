@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import types
-from typing import TYPE_CHECKING, Any, Final, Generic, TypeVar, cast, final
+from functools import partial
+from typing import TYPE_CHECKING, Any, Final, Generic, Protocol, TypeVar, cast, final
 
 import pytest
 
@@ -39,6 +40,8 @@ else:
 
 from test_plugin.dataframe import DictDataFrame
 from test_plugin.namespace import DictNamespace
+
+from narwhals._typing import Backend
 
 DEPENDENCIES_MODULES: Final = (nw_dependencies, nw_v1_dependencies, nw_v2_dependencies)
 
@@ -124,6 +127,16 @@ class NotImplementedNamespace(CompliantNamespace[Any, Any]):
     read_parquet = not_implemented()
     _series = not_implemented()
     _dataframe = not_implemented()
+
+
+BackendT = TypeVar("BackendT", bound=Backend, contravariant=True)  # noqa: PLC0105
+FrameT_co = TypeVar(
+    "FrameT_co", bound=nw.DataFrame[Any] | nw.LazyFrame[Any], covariant=True
+)
+
+
+class BackendFn(Protocol[BackendT, FrameT_co]):
+    def __call__(self, *, backend: IntoBackend[BackendT | PluginName]) -> FrameT_co: ...
 
 
 def _np_2d_array() -> _2DArray:
@@ -326,24 +339,24 @@ def test_dataframe_filter_mask_plugin() -> None:
 
 
 @pytest.mark.parametrize(
-    ("function", "args"),
+    "function",
     [
-        (nw.scan_csv, ("x.csv",)),
-        (nw.read_csv, ("x.csv",)),
-        (nw.scan_parquet, ("x.parquet",)),
-        (nw.read_parquet, ("x.parquet",)),
-        (nw.from_dict, (DATA,)),
+        partial(nw.scan_csv, "x.csv"),
+        partial(nw.read_csv, "x.csv"),
+        partial(nw.scan_parquet, "x.parquet"),
+        partial(nw.read_parquet, "x.parquet"),
+        partial(nw.from_dict, DATA),
     ],
 )
 def test_plugin_missing_narwhals_namespace(
-    function: Callable[..., nw.DataFrame[Any] | nw.LazyFrame[Any]], args: tuple[Any, ...]
+    function: BackendFn[Backend, nw.DataFrame[Any] | nw.LazyFrame[Any]],
 ) -> None:
     """IO and eager functions require the plugin to implement `__narwhals_namespace__`."""
     empty_namespace = types.ModuleType("empty_plugin")
     with pytest.raises(
         PluginError, match="expected to implement `__narwhals_namespace__`"
     ):
-        function(*args, backend=empty_namespace)
+        function(backend=empty_namespace)
 
 
 @pytest.mark.parametrize("make_namespace", [object, NotImplementedNamespace])
