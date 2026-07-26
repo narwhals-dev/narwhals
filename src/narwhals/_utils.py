@@ -83,7 +83,7 @@ if TYPE_CHECKING:
         NativeDataFrameT,
         NativeLazyFrameT,
     )
-    from narwhals._namespace import Namespace
+    from narwhals._namespace import EagerNamespaceKnown, Namespace
     from narwhals._native import (
         NativeArrow,
         NativeCuDF,
@@ -1681,7 +1681,7 @@ def eager_namespace(
     version: Version,
     function_name: str,
     hint_example: str,
-) -> EagerNamespaceAny:
+) -> EagerNamespaceAny | EagerNamespaceKnown:
     """Resolve `backend` to an eager-allowed compliant namespace.
 
     Built-in eager backends resolve directly. Anything unknown to `Implementation` is
@@ -1693,11 +1693,7 @@ def eager_namespace(
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
-        # NOTE: `cast` is required as the overload returns a union of concrete
-        # namespaces, whose invariant type parameters don't unify with `*Any` aliases.
-        return cast(
-            "EagerNamespaceAny", version.namespace.from_backend(implementation).compliant
-        )
+        return version.namespace.from_backend(implementation).compliant
     if implementation is not Implementation.UNKNOWN:
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
