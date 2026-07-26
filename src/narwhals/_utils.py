@@ -78,6 +78,8 @@ if TYPE_CHECKING:
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
+        CompliantDataFrameAny,
+        CompliantSeriesAny,
         EagerNamespaceAny,
         EvalNames,
         NativeDataFrameT,
@@ -1711,7 +1713,7 @@ def eager_namespace(
 
 
 def eager_namespace_from_compliant(
-    compliant_object: Any, /, *, function_name: str
+    compliant_object: CompliantDataFrameAny | CompliantSeriesAny, /, *, function_name: str
 ) -> EagerNamespaceAny:
     """Resolve the eager namespace of a compliant object originating from a plugin.
 
@@ -1719,8 +1721,11 @@ def eager_namespace_from_compliant(
     internally construct series use the namespace of the compliant object itself.
     """
     namespace = compliant_object.__narwhals_namespace__()
+    # NOTE: See https://github.com/narwhals-dev/narwhals/pull/3110#issuecomment-3270692267
     return _ensure_eager_allowed(
-        namespace, source=type(namespace).__name__, function_name=function_name
+        namespace,  # type: ignore [arg-type] # pyright: ignore[reportArgumentType]
+        source=type(namespace).__name__,
+        function_name=function_name,
     )
 
 
