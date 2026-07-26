@@ -1653,7 +1653,7 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
 
 
 def _ensure_eager_allowed(
-    namespace: Any, /, *, source: str, function_name: str
+    namespace: EagerNamespaceAny, /, *, source: str, function_name: str
 ) -> EagerNamespaceAny:
     """Duck-check that `namespace` implements the `EagerNamespace` protocol."""
     # NOTE: `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
@@ -1671,7 +1671,7 @@ def _ensure_eager_allowed(
             f"but `{function_name}` is an eager-only function."
         )
         raise PluginError(msg)
-    return cast("EagerNamespaceAny", namespace)
+    return namespace
 
 
 def eager_namespace(
