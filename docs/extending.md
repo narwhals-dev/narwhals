@@ -81,7 +81,9 @@ In all cases, dispatch goes through the compliant namespace returned by the plug
 2. **Eager constructors** (`from_dict`, `from_dicts`, `from_numpy`, `from_arrow`,
    `new_series`, as well as the `DataFrame.from_*` and `Series.from_*` classmethods):
    these are eager-only. If the plugin's compliant namespace implements the
-   `EagerNamespace` protocol (in particular the `_dataframe` and `_series` properties,
+   `EagerNamespace` protocol (importable from `narwhals.compliant`, alongside
+   `EagerDataFrame`, `EagerSeries` and `EagerExpr`; in particular the
+   `_dataframe` and `_series` properties,
    and the `from_dict`, `from_dicts`, `from_numpy`, `from_arrow` and `from_iterable`
    constructors on the respective compliant classes), these functions work with no
    extra plugin code. Lazy-only plugins get an informative
