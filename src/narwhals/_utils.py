@@ -1654,19 +1654,28 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
-def _ensure_eager_allowed(
-    namespace: EagerNamespaceAny, /, *, source: str, function_name: str
-) -> EagerNamespaceAny:
-    """Duck-check that `namespace` implements the `EagerNamespace` protocol."""
-    # NOTE: `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
-    # `not_implemented` descriptors, which exist statically but raise on instance
-    # access, so the statically-retrieved attribute is checked against `not_implemented`.
-    eager_allowed = all(
-        (attr := getattr_static(namespace, name, None)) is not None
+# TODO(Unassigned): Generalize _hasattr_static?
+# See https://github.com/narwhals-dev/narwhals/pull/3753#discussion_r3653098839
+def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
+    """Duck-check that `obj` implements the `EagerNamespace` protocol.
+
+    Note:
+        `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
+        `not_implemented` descriptors, which exist statically but raise on instance
+        access, so the statically-retrieved attribute is checked against `not_implemented`.
+    """
+    return all(
+        (attr := getattr_static(obj, name, None)) is not None
         and not isinstance(attr, not_implemented)
         for name in ("_series", "_dataframe")
     )
-    if not eager_allowed:
+
+
+def _ensure_eager_allowed(
+    namespace: object, /, *, source: str, function_name: str
+) -> EagerNamespaceAny:
+    """Raise unless `namespace` implements the `EagerNamespace` protocol."""
+    if not _is_eager_namespace(namespace):
         msg = (
             f"Plugin backend {source!r} does not provide eager support (its "
             "compliant namespace does not implement the `EagerNamespace` protocol), "
@@ -1703,12 +1712,12 @@ def eager_namespace(
             f"    {hint_example}.lazy('{implementation}')"
         )
         raise ValueError(msg)
-    from narwhals.plugins import _backend_namespace, _plugin_hook
+    from narwhals.plugins import _backend_namespace, _plugin_namespace
 
-    module = _backend_namespace(backend)
-    namespace = _plugin_hook(module, "__narwhals_namespace__")(version=version)
+    plugin = _backend_namespace(backend)
+    namespace = _plugin_namespace(plugin, version=version)
     return _ensure_eager_allowed(
-        namespace, source=module.__name__, function_name=function_name
+        namespace, source=plugin.__name__, function_name=function_name
     )
 
 
@@ -1721,11 +1730,8 @@ def eager_namespace_from_compliant(
     internally construct series use the namespace of the compliant object itself.
     """
     namespace = compliant_object.__narwhals_namespace__()
-    # NOTE: See https://github.com/narwhals-dev/narwhals/pull/3110#issuecomment-3270692267
     return _ensure_eager_allowed(
-        namespace,  # type: ignore [arg-type] # pyright: ignore[reportArgumentType]
-        source=type(namespace).__name__,
-        function_name=function_name,
+        namespace, source=type(namespace).__name__, function_name=function_name
     )
 
 
