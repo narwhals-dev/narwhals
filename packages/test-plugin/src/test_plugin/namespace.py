@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant import CompliantNamespace
 from narwhals._utils import Implementation, not_implemented
+from narwhals.compliant import CompliantNamespace
 from test_plugin.dataframe import DictDataFrame, DictFrame, DictLazyFrame
 
 if TYPE_CHECKING:
@@ -31,24 +31,33 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
 
     # IO methods below follow the namespace contract used by `narwhals.functions`
     # (see "IO functions: the namespace contract" in `docs/extending.md`).
-    # `read_*` are deliberately left unimplemented: `test_plugin` wraps dicts
-    # lazily, so it only supports `scan_*`.
+    # `scan_*` delegate to `read_*`, mirroring the defaults `EagerNamespace` provides.
 
-    def scan_csv(
+    def read_csv(
         self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-    ) -> DictLazyFrame:
+    ) -> DictDataFrame:
         import csv
         from pathlib import Path
 
         with Path(source).open(newline="", encoding="utf-8") as file:
             header, *rows = list(csv.reader(file, delimiter=separator))
         data = {name: [row[index] for row in rows] for index, name in enumerate(header)}
-        return DictLazyFrame(data, version=self._version)
+        return DictDataFrame(data, version=self._version)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DictLazyFrame:
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> DictDataFrame:
         import pyarrow.parquet as pq
 
         data: DictFrame = pq.read_table(source, **kwds).to_pydict()
+        return DictDataFrame(data, version=self._version)
+
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> DictLazyFrame:
+        data = self.read_csv(source, separator=separator, **kwds).native
+        return DictLazyFrame(data, version=self._version)
+
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DictLazyFrame:
+        data = self.read_parquet(source, **kwds).native
         return DictLazyFrame(data, version=self._version)
 
     # NOTE: `not_implemented.__get__` reads `instance._implementation` to build its

@@ -8,7 +8,7 @@ from narwhals._utils import (
     Version,
     not_implemented,
 )
-from narwhals.typing import CompliantLazyFrame
+from narwhals.compliant import CompliantLazyFrame
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence

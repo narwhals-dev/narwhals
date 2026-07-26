@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 import types
-from typing import TYPE_CHECKING, Any, cast
+from functools import partial
+from typing import TYPE_CHECKING, Any, Protocol, cast, get_args
 
 import pytest
 
@@ -9,9 +11,10 @@ import narwhals as nw
 import narwhals.stable.v1.dependencies as nw_v1_dependencies
 import narwhals.stable.v2.dependencies as nw_v2_dependencies
 from narwhals import dependencies as nw_dependencies
+from narwhals._compliant import CompliantNamespace
+from narwhals._utils import EAGER_HINT_EXAMPLES, EagerFunctionName, not_implemented
 from narwhals.exceptions import PluginError
 from narwhals.plugins import PluginName
-from narwhals.utils import Version
 from tests.utils import PYARROW_VERSION
 
 if TYPE_CHECKING:
@@ -23,9 +26,10 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from typing_extensions import Self
 
-    from narwhals._typing import EagerAllowed, IntoBackend
+    from narwhals._typing import Backend, EagerAllowed, IntoBackend
     from narwhals.plugins import Plugin
-    from narwhals.typing import NormalizedPath, _1DArray, _2DArray
+    from narwhals.typing import _1DArray, _2DArray
+    from narwhals.utils import Version
 
     _ConstructorData: TypeAlias = "Mapping[str, Any] | Sequence[Mapping[str, Any]] | Callable[[], _2DArray | pa.Table]"
 
@@ -88,15 +92,44 @@ class FakeEntryPoint:
         return self._plugin
 
 
-def _plugin_module(name: str, make_namespace: Callable[[], object]) -> types.ModuleType:
-    """Build an ad-hoc plugin module whose `__narwhals_namespace__` returns `make_namespace()`."""
-    plugin = types.ModuleType(name)
+class PluginModule(types.ModuleType):
+    """An ad-hoc, *deliberately incomplete* plugin module.
 
-    def __narwhals_namespace__(version: Version) -> object:  # noqa: ARG001, N807
-        return make_namespace()
+    Real plugins live in `packages/`, but the error paths below need namespaces which
+    violate the contract on purpose, so they cannot be packaged.
+    """
 
-    plugin.__narwhals_namespace__ = __narwhals_namespace__  # type: ignore[attr-defined]
-    return plugin
+    _factory: Callable[[], object]
+
+    def __init__(self, name: str, factory: Callable[[], object]) -> None:
+        super().__init__(name)
+        self._factory = factory
+
+    def __narwhals_namespace__(self, version: Version) -> object:
+        return self._factory()
+
+
+class BackendFn(Protocol):
+    """A narwhals function whose remaining argument is `backend`."""
+
+    def __call__(
+        self, *, backend: IntoBackend[Backend | PluginName]
+    ) -> nw.DataFrame[Any] | nw.LazyFrame[Any]: ...
+
+
+class NotImplementedNamespace(CompliantNamespace[Any, Any]):
+    """A namespace which declares, but does not provide, the optional plugin methods.
+
+    `not_implemented` descriptors exist statically yet raise on instance access, so they
+    must not be mistaken for support.
+    """
+
+    scan_csv = not_implemented()
+    read_csv = not_implemented()
+    scan_parquet = not_implemented()
+    read_parquet = not_implemented()
+    _series = not_implemented()
+    _dataframe = not_implemented()
 
 
 def _np_2d_array() -> _2DArray:
@@ -172,54 +205,23 @@ def test_scan_plugin(
 
 
 @pytest.mark.parametrize(
-    ("hook", "read_function", "path_fixture"),
+    ("read_function", "path_fixture", "expected"),
     [
-        ("read_csv", nw.read_csv, "csv_path"),
-        ("read_parquet", nw.read_parquet, "parquet_path"),
+        (nw.read_csv, "csv_path", {"a": ["1", "1", "2"], "b": ["4", "5", "6"]}),
+        (nw.read_parquet, "parquet_path", DATA),
     ],
+    ids=["read_csv", "read_parquet"],
 )
-def test_read_plugin_scan_only(
+def test_read_plugin(
     request: pytest.FixtureRequest,
-    hook: str,
     read_function: Callable[..., nw.DataFrame[Any]],
     path_fixture: str,
+    expected: dict[str, Any],
 ) -> None:
-    """`test_plugin` wraps dicts lazily and only implements `scan_*`, so eager reads raise."""
-    with pytest.raises(PluginError, match=f"expected to implement `{hook}`"):
-        read_function(request.getfixturevalue(path_fixture), backend=BACKEND)
-
-
-def _eager_io_plugin() -> types.ModuleType:
-    """A plugin whose compliant namespace also implements the `read_*` methods."""
-    from test_plugin.dataframe import DictDataFrame
-    from test_plugin.namespace import DictNamespace
-
-    class EagerIODictNamespace(DictNamespace):
-        def read_csv(
-            self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-        ) -> DictDataFrame:
-            data = self.scan_csv(source, separator=separator, **kwds)._native_frame
-            return DictDataFrame(data, version=self._version)
-
-        def read_parquet(self, source: NormalizedPath, **kwds: Any) -> DictDataFrame:
-            data = self.scan_parquet(source, **kwds)._native_frame
-            return DictDataFrame(data, version=self._version)
-
-    def make_namespace() -> EagerIODictNamespace:
-        return EagerIODictNamespace(version=Version.MAIN)
-
-    return _plugin_module("eager_io_plugin", make_namespace)
-
-
-def test_read_plugin_eager_namespace(csv_path: str, parquet_path: str) -> None:
-    """A plugin namespace implementing `read_*` serves eager reads, per the IO contract."""
-    plugin = _eager_io_plugin()
-    df_csv = nw.read_csv(csv_path, backend=plugin)
-    assert isinstance(df_csv, nw.DataFrame)
-    assert df_csv.to_native() == {"a": ["1", "1", "2"], "b": ["4", "5", "6"]}
-    df_parquet = nw.read_parquet(parquet_path, backend=plugin)
-    assert isinstance(df_parquet, nw.DataFrame)
-    assert df_parquet.to_native() == DATA
+    """`read_*` dispatch to the namespace's eager half of the IO contract."""
+    df = read_function(request.getfixturevalue(path_fixture), backend=BACKEND)
+    assert isinstance(df, nw.DataFrame)
+    assert df.to_native() == expected
 
 
 @pytest.mark.parametrize(
@@ -297,39 +299,25 @@ def test_dataframe_filter_mask_plugin() -> None:
 
 
 @pytest.mark.parametrize(
-    ("function", "args"),
+    "function",
     [
-        (nw.scan_csv, ("x.csv",)),
-        (nw.read_csv, ("x.csv",)),
-        (nw.scan_parquet, ("x.parquet",)),
-        (nw.read_parquet, ("x.parquet",)),
-        (nw.from_dict, (DATA,)),
+        partial(nw.scan_csv, "x.csv"),
+        partial(nw.read_csv, "x.csv"),
+        partial(nw.scan_parquet, "x.parquet"),
+        partial(nw.read_parquet, "x.parquet"),
+        partial(nw.from_dict, DATA),
     ],
 )
-def test_plugin_missing_narwhals_namespace(
-    function: Callable[..., nw.DataFrame[Any] | nw.LazyFrame[Any]], args: tuple[Any, ...]
-) -> None:
+def test_plugin_missing_narwhals_namespace(function: BackendFn) -> None:
     """IO and eager functions require the plugin to implement `__narwhals_namespace__`."""
     empty_namespace = types.ModuleType("empty_plugin")
     with pytest.raises(
         PluginError, match="expected to implement `__narwhals_namespace__`"
     ):
-        function(*args, backend=empty_namespace)
+        function(backend=empty_namespace)
 
 
-def _not_implemented_io_namespace() -> object:
-    from narwhals._utils import not_implemented
-
-    class NotImplementedIONamespace:
-        scan_csv = not_implemented()
-        read_csv = not_implemented()
-        scan_parquet = not_implemented()
-        read_parquet = not_implemented()
-
-    return NotImplementedIONamespace()
-
-
-@pytest.mark.parametrize("make_namespace", [object, _not_implemented_io_namespace])
+@pytest.mark.parametrize("make_namespace", [object, NotImplementedNamespace])
 @pytest.mark.parametrize(
     ("io_function", "source"),
     [
@@ -348,43 +336,32 @@ def test_plugin_missing_io_method(
 
     Both a plainly absent method and a `not_implemented` placeholder count as missing.
     """
-    minimal_plugin = _plugin_module("minimal_plugin", make_namespace)
+    minimal_plugin = PluginModule("minimal_plugin", make_namespace)
     with pytest.raises(
         PluginError, match=f"expected to implement `{io_function.__name__}`"
     ):
         io_function(source, backend=minimal_plugin)
 
 
-def _not_implemented_namespace() -> object:
-    from narwhals._utils import not_implemented
-
-    class LazyOnlyNamespace:
-        _series = not_implemented()
-        _dataframe = not_implemented()
-
-    return LazyOnlyNamespace()
-
-
-@pytest.mark.parametrize("make_namespace", [object, _not_implemented_namespace])
+@pytest.mark.parametrize("make_namespace", [object, NotImplementedNamespace])
 @pytest.mark.parametrize(
-    ("function", "args"),
+    "function",
     [
-        (nw.from_dict, (DATA,)),
-        (nw.from_dicts, (ROWS,)),
-        (nw.new_series, ("a", [1])),
-        (nw.Series.from_iterable, ("a", [1])),
-        (nw.DataFrame.from_dict, (DATA,)),
+        partial(nw.from_dict, DATA),
+        partial(nw.from_dicts, ROWS),
+        partial(nw.new_series, "a", [1]),
+        partial(nw.Series.from_iterable, "a", [1]),
+        partial(nw.DataFrame.from_dict, DATA),
     ],
 )
 def test_plugin_not_eager_allowed(
     function: Callable[..., nw.DataFrame[Any] | nw.Series[Any]],
-    args: tuple[Any, ...],
     make_namespace: Callable[[], object],
 ) -> None:
     """Eager functions require an `EagerNamespace`-compliant plugin namespace."""
-    lazy_plugin = _plugin_module("lazy_plugin", make_namespace)
+    lazy_plugin = PluginModule("lazy_plugin", make_namespace)
     with pytest.raises(PluginError, match="does not provide eager support"):
-        function(*args, backend=lazy_plugin)
+        function(backend=lazy_plugin)
 
 
 def test_unknown_backend_raises() -> None:
@@ -441,6 +418,27 @@ def test_typing() -> None:
     import test_plugin
 
     _plugin: Plugin = test_plugin
+
+
+def test_eager_hint_examples_exhaustive() -> None:
+    assert set(get_args(EagerFunctionName)) == set(EAGER_HINT_EXAMPLES)
+
+
+@pytest.mark.parametrize(
+    ("function", "function_name"),
+    [
+        (partial(nw.from_dict, DATA), "from_dict"),
+        (partial(nw.new_series, "a", [1]), "new_series"),
+        (partial(nw.DataFrame.from_dicts, ROWS), "DataFrame.from_dicts"),
+    ],
+)
+def test_eager_only_lazy_backend_hint(
+    function: Callable[..., Any], function_name: str
+) -> None:
+    """A lazy-only *built-in* backend gets the per-function hint, keyed by `function_name`."""
+    hint = EAGER_HINT_EXAMPLES[function_name]  # type: ignore[index]
+    with pytest.raises(ValueError, match=re.escape(f"    {hint}.lazy(")):
+        function(backend="duckdb")
 
 
 def test_plugin_name_runtime() -> None:

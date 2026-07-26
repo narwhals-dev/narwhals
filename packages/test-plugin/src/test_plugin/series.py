@@ -9,8 +9,9 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.series import Series
+    from narwhals.utils import Version
 
 
 class DictSeries:
