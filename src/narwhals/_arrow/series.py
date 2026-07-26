@@ -546,7 +546,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def is_nan(self) -> Self:
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
+        if not strict:
+            msg = "`cast(..., strict=False)` is not yet implemented for the pyarrow backend."
+            raise NotImplementedError(msg)
         data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
 

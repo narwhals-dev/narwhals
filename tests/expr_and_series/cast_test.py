@@ -191,6 +191,72 @@ def test_cast_to_float16(constructor: Constructor) -> None:
         assert_equal_data(result, data)
 
 
+# Backends for which `cast(..., strict=False)` isn't (yet) implemented.
+CAST_STRICT_FALSE_UNSUPPORTED = ("pyarrow_table", "dask", "pyspark", "sqlframe")
+
+
+def test_cast_strict_false_string_to_numeric(constructor: Constructor) -> None:
+    data = {"a": ["1", "2", "abc", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Int64, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Int64, strict=False))
+    assert result.collect_schema()["a"] == nw.Int64
+    assert_equal_data(result, {"a": [1, 2, None, None]})
+
+
+def test_cast_strict_false_numeric_overflow(constructor: Constructor) -> None:
+    # Downcasting to a narrower integer type: out-of-range values should become
+    # `null` under `strict=False`, instead of silently wrapping/overflowing.
+    data = {"a": [300, -1, 5, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Int8, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Int8, strict=False))
+    assert result.collect_schema()["a"] == nw.Int8
+    assert_equal_data(result, {"a": [None, -1, 5, None]})
+
+
+def test_cast_strict_false_float_to_int(constructor: Constructor) -> None:
+    # A float so large it can't be represented as an `Int64` should become `null`
+    # under `strict=False`, while in-range floats cast normally.
+    data = {"a": [1e300, 2.0, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Int64, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Int64, strict=False))
+    assert result.collect_schema()["a"] == nw.Int64
+    assert_equal_data(result, {"a": [None, 2, None]})
+
+
+def test_cast_strict_false_numeric_to_numeric(constructor: Constructor) -> None:
+    # Plain, in-range numeric-to-numeric casts: `strict=False` should behave
+    # identically to `strict=True` when nothing is actually invalid.
+    data = {"a": [1, 2, 3]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Float64, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Float64, strict=False))
+    assert result.collect_schema()["a"] == nw.Float64
+    assert_equal_data(result, data)
+
+
 def test_cast_string() -> None:
     pytest.importorskip("pandas")
     import pandas as pd

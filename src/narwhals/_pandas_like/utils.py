@@ -18,6 +18,7 @@ from narwhals._constants import (
     US_PER_SECOND,
 )
 from narwhals._exceptions import issue_warning
+from narwhals._integer_bounds import INTEGER_BOUNDS
 from narwhals._utils import (
     Implementation,
     Version,
@@ -558,6 +559,48 @@ def narwhals_to_native_arrow_dtype(
         f"{implementation} and version {version}."
     )
     raise NotImplementedError(msg)
+
+
+def cast_non_strict(
+    native: pd.Series[Any],
+    dtype: IntoDType,
+    pd_dtype: Any,
+    dtype_backend: DTypeBackend,
+    implementation: Implementation,
+    version: Version,
+) -> pd.Series[Any]:
+    """Non-strict (`strict=False`) counterpart to `.astype(pd_dtype)`-based casting.
+
+    Dispatches on the target dtype family and uses pandas' own vectorized "coerce"
+    tools, so that values which can't be cast become null instead of raising.
+    """
+    base_type = dtype.base_type()
+    if base_type.is_integer() or base_type.is_float():
+        numeric = pd.to_numeric(native, errors="coerce")
+        target: Any = pd_dtype
+        if bounds := INTEGER_BOUNDS.get(base_type):
+            lo, hi = bounds
+            numeric = numeric.where(numeric.isna() | numeric.between(lo, hi))
+            if (
+                dtype_backend is None
+                and implementation is not Implementation.CUDF
+                and numeric.isna().any()
+            ):
+                # A plain NumPy integer dtype can't hold a null, so upgrade to the
+                # nullable flavor, but only once we know we actually introduced one.
+                target = narwhals_to_native_dtype(
+                    dtype, "numpy_nullable", implementation, version
+                )
+        return numeric.astype(target)
+    if issubclass(base_type, (dtypes.Datetime, dtypes.Date)):
+        return pd.to_datetime(native, errors="coerce").astype(pd_dtype)
+    if issubclass(base_type, dtypes.Duration):
+        return pd.to_timedelta(native, errors="coerce").astype(pd_dtype)
+    # Other targets (Boolean, String, Categorical, Struct, ...): Polars itself mostly
+    # disallows/doesn't lose data on these combinations anyway (e.g. casting `String`
+    # to `Boolean` already raises in Polars regardless of `strict`), so a plain cast
+    # is the correct match here too.
+    return native.astype(pd_dtype)
 
 
 def int_dtype_mapper(dtype: Any) -> str:

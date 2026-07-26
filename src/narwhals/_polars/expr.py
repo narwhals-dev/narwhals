@@ -103,9 +103,9 @@ class PolarsExpr:
         name = "min_periods" if self._backend_version < (1, 21, 0) else "min_samples"
         return {name: min_samples}
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
-        return self._with_native(self.native.cast(dtype_pl))
+        return self._with_native(self.native.cast(dtype_pl, strict=strict))
 
     def clip_lower(self, lower_bound: PolarsExpr) -> Self:
         lower_native = extract_native(lower_bound)

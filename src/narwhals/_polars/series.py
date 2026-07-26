@@ -288,9 +288,9 @@ class PolarsSeries:
             return self._from_native_object(self.native.__getitem__(item.native))
         return self._from_native_object(self.native.__getitem__(item))
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         dtype_pl = narwhals_to_native_dtype(dtype, self._version)
-        return self._with_native(self.native.cast(dtype_pl))
+        return self._with_native(self.native.cast(dtype_pl, strict=strict))
 
     def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:
         return self._with_native(
