@@ -23,6 +23,13 @@ typing: ## Run type checkers
 typing-coverage: ## Run type checkers
 	uv run --group typing pyrefly coverage check src/narwhals --public-only
 
+.PHONY: docs-build
+docs-build:  ## Build the docs locally
+	uv run --group docs zensical build --clean
+	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
+	uv run --group docs utils/generate_zen_content.py
+	uv run --group docs zensical build --strict
+
 .PHONY: docs-serve
 docs-serve: ## Build and serve the docs locally
 	uv run --group docs --extra dask --extra ibis utils/generate_backend_completeness.py
