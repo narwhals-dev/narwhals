@@ -691,7 +691,7 @@ jobs:
       - name: install-lightgbm
         run: |
           cd LightGBM
-          uv pip install pip
+          uv pip install pip build
           sh ./build-python.sh install
       - name: install-deps
         run: |

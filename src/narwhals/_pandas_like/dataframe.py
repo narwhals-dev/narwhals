@@ -422,16 +422,13 @@ class PandasLikeDataFrame(
 
     @property
     def schema(self) -> dict[str, DType]:
-        native_dtypes = self.native.dtypes
         return {
-            col: native_to_narwhals_dtype(
-                native_dtypes[col], self._version, self._implementation
-            )
-            if native_dtypes[col] != "object"
+            col: native_to_narwhals_dtype(dtype, self._version, self._implementation)
+            if dtype != "object"
             else object_native_to_narwhals_dtype(
                 self.native[col], self._version, self._implementation
             )
-            for col in self.native.columns
+            for col, dtype in self.native.dtypes.items()
         }
 
     def collect_schema(self) -> dict[str, DType]:

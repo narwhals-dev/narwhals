@@ -17,16 +17,18 @@ if TYPE_CHECKING:
 
     import sqlframe.base.types as sqlframe_types
     from sqlframe.base.column import Column
+    from sqlframe.base.readerwriter import _BaseDataFrameReader
     from sqlframe.base.session import _BaseSession as Session
 
     from narwhals._compliant.typing import CompliantLazyFrameAny
-    from narwhals._spark_like.dataframe import SparkLikeLazyFrame
+    from narwhals._spark_like.dataframe import SparkLikeLazyFrame, SQLFrameDataFrame
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.dtypes import DType
     from narwhals.typing import IntoDType
 
     _NativeDType: TypeAlias = sqlframe_types.DataType
     SparkSession = Session[Any, Any, Any, Any, Any, Any, Any]
+    SparkReader = _BaseDataFrameReader[SparkSession, SQLFrameDataFrame, Any]
 
 UNITS_DICT = {
     "y": "year",
@@ -221,6 +223,17 @@ def evaluate_exprs(
     return native_results
 
 
+@lru_cache(maxsize=18)
+def _import_sqlframe_module(dialect: str, submodule: str, /) -> ModuleType:
+    return import_module(f"sqlframe.{dialect}.{submodule}")
+
+
+def _sqlframe_dialect() -> str:
+    from sqlframe.base.session import _BaseSession
+
+    return _BaseSession().execution_dialect_name
+
+
 def import_functions(implementation: Implementation, /) -> ModuleType:
     if implementation is Implementation.PYSPARK:
         from pyspark.sql import functions
@@ -230,9 +243,7 @@ def import_functions(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql.connect import functions
 
         return functions
-    from sqlframe.base.session import _BaseSession
-
-    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.functions")
+    return _import_sqlframe_module(_sqlframe_dialect(), "functions")
 
 
 def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
@@ -244,9 +255,7 @@ def import_native_dtypes(implementation: Implementation, /) -> ModuleType:
         from pyspark.sql.connect import types
 
         return types
-    from sqlframe.base.session import _BaseSession
-
-    return import_module(f"sqlframe.{_BaseSession().execution_dialect_name}.types")
+    return _import_sqlframe_module(_sqlframe_dialect(), "types")
 
 
 def import_window(implementation: Implementation, /) -> type[Any]:
@@ -259,11 +268,7 @@ def import_window(implementation: Implementation, /) -> type[Any]:
         from pyspark.sql.connect.window import Window
 
         return Window
-    from sqlframe.base.session import _BaseSession
-
-    return import_module(
-        f"sqlframe.{_BaseSession().execution_dialect_name}.window"
-    ).Window
+    return _import_sqlframe_module(_sqlframe_dialect(), "window").Window
 
 
 @overload
