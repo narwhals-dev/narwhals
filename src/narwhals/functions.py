@@ -33,16 +33,18 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.plugins import _plugin_io_namespace
+from narwhals.plugins import plugin_io_method
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import ModuleType
     from typing import TypeAlias
 
     from typing_extensions import Self, TypeIs
 
+    from narwhals._compliant.typing import CompliantFrameAny
     from narwhals._translate import IntoArrowTable
     from narwhals._typing import Backend, EagerAllowed, IntoBackend, PluginName
     from narwhals.dataframe import DataFrame, LazyFrame
@@ -607,11 +609,9 @@ def read_csv(
         frame = ns.read_csv(normalize_path(source), separator=separator, **kwargs)
         return frame.to_narwhals()
     if impl is Implementation.UNKNOWN:
-        plugin_ns = _plugin_io_namespace(backend, "read_csv", version=Version.MAIN)
-        plugin_frame = plugin_ns.read_csv(
-            normalize_path(source), separator=separator, **kwargs
-        )
-        result: DataFrame[Any] = plugin_frame.to_narwhals()
+        read = plugin_io_method(backend, "read_csv", version=Version.MAIN)
+        frame = read(normalize_path(source), separator=separator, **kwargs)
+        result: DataFrame[Any] = frame.to_narwhals()
         return result
     msg = (
         f"Expected eager backend, found {impl}.\n\n"
@@ -661,11 +661,12 @@ def scan_csv(
         └─────────┴───────┘
     """
     impl = Implementation.from_backend(backend)
+    scan: Callable[..., CompliantFrameAny]
     if impl is Implementation.UNKNOWN:
-        ns: Any = _plugin_io_namespace(backend, "scan_csv", version=Version.MAIN)
+        scan = plugin_io_method(backend, "scan_csv", version=Version.MAIN)
     else:
-        ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_csv(normalize_path(source), separator=separator, **kwargs)
+        scan = Version.MAIN.namespace.from_backend(impl).compliant.scan_csv
+    frame = scan(normalize_path(source), separator=separator, **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
@@ -710,9 +711,9 @@ def read_parquet(
         frame = ns.read_parquet(normalize_path(source), **kwargs)
         return frame.to_narwhals()
     if impl is Implementation.UNKNOWN:
-        plugin_ns = _plugin_io_namespace(backend, "read_parquet", version=Version.MAIN)
-        plugin_frame = plugin_ns.read_parquet(normalize_path(source), **kwargs)
-        result: DataFrame[Any] = plugin_frame.to_narwhals()
+        read = plugin_io_method(backend, "read_parquet", version=Version.MAIN)
+        frame = read(normalize_path(source), **kwargs)
+        result: DataFrame[Any] = frame.to_narwhals()
         return result
     msg = (
         f"Expected eager backend, found {impl}.\n\n"
@@ -784,11 +785,12 @@ def scan_parquet(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
+    scan: Callable[..., CompliantFrameAny]
     if impl is Implementation.UNKNOWN:
-        ns: Any = _plugin_io_namespace(backend, "scan_parquet", version=Version.MAIN)
+        scan = plugin_io_method(backend, "scan_parquet", version=Version.MAIN)
     else:
-        ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_parquet(normalize_path(source), **kwargs)
+        scan = Version.MAIN.namespace.from_backend(impl).compliant.scan_parquet
+    frame = scan(normalize_path(source), **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 import sys
 from functools import cache
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, overload
 
 from narwhals._compliant import CompliantNamespace
 from narwhals._typing import PluginName
@@ -24,7 +24,7 @@ from narwhals._typing_compat import TypeVar
 from narwhals.exceptions import PluginError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
     from importlib.metadata import EntryPoints
     from typing import TypeAlias
 
@@ -38,6 +38,11 @@ if TYPE_CHECKING:
     )
     from narwhals._typing import Backend, IntoBackend
     from narwhals.utils import Version
+
+    IOMethodName: TypeAlias = Literal[
+        "read_csv", "read_parquet", "scan_csv", "scan_parquet"
+    ]
+    """Name of a Narwhals IO function, dispatched to a same-named namespace method."""
 
 
 __all__ = ["Plugin", "PluginName", "from_native"]
@@ -70,30 +75,36 @@ def _plugin_names() -> tuple[str, ...]:
     return tuple(entry_point.name for entry_point in _discover_entrypoints())
 
 
-def _find_plugin(backend_name: str, /) -> ModuleType | None:
-    """Return the namespace of the first installed plugin matching `backend_name`.
+def _find_plugin(backend_name: str, /) -> Plugin | None:
+    """Return the first installed plugin matching `backend_name`.
 
     `backend_name` is matched against both the entry point name and its module,
     e.g. both `"my-plugin"` and `"my_plugin"` for a plugin registered as:
 
         [project.entry-points.'narwhals.plugins']
         my-plugin = 'my_plugin'
+
+    Note:
+        The parameter is a plain `str`, not a `PluginName`: the module spelling is a
+        valid input and is *not* an entry point name.
     """
     for entry_point in _discover_entrypoints():
         if backend_name in {entry_point.name, entry_point.module}:
-            namespace: ModuleType = entry_point.load()
-            return namespace
+            plugin: Plugin = entry_point.load()
+            return plugin
     return None
 
 
-def _backend_namespace(backend: IntoBackend[Backend | PluginName], /) -> ModuleType:
-    """Resolve a backend which is not a Narwhals `Implementation` to a plugin namespace.
+def _backend_namespace(backend: IntoBackend[Backend | PluginName], /) -> Plugin:
+    """Resolve a backend which is not a Narwhals `Implementation` to a plugin.
 
-    The namespace is expected to implement the `Plugin` protocol, in particular the
+    The plugin is expected to implement the `Plugin` protocol, in particular the
     `__narwhals_namespace__` function returning a compliant namespace.
     """
     if isinstance(backend, ModuleType):
-        return backend
+        # NOTE: A user-provided module is only *claimed* to be a `Plugin`; the runtime
+        # guard is `_plugin_namespace`, which raises `PluginError` if it is not one.
+        return cast("Plugin", backend)
     if isinstance(backend, str) and (plugin := _find_plugin(backend)) is not None:
         return plugin
     installed = ", ".join(_plugin_names()) or "<none>"
@@ -106,37 +117,68 @@ def _backend_namespace(backend: IntoBackend[Backend | PluginName], /) -> ModuleT
     raise ValueError(msg)
 
 
-def _plugin_hook(native_namespace: ModuleType, name: str, /) -> Any:
-    """Fetch extension hook `name` from a plugin namespace, raising if missing."""
-    if (hook := getattr(native_namespace, name, None)) is None:
-        msg = f"Plugin backend {native_namespace.__name__!r} is expected to implement `{name}` function."
+def _plugin_namespace(plugin: Plugin, /, *, version: Version) -> PluginNamespace:
+    """Get `plugin`'s compliant namespace, raising if `__narwhals_namespace__` is missing."""
+    name = "__narwhals_namespace__"
+    if (hook := getattr(plugin, name, None)) is None:
+        msg = f"Plugin backend {plugin.__name__!r} is expected to implement `{name}` function."
         raise PluginError(msg)
-    return hook
+    namespace: PluginNamespace = hook(version=version)
+    return namespace
 
 
-def _plugin_io_namespace(
-    backend: IntoBackend[Backend | PluginName], method_name: str, /, *, version: Version
-) -> Any:
-    """Resolve `backend` to a plugin's compliant namespace, requiring IO method `method_name`.
+@overload
+def plugin_io_method(
+    backend: IntoBackend[Backend | PluginName],
+    method_name: Literal["read_csv", "read_parquet"],
+    /,
+    *,
+    version: Version,
+) -> Callable[..., CompliantDataFrameAny]: ...
+
+
+@overload
+def plugin_io_method(
+    backend: IntoBackend[Backend | PluginName],
+    method_name: Literal["scan_csv", "scan_parquet"],
+    /,
+    *,
+    version: Version,
+) -> Callable[..., CompliantFrameAny]: ...
+
+
+def plugin_io_method(
+    backend: IntoBackend[Backend | PluginName],
+    method_name: IOMethodName,
+    /,
+    *,
+    version: Version,
+) -> Callable[..., CompliantFrameAny]:
+    """Resolve `backend` to the `method_name` method of a plugin's compliant namespace.
 
     IO functions share a single dispatch mechanism with built-in backends: they call
     same-named methods on the compliant namespace (see the "IO functions" section of
     the [extension docs](../extending.md/#io-functions-the-namespace-contract)).
+
+    Note:
+        `PluginNamespace` deliberately does not declare the IO methods: they are an
+        optional subset of a plugin (e.g. a lazy-only plugin implements `scan_*` only).
     """
     from inspect import getattr_static
 
     from narwhals._utils import not_implemented
 
-    module = _backend_namespace(backend)
-    namespace = _plugin_hook(module, "__narwhals_namespace__")(version=version)
+    plugin = _backend_namespace(backend)
+    namespace = _plugin_namespace(plugin, version=version)
     method = getattr_static(namespace, method_name, None)
     if method is None or isinstance(method, not_implemented):
         msg = (
-            f"Plugin backend {module.__name__!r} is expected to implement "
+            f"Plugin backend {plugin.__name__!r} is expected to implement "
             f"`{method_name}` on its compliant namespace to support `narwhals.{method_name}`."
         )
         raise PluginError(msg)
-    return namespace
+    bound_method: Callable[..., CompliantFrameAny] = getattr(namespace, method_name)
+    return bound_method
 
 
 class PluginNamespace(CompliantNamespace[FrameT, Any], Protocol[FrameT, FromNativeR_co]):
@@ -166,6 +208,14 @@ class Plugin(Protocol[FrameT, FromNativeR_co]):
 
     See [extensions and plugins](../extending.md) for a complete walk-through.
     """
+
+    @property
+    def __name__(self) -> str:
+        """Name of the plugin module, used to identify the backend in error messages.
+
+        Automatically provided: a plugin *is* a module, and every module has a `__name__`.
+        """
+        ...
 
     @property
     def NATIVE_PACKAGE(self) -> LiteralString:  # noqa: N802
@@ -228,10 +278,10 @@ def from_native(native_object: Any, version: Version) -> CompliantAny | None:
         version: Narwhals API version.
 
     Returns:
-        If the following conditions are met:
+        If the following conditions are met
 
-            * at least 1 plugin is installed
-            * at least 1 installed plugin supports `type(native_object)`
+            - at least 1 plugin is installed
+            - at least 1 installed plugin supports `type(native_object)`
 
             Then for the **first matching plugin**, the result of the call below.
 
