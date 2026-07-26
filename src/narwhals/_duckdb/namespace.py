@@ -5,6 +5,7 @@ from functools import reduce
 from itertools import chain
 from typing import TYPE_CHECKING, Any
 
+import duckdb
 from duckdb import CoalesceOperator, Expression
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
@@ -29,7 +30,7 @@ from narwhals._expression_parsing import (
     evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, requires, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -38,7 +39,13 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -62,6 +69,23 @@ class DuckDBNamespace(
     @property
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
+
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> DuckDBLazyFrame:
+        validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        reader = kwds.pop("connection", None) or duckdb
+        native_frame = reader.read_csv(source, delimiter=separator, **kwds)
+        return self._lazyframe.from_native(native_frame, context=self)
+
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DuckDBLazyFrame:
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        reader = kwds.pop("connection", None) or duckdb
+        native_frame = reader.read_parquet(source, **kwds)
+        return self._lazyframe.from_native(native_frame, context=self)
 
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
         return function(name, *args)

@@ -273,6 +273,7 @@ ignore = [
   "A004",    # builtin-import-shadowing
   "ARG002",  # unused-method-argument
   "ANN401",  # any-type
+  "CPY001",  # missing-copyright-notice
   "COM812",  # missing-trailing-comma
   "D100",    # undocumented-public-module
   "D101",    # undocumented-public-class
@@ -320,11 +321,12 @@ extend-ignore-names = [
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
+  "PLR0917", # too-many-positional-arguments
 ]
+
 "tpch/tests/*" = ["S101"]
-"utils/*" = ["S311", "T201"]
-"utils/bump_version.py" = ["S603", "S607"]
 "tpch/execute/*" = ["T201"]
+"tpch/queries/*" = ["PLR0917"]
 "tpch/notebooks/*" = [
   "ANN001",
   "ANN201",
@@ -334,6 +336,8 @@ extend-ignore-names = [
   "T203",
   "TRY003",
 ]
+"utils/*" = ["S311", "T201"]
+"utils/bump_version.py" = ["S603", "S607"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

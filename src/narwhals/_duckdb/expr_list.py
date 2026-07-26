@@ -21,7 +21,11 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(lambda expr: F("len", expr))
 
     @requires.backend_version((1, 3))  # bugged before 1.3
-    def unique(self) -> DuckDBExpr:
+    def unique(self, *, maintain_order: bool) -> DuckDBExpr:
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for the DuckDB backend."
+            raise NotImplementedError(msg)
+
         def func(expr: Expression) -> Expression:
             expr_distinct = F("list_distinct", expr)
             return when(
