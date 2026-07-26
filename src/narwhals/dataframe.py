@@ -550,10 +550,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
             raise TypeError(msg)
         ns = eager_namespace(
-            backend,
-            version=cls._version,
-            function_name="DataFrame.from_arrow",
-            hint_example="nw.DataFrame.from_arrow(df, backend='pyarrow')",
+            backend, version=cls._version, function_name="DataFrame.from_arrow"
         )
         compliant = ns._dataframe.from_arrow(native_frame, context=ns)
         return cls(compliant, level="full")
@@ -609,10 +606,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             data, backend = _from_dict_no_backend(data)
         schema = dict(schema) if schema is not None else None
         ns = eager_namespace(
-            backend,
-            version=cls._version,
-            function_name="DataFrame.from_dict",
-            hint_example="nw.DataFrame.from_dict({'a': [1, 2]}, backend='pyarrow')",
+            backend, version=cls._version, function_name="DataFrame.from_dict"
         )
         compliant = ns._dataframe.from_dict(data, schema=schema, context=ns)
         return cls(compliant, level="full")
@@ -679,10 +673,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         schema = dict(schema) if schema is not None else None
         ns = eager_namespace(
-            backend,
-            version=cls._version,
-            function_name="DataFrame.from_dicts",
-            hint_example="nw.DataFrame.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+            backend, version=cls._version, function_name="DataFrame.from_dicts"
         )
         compliant = ns._dataframe.from_dicts(data, schema=schema, context=ns)
         return cls(compliant, level="full")
@@ -751,10 +742,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not (schema is None or is_sequence_of(schema, str)):
             schema = Schema(schema)
         ns = eager_namespace(
-            backend,
-            version=cls._version,
-            function_name="DataFrame.from_numpy",
-            hint_example="nw.DataFrame.from_numpy(arr, backend='pyarrow')",
+            backend, version=cls._version, function_name="DataFrame.from_numpy"
         )
         compliant = ns._dataframe.from_numpy(data, schema=schema, context=ns)
         return cls(compliant, level="full")

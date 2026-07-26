@@ -216,12 +216,7 @@ def _new_series_impl(
     *,
     backend: IntoBackend[EagerAllowed | PluginName],
 ) -> Series[Any]:
-    ns = eager_namespace(
-        backend,
-        version=Version.MAIN,
-        function_name="new_series",
-        hint_example="nw.new_series('a', [1,2,3], backend='pyarrow').to_frame()",
-    )
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="new_series")
     series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
     return series.to_narwhals()
 
@@ -280,12 +275,7 @@ def from_dict(
     if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
         msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
         raise InvalidOperationError(msg)
-    ns = eager_namespace(
-        backend,
-        version=Version.MAIN,
-        function_name="from_dict",
-        hint_example="nw.from_dict({'a': [1, 2]}, backend='pyarrow')",
-    )
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="from_dict")
     return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
 
 
@@ -424,12 +414,7 @@ def from_numpy(
         raise TypeError(msg)
     if not (schema is None or is_sequence_of(schema, str)):
         schema = Schema(schema)
-    ns = eager_namespace(
-        backend,
-        version=Version.MAIN,
-        function_name="from_numpy",
-        hint_example="nw.from_numpy(arr, backend='pyarrow')",
-    )
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="from_numpy")
     return ns._dataframe.from_numpy(data, schema=schema, context=ns).to_narwhals()
 
 
@@ -481,12 +466,7 @@ def from_arrow(
     if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
-    ns = eager_namespace(
-        backend,
-        version=Version.MAIN,
-        function_name="from_arrow",
-        hint_example="nw.from_arrow(df, backend='pyarrow')",
-    )
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="from_arrow")
     return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
 
 

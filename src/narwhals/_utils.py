@@ -1685,13 +1685,43 @@ def _ensure_eager_allowed(
     return namespace
 
 
+EagerFunctionName: TypeAlias = Literal[
+    "new_series",
+    "from_dict",
+    "from_dicts",
+    "from_numpy",
+    "from_arrow",
+    "DataFrame.from_arrow",
+    "DataFrame.from_dict",
+    "DataFrame.from_dicts",
+    "DataFrame.from_numpy",
+    "Series.from_iterable",
+    "Series.from_numpy",
+]
+"""Name of an eager-only Narwhals function or constructor which accepts `backend`."""
+
+EAGER_HINT_EXAMPLES: Mapping[EagerFunctionName, str] = {
+    "new_series": "nw.new_series('a', [1,2,3], backend='pyarrow').to_frame()",
+    "from_dict": "nw.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "from_dicts": "nw.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "from_numpy": "nw.from_numpy(arr, backend='pyarrow')",
+    "from_arrow": "nw.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_arrow": "nw.DataFrame.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_dict": "nw.DataFrame.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "DataFrame.from_dicts": "nw.DataFrame.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "DataFrame.from_numpy": "nw.DataFrame.from_numpy(arr, backend='pyarrow')",
+    "Series.from_iterable": "nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
+    "Series.from_numpy": "nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
+}
+"""Per-function `.lazy(...)` hint, shown when an eager-only function is given a lazy backend."""
+
+
 def eager_namespace(
     backend: IntoBackend[Backend | PluginName],
     /,
     *,
     version: Version,
-    function_name: str,
-    hint_example: str,
+    function_name: EagerFunctionName,
 ) -> EagerNamespaceAny | EagerNamespaceKnown:
     """Resolve `backend` to an eager-allowed compliant namespace.
 
@@ -1699,8 +1729,8 @@ def eager_namespace(
     resolved via the plugin entry-point registry, in which case the plugin's
     `__narwhals_namespace__` must return a namespace implementing the `EagerNamespace`
     protocol (in particular, the `_series` and `_dataframe` properties).
-    Built-in lazy-only backends raise an informative `ValueError`, suggesting
-    `hint_example` followed by a `.lazy(...)` call.
+    Built-in lazy-only backends raise an informative `ValueError`, suggesting the
+    `EAGER_HINT_EXAMPLES` entry for `function_name` followed by a `.lazy(...)` call.
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
@@ -1709,7 +1739,7 @@ def eager_namespace(
         msg = (
             f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
             "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    {hint_example}.lazy('{implementation}')"
+            f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
         )
         raise ValueError(msg)
     from narwhals.plugins import _backend_namespace, _plugin_namespace

@@ -166,10 +166,7 @@ class Series(Generic[IntoSeriesT]):
         if dtype:
             _validate_into_dtype(dtype)
         ns = eager_namespace(
-            backend,
-            version=cls._version,
-            function_name="Series.from_numpy",
-            hint_example="nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
+            backend, version=cls._version, function_name="Series.from_numpy"
         )
         compliant = ns._series.from_numpy(values, context=ns).alias(name)
         if dtype:
@@ -225,10 +222,7 @@ class Series(Generic[IntoSeriesT]):
             msg = f"Expected values to be an iterable, got: {qualified_type_name(values)!r}."
             raise TypeError(msg)
         ns = eager_namespace(
-            backend,
-            version=cls._version,
-            function_name="Series.from_iterable",
-            hint_example="nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
+            backend, version=cls._version, function_name="Series.from_iterable"
         )
         compliant = ns._series.from_iterable(values, context=ns, name=name, dtype=dtype)
         return cls(compliant, level="full")
