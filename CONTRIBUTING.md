@@ -150,7 +150,7 @@ If you add code that should be tested, please add tests.
 - To choose which backends to run tests with, you can use the `--constructors` flag:
   - To only run tests for pandas, Polars, and PyArrow, use `uv run pytest --constructors="pandas,pyarrow,polars[eager]"`
   - To run tests for all CPU constructors, use `uv run --extra modin --extra pyspark pytest --all-cpu-constructors`
-  - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
+  - By default, tests run for `pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis`. You can override this with the `NARWHALS_DEFAULT_CONSTRUCTORS` environment variable.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run --extra cudf --module cudf.pandas --module pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors="polars[lazy]"`
 

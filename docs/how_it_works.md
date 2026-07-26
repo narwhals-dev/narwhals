@@ -54,8 +54,9 @@ it to:
 - `DataFrame.select`: produce a DataFrame with only the result of the given expression
 - `DataFrame.with_columns`: produce a DataFrame like the current one, but also with the result of
   the given expression
-- `DataFrame.filter`: evaluate the given expression, and if it only returns a single Series, then
-  only keep rows where the result is `True`.
+- `DataFrame.filter`: evaluate the given expression(s), combine them with `&` (via
+  `nw.all_horizontal`), and only keep rows where the result is `True`. The combined
+  predicate must preserve length and produce a single output.
 
 Now let's turn our attention to the implementation.
 
@@ -66,11 +67,9 @@ from Polars'. So...Narwhals implements a `PandasLikeNamespace`, which includes t
 Polars functions included in the Narwhals API:
 
 ```python exec="yes" source="above", result="python" session="pandas_impl"
-import pandas as pd
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
-from narwhals._pandas_like.utils import Implementation
-from narwhals._utils import parse_version, Version
+from narwhals.utils import Implementation, Version
 
 pn = PandasLikeNamespace(
     implementation=Implementation.PANDAS,
@@ -88,15 +87,15 @@ Recall from above that an expression is a function from a dataframe to a sequenc
 The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasLikeDataFrame` and `PandasLikeSeries`. These are backed
-by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
-underlying pandas objects via `PandasLikeDataFrame._native_frame` and `PandasLikeSeries._native_series`.
+by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can
+access the underlying pandas objects via the `native` property (`PandasLikeDataFrame.native` /
+`PandasLikeSeries.native`, backed by the `_native_frame` / `_native_series` attributes).
 
 ```python exec="yes" result="python" session="pandas_impl" source="above"
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
-from narwhals._pandas_like.utils import Implementation
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals._utils import parse_version, Version
+from narwhals._utils import Implementation, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(
@@ -115,15 +114,16 @@ expression = pn.col("a") + 1
 result = expression._call(df)
 print(f"length of result: {len(result)}\n")
 print("native series of first value of result: ")
-print([x._native_series for x in result][0])
+print([x.native for x in result][0])
 ```
 
 So indeed, our expression did what it said on the tin - it took some dataframe, took
 column 'a', and added 1 to it.
 
-If you search for `def reuse_series_implementation`, you'll see that that's all
-expressions do in Narwhals - they just keep rigorously applying the definition of
-expression.
+If you search for `def _reuse_series` in `narwhals/_compliant/expr.py`, you'll see that
+that's all expressions do for eager backends in Narwhals: whenever `Series.foo` is already
+defined, `EagerExpr.foo` is derived from it by mapping it over the sequence of Series.
+They just keep rigorously applying the definition of expression.
 
 It may look like there should be significant overhead to doing it this way - but really,
 it's just a few Python calls which get unwinded. From timing tests I've done, there's
@@ -148,9 +148,19 @@ objects. So, all-in-all, there are a couple of layers here:
     - `narwhals._arrow.dataframe.ArrowDataFrame` is backed by a PyArrow Table
     - `narwhals._polars.dataframe.PolarsDataFrame` is backed by a Polars DataFrame
 
+The same holds for `nw.LazyFrame`, which is backed by a Narwhals-compliant LazyFrame such as
+`narwhals._duckdb.dataframe.DuckDBLazyFrame`, `narwhals._spark_like.dataframe.SparkLikeLazyFrame`,
+`narwhals._dask.dataframe.DaskLazyFrame`, or `narwhals._ibis.dataframe.IbisLazyFrame`.
+
 Each implementation defines its own objects in subfolders such as `narwhals._pandas_like`,
-`narwhals._arrow`, `narwhals._polars`, whereas the top-level modules such as `narwhals.dataframe`
-and `narwhals.series` coordinate how to dispatch the Narwhals API to each backend.
+`narwhals._arrow`, `narwhals._polars`, `narwhals._duckdb`, `narwhals._spark_like`,
+`narwhals._dask`, and `narwhals._ibis`, whereas the top-level modules such as
+`narwhals.dataframe` and `narwhals.series` coordinate how to dispatch the Narwhals API
+to each backend. Protocols and shared base classes live in `narwhals._compliant`, and
+SQL-generation helpers shared by the SQL backends live in `narwhals._sql`.
+
+Backends can also live outside the Narwhals repository entirely - see
+[Extensions and Plugins](extending.md).
 
 ## Mapping from API to implementations
 
@@ -190,9 +200,7 @@ Dataframe and Series objects described above - let's work through the motivating
 ```python exec="yes" session="pandas_api_mapping" source="above"
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
-from narwhals._pandas_like.utils import Implementation
-from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals._utils import parse_version, Version
+from narwhals.utils import Implementation, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(
@@ -225,10 +233,10 @@ df_compliant = df._compliant_frame
 result = df_compliant.select(expr)
 ```
 
-We can then view the underlying pandas Dataframe which was produced by calling `._native_frame`:
+We can then view the underlying pandas Dataframe which was produced by accessing `.native`:
 
 ```python exec="yes" result="python" session="pandas_api_mapping" source="above"
-print(result._native_frame)
+print(result.native)
 ```
 
 which is the same as we'd have obtained by just using the Narwhals API directly:
@@ -253,16 +261,20 @@ optimisations to get it to work.
 In Narwhals, here's what we do:
 
 - if somebody uses a simple group-by aggregation (e.g. `df.group_by('a').agg(nw.col('b').mean())`),
-  then on the pandas side we translate it to
+  then on the pandas side we translate it to a native aggregation on the `GroupBy` object:
 
     ```py
     df: pd.DataFrame
-    df.groupby("a").agg({"b": ["mean"]})
+    df.groupby("a")["b"].mean()
     ```
+
+    Each aggregation is evaluated this way and the results are concatenated horizontally.
+    See `AggExpr._getitem_aggs` in `narwhals/_pandas_like/group_by.py`.
 
 - if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
-  ends up being a simple one.
+  ends up being a simple one. See
+  [Avoiding the `UserWarning` while using pandas `group_by`](concepts/improve_group_by_operation.md).
 
 ## Nodes
 
@@ -280,7 +292,7 @@ Each node represents an operation. Here, we have 4 operations:
 1. Given some dataframe, select column `'a'`.
 2. Take its absolute value.
 3. Take its standard deviation, with `ddof=1`.
-4. Sum column `'b'`.
+4. Add column `'b'` to the result.
 
 Let's take a look at a couple of these nodes. Let's start with the third one:
 
@@ -306,7 +318,7 @@ Let's take a look at the fourth node:
 print(expr._nodes[3].as_dict())
 ```
 
-Note how now, the `exprs` attribute is populated. Indeed, we are summing another expression: `col('b')`.
+Note how now, the `exprs` attribute is populated. Indeed, we are adding another expression: `col('b')`.
 The `exprs` parameter holds arguments which are either expressions, or should be interpreted as expressions.
 The `str_as_lit` parameter tells us whether string literals should be interpreted as literals (e.g. `lit('foo')`)
 or columns (e.g. `col('foo')`). Finally `allow_multi_output` tells us whether multi-output expressions
@@ -339,11 +351,15 @@ Here's a brief description of each piece of metadata:
 - `expansion_kind`: How and whether the expression expands to multiple outputs.
   This can be one of:
 
-    - `ExpansionKind.SINGLE`: Only produces a single output. For example, `nw.col('a')`.
-    - `ExpansionKind.MULTI_NAMED`: Produces multiple outputs whose names can be
-      determined statically, for example `nw.col('a', 'b')`.
-    - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs whose names depend
-      on the input dataframe. For example, `nw.nth(0, 1)` or `nw.selectors.numeric()`.
+    - `ExpansionKind.SINGLE`: Only produces a single output. For example, `nw.col('a')`,
+      or `nw.sum_horizontal(nw.all())`.
+    - `ExpansionKind.MULTI_NAMED`: Produces multiple outputs which were explicitly
+      requested, for example `nw.col('a', 'b')` or `nw.nth(0, 1)`.
+    - `ExpansionKind.MULTI_UNNAMED`: Produces multiple outputs which depend on which
+      columns the input dataframe happens to have. For example, `nw.all()` or
+      `nw.selectors.numeric()`. Unlike `MULTI_NAMED`, these skip group-by keys when
+      expanded in a group-by context, so `df.group_by('a').agg(nw.all().sum())` does
+      not try to aggregate `'a'`.
 
 - `has_windows`: Whether the expression already contains an `over(...)` statement.
 - `n_orderable_ops`: How many order-dependent operations the expression contains.
@@ -352,7 +368,7 @@ Here's a brief description of each piece of metadata:
 
     - `nw.col('a')` contains 0 orderable operations.
     - `nw.col('a').diff()` contains 1 orderable operation.
-    - `nw.col('a').diff().shift()` contains 2 orderable operation.
+    - `nw.col('a').diff().shift()` contains 2 orderable operations.
 
 - `is_elementwise`: Whether it preserves length and operates on each row independently
   of the rows around it (e.g. `abs`, `is_null`, `round`, ...).
@@ -361,7 +377,8 @@ Here's a brief description of each piece of metadata:
 - `is_scalar_like`: Whether the output of the expression is always length-1.
 - `is_literal`: Whether the expression doesn't depend on any column but instead
   only on literal values, like `nw.lit(1)`.
-- `nodes`: List of operations which this expression applies when evaluated.
+- `nodes`: Tuple of operations which this expression applies when evaluated (see
+  [Nodes](#nodes) above).
 
 ### Chaining
 

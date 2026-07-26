@@ -130,7 +130,8 @@ So far, nothing, everything non-unstable from the main namespace should be avail
 - Since Narwhals 1.45:
 
     - `nw.any_horizontal` and `nw.all_horizontal` have a `ignore_nulls` keyword. In `narwhals.stable.v1`,
-      it defaults to `False`, but in Narwhals 2.0 it will become a required argument in the main namespace.
+      it defaults to `False`; since Narwhals 2.0 it is a required argument in the main namespace
+      (and in `narwhals.stable.v2`).
     - `LazyFrame.with_row_index` requires `order_by` to be specified as it is an order-dependent operation, in the main Narwhals namespace.
 
 - Since Narwhals 1.43:

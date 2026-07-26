@@ -247,7 +247,7 @@ to this list!
 
 If you'd like to say "thank you", please give us a ⭐ star ⭐.
 
-Please contact [hello_narwhals@proton.me](hello_narwhals@proton.me) if you would like to:
+Please contact [hello_narwhals@proton.me](mailto:hello_narwhals@proton.me) if you would like to:
 
 - Receive professional support (e.g., if you're using or would like to use Narwhals at your company).
 - Have any Narwhals fixes / features prioritised.
