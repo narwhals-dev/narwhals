@@ -283,7 +283,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [_cast(expr, native_dtype) for expr in self.window_function(df, inputs)]
+            return [
+                _cast(expr, native_dtype) for expr in self.window_function(df, inputs)
+            ]
 
         return self.__class__(
             func,

@@ -250,9 +250,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         if not strict:
-            msg = (
-                "`cast(..., strict=False)` is not yet implemented for spark-like backends."
-            )
+            msg = "`cast(..., strict=False)` is not yet implemented for spark-like backends."
             raise NotImplementedError(msg)
 
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
