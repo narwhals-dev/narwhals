@@ -34,7 +34,7 @@ from narwhals._native import (
     is_native_spark_like,
     is_native_sqlframe,
 )
-from narwhals._utils import Implementation, Version
+from narwhals._utils import Implementation, Version, is_into_plugin
 
 if TYPE_CHECKING:
     from typing import TypeAlias
@@ -57,6 +57,7 @@ if TYPE_CHECKING:
         Ibis,
         IntoBackend,
         PandasLike,
+        PluginName,
         Polars,
         SparkLike,
     )
@@ -135,12 +136,12 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @overload
     @classmethod
     def from_backend(
-        cls, backend: IntoBackend[Backend], /
+        cls, backend: IntoBackend[Backend | PluginName], /
     ) -> Namespace[CompliantNamespaceAny]: ...
 
     @classmethod
     def from_backend(
-        cls: type[Namespace[Any]], backend: IntoBackend[Backend], /
+        cls: type[Namespace[Any]], backend: IntoBackend[Backend | PluginName], /
     ) -> Namespace[Any]:
         """Instantiate from native namespace module, string, or Implementation.
 
@@ -184,8 +185,18 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             from narwhals._ibis.namespace import IbisNamespace
 
             ns = IbisNamespace(version=version)
-        else:
-            msg = "Not supported Implementation"  # pragma: no cover
+        elif is_into_plugin(backend, impl):
+            # NOTE: Anything unknown to `Implementation` is resolved as a plugin,
+            # either by entry point name, by module name, or as the plugin module itself.
+            from narwhals.plugins import _plugin_namespace, _resolve_plugin
+
+            plugin = _resolve_plugin(backend)
+            ns = _plugin_namespace(plugin, version=version)
+        else:  # pragma: no cover
+            # NOTE: Unreachable and defensive only check; `UNKNOWN` is handled
+            # above and every other member of `Implementation` is matched by one
+            # of the branches.
+            msg = "Not supported Implementation"
             raise AssertionError(msg)
         return cls(ns)
 

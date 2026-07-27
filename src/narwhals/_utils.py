@@ -67,7 +67,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import Concatenate, TypeAlias
+    from typing import Concatenate, TypeAlias, TypeGuard
 
     import pandas as pd
     import polars as pl
@@ -1654,6 +1654,24 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
+# NOTE: Keep `TypeGuard`, not `TypeIs`, as the two narrow by different rules.
+def is_into_plugin(
+    backend: IntoBackend[Backend | PluginName],  # noqa: ARG001
+    impl: Implementation,
+    /,
+) -> TypeGuard[IntoBackend[PluginName]]:
+    """Return True if `backend` names a plugin, rather than a built-in backend.
+
+    `Implementation.UNKNOWN` means exactly "not one of Narwhals' own backends", so a
+    `backend` which resolves to it can only be a plugin's name or a plugin module.
+
+    Arguments:
+        backend: Backend spelling, as given by the user.
+        impl: Result of `Implementation.from_backend(backend)`.
+    """
+    return impl is Implementation.UNKNOWN
+
+
 # TODO(Unassigned): Generalize _hasattr_static?
 # See https://github.com/narwhals-dev/narwhals/pull/3753#discussion_r3653098839
 def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
@@ -1725,30 +1743,29 @@ def eager_namespace(
 ) -> EagerNamespaceAny | EagerNamespaceKnown:
     """Resolve `backend` to an eager-allowed compliant namespace.
 
-    Built-in eager backends resolve directly. Anything unknown to `Implementation` is
-    resolved via the plugin entry-point registry, in which case the plugin's
-    `__narwhals_namespace__` must return a namespace implementing the `EagerNamespace`
-    protocol (in particular, the `_series` and `_dataframe` properties).
+    Built-in eager backends and plugins resolve through the same
+    `Namespace.from_backend`; for a plugin, the namespace returned by
+    `__narwhals_namespace__` must implement the `EagerNamespace` protocol (in
+    particular, the `_series` and `_dataframe` properties).
     Built-in lazy-only backends raise an informative `ValueError`, suggesting the
     `EAGER_HINT_EXAMPLES` entry for `function_name` followed by a `.lazy(...)` call.
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         return version.namespace.from_backend(implementation).compliant
-    if implementation is not Implementation.UNKNOWN:
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
-        )
-        raise ValueError(msg)
-    from narwhals.plugins import _backend_namespace, _plugin_namespace
+    if is_into_plugin(backend, implementation):
+        from narwhals.plugins import _backend_name
 
-    plugin = _backend_namespace(backend)
-    namespace = _plugin_namespace(plugin, version=version)
-    return _ensure_eager_allowed(
-        namespace, source=plugin.__name__, function_name=function_name
+        namespace = version.namespace.from_backend(backend).compliant
+        return _ensure_eager_allowed(
+            namespace, source=_backend_name(backend), function_name=function_name
+        )
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
     )
+    raise ValueError(msg)
 
 
 def eager_namespace_from_compliant(
