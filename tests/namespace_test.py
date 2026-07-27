@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from collections import deque
 from collections.abc import Callable, Iterable, Sequence
+from types import ModuleType
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
@@ -10,6 +11,8 @@ import pytest
 import narwhals as nw
 from narwhals._namespace import Namespace
 from narwhals._utils import Version
+from narwhals.exceptions import PluginError
+from narwhals.plugins import PluginName
 
 if TYPE_CHECKING:
     from typing import TypeAlias
@@ -70,6 +73,34 @@ def test_namespace_from_backend_name(backend: BackendName) -> None:
     namespace = Namespace.from_backend(backend)
     assert namespace.implementation.name.lower() == backend
     assert namespace.version is Version.MAIN
+
+
+@pytest.mark.parametrize(
+    "backend",
+    [PluginName("test-plugin"), PluginName("test_plugin")],
+    ids=["entry-point-name", "module-name"],
+)
+def test_namespace_from_backend_plugin(backend: PluginName) -> None:
+    pytest.importorskip("test_plugin")
+    namespace = Namespace.from_backend(backend)
+    if TYPE_CHECKING:
+        assert_type(namespace, "Namespace[CompliantNamespace[Any, Any]]")
+    assert repr(namespace) == "Namespace[DictNamespace]"
+    assert namespace.implementation is nw.Implementation.UNKNOWN
+    assert namespace.version is Version.MAIN
+
+
+def test_namespace_from_backend_plugin_not_installed() -> None:
+    with pytest.raises(ValueError, match="Unsupported backend: 'not-a-backend'"):
+        Namespace.from_backend(PluginName("not-a-backend"))
+
+
+def test_namespace_from_backend_plugin_invalid() -> None:
+    not_a_plugin = ModuleType("empty_plugin")
+    with pytest.raises(
+        PluginError, match="expected to implement `__narwhals_namespace__`"
+    ):
+        Namespace.from_backend(not_a_plugin)
 
 
 def test_namespace_from_native_object(constructor: Constructor) -> None:
