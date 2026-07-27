@@ -47,3 +47,9 @@ run-ci-plan: ## Very long command that I can't keep fixing merge conflicts for i
 	$(MAKE) show-deps DEPS="--group core-tests"
 	uv run --group core-tests pytest tests/plan -m unsafe_globals --numprocesses=1 --cov=src/narwhals/_plan --cov=tests/plan --cov-fail-under=0
 	uv run --group core-tests pytest tests/plan src/narwhals/_plan --cov=src/narwhals/_plan --cov=tests/plan --cov-fail-under=0 --doctest-modules --runslow --durations=30 --cov-append
+
+.PHONY: typing-plan
+typing-plan: ## Run type checkers (on a thinner slice of the repo)
+	uv run --group typing pyright src/narwhals/_plan tests/plan 
+	uv run --group typing mypy src/narwhals/_plan tests/plan
+	uv run --group typing pyrefly check

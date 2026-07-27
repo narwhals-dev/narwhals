@@ -9,8 +9,9 @@ from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._expr_ir import Constructor, ExprIR, NoDispatch, SelectorIR
 from narwhals._plan._nodes import node, nodes
 from narwhals._plan.exceptions import over_order_by_names_error
+from narwhals._plan.expressions.operators import Operator
 from narwhals._plan.expressions.selectors import ByName
-from narwhals._plan.typing import LeftT_co, OperatorT, RightT_co, Seq
+from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from narwhals._plan._expansion import Expander
     from narwhals._plan.options import SortMultipleOptions, SortOptions
     from narwhals._plan.schema import FrozenSchema
+    from narwhals._plan.typing import Seq
     from narwhals.dtypes import DType
 
 
@@ -35,6 +37,10 @@ __all__ = (
     "col",
     "ternary_expr",
 )
+
+LeftT_co = TypeVar("LeftT_co", bound=ExprIR, default=ExprIR, covariant=True)
+RightT_co = TypeVar("RightT_co", bound=ExprIR, default=ExprIR, covariant=True)
+OperatorT = TypeVar("OperatorT", bound=Operator, default=Operator)
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
 get_dtype = ResolveDType.get_dtype
@@ -64,6 +70,14 @@ class LenStar(Constructor, dispatch="Scalar", dtype=dtm.IDX_DTYPE):
 
 
 Len = LenStar
+"""Return the number of rows in the context.
+
+This is similar to `COUNT(*)` in SQL.
+
+Bug:
+    TODO @dangotbanned: Need to remove this alias.
+    Bad for the docs, but used **12** times in **9** source files.
+"""
 
 
 class Alias(NoDispatch):
@@ -129,6 +143,12 @@ class Col(Constructor, dispatch="Expr"):
 
 
 Column = Col
+"""An expression that selects exactly one column.
+
+Bug:
+    TODO @dangotbanned: Need to remove this alias.
+    Bad for the docs, but used **30** times in **11** source files.
+"""
 
 
 class Cast(ExprIR, dtype=get_dtype()):
@@ -174,7 +194,8 @@ class SortBy(ExprIR, dtype=same_dtype()):
 
     For SQL-like backends, there will be limitations on where `sort_by` is valid.
 
-    The simplest case represents the [`ORDER BY` Clause in Aggregate Functions]:
+    The simplest case represents the
+    [`ORDER BY` Clause in Aggregate Functions](https://duckdb.org/docs/current/sql/functions/aggregates#order-by-clause-in-aggregate-functions):
 
         # defaults to `descending=False, nulls_last=False`
         nw.col("a").sort_by("b").first()
@@ -182,8 +203,6 @@ class SortBy(ExprIR, dtype=same_dtype()):
     Which can be translated to:
 
         first("a", ORDER BY "b" ASC NULLS FIRST)
-
-    [`ORDER BY` Clause in Aggregate Functions]: https://duckdb.org/docs/current/sql/functions/aggregates#order-by-clause-in-aggregate-functions
     """
 
     __slots__ = ("expr", "by", "options")  # noqa: RUF023
@@ -227,27 +246,41 @@ class Filter(ExprIR, dtype=same_dtype()):
 
 
 class Over(ExprIR, dtype=same_dtype()):
-    """A fully specified `.over()`, that occurred after another expression.
+    """An expression computed over groups.
 
-    Related:
-    - https://github.com/pola-rs/polars/blob/112cab39380d8bdb82c6b76b31aca9b58c98fd93/crates/polars-plan/src/dsl/expr.rs#L129-L136
-    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L835-L838
-    - https://github.com/pola-rs/polars/blob/dafd0a2d0e32b52bcfa4273bffdd6071a0d5977a/crates/polars-plan/src/dsl/mod.rs#L840-L876
+    Note:
+        Always operates over groups, like
+        [`pl.Expr.over` (polars<1)](https://docs.pola.rs/api/python/version/0.20/reference/expressions/api/polars.Expr.over.html).
     """
 
     __slots__ = ("expr", "partition_by")
     expr: ExprIR = node(observe_scalar=False)
-    """For lazy backends, this should be the only place we allow `rolling_*`, `cum_*`."""
+    """A function or aggregation expression."""
     partition_by: Seq[ExprIR] = nodes()
+    """Expression(s) to group by."""
 
     def __repr__(self) -> str:
         return f"{self.expr!r}.over({list(self.partition_by)!r})"
 
 
 class OverOrdered(Over):
+    """An expression computed over ordered groups.
+
+    Note:
+        Always orders the groups, but `partition_by` is optional.
+        Typically implemented by using a single partition for all rows.
+    """
+
     __slots__ = ("order_by", "sort_options")
     order_by: Seq[ExprIR] = nodes()
+    """Expression(s) used to order rows.
+
+    Ordering is applied to each partition group before evaluating the expression.
+    """
+    # TODO @dangotbanned: Rename to `options`
+    # (had a naming collision ages ago, which was resolved)
     sort_options: SortOptions
+    """Flags defining order direction and the placement of nulls."""
 
     def __repr__(self) -> str:
         order = self.order_by
@@ -290,15 +323,17 @@ class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
     def __repr__(self) -> str:
         return f"[({self.left!r}) {self.op!r} ({self.right!r})]"
 
-    def resolve_dtype(self, schema: FrozenSchema) -> DType:  # pragma: no cover
-        """NOTE: Supported on `Logical` and `TrueDivide` operators only.
+    def resolve_dtype(self, schema: FrozenSchema) -> DType:
+        """(Partially supported).
 
-        Requires `get_supertype`:
-        - `Add`
-        - `Sub`
-        - `Multiply`
-        - `FloorDivide`
-        - `Modulus`
+        - [x] `Logical`
+        - [x] `TrueDivide`
+        - [ ] Requires [`get_supertype` (#3396)](https://github.com/narwhals-dev/narwhals/pull/3396)
+            - [ ] `Add`
+            - [ ] `Sub`
+            - [ ] `Multiply`
+            - [ ] `FloorDivide`
+            - [ ] `Modulus`
         """
         return self.op.resolve_dtype(self, schema)
 
@@ -311,13 +346,27 @@ class BinaryExpr(ExprIR, Generic[LeftT_co, OperatorT, RightT_co]):
 
 # TODO @dangotbanned: `get_supertype`, `nw.Null`
 class TernaryExpr(ExprIR):
-    """When-Then-Otherwise."""
+    """A `when-then-otherwise` expression.
+
+    Represents reaching a *"finished"* state via the `(Chained){When,Then}` builders.
+
+    The `Chained*` variants produce an [arbitrarily nested] `TernaryExpr`.
+
+    [arbitrarily nested]: https://github.com/pola-rs/polars/blob/1c11555550f8772dd4378b729069fd8c19e2d2dc/crates/polars-plan/src/dsl/arity.rs#L90-L111
+    """
 
     __slots__ = ("truthy", "falsy", "predicate")  # noqa: RUF023
-    # `truthy` is defined first because the root is from `when(...).then(<here>)`
+    # `truthy` is defined first to make it the root
     truthy: ExprIR = node()
+    """The *then* expression.
+
+    Note:
+        The output name is taken from `truthy`.
+    """
     predicate: ExprIR = node()
+    """The *when* expression."""
     falsy: ExprIR = node()
+    """The *otherwise* expression."""
 
     def __repr__(self) -> str:
         return (

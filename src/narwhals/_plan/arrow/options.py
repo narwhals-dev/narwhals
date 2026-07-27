@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals._plan.arrow import acero
     from narwhals._plan.arrow.typing import NullPlacement, RankMethodSingle
     from narwhals._plan.expressions import aggregation as agg
-    from narwhals._plan.typing import Order, Seq
+    from narwhals._plan.typing import Seq
 
 
 __all__ = (
@@ -43,7 +43,7 @@ __all__ = (
 
 
 _T = TypeVar("_T", bound="type[ir.ExprIR | ir.Function]")
-
+Order: TypeAlias = Literal["ascending", "descending"]
 LazyOptions: TypeAlias = Mapping[_T, "acero.AggregateOptions"]
 """Lazily constructed mapping to `pyarrow.compute.FunctionOptions` instances.
 

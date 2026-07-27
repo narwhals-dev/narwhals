@@ -1,5 +1,6 @@
 """Core expression intermediate representations.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 The design is *based on* (rust) polars, with *deviations* where:
 - `rust != python`
@@ -35,6 +36,7 @@ You could think of these sharing a role in lowering an IR:
 [algebraic data types]: https://github.com/jspahrsummers/adt
 [`plans::expr_ir::ExprIR`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/expr_ir.rs#L63-L74
 [`plans::aexpr::AExpr`]: https://github.com/pola-rs/polars/blob/7fc9f1875714fe9893c4d849b9593c1e4db1e854/crates/polars-plan/src/plans/aexpr/mod.rs#L179-L269
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations
@@ -52,7 +54,7 @@ from narwhals._plan._immutable import _OBJ_SETATTR, Immutable
 from narwhals._plan._meta import ExprIRMeta
 from narwhals._plan._nodes import ExprTraverser
 from narwhals._plan._version import into_version
-from narwhals._plan.typing import Constructs, ExprIRT_co
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Version, unstable
 from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
@@ -70,7 +72,7 @@ if TYPE_CHECKING:
     from narwhals._plan.meta import MetaNamespace
     from narwhals._plan.schema import FrozenSchema
     from narwhals._plan.selectors import Selector
-    from narwhals._plan.typing import Ignored, MapIR
+    from narwhals._plan.typing import Constructs, Ignored, MapIR
     from narwhals.typing import IntoDType
 
 
@@ -80,80 +82,90 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     All functions and methods that return an `Expr` are backed by an `ExprIR`.
 
     That may be a single node:
-    >>> import narwhals._plan as nw
-    >>> column = nw.col("howdy")
-    >>> column._ir
-    col('howdy')
-    >>> print(column._ir)
-    Col(name='howdy')
+
+        >>> import narwhals._plan as nw
+        >>> column = nw.col("howdy")
+        >>> column._ir
+        col('howdy')
+        >>> print(column._ir)
+        Col(name='howdy')
 
     Or something more deeply nested:
-    >>> bigger = (column + 10.5).alias("more")
-    >>> bigger_ir = bigger._ir
-    >>> print(bigger_ir)
-    Alias(expr=BinaryExpr(left=..., op=Add(), right=Lit(..., value=10.5)), name='more')
+
+        >>> bigger = (column + 10.5).alias("more")
+        >>> bigger_ir = bigger._ir
+        >>> print(bigger_ir)
+        Alias(expr=BinaryExpr(left=..., op=Add(), right=Lit(..., value=10.5)), name='more')
+
 
     An `ExprIR` is an easily traversable graph:
-    >>> def show_order(nodes: Iterator[ExprIR]) -> None:
-    ...     print("\n".join(f"{idx}: {node}" for idx, node in enumerate(nodes)))
+
+        >>> def show_order(nodes: Iterator[ExprIR]) -> None:
+        ...     print("\n".join(f"{idx}: {node}" for idx, node in enumerate(nodes)))
 
     Supporting iteration from both *root to leaf*:
-    >>> show_order(bigger_ir.iter_left())
-    0: Col(name='howdy')
-    1: Lit(dtype=Float64, value=10.5)
-    2: BinaryExpr(left=..., op=Add(), right=...)
-    3: Alias(expr=BinaryExpr(...), name='more')
+
+        >>> show_order(bigger_ir.iter_left())
+        0: Col(name='howdy')
+        1: Lit(dtype=Float64, value=10.5)
+        2: BinaryExpr(left=..., op=Add(), right=...)
+        3: Alias(expr=BinaryExpr(...), name='more')
 
     And *leaf to root* - for the same cost:
-    >>> show_order(bigger_ir.iter_right())
-    0: Alias(expr=BinaryExpr(...), name='more')
-    1: BinaryExpr(left=..., op=Add(), right=...)
-    2: Lit(dtype=Float64, value=10.5)
-    3: Col(name='howdy')
 
-    That comes in handy for [`meta`] operations, which are available for both `Expr` and `ExprIR`:
-    >>> bigger_ir.meta.root_names()
-    ['howdy']
-    >>> bigger_ir.meta.output_name()
-    'more'
+        >>> show_order(bigger_ir.iter_right())
+        0: Alias(expr=BinaryExpr(...), name='more')
+        1: BinaryExpr(left=..., op=Add(), right=...)
+        2: Lit(dtype=Float64, value=10.5)
+        3: Col(name='howdy')
 
-    See `ExprIR.map_ir` for other superpowers this gives us.
+    That comes in handy for [`meta`][meta] operations, which are available for both `Expr` and `ExprIR`:
 
-    [`meta`]: https://docs.pola.rs/api/python/stable/reference/expressions/meta.html
+        >>> bigger_ir.meta.root_names()
+        ['howdy']
+        >>> bigger_ir.meta.output_name()
+        'more'
+
+    See [`map_ir`][narwhals._plan.expressions.ExprIR.map_ir] for other superpowers this gives us.
     """
 
     __expr_ir_nodes__: ClassVar[ExprTraverser] = ExprTraverser(())
     """Graph traversal backend.
 
     Populated through the use of the `node`, `nodes` field specifiers in the class body:
-    >>> from narwhals._plan._nodes import node, nodes
-    >>> from narwhals._plan.typing import Seq
-    >>> class Over(ExprIR):
-    ...     __slots__ = ("expr", "partition_by")
-    ...     expr: ExprIR = node(observe_scalar=False)
-    ...     partition_by: Seq[ExprIR] = nodes()
+
+        >>> from narwhals._plan._nodes import node, nodes
+        >>> from narwhals._plan.typing import Seq
+        >>> class Over(ExprIR):
+        ...     __slots__ = ("expr", "partition_by")
+        ...     expr: ExprIR = node(observe_scalar=False)
+        ...     partition_by: Seq[ExprIR] = nodes()
 
     Aaaaand there it is:
-    >>> Over.__expr_ir_nodes__
-    ExprTraverser[2]
-        expr: ExprIR = node(observe_scalar=False)
-        partition_by: Seq[ExprIR] = nodes()
+
+        >>> Over.__expr_ir_nodes__
+        ExprTraverser[2]
+            expr: ExprIR = node(observe_scalar=False)
+            partition_by: Seq[ExprIR] = nodes()
 
     The order they are defined is meaningful, and extends to subclasses:
-    >>> from narwhals._plan.options import SortOptions
-    >>> class OverOrdered(Over):
-    ...     __slots__ = ("order_by", "sort_options")
-    ...     order_by: Seq[ExprIR] = nodes()
-    ...     sort_options: SortOptions
+
+        >>> from narwhals._plan.options import SortOptions
+        >>> class OverOrdered(Over):
+        ...     __slots__ = ("order_by", "sort_options")
+        ...     order_by: Seq[ExprIR] = nodes()
+        ...     sort_options: SortOptions
 
     Note how `sort_options` does not use a field specifier, and is ignored for traversal:
-    >>> OverOrdered.__expr_ir_nodes__
-    ExprTraverser[3]
-        expr: ExprIR = node(observe_scalar=False)
-        partition_by: Seq[ExprIR] = nodes()
-        order_by: Seq[ExprIR] = nodes()
+
+        >>> OverOrdered.__expr_ir_nodes__
+        ExprTraverser[3]
+            expr: ExprIR = node(observe_scalar=False)
+            partition_by: Seq[ExprIR] = nodes()
+            order_by: Seq[ExprIR] = nodes()
 
     This is what provides the default implementation of:
+
     - `iter_left`
     - `iter_right`
     - `iter_output_name`
@@ -167,15 +179,14 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     __expr_ir_dtype__: ClassVar[ResolveDType[Self]] = ResolveDType()
     """Callable defining how a `DType` is derived when `resolve_dtype` is called.
 
-    If the logic fits an existing pattern, use the `dtype` **parameter** [when subclassing]:
+    If the logic fits an existing pattern, use the `dtype` **parameter**
+    [when subclassing](https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__):
 
         class Slice(ExprIR, dtype=ResolveDType.expr_ir.same_dtype()):
             __slots__ = ("expr", "length", "offset")
             expr: ExprIR = node()
             offset: int
             length: int | None
-
-    See `IntoResolveDType` and `ResolveDType` for more examples.
 
     If nothing there *quite* scratches the itch, override `resolve_dtype` instead:
 
@@ -192,7 +203,9 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
                 inner = dtype.inner
                 return inner if not isinstance(inner, type) else inner()
 
-    [when subclassing]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+    See Also:
+        - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
+        - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
     """
 
     def __init_subclass__(
@@ -200,17 +213,15 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     ) -> None:
         """Hook to [customize a new subclass] of `ExprIR`.
 
+        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
+
         Arguments:
             dtype: Defines how a `DType` is derived when `resolve_dtype` is called.
                 Stored in `__expr_ir_dtype__`.
 
-                See `IntoResolveDType` and `ResolveDType` for usage.
-
-                **Warning**: This functionality is considered **unstable**.
-                Full support depends on [#3396].
-
-        [customize a new subclass]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
-        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+        See Also:
+            - [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
+            - [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
         """
         super().__init_subclass__(**_)
         if "__expr_ir_dispatch__" not in cls.__dict__:
@@ -222,11 +233,16 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
                 dtype = ResolveDType.expr_ir.visitor(dtype)  # pragma: no cover
             cls.__expr_ir_dtype__ = dtype
 
+    @unstable
     def resolve_dtype(self: Self, schema: FrozenSchema) -> DType:
         """Get the data type of an expanded expression.
 
         Arguments:
             schema: The same schema used to project this expression.
+
+        Warning:
+            This functionality is considered **unstable**.
+            Full support depends on [#3396](https://github.com/narwhals-dev/narwhals/pull/3396).
         """
         return self.__expr_ir_dtype__(self, schema)
 
@@ -257,26 +273,28 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     def to_selector_ir(self) -> SelectorIR:
         """Try to convert this `ExprIR` into a `SelectorIR`.
 
-        >>> import narwhals._plan as nw
-
         The only valid conversion is for a `Col`:
-        >>> column = nw.col("a")._ir
-        >>> column
-        col('a')
 
-        >>> selector = column.to_selector_ir()
-        >>> selector
-        ncs.by_name('a')
+            >>> import narwhals._plan as nw
+            >>> column = nw.col("a")._ir
+            >>> column
+            col('a')
+
+            >>> selector = column.to_selector_ir()
+            >>> selector
+            ncs.by_name('a')
 
         For a `SelectorIR`, this is a noop:
-        >>> selector.to_selector_ir()
-        ncs.by_name('a')
+
+            >>> selector.to_selector_ir()
+            ncs.by_name('a')
 
         Everything else will raise:
-        >>> alias = nw.col("a").alias("bad")._ir
-        >>> alias.to_selector_ir()
-        Traceback (most recent call last):
-        narwhals.exceptions.InvalidOperationError: cannot turn `col('a').alias('bad')` into a selector
+
+            >>> alias = nw.col("a").alias("bad")._ir
+            >>> alias.to_selector_ir()
+            Traceback (most recent call last):
+            narwhals.exceptions.InvalidOperationError: cannot turn `col('a').alias('bad')` into a selector
         """
         msg = f"cannot turn `{self!r}` into a selector"
         raise InvalidOperationError(msg)
@@ -306,45 +324,56 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         """Return True if this leaf produces a single value.
 
         Some expressions are always scalar:
-        >>> import narwhals._plan as nw
-        >>> length = nw.len()
-        >>> length._ir.is_scalar()
-        True
-        >>> nw.lit(123)._ir.is_scalar()
-        True
+
+            >>> import narwhals._plan as nw
+            >>> length = nw.len()
+            >>> length._ir.is_scalar()
+            True
+            >>> nw.lit(123)._ir.is_scalar()
+            True
 
         Others always output a column:
-        >>> column = nw.col("a")
-        >>> column._ir.is_scalar()
-        False
-        >>> nw.int_range(0, 10)._ir.is_scalar()
-        False
+
+            >>> column = nw.col("a")
+            >>> column._ir.is_scalar()
+            False
+            >>> nw.int_range(0, 10)._ir.is_scalar()
+            False
 
         Many depend on the scalar-ness of child expressions, and require traversal:
-        >>> (column + length)._ir.is_scalar()
-        False
-        >>> (column.first() + length)._ir.is_scalar()
-        True
 
-        ## Notes
-        Subclasses should override in 2 cases:
-        1. They are unconditionally scalar (`Len`, `AggExpr`)
-        2. They answer the question using non-node fields (`FunctionExpr.function`)
+            >>> (column + length)._ir.is_scalar()
+            False
+            >>> (column.first() + length)._ir.is_scalar()
+            True
+
+        Notes:
+            Subclasses should override in 2 cases:
+
+            1. They are unconditionally scalar (`Len`, `AggExpr`)
+            2. They answer the question using non-node fields (`FunctionExpr.function`)
         """
         return self.__expr_ir_nodes__.is_scalar(self)
 
     def needs_expansion(self) -> bool:
         """Return True if this expression contains selectors.
 
-        >>> import narwhals._plan as nw
-        >>> a = nw.col("a")
-        >>> bc = nw.col("b", "c")
-        >>> a._ir.needs_expansion()
-        False
-        >>> bc._ir.needs_expansion()
-        True
-        >>> (a * bc)._ir.needs_expansion()
-        True
+        A single column is not a selector:
+
+            >>> import narwhals._plan as nw
+            >>> a = nw.col("a")
+            >>> a._ir.needs_expansion()
+            False
+
+        It takes two to tango:
+
+            >>> bc = nw.col("b", "c")
+            >>> bc._ir.needs_expansion()
+            True
+            >>> (a * bc)._ir.needs_expansion()
+            True
+            >>> (bc + a)._ir.needs_expansion()
+            True
         """
         return any(isinstance(e, SelectorIR) for e in self.iter_left())
 
@@ -352,7 +381,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
         """Transform an expression by applying a function to all nodes in the graph.
 
         Arguments:
-            function: A single argument [idempotent] function.
+            function: A single argument [idempotent](https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning)
+                function.
 
                 Called *recursively* on any inputs and then the current node.
 
@@ -360,9 +390,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             Use `NamedIR.map_ir` if `function` requires selector expansion.
 
         Returns:
-            Either
-            - A new `ExprIR`, with any changes made as a result of `function`
-            - The same `ExprIR` (by identity)
+            Either a new `ExprIR`, with any changes made as a result of `function`.
+            Or the same `ExprIR` (by identity).
 
         Examples:
             >>> import narwhals._plan as nw
@@ -402,12 +431,8 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             [([(col('a')) + (col('b'))]) + (col('c'))].alias('sum')
 
         Notes:
-            - The name `map_ir` is a nod to [`plans::iterator::Expr.map_expr`]
-            - The iteration pattern is adapted from [`plans::iterator::!push_expr`]
-
-        [idempotent]: https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning
-        [`plans::iterator::Expr.map_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L166-L169
-        [`plans::iterator::!push_expr`]: https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L10-L124
+            - The name `map_ir` is a nod to [`plans::iterator::Expr.map_expr`]( https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L166-L169)
+            - The iteration pattern is adapted from [`plans::iterator::!push_expr`](https://github.com/pola-rs/polars/blob/3ea81c45e0c184af2cf5a93f8378cf330e4658c9/crates/polars-plan/src/plans/iterator.rs#L10-L124)
         """
         return self.__expr_ir_nodes__.map_ir(self, function)
 
@@ -416,70 +441,76 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
     def iter_left(self) -> Iterator[ExprIR]:
         r"""Yield nodes recursively from root->leaf.
 
-        `iter_left` will always yield the current node **last**.
+        `iter_left` will always yield the current node **last**:
 
-        >>> import narwhals._plan as nw
-        >>> def show(nodes: Iterator[ExprIR]) -> None:
-        ...     print("\n".join(repr(e) for e in nodes))
+            >>> import narwhals._plan as nw
+            >>> def show(nodes: Iterator[ExprIR]) -> None:
+            ...     print("\n".join(repr(e) for e in nodes))
 
         A root node just yields itself:
-        >>> show(nw.col("a")._ir.iter_left())
-        col('a')
+
+            >>> show(nw.col("a")._ir.iter_left())
+            col('a')
 
         A binary expression is a little more interesting:
-        >>> binary = nw.col("a").alias("b") + nw.col("c").min().alias("d")
-        >>> show(binary._ir.iter_left())
-        col('a')
-        col('a').alias('b')
-        col('c')
-        col('c').min()
-        col('c').min().alias('d')
-        [(col('a').alias('b')) + (col('c').min().alias('d'))]
+
+            >>> binary = nw.col("a").alias("b") + nw.col("c").min().alias("d")
+            >>> show(binary._ir.iter_left())
+            col('a')
+            col('a').alias('b')
+            col('c')
+            col('c').min()
+            col('c').min().alias('d')
+            [(col('a').alias('b')) + (col('c').min().alias('d'))]
 
         And we can go fancier:
-        >>> window = nw.col("e").first().over("f", order_by=["g", "h"])
-        >>> show(window._ir.iter_left())
-        col('e')
-        col('e').first()
-        col('f')
-        col('g')
-        col('h')
-        col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
+
+            >>> window = nw.col("e").first().over("f", order_by=["g", "h"])
+            >>> show(window._ir.iter_left())
+            col('e')
+            col('e').first()
+            col('f')
+            col('g')
+            col('h')
+            col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
         """
         yield from self.__expr_ir_nodes__.iter_left(self)
 
     def iter_right(self) -> Iterator[ExprIR]:
         r"""Yield nodes recursively from leaf->root.
 
-        `iter_right` will always yield the current node **first**.
+        `iter_right` will always yield the current node **first**:
 
-        >>> import narwhals._plan as nw
-        >>> def show(nodes: Iterator[ExprIR]) -> None:
-        ...     print("\n".join(repr(e) for e in nodes))
+            >>> import narwhals._plan as nw
+            >>> def show(nodes: Iterator[ExprIR]) -> None:
+            ...     print("\n".join(repr(e) for e in nodes))
 
         A root node just yields itself:
-        >>> show(nw.col("a")._ir.iter_right())
-        col('a')
+
+            >>> show(nw.col("a")._ir.iter_right())
+            col('a')
 
         A binary expression is a little more interesting:
-        >>> binary = nw.col("a").alias("b") + nw.col("c").min().alias("d")
-        >>> show(binary._ir.iter_right())
-        [(col('a').alias('b')) + (col('c').min().alias('d'))]
-        col('c').min().alias('d')
-        col('c').min()
-        col('c')
-        col('a').alias('b')
-        col('a')
+
+            >>> binary = nw.col("a").alias("b") + nw.col("c").min().alias("d")
+            >>> show(binary._ir.iter_right())
+            [(col('a').alias('b')) + (col('c').min().alias('d'))]
+            col('c').min().alias('d')
+            col('c').min()
+            col('c')
+            col('a').alias('b')
+            col('a')
 
         And we can go fancier:
-        >>> window = nw.col("e").first().over("f", order_by=["g", "h"])
-        >>> show(window._ir.iter_right())
-        col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
-        col('h')
-        col('g')
-        col('f')
-        col('e').first()
-        col('e')
+
+            >>> window = nw.col("e").first().over("f", order_by=["g", "h"])
+            >>> show(window._ir.iter_right())
+            col('e').first().over(partition_by=[col('f')], order_by=[col('g'), col('h')])
+            col('h')
+            col('g')
+            col('f')
+            col('e').first()
+            col('e')
         """
         yield from self.__expr_ir_nodes__.iter_right(self)
 
@@ -612,9 +643,9 @@ class ExprIR(Immutable, metaclass=ExprIRMeta):
             col('d').cum_sum().over(partition_by=[col('b'), col('c')], order_by=[col('d')])
 
 
-        [^1]: This is an intentional deviation from polars (see [polars#25022]).
+            [^1]: This is an intentional deviation from polars (see [polars#25022]).
 
-        [polars#25022]: https://github.com/pola-rs/polars/issues/25022
+            [polars#25022]: https://github.com/pola-rs/polars/issues/25022
         """
         yield from self.__expr_ir_nodes__.iter_expand(self, ctx)
 
@@ -657,14 +688,15 @@ class NoDispatch(ExprIR):
     """Ensure an expression cannot be used at the compliant-level.
 
     **Any** attempts to dispatch will raise a `TypeError`:
-    >>> import narwhals._plan as nw
-    >>> selector = nw.col("a", "b", "c")._ir
-    >>> selector.__expr_ir_dispatch__(selector, ..., ..., ...)
-    Traceback (most recent call last):
-    TypeError: 'ByName' should not appear at the compliant-level.
-    ...
-    Make sure to expand all expressions first, got:
-    ncs.by_name('a', 'b', 'c')
+
+        >>> import narwhals._plan as nw
+        >>> selector = nw.col("a", "b", "c")._ir
+        >>> selector.__expr_ir_dispatch__(selector, ..., ..., ...)
+        Traceback (most recent call last):
+        TypeError: 'ByName' should not appear at the compliant-level.
+        ...
+        Make sure to expand all expressions first, got:
+        ncs.by_name('a', 'b', 'c')
     """
 
     __expr_ir_dispatch__: ClassVar[_dispatch.NoDispatch[Self]] = (
@@ -696,62 +728,68 @@ class SelectorIR(NoDispatch):
     All functions that return a `Selector` are backed by a `SelectorIR`.
 
     The `selectors` module is the usual entry point:
-    >>> import narwhals._plan as nw
-    >>> import narwhals._plan.selectors as ncs
+
+        >>> import narwhals._plan as nw
+        >>> import narwhals._plan.selectors as ncs
 
     And selectors created this way support set operations:
-    >>> selector = ncs.first() | ncs.boolean()
-    >>> isinstance(selector, nw.Selector)
-    True
-    >>> selector._ir
-    [ncs.first() | ncs.boolean()]
+
+        >>> selector = ncs.first() | ncs.boolean()
+        >>> isinstance(selector, nw.Selector)
+        True
+        >>> selector._ir
+        [ncs.first() | ncs.boolean()]
 
     Some expressions are simply selectors in disguise:
-    >>> expr = nw.col("a", "b", "c")
-    >>> isinstance(expr, nw.Selector)
-    False
-    >>> expr._ir
-    ncs.by_name('a', 'b', 'c')
+
+        >>> expr = nw.col("a", "b", "c")
+        >>> isinstance(expr, nw.Selector)
+        False
+        >>> expr._ir
+        ncs.by_name('a', 'b', 'c')
 
     We can use selectors almost anywhere that column names are expected:
-    >>> data = {
-    ...     "A": ["dog", "cat", "dog", "cat", "dog"],
-    ...     "B": [1, 2, 1, 4, 0],
-    ...     "C": [30.0, 40.5, 10.0, 20.5, 2.0],
-    ...     "D": ["a", "b", "a", "a", "b"],
-    ... }
-    >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
-    >>> result = (
-    ...     df.group_by(ncs.string())
-    ...     .agg(ncs.float().sum(), ncs.integer())
-    ...     .with_columns(ncs.matches("C") / ncs.list().list.len())
-    ...     .explode(ncs.list())
-    ...     .sort(ncs.by_index(0, 1), descending=True)
-    ... )
-    >>> result.to_polars()
-    shape: (5, 4)
-    ┌─────┬─────┬──────┬─────┐
-    │ A   ┆ D   ┆ C    ┆ B   │
-    │ --- ┆ --- ┆ ---  ┆ --- │
-    │ str ┆ str ┆ f64  ┆ i64 │
-    ╞═════╪═════╪══════╪═════╡
-    │ dog ┆ b   ┆ 2.0  ┆ 0   │
-    │ dog ┆ a   ┆ 20.0 ┆ 1   │
-    │ dog ┆ a   ┆ 20.0 ┆ 1   │
-    │ cat ┆ b   ┆ 40.5 ┆ 2   │
-    │ cat ┆ a   ┆ 20.5 ┆ 4   │
-    └─────┴─────┴──────┴─────┘
+
+        >>> data = {
+        ...     "A": ["dog", "cat", "dog", "cat", "dog"],
+        ...     "B": [1, 2, 1, 4, 0],
+        ...     "C": [30.0, 40.5, 10.0, 20.5, 2.0],
+        ...     "D": ["a", "b", "a", "a", "b"],
+        ... }
+        >>> df = nw.DataFrame.from_dict(data, backend="pyarrow")
+        >>> result = (
+        ...     df.group_by(ncs.string())
+        ...     .agg(ncs.float().sum(), ncs.integer())
+        ...     .with_columns(ncs.matches("C") / ncs.list().list.len())
+        ...     .explode(ncs.list())
+        ...     .sort(ncs.by_index(0, 1), descending=True)
+        ... )
+        >>> result.to_polars()
+        shape: (5, 4)
+        ┌─────┬─────┬──────┬─────┐
+        │ A   ┆ D   ┆ C    ┆ B   │
+        │ --- ┆ --- ┆ ---  ┆ --- │
+        │ str ┆ str ┆ f64  ┆ i64 │
+        ╞═════╪═════╪══════╪═════╡
+        │ dog ┆ b   ┆ 2.0  ┆ 0   │
+        │ dog ┆ a   ┆ 20.0 ┆ 1   │
+        │ dog ┆ a   ┆ 20.0 ┆ 1   │
+        │ cat ┆ b   ┆ 40.5 ┆ 2   │
+        │ cat ┆ a   ┆ 20.5 ┆ 4   │
+        └─────┴─────┴──────┴─────┘
 
     Selectors are schema-dependent, with column names determined during expression expansion:
-    >>> middle = (~(ncs.first() | ncs.last()))._ir
-    >>> list(middle.iter_expand_selector(result.schema))
-    ['D', 'C']
-    >>> list(middle.iter_expand_selector(df.schema))
-    ['B', 'C']
+
+        >>> middle = (~(ncs.first() | ncs.last()))._ir
+        >>> list(middle.iter_expand_selector(result.schema))
+        ['D', 'C']
+        >>> list(middle.iter_expand_selector(df.schema))
+        ['B', 'C']
 
     Unlike `col`, a selector can still be valid if it matches zero columns:
-    >>> result.drop(ncs.struct()).columns == ["A", "D", "C", "B"]
-    True
+
+        >>> result.drop(ncs.struct()).columns == ["A", "D", "C", "B"]
+        True
     """
 
     def to_narwhals(self, version: Version = Version.MAIN) -> Selector:
@@ -763,15 +801,16 @@ class SelectorIR(NoDispatch):
     def iter_expand_selector(
         self, schema: Mapping[str, DType], ignored_columns: Ignored = (), /
     ) -> Iterator[str]:
-        """Yield column names that match the selector in schema order [^1].
+        """Yield column names that match the selector in schema order.
 
         Arguments:
             schema: Target scope to expand the selector in.
             ignored_columns: Names of `group_by` key columns.
-                These columns will be excluded [^1] from the result.
+                These columns will be excluded from the result.
 
-        Notes:
-            [^1]: Except `ByName`, `ByIndex`.
+        Important:
+            [`ByName`][narwhals._plan.expressions.selectors.ByName] and
+            [`ByIndex`][narwhals._plan.expressions.selectors.ByIndex] have unique behavior.
 
         Examples:
             >>> import narwhals as nw
@@ -855,29 +894,34 @@ class SelectorIR(NoDispatch):
         """Try to convert this `SelectorIR` into a `DTypeSelector`.
 
         This helps us enforce what you can use inside a nested selector:
-        >>> import narwhals as nw
-        >>> import narwhals._plan.selectors as ncs
+
+            >>> import narwhals as nw
+            >>> import narwhals._plan.selectors as ncs
 
         We allow existing dtype selectors:
-        >>> ncs.list(ncs.integer())._ir
-        ncs.list(ncs.integer())
+
+            >>> ncs.list(ncs.integer())._ir
+            ncs.list(ncs.integer())
 
         Selectors that can be converted into dtype selectors:
-        >>> ncs.list(ncs.all())._ir
-        ncs.list(ncs.all())
-        >>> ncs.list(ncs.empty())._ir
-        ncs.list(ncs.empty())
+
+            >>> ncs.list(ncs.all())._ir
+            ncs.list(ncs.all())
+            >>> ncs.list(ncs.empty())._ir
+            ncs.list(ncs.empty())
 
         Compositions where each sub-selector satisfies the above:
-        >>> ncs.list(~ncs.float())._ir
-        ncs.list(~ncs.float())
-        >>> ncs.list(ncs.enum() | ncs.list(ncs.struct()))._ir
-        ncs.list([ncs.enum() | ncs.list(ncs.struct())])
+
+            >>> ncs.list(~ncs.float())._ir
+            ncs.list(~ncs.float())
+            >>> ncs.list(ncs.enum() | ncs.list(ncs.struct()))._ir
+            ncs.list([ncs.enum() | ncs.list(ncs.struct())])
 
         Everything else will raise:
-        >>> ncs.list(ncs.float() | ncs.matches("inner"))
-        Traceback (most recent call last):
-        TypeError: expected data type based selector got `ncs.matches('inner')`
+
+            >>> ncs.list(ncs.float() | ncs.matches("inner"))
+            Traceback (most recent call last):
+            TypeError: expected data type based selector got `ncs.matches('inner')`
         """
         msg = f"expected data type based selector got `{self!r}`"
         raise TypeError(msg)
@@ -891,8 +935,11 @@ class SelectorIR(NoDispatch):
     def or_(self: SelectorIR, *others: SelectorIR) -> SelectorIR:
         """Syntax sugar for `BinarySelector(left=self, op=Or(), right=others[0])`.
 
-        - Noop when `others` is empty
-        - Reduction when `len(others) > 1`
+        Arguments:
+            *others: Zero or more other selectors.
+
+                - Noop when `others` is empty
+                - Reduction when `len(others) > 1`
         """
         # NOTE: `Self@SelectorIR.or_(*SelectorIR)` is obliterating pylance
         from narwhals._plan.expressions.operators import Or
@@ -910,6 +957,9 @@ class SelectorIR(NoDispatch):
         return InvertSelector(selector=self)
 
 
+ExprIRT_co = TypeVar("ExprIRT_co", bound=ExprIR, default=ExprIR, covariant=True)
+
+
 # TODO @dangotbanned: Final polish on class-level doc
 @final
 class NamedIR(Immutable, Generic[ExprIRT_co]):
@@ -922,6 +972,7 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         df.select(nw.col("weight", "height").mean().name.prefix("avg_"))
 
     `NamedIR` *wraps* a `ExprIR` as a promise we've resolved it against a schema and:
+
     1. Converted selectors into column references
     2. Checked all column references exist in the schema
     3. Finished any renaming operations without producing duplicates
@@ -935,38 +986,46 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
     And in their place, we get a *single* output column name, bound to the schema we expanded with.
 
-    ## Examples
-    >>> import narwhals as nw
-    >>> import narwhals._plan as nwp
-    >>> import narwhals._plan.selectors as ncs
-    >>> from tests.plan.utils import Frame
-    >>> schema = {
-    ...     "name": nw.String(),
-    ...     "birthdate": nw.String(),
-    ...     "weight": nw.Float64(),
-    ...     "height": nw.String(),
-    ... }
-    >>> df = Frame.from_mapping(schema)
+    Let's see that in action:
+
+        >>> import narwhals as nw
+        >>> import narwhals._plan as nwp
+        >>> import narwhals._plan.selectors as ncs
+        >>> from tests.plan.utils import Frame
+        >>> schema = {
+        ...     "name": nw.String(),
+        ...     "birthdate": nw.String(),
+        ...     "weight": nw.Float64(),
+        ...     "height": nw.String(),
+        ... }
+        >>> df = Frame.from_mapping(schema)
 
     Suppose we have this expression:
-    >>> expr = (
-    ...     nwp.col("weight", "height")
-    ...     .mean()
-    ...     .name.prefix("avg_")
-    ...     .over(ncs.matches(r"date").str.slice(0, 3))
-    ... )
 
-    Before expansion we have 1 `ExprIR` with:
+        >>> expr = (
+        ...     nwp.col("weight", "height")
+        ...     .mean()
+        ...     .name.prefix("avg_")
+        ...     .over(ncs.matches(r"date").str.slice(0, 3))
+        ... )
+
+    *Before* expansion we have a single expression, composed of:
+
     - a root selector
     - a renaming operation
     - another selector inside a window
-    >>> expr._ir
-    ncs.by_name('weight', 'height').mean().name.prefix('avg_').over([ncs.matches('date').str.slice()])
 
-    After expansion, its `col`(s) all the way down, multiple outputs + the names are ready too:
-    >>> df.project(expr)  # doctest: +NORMALIZE_WHITESPACE
-    (avg_weight=col('weight').mean().over([col('birthdate').str.slice()]),
-     avg_height=col('height').mean().over([col('birthdate').str.slice()]))
+    For comparison:
+
+        >>> expr._ir
+        ncs.by_name('weight', 'height').mean().name.prefix('avg_').over([ncs.matches('date').str.slice()])
+
+    *After* expansion, its `col`(s) all the way down, multiple outputs + the names are ready too:
+
+        >>> df.project(expr)  # doctest: +NORMALIZE_WHITESPACE
+        (avg_weight=col('weight').mean().over([col('birthdate').str.slice()]),
+         avg_height=col('height').mean().over([col('birthdate').str.slice()]))
+
 
     [projection context]: https://docs.pola.rs/user-guide/concepts/expressions-and-contexts/#contexts
     [expression expansion]: https://docs.pola.rs/user-guide/expressions/expression-expansion/
@@ -978,40 +1037,44 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
     """The expanded expression.
 
     For an expression with multiple outputs:
-    >>> import narwhals._plan as nw
-    >>> expr_ir = nw.col("a", "b").first()._ir
-    >>> expr_ir
-    col('a', 'b').first()
+
+        >>> import narwhals._plan as nw
+        >>> expr_ir = nw.col("a", "b").first()._ir
+        >>> expr_ir
+        col('a', 'b').first()
 
     We expand each output into a new `NamedIR`:
-    >>> from narwhals._plan import expressions as ir
-    >>> for name in expr_ir.expr.selector.names:
-    ...     expanded = expr_ir.__replace__(expr=ir.col(name))
-    ...     print(f"{ir.NamedIR(expr=expanded, name=name)!r}")
-    ...     #                   ^^^^
-    a=col('a').first()
-    b=col('b').first()
+
+        >>> from narwhals._plan import expressions as ir
+        >>> for name in expr_ir.expr.selector.names:
+        ...     expanded = expr_ir.__replace__(expr=ir.col(name))
+        ...     print(f"{ir.NamedIR(expr=expanded, name=name)!r}")
+        ...     #                   ^^^^
+        a=col('a').first()
+        b=col('b').first()
     """
 
     name: str
     """The resolved output column name.
 
     When an expression contains one or more renaming operations, like:
-    >>> import narwhals._plan as nw
-    >>> expr_ir = (
-    ...     nw.col("a")
-    ...     .cum_sum()
-    ...     .alias("b")
-    ...     .over(order_by="c")
-    ...     .name.suffix("_cum_sum")
-    ...     ._ir
-    ... )
-    >>> expr_ir
-    col('a').cum_sum().alias('b').over(order_by=[col('c')]).name.suffix('_cum_sum')
+
+        >>> import narwhals._plan as nw
+        >>> expr_ir = (
+        ...     nw.col("a")
+        ...     .cum_sum()
+        ...     .alias("b")
+        ...     .over(order_by="c")
+        ...     .name.suffix("_cum_sum")
+        ...     ._ir
+        ... )
+        >>> expr_ir
+        col('a').cum_sum().alias('b').over(order_by=[col('c')]).name.suffix('_cum_sum')
 
     `name` represents the column name *produced by* the original expression:
-    >>> expr_ir.meta.output_name()
-    'b_cum_sum'
+
+        >>> expr_ir.meta.output_name()
+        'b_cum_sum'
     """
 
     def __init__(self, name: str, expr: ExprIRT_co) -> None:
@@ -1024,7 +1087,8 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
         See `ExprIR.map_ir` for examples.
 
         Arguments:
-            function: A single argument [idempotent] function.
+            function: A single argument [idempotent](https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning)
+                function.
 
                 Called *recursively* on any inputs to `self.expr` and then `self.expr` itself.
 
@@ -1033,11 +1097,8 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
             selector expansion instead.
 
         Returns:
-            Either
-            - A new `NamedIR`, with any changes made as a result of `function`
-            - The same `NamedIR` (by identity)
-
-        [idempotent]: https://en.wikipedia.org/wiki/Idempotence#Computer_science_meaning
+            Either a new `NamedIR`, with any changes made as a result of `function`.
+            Or the same `NamedIR` (by identity).
         """
         return NamedIR.__replace__(self, expr=function(self.expr.map_ir(function)))
 
@@ -1076,9 +1137,8 @@ class NamedIR(Immutable, Generic[ExprIRT_co]):
 
         Warning:
             Most `ExprIR`(s) and `Function`(s) support this operation, but
-            may be composed of others that cannot until [#3396] is merged.
-
-        [#3396]: https://github.com/narwhals-dev/narwhals/pull/3396
+            may be composed of others that cannot until [#3396](https://github.com/narwhals-dev/narwhals/pull/3396)
+            is merged.
         """
         return self.expr.resolve_dtype(schema)
 

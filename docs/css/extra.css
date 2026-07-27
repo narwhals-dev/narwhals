@@ -2,6 +2,7 @@
 .md-typeset ul li {
   margin-bottom: 0.1em !important;
 }
+
 .md-main__inner.md-grid {
   max-width: initial;
   margin-left: 5vw;
@@ -72,4 +73,63 @@ article table:not([class]) td:first-child {
 
 [data-md-color-scheme="slate"] .column-selector-button:hover {
   background: var(--md-primary-fg-color--dark, #4051b5) !important;
+}
+
+[data-md-color-scheme="slate"] {
+  /* Code highlighting syntax color shades
+
+  https://github.com/zensical/ui/blob/c5152dee833503b1a80dee997073d13712b3861f/src/assets/stylesheets/modern/main/_colors.scss#L75-L107
+  https://github.com/zensical/ui/blob/c5152dee833503b1a80dee997073d13712b3861f/src/assets/stylesheets/modern/main/extensions/pymdownx/_highlight.scss#L26-L169
+  */
+
+  /* Mostly tried to recreate a [VSCode theme], but pygments doesn't understand enough of the symbols [mkdocstrings/griffe#254].
+
+  [VSCode theme]: https://github.com/thowitz/dark-plus-python-theme/blob/99ece7cb5ac540cbb28447d401b316fd44230d26/themes/dark-plus-python-theme.json
+  [mkdocstrings/griffe#254]: https://github.com/mkdocstrings/griffe/issues/254
+  */
+  --md-code-hl-string-color: #CE9178;
+  --md-code-hl-number-color: #B5CEA8;
+  --md-code-hl-comment-color: #6A9955;
+  --md-code-hl-function-color: #DCDCAA;
+
+  .highlight {
+
+    /* Use the same color for all regular strings */
+    .se {
+      color: var(--md-code-hl-string-color);
+    }
+
+    .kn {
+      /* keyword, namespace ('from', 'import') */
+      color: #C586C0;
+    }
+
+    :is(.kc, .k) {
+      /*
+      keyword, constant ('True', 'False', 'None')
+      keyword, other
+      */
+      color: #569CD6;
+    }
+
+    /* Overrides `--md-code-hl-function-color` for things that are not functions:
+    .nc = Name, class
+    .ne = Name, exception
+    .nn = Name, namespace
+    */
+    :is(.nc, .ne, .nn) {
+      color: #4EC9B0;
+    }
+
+    /* Generic, prompt ('>>>', '...') */
+    .gp {
+      color: var(--md-code-hl-keyword-color);
+      font-weight: bold;
+    }
+
+    /* The color of the error type in traceback */
+    .gr {
+      color: #CD3131;
+    }
+  }
 }

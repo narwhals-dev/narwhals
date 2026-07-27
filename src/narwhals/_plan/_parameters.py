@@ -23,8 +23,8 @@ __all__ = ("SCALAR", "Binary", "Parameters", "Ternary", "Unary", "Variadic")
 Arity: TypeAlias = Literal[1, 2, 3, "*"]
 """The number of expression arguments taken by a function.
 
-## See Also
-[Arity](https://en.wikipedia.org/wiki/Arity)
+See Also:
+    [Arity](https://en.wikipedia.org/wiki/Arity)
 """
 
 
@@ -51,36 +51,43 @@ class Parameters(metaclass=SlottedMeta):
     """Expectations of expression arguments to a function.
 
     Default instances encode how many:
-    >>> Ternary().arity
-    3
+
+        >>> Ternary().arity
+        3
 
     And define rules each must follow:
-    >>> Binary()
-    Binary(DEFAULT, ANY)
+
+        >>> Binary()
+        Binary(DEFAULT, ANY)
 
     We can constrain that further if needed:
-    >>> Binary(right=Constraint.SCALAR)
-    Binary(DEFAULT, SCALAR)
+
+        >>> Binary(right=Constraint.SCALAR)
+        Binary(DEFAULT, SCALAR)
 
     Putting it all together:
-    >>> import narwhals._plan as nw
-    >>> from narwhals._plan import expressions as ir
+
+        >>> import narwhals._plan as nw
+        >>> from narwhals._plan import expressions as ir
 
     Both inputs must be scalar:
-    >>> ir.ranges.IntRange.__function_parameters__
-    Binary(SCALAR, SCALAR)
+
+        >>> ir.ranges.IntRange.__function_parameters__
+        Binary(SCALAR, SCALAR)
 
     Which permits literals and aggregations:
-    >>> nw.int_range(0, nw.len())._ir
-    int_range(lit(0), len())
+
+        >>> nw.int_range(0, nw.len())._ir
+        int_range(lit(0), len())
 
     But will raise on anything else:
-    >>> nw.int_range(0, nw.col("bad").abs())  # doctest: +IGNORE_EXCEPTION_DETAIL
-    Traceback (most recent call last):
-    ShapeError: `int_range()` does not support non-scalar expressions, got: `col('bad').abs()`.
 
-    ## See Also
-    [Argument vs parameter](https://docs.python.org/3/faq/programming.html#faq-argument-vs-parameter)
+        >>> nw.int_range(0, nw.col("bad").abs())  # doctest: +IGNORE_EXCEPTION_DETAIL
+        Traceback (most recent call last):
+        ShapeError: `int_range()` does not support non-scalar expressions, got: `col('bad').abs()`.
+
+    See Also:
+        [Argument vs parameter](https://docs.python.org/3/faq/programming.html#faq-argument-vs-parameter)
     """
 
     __slots__ = ("_constraints",)
@@ -89,11 +96,7 @@ class Parameters(metaclass=SlottedMeta):
 
     @property
     def arity(self) -> Arity:
-        """The number of expression arguments taken by a function.
-
-        >>> [tp().arity for tp in (Unary, Binary, Ternary, Variadic)]
-        [1, 2, 3, '*']
-        """
+        """The number of expression arguments taken by a function."""
         return self._arity
 
     def check(self, function: Function, exprs: Seq[ExprIR], /) -> Seq[ExprIR]:
@@ -146,13 +149,17 @@ class Unary(Parameters, arity=1):
 
     This is the default and used for most functions (by count).
 
-    The expression is whatever we had when the `Expr` *method* was called:
-    >>> import narwhals._plan as nw
-    >>> expr = nw.col("a").abs()
-    >>> expr._ir.function.__function_parameters__
-    Unary(DEFAULT)
-    >>> expr._ir.args[0]
-    col('a')
+    Arguments:
+        arg: A rule for the expression argument.
+
+    Examples:
+        The expression is whatever we had when the `Expr` *method* was called:
+        >>> import narwhals._plan as nw
+        >>> expr = nw.col("a").abs()
+        >>> expr._ir.function.__function_parameters__
+        Unary(DEFAULT)
+        >>> expr._ir.args[0]
+        col('a')
     """
 
     def __init__(self, arg: Constraint = _DEFAULT, /) -> None:
@@ -169,16 +176,21 @@ class Unary(Parameters, arity=1):
 class Binary(Parameters, arity=2):
     """Takes two expression arguments.
 
-    In many cases, this is like `Unary` but the `Expr` *method* accepts an expression:
-    >>> import narwhals._plan as nw
-    >>> expr = nw.col("a").fill_null(nw.col("a").min())
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
-    Binary(DEFAULT, ANY) | (col('a'), col('a').min())
+    Arguments:
+        left: A rule for the first expression argument.
+        right: A rule for the second expression argument.
 
-    We also use this to represent range *functions*:
-    >>> expr = nw.int_range(0, 10)
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
-    Binary(SCALAR, SCALAR) | (lit(0), lit(10))
+    Examples:
+        In many cases, this is like `Unary` but the `Expr` *method* accepts an expression:
+        >>> import narwhals._plan as nw
+        >>> expr = nw.col("a").fill_null(nw.col("a").min())
+        >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
+        Binary(DEFAULT, ANY) | (col('a'), col('a').min())
+
+        We also use this to represent range *functions*:
+        >>> expr = nw.int_range(0, 10)
+        >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
+        Binary(SCALAR, SCALAR) | (lit(0), lit(10))
     """
 
     def __init__(self, left: Constraint = _DEFAULT, right: Constraint = _ANY) -> None:
@@ -198,11 +210,17 @@ class Binary(Parameters, arity=2):
 class Ternary(Parameters, arity=3):
     """Takes three expression arguments.
 
-    This is like `Unary` but the `Expr` *method* accepts two expressions:
-    >>> import narwhals._plan as nw
-    >>> expr = nw.col("a").alias("clip").clip(nw.col("b"), nw.col("c"))
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
-    Ternary(DEFAULT, ANY, ANY) | (col('a').alias('clip'), col('b'), col('c'))
+    Arguments:
+        arg_1: A rule for the first expression argument.
+        arg_2: A rule for the second expression argument.
+        arg_3: A rule for the third expression argument.
+
+    Examples:
+        This is like `Unary` but the `Expr` *method* accepts two expressions:
+        >>> import narwhals._plan as nw
+        >>> expr = nw.col("a").alias("clip").clip(nw.col("b"), nw.col("c"))
+        >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
+        Ternary(DEFAULT, ANY, ANY) | (col('a').alias('clip'), col('b'), col('c'))
     """
 
     def __init__(
@@ -230,15 +248,17 @@ class Variadic(Parameters, arity="*"):
     """Takes a variable number of expression arguments.
 
     Describes the parameters of horizontal functions:
-    >>> import narwhals._plan as nw
-    >>> expr = nw.all_horizontal("a", "b", "c", "d")
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
-    Variadic(*) | (col('a'), col('b'), col('c'), col('d'))
+
+        >>> import narwhals._plan as nw
+        >>> expr = nw.all_horizontal("a", "b", "c", "d")
+        >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
+        Variadic(*) | (col('a'), col('b'), col('c'), col('d'))
 
     Yep, this too:
-    >>> expr = nw.concat_str(nw.col("c"), nw.nth(-1))
-    >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
-    Variadic(*) | (col('c'), ncs.last())
+
+        >>> expr = nw.concat_str(nw.col("c"), nw.nth(-1))
+        >>> print(f"{expr._ir.function.__function_parameters__} | {expr._ir.args}")
+        Variadic(*) | (col('c'), ncs.last())
     """
 
     def __init__(self) -> None:

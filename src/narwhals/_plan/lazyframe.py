@@ -53,42 +53,7 @@ Incomplete: TypeAlias = Any
 
 # TODO @dangotbanned: Remove `self._compliant`
 class LazyFrame(Generic[Native]):
-    """Representation of a lazy computation.
-
-    ## Notes
-    `CompliantLazyFrame` seems like the wrong abstraction,
-    but preserving the native type is non-negotiable.
-
-    ### Different operations
-    I'd like to acknowledge
-
-    (1) Fake lazy (needs a reference to eager data):
-
-        DataFrame(<native-df>).lazy(None)
-        # becomes
-        LazyFrame._from_lp(ScanDataFrame.from_narwhals(<narwhals-df>))
-
-    (2) Native lazy (needs a reference to lazy query):
-
-        LazyFrame.from_native(<native_lf>)
-        # becomes
-        LazyFrame._from_lp(<some-new-node>)
-
-    (3) Lazy from file (needs a reference to `Implementation`):
-
-        scan_parquet(source, backend=backend)
-        # becomes
-        LazyFrame._from_lp(ScanFile.from_source(source, Implementation.from_backend(backend)))
-
-    (4) Eager -> lazy conversion (needs a reference to lazy query, [maybe `Implementation`]):
-
-        DataFrame(<native-df>).lazy(<backend-conversion>)
-        # do the conversion ...
-        LazyFrame.from_native(<converted-to-native-lf>)
-        LazyFrame._from_lp(<some-new-node>)
-
-    [maybe `Implementation`]: https://github.com/narwhals-dev/narwhals/issues/3210
-    """
+    """Representation of a lazy computation."""
 
     _plan: LogicalPlan
     _implementation: Implementation

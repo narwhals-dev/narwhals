@@ -17,7 +17,7 @@ from narwhals._plan import (
 )
 from narwhals._plan._dispatch import DispatcherOptions, get_dispatch_name
 from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import UnaryFunction
+from narwhals._plan._function import Unary
 from narwhals._plan._nodes import node
 from tests.plan.utils import DataFrame, assert_equal_data, re_compile
 
@@ -86,9 +86,7 @@ def test_dispatch_not_yet(data: Data, dataframe: DataFrame) -> None:
 def test_missing_compliant_method(
     data: Data, dataframe: DataFrame, request: FixtureRequest, *, enable_hints: bool
 ) -> None:
-    class MissingMethod(
-        UnaryFunction, dispatch=DispatcherOptions(accessor_name="str")
-    ): ...
+    class MissingMethod(Unary, dispatch=DispatcherOptions(accessor_name="str")): ...
 
     dataframe.xfail(
         request,
@@ -215,10 +213,10 @@ def test_sharing_expr_ir() -> None:
 
 
 def test_multiple_inheritance_function() -> None:
-    ELEMENTWISE = FunctionFlags.ELEMENTWISE  # noqa: N806
     ACCESSOR_BIN = DispatcherOptions(accessor_name="bin")  # noqa: N806
 
-    class ConfiguredFlagsSkip(ir.Function, dispatch="skip", flags=ELEMENTWISE): ...
+    class ConfiguredFlagsSkip(ir.Function, dispatch="skip"):
+        __function_flags__ = FunctionFlags.ELEMENTWISE
 
     class ConfiguredDispatch(ir.Function, dispatch=ACCESSOR_BIN): ...
 

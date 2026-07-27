@@ -1,64 +1,36 @@
+"""Sugar for writing `resolve_dtype` methods.
+
+<!--BEGIN: IMPL NOTES-->
+## Implementation Notes
+`ResolveDType` constructors are based on patterns observed in a few places upstream:
+
+- [`AExpr.to_field_impl`](https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L877)
+- [`IRFunctionExpr.get_field`](https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rsL6-L463)
+- [`FieldsMapper`](https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L476-L838)
+
+<!--END: IMPL NOTES-->
+"""
+
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol
 
 from narwhals._plan._guards import is_binary_expr, is_function_expr
 from narwhals._plan._meta import SlottedMeta
 from narwhals._typing_compat import TypeVar
+from narwhals.dtypes import DType
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
     from typing import TypeAlias
 
     from typing_extensions import Self, TypeIs
 
     from narwhals._plan.schema import FrozenSchema
-    from narwhals.dtypes import DType
 
-
-# NOTE: `Col` is the exception, which uses `schema[self.name]` and so it is manually defined
-# rather than accepting 2 arguments here and ignoring in all other cases
-T = TypeVar("T")
-Visitor: TypeAlias = "Callable[[T], DType]"
-"""A function requiring a single argument to derive the resolved `DType`."""
-
-IntoResolveDType: TypeAlias = "DType | ResolveDType[Any] | Callable[[T], DType]"
-"""Anything that can be converted into a `ResolveDType`.
-
-When passed as `__init_subclass__(dtype=...)`, any of the following forms are accepted:
-
-1. An existing instance of `ResolveDType`:
-
-    ResolveDType.get_dtype()
-    ResolveDType.expr_ir.same_dtype()
-    ResolveDType.function.map_first(lambda dtype: dtype if dtype.is_integer() else Boolean())
-
-2. A constant `DType`:
-
-    UInt32()
-    String()
-    Float64()
-
-Which is equivalent to:
-
-    dtype=ResolveDType.just_dtype(dtype)
-
-3. A visitor function, that will be called on an instance of the enclosing class:
-
-    lambda hist: (
-        Struct({"breakpoint": Float64(), "count": Int64()})
-        if hist.include_breakpoint
-        else Int64()
-    )
-    lambda rank: Float64() if rank.options.method == "average" else Int64()
-
-Which (depending on the base class) is equivalent to either:
-
-    dtype=ResolveDType.function.visitor(dtype)
-    dtype=ResolveDType.expr_ir.visitor(dtype)
-"""
 
 # fmt: off
 # NOTE: Structural typing to prevent cycles
@@ -105,21 +77,25 @@ class _ClassAccessorDescriptor:
 class _FunctionAccessor(_ClassAccessorDescriptor):
     __slots__ = ()
 
+    # TODO @dangotbanned: docs: Improve `function.same_dtype` (examples)
     @staticmethod
     def same_dtype() -> FunctionSameDType[Any]:
         """Propagate the dtype of first function input."""
         return FunctionSameDType()
 
+    # TODO @dangotbanned: docs: Improve `function.map_first` (args, examples)
     @staticmethod
     def map_first(mapper: Visitor[DType], /) -> FunctionMapFirst[Any]:
         """Derive the dtype by calling `mapper` on the dtype of first function input."""
         return FunctionMapFirst(mapper)
 
+    # TODO @dangotbanned: docs: Improve `function.map_all` (args, examples)
     @staticmethod
     def map_all(mapper: Visitor[Iterable[DType]], /) -> FunctionMapAll[Any]:
         """Derive the dtype by calling `mapper` on the dtypes of all function inputs."""
         return FunctionMapAll(mapper)
 
+    # TODO @dangotbanned: docs: Improve `function.visitor` (args, examples)
     @staticmethod
     def visitor(visitor: Visitor[_FunctionT], /) -> FunctionVisitor[_FunctionT]:
         """Derive the dtype by calling `visitor` on an instance of `FunctionT`."""
@@ -129,16 +105,19 @@ class _FunctionAccessor(_ClassAccessorDescriptor):
 class _ExprIRAccessor(_ClassAccessorDescriptor):
     __slots__ = ()
 
+    # TODO @dangotbanned: docs: Improve `expr_ir.same_dtype` (examples)
     @staticmethod
     def same_dtype() -> ExprIRSameDType:
         """Propagate the dtype of first expression input."""
         return ExprIRSameDType()
 
+    # TODO @dangotbanned: docs: Improve `expr_ir.map_first` (args, examples)
     @staticmethod
     def map_first(mapper: Visitor[DType], /) -> ExprIRMapFirst[Any]:
         """Derive the dtype by calling `mapper` on the dtype of first expression input."""
         return ExprIRMapFirst(mapper)
 
+    # TODO @dangotbanned: docs: Improve `expr_ir.visitor` (args, examples)
     @staticmethod
     def visitor(
         visitor: Visitor[_ExprIRT], /
@@ -153,19 +132,12 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
     An `ExprIR` or `Function` can use this to define how the node derives
     a `DType` and (optionally) how the incoming `DType` should be transformed.
 
-    By default, this operation is unsupported and when called `ResolveDType` will raise an
-    appropriate error.
+    Warning:
+        By default, this operation is unsupported and when called `ResolveDType` will raise an
+        appropriate error.
 
-    `ResolveDType` provides constructors (`@staticmethod`s) targeting patterns observed in:
-    - [`AExpr.to_field_impl`]
-    - [`IRFunctionExpr.get_field`]
-    - [`FieldsMapper`]
-
-    <!---TODO @dangotbanned: Add examples after finalizing the naming -->
-
-    [`AExpr.to_field_impl`]: https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/schema.rs#L45-L877
-    [`IRFunctionExpr.get_field`]: https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rsL6-L463
-    [`FieldsMapper`]: https://github.com/pola-rs/polars/blob/375fdc81c846c2c35e1b96677d0b483b33a6c3d1/crates/polars-plan/src/plans/aexpr/function_expr/schema.rs#L476-L838
+    See Also:
+        [`IntoResolveDType`][narwhals._plan._dtype.IntoResolveDType]
     """
 
     __slots__ = ()
@@ -190,6 +162,7 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
         msg = f"`NamedIR[{generic_name}].resolve_dtype()` is not yet implemented, got:\n{node!r}"
         raise NotImplementedError(msg)
 
+    # TODO @dangotbanned: docs: Improve `just_dtype` (args, examples)
     @staticmethod
     def just_dtype(dtype: DType, /) -> JustDType:
         """Always returns exactly `dtype`, disregarding any prior context.
@@ -198,14 +171,17 @@ class ResolveDType(Generic[_ExprIRT], metaclass=SlottedMeta):
         """
         return _just_dtype(dtype)
 
+    # TODO @dangotbanned: docs: Improve `get_dtype` (examples)
     @staticmethod
     def get_dtype() -> GetDType[Any]:
         """Propagate a `dtype` attribute from the `ExprIR` or `Function` instance."""
         return GetDType()
 
+    # TODO @dangotbanned: docs: Improve `expr_ir` (examples)
     expr_ir = _ExprIRAccessor()
     """`ExprIR`-based constructors."""
 
+    # TODO @dangotbanned: docs: Improve `function` (examples)
     function = _FunctionAccessor()
     """`Function`-based constructors."""
 
@@ -344,3 +320,64 @@ class FunctionMapAll(ResolveDType[_FunctionExprT]):
 
 def _is_function_expr_dtype(node: Any) -> TypeIs[_FunctionExpr[_FunctionDType]]:
     return is_function_expr(node)
+
+
+# NOTE: `Col` is the exception, which uses `schema[self.name]` and so it is manually defined
+# rather than accepting 2 arguments here and ignoring in all other cases
+T = TypeVar("T")
+Visitor: TypeAlias = Callable[[T], DType]
+"""A function requiring a single argument to derive the resolved `DType`."""
+
+# TODO @dangotbanned: (HIGH PRIORITY) Comment explaining what rules are being followed to get markdown happy everywhere
+# https://facelessuser.github.io/pymdown-extensions/extensions/superfences/
+IntoResolveDType: TypeAlias = DType | ResolveDType[Any] | Visitor[T]
+"""Anything that can be converted into a `ResolveDType`.
+
+When passed as `__init_subclass__(dtype=...)`, any of the following forms are accepted:
+
+1. An existing instance of [`ResolveDType`][narwhals._plan._dtype.ResolveDType]
+
+    ```
+    ResolveDType.get_dtype()
+    ResolveDType.expr_ir.same_dtype()
+    ResolveDType.function.map_first(lambda dtype: dtype if dtype.is_integer() else Boolean())
+    ```
+
+2. A constant [`DType`][narwhals.dtypes]
+
+    ```
+    UInt32()
+    String()
+    Float64()
+    ```
+
+    Which is equivalent to
+
+    ```
+    dtype=ResolveDType.just_dtype(dtype)
+    ```
+
+3. A visitor function, that will be called on an instance of the enclosing class
+
+    ```
+    lambda hist: (
+        Struct({"breakpoint": Float64(), "count": Int64()})
+        if hist.include_breakpoint
+        else Int64()
+    )
+    lambda rank: Float64() if rank.options.method == "average" else Int64()
+    ```
+
+    Which is equivalent to either [^1]
+
+    ```
+    dtype=ResolveDType.function.visitor(dtype)
+    dtype=ResolveDType.expr_ir.visitor(dtype)
+    ```
+
+    [^1]: Depending on the base class
+
+See Also:
+    - [`ExprIR.__init_subclass__`][narwhals._plan.expressions.ExprIR.__init_subclass__]
+    - [`Function.__init_subclass__`][narwhals._plan._function.Function.__init_subclass__]
+"""

@@ -8,7 +8,7 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 from narwhals._plan import common, expressions as ir
-from narwhals._plan._function import UnaryFunction as _UnaryFunction
+from narwhals._plan._function import Unary
 from narwhals._plan._guards import (
     is_function_expr,
     is_iterable_reject,
@@ -102,12 +102,6 @@ This is needed for getting the descriptor/decorator stuff to work nicely with su
 _AccessorSelf: TypeAlias = "ArrowCatNamespace[Any] | ArrowListNamespace[Any] | ArrowStringNamespace[Any] | ArrowStructNamespace[Any]"
 """Equivalent to `_Self`, for namespaces."""
 
-UnaryFn: TypeAlias = _UnaryFunction
-"""The upper bound for `U*` type vars used with `_ArrowDispatch`.
-
-Nothing to fancy here, just a short way to say *subclasses of `UnaryFunction`*.
-"""
-
 FunctionImplMethod = ct.FunctionImplMethod[ct.Self_, ct.F_contra, "Frame", ct.ColumnT_co]
 """The type of the wrapper method *produced by* any `unary` constructor."""
 
@@ -119,9 +113,9 @@ S1 = TypeVar("S1", bound=_Self)
 """`_ArrowDispatch` scoped to an instance of `unary`."""
 S2 = TypeVar("S2", bound=_Self)
 """`_ArrowDispatch` scoped to the `@staticmethod`(s) of `unary`."""
-U1 = TypeVar("U1", bound=UnaryFn, contravariant=True, default=UnaryFn)  # noqa: PLC0105
+U1 = TypeVar("U1", bound=Unary, contravariant=True, default=Unary)  # noqa: PLC0105
 """`UnaryFunction` scoped to an instance of `unary`."""
-U2 = TypeVar("U2", bound=UnaryFn, contravariant=True, default=UnaryFn)  # noqa: PLC0105
+U2 = TypeVar("U2", bound=Unary, contravariant=True, default=Unary)  # noqa: PLC0105
 """`UnaryFunction` scoped to the `@staticmethod`(s) of `unary`."""
 
 Native_co = TypeVar("Native_co", bound="Native", covariant=True, default="Native")
@@ -219,7 +213,7 @@ class unary(_BaseWrapper[FunctionImplMethod[S1, U1, S1]], Generic[S1, U1]):
             is_finite = unary.no_args(fn.is_finite)
         """
 
-        def _wrapper(self: _Self, node: FExpr[UnaryFn], frame: Frame, name: str) -> _Self:
+        def _wrapper(self: _Self, node: FExpr[Unary], frame: Frame, name: str) -> _Self:
             previous = node.dispatch_arg(self, frame, name).native
             return self._with_native(fn_native(previous), name)
 
@@ -289,7 +283,7 @@ class unary_accessor(  # noqa: N801
         fn_native: Callable[[Incomplete], Native], /
     ) -> Callable[..., Expr | Scalar]:
         def _wrapper(
-            self: _AccessorSelf, node: FExpr[UnaryFn], frame: Frame, name: str
+            self: _AccessorSelf, node: FExpr[Unary], frame: Frame, name: str
         ) -> Expr | Scalar:
             compliant = self.compliant
             previous = node.dispatch_arg(compliant, frame, name).native

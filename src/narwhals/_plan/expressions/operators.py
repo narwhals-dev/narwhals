@@ -1,31 +1,32 @@
 from __future__ import annotations
 
 import operator as op
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._plan._dtype import ResolveDType
 from narwhals._plan._immutable import Immutable
 from narwhals._plan.exceptions import binary_expr_length_changing_error
+from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
-    from typing import Any, ClassVar, TypeAlias
+    from typing import ClassVar, TypeAlias
 
     from typing_extensions import Self
 
-    from narwhals._plan.expressions import BinaryExpr
+    from narwhals._plan.expressions import BinaryExpr, ExprIR, SelectorIR
     from narwhals._plan.expressions.selectors import BinarySelector
     from narwhals._plan.schema import FrozenSchema
-    from narwhals._plan.typing import (
-        LeftSelectorT,
-        LeftT,
-        OperatorFn,
-        RightSelectorT,
-        RightT,
-    )
     from narwhals.dtypes import DType
 
     BinaryAny: TypeAlias = BinaryExpr[Any, Any, Any]
+
+LeftT = TypeVar("LeftT", bound="ExprIR", default="ExprIR")
+RightT = TypeVar("RightT", bound="ExprIR", default="ExprIR")
+LeftSelectorT = TypeVar("LeftSelectorT", bound="SelectorIR", default="SelectorIR")
+RightSelectorT = TypeVar("RightSelectorT", bound="SelectorIR", default="SelectorIR")
+OperatorFn: TypeAlias = Callable[[Any, Any], Any]
 
 
 class Operator(Immutable):
@@ -70,6 +71,7 @@ class Operator(Immutable):
         """Apply binary operator to `left`, `right` operands."""
         return self.__class__._func(lhs, rhs)
 
+    # TODO @dangotbanned: Use `LazyFrame.filter` to cover `Logical`
     def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:
         return self.__expr_ir_dtype__(node, schema)  # pragma: no cover
 
@@ -99,7 +101,7 @@ class ExclusiveOr(SelectorOperator, func=op.xor, symbol="^", dtype=dtm.BOOL): ..
 # https://github.com/pola-rs/polars/blob/675f5b312adfa55b071467d963f8f4a23842fc1e/crates/polars-plan/src/plans/aexpr/schema.rs#L475-L766
 class Arithmetic(Operator, func=None): ...
 class TrueDivide(Arithmetic, func=op.truediv, symbol="/"):
-    def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:  # pragma: no cover
+    def resolve_dtype(self, node: BinaryAny, schema: FrozenSchema, /) -> DType:
         left, right = node.left.resolve_dtype(schema), node.right.resolve_dtype(schema)
         return dtm.truediv_dtype(left, right)
 class Add(Arithmetic, func=op.add, symbol="+"): ...

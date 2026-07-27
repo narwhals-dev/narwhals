@@ -32,13 +32,7 @@ if TYPE_CHECKING:
     from typing import TypeAlias
 
     from narwhals._plan._function import Function
-    from narwhals._plan.typing import (
-        IntoExpr,
-        IntoExprColumn,
-        OneOrIterable,
-        OperatorFn,
-        Seq,
-    )
+    from narwhals._plan.typing import IntoExpr, IntoExprColumn, OneOrIterable, Seq
     from narwhals._plan.when_then import ChainedWhen, When
     from narwhals.typing import IntoDType, PythonLiteral
 
@@ -736,7 +730,7 @@ def test_sort_by_invalid(
 def test_operators_left_right(
     arg_1: IntoExpr,
     arg_2: IntoExpr,
-    function: OperatorFn,
+    function: Callable[[Any, Any], Any],
     op: type[ops.Operator | Function],
 ) -> None:
     inverse: Mapping[type[ops.Operator], type[ops.Operator]] = {

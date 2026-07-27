@@ -15,7 +15,7 @@ from narwhals._plan.arrow import acero, compat, functions as fn, options
 from narwhals._plan.common import temp
 from narwhals._plan.compliant.group_by import EagerDataFrameGroupBy
 from narwhals._plan.expressions import aggregation as agg
-from narwhals._plan.typing import AggExprT_co
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import Implementation, qualified_type_name
 from narwhals.exceptions import InvalidOperationError
 
@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from narwhals.typing import UniqueKeepStrategy
 
 Incomplete: TypeAlias = Any
+AggExprT_co = TypeVar("AggExprT_co", bound=ir.AggExpr, default=ir.AggExpr, covariant=True)
 
 
 class _IntoAggExpr(Protocol[AggExprT_co]):

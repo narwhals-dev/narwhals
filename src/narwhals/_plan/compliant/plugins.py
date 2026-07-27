@@ -78,34 +78,38 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
 
         ## Examples
         We use this to detect which backend to use when provided a native object:
-        >>> # User
-        >>> import polars as pl
-        >>> native = pl.DataFrame()
+
+            >>> # User
+            >>> import polars as pl
+            >>> native = pl.DataFrame()
 
         For `native` to *possibly* be a `pl.DataFrame`, that import had to have happened:
-        >>> # Narwhals
-        >>> from narwhals._plan.plugins import load_plugin
-        >>> plugin = load_plugin("polars")
-        >>> plugin
-        Plugin[polars]
-        >>> plugin.is_imported()
-        True
+
+            >>> # Narwhals
+            >>> from narwhals._plan.plugins import load_plugin
+            >>> plugin = load_plugin("polars")
+            >>> plugin
+            Plugin[polars]
+            >>> plugin.is_imported()
+            True
 
         Now we can freely import `polars`, without requiring the dependency:
-        >>> import polars as pl
-        >>> isinstance(native, pl.DataFrame)
-        True
+
+            >>> import polars as pl
+            >>> isinstance(native, pl.DataFrame)
+            True
 
         This check does not require reloading the plugin to update:
-        >>> _ = sys.modules.pop("pyarrow", None)
-        >>> plugin = load_plugin("pyarrow")
-        >>> plugin
-        Plugin[pyarrow]
-        >>> plugin.is_imported()
-        False
-        >>> import pyarrow
-        >>> plugin.is_imported()
-        True
+
+            >>> _ = sys.modules.pop("pyarrow", None)
+            >>> plugin = load_plugin("pyarrow")
+            >>> plugin
+            Plugin[pyarrow]
+            >>> plugin.is_imported()
+            False
+            >>> import pyarrow
+            >>> plugin.is_imported()
+            True
         """
         # NOTE: `sys.modules` may be populated by other tests in any order.
         # Removing `"pyarrow"` ensures the result of this one isn't contaminated
@@ -114,25 +118,28 @@ class Plugin(HasClasses[C], Protocol[C, DF, LF, S]):
     def can_import(self) -> bool:
         """Return True if we *can* import all required dependencies.
 
-        Important:
-            Prefer `is_imported` if you only need the import for a runtime type check.
+        Tip:
+            If you only need the import for a runtime type check, prefer
+            [`is_imported`][narwhals._plan.plugins.Plugin.is_imported].
 
         ## Examples
         We use this for operations that convert between backends:
-        >>> from narwhals._plan.plugins import load_plugin
-        >>> import polars as pl
-        >>> native = pl.Series([1, 2, 3])
-        >>> load_plugin("pyarrow").can_import()
-        True
+
+            >>> from narwhals._plan.plugins import load_plugin
+            >>> import polars as pl
+            >>> native = pl.Series([1, 2, 3])
+            >>> load_plugin("pyarrow").can_import()
+            True
 
         Now we can be sure this won't raise an `ImportError`:
-        >>> native.to_arrow()
-        <pyarrow.lib.Int64Array ...
-        [
-          1,
-          2,
-          3
-        ]
+
+            >>> native.to_arrow()
+            <pyarrow.lib.Int64Array ...
+            [
+              1,
+              2,
+              3
+            ]
         """
         ...
 
@@ -153,12 +160,12 @@ class Builtin(Plugin[CB, DF, LF, S], Protocol[CB, DF, LF, S]):
 
     `[CB, DF, LF, S]`.
 
-    ## Notes
-    - Might want to provide *parts* of this in a sub-protocol for `Plugin`
-    - So it can be used for extending to get things moving quickly
-    - And `is_imported`, `can_import` are probably the most sensible defaults
+    The main difference is that a `Builtin` is **required** to support the [Perfect backwards compatibility policy](/backcompat/).
     """
 
+    # NOTE: Might want to provide *parts* of this in a sub-protocol for `Plugin`
+    # - can be used for extending to get things moving quickly
+    # -`is_imported`, `can_import` are probably the most sensible defaults
     __slots__ = ()
     implementation: ClassVar[KnownImpl]
 

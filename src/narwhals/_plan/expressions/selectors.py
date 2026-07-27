@@ -13,12 +13,8 @@ from narwhals._plan.exceptions import (
     column_not_found_error,
     one_or_iterable_type_error,
 )
-from narwhals._plan.typing import (
-    LeftSelectorT_co,
-    RightSelectorT_co,
-    SelectorOperatorT,
-    SelectorT_co,
-)
+from narwhals._plan.expressions import operators as ops
+from narwhals._typing_compat import TypeVar
 from narwhals._utils import _parse_time_unit_and_time_zone
 from narwhals.dtypes import DType, FloatType, IntegerType, NumericType, TemporalType
 from narwhals.typing import IntoDType, TimeUnit
@@ -31,6 +27,32 @@ if TYPE_CHECKING:
 
     from narwhals._plan.typing import Ignored, OneOrIterable, Seq
 
+
+SelectorT_co = TypeVar(
+    "SelectorT_co", bound=SelectorIR, default=SelectorIR, covariant=True
+)
+LeftSelectorT_co = TypeVar(
+    "LeftSelectorT_co", bound=SelectorIR, default=SelectorIR, covariant=True
+)
+RightSelectorT_co = TypeVar(
+    "RightSelectorT_co", bound=SelectorIR, default=SelectorIR, covariant=True
+)
+SelectorOperatorT = TypeVar(
+    "SelectorOperatorT", bound=ops.SelectorOperator, default=ops.SelectorOperator
+)
+"""An `Operator` used in a `BinarySelector`.
+
+One of:
+
+    ┌─────────────┬────────────┬──────────────────────┐
+    │ Operator    ┆ Expression ┆ set operation        │
+    ╞═════════════╪════════════╪══════════════════════╡
+    │ And         ┆ A & B      ┆ intersection         │
+    │ Or          ┆ A | B      ┆ union                │
+    │ Sub         ┆ A - B      ┆ difference           │
+    │ ExclusiveOr ┆ A ^ B      ┆ symmetric_difference │
+    └─────────────┴────────────┴──────────────────────┘
+"""
 
 _ALL_TIME_UNITS = frozenset[TimeUnit](("ms", "us", "ns", "s"))
 
@@ -179,24 +201,27 @@ class All(RootSelector):
 
     ## Examples
     Represents both variants of `all()`:
-    >>> import narwhals._plan as nw
-    >>> import narwhals._plan.selectors as ncs
-    >>> expr = nw.all()
-    >>> expr._ir
-    ncs.all()
-    >>> selector = ncs.all()
-    >>> selector._ir
-    ncs.all()
+
+        >>> import narwhals._plan as nw
+        >>> import narwhals._plan.selectors as ncs
+        >>> expr = nw.all()
+        >>> expr._ir
+        ncs.all()
+        >>> selector = ncs.all()
+        >>> selector._ir
+        ncs.all()
 
     While they are *internally* identical:
-    >>> expr._ir == selector._ir
-    True
+
+        >>> expr._ir == selector._ir
+        True
 
     The *outer* container defines binary operator behavior:
-    >>> not isinstance(expr, nw.Selector)
-    True
-    >>> isinstance(selector, nw.Selector)
-    True
+
+        >>> not isinstance(expr, nw.Selector)
+        True
+        >>> isinstance(selector, nw.Selector)
+        True
     """
 
     def to_dtype_selector(self) -> AllDType:

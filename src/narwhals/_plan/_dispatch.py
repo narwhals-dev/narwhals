@@ -1,5 +1,6 @@
 """Making the connection between `CompliantColumn` and `ExprIR`.
 
+<!--BEGIN: IMPL NOTES-->
 ## Implementation Notes
 An earlier version implemented `Dispatch.__call__` using the descriptor protocol,
 to make the signature more convenient for the caller:
@@ -11,6 +12,7 @@ to make the signature more convenient for the caller:
 
 However, it required creating an additional function per-call - which was
 considered a bad tradeoff (performance & complexity) for syntax sugar.
+<!--END: IMPL NOTES-->
 """
 
 from __future__ import annotations
@@ -64,28 +66,26 @@ class Bind(Protocol[Expr_contra]):
 Bound: TypeAlias = "Callable[[Expr, ct.FrameAny, str], ct.E | ct.SC]"
 
 
-# TODO @dangotbanned: Pick a focus for the docstring and start again
 class Dispatch(Generic[Expr]):
     """Dispatch an expression to the compliant-level.
 
-    Translates `ExprIR` and `Function` definitions into error-wrapped method calls, and stores in ``__expr_ir_dispatch__`.
+    Translates `ExprIR` and `Function` definitions into error-wrapped method calls.
 
-    By default, we dispatch to the compliant-level by calling a method that is the
-    **snake_case**-equivalent of the class name:
+    See Also:
+        - [`ExprIR.__expr_ir_dispatch__`][narwhals._plan.expressions.ExprIR.__expr_ir_dispatch__]
+        - [`Function.__expr_ir_dispatch__`][narwhals._plan._function.Function.__expr_ir_dispatch__]
 
-        class BinaryExpr(ExprIR): ...
+    ## Notes
+    For a given expression, we want to answer:
 
-        class CompliantExpr(Protocol):
-            def binary_expr(self, *args: Any): ...
-
-    ## Rewrite idea
-    For a given `Node`, we want to answer:
     1. What is the name of the method we need to call?
     2. Is that name an instance method or do we need to access it from somewhere else?
     3. Once we know where to look, did we actually find the method?
     4. If we found it, did calling it return a value?
 
-    If all goes well - these steps are equivalent to just calling the method directly (if we knew the name at the start).
+    If all goes well - these steps are equivalent to just calling the method directly[^1].
+
+    [^1]: if we knew the method name already
 
     If something goes wrong though - we'd like to raise a more helpful error than this:
 
@@ -105,25 +105,29 @@ class Dispatch(Generic[Expr]):
         """Compliant-level method name.
 
         They're often the lowercase transform of the class name:
-        >>> import narwhals as nw
-        >>> import narwhals._plan as nwp
-        >>> from narwhals._plan import expressions as ir
-        >>> expr = nwp.col("a").cast(nw.Int64())._ir
-        >>> type(expr).__name__, get_dispatch_name(expr)
-        ('Cast', 'cast')
+
+            >>> import narwhals as nw
+            >>> import narwhals._plan as nwp
+            >>> from narwhals._plan import expressions as ir
+            >>> expr = nwp.col("a").cast(nw.Int64())._ir
+            >>> type(expr).__name__, get_dispatch_name(expr)
+            ('Cast', 'cast')
 
         *PascalCase* becomes *snake_case*:
-        >>> expr = nwp.col("a").over(order_by="b")._ir
-        >>> type(expr).__name__, get_dispatch_name(expr)
-        ('OverOrdered', 'over_ordered')
+
+            >>> expr = nwp.col("a").over(order_by="b")._ir
+            >>> type(expr).__name__, get_dispatch_name(expr)
+            ('OverOrdered', 'over_ordered')
 
         Accessor methods reflect the full dotted path:
-        >>> ir.lists.NUnique.__expr_ir_dispatch__.name
-        'list.n_unique'
+
+            >>> ir.lists.NUnique.__expr_ir_dispatch__.name
+            'list.n_unique'
 
         For functions, generated names can be overridden at class definition time:
-        >>> ir.boolean.Not.__expr_ir_dispatch__.name
-        'not_'
+
+            >>> ir.boolean.Not.__expr_ir_dispatch__.name
+            'not_'
         """
         return self._name
 
@@ -195,7 +199,8 @@ class FunctionDispatch(_CompliantNew[FExpr]):
         When a `Function` is subclassed, this property is inherited and reused in a new
         `FunctionDispatch` instance.
 
-        See `DispatcherOptions` for examples.
+        See Also:
+            [`DispatcherOptions`][narwhals._plan._dispatch.DispatcherOptions]
         """
         return self._options
 
@@ -365,40 +370,43 @@ class DispatcherOptions:
     Defined via the (optional) `dispatch` parameter at [subclass-definition time].
 
     Many functions simply use the default:
-    >>> from narwhals._plan import expressions as ir
-    >>> from narwhals._plan._dispatch import DispatcherOptions
-    >>> from narwhals._plan.options import ExplodeOptions
-    >>>
-    >>> class Explode(ir.Function): ...
 
-    >>> Explode.__expr_ir_dispatch__
-    Dispatch<explode>
+        >>> from narwhals._plan import expressions as ir
+        >>> from narwhals._plan._dispatch import DispatcherOptions
+        >>> from narwhals._plan.options import ExplodeOptions
+        >>>
+        >>> class Explode(ir.Function): ...
 
-    >>> Explode.__expr_ir_dispatch__.options
-    DispatcherOptions(<default>)
+        >>> Explode.__expr_ir_dispatch__
+        Dispatch<explode>
+
+        >>> Explode.__expr_ir_dispatch__.options
+        DispatcherOptions(<default>)
 
     `dispatch` provides a bit more flexibility when you want it:
 
-    >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
+        >>> class Explode2(Explode, dispatch=DispatcherOptions.renamed("explodier")): ...
 
-    >>> Explode2.__expr_ir_dispatch__
-    Dispatch<explodier>
+        >>> Explode2.__expr_ir_dispatch__
+        Dispatch<explodier>
 
-    >>> Explode2.__expr_ir_dispatch__.options
-    DispatcherOptions(override_name='explodier')
+        >>> Explode2.__expr_ir_dispatch__.options
+        DispatcherOptions(override_name='explodier')
 
     Keep in mind that `options` are inherited:
-    >>> class Explode21(Explode2): ...
-    >>> Explode21.__expr_ir_dispatch__
-    Dispatch<explodier>
+
+        >>> class Explode21(Explode2): ...
+        >>> Explode21.__expr_ir_dispatch__
+        Dispatch<explodier>
 
     So we'd need another override to get the default back:
-    >>> class ExplodeWithOptions(Explode2, dispatch=DispatcherOptions()):
-    ...     __slots__ = ("options",)
-    ...     options: ExplodeOptions
 
-    >>> ExplodeWithOptions.__expr_ir_dispatch__
-    Dispatch<explode_with_options>
+        >>> class ExplodeWithOptions(Explode2, dispatch=DispatcherOptions()):
+        ...     __slots__ = ("options",)
+        ...     options: ExplodeOptions
+
+        >>> ExplodeWithOptions.__expr_ir_dispatch__
+        Dispatch<explode_with_options>
 
     [subclass-definition time]: https://docs.python.org/3/reference/datamodel.html#object.__init_subclass__
     """
@@ -474,12 +482,12 @@ class DispatcherOptions:
         If an `accessor_name` was defined, it is **sticky** and will be merged
         with options of `child`:
 
-        >>> from narwhals._plan._function import Function
-        >>> options = DispatcherOptions
-        >>> class StringFunction(Function, dispatch=options(accessor_name="str")): ...
-        >>> class ZFill(StringFunction, dispatch=options.renamed("zfill")): ...
-        >>> get_dispatch_name(ZFill)
-        'str.zfill'
+            >>> from narwhals._plan._function import Function
+            >>> options = DispatcherOptions
+            >>> class StringFunction(Function, dispatch=options(accessor_name="str")): ...
+            >>> class ZFill(StringFunction, dispatch=options.renamed("zfill")): ...
+            >>> get_dispatch_name(ZFill)
+            'str.zfill'
         """
         options = child or self
         if accessor_name := (self.accessor_name or options.accessor_name):

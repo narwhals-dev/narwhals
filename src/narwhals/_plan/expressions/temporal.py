@@ -4,10 +4,9 @@ from typing import TYPE_CHECKING, ClassVar, Generic, Literal, TypeVar, get_args
 
 import narwhals._plan.dtypes_mapper as dtm
 from narwhals._duration import Interval
+from narwhals._plan import _function as _f
 from narwhals._plan._dispatch import DispatcherOptions
 from narwhals._plan._dtype import ResolveDType
-from narwhals._plan._flags import FunctionFlags
-from narwhals._plan._function import Function, UnaryFunction
 from narwhals._plan.expressions.namespace import IRNamespace
 from narwhals.exceptions import ComputeError
 
@@ -27,13 +26,12 @@ _POLARS_TIME_UNIT = frozenset[PolarsTimeUnit](("ns", "us", "ms"))
 Tz = TypeVar("Tz", str, "str | None")
 
 # NOTE: See https://github.com/astral-sh/ty/issues/1777#issuecomment-3618906859
-ELEMENTWISE = FunctionFlags.ELEMENTWISE
 same_dtype = ResolveDType.function.same_dtype
 
 
 # fmt: off
-class TemporalFunction(Function, dispatch=DispatcherOptions(accessor_name="dt"), flags=ELEMENTWISE): ...
-class _TemporalUnary(UnaryFunction, TemporalFunction): ...
+class TemporalFunction(_f.Elementwise, dispatch=DispatcherOptions(accessor_name="dt")): ...
+class _TemporalUnary(_f.Unary, TemporalFunction): ...
 class _TemporalInt8(_TemporalUnary, dtype=dtm.I8): ...
 class _TemporalInt32(_TemporalUnary, dtype=dtm.I32): ...
 class _TemporalInt64(_TemporalUnary, dtype=dtm.I64): ...
