@@ -81,7 +81,7 @@ def test_namespace_from_backend_name(backend: BackendName) -> None:
     ids=["entry-point-name", "module-name"],
 )
 def test_namespace_from_backend_plugin(backend: PluginName) -> None:
-    pytest.importorskip("test-plugin")
+    pytest.importorskip("test_plugin")
     namespace = Namespace.from_backend(backend)
     if TYPE_CHECKING:
         assert_type(namespace, "Namespace[CompliantNamespace[Any, Any]]")
