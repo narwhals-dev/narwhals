@@ -7,7 +7,12 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -125,6 +130,13 @@ def test_pivot(
     if "pyarrow_table" in str(constructor_eager) and agg_func == "median":
         # pyarrow only has an approximate hash median, like `group_by(...).agg(median())`.
         request.applymarker(pytest.mark.xfail)
+    if (
+        "pyarrow_table" in str(constructor_eager)
+        and agg_func in {"first", "last"}
+        and PYARROW_VERSION < (14,)
+    ):
+        # first/last are ordered aggregators; pyarrow supports them only from 14.0.
+        request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
         request.applymarker(pytest.mark.xfail)
@@ -152,6 +164,13 @@ def test_pivot_no_agg(
     request: Any, constructor_eager: ConstructorEager, data_: Any, context: Any
 ) -> None:
     if "modin" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "pyarrow_table" in str(constructor_eager)
+        and PYARROW_VERSION < (14,)
+        and isinstance(context, does_not_raise)
+    ):
+        # the no-dup path extracts the single value with `first` (pyarrow>=14).
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented

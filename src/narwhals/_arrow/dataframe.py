@@ -871,6 +871,7 @@ class ArrowDataFrame(
     ) -> tuple[pa.Table, dict[str, str]]:
         # One row per index + on combination; pyarrow names each aggregate `{column}_{function}`.
         native = self.native
+        ordered = False
         if aggregate_function == "len":
             specs: list[Any] = [
                 (value, "count", pc.CountOptions(mode="all")) for value in values
@@ -878,9 +879,7 @@ class ArrowDataFrame(
             names = {value: f"{value}_count" for value in values}
         else:
             if aggregate_function is None:
-                counts = native.group_by(keys, use_threads=False).aggregate(
-                    [([], "count_all")]
-                )
+                counts = native.group_by(keys).aggregate([([], "count_all")])
                 if counts.num_rows and pc.max(counts["count_all"]).as_py() > 1:
                     msg = (
                         "Found multiple elements for some combination of `index` and `on`.\n\n"
@@ -894,10 +893,22 @@ class ArrowDataFrame(
                 # polars keeps nulls in first/last (and the no-agg single value); pyarrow drops them.
                 keep_nulls = pc.ScalarAggregateOptions(skip_nulls=False)
                 specs = [(value, function, keep_nulls) for value in values]
+                ordered = True
             else:
                 specs = [(value, function) for value in values]
             names = {value: f"{value}_{function}" for value in values}
-        return native.group_by(keys, use_threads=False).aggregate(specs), names
+        if ordered and self._backend_version < (14,):  # pragma: no cover
+            msg = (
+                "Using `first`/`last` or an unaggregated `pivot` with the pyarrow "
+                "backend requires 'pyarrow>=14.0.0'.\n\n"
+                "See https://github.com/apache/arrow/issues/36709"
+            )
+            raise NotImplementedError(msg)
+        # first/last are ordered aggregators; pyarrow computes them only single-threaded.
+        grouped = (
+            native.group_by(keys, use_threads=False) if ordered else native.group_by(keys)
+        )
+        return grouped.aggregate(specs), names
 
     def _pivot_distinct(self, columns: list[str], /) -> pa.Table:
         # Distinct `columns` combinations, ordered by first appearance (group_by loses order).
@@ -906,7 +917,7 @@ class ArrowDataFrame(
         return (
             native.select(columns)
             .append_column(token, pa.array(range(native.num_rows)))
-            .group_by(columns, use_threads=False)
+            .group_by(columns)
             .aggregate([(token, "min")])
             .sort_by(f"{token}_min")
             .select(columns)
@@ -926,14 +937,14 @@ class ArrowDataFrame(
     def _pivot_reshape(
         self,
         grouped: pa.Table,
-        agg_names: dict[str, str],
         base: pa.Table,
+        combinations: list[tuple[Any, ...]],
+        *,
+        agg_names: dict[str, str],
         index: list[str],
         on: list[str],
         values: list[str],
-        combinations: list[tuple[Any, ...]],
         separator: str,
-        /,
     ) -> tuple[list[Any], list[str]]:
         # Scatter each cell to its row and column. Tuples compare structurally, so nulls
         # match here where a pyarrow join would not.
@@ -1002,7 +1013,14 @@ class ArrowDataFrame(
         base = self._pivot_distinct(index)
         combinations = self._pivot_combinations(on, sort_columns=sort_columns)
         arrays, output_names = self._pivot_reshape(
-            grouped, agg_names, base, index, on, values, combinations, separator
+            grouped,
+            base,
+            combinations,
+            agg_names=agg_names,
+            index=index,
+            on=on,
+            values=values,
+            separator=separator,
         )
 
         result = pa.Table.from_arrays(arrays, names=output_names)
