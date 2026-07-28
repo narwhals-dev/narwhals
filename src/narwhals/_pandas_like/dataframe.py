@@ -1217,33 +1217,52 @@ class PandasLikeDataFrame(
             )
         )
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        dtypes = self._version.dtypes
-
+    def _validate_explode_dtypes(self, columns: Sequence[str]) -> None:
+        list_dtype = self._version.dtypes.List
         schema = self.collect_schema()
-        for col_to_explode in columns:
-            dtype = schema[col_to_explode]
-
-            if dtype != dtypes.List:
+        for name in columns:
+            if (dtype := schema[name]) != list_dtype:
                 msg = (
                     f"`explode` operation not supported for dtype `{dtype}`, "
                     "expected List type"
                 )
                 raise InvalidOperationError(msg)
 
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        self._validate_explode_dtypes(columns)
+
+        native_frame = self.native
+        empty_rows = 1 if empty_as_null else 0
+        null_rows = 1 if keep_nulls else 0
+
+        def explode_shape(name: str) -> pd.Series[int]:
+            # Per-row "shape" of the explode: a real list (length >= 1) keeps its
+            # length, while an empty `[]` / null list maps to *minus* the number of rows
+            # it expands to under the flags (`0` => drops out, `-1` => a single null row).
+            raw = native_frame[name].list.len()
+            is_null = native_frame[name].isna()
+            return raw.mask(raw == 0, -empty_rows).where(~is_null, -null_rows)
+
+        # Multiple columns can only be exploded together if they share this shape per row.
+        shapes: list[pd.Series[int]] = []
+        if len(columns) > 1:
+            shapes = [explode_shape(name) for name in columns]
+            if not all((shape == shapes[0]).all() for shape in shapes[1:]):
+                msg = "exploded columns must have matching element counts"
+                raise ShapeError(msg)
+
+        # Drop cells that expand to zero rows up front, else native `explode` would emit
+        # a null row for every empty/null list.
+        if not (empty_as_null and keep_nulls):
+            anchor_shape = shapes[0] if shapes else explode_shape(columns[0])
+            native_frame = native_frame[anchor_shape != 0]
+
         if len(columns) == 1:
             return self._with_native(
-                self.native.explode(columns[0]), validate_column_names=False
+                native_frame.explode(columns[0]), validate_column_names=False
             )
-        native_frame = self.native
-        anchor_series = native_frame[columns[0]].list.len()
-
-        if not all(
-            (native_frame[col_name].list.len() == anchor_series).all()
-            for col_name in columns[1:]
-        ):
-            msg = "exploded columns must have matching element counts"
-            raise ShapeError(msg)
 
         original_columns = self.columns
         other_columns = [c for c in original_columns if c not in columns]

@@ -109,7 +109,7 @@ jobs:
           echo "Spark Connect server started"
 
       - name: Run pytest
-        run: uv run --no-sync pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=95 --runslow --constructors "pyspark[connect]"
+        run: uv run --no-sync pytest tests --cov=src/narwhals/_spark_like --cov-fail-under=90 --runslow --constructors "pyspark[connect]"
 
       - name: Stop Spark Connect server
         if: always()

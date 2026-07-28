@@ -79,7 +79,6 @@ INHERITED_METHODS = frozenset(
         "clone",
         "drop_nulls",
         "estimated_size",
-        "explode",
         "filter",
         "gather_every",
         "head",
@@ -235,12 +234,6 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             )
         )
 
-    def explode(self, columns: Sequence[str]) -> Self:
-        if self._backend_version < (1, 36):
-            return self._with_native(self.native.explode(columns))
-        res = self.native.explode(columns, empty_as_null=True, keep_nulls=True)
-        return self._with_native(res)
-
     def top_k(
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool]
     ) -> Self:
@@ -292,6 +285,32 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             result = frame.select(
                 pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
+
+        return self._with_native(result)
+
+    def explode(
+        self, columns: Sequence[str], *, empty_as_null: bool, keep_nulls: bool
+    ) -> Self:
+        try:
+            if self._backend_version < (1, 36):
+                # On old versions the native explode behaves as `empty_as_null=True,
+                # keep_nulls=True`, so backport the flags by dropping the rows we don't
+                # want kept first. The drop is driven by the first column; multiple
+                # columns that disagree on null/empty layout at the same row then raise.
+                anchor = pl.col(columns[0])
+                keep: list[pl.Expr] = []
+                if not empty_as_null:
+                    keep.append((anchor.list.len() != 0) | anchor.is_null())
+                if not keep_nulls:
+                    keep.append(anchor.is_not_null())
+                frame = self.native.filter(*keep) if keep else self.native
+                result = frame.explode(columns)
+            else:
+                result = self.native.explode(
+                    columns, empty_as_null=empty_as_null, keep_nulls=keep_nulls
+                )
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
 
         return self._with_native(result)
 
