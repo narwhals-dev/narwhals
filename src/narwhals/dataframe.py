@@ -2446,6 +2446,10 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             )
             raise InvalidOperationError(msg)
 
+    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
+        # `collect_schema` avoids the warning `self.columns` raises on a LazyFrame.
+        return check_columns_exist(subset, available=self.collect_schema().names())
+
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
         self._compliant_frame: CompliantLazyFrame[Any, LazyFrameT, Self]

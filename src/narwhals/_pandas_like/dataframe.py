@@ -59,7 +59,6 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         DTypeBackend,
         IntoDType,
-        IntoSchema,
         JoinStrategy,
         PivotAgg,
         SizedMultiIndexSelector,
@@ -524,10 +523,11 @@ class PandasLikeDataFrame(
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
         native = self.native
+        pd_dtypes = native.dtypes
         to_cast = {
             name: narwhals_to_native_dtype(
                 dtype,
-                dtype_backend=get_dtype_backend(native[name].dtype, self._implementation),
+                dtype_backend=get_dtype_backend(pd_dtypes[name], self._implementation),
                 implementation=self._implementation,
                 version=self._version,
             )
