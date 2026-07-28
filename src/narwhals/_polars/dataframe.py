@@ -53,7 +53,6 @@ if TYPE_CHECKING:
     from narwhals.dtypes import DType
     from narwhals.typing import (
         IntoDType,
-        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -174,7 +173,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             for name, dtype in dtypes.items()
         }
         return self._with_native(
-            self.native.cast(native_dtypes)  # pyright: ignore[reportArgumentType]
+            self.native.cast(native_dtypes)  # type: ignore[arg-type]
         )
 
     def _with_version(self, version: Version) -> Self:

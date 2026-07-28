@@ -64,7 +64,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDType,
-        IntoSchema,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
