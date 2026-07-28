@@ -4,7 +4,7 @@ import operator
 from datetime import date, datetime
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -22,7 +22,12 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, is_nested_literal, not_implemented
+from narwhals._utils import (
+    Implementation,
+    is_nested_literal,
+    not_implemented,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -35,6 +40,7 @@ if TYPE_CHECKING:
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
+        NormalizedPath,
     )
 
 
@@ -58,6 +64,16 @@ class DaskNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> DaskLazyFrame:
+        validate_separators(separator, ("sep",), kwds)
+        native = dd.read_csv(source, sep=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(dd.read_parquet(source, **kwds), context=self)
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):
@@ -305,12 +321,12 @@ class DaskNamespace(
                 df = new_df
 
             if otherwise is None:
-                (condition, then_series) = align_series_full_broadcast(
+                condition, then_series = align_series_full_broadcast(
                     df, condition, then_value
                 )
                 validate_comparand(condition, then_series)
                 return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
-            (condition, then_series, otherwise_series) = align_series_full_broadcast(
+            condition, then_series, otherwise_series = align_series_full_broadcast(
                 df, condition, then_value, otherwise_value
             )
             validate_comparand(condition, then_series)
@@ -364,3 +380,4 @@ class DaskNamespace(
         )
 
     struct = not_implemented()
+    list = not_implemented()

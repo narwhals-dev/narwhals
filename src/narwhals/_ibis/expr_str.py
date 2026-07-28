@@ -46,7 +46,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
     def replace_all(self, value: IbisExpr, pattern: str, *, literal: bool) -> IbisExpr:
         fn = self._replace_all_literal if literal else self._replace_all
         return self.compliant._with_elementwise(
-            lambda expr, value: fn(pattern, value)(expr), value=value
+            lambda expr, value: fn(pattern, value)(expr), expression_args={"value": value}
         )
 
     def _to_datetime(self, format: str) -> Callable[..., ir.TimestampValue]:

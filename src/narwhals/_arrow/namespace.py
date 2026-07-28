@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from functools import reduce
 from itertools import chain
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -12,7 +12,7 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import cast_to_comparable_string_types
+from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -25,7 +25,12 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
     from narwhals._utils import Version
-    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 
 class ArrowNamespace(
@@ -47,6 +52,27 @@ class ArrowNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def read_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> ArrowDataFrame:
+        from pyarrow import csv
+
+        if (parse_options := kwds.get("parse_options")) is not None:
+            if cast("csv.ParseOptions", parse_options).delimiter != separator:
+                msg = (
+                    "`separator` and `parse_options.delimiter` do not match: "
+                    f"`separator`={separator} and `delimiter`={parse_options.delimiter}."
+                )
+                raise TypeError(msg)
+        else:
+            kwds["parse_options"] = csv.ParseOptions(delimiter=separator)
+        return self._dataframe.from_native(csv.read_csv(source, **kwds), context=self)
+
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> ArrowDataFrame:
+        from pyarrow import parquet as pq
+
+        return self._dataframe.from_native(pq.read_table(source, **kwds), context=self)
 
     def extract_native(
         self, *series: ArrowSeries
@@ -256,6 +282,20 @@ class ArrowNamespace(
             )
             result = pa.chunked_array([struct_array])
             return [ArrowSeries(result, name=name, version=self._version)]
+
+        return self._expr._from_callable(
+            func=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            context=self,
+        )
+
+    def list(self, *exprs: ArrowExpr) -> ArrowExpr:
+        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
+            series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            # pa.concat_arrays requires Array, not ChunkedArray
+            result = build_list_array([s.native.combine_chunks() for s in series])
+            return [ArrowSeries(result, name=series[0].name, version=self._version)]
 
         return self._expr._from_callable(
             func=func,

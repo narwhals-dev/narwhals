@@ -315,10 +315,7 @@ class IbisLazyFrame(
         ]
 
     def collect_schema(self) -> dict[str, DType]:
-        return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in self.native.schema().fields.items()
-        }
+        return self.schema
 
     def unique(
         self,

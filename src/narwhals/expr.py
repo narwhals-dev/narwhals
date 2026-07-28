@@ -1045,7 +1045,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import duckdb
@@ -1076,7 +1076,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import duckdb
@@ -1117,7 +1117,7 @@ class Expr:
 
         Notes:
             - pandas handles null values differently from other libraries.
-              See [null_handling](../concepts/null_handling.md/)
+              See [null_handling](../concepts/null_handling.md)
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
@@ -1215,7 +1215,7 @@ class Expr:
         Notes:
             This function only fills `'NaN'` values, not null ones, except for pandas
             which doesn't distinguish between them.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import duckdb
@@ -1245,7 +1245,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1394,7 +1394,7 @@ class Expr:
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1767,7 +1767,7 @@ class Expr:
 
         Warning:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
             `is_finite` will return False for NaN and Null's in the Dask and
             pandas non-nullable backend, while for Polars, PyArrow and pandas
             nullable backends null values are kept as such.

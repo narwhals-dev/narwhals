@@ -196,14 +196,14 @@ class DaskExpr(
         # First argument to `call` should be `dx.Series`
         call: Callable[..., dx.Series],
         /,
-        **expressifiable_args: Self,
+        expression_args: dict[str, Self] | None = None,
     ) -> Self:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             native_results: list[dx.Series] = []
             native_series_list = self._call(df)
             other_native_series = {
                 key: df._evaluate_single_output_expr(value)
-                for key, value in expressifiable_args.items()
+                for key, value in (expression_args or {}).items()
             }
             for native_series in native_series_list:
                 result_native = call(native_series, **other_native_series)
@@ -236,7 +236,7 @@ class DaskExpr(
     def _with_binary(
         self, call: Callable[[dx.Series, Any], dx.Series], other: Any
     ) -> Self:
-        return self._with_callable(call, other=other)
+        return self._with_callable(call, expression_args={"other": other})
 
     def _binary_op(self, op_name: str, other: Any) -> Self:
         return self._with_binary(lambda expr, other: getattr(expr, op_name)(other), other)
@@ -403,7 +403,7 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        def func(expr: dx.Series) -> dx.Series:
+        def func(expr: dx.Series, value: Self | None = None) -> dx.Series:
             if value is not None:
                 res_ser = expr.fillna(value)
             else:
@@ -414,6 +414,8 @@ class DaskExpr(
                 )
             return res_ser
 
+        if value is not None:
+            return self._with_callable(func, expression_args={"value": value})
         return self._with_callable(func)
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
@@ -421,20 +423,19 @@ class DaskExpr(
             lambda expr, lower_bound, upper_bound: expr.clip(
                 lower=lower_bound, upper=upper_bound
             ),
-            lower_bound=lower_bound,
-            upper_bound=upper_bound,
+            expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
         return self._with_callable(
             lambda expr, lower_bound: expr.clip(lower=lower_bound),
-            lower_bound=lower_bound,
+            expression_args={"lower_bound": lower_bound},
         )
 
     def clip_upper(self, upper_bound: Self) -> Self:
         return self._with_callable(
             lambda expr, upper_bound: expr.clip(upper=upper_bound),
-            upper_bound=upper_bound,
+            expression_args={"upper_bound": upper_bound},
         )
 
     def n_unique(self) -> Self:

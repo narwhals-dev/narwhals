@@ -361,7 +361,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.ifnull(expr, value)
 
         assert value is not None  # noqa: S101
-        return self._with_elementwise(_fill_constant, value=value)
+        return self._with_elementwise(_fill_constant, expression_args={"value": value})
 
     def replace_strict(
         self,

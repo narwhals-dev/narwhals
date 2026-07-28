@@ -49,6 +49,7 @@ if TYPE_CHECKING:
         options: Any = None,
         memory_pool: Any = None,
     ) -> ChunkedArrayStructArray: ...
+
 else:
     from pyarrow.compute import extract_regex
     from pyarrow.types import (
@@ -89,6 +90,35 @@ def extract_py_scalar(value: Any, /) -> Any:
 def is_array_or_scalar(obj: Any) -> TypeIs[ArrayOrScalar]:
     """Return True for any base `pyarrow` container."""
     return isinstance(obj, (pa.ChunkedArray, pa.Array, pa.Scalar))
+
+
+def arange(start: int, end: int, step: int) -> ArrayAny:
+    if BACKEND_VERSION < (21,):
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start, end, step))
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
+    return pa.arange(start, end, step)  # type: ignore[attr-defined]
+
+
+def build_list_array(arrays: list[pa.Array[Any]]) -> pa.ChunkedArray[Any]:
+    # This works by using concat_arrays to vertically stack the arrays.
+    # Then we use take to grab the data by index and to horizontally
+    # pack the arrays.
+    n = len(arrays[0])
+    num_cols = len(arrays)
+    i = arange(0, n, 1)
+    j = arange(0, num_cols, 1)
+    k = arange(0, n * num_cols, 1)
+    row_idx = cast("pa.Int64Array", pc.divide(k, lit(num_cols)))
+    col_idx = cast("pa.Int64Array", pc.subtract(k, pc.multiply(row_idx, lit(num_cols))))
+    i_rep = pc.take(i, row_idx)
+    j_tile = pc.take(j, col_idx)
+    indices = cast("pa.Int64Array", pc.add(pc.multiply(j_tile, lit(n)), i_rep))
+    interleaved = pc.take(pa.concat_arrays(arrays), indices)
+    offsets = cast("pa.Int64Array", arange(0, n * num_cols + 1, num_cols))
+    # Typing suggests only allow Int32Array is valid for offsets, but Int64Array is fine.
+    return pa.chunked_array([pa.ListArray.from_arrays(offsets, interleaved)])  # type: ignore[call-overload]
 
 
 def chunked_array(
@@ -493,15 +523,6 @@ def concat_tables(
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
 
 
-def arange(start: int, end: int, step: int) -> ArrayAny:
-    if BACKEND_VERSION < (21,):
-        import numpy as np  # ignore-banned-import
-
-        return pa.array(np.arange(start, end, step))
-    # NOTE: Added in https://github.com/apache/arrow/pull/46778
-    return pa.arange(start, end, step)  # type: ignore[attr-defined]
-
-
 def list_agg(
     array: ChunkedArrayAny,
     func: Literal["min", "max", "mean", "approximate_median", "sum"],
@@ -556,11 +577,18 @@ def list_sort(
     exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )
-    sorted_indices = pc.sort_indices(
-        exploded,
-        sort_keys=[(idx, "ascending"), (v, sort_direction)],
-        null_placement=nulls_position,
-    )
+    if BACKEND_VERSION < (25,):  # pragma: no cover
+        sorted_indices = pc.sort_indices(
+            exploded,
+            sort_keys=[(idx, "ascending"), (v, sort_direction)],
+            null_placement=nulls_position,
+        )
+    else:
+        # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+        # it must be specified per sort key instead.
+        keyed = [(idx, "ascending", nulls_position), (v, sort_direction, nulls_position)]
+        sorted_indices = pc.sort_indices(exploded, sort_keys=keyed)  # type: ignore[arg-type]
+
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
     sorted_imploded = pa.ListArray.from_arrays(
         offsets, pa.array(exploded.take(sorted_indices).column(v))
