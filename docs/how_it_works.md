@@ -66,7 +66,7 @@ The pandas namespace (`pd`) isn't Narwhals-compliant, as the pandas API is very 
 from Polars'. So...Narwhals implements a `PandasLikeNamespace`, which includes the top-level
 Polars functions included in the Narwhals API:
 
-```python exec="yes" source="above", result="python" session="pandas_impl"
+```python exec="yes" source="above" result="python" session="pandas_impl"
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals.utils import Implementation, Version
@@ -95,7 +95,7 @@ access the underlying pandas objects via the `native` property (`PandasLikeDataF
 import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals._pandas_like.dataframe import PandasLikeDataFrame
-from narwhals._utils import Implementation, Version
+from narwhals.utils import Implementation, Version
 import pandas as pd
 
 pn = PandasLikeNamespace(
@@ -131,7 +131,7 @@ no detectable difference - in fact, because the Narwhals API guards against misu
 pandas API, it's likely that running pandas via Narwhals will in general be more efficient
 than running pandas directly.
 
-Further attempts at demistifying Narwhals, refactoring code so it's clearer, and explaining
+Further attempts at demystifying Narwhals, refactoring code so it's clearer, and explaining
 this section better are 110% welcome.
 
 ## Polars and other implementations
@@ -274,7 +274,7 @@ In Narwhals, here's what we do:
 - if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
   ends up being a simple one. See
-  [Avoiding the `UserWarning` while using pandas `group_by`](concepts/improve_group_by_operation.md).
+  [Avoiding the `UserWarning` when using pandas `group_by`](concepts/improve_group_by_operation.md).
 
 ## Nodes
 
@@ -362,9 +362,7 @@ Here's a brief description of each piece of metadata:
       not try to aggregate `'a'`.
 
 - `has_windows`: Whether the expression already contains an `over(...)` statement.
-- `n_orderable_ops`: How many order-dependent operations the expression contains.
-  
-    Examples:
+- `n_orderable_ops`: How many order-dependent operations the expression contains. Examples:
 
     - `nw.col('a')` contains 0 orderable operations.
     - `nw.col('a').diff()` contains 1 orderable operation.
@@ -507,5 +505,6 @@ nw.col("a").sum().over("c") + nw.col("b").sum().over("c")
 !!! info
     In general, query optimisation is out-of-scope for Narwhals. We consider this
     expression rewrite acceptable because:
-      - It's simple.
-      - It allows us to evaluate operations which otherwise wouldn't be allowed for certain backends.
+
+    - It's simple.
+    - It allows us to evaluate operations which otherwise wouldn't be allowed for certain backends.

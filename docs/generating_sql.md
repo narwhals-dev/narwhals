@@ -16,8 +16,6 @@ def avg_monthly_price(df: FrameT) -> FrameT:
     )
 ```
 
-?
-
 Narwhals provides you with a `narwhals.sql` module to do just that!
 
 !!! info
@@ -54,7 +52,7 @@ solutions below (which also use sqlglot).
 
 ## Via Ibis
 
-You can also use Ibis or SQLFrame to generate SQL:
+Ibis can generate SQL from the same dataframe-agnostic function:
 
 ```py
 import ibis
@@ -65,7 +63,7 @@ print(ibis.to_sql(avg_monthly_price(df).to_native()))
 
 ## Via SQLFrame
 
-You can also use SQLFrame:
+So can SQLFrame:
 
 ```python exec="yes" source="above" session="generating-sql" result="sql"
 from sqlframe.standalone import StandaloneSession
