@@ -14,7 +14,8 @@ If you've got experience with open source contributions, the following instructi
 - `uv sync --group local-dev` (creates `.venv` and installs project + dev deps)
 - Install prek as a git hook: `uv run prek install`
 - To run tests: `uv run pytest`
-- To run all linting checks: `make lint`
+- To run ruff formatting and linting: `make lint`
+- To run all pre-commit checks (which include ruff): `uv run prek run --all-files`
 - To run static typing checks: `make typing`
 
 For more detailed and beginner-friendly instructions, see below!
@@ -331,6 +332,8 @@ The docs should refresh when you make changes. If they don't, press `ctrl+C`, an
 ```terminal
 make docs-clean-serve
 ```
+
+which rebuilds everything from a clean state (via `make docs-build`) before serving.
 
 ### 10. Pull requests
 
