@@ -29,7 +29,7 @@ docs-dynamic-content:  ## Regenerate the dynamic docs pages (API completeness ta
 	uv run --group docs utils/generate_zen_content.py
 
 .PHONY: docs-build
-docs-build: docs-dynamic-content  ## Build the docs locally
+docs-build: docs-dynamic-content  ## Build the docs from a clean state, failing on warnings
 	uv run --group docs zensical build --clean --strict
 
 .PHONY: docs-serve
