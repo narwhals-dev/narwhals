@@ -134,14 +134,14 @@ make typing-coverage
 that catches missing `# pragma: no cover`):
 
 ```bash
-PYTEST_ADDOPTS="--numprocesses=logical" make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn --group plugins" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=100 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
+make test-full-coverage
 ```
 
 **4. Doctests** (docstring examples are executed; reprs differ across versions, so CI only runs
 these on the latest Python):
 
 ```bash
-make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn" CMD="pytest src --doctest-modules"
+make doctest
 ```
 
 **5. Docs build**, if you touched anything under `docs/` or any docstring. The build *executes* the
@@ -151,8 +151,9 @@ make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn
 make docs-build
 ```
 
-To preview instead of just building: `make docs-serve` (or `make docs-clean-serve` if it does not
-refresh). Docs are built with `zensical` (configured in [zensical.toml](zensical.toml)), not mkdocs
+To preview instead of just building: `make docs-clean-serve` (or plain `make docs-serve` for a
+quicker preview without the clean rebuild).
+Docs are built with `zensical` (configured in [zensical.toml](zensical.toml)), not mkdocs
 — the nav lives there, so a new page must be added to it.
 
 ### Faster inner loop
