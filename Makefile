@@ -34,7 +34,8 @@ docs-build: ## Build the docs from a clean state, failing on warnings
 	uv run --group docs zensical build --clean --strict
 
 .PHONY: docs-serve
-docs-serve: docs-dynamic-content ## Serve the docs locally
+docs-serve: ## Serve the docs locally
+	$(MAKE) docs-dynamic-content 
 	uv run --group docs zensical serve
 
 .PHONY: docs-clean-serve
