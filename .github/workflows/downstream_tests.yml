@@ -380,7 +380,7 @@ jobs:
       - name: Run tests
         run: |
           cd hierarchicalforecast
-          pytest tests --no-cov --import-mode=importlib 
+          pytest tests --no-cov --import-mode=importlib
 
 
   formulaic:
