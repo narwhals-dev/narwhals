@@ -134,6 +134,5 @@ repos:
       exclude: |
         (?x)^(
             tests/data/.*\.csv|
-            .*\.svg|
-            src/narwhals/this\.py
+            .*\.svg
         )$
