@@ -130,3 +130,10 @@ repos:
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$
+  -   id: trailing-whitespace
+      exclude: |
+        (?x)^(
+            tests/data/.*\.csv|
+            .*\.svg|
+            src/narwhals/this\.py
+        )$
