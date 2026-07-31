@@ -88,7 +88,7 @@ Recall from above that an expression is a function from a dataframe to a sequenc
 The `_call` method gives us that function! Let's see it in action.
 
 Note: the following examples use `PandasLikeDataFrame` and `PandasLikeSeries`. These are backed
-by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the 
+by actual `pandas.DataFrame`s and `pandas.Series` respectively and are Narwhals-compliant. We can access the
 underlying pandas objects via `PandasLikeDataFrame._native_frame` and `PandasLikeSeries._native_series`.
 
 ```python exec="yes" result="python" session="pandas_impl" source="above"
@@ -347,7 +347,7 @@ Here's a brief description of each piece of metadata:
 
 - `has_windows`: Whether the expression already contains an `over(...)` statement.
 - `n_orderable_ops`: How many order-dependent operations the expression contains.
-  
+
     Examples:
 
     - `nw.col('a')` contains 0 orderable operations.
