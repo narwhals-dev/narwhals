@@ -273,11 +273,16 @@ Please adhere to the following guidelines:
 1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
 
    **TLDR**: The PR title should start with any of these abbreviations:
-      `build`, `chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`.
-      Add a `!`at the end, if it is a breaking change. For example `refactor!`.
+   `build`, `chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`.
+   Add a `!`at the end, if it is a breaking change. For example `refactor!`.
 
 2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
 3. Please follow the instructions in the pull request form and submit.
+
+## How it works
+
+If Narwhals looks like underwater unicorn magic to you, then please read
+[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
 
 ## Rules and conventions
 
@@ -482,11 +487,6 @@ Some general guidelines:
   project author (`@MarcoGorelli`).
 - Avoid escalating conflicts. People type harder than they speak, and online discourse
   is especially difficult. Again, please assume good intentions.
-
-## How it works
-
-If Narwhals looks like underwater unicorn magic to you, then please read
-[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
 
 ## Happy contributing!
 
