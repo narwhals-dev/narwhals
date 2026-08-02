@@ -56,8 +56,8 @@ You can contribute to Narwhals in your local development environment, using `uv`
 You can also contribute to Narwhals using [Github Codespaces](https://docs.github.com/en/codespaces/overview) - a development environment that's hosted in the cloud.
 This way you can easily start to work from your browser without installing git and cloning the repo.
 
-Once your environment is set up (either way), the rest of the workflow is the same for everyone, please follow the [Working on your issue](#working-on-your-issue)
-through [Pull requests](#pull-requests) sections.
+Once your environment is set up, the rest of the workflow is the same for everyone, please follow the
+[Working on your issue](#2-working-on-your-issue) through [Pull requests](#6-pull-requests) sections.
 
 ### a. Local development
 
@@ -126,7 +126,7 @@ where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
 #### 5. Setting up your environment
 
-With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project by running:
+With `uv` already installed (see [Prerequisites](#0-prerequisites)), set up the project by running:
 
 ```terminal
 uv sync --group local-dev
