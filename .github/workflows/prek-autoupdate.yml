@@ -41,9 +41,10 @@ jobs:
           git checkout -b "$branch"
           git add .pre-commit-config.yaml
           git commit -m "chore: prek autoupdate"
-          # `persist-credentials: false` leaves `origin` unauthenticated, so pass the token
-          # for this one command rather than writing it into .git/config for the whole job.
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${branch}"
+          # `persist-credentials: false` leaves `origin` unauthenticated; the gh credential
+          # helper supplies the token on demand instead of writing it into .git/config.
+          gh auth setup-git
+          git push --set-upstream origin "$branch"
           gh pr create \
             --title "chore: prek autoupdate" \
             --body "Automated hook version bump via \`prek autoupdate\`." \
