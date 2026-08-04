@@ -20,7 +20,7 @@ If you've got experience with open source contributions, the following instructi
 
 For more detailed and beginner-friendly instructions, see below!
 
-## Prerequisites
+## 0. Prerequisites
 
 Narwhals uses [uv](https://docs.astral.sh/uv/) as its package and environment manager. You must have `uv` installed to follow the rest of this guide. The Makefile targets, dependency groups, and lockfile (`uv.lock`) all assume `uv` is present.
 
@@ -30,20 +30,38 @@ To install `uv`, follow the official instructions at [uv installation](https://d
 uv self update
 ```
 
+### Dependency management with uv
+
+A few useful `uv` workflows when contributing:
+
+- `uv add --group local-dev <package>` — add a dependency to a group (e.g. `local-dev`)
+- `uv add --optional dask <package>` — add a dependency to an extra (e.g. `dask`)
+- `uv remove <package>` — remove a dependency (with `--group`/`--optional` as appropriate)
+- `uv lock` — refresh the lockfile without changing pins
+- `uv lock --upgrade` — upgrade everything
+
+After editing `pyproject.toml` (or `uv.lock`) manually, the right order to refresh things is `uv lock` then `uv sync` (the `uv add`/`uv remove` commands above already do both for you).
+
+All of these update `pyproject.toml` and `uv.lock`. Commit both files together when changing dependencies.
+
+See also the relevant `uv` docs: [`uv sync`](https://docs.astral.sh/uv/reference/cli/#uv-sync), [`uv lock`](https://docs.astral.sh/uv/reference/cli/#uv-lock), [syncing the environment](https://docs.astral.sh/uv/concepts/projects/sync/#syncing-the-environment), and [upgrading locked versions](https://docs.astral.sh/uv/concepts/projects/sync/#upgrading-locked-package-versions).
+
 ### Optional: Java for PySpark tests
 
 If you want to run PySpark-related tests, you'll also need to have Java installed. Refer to the [Spark documentation](https://spark.apache.org/docs/latest/#downloading) for more information. As an alternative to a system-wide install, `conda` / `pixi` / `mamba` users can pull a compatible JDK from conda-forge ([`openjdk`](https://anaconda.org/conda-forge/openjdk)).
 
-## Local development vs Codespaces
+## 1. Setting up your dev environment
 
 You can contribute to Narwhals in your local development environment, using `uv`, git and your editor of choice.
 You can also contribute to Narwhals using [Github Codespaces](https://docs.github.com/en/codespaces/overview) - a development environment that's hosted in the cloud.
 This way you can easily start to work from your browser without installing git and cloning the repo.
-Scroll down for instructions on how to use [Codespaces](#working-with-codespaces).
 
-## Working with local development environment
+Once your environment is set up, the rest of the workflow is the same for everyone, please follow the
+[Working on your issue](#2-working-on-your-issue) through [Pull requests](#6-pull-requests) sections.
 
-### 1. Make sure you have git on your machine and a GitHub account
+### a. Local development
+
+#### 1. Make sure you have git on your machine and a GitHub account
 
 Open your terminal and run the following command:
 
@@ -60,12 +78,12 @@ You should also [check for existing SSH keys](https://docs.github.com/en/authent
 [generate and add a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 if you don't have one already.
 
-### 2. Fork the repository
+#### 2. Fork the repository
 
 Go to the [main project page](https://github.com/narwhals-dev/narwhals).
 Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
 
-### 3. Clone the repository
+#### 3. Clone the repository
 
 Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories.
 Click on the green `Code` button and then click the `Copy url to clipboard` icon.
@@ -87,7 +105,7 @@ You should then navigate to the folder you just created:
 cd narwhals-dev
 ```
 
-### 4. Add the `upstream` remote and fetch from it
+#### 4. Add the `upstream` remote and fetch from it
 
 ```bash
 git remote add upstream git@github.com:narwhals-dev/narwhals.git
@@ -106,9 +124,9 @@ upstream git@github.com:narwhals-dev/narwhals.git (push)
 
 where `YOUR-GITHUB-USERNAME` will be your GitHub user name.
 
-### 5. Setting up your environment
+#### 5. Setting up your environment
 
-With `uv` already installed (see [Prerequisites](#prerequisites)), set up the project by running:
+With `uv` already installed (see [Prerequisites](#0-prerequisites)), set up the project by running:
 
 ```terminal
 uv sync --group local-dev
@@ -136,13 +154,37 @@ This will automatically format and lint your code before each commit, and it wil
 
 Static typing is run separately from `prek` pre commit hooks, as it's quite slow. Assuming you followed all the instructions above, you can run it with `make typing` (which itself invokes `uv run --group typing ...` under the hood).
 
-### 6. Working on your issue
+### b. Codespaces
+
+Codespaces is a great way to work on Narwhals without the need of configuring your local development environment.
+Every GitHub.com user has a monthly quota of free use of GitHub Codespaces, and you can start working in a codespace without providing any payment details.
+You'll be informed per email if you'll be close to using 100% of included services.
+To learn more about it visit [GitHub Docs](https://docs.github.com/en/codespaces/overview)
+
+#### 1. Make sure you have GitHub account
+
+If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
+
+#### 2. Fork the repository
+
+Go to the [main project page](https://github.com/narwhals-dev/narwhals).
+Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
+
+#### 3. Create codespace
+
+Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories.
+Click on the green `Code` button and navigate to the `Codespaces` tab.
+Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
+with the complete repository and git installed. If `uv` is not installed already, install it via the [uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/) before continuing.
+You can now proceed with [5. Setting up your environment](#5-setting-up-your-environment) from the local development steps above.
+
+## 2. Working on your issue
 
 Create a new git branch from the `main` branch in your local repository.
 Note that your work cannot be merged if the tests below fail.
 If you add code that should be tested, please add tests.
 
-### 7. Running tests
+## 3. Running tests
 
 - To run tests: `uv run pytest`. To check coverage: `uv run pytest --cov=src`
 - To run tests on the doctests, use `uv run pytest src --doctest-modules`
@@ -154,10 +196,111 @@ If you add code that should be tested, please add tests.
   - By default, tests run for pandas, pandas (PyArrow dtypes), PyArrow, and Polars.
   - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run --extra cudf --module cudf.pandas --module pytest`
   - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors="polars[lazy]"`
+- To run all test with coverage, use `make test-full-coverage`
 
 Tip: passing extras (`--extra <name>`) or groups (`--group <name>`) to `uv run` will transparently sync the environment to include those dependencies before running the command.
 
-### General considerations
+See also [Test Failure Patterns](#test-failure-patterns) in Rules and conventions for the conventions we use to mark xfail/skipif/raises tests.
+
+### Static typing
+
+We run `mypy`, `pyright`, and `pyrefly` in CI. All of them are included in `--group typing` and are installed as needed when running `make typing`.
+
+Run them with:
+
+```console
+make typing
+```
+
+to verify type completeness / correctness.
+
+Note that:
+
+- In `_pandas_like`, we type all native objects as if they are pandas ones, though
+  in reality this package is shared between pandas, Modin, and cuDF.
+- In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
+  in reality this package is shared between SQLFrame and PySpark.
+
+## 4. Writing the doc(strings)
+
+If you are adding a new feature or changing an existing one, you should also update the documentation and the docstrings
+to reflect the changes.
+
+Writing the docstring in Narwhals is not an exact science, but we have some high level guidelines (if in doubt just ask us in the PR):
+
+- The examples should be clear and to the point.
+- The examples should import _one_ dataframe library, create a dataframe and exemplify the Narwhals functionality.
+- We strive for balancing the use of different backend across all our docstrings examples.
+- There are exceptions to the above rules!
+
+Here an example of a docstring:
+
+```python
+>>> import pyarrow as pa
+>>> import narwhals as nw
+>>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
+>>> df = nw.from_native(df_native)
+>>> df.estimated_size()
+32
+```
+
+Full discussion at [narwhals#1943](https://github.com/narwhals-dev/narwhals/issues/1943).
+
+## 5. Building the docs
+
+To serve the docs locally, run:
+
+```terminal
+make docs-serve
+```
+
+and then open the link provided in a browser.
+
+The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
+
+```terminal
+make docs-clean-serve
+```
+
+which rebuilds everything from a clean state (via `make docs-build`) before serving.
+
+## 6. Pull requests
+
+When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
+
+Please adhere to the following guidelines:
+
+1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
+
+   **TLDR**: The PR title should start with any of these abbreviations:
+   `build`, `chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`.
+   Add a `!`at the end, if it is a breaking change. For example `refactor!`.
+
+2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
+3. Please follow the instructions in the pull request form and submit.
+
+## How it works
+
+If Narwhals looks like underwater unicorn magic to you, then please read
+[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
+
+## Rules and conventions
+
+These are non-negotiable and the most common source of review comments.
+
+- **Zero dependencies.** Narwhals must never add a runtime dependency. It only uses what the user
+  passes in.
+- **Never import anything for `isinstance` checks.** Use the functions in [src/narwhals/dependencies.py](src/narwhals/dependencies.py)
+  (e.g. `is_pandas_dataframe`). See the [Import section](#imports) below.
+- **Never iterate over rows.** Assume infinite rows. Column iteration is acceptable. See the [Dataframe considerations](#general-dataframe-considerations) below.
+- **Never modify user input data.** Especially with pandas: no inplace operations on user-provided objects.
+- **100% branch coverage** is enforced by the full-coverage CI job. When a branch is genuinely
+  unreachable (e.g. gated on an unsupported backend version), mark it `# pragma: no cover` with a one-line reason.
+- **Breaking changes never land in `narwhals.stable.v1` or `narwhals.stable.v2`.** New public APIs
+  land in the main `narwhals` namespace and graduate into the next stable version. See
+  [docs/backcompat.md](docs/backcompat.md), and add an entry to its `main` vs `stable.*` diff when the namespaces diverge.
+
+### General dataframe considerations
 
 In general we assume that dataframes are used to store and process columnar data. Therefore:
 
@@ -181,6 +324,7 @@ In general we assume that dataframes are used to store and process columnar data
       deprecated/removed, but please keep it for older pandas versions
       https://github.com/pandas-dev/pandas/pull/51466/files.
     - Instead of `rename`, prefer `alias` at the compliant level.
+
   - pandas supports any hashable object as a column name, whereas other libraries tend to only support
     strings. We tend to just type `: str` in places which accept column names, with the understanding
     that for pandas, other data types will silently work.
@@ -258,129 +402,7 @@ then their tests will run too.
 
 We can't currently test in CI against cuDF, but you can test it manually in Kaggle using GPUs. Please follow this [Kaggle notebook](https://www.kaggle.com/code/marcogorelli/testing-cudf-in-narwhals) to run the tests.
 
-### Dependency management with uv
-
-A few useful `uv` workflows when contributing:
-
-- `uv add --group local-dev <package>` — add a dependency to a group (e.g. `local-dev`)
-- `uv add --optional dask <package>` — add a dependency to an extra (e.g. `dask`)
-- `uv remove <package>` — remove a dependency (with `--group`/`--optional` as appropriate)
-- `uv lock` — refresh the lockfile without changing pins
-- `uv lock --upgrade` — upgrade everything
-
-After editing `pyproject.toml` (or `uv.lock`) manually, the right order to refresh things is `uv lock` then `uv sync` (the `uv add`/`uv remove` commands above already do both for you).
-
-All of these update `pyproject.toml` and `uv.lock`. Commit both files together when changing dependencies.
-
-See also the relevant `uv` docs: [`uv sync`](https://docs.astral.sh/uv/reference/cli/#uv-sync), [`uv lock`](https://docs.astral.sh/uv/reference/cli/#uv-lock), [syncing the environment](https://docs.astral.sh/uv/concepts/projects/sync/#syncing-the-environment), and [upgrading locked versions](https://docs.astral.sh/uv/concepts/projects/sync/#upgrading-locked-package-versions).
-
-### Static typing
-
-We run `mypy`, `pyright`, and `pyrefly` in CI. All of them are included in `--group typing` and are installed as needed when running `make typing`.
-
-Run them with:
-
-```console
-make typing
-```
-
-to verify type completeness / correctness.
-
-Note that:
-- In `_pandas_like`, we type all native objects as if they are pandas ones, though
-  in reality this package is shared between pandas, Modin, and cuDF.
-- In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
-  in reality this package is shared between SQLFrame and PySpark.
-
-### 8. Writing the doc(strings)
-
-If you are adding a new feature or changing an existing one, you should also update the documentation and the docstrings
-to reflect the changes.
-
-Writing the docstring in Narwhals is not an exact science, but we have some high level guidelines (if in doubt just ask us in the PR):
-
-- The examples should be clear and to the point.
-- The examples should import _one_ dataframe library, create a dataframe and exemplify the Narwhals functionality.
-- We strive for balancing the use of different backend across all our docstrings examples.
-- There are exceptions to the above rules!
-
-Here an example of a docstring:
-
-```python
->>> import pyarrow as pa
->>> import narwhals as nw
->>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
->>> df = nw.from_native(df_native)
->>> df.estimated_size()
-32
-```
-
-Full discussion at [narwhals#1943](https://github.com/narwhals-dev/narwhals/issues/1943).
-
-### 9. Building the docs
-
-To serve the docs locally, run:
-
-```terminal
-make docs-serve
-```
-
-and then open the link provided in a browser.
-
-The docs should refresh when you make changes. If they don't, press `ctrl+C`, and then run:
-
-```terminal
-make docs-clean-serve
-```
-
-which rebuilds everything from a clean state (via `make docs-build`) before serving.
-
-### 10. Pull requests
-
-When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
-
-Please adhere to the following guidelines:
-
-1. Start your pull request title with a [conventional commit](https://www.conventionalcommits.org/) tag. This helps us add your contribution to the right section of the changelog. We use "Type" from the [Angular convention](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
-
-   **TLDR**: The PR title should start with any of these abbreviations:
-      `build`, `chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test`.
-      Add a `!`at the end, if it is a breaking change. For example `refactor!`.
-
-2. This text will end up in the [changelog](https://github.com/narwhals-dev/narwhals/releases).
-3. Please follow the instructions in the pull request form and submit.
-
-## Working with Codespaces
-
-Codespaces is a great way to work on Narwhals without the need of configuring your local development environment.
-Every GitHub.com user has a monthly quota of free use of GitHub Codespaces, and you can start working in a codespace without providing any payment details.
-You'll be informed per email if you'll be close to using 100% of included services.
-To learn more about it visit [GitHub Docs](https://docs.github.com/en/codespaces/overview)
-
-### 1. Make sure you have GitHub account
-
-If you're new to GitHub, you'll need to create an account on [GitHub.com](https://github.com/) and verify your email address.
-
-### 2. Fork the repository
-
-Go to the [main project page](https://github.com/narwhals-dev/narwhals).
-Fork the repository by clicking on the fork button. You can find it in the right corner on the top of the page.
-
-### 3. Create codespace
-
-Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories.
-Click on the green `Code` button and navigate to the `Codespaces` tab.
-Click on the green button `Create codespace on main` - it will open a browser version of VSCode,
-with the complete repository and git installed. If `uv` is not installed already, install it via the [uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/) before continuing.
-You can now proceed with the steps [5. Setting up your environment](#5-setting-up-your-environment) up to [10. Pull request](#10-pull-requests)
-listed above in [Working with local development environment](#working-with-local-development-environment).
-
-## How it works
-
-If Narwhals looks like underwater unicorn magic to you, then please read
-[how it works](https://narwhals-dev.github.io/narwhals/how_it_works/).
-
-## Imports
+### Imports
 
 In Narwhals, we are very particular about imports. When it comes to importing
 heavy third-party libraries (pandas, NumPy, Polars, etc...) please follow these rules:
@@ -407,18 +429,18 @@ We do not categorically reject AI-assisted contributions, but we ask for transpa
 The aim is to keep maintainer time focused on review quality, not on triaging machine-generated noise.
 
 1. **Disclose AI usage in the PR description**: when opening a pull request, the template
-    has a dedicated field that must be flagged to disclose whether or not the changes are
-    AI assisted and which tools and models were used to achieve that.
-    Disclosure is for transparency; it does not affect whether your PR is accepted.
+   has a dedicated field that must be flagged to disclose whether or not the changes are
+   AI assisted and which tools and models were used to achieve that.
+   Disclosure is for transparency; it does not affect whether your PR is accepted.
 
 2. **You are responsible for every line you submit, regardless of how it was produced**:
-    the disclosure does not transfer responsibility to the tool.
-    Before opening a PR, read through your diff and make sure you can explain and defend each change in review.
+   the disclosure does not transfer responsibility to the tool.
+   Before opening a PR, read through your diff and make sure you can explain and defend each change in review.
 
 3. **Engage with review feedback**: we reserve the right to close, without extended discussion,
-    pull requests where the author does not engage with reviewer comments.
+   pull requests where the author does not engage with reviewer comments.
 
-    **This applies whether or not AI was used.**
+   **This applies whether or not AI was used.**
 
 4. **First-time contributors** are asked to:
 
@@ -428,7 +450,7 @@ The aim is to keep maintainer time focused on review quality, not on triaging ma
       you open the next one.
 
 5. When interacting in issues, pull requests, discussion, discord, etc., **do not use LLMs to speak for you**,
-    except for translation or grammar edits. Human-to-human communication is foundational to open source communities.
+   except for translation or grammar edits. Human-to-human communication is foundational to open source communities.
 
 ## Claiming issues
 
