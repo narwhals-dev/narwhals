@@ -67,7 +67,7 @@ Fork the repository by clicking on the fork button. You can find it in the right
 
 ### 3. Clone the repository
 
-Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories. 
+Go to the forked repository on your GitHub account - you'll find it on your account in the tab Repositories.
 Click on the green `Code` button and then click the `Copy url to clipboard` icon.
 Open a terminal, choose the directory where you would like to have Narwhals repository and run the following git command:
 
@@ -97,7 +97,7 @@ git fetch upstream
 Check to see the remote has been added with `git remote -v`, you should see something like this:
 
 ```bash
-git remote -v                                                          
+git remote -v
 origin   git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (fetch)
 origin   git@github.com:YOUR-GITHUB-USERNAME/narwhals.git (push)
 upstream git@github.com:narwhals-dev/narwhals.git (fetch)
@@ -211,8 +211,8 @@ We aim to use three standard patterns for handling test failures:
 
 Note: While we're not currently totally consistent with these patterns, any efforts towards our aim are appreciated and welcome.
 
-1. `requests.applymarker(pytest.mark.xfail)`: Used for features that are planned but not yet supported. 
-   
+1. `requests.applymarker(pytest.mark.xfail)`: Used for features that are planned but not yet supported.
+
    ```python
    def test_future_feature(request):
        request.applymarker(pytest.mark.xfail)
@@ -220,7 +220,7 @@ Note: While we're not currently totally consistent with these patterns, any effo
    ```
 
 2. `pytest.mark.skipif`: Used when there's a condition under which the test cannot run (e.g., unsupported pandas versions).
-   
+
    ```python
    @pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="requires pandas 2.0+")
    def test_version_dependent():
@@ -228,7 +228,7 @@ Note: While we're not currently totally consistent with these patterns, any effo
    ```
 
 3. `pytest.raises`: Used for testing that code raises expected exceptions.
-   
+
    ```python
    def test_invalid_input():
        with pytest.raises(ValueError, match="expected error message"):
@@ -421,12 +421,12 @@ The aim is to keep maintainer time focused on review quality, not on triaging ma
     **This applies whether or not AI was used.**
 
 4. **First-time contributors** are asked to:
-    
+
     - Post a screenshot of the test suite passing locally (not on CI) in the PR description.
       This is a quick check that your dev environment works and that you have run the code you are proposing.
     - Keep at most one open pull request at a time, so reviewers can give it proper attention before
       you open the next one.
-  
+
 5. When interacting in issues, pull requests, discussion, discord, etc., **do not use LLMs to speak for you**,
     except for translation or grammar edits. Human-to-human communication is foundational to open source communities.
 
