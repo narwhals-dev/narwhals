@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Generic
 
+from narwhals._utils import validate_width
 from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
@@ -488,6 +489,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             3    123456
             dtype: str
         """
+        validate_width(width)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
         )
@@ -516,6 +518,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        validate_width(length, "length")
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_start(
                 length=length, fill_char=fill_char
@@ -546,6 +549,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        validate_width(length, "length")
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_end(
                 length=length, fill_char=fill_char
