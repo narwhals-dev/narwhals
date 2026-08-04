@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
@@ -2905,6 +2906,68 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
+    def factorize(
+        self, *, null_as_value: bool = False, sort: bool = False
+    ) -> Encoded[IntoSeriesT]:
+        """Encode values as integer codes and unique values.
+
+        The integer codes are index locations that map the unique values back to their
+        positions within the original array.
+
+        Arguments:
+            null_as_value: Whether to treat null as a regular value. When False,
+                nulls are removed from the returned unique values and the code -1 is
+                used to indicate the location of null values in the original array.
+                When True, nulls are preserved in the returned unique values and a
+                positive integer is used to indicate their location in the original
+                array.
+            sort: Whether to sort the unique values before assigning codes.
+
+        Returns:
+            codes: An integer series where each value represents the index
+                of the corresponding value in `uniques`. Null values are encoded
+                as -1.
+            uniques: A series containing the unique non-null values.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = pl.DataFrame({"groups": ["a", "b", "a", None]})
+            >>> nw_df = nw.from_native(df)
+            >>> codes, uniques = nw_df["groups"].factorize(sort=True)
+            >>> codes
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |shape: (4,)           |
+            |Series: 'groups' [i32]|
+            |[                     |
+            |        0             |
+            |        1             |
+            |        0             |
+            |        -1            |
+            |]                     |
+            └──────────────────────┘
+            >>> uniques
+            ┌──────────────────────┐
+            |   Narwhals Series    |
+            |----------------------|
+            |shape: (2,)           |
+            |Series: 'groups' [str]|
+            |[                     |
+            |        "a"           |
+            |        "b"           |
+            |]                     |
+            └──────────────────────┘
+        """
+        codes, uniques = self._compliant_series.factorize(
+            null_as_value=null_as_value, sort=sort
+        )
+        return Encoded(
+            self._with_compliant(codes).alias("codes"),
+            self._with_compliant(uniques).alias("uniques"),
+        )
+
     @unstable
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
         """Get a random value from the column.
@@ -2946,3 +3009,26 @@ class Series(Generic[IntoSeriesT]):
     @property
     def struct(self) -> SeriesStructNamespace[Self]:
         return SeriesStructNamespace(self)
+
+
+@dataclass(frozen=True)
+class Encoded(Generic[IntoSeriesT]):
+    """Result of `factorize`. Unpacks as `(codes, uniques)` like pandas."""
+
+    codes: Series[IntoSeriesT]
+    uniques: Series[IntoSeriesT]
+
+    def __iter__(self) -> Iterator[Series[IntoSeriesT]]:
+        yield self.codes
+        yield self.uniques
+
+    @property
+    def mapping(self) -> Mapping[Any, int]:
+        """Forward map as a joinable ``(value, code)`` frame; works for any dtype."""
+        name = self.uniques.name
+        return dict(
+            self.uniques.to_frame()
+            .with_row_index("code")
+            .select(name, "code")
+            .iter_rows()
+        )

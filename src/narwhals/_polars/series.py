@@ -670,6 +670,27 @@ class PolarsSeries:
     def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
         return self.drop_nulls().first() if ignore_nulls else self.first()
 
+    def factorize(
+        self, *, null_as_value: bool = False, sort: bool = False
+    ) -> tuple[Self, Self]:
+        uniques = self.unique() if null_as_value else self.unique().drop_nulls()
+        if sort:
+            uniques = uniques.sort(descending=False, nulls_last=True)
+
+        if null_as_value:
+            codes = self.native.replace_strict(
+                old=uniques.native, new=range(len(uniques)), return_dtype=pl.Int32()
+            )
+        else:
+            codes = self.native.replace_strict(
+                old=uniques.native,
+                new=range(len(uniques)),
+                default=-1,
+                return_dtype=pl.Int32(),
+            )
+
+        return self._with_native(codes.cast(pl.Int32())), uniques
+
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
         return PolarsSeriesDateTimeNamespace(self)

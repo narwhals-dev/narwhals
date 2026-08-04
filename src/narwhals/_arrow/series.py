@@ -1038,6 +1038,57 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             .to_frame()
         )
 
+    def factorize(
+        self, *, null_as_value: bool = False, sort: bool = False
+    ) -> tuple[Self, Self]:
+        if len(self.native) == 0:
+            codes = pa.chunked_array([[]], type=pa.int32())
+            uniques = pa.chunked_array([[]], type=self.native.type)
+            return (self._with_native(codes), self._with_native(uniques))
+
+        # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
+        if pa.types.is_null(self.native.type):
+            if null_as_value:
+                codes, uniques = (
+                    pa.repeat(0, len(self.native)),
+                    pa.nulls(1, type=self.native.type),
+                )
+            else:
+                codes, uniques = (
+                    pa.repeat(-1, len(self.native)),
+                    pa.nulls(0, type=self.native.type),
+                )
+
+            return (self._with_native(codes.cast(pa.int32())), self._with_native(uniques))
+
+        native = self.native
+        if pa.types.is_dictionary(native.type):
+            # re-encode if already dict encoded; can't be certain how the original dict encoding was done
+            native = native.cast(native.type.value_type)
+
+        null_encoding: Literal["encode", "mask"] = "encode" if null_as_value else "mask"
+        encoded = pc.dictionary_encode(
+            native, null_encoding=null_encoding
+        ).unify_dictionaries()
+        uniques = encoded.chunk(0).dictionary  # type: ignore[attr-defined]
+        codes = pa.chunked_array([c.indices for c in encoded.chunks], type=pa.int32())  # type: ignore[attr-defined]
+        codes = cast("pa.ChunkedArray[pa.Int32Scalar]", codes)
+
+        if not sort:
+            return (
+                self._with_native(pc.fill_null(codes, pa.scalar(-1))),
+                self._with_native(uniques),
+            )
+
+        sorted_uniques = pc.take(uniques, pc.sort_indices(uniques))
+        new_mapping = pc.index_in(uniques, value_set=sorted_uniques)
+        new_codes = pc.take(new_mapping, codes)
+
+        return (
+            self._with_native(pc.fill_null(new_codes, pa.scalar(-1))),
+            self._with_native(sorted_uniques),
+        )
+
     def __iter__(self) -> Iterator[Any]:
         for x in self.native:
             yield maybe_extract_py_scalar(x, return_py_scalar=True)
