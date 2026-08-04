@@ -9,6 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
     arange,
+    chunked_array_from_values,
     concat_tables,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -142,9 +143,9 @@ class ArrowDataFrame(
             raise NotImplementedError(msg)
         res = pa.table(
             {
-                name: pa.chunked_array(  # type: ignore[misc]
+                name: chunked_array_from_values(  # type: ignore[misc]
                     [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
+                    narwhals_to_native_dtype(nw_dtype, version=context._version)
                     if nw_dtype is not None
                     else None,
                 )
@@ -175,7 +176,26 @@ class ArrowDataFrame(
         if pa_schema and not data:
             native = pa_schema.empty_table()
         else:
-            native = pa.Table.from_pylist(data, schema=pa_schema)
+            # `from_pylist` cannot build dictionary (Categorical) columns, so those are
+            # read with the dictionary's value type and cast afterwards. One pass over
+            # the schema decides both, and a schema without dictionaries is passed
+            # through untouched.
+            read_schema, has_dictionary = pa_schema, False
+            if pa_schema is not None:
+                fields = []
+                for field in pa_schema:
+                    if pa.types.is_dictionary(field.type):
+                        has_dictionary = True
+                        fields.append(field.with_type(field.type.value_type))
+                    else:
+                        fields.append(field)
+                if has_dictionary:
+                    read_schema = pa.schema(fields)
+            native = pa.Table.from_pylist(data, schema=read_schema)
+            if has_dictionary:
+                # Casting values to dictionary needs PyArrow >=15; below that the
+                # backend raises, which is the same answer the old path gave.
+                native = native.cast(cast("pa.Schema", pa_schema))
         return cls.from_native(native, context=context)
 
     @staticmethod
