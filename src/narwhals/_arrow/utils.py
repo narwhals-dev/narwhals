@@ -127,15 +127,27 @@ def chunked_array(
     if isinstance(arr, pa.ChunkedArray):
         return arr
     if isinstance(arr, list):
-        if dtype is not None and pa.types.is_dictionary(dtype):
-            # `pa.chunked_array` cannot build a dictionary-typed (Categorical) array from
-            # Python values, so build each chunk from the values with the target type.
-            # TODO(unassigned): once the minimum PyArrow is >=15.0.0, simplify to
-            # `pc.cast(pa.chunked_array(arr), dtype)` (string -> dictionary cast is
-            # supported from 15.0.0).
-            return pa.chunked_array([pa.array(chunk, dtype) for chunk in arr])
         return pa.chunked_array(arr, dtype)
     return pa.chunked_array([arr], dtype)
+
+
+def chunked_array_from_values(
+    values: list[Iterable[Any]], dtype: pa.DataType | None = None, /
+) -> ChunkedArrayAny:
+    """Build a chunked array from Python values, honouring a dictionary dtype.
+
+    `pa.chunked_array` cannot construct a dictionary-typed (Categorical) array from
+    Python values, so those chunks are built one at a time with the target type.
+    Kept out of `chunked_array`, which is called on every column construction and
+    never needs this.
+
+    TODO(unassigned): once the minimum PyArrow is >=15.0.0 this can become
+    `pc.cast(pa.chunked_array(values), dtype)`; the string to dictionary cast is
+    supported from 15.0.0.
+    """
+    if dtype is not None and pa.types.is_dictionary(dtype):
+        return pa.chunked_array([pa.array(chunk, dtype) for chunk in values])
+    return pa.chunked_array(values, dtype)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:

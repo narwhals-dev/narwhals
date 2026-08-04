@@ -114,16 +114,22 @@ def test_from_dicts_categorical(
     assert_equal_data(result, {"a": ["x", "y", "x"]})
 
 
-def test_from_dicts_categorical_reordered_pyarrow() -> None:
-    # Regression for the pyarrow Categorical path: it must follow the schema even when
-    # the row keys are in a different order. A bare `from_pylist(data).cast(schema)`
-    # would raise here, since `from_pylist` infers column order from the data.
-    pytest.importorskip("pyarrow")
-    if PYARROW_VERSION < (15,):
-        pytest.skip("string -> dictionary cast needs pyarrow >= 15")
+def test_from_dicts_categorical_reordered(
+    request: pytest.FixtureRequest, eager_backend: EagerAllowed
+) -> None:
+    # The schema decides the column order, not the row keys. Checked on every eager
+    # backend so the Categorical path cannot drift from the others: on pyarrow a bare
+    # `from_pylist(data).cast(schema)` would raise here, since `from_pylist` infers
+    # the order from the data.
+    if "pyarrow" in str(eager_backend) and PYARROW_VERSION < (15,):
+        request.applymarker(pytest.mark.xfail)
+    if "pandas" in str(eager_backend) or "modin" in str(eager_backend):
+        # https://github.com/narwhals-dev/narwhals/issues/3837: on pandas-like the
+        # schema is applied as a dtype hint, so it neither selects nor orders.
+        request.applymarker(pytest.mark.xfail)
     schema = {"a": nw.Categorical(), "b": nw.Int64()}
     result = nw.from_dicts(
-        [{"b": 1, "a": "x"}, {"b": 2, "a": "y"}], backend="pyarrow", schema=schema
+        [{"b": 1, "a": "x"}, {"b": 2, "a": "y"}], backend=eager_backend, schema=schema
     )
     assert result.collect_schema() == schema
     assert_equal_data(result, {"a": ["x", "y"], "b": [1, 2]})

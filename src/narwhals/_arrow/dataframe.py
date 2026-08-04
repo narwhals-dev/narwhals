@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
     arange,
-    chunked_array,
+    chunked_array_from_values,
     concat_tables,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -143,7 +143,7 @@ class ArrowDataFrame(
             raise NotImplementedError(msg)
         res = pa.table(
             {
-                name: chunked_array(  # type: ignore[misc]
+                name: chunked_array_from_values(  # type: ignore[misc]
                     [data[name] if data else []],
                     narwhals_to_native_dtype(nw_dtype, version=context._version)
                     if nw_dtype is not None
@@ -175,28 +175,27 @@ class ArrowDataFrame(
         )
         if pa_schema and not data:
             native = pa_schema.empty_table()
-        elif pa_schema is not None and any(
-            pa.types.is_dictionary(field.type) for field in pa_schema
-        ):
-            # `from_pylist` cannot build dictionary (Categorical) columns directly. Read
-            # the rows using the dictionaries' value types (so column selection and order
-            # follow the schema, like the branch below), then cast to the requested
-            # schema. Casting string -> dictionary needs PyArrow >=15; on older versions
-            # the backend raises, which is acceptable here.
-            pre_cast_schema = pa.schema(
-                [
-                    (
-                        field.name,
-                        field.type.value_type
-                        if pa.types.is_dictionary(field.type)
-                        else field.type,
-                    )
-                    for field in pa_schema
-                ]
-            )
-            native = pa.Table.from_pylist(data, schema=pre_cast_schema).cast(pa_schema)
         else:
-            native = pa.Table.from_pylist(data, schema=pa_schema)
+            # `from_pylist` cannot build dictionary (Categorical) columns, so those are
+            # read with the dictionary's value type and cast afterwards. One pass over
+            # the schema decides both, and a schema without dictionaries is passed
+            # through untouched.
+            read_schema, has_dictionary = pa_schema, False
+            if pa_schema is not None:
+                fields = []
+                for field in pa_schema:
+                    if pa.types.is_dictionary(field.type):
+                        has_dictionary = True
+                        fields.append(field.with_type(field.type.value_type))
+                    else:
+                        fields.append(field)
+                if has_dictionary:
+                    read_schema = pa.schema(fields)
+            native = pa.Table.from_pylist(data, schema=read_schema)
+            if has_dictionary:
+                # Casting values to dictionary needs PyArrow >=15; below that the
+                # backend raises, which is the same answer the old path gave.
+                native = native.cast(cast("pa.Schema", pa_schema))
         return cls.from_native(native, context=context)
 
     @staticmethod
