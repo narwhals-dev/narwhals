@@ -5,7 +5,7 @@ on:
     paths:
       - src/narwhals/_expression_parsing.py
       - src/narwhals/_ibis/**
-      - src/narwhals/_sql/**      
+      - src/narwhals/_sql/**
       - tests/**
       - .github/workflows/pytest-ibis.yml
       - pyproject.toml
