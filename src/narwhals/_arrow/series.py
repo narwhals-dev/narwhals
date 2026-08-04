@@ -553,6 +553,40 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def null_count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)
 
+    def equals(
+        self, other: Self, *, check_dtypes: bool, check_names: bool, null_equal: bool
+    ) -> bool:
+        if (
+            (check_names and self._name != other._name)
+            or (check_dtypes and self.dtype != other.dtype)
+            or len(self) != len(other)
+        ):
+            return False
+
+        lhs = self.native
+        rhs = other.native
+
+        if not null_equal and (lhs.null_count or rhs.null_count):
+            return False
+
+        try:
+            values_equal = pc.equal(lhs, rhs)
+        except pa.lib.ArrowNotImplementedError:
+            return False
+
+        try:
+            both_nan = pc.fill_null(pc.and_(pc.is_nan(lhs), pc.is_nan(rhs)), False)
+            values_or_nan_equal = pc.fill_null(pc.or_(values_equal, both_nan), False)
+        except pa.lib.ArrowNotImplementedError:
+            values_or_nan_equal = pc.fill_null(values_equal, False)
+
+        if null_equal:
+            both_null = pc.and_(pc.is_null(lhs), pc.is_null(rhs))
+            result = pc.if_else(both_null, True, values_or_nan_equal)
+            return bool(pc.all(result, skip_nulls=False).as_py())
+
+        return bool(pc.all(values_or_nan_equal).as_py())
+
     def head(self, n: int) -> Self:
         if n >= 0:
             return self._with_native(self.native.slice(0, n))

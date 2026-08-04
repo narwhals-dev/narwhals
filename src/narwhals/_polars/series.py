@@ -531,6 +531,23 @@ class PolarsSeries:
             )
         return PolarsDataFrame.from_native(result, context=self)
 
+    def equals(
+        self, other: Self, *, check_dtypes: bool, check_names: bool, null_equal: bool
+    ) -> bool:
+        if self._backend_version < (0, 20, 31):  # pragma: no cover
+            return self.native.equals(
+                other.native,
+                strict=check_dtypes,
+                check_names=check_names,
+                null_equal=null_equal,
+            )
+        return self.native.equals(
+            other.native,
+            check_dtypes=check_dtypes,
+            check_names=check_names,
+            null_equal=null_equal,
+        )
+
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
