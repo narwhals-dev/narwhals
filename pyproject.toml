@@ -41,7 +41,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # `modin.pandas.__version__`. The latter is the one that we make
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
-# https://github.com/narwhals-dev/narwhals/issues/817 
+# https://github.com/narwhals-dev/narwhals/issues/817
 pandas = ["pandas>=1.3.4"]
 modin = ["modin>=0.22.0"]
 cudf = ["cudf-cu12>=24.10.0; sys_platform == 'linux'"]
@@ -301,23 +301,23 @@ builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
-  "Series", 
-  "DataFrame", 
-  "_Window", 
-  "F", 
+  "Series",
+  "DataFrame",
+  "_Window",
+  "F",
   "_F",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"src/narwhals/expr_dt.py" = ["RUF002"] 
+"src/narwhals/expr_dt.py" = ["RUF002"]
 "src/narwhals/typing.py" = [
   "PYI042",  # snake-case-type-alias (catches `_1DArray`)
-] 
+]
 "src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
 "tests/*" = [
-  "S101", 
+  "S101",
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
@@ -363,7 +363,7 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
-  
+
   # Deprecation raised by DuckDB
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:sqlframe',
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:ibis',
