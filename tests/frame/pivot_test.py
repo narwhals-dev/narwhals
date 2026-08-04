@@ -7,7 +7,12 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -120,7 +125,17 @@ def test_pivot(
     index: str | list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if "modin" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if "pyarrow_table" in str(constructor_eager) and agg_func == "median":
+        # pyarrow only has an approximate hash median, like `group_by(...).agg(median())`.
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "pyarrow_table" in str(constructor_eager)
+        and agg_func in {"first", "last"}
+        and PYARROW_VERSION < (14,)
+    ):
+        # first/last are ordered aggregators; pyarrow supports them only from 14.0.
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
@@ -148,7 +163,14 @@ def test_pivot(
 def test_pivot_no_agg(
     request: Any, constructor_eager: ConstructorEager, data_: Any, context: Any
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if "modin" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail)
+    if (
+        "pyarrow_table" in str(constructor_eager)
+        and PYARROW_VERSION < (14,)
+        and isinstance(context, does_not_raise)
+    ):
+        # the no-dup path extracts the single value with `first` (pyarrow>=14).
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
@@ -172,7 +194,7 @@ def test_pivot_sort_columns(
     sort_columns: Any,
     expected: list[str],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
@@ -220,7 +242,7 @@ def test_pivot_sort_columns(
 def test_pivot_names_out(
     request: Any, constructor_eager: ConstructorEager, kwargs: Any, expected: list[str]
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
@@ -243,7 +265,7 @@ def test_pivot_no_index_no_values(constructor_eager: ConstructorEager) -> None:
 def test_pivot_no_index(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         # not implemented
@@ -257,4 +279,50 @@ def test_pivot_no_index(
         "a": [1.0, None, None, 3.0],
         "b": [None, 2.0, 4.0, None],
     }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data_", "expected"),
+    [
+        (
+            {"i": ["a", "b"], "o": [True, False], "v": [1, 2]},
+            {"i": ["a", "b"], "true": [1, 0], "false": [0, 2]},
+        ),
+        (
+            {"i": ["a", "b"], "o": ["x", None], "v": [1, 2]},
+            {"i": ["a", "b"], "x": [1, 0], "null": [0, 2]},
+        ),
+    ],
+)
+def test_pivot_on_bool_or_null(
+    constructor_eager: ConstructorEager,
+    data_: Any,
+    expected: dict[str, list[Any]],
+    request: pytest.FixtureRequest,
+) -> None:
+    # Only polars and pyarrow name boolean and null `on` values as `true`/`false`/`null`.
+    if not any(x in str(constructor_eager) for x in ("polars", "pyarrow_table")):
+        pytest.skip("boolean and null `on` naming is specific to polars and pyarrow")
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor_eager(data_), eager_only=True)
+    result = df.pivot(on="o", index="i", values="v", aggregate_function="sum")
+    assert_equal_data(result, expected)
+
+
+def test_pivot_multiple_on_with_null(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    # polars collapses an `on` combination holding a null to `null`, not `{...}`.
+    if not any(x in str(constructor_eager) for x in ("polars", "pyarrow_table")):
+        pytest.skip("null `on` naming is specific to polars and pyarrow")
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
+        request.applymarker(pytest.mark.xfail)
+
+    data_ = {"i": ["a", "b"], "o1": ["x", None], "o2": [1, 2], "v": [1, 2]}
+    df = nw.from_native(constructor_eager(data_), eager_only=True)
+    result = df.pivot(on=["o1", "o2"], index="i", values="v", aggregate_function="sum")
+    expected = {"i": ["a", "b"], '{"x",1}': [1, 0], "null": [0, 2]}
     assert_equal_data(result, expected)
