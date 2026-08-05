@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PYARROW_VERSION, assert_equal_data
+from tests.utils import POLARS_VERSION, PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -153,6 +153,9 @@ def test_shared_expr_over_push_down() -> None:
 
 def test_shared_expr_evaluation(constructor_eager: ConstructorEager) -> None:
     """Evaluating one shared `Expr` in several contexts at once must not mutate it."""
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+        pytest.skip("`over(order_by=...)` requires polars>=1.10")
+
     df = nw.from_native(constructor_eager(DATA), eager_only=True)
     expr = nw.col("v").cum_sum()
     expected_repr = repr(expr)
@@ -327,5 +330,6 @@ def test_sql_table_concurrent() -> None:
         result = table(name, {"a": nw.Int64(), "b": nw.String()})
         assert result.collect_schema() == {"a": nw.Int64(), "b": nw.String()}
         assert name in result.to_sql()
+        assert result.to_native().fetchall() == []
 
     run_threaded(check, outer_iterations=5)
