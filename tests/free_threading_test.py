@@ -1,7 +1,10 @@
 """Concurrency stress tests for narwhals-owned shared state.
 
 Targets: caches populated on first use, lazily-materialized dtype metadata,
-expression `over` push-down, and `narwhals.sql`'s shared DuckDB catalog.
+expression `over` push-down, state stashed on shared Narwhals objects, and
+`narwhals.sql`'s shared DuckDB catalog.
+
+See [docs/concepts/thread_safety.md].
 
 NOTE: The tests are valid on any build (races are bugs under the GIL too), but are
 most effective on a free-threaded build (`PYTHON_GIL=0`), where threads run in parallel.
@@ -19,11 +22,23 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION
+from tests.utils import PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from concurrent.futures import Future
+
+    from tests.utils import ConstructorEager
+
+DATA: dict[str, Any] = {
+    "g": [1, 1, 2, 2, 3, 3],
+    "i": [6, 5, 4, 3, 2, 1],
+    "v": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+}
+"""`i` is a unique ordering column, reversing the row order."""
+
+_SELECT_TZ = "select timestamptz '2024-01-01' as t"
+"""Time-zone-aware: forces Narwhals to query the connection for its time zone."""
 
 
 def run_threaded(
@@ -136,6 +151,88 @@ def test_shared_expr_over_push_down() -> None:
     run_threaded(check, outer_iterations=5)
 
 
+def test_shared_expr_evaluation(constructor_eager: ConstructorEager) -> None:
+    """Evaluating one shared `Expr` in several contexts at once must not mutate it."""
+    df = nw.from_native(constructor_eager(DATA), eager_only=True)
+    expr = nw.col("v").cum_sum()
+    expected_repr = repr(expr)
+
+    def check(barrier: threading.Barrier) -> None:
+        barrier.wait()
+        for _ in range(10):
+            # Row order, `i` order, and one appended node: three rewrites of `expr`.
+            assert_equal_data(df.select(expr), {"v": [1.0, 3.0, 6.0, 10.0, 15.0, 21.0]})
+            assert_equal_data(
+                df.select(expr.over(order_by="i")),
+                {"v": [21.0, 20.0, 18.0, 15.0, 11.0, 6.0]},
+            )
+            assert_equal_data(
+                df.with_columns(out=expr.abs()).select("out"),
+                {"out": [1.0, 3.0, 6.0, 10.0, 15.0, 21.0]},
+            )
+            assert repr(expr) == expected_repr
+
+    run_threaded(check, outer_iterations=2)
+
+
+def test_shared_group_by_agg(constructor_eager: ConstructorEager) -> None:
+    """A `GroupBy` reused from several threads must not leak state between them.
+
+    Regression test: `agg` used to stash the native `groupby` on `self`, so one thread
+    could read another's grouping and silently aggregate the wrong rows.
+    """
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (14, 0):
+        pytest.skip("https://github.com/apache/arrow/issues/36709")
+
+    grouped = nw.from_native(constructor_eager(DATA), eager_only=True).group_by("g")
+    # `sum` groups as-is, `first(order_by="i")` groups a sorted copy: two distinct
+    # native groupings, so a leak between threads shows up in the values.
+    unordered = {"g": [1, 2, 3], "v": [3.0, 7.0, 11.0]}
+    ordered = {"g": [1, 2, 3], "v": [2.0, 4.0, 6.0]}
+
+    def check(barrier: threading.Barrier) -> None:
+        barrier.wait()
+        for _ in range(20):
+            res_ordered = grouped.agg(nw.col("v").first(order_by="i")).sort("g")
+            assert_equal_data(res_ordered, ordered)
+
+            res_unordered = grouped.agg(nw.col("v").sum()).sort("g")
+            assert_equal_data(res_unordered, unordered)
+
+    run_threaded(check, outer_iterations=3)
+
+
+def test_shared_dataframe_read_only(constructor_eager: ConstructorEager) -> None:
+    """Reading from a shared `DataFrame` is safe: no method may mutate it, or its input."""
+    native = constructor_eager(DATA)
+    df = nw.from_native(native, eager_only=True)
+    native_before = repr(native)
+
+    def check(barrier: threading.Barrier) -> None:
+        barrier.wait()
+        for _ in range(10):
+            assert df.columns == ["g", "i", "v"]
+            assert df.schema == {"g": nw.Int64(), "i": nw.Int64(), "v": nw.Float64()}
+            assert df.shape == (6, 3)
+            assert_equal_data(
+                df.select(nw.col("v") * 2), {"v": [2.0, 4.0, 6.0, 8.0, 10.0, 12.0]}
+            )
+            assert_equal_data(
+                df.filter(nw.col("g") == 1), {"g": [1, 1], "i": [6, 5], "v": [1.0, 2.0]}
+            )
+            assert_equal_data(
+                df.sort("i").select("v"), {"v": [6.0, 5.0, 4.0, 3.0, 2.0, 1.0]}
+            )
+            assert_equal_data(df.unique("g").sort("g").select("g"), {"g": [1, 2, 3]})
+            assert_equal_data(df.lazy().collect().select("g"), {"g": [1, 1, 2, 2, 3, 3]})
+            # `scatter` is the one method that reads as in-place: it must not be.
+            assert df["v"].scatter(0, 99.0).to_list() == [99.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+            assert df["v"].to_list() == [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+
+    run_threaded(check, outer_iterations=2)
+    assert repr(native) == native_before, "narwhals mutated the native input"
+
+
 def test_enum_deferred_categories() -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -175,10 +272,53 @@ def test_shared_lazyframe_schema() -> None:
     run_threaded(check, outer_iterations=5)
 
 
-def test_sql_table_concurrent() -> None:
+def test_shared_duckdb_connection_schema() -> None:
     pytest.importorskip("duckdb")
-    if DUCKDB_VERSION < (1, 3):
-        pytest.skip()
+    import duckdb
+
+    con = duckdb.connect()
+    con.sql("set timezone = 'UTC'")
+    # One frame per thread *and* one shared frame, all on the same connection.
+    frames = [nw.from_native(con.sql(_SELECT_TZ)) for _ in range(8)]
+    shared = nw.from_native(con.sql(_SELECT_TZ))
+    expected = {"t": nw.Datetime(time_zone="UTC")}
+
+    def check(barrier: threading.Barrier) -> None:
+        barrier.wait()
+        for lf in (*frames, shared):
+            assert lf.collect_schema() == expected
+
+    run_threaded(check, outer_iterations=3)
+
+
+def test_duckdb_per_thread_cursor() -> None:
+    """The supported recipe for concurrent DuckDB use: one cursor per thread.
+
+    NOTE: `TimeZone` is `LOCAL`-scoped, so a cursor does not inherit the parent's value.
+    """
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+
+    def check(barrier: threading.Barrier) -> None:
+        cursor = con.cursor()
+        cursor.sql("set timezone = 'UTC'")
+        barrier.wait()
+        for _ in range(5):
+            lf = nw.from_native(cursor.sql(f"{_SELECT_TZ}, 1 as idx, 2 as a, 3 as b"))
+            assert lf.collect_schema()["t"] == nw.Datetime(time_zone="UTC")
+            assert_equal_data(lf.select("a").collect(), {"a": [2]})
+            assert_equal_data(
+                lf.unpivot(on=["a", "b"], index=["idx"]).sort("variable"),
+                {"idx": [1, 1], "variable": ["a", "b"], "value": [2, 3]},
+            )
+
+    run_threaded(check, outer_iterations=3)
+
+
+def test_sql_table_concurrent() -> None:
+    pytest.importorskip("duckdb", minversion="1.3.0")
     from narwhals.sql import table
 
     def check(barrier: threading.Barrier) -> None:
