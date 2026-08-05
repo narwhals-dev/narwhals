@@ -16,6 +16,7 @@ from narwhals._duckdb.utils import (
     join_column_names,
     lit,
     native_to_narwhals_dtype,
+    temporary_view_name,
     window_expression,
 )
 from narwhals._sql.dataframe import SQLLazyFrame
@@ -388,13 +389,19 @@ class DuckDBLazyFrame(
             else f'rhs."{name}"'
             for name in keep_cols
         )
-        query = f"""
+        # `rhs` is resolved via replacement scan.
+        # `rel.query` creates a view, so this fails on read-only databases (#3567);
+        # unavoidable until the relational API gains ASOF join support.
+        view = temporary_view_name()
+        joined = lhs.query(
+            view,
+            f"""
             SELECT {",".join(rhs_select)}
-            FROM lhs
+            FROM {view} AS lhs
             ASOF LEFT JOIN rhs
             ON {condition}
-            """  # noqa: S608
-        joined = duckdb.sql(query)
+            """,  # noqa: S608
+        )
 
         select = [col(name) for name in lhs.columns]
         select.extend(
@@ -457,25 +464,23 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.sort(*it))
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
-        _rel = self.native
         by = list(by)
         if isinstance(reverse, bool):
             descending = extend_bool(not reverse, len(by))
         else:
             descending = tuple(not rev for rev in reverse)
+        tmp_name = generate_temporary_column_name(8, self.columns, prefix="row_number_")
         expr = window_expression(
             F("row_number"),
             order_by=by,
             descending=descending,
             nulls_last=extend_bool(True, len(by)),
         )
-        condition = expr <= lit(k)
-        query = f"""
-            SELECT *
-            FROM _rel
-            QUALIFY {condition}
-        """  # noqa: S608
-        return self._with_native(duckdb.sql(query))
+        return self._with_native(
+            self.native.select(StarExpression(), expr.alias(tmp_name)).filter(
+                col(tmp_name) <= lit(k)
+            )
+        ).drop([tmp_name], strict=False)
 
     def drop_nulls(self, subset: Sequence[str] | None) -> Self:
         subset_ = subset if subset is not None else self.columns
@@ -542,19 +547,21 @@ class DuckDBLazyFrame(
             raise NotImplementedError(msg)
 
         unpivot_on = join_column_names(*on_)
-        _rel = self.native
+        # `rel.query` creates a view, so this fails on read-only databases (#3567).
         # Replace with Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
-        query = f"""
-            unpivot _rel
+        view = temporary_view_name()
+        unpivoted = self.native.query(
+            view,
+            f"""
+            unpivot {view}
             on {unpivot_on}
             into
                 name {col(variable_name)}
                 value {col(value_name)}
-            """
-        return self._with_native(
-            duckdb.sql(query).select(*[*index_, variable_name, value_name])
+            """,
         )
+        return self._with_native(unpivoted.select(*index_, variable_name, value_name))
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:

@@ -20,6 +20,7 @@ from narwhals._duckdb.utils import (
     lit,
     narwhals_to_native_dtype,
     sql_expression,
+    temporary_view_name,
     when,
     window_expression,
 )
@@ -73,12 +74,18 @@ class DuckDBNamespace(
         self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
     ) -> DuckDBLazyFrame:
         validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
-        native = duckdb.read_csv(source, delimiter=separator, **kwds)
-        return self._lazyframe.from_native(native, context=self)
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        reader = kwds.pop("connection", None) or duckdb
+        native_frame = reader.read_csv(source, delimiter=separator, **kwds)
+        return self._lazyframe.from_native(native_frame, context=self)
 
     def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DuckDBLazyFrame:
-        native = duckdb.read_parquet(source, **kwds)
-        return self._lazyframe.from_native(native, context=self)
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        reader = kwds.pop("connection", None) or duckdb
+        native_frame = reader.read_parquet(source, **kwds)
+        return self._lazyframe.from_native(native_frame, context=self)
 
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
         return function(name, *args)
@@ -113,9 +120,13 @@ class DuckDBNamespace(
             res = first.native
             for _item in native_items[1:]:
                 # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
-                res = duckdb.sql("""
-                    from res select * union all by name from _item select *
-                """)
+                # `_item` is resolved via replacement scan.
+                # `rel.query` creates a view, so this fails on read-only databases (#3567).
+                view = temporary_view_name()
+                res = res.query(
+                    view,
+                    f"from {view} select * union all by name from _item select *",  # noqa: S608
+                )
             return first._with_native(res)
         res = reduce(lambda x, y: x.union(y), native_items)
         return first._with_native(res)

@@ -5,6 +5,7 @@ import re
 from collections import deque
 from contextlib import nullcontext as does_not_raise
 from datetime import datetime, timedelta
+from functools import partial
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -369,12 +370,13 @@ def test_v1_enum_duckdb_2550() -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
+    con = duckdb.connect()
     result_v1 = nw_v1.from_native(
-        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
+        con.sql("select 'a'::enum('a', 'b', 'c') as a")
     ).collect_schema()
     assert result_v1 == {"a": nw_v1.Enum()}
     result = nw.from_native(
-        duckdb.sql("select 'a'::enum('a', 'b', 'c') as a")
+        con.sql("select 'a'::enum('a', 'b', 'c') as a")
     ).collect_schema()
     assert result == {"a": nw.Enum(("a", "b", "c"))}
 
@@ -483,12 +485,12 @@ def test_with_row_index(constructor: Constructor) -> None:
 
     msg = "Cannot pass `order_by`"
     context = (
-        pytest.raises(TypeError, match=msg)
+        partial(pytest.raises, TypeError, match=msg)
         if any(x in str(constructor) for x in ("duckdb", "pyspark"))
-        else does_not_raise()
+        else does_not_raise
     )
 
-    with context:
+    with context():
         result = frame.with_row_index()
 
         expected = {"index": [0, 1], **data}
@@ -574,8 +576,8 @@ def test_dtypes() -> None:
 @pytest.mark.parametrize(
     ("strict", "context"),
     [
-        (True, pytest.raises(TypeError, match="Unsupported dataframe type")),
-        (False, does_not_raise()),
+        (True, partial(pytest.raises, TypeError, match="Unsupported dataframe type")),
+        (False, does_not_raise),
     ],
 )
 def test_strict(strict: Any, context: Any) -> None:
@@ -584,7 +586,7 @@ def test_strict(strict: Any, context: Any) -> None:
 
     arr = np.array([1, 2, 3])
 
-    with context:
+    with context():
         res = nw_v1.from_native(arr, strict=strict)
         assert isinstance(res, np.ndarray)
 

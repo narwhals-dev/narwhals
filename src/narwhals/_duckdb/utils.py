@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import operator
+import threading
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
 import duckdb
 from duckdb import Expression
 
-from narwhals._utils import Implementation, Version, extend_bool, isinstance_or_issubclass
+from narwhals._utils import (
+    Implementation,
+    Version,
+    extend_bool,
+    generate_temporary_column_name,
+    isinstance_or_issubclass,
+)
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
@@ -199,10 +206,24 @@ def native_to_narwhals_dtype(
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
+_TIME_ZONE_LOCK = threading.Lock()
+"""Serializes the only query Narwhals issues *implicitly* on a user's connection.
+
+A connection must not be used concurrently (see [multiple threads]), and a relation
+gives us no way to reach its own connection to open a per-thread `.cursor()`.
+This keeps `collect_schema()` safe on relations sharing a connection; explicit execution
+(`collect`, ...) still follows DuckDB's rules, see [docs/concepts/thread_safety.md].
+
+[multiple threads]: https://duckdb.org/docs/stable/guides/python/multiple_threads
+"""
+
+
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
-    result = rel.query(
-        "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
-    ).fetchone()
+    with _TIME_ZONE_LOCK:
+        result = rel.query(
+            "duckdb_settings()",
+            "select value from duckdb_settings() where name = 'TimeZone'",
+        ).fetchone()
     assert result is not None  # noqa: S101
     return result[0]  # type: ignore[no-any-return]
 
@@ -335,6 +356,26 @@ def generate_partition_by_sql(*partition_by: str | Expression) -> str:
 
 def join_column_names(*names: str) -> str:
     return ", ".join(str(col(name)) for name in names)
+
+
+def temporary_view_name() -> str:
+    """Unique name for `DuckDBPyRelation.query`'s `virtual_table_name`.
+
+    `rel.query(view, sql)` registers `rel` as a view named `view` and runs `sql` on
+    `rel`'s own connection (see [relational api]). We prefer it to `duckdb.sql(statement)`,
+    which uses the global default connection and cannot see relations from other
+    connections (see [using connections in parallel pythonprograms]).
+
+    The name must be unique per call: views persist and the lazy result re-binds by
+    name on execution, so a reused name shadows earlier views and corrupts their plans.
+    `rel.query` must also run in the frame whose locals the SQL references, as
+    [replacement scans] only see the caller's frame [3].
+
+    [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
+    [using connections in parallel pythonprograms]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
+    [replacement scans]: https://duckdb.org/docs/current/clients/c/replacement_scans
+    """
+    return generate_temporary_column_name(8, [], prefix="_narwhals_")
 
 
 def generate_order_by_sql(
