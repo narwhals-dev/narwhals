@@ -112,9 +112,10 @@ class AggExpr:
         )
         return self
 
-    def _getitem_aggs(self, group_by: PandasLikeGroupBy) -> pd.DataFrame | pd.Series[Any]:
+    def _getitem_aggs(
+        self, group_by: PandasLikeGroupBy, grouped: NativeGroupBy
+    ) -> pd.DataFrame | pd.Series[Any]:
         """Evaluate the wrapped expression as a group_by operation."""
-        grouped = group_by._grouped
         result: pd.DataFrame | pd.Series[Any]
         names = self.output_names
         if self.is_len() and self.is_top_level_function():
@@ -296,13 +297,13 @@ class PandasLikeGroupBy(
             ).groupby(self._keys.copy(), **self._group_by_kwargs)
         else:
             grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
-        self._grouped = grouped
-
+        # NOTE: `grouped` varies per `agg` call, so pass it along rather than stashing it
+        # on `self`: a shared `GroupBy` would let one call read another's grouping.
         if all_aggs_are_simple:
             result: pd.DataFrame
             if agg_exprs:
                 ns = self.compliant.__narwhals_namespace__()
-                result = ns._concat_horizontal(self._getitem_aggs(agg_exprs))
+                result = ns._concat_horizontal(self._getitem_aggs(agg_exprs, grouped))
             else:
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(grouped.groups), columns=self._keys
@@ -337,9 +338,9 @@ class PandasLikeGroupBy(
         )
 
     def _getitem_aggs(
-        self, exprs: Iterable[AggExpr], /
+        self, exprs: Iterable[AggExpr], grouped: NativeGroupBy, /
     ) -> list[pd.DataFrame | pd.Series[Any]]:
-        return [e._getitem_aggs(self) for e in exprs]
+        return [e._getitem_aggs(self, grouped) for e in exprs]
 
     def _apply_aggs(
         self, grouped: NativeGroupBy, exprs: Iterable[PandasLikeExpr]
