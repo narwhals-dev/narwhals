@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+import threading
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any
 
@@ -205,10 +206,24 @@ def native_to_narwhals_dtype(
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 
 
+_TIME_ZONE_LOCK = threading.Lock()
+"""Serializes the only query Narwhals issues *implicitly* on a user's connection.
+
+A connection must not be used concurrently (see [multiple threads]), and a relation
+gives us no way to reach its own connection to open a per-thread `.cursor()`.
+This keeps `collect_schema()` safe on relations sharing a connection; explicit execution
+(`collect`, ...) still follows DuckDB's rules, see [docs/concepts/thread_safety.md].
+
+[multiple threads]: https://duckdb.org/docs/stable/guides/python/multiple_threads
+"""
+
+
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
-    result = rel.query(
-        "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
-    ).fetchone()
+    with _TIME_ZONE_LOCK:
+        result = rel.query(
+            "duckdb_settings()",
+            "select value from duckdb_settings() where name = 'TimeZone'",
+        ).fetchone()
     assert result is not None  # noqa: S101
     return result[0]  # type: ignore[no-any-return]
 
