@@ -707,7 +707,8 @@ def scan_csv(
     Note:
         For the DuckDB backend, a `connection` object can be passed in `kwargs`
         to read through a specific `DuckDBPyConnection` instead of the
-        process-global default connection.
+        process-global default connection. Reading through a per-thread connection
+        is what makes concurrent reads safe, see [thread safety](../concepts/thread_safety.md).
 
     Arguments:
         source: Path to a file.
@@ -837,7 +838,8 @@ def scan_parquet(
     Note:
         For the DuckDB backend, a `connection` object can be passed in `kwargs`
         to read through a specific `DuckDBPyConnection` instead of the
-        process-global default connection.
+        process-global default connection. Reading through a per-thread connection
+        is what makes concurrent reads safe, see [thread safety](../concepts/thread_safety.md).
 
     Arguments:
         source: Path to a file.
