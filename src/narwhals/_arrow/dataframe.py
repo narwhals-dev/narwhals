@@ -708,6 +708,17 @@ class ArrowDataFrame(
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        native = self.native
+        # `with_type` keeps each field's name, nullability and metadata.
+        target = pa.schema(
+            field.with_type(narwhals_to_native_dtype(dtypes[field.name], self._version))
+            if field.name in dtypes
+            else field
+            for field in native.schema
+        )
+        return self._with_native(native.cast(target), validate_column_names=False)
+
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
