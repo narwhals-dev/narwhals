@@ -176,6 +176,8 @@ jobs:
           # NOTE: Clear PYTEST_ADDOPTS since xdist forks processes,
           # and the point here is threads within one process
           PYTEST_ADDOPTS: ""
+        # TODO(Unassigned): Add other backends (duckdb, polars, ...) as they rollout free-threaded support
+        # polars: https://github.com/pola-rs/polars/issues/27955
         run: |
           make run-ci \
           DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" \
