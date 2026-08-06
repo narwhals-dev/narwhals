@@ -60,6 +60,7 @@ from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
     InvalidOperationError,
+    PluginError,
     ShapeError,
 )
 
@@ -77,11 +78,14 @@ if TYPE_CHECKING:
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
+        CompliantDataFrameAny,
+        CompliantSeriesAny,
+        EagerNamespaceAny,
         EvalNames,
         NativeDataFrameT,
         NativeLazyFrameT,
     )
-    from narwhals._namespace import Namespace
+    from narwhals._namespace import EagerNamespaceKnown, Namespace
     from narwhals._native import (
         NativeArrow,
         NativeCuDF,
@@ -1648,6 +1652,117 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
         Implementation.POLARS,
         Implementation.PYARROW,
     }
+
+
+# TODO(Unassigned): Generalize _hasattr_static?
+# See https://github.com/narwhals-dev/narwhals/pull/3753#discussion_r3653098839
+def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
+    """Duck-check that `obj` implements the `EagerNamespace` protocol.
+
+    Note:
+        `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
+        `not_implemented` descriptors, which exist statically but raise on instance
+        access, so the statically-retrieved attribute is checked against `not_implemented`.
+    """
+    return all(
+        (attr := getattr_static(obj, name, None)) is not None
+        and not isinstance(attr, not_implemented)
+        for name in ("_series", "_dataframe")
+    )
+
+
+def _ensure_eager_allowed(
+    namespace: object, /, *, source: str, function_name: str
+) -> EagerNamespaceAny:
+    """Raise unless `namespace` implements the `EagerNamespace` protocol."""
+    if not _is_eager_namespace(namespace):
+        msg = (
+            f"Plugin backend {source!r} does not provide eager support (its "
+            "compliant namespace does not implement the `EagerNamespace` protocol), "
+            f"but `{function_name}` is an eager-only function."
+        )
+        raise PluginError(msg)
+    return namespace
+
+
+EagerFunctionName: TypeAlias = Literal[
+    "new_series",
+    "from_dict",
+    "from_dicts",
+    "from_numpy",
+    "from_arrow",
+    "DataFrame.from_arrow",
+    "DataFrame.from_dict",
+    "DataFrame.from_dicts",
+    "DataFrame.from_numpy",
+    "Series.from_iterable",
+    "Series.from_numpy",
+]
+"""Name of an eager-only Narwhals function or constructor which accepts `backend`."""
+
+EAGER_HINT_EXAMPLES: Mapping[EagerFunctionName, str] = {
+    "new_series": "nw.new_series('a', [1,2,3], backend='pyarrow').to_frame()",
+    "from_dict": "nw.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "from_dicts": "nw.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "from_numpy": "nw.from_numpy(arr, backend='pyarrow')",
+    "from_arrow": "nw.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_arrow": "nw.DataFrame.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_dict": "nw.DataFrame.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "DataFrame.from_dicts": "nw.DataFrame.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "DataFrame.from_numpy": "nw.DataFrame.from_numpy(arr, backend='pyarrow')",
+    "Series.from_iterable": "nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
+    "Series.from_numpy": "nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
+}
+"""Per-function `.lazy(...)` hint, shown when an eager-only function is given a lazy backend."""
+
+
+def eager_namespace(
+    backend: IntoBackend[Backend | PluginName],
+    /,
+    *,
+    version: Version,
+    function_name: EagerFunctionName,
+) -> EagerNamespaceAny | EagerNamespaceKnown:
+    """Resolve `backend` to an eager-allowed compliant namespace.
+
+    Built-in eager backends resolve directly. Anything unknown to `Implementation` is
+    resolved via the plugin entry-point registry, in which case the plugin's
+    `__narwhals_namespace__` must return a namespace implementing the `EagerNamespace`
+    protocol (in particular, the `_series` and `_dataframe` properties).
+    Built-in lazy-only backends raise an informative `ValueError`, suggesting the
+    `EAGER_HINT_EXAMPLES` entry for `function_name` followed by a `.lazy(...)` call.
+    """
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        return version.namespace.from_backend(implementation).compliant
+    if implementation is not Implementation.UNKNOWN:
+        msg = (
+            f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
+            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+            f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
+        )
+        raise ValueError(msg)
+    from narwhals.plugins import _backend_namespace, _plugin_namespace
+
+    plugin = _backend_namespace(backend)
+    namespace = _plugin_namespace(plugin, version=version)
+    return _ensure_eager_allowed(
+        namespace, source=plugin.__name__, function_name=function_name
+    )
+
+
+def eager_namespace_from_compliant(
+    compliant_object: CompliantDataFrameAny | CompliantSeriesAny, /, *, function_name: str
+) -> EagerNamespaceAny:
+    """Resolve the eager namespace of a compliant object originating from a plugin.
+
+    `Implementation.UNKNOWN` cannot be resolved back to a plugin, so methods which
+    internally construct series use the namespace of the compliant object itself.
+    """
+    namespace = compliant_object.__narwhals_namespace__()
+    return _ensure_eager_allowed(
+        namespace, source=type(namespace).__name__, function_name=function_name
+    )
 
 
 def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
