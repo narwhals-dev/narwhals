@@ -561,9 +561,58 @@ def narwhals_to_native_arrow_dtype(
     raise NotImplementedError(msg)
 
 
+def _cast_integer_non_strict(
+    native: pd.Series[Any],
+    dtype: IntoDType,
+    *,
+    pd_dtype: Any,
+    dtype_backend: DTypeBackend,
+    implementation: Implementation,
+    version: Version,
+) -> pd.Series[Any]:
+    base_type = dtype.base_type()
+    source_is_numeric = pd.api.types.is_numeric_dtype(native.dtype)
+    numeric = pd.to_numeric(native, errors="coerce")
+    if (
+        not source_is_numeric
+        and pd.api.types.is_float_dtype(numeric.dtype)
+        and numeric.abs().gt(2**53).any()
+    ):
+        msg = (
+            "Pandas converted integer-like input outside the exact Float64 range "
+            "while performing a non-strict cast. This conversion is not supported "
+            "because it may silently lose integer precision."
+        )
+        raise NotImplementedError(msg)
+
+    truncated = np.trunc(numeric)
+    if source_is_numeric:
+        # Match Pandas' native numeric-to-integer cast, which truncates fractions.
+        numeric = truncated
+    else:
+        # Pandas does not consider fractional text to be valid integer text.
+        numeric = numeric.where(numeric.isna() | numeric.eq(truncated))
+
+    lo, hi = INTEGER_BOUNDS[base_type]
+    numeric = numeric.where(numeric.isna() | numeric.between(lo, hi))
+    target: Any = pd_dtype
+    if (
+        dtype_backend is None
+        and implementation is not Implementation.CUDF
+        and numeric.isna().any()
+    ):
+        # A plain NumPy integer dtype can't hold a null, so use Pandas'
+        # nullable representation when coercion introduces or preserves one.
+        target = narwhals_to_native_dtype(
+            dtype, "numpy_nullable", implementation, version
+        )
+    return numeric.astype(target)
+
+
 def cast_non_strict(
     native: pd.Series[Any],
     dtype: IntoDType,
+    *,
     pd_dtype: Any,
     dtype_backend: DTypeBackend,
     implementation: Implementation,
@@ -575,31 +624,31 @@ def cast_non_strict(
     tools, so that values which can't be cast become null instead of raising.
     """
     base_type = dtype.base_type()
-    if base_type.is_integer() or base_type.is_float():
+    if base_type.is_integer():
+        return _cast_integer_non_strict(
+            native,
+            dtype,
+            pd_dtype=pd_dtype,
+            dtype_backend=dtype_backend,
+            implementation=implementation,
+            version=version,
+        )
+    if base_type.is_float():
         numeric = pd.to_numeric(native, errors="coerce")
-        target: Any = pd_dtype
-        if bounds := INTEGER_BOUNDS.get(base_type):
-            lo, hi = bounds
-            numeric = numeric.where(numeric.isna() | numeric.between(lo, hi))
-            if (
-                dtype_backend is None
-                and implementation is not Implementation.CUDF
-                and numeric.isna().any()
-            ):
-                # A plain NumPy integer dtype can't hold a null, so upgrade to the
-                # nullable flavor, but only once we know we actually introduced one.
-                target = narwhals_to_native_dtype(
-                    dtype, "numpy_nullable", implementation, version
-                )
-        return numeric.astype(target)
-    if issubclass(base_type, (dtypes.Datetime, dtypes.Date)):
+        return numeric.astype(pd_dtype)
+    if issubclass(base_type, dtypes.Datetime):
+        converted = pd.to_datetime(native, errors="coerce")
+        # `to_datetime` parses at nanosecond resolution. Normalize before casting
+        # to an Arrow-backed coarser unit, which otherwise rejects lossy conversion.
+        converted = converted.dt.as_unit(dtype.time_unit)
+        return converted.astype(pd_dtype)
+    if issubclass(base_type, dtypes.Date):
         return pd.to_datetime(native, errors="coerce").astype(pd_dtype)
     if issubclass(base_type, dtypes.Duration):
         return pd.to_timedelta(native, errors="coerce").astype(pd_dtype)
-    # Other targets (Boolean, String, Categorical, Struct, ...): Polars itself mostly
-    # disallows/doesn't lose data on these combinations anyway (e.g. casting `String`
-    # to `Boolean` already raises in Polars regardless of `strict`), so a plain cast
-    # is the correct match here too.
+    # Pandas has no coercing conversion API for the remaining target families.
+    # Delegate to its regular cast rather than inventing cross-backend semantics;
+    # unsupported conversions may therefore still raise with `strict=False`.
     return native.astype(pd_dtype)
 
 

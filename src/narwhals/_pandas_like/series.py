@@ -332,10 +332,10 @@ class PandasLikeSeries(EagerSeries[Any]):
             native = cast_non_strict(
                 self.native,
                 dtype,
-                pd_dtype,
-                dtype_backend,
-                self._implementation,
-                self._version,
+                pd_dtype=pd_dtype,
+                dtype_backend=dtype_backend,
+                implementation=self._implementation,
+                version=self._version,
             )
         return self._with_native(native, preserve_broadcast=True)
 

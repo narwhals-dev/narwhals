@@ -114,6 +114,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             else self._function("first", expr)
         )
 
+    @staticmethod
+    def _cast_non_strict(expr: Expression, native_dtype: Any) -> Expression:
+        # DuckDB's relational API has `Expression.cast`, but does not expose a
+        # TRY_CAST expression constructor.
+        return sql_expression(f"TRY_CAST({expr} AS {native_dtype})")
+
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
@@ -273,7 +279,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         def _cast(expr: Expression, native_dtype: Any) -> Expression:
             if strict:
                 return expr.cast(native_dtype)
-            return sql_expression(f"TRY_CAST({expr} AS {native_dtype})")
+            return self._cast_non_strict(expr, native_dtype)
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
