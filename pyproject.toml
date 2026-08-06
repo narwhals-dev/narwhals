@@ -90,8 +90,8 @@ sklearn = [
 ]
 typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
   # Type checkers
-  "mypy==2.1.0",
-  "pyrefly==1.1.1",
+  "mypy",
+  "pyrefly",
   "pyright",
   # Dependencies
   "hypothesis>=6.0.0",
