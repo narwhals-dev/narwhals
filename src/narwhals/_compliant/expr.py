@@ -449,8 +449,8 @@ class EagerExpr(
             version=self._version,
         )
 
-    def cast(self, dtype: IntoDType) -> Self:
-        return self._reuse_series("cast", dtype=dtype)
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
+        return self._reuse_series("cast", dtype=dtype, strict=strict)
 
     def _with_binary(self, operator: str, other: Self, /) -> Self:
         return self._reuse_series(operator, other=other)

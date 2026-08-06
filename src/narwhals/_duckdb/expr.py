@@ -114,6 +114,12 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
             else self._function("first", expr)
         )
 
+    @staticmethod
+    def _cast_non_strict(expr: Expression, native_dtype: Any) -> Expression:
+        # DuckDB's relational API has `Expression.cast`, but does not expose a
+        # TRY_CAST expression constructor.
+        return sql_expression(f"TRY_CAST({expr} AS {native_dtype})")
+
     def __narwhals_namespace__(self) -> DuckDBNamespace:  # pragma: no cover
         from narwhals._duckdb.namespace import DuckDBNamespace
 
@@ -269,16 +275,23 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         assert value is not None  # noqa: S101
         return self._with_elementwise(_fill_constant, expression_args={"value": value})
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
+        def _cast(expr: Expression, native_dtype: Any) -> Expression:
+            if strict:
+                return expr.cast(native_dtype)
+            return self._cast_non_strict(expr, native_dtype)
+
         def func(df: DuckDBLazyFrame) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(native_dtype) for expr in self(df)]
+            return [_cast(expr, native_dtype) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
+            return [
+                _cast(expr, native_dtype) for expr in self.window_function(df, inputs)
+            ]
 
         return self.__class__(
             func,

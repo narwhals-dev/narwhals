@@ -618,7 +618,11 @@ class DaskExpr(
             version=self._version,
         )
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
+        if not strict:
+            msg = "`cast(..., strict=False)` is not yet implemented for the dask backend."
+            raise NotImplementedError(msg)
+
         def func(expr: dx.Series) -> dx.Series:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
             return expr.astype(native_dtype)

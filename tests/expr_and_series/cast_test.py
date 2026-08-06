@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING
 
 import pytest
@@ -189,6 +189,379 @@ def test_cast_to_float16(constructor: Constructor) -> None:
         result = df.select(nw.col("a").cast(nw.Float16))
         assert result.collect_schema()["a"] == nw.Float16
         assert_equal_data(result, data)
+
+
+# Backends for which `cast(..., strict=False)` isn't (yet) implemented.
+CAST_STRICT_FALSE_UNSUPPORTED = ("dask", "pyspark", "sqlframe")
+
+# The Ibis test constructor uses DuckDB, so Ibis `try_cast` compiles to DuckDB's
+# TRY_CAST and consequently has the same value-conversion semantics.
+DUCKDB_TRY_CAST_CONSTRUCTORS = ("duckdb", "ibis")
+DATETIME_PARSING_CONSTRUCTORS = (*DUCKDB_TRY_CAST_CONSTRUCTORS, "pandas")
+
+INTEGER_CAST_CASES = [
+    pytest.param(nw.Int8, -128, 127, id="int8"),
+    pytest.param(nw.Int16, -32_768, 32_767, id="int16"),
+    pytest.param(nw.Int32, -2_147_483_648, 2_147_483_647, id="int32"),
+    pytest.param(nw.Int64, -(2**63), 2**63 - 1, id="int64"),
+    pytest.param(nw.UInt8, 0, 255, id="uint8"),
+    pytest.param(nw.UInt16, 0, 65_535, id="uint16"),
+    pytest.param(nw.UInt32, 0, 2**32 - 1, id="uint32"),
+    pytest.param(nw.UInt64, 0, 2**64 - 1, id="uint64"),
+]
+
+
+def test_cast_strict_false_string_to_numeric(constructor: Constructor) -> None:
+    data = {"a": ["1", "2", "-1.5", "abc", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Int64, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Int64, strict=False))
+    assert result.collect_schema()["a"] == nw.Int64
+    expected = (
+        [1, 2, -2, None, None]
+        if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS)
+        else [1, 2, None, None, None]
+    )
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(("dtype", "lower", "upper"), INTEGER_CAST_CASES)
+def test_cast_strict_false_string_to_integer_bounds(
+    constructor: Constructor, dtype: type[NonNestedDType], lower: int, upper: int
+) -> None:
+    """Exercise the VARCHAR-to-integer portion of the cast matrix at each bound."""
+    data = {
+        "a": [
+            str(lower),
+            str(upper),
+            str(lower - 1),
+            str(upper + 1),
+            "not-a-number",
+            None,
+        ]
+    }
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(dtype, strict=False)).lazy().collect()
+        return
+
+    if "pandas" in str(constructor) and dtype in {nw.Int64, nw.UInt64}:
+        # `to_numeric` may promote mixed in/out-of-range 64-bit integer text to
+        # Float64, at which point the valid boundary values are no longer exact.
+        with pytest.raises(NotImplementedError, match="exact Float64 range"):
+            df.select(nw.col("a").cast(dtype, strict=False))
+        return
+
+    result = df.select(nw.col("a").cast(dtype, strict=False))
+    assert result.collect_schema()["a"] == dtype
+    assert_equal_data(result, {"a": [lower, upper, None, None, None, None]})
+
+
+def test_cast_strict_false_string_to_float(constructor: Constructor) -> None:
+    data = {"a": ["-1.5", "0", "2.25", "not-a-number", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Float64, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Float64, strict=False))
+    assert result.collect_schema()["a"] == nw.Float64
+    assert_equal_data(result, {"a": [-1.5, 0.0, 2.25, None, None]})
+
+
+def test_cast_strict_false_string_to_datetime(constructor: Constructor) -> None:
+    data = {"a": ["2020-01-02 03:04:05", "not-a-datetime", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Datetime, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Datetime, strict=False))
+    assert result.collect_schema()["a"] == nw.Datetime
+    # Direct Polars casting is not datetime parsing. DuckDB TRY_CAST and Pandas'
+    # to_datetime do parse valid formatted timestamp strings.
+    expected = (
+        [datetime(2020, 1, 2, 3, 4, 5), None, None]
+        if any(x in str(constructor) for x in DATETIME_PARSING_CONSTRUCTORS)
+        else [None, None, None]
+    )
+    assert_equal_data(result, {"a": expected})
+
+
+def test_cast_strict_false_string_to_date(constructor: Constructor) -> None:
+    data = {"a": ["2020-01-02", "not-a-date", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Date, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Date, strict=False))
+    assert result.collect_schema()["a"] == nw.Date
+    assert_equal_data(result, {"a": [date(2020, 1, 2), None, None]})
+
+
+def test_cast_strict_false_integer_to_unsigned(constructor: Constructor) -> None:
+    data = {"a": [-1, 0, 255, 256, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.UInt8, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.UInt8, strict=False))
+    assert result.collect_schema()["a"] == nw.UInt8
+    assert_equal_data(result, {"a": [None, 0, 255, None, None]})
+
+
+def test_cast_strict_false_float_to_int(constructor: Constructor) -> None:
+    data = {"a": [1.9, -1.9, 127.0, 1e30, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Int8, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Int8, strict=False))
+    assert result.collect_schema()["a"] == nw.Int8
+    expected = (
+        [2, -2, 127, None, None]
+        if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS)
+        else [1, -1, 127, None, None]
+    )
+    assert_equal_data(result, {"a": expected})
+
+
+def test_cast_strict_false_numeric_to_numeric(constructor: Constructor) -> None:
+    # Plain, in-range numeric-to-numeric casts: `strict=False` should behave
+    # identically to `strict=True` when nothing is actually invalid.
+    data = {"a": [1, 2, 3]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Float64, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Float64, strict=False))
+    assert result.collect_schema()["a"] == nw.Float64
+    assert_equal_data(result, data)
+
+
+def test_cast_strict_false_numeric_to_boolean(constructor: Constructor) -> None:
+    data = {"a": [0, 1, 2, -1, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Boolean, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Boolean, strict=False))
+    assert result.collect_schema()["a"] == nw.Boolean
+    expected = (
+        [False, True, True, True, True]
+        if "pandas_constructor" in str(constructor)
+        else [False, True, True, True, None]
+    )
+    assert_equal_data(result, {"a": expected})
+
+
+def test_cast_strict_false_string_to_boolean(constructor: Constructor) -> None:
+    data = {"a": ["true", "false", "1", "not-a-boolean", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS):
+        result = df.select(nw.col("a").cast(nw.Boolean, strict=False))
+        assert_equal_data(result, {"a": [True, False, True, None, None]})
+    elif "pandas_constructor" in str(constructor):
+        result = df.select(nw.col("a").cast(nw.Boolean, strict=False))
+        assert_equal_data(result, {"a": [True, True, True, True, True]})
+    else:
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(nw.col("a").cast(nw.Boolean, strict=False)).lazy().collect()
+
+
+def test_cast_strict_false_date_to_datetime(constructor: Constructor) -> None:
+    data = {"a": [date(2020, 1, 2), date(2024, 12, 31), None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Datetime, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Datetime, strict=False))
+    assert result.collect_schema()["a"] == nw.Datetime
+    assert_equal_data(result, {"a": [datetime(2020, 1, 2), datetime(2024, 12, 31), None]})
+
+
+def test_cast_strict_false_datetime_to_date(constructor: Constructor) -> None:
+    data = {
+        "a": [datetime(2020, 1, 2, 3, 4, 5), datetime(2024, 12, 31, 23, 59, 59), None]
+    }
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Date, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Date, strict=False))
+    assert result.collect_schema()["a"] == nw.Date
+    assert_equal_data(result, {"a": [date(2020, 1, 2), date(2024, 12, 31), None]})
+
+
+def test_cast_strict_false_numeric_to_date(constructor: Constructor) -> None:
+    data = {"a": [0.0, 1.0, -1.0, 1.9, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Date, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Date, strict=False))
+    assert result.collect_schema()["a"] == nw.Date
+    if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS):
+        expected = [None, None, None, None, None]
+    elif "pandas" in str(constructor):
+        # Pandas interprets numeric datetime input as nanoseconds since the epoch;
+        # converting to Date consequently places all these small values near day 0.
+        expected = [
+            date(1970, 1, 1),
+            date(1970, 1, 1),
+            date(1969, 12, 31),
+            date(1970, 1, 1),
+            None,
+        ]
+    else:
+        expected = [
+            date(1970, 1, 1),
+            date(1970, 1, 2),
+            date(1969, 12, 31),
+            date(1970, 1, 2),
+            None,
+        ]
+    assert_equal_data(result, {"a": expected})
+
+
+def test_cast_strict_false_numeric_to_datetime(constructor: Constructor) -> None:
+    data = {"a": [0.0, 1.0, -1.0, 1.9, None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Datetime, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Datetime, strict=False))
+    assert result.collect_schema()["a"] == nw.Datetime
+    if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS):
+        expected = [None, None, None, None, None]
+    elif "pandas" in str(constructor):
+        # Pandas treats numeric input as nanoseconds, then converts it to the
+        # requested Narwhals datetime unit.
+        expected = [
+            datetime(1970, 1, 1),
+            datetime(1970, 1, 1),
+            datetime(1969, 12, 31, 23, 59, 59, 999999),
+            datetime(1970, 1, 1),
+            None,
+        ]
+    else:
+        expected = [
+            datetime(1970, 1, 1),
+            datetime(1970, 1, 1, 0, 0, 0, 1),
+            datetime(1969, 12, 31, 23, 59, 59, 999999),
+            datetime(1970, 1, 1, 0, 0, 0, 1),
+            None,
+        ]
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param([time(3, 4, 5), None], id="time"),
+        pytest.param([timedelta(days=1), None], id="duration"),
+    ],
+)
+def test_cast_strict_false_temporal_to_date_or_datetime_duckdb(
+    constructor: Constructor, data: list[time] | list[timedelta]
+) -> None:
+    if not any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS):
+        pytest.skip("DuckDB-specific TRY_CAST behavior")
+
+    df = nw.from_native(constructor({"a": data}))
+    for dtype in (nw.Date, nw.Datetime):
+        result = df.select(nw.col("a").cast(dtype, strict=False))
+        assert_equal_data(result, {"a": [None, None]})
+
+
+def test_cast_strict_false_string_to_binary(constructor: Constructor) -> None:
+    data = {"a": ["plain ASCII", "café", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in CAST_STRICT_FALSE_UNSUPPORTED):
+        with pytest.raises(NotImplementedError):
+            df.select(nw.col("a").cast(nw.Binary, strict=False)).lazy().collect()
+        return
+
+    result = df.select(nw.col("a").cast(nw.Binary, strict=False))
+    assert result.collect_schema()["a"] == nw.Binary
+    expected = (
+        [b"plain ASCII", None, None]
+        if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS)
+        else [b"plain ASCII", b"caf\xc3\xa9", None]
+    )
+    assert_equal_data(result, {"a": expected})
+
+
+def test_cast_strict_false_invalid_utf8_to_string_unsupported(
+    constructor: Constructor,
+) -> None:
+    data = {"a": [b"valid UTF-8", b"\xff", None]}
+    df = nw.from_native(constructor(data))
+
+    if any(x in str(constructor) for x in DUCKDB_TRY_CAST_CONSTRUCTORS):
+        result = df.select(nw.col("a").cast(nw.String, strict=False))
+        assert_equal_data(result, {"a": ["valid UTF-8", "\\xFF", None]})
+    else:
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(nw.col("a").cast(nw.String, strict=False)).lazy().collect()
+
+
+def test_cast_strict_false_to_string_matches_duckdb_strict() -> None:
+    duckdb = pytest.importorskip("duckdb")
+    native = duckdb.sql(
+        """
+        SELECT
+            [1, 2] AS list,
+            [1, 2]::INTEGER[2] AS array,
+            INTERVAL '1 day' AS duration
+        """
+    )
+    df = nw.from_native(native)
+
+    strict = df.select(nw.all().cast(nw.String))
+    non_strict = df.select(nw.all().cast(nw.String, strict=False))
+
+    assert nw.to_native(non_strict).fetchall() == nw.to_native(strict).fetchall()
 
 
 def test_cast_string() -> None:

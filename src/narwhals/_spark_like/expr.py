@@ -248,7 +248,11 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         neg = cast("Callable[..., Column]", operator.neg)
         return self._with_elementwise(neg)
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
+        if not strict:
+            msg = "`cast(..., strict=False)` is not yet implemented for spark-like backends."
+            raise NotImplementedError(msg)
+
         def func(df: SparkLikeLazyFrame) -> Sequence[Column]:
             spark_dtype = narwhals_to_native_dtype(
                 dtype, self._version, self._native_dtypes, df.native.sparkSession

@@ -123,6 +123,22 @@ def maybe_extract_py_scalar(value: Any, return_py_scalar: bool) -> Any:  # noqa:
     return value
 
 
+def _cast_scalar_non_strict(value: ScalarAny, data_type: pa.DataType) -> ScalarAny:
+    try:
+        return pc.cast(value, data_type)
+    except pa.ArrowInvalid:
+        return pa.scalar(None, type=data_type)
+
+
+def _cast_chunk_non_strict(chunk: ArrayAny, data_type: pa.DataType) -> ArrayAny:
+    try:
+        return pc.cast(chunk, data_type)
+    except pa.ArrowInvalid:
+        return pa.array(
+            [_cast_scalar_non_strict(value, data_type) for value in chunk], type=data_type
+        )
+
+
 class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     _implementation = Implementation.PYARROW
 
@@ -546,9 +562,25 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def is_nan(self) -> Self:
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
-        return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
+        if strict:
+            native = pc.cast(self.native, data_type)
+        else:
+            dtypes = self._version.dtypes
+            base_type = dtype.base_type()
+            is_fallible_cast = base_type.is_numeric() or issubclass(
+                base_type, (dtypes.Date, dtypes.Datetime, dtypes.Duration)
+            )
+            if not is_fallible_cast:
+                native = pc.cast(self.native, data_type)
+            else:
+                chunks = [
+                    _cast_chunk_non_strict(chunk, data_type)
+                    for chunk in self.native.chunks
+                ]
+                native = pa.chunked_array(chunks, type=data_type)
+        return self._with_native(native, preserve_broadcast=True)
 
     def null_count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)

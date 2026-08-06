@@ -285,11 +285,13 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         assert value is not None  # noqa: S101
         return self._with_callable(_fill_null, expression_args={"value": value})
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         def _func(expr: ir.Column) -> ir.Value:
             native_dtype = narwhals_to_native_dtype(dtype, self._version)
-            # ibis `cast` overloads do not include DataType, only literals
-            return expr.cast(native_dtype)  # type: ignore[unused-ignore]
+            # ibis `cast`/`try_cast` overloads do not include DataType, only literals
+            if strict:
+                return expr.cast(native_dtype)  # type: ignore[unused-ignore]
+            return expr.try_cast(native_dtype)  # type: ignore[unused-ignore]
 
         return self._with_callable(_func)
 

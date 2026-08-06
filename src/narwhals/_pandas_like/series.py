@@ -15,6 +15,7 @@ from narwhals._pandas_like.utils import (
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
+    cast_non_strict,
     get_dtype_backend,
     import_array_module,
     narwhals_to_native_dtype,
@@ -312,19 +313,31 @@ class PandasLikeSeries(EagerSeries[Any]):
 
         return None if in_place else self._with_native(series)
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         if self.dtype == dtype and self.native.dtype != "object":
             # Avoid dealing with pandas' type-system if we can. Note that it's only
             # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
             # for an example of why.
             return self._with_native(self.native, preserve_broadcast=True)
+        dtype_backend = get_dtype_backend(self.native.dtype, self._implementation)
         pd_dtype = narwhals_to_native_dtype(
             dtype,
-            dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
+            dtype_backend=dtype_backend,
             implementation=self._implementation,
             version=self._version,
         )
-        return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
+        if strict:
+            native = self.native.astype(pd_dtype)
+        else:
+            native = cast_non_strict(
+                self.native,
+                dtype,
+                pd_dtype=pd_dtype,
+                dtype_backend=dtype_backend,
+                implementation=self._implementation,
+                version=self._version,
+            )
+        return self._with_native(native, preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
