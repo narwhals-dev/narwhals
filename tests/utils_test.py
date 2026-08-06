@@ -202,6 +202,41 @@ def test_maybe_get_index_pandas() -> None:
     assert_index_equal(result_s, pandas_series.index)
 
 
+def test_maybe_get_index_pandas_as_series() -> None:
+    pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
+    result = nw.maybe_get_index(nw.from_native(pandas_df), as_series=True)
+    assert isinstance(result, nw.Series)
+    assert result.implementation.is_pandas()
+    assert_index_equal(pd.Index(result.to_native()), pandas_df.index)
+
+    pandas_series = pd.Series([1, 2, 3], index=[1, 2, 0])
+    result_s = nw.maybe_get_index(
+        nw.from_native(pandas_series, series_only=True), as_series=True
+    )
+    assert isinstance(result_s, nw.Series)
+    assert_index_equal(pd.Index(result_s.to_native()), pandas_series.index)
+
+
+def test_maybe_get_index_pandas_as_series_empty() -> None:
+    df = nw.from_native(pd.DataFrame({"a": []}))
+    result = nw.maybe_get_index(df, as_series=True)
+    assert isinstance(result, nw.Series)
+    assert len(result) == 0
+    series = nw.from_native(pd.Series([], dtype="float64"), series_only=True)
+    result_s = nw.maybe_get_index(series, as_series=True)
+    assert isinstance(result_s, nw.Series)
+    assert len(result_s) == 0
+
+
+def test_maybe_get_index_pandas_as_series_round_trip() -> None:
+    like = nw.from_native(pd.DataFrame({"a": [1, 2, 3]}, index=[7, 8, 9]))
+    new_series = nw.from_native(pd.Series([4, 5, 6]), series_only=True)
+    result = nw.maybe_set_index(
+        new_series, index=nw.maybe_get_index(like, as_series=True)
+    )
+    assert_index_equal(result.to_native().index, like.to_native().index)
+
+
 def test_maybe_get_index_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl
@@ -212,6 +247,16 @@ def test_maybe_get_index_polars() -> None:
     series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
     result = nw.maybe_get_index(series)
     assert result is None
+
+
+def test_maybe_get_index_polars_as_series() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    assert nw.maybe_get_index(df, as_series=True) is None
+    series = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
+    assert nw.maybe_get_index(series, as_series=True) is None
 
 
 def test_maybe_reset_index_pandas() -> None:
