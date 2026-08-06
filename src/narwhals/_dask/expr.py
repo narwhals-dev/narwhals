@@ -95,6 +95,7 @@ class DaskExpr(
     __le__ = simple_binary("__le__")
     __and__ = simple_binary("__and__")
     __or__ = simple_binary("__or__")
+    __xor__ = simple_binary("__xor__")
     __rsub__ = trivial_binary_right(lambda x, y: x - y)
     __rtruediv__ = trivial_binary_right(lambda x, y: x / y)
     __rpow__ = trivial_binary_right(lambda x, y: x**y)
