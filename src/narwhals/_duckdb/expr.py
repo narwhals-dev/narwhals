@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duckdb.dataframe import DuckDBLazyFrame
     from narwhals._duckdb.namespace import DuckDBNamespace
+    from narwhals._duckdb.utils import duckdb_dtypes
     from narwhals._typing import NoDefault
     from narwhals._utils import _LimitedContext
     from narwhals.typing import FillNullStrategy, IntoDType, RollingInterpolationMethod
@@ -270,15 +271,18 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(_fill_constant, expression_args={"value": value})
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
+        def native_dtype(df: DuckDBLazyFrame) -> duckdb_dtypes.DuckDBPyType:
+            self._validate_temporal_to_numeric_cast(df, dtype)
             tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(native_dtype) for expr in self(df)]
+            return narwhals_to_native_dtype(dtype, self._version, tz)
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            dtype_ = native_dtype(df)
+            return [expr.cast(dtype_) for expr in self(df)]
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
+            dtype_ = native_dtype(df)
+            return [expr.cast(dtype_) for expr in self.window_function(df, inputs)]
 
         return self.__class__(
             func,

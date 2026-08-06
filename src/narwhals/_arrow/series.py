@@ -34,6 +34,7 @@ from narwhals._utils import (
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -547,6 +548,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
     def cast(self, dtype: IntoDType) -> Self:
+        _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
         data_type = narwhals_to_native_dtype(dtype, self._version)
         return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
 

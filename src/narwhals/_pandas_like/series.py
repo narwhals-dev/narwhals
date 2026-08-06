@@ -27,7 +27,7 @@ from narwhals._pandas_like.utils import (
 from narwhals._typing_compat import assert_never
 from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
-from narwhals.dtypes import String
+from narwhals.dtypes import String, _validate_cast_temporal_to_numeric
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -313,6 +313,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return None if in_place else self._with_native(series)
 
     def cast(self, dtype: IntoDType) -> Self:
+        _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
         if self.dtype == dtype and self.native.dtype != "object":
             # Avoid dealing with pandas' type-system if we can. Note that it's only
             # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas

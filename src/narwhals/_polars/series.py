@@ -22,6 +22,7 @@ from narwhals._polars.utils import (
 )
 from narwhals._utils import NO_DEFAULT, Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -289,7 +290,8 @@ class PolarsSeries:
         return self._from_native_object(self.native.__getitem__(item))
 
     def cast(self, dtype: IntoDType) -> Self:
-        dtype_pl = narwhals_to_native_dtype(dtype, self._version)
+        _validate_cast_temporal_to_numeric(source=self.dtype, target=dtype)
+        dtype_pl = narwhals_to_native_dtype(dtype, version=self._version)
         return self._with_native(self.native.cast(dtype_pl))
 
     def clip(self, lower_bound: PolarsSeries, upper_bound: PolarsSeries) -> Self:
