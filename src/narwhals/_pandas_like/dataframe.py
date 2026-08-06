@@ -144,6 +144,26 @@ class PandasLikeDataFrame(
         return cls.from_native(native, context=context)
 
     @classmethod
+    def _from_pandas(cls, data: pd.DataFrame, /, *, context: _LimitedContext) -> Self:
+        """Construct a pandas-like frame from a native pandas DataFrame."""
+        impl = context._implementation
+        if impl.is_pandas():
+            native = data
+        elif impl.is_modin():
+            ns = impl.to_native_namespace()
+            native = ns.DataFrame(data)
+        elif impl.is_cudf():  # pragma: no cover
+            ns = impl.to_native_namespace()
+            native = ns.from_pandas(data)
+        else:  # pragma: no cover
+            msg = (
+                "Can't instantiate PandasLikeDataFrame from pandas DataFrame and "
+                f"implementation {impl}"
+            )
+            raise ValueError(msg)
+        return cls.from_native(native, context=context)
+
+    @classmethod
     def from_dict(
         cls,
         data: Mapping[str, Any],

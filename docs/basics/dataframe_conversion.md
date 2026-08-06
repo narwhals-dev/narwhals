@@ -63,3 +63,17 @@ print(df_to_polars(df_duckdb))
 ```
 
 It works to pass Polars to `backend` here because Polars supports the [PyCapsule Interface](https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html) for import.
+
+## Switching eager backend while staying in Narwhals
+
+`to_pandas`, `to_polars` and `to_arrow` return the native object, taking you out of the Narwhals layer.
+If you want to keep chaining Narwhals methods, use `DataFrame.with_backend` instead:
+
+```python exec="yes" source="above" session="conversion" result="python"
+df = nw.from_native(df_pandas)
+print(df.with_backend("polars").implementation)
+print(df.with_backend("pyarrow").implementation)
+```
+
+`with_backend` accepts a string (`"pandas"`, `"modin"`, `"cudf"`, `"pyarrow"`, `"polars"`),
+an `Implementation`, or a module.
