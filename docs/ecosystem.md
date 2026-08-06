@@ -2,6 +2,7 @@
 render_macros: true
 ---
 
+{% from "cards.html" import project_card_light_dark %}
 {% from "cards.html" import project_card %}
 
 # Ecosystem
@@ -9,7 +10,7 @@ render_macros: true
 The Narwhals Ecosystem is comprised of tools that rely on us and the tabular data packages we support either directly or through 
 the [plugins system](/narwhals/extending/)
 
-## Narwhals is Used by
+## Used by
 
 The following is a non-exhaustive list of {{ projects.downstream | length }} libraries and tools that choose to use Narwhals
 for their dataframe interoperability needs:
@@ -17,7 +18,11 @@ for their dataframe interoperability needs:
 <div class="project-grid">
 
 {% for project in projects.downstream %}
-    {{ project_card(project.name, project.homepage, project.logo) }}
+    {% if 'logo_dark' not in project %}
+        {{ project_card(project.name, project.homepage, project.logo_light) }}
+    {% else %}
+        {{ project_card_light_dark(project.name, project.homepage, project.logo_light, project.logo_dark) }}
+    {% endif %}
 {% endfor %}
 
 </div>
@@ -26,19 +31,23 @@ If your project is missing from the list, feel free to open a PR to add it.
 
 If you would like to chat with us, or if you need any support, please [join our Discord server](https://discord.gg/V3PqtB4VA4).
 
-## Directly Supported Tabular Data Packages
+## Builtins: Directly Supported Tabular Data Packages
 
 Narwhals directly provides support for {{ projects.upstream | length }} tabular data packages.
 
 <div class="project-grid">
 
 {% for project in projects.upstream %}
-    {{ project_card(project.name, project.homepage, project.logo) }}
+    {% if 'logo_dark' not in project %}
+        {{ project_card(project.name, project.homepage, project.logo_light) }}
+    {% else %}
+        {{ project_card_light_dark(project.name, project.homepage, project.logo_light, project.logo_dark) }}
+    {% endif %}
 {% endfor %}
 
 </div>
 
-## Plugin Supported Tabular Data Packages
+## Plugins: Externally Supported Tabular Data Packages
 
 Narwhals additionally provides support for {{ projects.plugin | length }} tabular data package(s), through plugins.
 See [Extensions and Plugins](/narwhals/extending/) for how to write your own plugin and bring Narwhals to another tabular data package.
@@ -46,7 +55,11 @@ See [Extensions and Plugins](/narwhals/extending/) for how to write your own plu
 <div class="project-grid">
 
 {% for project in projects.plugin %}
-    {{ project_card(project.name, project.homepage, project.logo) }}
+    {% if 'logo_dark' not in project %}
+        {{ project_card(project.name, project.homepage, project.logo_light) }}
+    {% else %}
+        {{ project_card_light_dark(project.name, project.homepage, project.logo_light, project.logo_dark) }}
+    {% endif %}
 {% endfor %}
 
 </div>

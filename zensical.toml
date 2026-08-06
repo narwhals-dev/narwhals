@@ -159,8 +159,5 @@ emoji_generator = "zensical.extensions.emoji.to_svg"
 [project.markdown_extensions.pymdownx.arithmatex]
 generic = true
 
-[project.markdown_extensions.zensical.extensions.macros]
-include_dir = "docs/includes"
-
-[project.markdown_extensions.zensical.extensions.macros.include_yaml]
-projects = "docs/data/projects.yml"
+[project.markdown_extensions.zensical.extensions]
+macros = { include_dir = "docs/includes", include_yaml = { projects = "docs/data/projects.yml" } }

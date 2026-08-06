@@ -45,7 +45,8 @@
     margin: 0.75rem auto 1rem;
     border: 0;
     border-top: 1px solid var(--md-default-fg-color--light);
-    opacity: 0.6;}
+    opacity: 0.6;
+}
 
 .project-card img {
     width: min(120px, 60%);
@@ -71,4 +72,42 @@
     .project-card {
         min-height: 140px;
     }
+}
+
+.logo-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100px;
+}
+
+
+.logo-area {
+    width: 100%;
+}
+.logo-area img {
+    max-width: 100%;
+    max-height: 80px;
+}
+
+.logo-dark {
+    display: none;
+}
+
+[data-md-color-scheme="slate"] .bg-toggle-dark {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+}
+
+[data-md-color-scheme="slate"] .bg-toggle-darkish {
+    background-color: rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+}
+
+[data-md-color-scheme="slate"] .logo-light {
+    display: none;
+}
+
+[data-md-color-scheme="slate"] .logo-dark {
+    display: block;
 }
