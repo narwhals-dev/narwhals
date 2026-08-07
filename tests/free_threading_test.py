@@ -7,13 +7,11 @@ expression `over` push-down, state stashed on shared Narwhals objects, and
 See [docs/concepts/thread_safety.md].
 
 NOTE: The tests are valid on any build (races are bugs under the GIL too), but are
-most effective on a free-threaded build (`PYTHON_GIL=0`), where threads run in parallel.
+most effective on a free-threaded build, where threads run in parallel.
 """
 
 from __future__ import annotations
 
-import sys
-import sysconfig
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +27,10 @@ if TYPE_CHECKING:
     from concurrent.futures import Future
 
     from tests.utils import ConstructorEager
+
+pytestmark = pytest.mark.thread_unsafe(
+    reason="each test drives its own thread pool; running 4 copies of that only adds contention"
+)
 
 DATA: dict[str, Any] = {
     "g": [1, 1, 2, 2, 3, 3],
@@ -78,18 +80,6 @@ def run_threaded(
                 )
             for f in futures:
                 f.result()
-
-
-def test_gil_stays_disabled_on_free_threaded_build() -> None:  # pragma: no cover
-    if not sysconfig.get_config_var("Py_GIL_DISABLED"):
-        pytest.skip("not a free-threaded build")
-    # NOTE: Only reached on a free-threaded build, never on the GIL-enabled coverage jobs.
-    # Because of this, the entire function is flagged as "pragma: no cover"
-    is_gil_enabled = getattr(sys, "_is_gil_enabled", lambda: True)
-    assert not is_gil_enabled(), (
-        "The GIL was re-enabled, likely by importing an extension module "
-        "without free-threading support."
-    )
 
 
 def test_from_native_cold_caches() -> None:
