@@ -430,9 +430,11 @@ class Implementation(NoAutoEnum):
         return (
             cls.from_string(backend)
             if isinstance(backend, str)
-            else backend
-            if isinstance(backend, Implementation)
-            else cls.from_native_namespace(backend)
+            else (
+                backend
+                if isinstance(backend, Implementation)
+                else cls.from_native_namespace(backend)
+            )
         )
 
     def to_native_namespace(self) -> ModuleType:
@@ -1263,6 +1265,36 @@ def generate_temporary_column_name(
             raise AssertionError(msg)
 
 
+def generate_pivot_column_names(
+    on_columns: Sequence[Any], values: Sequence[str], *, separator: str
+) -> list[tuple[str, Any, str]]:
+    result = []
+    for value in values:
+        for on_value in on_columns:
+            pivot_name = str(on_value)
+            output_name = (
+                separator.join((value, pivot_name)) if len(values) > 1 else pivot_name
+            )
+            result.append((value, on_value, output_name))
+    return result
+
+
+def resolve_pivot_index_values(
+    columns: Sequence[str],
+    on: str,
+    index: Sequence[str] | None,
+    values: Sequence[str] | None,
+) -> tuple[list[str], list[str]]:
+    if values is None:
+        if index is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+        values = [name for name in columns if name not in {on, *index}]
+    if index is None:
+        index = [name for name in columns if name not in {on, *values}]
+    return list(index), list(values)
+
+
 def parse_columns_to_drop(
     frame: _StoresColumns, subset: Iterable[str], /, *, strict: bool
 ) -> list[str]:
@@ -1552,9 +1584,11 @@ def _parse_time_unit_and_time_zone(
     time_zones: Set[str | None] = (
         {None}
         if time_zone is None
-        else {str(time_zone)}
-        if isinstance(time_zone, (str, timezone))
-        else {str(tz) if tz is not None else None for tz in time_zone}
+        else (
+            {str(time_zone)}
+            if isinstance(time_zone, (str, timezone))
+            else {str(tz) if tz is not None else None for tz in time_zone}
+        )
     )
     return time_units, time_zones
 
@@ -1595,10 +1629,12 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: CompliantDataFrame[
-        CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co
-    ]
-    | Any,
+    obj: (
+        CompliantDataFrame[
+            CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co
+        ]
+        | Any
+    ),
 ) -> TypeIs[
     CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co]
 ]:
@@ -2122,6 +2158,7 @@ class _Implementation:
     def __get__(
         self, instance: Narwhals[NativePySpark | NativePySparkConnect], owner: Any
     ) -> _PySparkImpl | _PySparkConnectImpl: ...
+
     # NOTE: https://docs.python.org/3/howto/descriptor.html#invocation-from-a-class
     @overload
     def __get__(self, instance: None, owner: type[Narwhals[Any]]) -> Self: ...
@@ -2162,6 +2199,7 @@ if sys.platform != "win32":
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
+
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
