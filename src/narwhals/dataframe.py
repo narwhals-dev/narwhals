@@ -89,6 +89,7 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
+        LazyPivotAgg,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
@@ -2155,7 +2156,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def pivot(
         self,
-        on: str | list[str],
+        on: str,
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
@@ -3295,6 +3296,51 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         This is a no-op, and exists only for compatibility with `DataFrame.lazy`.
         """
         return self
+
+    def pivot(
+        self,
+        on: str | list[str],
+        on_columns: Sequence[Any],
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: LazyPivotAgg | None = None,
+        maintain_order: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        r"""Create a spreadsheet-style pivot table as a LazyFrame.
+
+        This operation is currently supported for Polars LazyFrames. Unlike an eager
+        pivot, the values that will become output columns must be supplied explicitly
+        via `on_columns`, allowing the output schema to be determined lazily.
+
+        Arguments:
+            on: Column whose values will be used as the new output columns.
+            on_columns: Value combinations to consider for the output table.
+            index: Column(s) that remain from the input to the output.
+            values: Column(s) containing the values to place in the output table.
+            aggregate_function: Aggregation to apply when multiple values occur in a
+                group. One of {'min', 'max', 'first', 'last', 'sum', 'mean',
+                'median', 'len', 'item'}, or None.
+            maintain_order: Preserve discovery order of the index values.
+            separator: Separator used in generated column names.
+        """
+        if values is None and index is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+        values = [values] if isinstance(values, str) else values
+        index = [index] if isinstance(index, str) else index
+        return self._with_compliant(
+            self._compliant_frame.pivot(
+                on=on,
+                on_columns=on_columns,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                maintain_order=maintain_order,
+                separator=separator,
+            )
+        )
 
     def unpivot(
         self,

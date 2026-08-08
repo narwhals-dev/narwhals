@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoDType,
         JoinStrategy,
+        LazyPivotAgg,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
@@ -763,6 +764,30 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
+
+    @requires.backend_version((1, 43))
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: LazyPivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        return self._with_native(
+            self.native.pivot(
+                on,
+                on_columns,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                maintain_order=maintain_order,
+                separator=separator,
+            )
+        )
 
     def group_by(
         self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool

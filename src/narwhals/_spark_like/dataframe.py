@@ -20,9 +20,11 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     extend_bool,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    resolve_pivot_index_values,
     to_pyarrow_table,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -49,7 +51,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import JoinStrategy, LazyPivotAgg, UniqueKeepStrategy
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -560,6 +562,68 @@ class SparkLikeLazyFrame(
         if index is None:
             unpivoted_native_frame = unpivoted_native_frame.drop(*ids)
         return self._with_native(unpivoted_native_frame)
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: LazyPivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        if maintain_order:
+            msg = (
+                "Spark-like backends do not support maintaining row order during a pivot."
+            )
+            raise NotImplementedError(msg)
+        if aggregate_function is None or aggregate_function == "item":
+            msg = (
+                "Spark-like backends do not support pivoting without aggregation "
+                "because they cannot validate that each group contains a single value."
+            )
+            raise NotImplementedError(msg)
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+
+        if aggregate_function == "len":
+            aggregations = [
+                self._F.sum(
+                    self._F.when(
+                        self._F.col(on) == self._F.lit(on_value), self._F.lit(1)
+                    ).otherwise(self._F.lit(0))
+                ).alias(output_name)
+                for _, on_value, output_name in generate_pivot_column_names(
+                    on_columns, values, separator=separator
+                )
+            ]
+            result = (
+                self.native.groupBy(*index).agg(*aggregations)
+                if index
+                else self.native.agg(*aggregations)
+            )
+            return self._with_native(result)
+
+        aggregations = [
+            getattr(self._F, aggregate_function)(value).alias(value)
+            for value in values
+        ]
+        result = (
+            self.native.groupBy(*index)
+            .pivot(on, list(on_columns))
+            .agg(*aggregations)
+        )
+        pivoted = []
+        for value, on_value, output_name in generate_pivot_column_names(
+            on_columns, values, separator=separator
+        ):
+            source_name = str(on_value) if len(values) == 1 else f"{on_value}_{value}"
+            expression = self._F.col(source_name)
+            if aggregate_function == "sum":
+                expression = self._F.coalesce(expression, self._F.lit(0))
+            pivoted.append(expression.alias(output_name))
+        return self._with_native(result.select(*index, *pivoted))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
         if order_by is None:

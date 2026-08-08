@@ -24,9 +24,11 @@ from narwhals._utils import (
     ValidateBackendVersion,
     Version,
     extend_bool,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     parse_columns_to_drop,
     requires,
+    resolve_pivot_index_values,
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
@@ -53,7 +55,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        LazyPivotAgg,
+        UniqueKeepStrategy,
+    )
 
 
 class DuckDBLazyFrame(
@@ -555,6 +562,80 @@ class DuckDBLazyFrame(
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: LazyPivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        # DuckDB does not have pivot in its relational API
+        if maintain_order:
+            msg = "DuckDB does not support maintaining row order during a pivot."
+            raise NotImplementedError(msg)
+        if aggregate_function is None or aggregate_function == "item":
+            msg = (
+                "DuckDB does not support pivoting without aggregation because it "
+                "cannot validate that each group contains a single value."
+            )
+            raise NotImplementedError(msg)
+
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+
+        # Example generated query:
+        # PIVOT _rel ON "subject" IN ('maths', 'physics')
+        # USING mean("test_1") AS "test_1", mean("test_2") AS "test_2"
+        # GROUP BY "name"
+
+        aggregate = "count" if aggregate_function == "len" else aggregate_function
+        on_values = ", ".join(str(lit(name)) for name in on_columns)
+        using = ", ".join(
+            (
+                f"{aggregate}({col(value)}) AS {col(value)}"
+                if len(values) > 1
+                else f"{aggregate}({col(value)})"
+            )
+            for value in values
+        )
+        group_by = f"GROUP BY {join_column_names(*index)}" if index else ""
+        _rel = self.native  # not actually unused, referenced in query
+        query = f"PIVOT _rel ON {col(on)} IN ({on_values}) USING {using} {group_by}"
+        result = duckdb.sql(query)
+
+        output: list[Expression] = []
+        for value, on_value, output_name in generate_pivot_column_names(
+            on_columns, values, separator=separator
+        ):
+            # duckdb won't append the value to the resulting column name if there is
+            # only one value
+            #
+            # Input:
+            # name | subject | test_1 | test_2
+            # Cady | maths   |      98 |     100
+            #
+            # One value:
+            # if values=["test_1"]
+            # name | maths
+            # Cady |    98
+            #
+            # Multiple Values:
+            # if values=["test_1", "test_2"]
+            # name | maths_test_1 | maths_test_2
+            # Cady |           98 |          100
+            source_name = str(on_value) if len(values) == 1 else f"{on_value}_{value}"
+            expression = col(source_name)
+            if aggregate_function in {"sum", "len"}:
+                # duckdb returns null for a missing pivot combination, to match polars
+                # semantics we need to 0. For the other aggregations like mean, min,
+                # max, both duckdb and polars return null.
+                expression = duckdb.SQLExpression(f"COALESCE({col(source_name)}, 0)")
+            output.append(expression.alias(output_name))
+        return self._with_native(result.select(*index, *output))
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
