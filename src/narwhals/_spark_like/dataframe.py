@@ -606,13 +606,10 @@ class SparkLikeLazyFrame(
             return self._with_native(result)
 
         aggregations = [
-            getattr(self._F, aggregate_function)(value).alias(value)
-            for value in values
+            getattr(self._F, aggregate_function)(value).alias(value) for value in values
         ]
         result = (
-            self.native.groupBy(*index)
-            .pivot(on, list(on_columns))
-            .agg(*aggregations)
+            self.native.groupBy(*index).pivot(on, list(on_columns)).agg(*aggregations)
         )
         pivoted = []
         for value, on_value, output_name in generate_pivot_column_names(
