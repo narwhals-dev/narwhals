@@ -35,22 +35,9 @@ data_missing_combination = {
 }
 
 PIVOT_MISSING_COMBINATION_CASES = [
-    (
-        "sum",
-        {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 0]},
-    ),
-    (
-        "len",
-        {"name": ["Cady", "Karen"], "maths": [1, 1], "physics": [1, 0]},
-    ),
-    (
-        "mean",
-        {
-            "name": ["Cady", "Karen"],
-            "maths": [98.0, 61.0],
-            "physics": [99.0, None],
-        },
-    ),
+    ("sum", {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 0]}),
+    ("len", {"name": ["Cady", "Karen"], "maths": [1, 1], "physics": [1, 0]}),
+    ("mean", {"name": ["Cady", "Karen"], "maths": [98.0, 61.0], "physics": [99.0, None]}),
 ]
 
 
@@ -141,10 +128,7 @@ PIVOT_CASES = [
 def make_lazy_frame(data_: Any, constructor: Constructor) -> nw.LazyFrame[Any]:
     frame = nw.from_native(constructor(data_))
     if isinstance(frame, nw.LazyFrame):
-        if (
-            frame.implementation is nw.Implementation.POLARS
-            and POLARS_VERSION < (1, 43)
-        ):
+        if frame.implementation is nw.Implementation.POLARS and POLARS_VERSION < (1, 43):
             pytest.skip("Polars LazyFrame.pivot")
         return frame
     msg = "LazyFrame.pivot"
@@ -327,9 +311,7 @@ def test_pivot_lazy(
 
 @pytest.mark.parametrize(("agg_func", "expected"), PIVOT_MISSING_COMBINATION_CASES)
 def test_pivot_lazy_missing_combination(
-    constructor: Constructor,
-    agg_func: LazyPivotAgg,
-    expected: dict[str, list[Any]],
+    constructor: Constructor, agg_func: LazyPivotAgg, expected: dict[str, list[Any]]
 ) -> None:
     df = make_lazy_frame(data_missing_combination, constructor)
     result = (
@@ -354,9 +336,7 @@ def test_pivot_lazy_missing_combination(
         (data, pytest.raises((ValueError, NarwhalsError))),
     ],
 )
-def test_pivot_lazy_no_agg(
-    constructor: Constructor, data_: Any, context: Any
-) -> None:
+def test_pivot_lazy_no_agg(constructor: Constructor, data_: Any, context: Any) -> None:
     df = make_lazy_frame(data_, constructor)
     if df.implementation is not nw.Implementation.POLARS:
         context = pytest.raises(
