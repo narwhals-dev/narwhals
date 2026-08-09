@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from narwhals._constants import POLARS_WHITESPACE
 from narwhals._duckdb.utils import F, col, concat_str, lit
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import not_implemented, requires
@@ -13,6 +14,18 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
+    def strip_chars_start(self, characters: str | None) -> DuckDBExpr:
+        characters = POLARS_WHITESPACE if characters is None else characters
+        return self.compliant._with_elementwise(
+            lambda expr: F("ltrim", expr, lit(characters))
+        )
+
+    def strip_chars_end(self, characters: str | None) -> DuckDBExpr:
+        characters = POLARS_WHITESPACE if characters is None else characters
+        return self.compliant._with_elementwise(
+            lambda expr: F("rtrim", expr, lit(characters))
+        )
+
     def to_datetime(self, format: str | None) -> DuckDBExpr:
         if format is None:
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."
