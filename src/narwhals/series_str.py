@@ -123,8 +123,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pl.Series([" apple ", "\nmango"])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.strip_chars_start().to_list()
-            ['apple ', 'mango']
+            >>> s.str.strip_chars_start().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                    "apple "
+                    "mango"
+            ]
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_start(characters)
@@ -143,8 +148,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
             >>> import narwhals as nw
             >>> s_native = pl.Series([" apple ", "mango\n"])
             >>> s = nw.from_native(s_native, series_only=True)
-            >>> s.str.strip_chars_end().to_list()
-            [' apple', 'mango']
+            >>> s.str.strip_chars_end().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                    " apple"
+                    "mango"
+            ]
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_end(characters)
