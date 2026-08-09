@@ -2156,7 +2156,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     def pivot(
         self,
-        on: str,
+        on: str | list[str],
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
@@ -3299,7 +3299,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
     def pivot(
         self,
-        on: str | list[str],
+        on: str,
         on_columns: Sequence[Any],
         *,
         index: str | list[str] | None = None,
@@ -3310,20 +3310,57 @@ class LazyFrame(BaseFrame[LazyFrameT]):
     ) -> Self:
         r"""Create a spreadsheet-style pivot table as a LazyFrame.
 
-        This operation is currently supported for Polars LazyFrames. Unlike an eager
-        pivot, the values that will become output columns must be supplied explicitly
-        via `on_columns`, allowing the output schema to be determined lazily.
-
         Arguments:
-            on: Column whose values will be used as the new output columns.
-            on_columns: Value combinations to consider for the output table.
-            index: Column(s) that remain from the input to the output.
-            values: Column(s) containing the values to place in the output table.
-            aggregate_function: Aggregation to apply when multiple values occur in a
-                group. One of {'min', 'max', 'first', 'last', 'sum', 'mean',
-                'median', 'len', 'item'}, or None.
-            maintain_order: Preserve discovery order of the index values.
-            separator: Separator used in generated column names.
+            on: Name of the column whose values will be used as the header of the
+                output LazyFrame.
+            on_columns: What value combinations will be considered for the output table.
+            index: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `values` will be used. At least one of `index` and
+                `values` must be specified.
+            values: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `index` will be used. At least one of `index` and
+                `values` must be specified.
+            aggregate_function: Choose from
+
+                - None: no aggregation takes place, will raise error if multiple values
+                    are in group.
+                - A predefined aggregate function string, one of
+                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len',
+                    'item'}
+            maintain_order: Ensure the values of `index` are sorted by discovery order.
+            separator: Used as separator/delimiter in generated column names in case of
+                multiple `values` columns.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "ix": [1, 1, 2, 2, 1, 2],
+            ...     "col": ["a", "a", "a", "a", "b", "b"],
+            ...     "foo": [0, 1, 2, 2, 7, 1],
+            ...     "bar": [0, 2, 0, 0, 9, 4],
+            ... }
+            >>> df_native = pl.LazyFrame(data)
+            >>> (
+            ...     nw.from_native(df_native)
+            ...     .pivot(
+            ...         "col",
+            ...         on_columns=["a", "b"],
+            ...         index="ix",
+            ...         aggregate_function="sum",
+            ...     )
+            ...     .collect()
+            ...     .to_native()
+            ... )
+            shape: (2, 5)
+            ┌─────┬───────┬───────┬───────┬───────┐
+            │ ix  ┆ foo_a ┆ foo_b ┆ bar_a ┆ bar_b │
+            │ --- ┆ ---   ┆ ---   ┆ ---   ┆ ---   │
+            │ i64 ┆ i64   ┆ i64   ┆ i64   ┆ i64   │
+            ╞═════╪═══════╪═══════╪═══════╪═══════╡
+            │ 1   ┆ 1     ┆ 7     ┆ 2     ┆ 9     │
+            │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
+            └─────┴───────┴───────┴───────┴───────┘
         """
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
