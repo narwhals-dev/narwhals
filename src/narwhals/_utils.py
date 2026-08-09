@@ -1284,10 +1284,7 @@ def resolve_pivot_index_values(
     values: Sequence[str] | None,
 ) -> tuple[list[str], list[str]]:
     if values is None:
-        if index is None:
-            msg = "At least one of `values` and `index` must be passed"
-            raise ValueError(msg)
-        values = [name for name in columns if name not in {on, *index}]
+        values = [name for name in columns if name not in {on, *(index or ())}]
     if index is None:
         index = [name for name in columns if name not in {on, *values}]
     return list(index), list(values)

@@ -377,6 +377,39 @@ def test_pivot_lazy_no_index(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_pivot_lazy_no_values(constructor: Constructor) -> None:
+    df = make_lazy_frame(data_no_dups, constructor)
+    result = (
+        df.pivot(
+            "col",
+            ["a", "b"],
+            index="ix",
+            aggregate_function="min",
+            maintain_order=df.implementation is nw.Implementation.POLARS,
+        )
+        .sort("ix")
+        .collect()
+    )
+    expected = {
+        "ix": [1, 2],
+        "foo_a": [1, 3],
+        "foo_b": [2, 4],
+        "bar_a": ["x", "z"],
+        "bar_b": ["y", "w"],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_pivot_lazy_no_index_columns(constructor: Constructor) -> None:
+    df = make_lazy_frame({"col": ["a", "b"], "foo": [1, 2]}, constructor)
+    if df.implementation is nw.Implementation.DASK:
+        with pytest.raises(NotImplementedError, match="no index columns"):
+            df.pivot("col", ["a", "b"], values="foo", aggregate_function="sum")
+        return
+    result = df.pivot("col", ["a", "b"], values="foo", aggregate_function="sum").collect()
+    assert_equal_data(result, {"a": [1], "b": [2]})
+
+
 def test_pivot_lazy_maintain_order(constructor: Constructor) -> None:
     df = make_lazy_frame(data, constructor)
     if df.implementation is nw.Implementation.POLARS:
