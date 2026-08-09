@@ -65,6 +65,7 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         IntoDType,
         JoinStrategy,
+        LazyPivotAgg,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
@@ -304,6 +305,17 @@ class CompliantLazyFrame(
     def collect(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny: ...
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: LazyPivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self: ...
     def sink_parquet(self, file: str | Path | BytesIO) -> None: ...
 
 
