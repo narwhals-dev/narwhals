@@ -3346,6 +3346,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             ...     .pivot(
             ...         "col", on_columns=["a", "b"], index="ix", aggregate_function="sum"
             ...     )
+            ...     .sort("ix")
             ...     .collect()
             ...     .to_native()
             ... )
