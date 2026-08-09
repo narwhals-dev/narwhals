@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import ibis
 from ibis.expr.datatypes import Timestamp
 
+from narwhals._constants import POLARS_WHITESPACE
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, not_implemented
 
@@ -20,6 +22,22 @@ IntoStringValue: TypeAlias = "str | ir.StringValue"
 
 
 class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
+    def strip_chars_start(self, characters: str | None) -> IbisExpr:
+        characters = POLARS_WHITESPACE if characters is None else characters
+        if not characters:
+            return self.compliant
+
+        pattern = rf"^[{re.escape(characters)}]+"
+        return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
+
+    def strip_chars_end(self, characters: str | None) -> IbisExpr:
+        characters = POLARS_WHITESPACE if characters is None else characters
+        if not characters:
+            return self.compliant
+
+        pattern = rf"[{re.escape(characters)}]+$"
+        return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
+
     def strip_chars(self, characters: str | None) -> IbisExpr:
         if characters is not None:
             msg = "Ibis does not support `characters` argument in `str.strip_chars`"
