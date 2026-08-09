@@ -16,6 +16,7 @@ from narwhals._duckdb.utils import (
     join_column_names,
     lit,
     native_to_narwhals_dtype,
+    when,
     window_expression,
 )
 from narwhals._sql.dataframe import SQLLazyFrame
@@ -633,7 +634,7 @@ class DuckDBLazyFrame(
                 # duckdb returns null for a missing pivot combination, to match polars
                 # semantics we need to 0. For the other aggregations like mean, min,
                 # max, both duckdb and polars return null.
-                expression = duckdb.SQLExpression(f"COALESCE({col(source_name)}, 0)")
+                expression = when(~expression.isnotnull(), lit(0)).otherwise(expression)
             output.append(expression.alias(output_name))
         return self._with_native(result.select(*index, *output))
 
