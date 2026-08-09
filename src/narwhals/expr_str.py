@@ -136,6 +136,50 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
+    def strip_chars_start(self, characters: str | None = None) -> ExprT:
+        r"""Remove leading characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start of the string. If set
+                to None (default), all leading whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"fruits": [" apple ", "\nmango"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     stripped=nw.col("fruits").str.strip_chars_start()
+            ... ).to_dict(as_series=False)
+            {'fruits': [' apple ', '\nmango'], 'stripped': ['apple ', 'mango']}
+        """
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_start", characters=characters)
+        )
+
+    def strip_chars_end(self, characters: str | None = None) -> ExprT:
+        r"""Remove trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the end of the string. If set
+                to None (default), all trailing whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"fruits": [" apple ", "mango\n"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(stripped=nw.col("fruits").str.strip_chars_end()).to_dict(
+            ...     as_series=False
+            ... )
+            {'fruits': [' apple ', 'mango\n'], 'stripped': [' apple', 'mango']}
+        """
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_end", characters=characters)
+        )
+
     def starts_with(self, prefix: str | IntoExpr) -> ExprT:
         r"""Check if string values start with a substring.
 

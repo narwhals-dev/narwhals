@@ -110,6 +110,46 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
+    def strip_chars_start(self, characters: str | None = None) -> SeriesT:
+        r"""Remove leading characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start of the string. If set
+                to None (default), all leading whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([" apple ", "\nmango"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.strip_chars_start().to_list()
+            ['apple ', 'mango']
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.strip_chars_start(characters)
+        )
+
+    def strip_chars_end(self, characters: str | None = None) -> SeriesT:
+        r"""Remove trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the end of the string. If set
+                to None (default), all trailing whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([" apple ", "mango\n"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.strip_chars_end().to_list()
+            [' apple', 'mango']
+        """
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.strip_chars_end(characters)
+        )
+
     def starts_with(self, prefix: str | SeriesT) -> SeriesT:
         r"""Check if string values start with a substring.
 
