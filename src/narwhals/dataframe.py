@@ -3344,10 +3344,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             >>> (
             ...     nw.from_native(df_native)
             ...     .pivot(
-            ...         "col",
-            ...         on_columns=["a", "b"],
-            ...         index="ix",
-            ...         aggregate_function="sum",
+            ...         "col", on_columns=["a", "b"], index="ix", aggregate_function="sum"
             ...     )
             ...     .collect()
             ...     .to_native()
