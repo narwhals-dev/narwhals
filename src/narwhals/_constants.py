@@ -28,14 +28,3 @@ EPOCH_YEAR = 1970
 """See [Unix time](https://en.wikipedia.org/wiki/Unix_time)."""
 EPOCH = dt.datetime(EPOCH_YEAR, 1, 1).replace(tzinfo=None)
 """See [Unix time](https://en.wikipedia.org/wiki/Unix_time)."""
-
-# Some backends' default trim sets exclude whitespace recognized by Polars, such as
-# tabs and newlines. Polars directly calls Rust's stdlib methods, which define
-# whitespace according to the Unicode Derived Core Property White_Space.
-# https://github.com/pola-rs/polars/blob/main/crates/polars-ops/src/chunked_array/strings/strip.rs
-# https://doc.rust-lang.org/std/string/struct.String.html#method.trim_start
-# https://www.unicode.org/Public/17.0.0/ucd/PropList.txt
-POLARS_WHITESPACE = (
-    "\t\n\v\f\r \x85\xa0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006"
-    "\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000"
-)

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re
+import string
 from functools import partial
 from typing import TYPE_CHECKING
 
-from narwhals._constants import POLARS_WHITESPACE
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._sql.expr_str import SQLExprStringNamespace
 from narwhals._utils import _is_naive_format, is_pyspark_pre_4, not_implemented, requires
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
     def _strip_chars(self, characters: str | None, *, start: bool) -> SparkLikeExpr:
         implementation = self.compliant._implementation
-        characters = POLARS_WHITESPACE if characters is None else characters
+        characters = string.whitespace if characters is None else characters
         if not characters:
             return self.compliant
 

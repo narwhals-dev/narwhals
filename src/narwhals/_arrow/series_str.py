@@ -14,7 +14,6 @@ from narwhals._arrow.utils import (
     parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._constants import POLARS_WHITESPACE
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -49,12 +48,14 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         )
 
     def strip_chars_start(self, characters: str | None) -> ArrowSeries:
-        characters = POLARS_WHITESPACE if characters is None else characters
-        return self.with_native(pc.utf8_ltrim(self.native, characters))
+        return self.with_native(
+            pc.utf8_ltrim(self.native, characters or string.whitespace)
+        )
 
     def strip_chars_end(self, characters: str | None) -> ArrowSeries:
-        characters = POLARS_WHITESPACE if characters is None else characters
-        return self.with_native(pc.utf8_rtrim(self.native, characters))
+        return self.with_native(
+            pc.utf8_rtrim(self.native, characters or string.whitespace)
+        )
 
     def starts_with(self, prefix: ArrowSeries) -> ArrowSeries:
         _, prefix_native = extract_native(self.compliant, prefix)
