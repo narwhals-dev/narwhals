@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from narwhals._spark_like.utils import strptime_to_pyspark_format
 from narwhals._sql.expr_str import SQLExprStringNamespace
-from narwhals._utils import _is_naive_format, is_pyspark_pre_4, not_implemented, requires
+from narwhals._utils import _is_naive_format, not_implemented, requires
 
 if TYPE_CHECKING:
     from sqlframe.base.column import Column
@@ -17,22 +17,13 @@ if TYPE_CHECKING:
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
     def _strip_chars(self, characters: str | None, *, start: bool) -> SparkLikeExpr:
-        implementation = self.compliant._implementation
         characters = string.whitespace if characters is None else characters
         if not characters:
             return self.compliant
 
-        F = self.compliant._F
-        if not implementation.is_sqlframe() and not is_pyspark_pre_4(
-            implementation
-        ):  # pragma: no cover
-            function = F.ltrim if start else F.rtrim
-            return self.compliant._with_elementwise(
-                lambda expr: function(expr, F.lit(characters))
-            )
-
         escaped = re.escape(characters)
         pattern = rf"^[{escaped}]+" if start else rf"[{escaped}]+$"
+        F = self.compliant._F
         return self.compliant._with_elementwise(
             lambda expr: F.regexp_replace(expr, pattern, "")
         )
