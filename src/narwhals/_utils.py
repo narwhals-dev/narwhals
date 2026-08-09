@@ -430,11 +430,9 @@ class Implementation(NoAutoEnum):
         return (
             cls.from_string(backend)
             if isinstance(backend, str)
-            else (
-                backend
-                if isinstance(backend, Implementation)
-                else cls.from_native_namespace(backend)
-            )
+            else backend
+            if isinstance(backend, Implementation)
+            else cls.from_native_namespace(backend)
         )
 
     def to_native_namespace(self) -> ModuleType:
@@ -1584,11 +1582,9 @@ def _parse_time_unit_and_time_zone(
     time_zones: Set[str | None] = (
         {None}
         if time_zone is None
-        else (
-            {str(time_zone)}
-            if isinstance(time_zone, (str, timezone))
-            else {str(tz) if tz is not None else None for tz in time_zone}
-        )
+        else {str(time_zone)}
+        if isinstance(time_zone, (str, timezone))
+        else {str(tz) if tz is not None else None for tz in time_zone}
     )
     return time_units, time_zones
 
@@ -1629,12 +1625,10 @@ def _hasattr_static(obj: Any, attr: str) -> bool:
 
 
 def is_compliant_dataframe(
-    obj: (
-        CompliantDataFrame[
-            CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co
-        ]
-        | Any
-    ),
+    obj: CompliantDataFrame[
+        CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co
+    ]
+    | Any,
 ) -> TypeIs[
     CompliantDataFrame[CompliantSeriesT, CompliantExprT, NativeDataFrameT, ToNarwhalsT_co]
 ]:
@@ -2158,7 +2152,6 @@ class _Implementation:
     def __get__(
         self, instance: Narwhals[NativePySpark | NativePySparkConnect], owner: Any
     ) -> _PySparkImpl | _PySparkConnectImpl: ...
-
     # NOTE: https://docs.python.org/3/howto/descriptor.html#invocation-from-a-class
     @overload
     def __get__(self, instance: None, owner: type[Narwhals[Any]]) -> Self: ...
@@ -2199,7 +2192,6 @@ if sys.platform != "win32":
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
-
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
     # This module is an example of the issue:
