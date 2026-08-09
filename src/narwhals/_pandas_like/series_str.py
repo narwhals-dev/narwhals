@@ -39,6 +39,12 @@ class PandasLikeSeriesStringNamespace(
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self.with_native(self.native.str.strip(characters))
 
+    def strip_chars_start(self, characters: str | None) -> PandasLikeSeries:
+        return self.with_native(self.native.str.lstrip(characters))
+
+    def strip_chars_end(self, characters: str | None) -> PandasLikeSeries:
+        return self.with_native(self.native.str.rstrip(characters))
+
     def starts_with(self, prefix: PandasLikeSeries) -> PandasLikeSeries:
         _, prefix_native = align_and_extract_native(self.compliant, prefix)
         if not isinstance(prefix_native, str):
