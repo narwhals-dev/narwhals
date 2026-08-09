@@ -629,7 +629,7 @@ class DuckDBLazyFrame(
             # Cady |           98 |          100
             source_name = str(on_value) if len(values) == 1 else f"{on_value}_{value}"
             expression = col(source_name)
-            if aggregate_function in {"sum", "len"}:
+            if aggregate in {"sum", "count"}:
                 # duckdb returns null for a missing pivot combination, to match polars
                 # semantics we need to 0. For the other aggregations like mean, min,
                 # max, both duckdb and polars return null.

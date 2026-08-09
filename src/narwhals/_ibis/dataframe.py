@@ -447,7 +447,7 @@ class IbisLazyFrame(
             values_from=values,
             # ibis will treat missing pivot combination as null for these, instead of 0
             # as polars does.
-            values_fill=0 if aggregate_function in {"sum", "len"} else None,
+            values_fill=0 if aggregate in {"sum", "count"} else None,
             values_agg=aggregate,
         )
 
