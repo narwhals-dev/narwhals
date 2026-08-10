@@ -8,9 +8,7 @@ import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
-def test_unary(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unary(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
@@ -70,11 +68,7 @@ def test_unary_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_unary_two_elements(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "ibis" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_unary_two_elements(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 2], "b": [2, 10], "c": [2.0, None]}
