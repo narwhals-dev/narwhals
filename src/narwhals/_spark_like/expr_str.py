@@ -18,7 +18,9 @@ if TYPE_CHECKING:
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
     def _strip_chars(self, characters: str | None, *, start: bool) -> SparkLikeExpr:
         characters = string.whitespace if characters is None else characters
-        if not characters:
+        if not characters:  # pragma: no cover
+            # empty string means that no characters should be stripped, so we just
+            # early return
             return self.compliant
 
         escaped = re.escape(characters)
