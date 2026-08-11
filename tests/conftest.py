@@ -274,7 +274,7 @@ EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
-LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {  # pyrefly: ignore[bad-assignment]
+LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
