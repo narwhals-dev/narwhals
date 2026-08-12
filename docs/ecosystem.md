@@ -7,7 +7,7 @@ render_macros: true
 
 # Ecosystem
 
-The Narwhals Ecosystem is comprised of tools that rely on us and the tabular data packages we support either directly or through 
+The Narwhals Ecosystem is comprised of tools that rely on us and the tabular data packages we support either directly or through
 the [plugins system](/narwhals/extending/)
 
 ## Used by
