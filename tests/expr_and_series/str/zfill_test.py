@@ -53,9 +53,7 @@ def test_str_zfill_series(
 def test_str_zfill_zero_width(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # zfill(0) is a no-op. pyarrow needs a special case for it (otherwise utf8_lpad(width
-    # - 1) asks for length -1 and it crashes), so this runs over every backend to confirm
-    # none of the others need one too.
+    # pyarrow special-cases width zero; run every backend to confirm the rest do not.
     _skip_unsupported_zfill(request, constructor)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(0))

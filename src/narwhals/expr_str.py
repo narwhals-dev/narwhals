@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals._utils import validate_width
+from narwhals._utils import validate_is_non_negative
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -553,7 +553,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
-        validate_width(width)
+        validate_is_non_negative(width, "width")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
@@ -582,7 +582,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
-        validate_width(length, "length")
+        validate_is_non_negative(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -613,7 +613,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
-        validate_width(length, "length")
+        validate_is_non_negative(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char

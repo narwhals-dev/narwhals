@@ -1455,13 +1455,7 @@ def _validate_rolling_arguments(
     return window_size, min_samples
 
 
-def validate_width(value: int, arg_name: str = "width") -> None:
-    """Reject a negative target length for zfill and the pad methods.
-
-    Shared by `zfill` (`width`) and `pad_start`/`pad_end` (`length`). Validating in
-    the public layer gives one error across backends, which otherwise disagree on a
-    negative value: pandas ignores it, Polars raises a cast error, pyarrow crashes.
-    """
+def validate_is_non_negative(value: int, arg_name: str) -> None:
     if value < 0:
         msg = f"`{arg_name}` must be non-negative but got {value}"
         raise InvalidOperationError(msg)

@@ -461,10 +461,6 @@ class PolarsExprStringNamespace(
                 pl.when(starts_with_plus & less_than_width)
                 .then(
                     self.native.str.slice(1, length)
-                    # Polars builds this branch even where the predicate is
-                    # false, so at width zero it would reach zfill(-1), which no
-                    # version accepts. The public layer rejects a negative
-                    # width, so zero is the only value that gets here.
                     .str.zfill(max(width - 1, 0))
                     .str.pad_start(width, plus)
                 )

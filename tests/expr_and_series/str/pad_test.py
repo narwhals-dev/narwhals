@@ -111,8 +111,7 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> None:
-    # Same divergence as zfill, since the length reaches the same backend calls. See
-    # the note in zfill_test.py for why the message is pinned and not just the type.
+    # Same divergence as zfill: the length reaches the same backend calls.
     s = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)["a"]
     msg = r"`length` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
@@ -122,7 +121,6 @@ def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> 
 
 
 def test_str_pad_negative_length_expr_raises(constructor: Constructor) -> None:
-    # Separate from the series test so the lazy backends are covered too.
     df = nw.from_native(constructor({"a": ["abc"]}))
     msg = r"`length` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
