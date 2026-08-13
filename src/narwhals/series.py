@@ -2912,6 +2912,7 @@ class Series(Generic[IntoSeriesT]):
         result = result.rename(orig_name) if name_is_none else result
         return cast("Self", result)
 
+    @unstable
     def factorize(
         self,
         *,
@@ -2923,6 +2924,10 @@ class Series(Generic[IntoSeriesT]):
 
         The integer codes are index locations that map each value in the
         original array to its corresponding position in the unique values.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
 
         Arguments:
             sort: Whether to sort the unique values before assigning codes.
@@ -3032,9 +3037,15 @@ class Series(Generic[IntoSeriesT]):
         return SeriesStructNamespace(self)
 
 
+@unstable
 @dataclass(frozen=True)
 class Encoded(Generic[IntoSeriesT]):
-    """Result of `factorize`. Unpacks as `(codes, uniques)` like pandas."""
+    """Result of `factorize`. Unpacks as `(codes, uniques)` like pandas.
+
+    Warning:
+        This functionality is considered **unstable** as it diverges from the polars API.
+        It may be changed at any point without it being considered a breaking change.
+    """
 
     codes: Series[IntoSeriesT]
     uniques: Series[IntoSeriesT]
