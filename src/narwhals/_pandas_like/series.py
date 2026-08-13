@@ -1191,14 +1191,20 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
 
         if null_policy == "preserve":
-            codes, uniques = self.native.factorize(sort=sort, use_na_sentinel=True)
+            codes, uniques = self.native.factorize(sort=sort)
             codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1)
 
         elif null_policy == "encode":
-            codes, uniques = self.native.factorize(sort=sort, use_na_sentinel=False)
+            if self._implementation is Implementation.PANDAS and self._backend_version < (
+                1.5,
+            ):
+                kwargs = {"sort": sort, "na_sentinel": None}
+            else:
+                kwargs = {"sort": sort, "use_na_sentinel": False}
+            codes, uniques = self.native.factorize(**kwargs)
 
         elif null_policy == "sentinel":
-            codes, uniques = self.native.factorize(sort=sort, use_na_sentinel=True)
+            codes, uniques = self.native.factorize(sort=sort)
             if sentinel != -1:
                 codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1, sentinel)
 

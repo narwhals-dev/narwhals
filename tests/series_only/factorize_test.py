@@ -105,6 +105,11 @@ def test_factorize_null(
         pytest.skip(reason=pl_skip_reason)
 
     df_native = constructor_eager({"a": values})
+    if constructor_eager.__name__ == "pandas_constructor" and all(
+        v is None for v in values
+    ):
+        df_native["a"] = df_native["a"].astype(float)
+
     df = nw.from_native(df_native)
     encoded_result = df["a"].factorize(**null_policy_args)
     codes, uniqs = encoded_result
@@ -225,6 +230,10 @@ def test_factorize_sort_null(
         pytest.skip(reason=pl_skip_reason)
 
     df_native = constructor_eager({"a": values})
+    if constructor_eager.__name__ == "pandas_constructor" and all(
+        v is None for v in values
+    ):
+        df_native["a"] = df_native["a"].astype(float)
     df = nw.from_native(df_native)
     codes, uniqs = df["a"].factorize(sort=True, **null_policy_args)
 

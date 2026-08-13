@@ -39,6 +39,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.namespace import EagerNamespace
+    from narwhals._typing import NoDefault, NullPolicy
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -134,7 +135,7 @@ class CompliantSeries(
     def arg_true(self) -> Self: ...
     def count(self) -> int: ...
     def factorize(
-        self, *, null_as_value: bool, sort: bool = False
+        self, *, sort: bool, null_policy: NullPolicy, sentinel: NoDefault
     ) -> tuple[Self, Self]: ...
     def filter(self, predicate: Any) -> Self: ...
     def first(self) -> PythonLiteral: ...
