@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
-    from narwhals._typing import NoDefault
+    from narwhals._typing import NoDefault, NullPolicy
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -1164,28 +1164,44 @@ class PandasLikeSeries(EagerSeries[Any]):
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
 
     def factorize(
-        self, *, null_as_value: bool = False, sort: bool = False
+        self, *, sort: bool, null_policy: NullPolicy, sentinel: Any | NoDefault
     ) -> tuple[Self, Self]:
         pdx = self.__native_namespace__()
 
-        # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
-        if self.native.dtype == "null[pyarrow]":
-            if null_as_value:
-                codes, uniques = (
-                    pdx.Series(0, index=self.native.index),
-                    pdx.Series([None], dtype=self.native.dtype),
-                )
-            else:
-                codes, uniques = (
-                    pdx.Series(-1, index=self.native.index),
-                    pdx.Series([], dtype=self.native.dtype),
-                )
+        if self.is_native_dtype_pyarrow(self.native.dtype):
+            import pyarrow as pa  # ignore-banned-import()
 
-            return (self._with_native(codes), self._with_native(uniques))
+            from narwhals._arrow.series import ArrowSeries
 
-        codes, uniques = self.native.factorize(
-            sort=sort, use_na_sentinel=not null_as_value
-        )
+            codes, uniques = ArrowSeries(
+                pa.chunked_array(self.native.array._pa_array),
+                name=self._name,
+                version=self._version,
+            ).factorize(null_policy=null_policy, sentinel=sentinel, sort=sort)
+            return (
+                self._with_native(
+                    pdx.Series(
+                        pdx.arrays.ArrowExtensionArray(codes.native),
+                        dtype="int32[pyarrow]",
+                    )
+                ),
+                self._with_native(
+                    pdx.Series(pdx.arrays.ArrowExtensionArray(uniques.native))
+                ),
+            )
+
+        if null_policy == "preserve":
+            codes, uniques = self.native.factorize(sort=sort, use_na_sentinel=True)
+            codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1)
+
+        elif null_policy == "encode":
+            codes, uniques = self.native.factorize(sort=sort, use_na_sentinel=False)
+
+        elif null_policy == "sentinel":
+            codes, uniques = self.native.factorize(sort=sort, use_na_sentinel=True)
+            if sentinel != -1:
+                codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1, sentinel)
+
         return (
             self._with_native(pdx.Series(codes)),
             self._with_native(pdx.Series(uniques)),

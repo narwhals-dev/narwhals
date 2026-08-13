@@ -46,7 +46,13 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
+    from narwhals._typing import (
+        EagerAllowed,
+        IntoBackend,
+        NoDefault,
+        NullPolicy,
+        PluginName,
+    )
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -2907,27 +2913,33 @@ class Series(Generic[IntoSeriesT]):
         return cast("Self", result)
 
     def factorize(
-        self, *, null_as_value: bool = False, sort: bool = False
+        self,
+        *,
+        sort: bool = False,
+        null_policy: NullPolicy = "preserve",
+        sentinel: Any | NoDefault = NO_DEFAULT,
     ) -> Encoded[IntoSeriesT]:
         """Encode values as integer codes and unique values.
 
-        The integer codes are index locations that map the unique values back to their
-        positions within the original array.
+        The integer codes are index locations that map each value in the
+        original array to its corresponding position in the unique values.
 
         Arguments:
-            null_as_value: Whether to treat null as a regular value. When False,
-                nulls are removed from the returned unique values and the code -1 is
-                used to indicate the location of null values in the original array.
-                When True, nulls are preserved in the returned unique values and a
-                positive integer is used to indicate their location in the original
-                array.
             sort: Whether to sort the unique values before assigning codes.
+            null_policy:
+                "preserve": Preserve null values in the returned codes. Null values are
+                    not included in the unique values.
+                "encode": Encode null values as a unique value. Null values are included
+                    in the unique values, and their codes index that null value.
+                "sentinel": Replace null values in the returned codes with ``sentinel``.
+                    Null values are not included in the unique values.
+            sentinel: The value placed into the returned codes when specifying
+                ``null_policy='sentinel'``
 
         Returns:
             codes: An integer series where each value represents the index
-                of the corresponding value in `uniques`. Null values are encoded
-                as -1.
-            uniques: A series containing the unique non-null values.
+                of the corresponding value in `uniques`.
+            uniques: A series containing the unique values.
 
         Examples:
             >>> import polars as pl
@@ -2936,32 +2948,41 @@ class Series(Generic[IntoSeriesT]):
             >>> nw_df = nw.from_native(df)
             >>> codes, uniques = nw_df["groups"].factorize(sort=True)
             >>> codes
-            ┌──────────────────────┐
-            |   Narwhals Series    |
-            |----------------------|
-            |shape: (4,)           |
-            |Series: 'groups' [i32]|
-            |[                     |
-            |        0             |
-            |        1             |
-            |        0             |
-            |        -1            |
-            |]                     |
-            └──────────────────────┘
+            ┌─────────────────────┐
+            |   Narwhals Series   |
+            |---------------------|
+            |shape: (4,)          |
+            |Series: 'codes' [i32]|
+            |[                    |
+            |        0            |
+            |        1            |
+            |        0            |
+            |        null         |
+            |]                    |
+            └─────────────────────┘
+
             >>> uniques
-            ┌──────────────────────┐
-            |   Narwhals Series    |
-            |----------------------|
-            |shape: (2,)           |
-            |Series: 'groups' [str]|
-            |[                     |
-            |        "a"           |
-            |        "b"           |
-            |]                     |
-            └──────────────────────┘
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |shape: (2,)            |
+            |Series: 'uniques' [str]|
+            |[                      |
+            |        "a"            |
+            |        "b"            |
+            |]                      |
+            └───────────────────────┘
         """
+        if null_policy == "sentinel":
+            if sentinel is NO_DEFAULT:
+                msg = "Must supply `sentinel` when null_policy='sentinel'"
+                raise TypeError(msg)
+        elif sentinel is not NO_DEFAULT:
+            msg = f"Argument `sentinel` is ignored when null_policy={null_policy}"
+            raise TypeError(msg)
+
         codes, uniques = self._compliant_series.factorize(
-            null_as_value=null_as_value, sort=sort
+            null_policy=null_policy, sentinel=sentinel, sort=sort
         )
         return Encoded(
             self._with_compliant(codes).alias("codes"),
@@ -3025,10 +3046,4 @@ class Encoded(Generic[IntoSeriesT]):
     @property
     def mapping(self) -> Mapping[Any, int]:
         """Forward map as a joinable ``(value, code)`` frame; works for any dtype."""
-        name = self.uniques.name
-        return dict(
-            self.uniques.to_frame()
-            .with_row_index("code")
-            .select(name, "code")
-            .iter_rows()
-        )
+        return {value: idx for idx, value in enumerate(self.uniques)}

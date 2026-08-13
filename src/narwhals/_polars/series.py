@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._typing import NoDefault
+    from narwhals._typing import NoDefault, NullPolicy
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -671,25 +671,31 @@ class PolarsSeries:
         return self.drop_nulls().first() if ignore_nulls else self.first()
 
     def factorize(
-        self, *, null_as_value: bool = False, sort: bool = False
+        self, *, sort: bool, null_policy: NullPolicy, sentinel: Any | NoDefault
     ) -> tuple[Self, Self]:
-        uniques = self.unique() if null_as_value else self.unique().drop_nulls()
-        if sort:
-            uniques = uniques.sort(descending=False, nulls_last=True)
 
-        if null_as_value:
+        unique_expr = pl.col(self.native.name).unique()
+        if null_policy in {"preserve", "sentinel"}:
+            unique_expr = unique_expr.drop_nulls()
+
+        if sort:
+            unique_expr = unique_expr.sort(nulls_last=True)
+
+        uniques = (
+            self.native.to_frame()
+            .lazy()
+            .select(unique_expr)
+            .collect()
+            .get_column(self.native.name)
+        )
+
+        if null_policy == "sentinel":
             codes = self.native.replace_strict(
-                old=uniques.native, new=range(len(uniques)), return_dtype=pl.Int32()
+                old=uniques, new=range(len(uniques)), default=sentinel
             )
         else:
-            codes = self.native.replace_strict(
-                old=uniques.native,
-                new=range(len(uniques)),
-                default=-1,
-                return_dtype=pl.Int32(),
-            )
-
-        return self._with_native(codes.cast(pl.Int32())), uniques
+            codes = self.native.replace_strict(old=uniques, new=range(len(uniques)))
+        return self._with_native(codes.cast(pl.Int32())), self._with_native(uniques)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:
