@@ -290,5 +290,5 @@ def test_factorize_nan_semantics(
     df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
 
-    expected = df["a"].factorize(sort=True, **null_policy_args)
-    assert_equal_series(expected.uniques, expected, name="uniques")
+    result = df["a"].factorize(sort=True, **null_policy_args)
+    assert_equal_series(result.uniques, expected, name="uniques")
