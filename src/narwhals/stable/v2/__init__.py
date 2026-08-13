@@ -57,7 +57,7 @@ from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
-from narwhals.series import Series as NwSeries
+from narwhals.series import Encoded, Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.stable.v2.typing import (
     DataFrameT,
@@ -1181,6 +1181,7 @@ __all__ = [
     "Datetime",
     "Decimal",
     "Duration",
+    "Encoded",
     "Enum",
     "Expr",
     "Field",
