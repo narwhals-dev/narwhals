@@ -39,6 +39,34 @@ def test_median_series(
     assert_equal_data({col: [result]}, {col: [expected]})
 
 
+# Every column in `data` has an odd number of non-null values. An approximate
+# median agrees with the exact one there, so the columns below have an even
+# number of non-null values instead.
+even_data = {"a": [5.0, 1.0, None], "b": [1.0, 2.0, None], "z": [10.0, None, 20.0]}
+
+
+@pytest.mark.parametrize(
+    "expr", [nw.col("a", "b", "z").median(), nw.median("a", "b", "z")]
+)
+def test_median_expr_even_length(
+    constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
+) -> None:
+    if "dask_lazy_p2" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(even_data))
+    result = df.select(expr)
+    expected = {"a": [3.0], "b": [1.5], "z": [15.0]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(("col", "expected"), [("a", 3.0), ("b", 1.5), ("z", 15.0)])
+def test_median_series_even_length(
+    constructor_eager: ConstructorEager, col: str, expected: float
+) -> None:
+    series = nw.from_native(constructor_eager(even_data), eager_only=True)[col]
+    assert_equal_data({col: [series.median()]}, {col: [expected]})
+
+
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
 def test_median_expr_raises_on_str(
     constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
