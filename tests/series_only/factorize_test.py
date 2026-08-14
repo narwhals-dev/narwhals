@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from typing import Any
 
 import pytest
@@ -19,6 +20,7 @@ NULL_ARGS = [
     NULL_PRESERVE := {"null_policy": "preserve"},
     NULL_ENCODE := {"null_policy": "encode"},
     NULL_SENTINEL := {"null_policy": "sentinel", "sentinel": -1},
+    NULL_SENTINEL := {"null_policy": "sentinel", "sentinel": -2},
 ]
 
 
@@ -29,6 +31,14 @@ NULL_ARGS = [
         ([*"abcabc"], ["a", "b", "c"]),
         ([1, 2, 3, 2], [1, 2, 3]),
         ([1.1, 2.2, 3.3, 2.2], [1.1, 2.2, 3.3]),
+        (
+            [date(1970, 1, 1), date(1971, 1, 1), date(1970, 1, 1)],
+            [date(1970, 1, 1), date(1971, 1, 1)],
+        ),
+        (
+            [datetime(1970, 1, 1), datetime(1971, 1, 1), datetime(1970, 1, 1)],
+            [datetime(1970, 1, 1), datetime(1971, 1, 1)],
+        ),
     ],
 )
 @pytest.mark.parametrize("null_policy_args", NULL_ARGS)
@@ -37,7 +47,7 @@ def test_factorize_nonnull(
     *,
     values: list[Any],
     null_policy_args: dict[str, Any],
-    expected_unique: int,
+    expected_unique: list[Any],
 ) -> None:
     if "polars" in str(constructor_eager) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
@@ -99,7 +109,7 @@ def test_factorize_null(
     *,
     values: list[Any],
     null_policy_args: dict[str, Any],
-    expected_unique: int,
+    expected_unique: list[Any],
 ) -> None:
     if "polars" in str(constructor_eager) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
@@ -108,7 +118,7 @@ def test_factorize_null(
     if constructor_eager.__name__ == "pandas_constructor" and all(
         v is None for v in values
     ):
-        df_native["a"] = df_native["a"].astype(float)
+        df_native["a"] = df_native["a"].astype(float)  # type: ignore[reportIndexIssue]
 
     df = nw.from_native(df_native)
     encoded_result = df["a"].factorize(**null_policy_args)
@@ -233,7 +243,7 @@ def test_factorize_sort_null(
     if constructor_eager.__name__ == "pandas_constructor" and all(
         v is None for v in values
     ):
-        df_native["a"] = df_native["a"].astype(float)
+        df_native["a"] = df_native["a"].astype(float)  # type: ignore[reportIndexIssue]
     df = nw.from_native(df_native)
     codes, uniqs = df["a"].factorize(sort=True, **null_policy_args)
 
@@ -301,3 +311,58 @@ def test_factorize_nan_semantics(
 
     result = df["a"].factorize(sort=True, **null_policy_args)
     assert_equal_series(result.uniques, expected, name="uniques")
+
+
+def test_factorize_non_sentinel_policy_w_sentinel_arg() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s = nw.from_native(pl.Series("a", ["x", "y", "z"]), series_only=True)
+    with pytest.raises(
+        TypeError, match="Argument `sentinel` is ignored when null_policy="
+    ):
+        s.factorize(null_policy="preserve", sentinel=-1)
+
+
+def test_factorize_sentinel_policy_w_no_sentinel_arg() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s = nw.from_native(pl.Series("a", ["x", "y", "z"]), series_only=True)
+    with pytest.raises(
+        TypeError, match="Must supply `sentinel` when null_policy='sentinel'"
+    ):
+        s.factorize(null_policy="sentinel")
+
+
+@pytest.mark.parametrize(("values", "expected_unique"), [([*"abcabc"], ["a", "b", "c"])])
+@pytest.mark.parametrize("null_policy_args", NULL_ARGS)
+def test_factorize_pyarrow_dictionary_array(
+    constructor_eager: ConstructorEager,
+    *,
+    values: list[Any],
+    expected_unique: list[Any],
+    null_policy_args: dict[str, Any],
+) -> None:
+    pytest.importorskip("pyarrow")
+
+    df_native = constructor_eager({"a": values})
+    df = nw.from_native(df_native).select(nw.col("a").cast(nw.Categorical))
+    encoded_result = df["a"].factorize(**null_policy_args)
+    codes, uniqs = encoded_result
+
+    reconstructed_values = {"a": [uniqs[i] if i >= 0 else None for i in codes]}
+    assert_equal_data(df, reconstructed_values)
+    assert len(uniqs) == len(expected_unique)
+
+    assert codes.dtype.is_integer()
+    assert len(codes) == len(values)
+
+    assert (codes >= 0).all()
+    assert codes.name == "codes"
+    assert uniqs.name == "uniques"
+
+    assert_equal_series(
+        encoded_result.uniques, [*encoded_result.mapping.keys()], name=uniqs.name
+    )
+    assert [*encoded_result.mapping.values()] == [*range(len(encoded_result.uniques))]

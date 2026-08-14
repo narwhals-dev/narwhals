@@ -691,7 +691,9 @@ class PolarsSeries:
 
         if null_policy == "sentinel":
             codes = self.native.replace_strict(
-                old=uniques, new=range(len(uniques)), default=sentinel
+                old=uniques,
+                new=range(len(uniques)),
+                default=sentinel,  # type: ignore[reportArgumentType]
             )
         else:
             codes = self.native.replace_strict(old=uniques, new=range(len(uniques)))

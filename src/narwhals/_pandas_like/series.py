@@ -1207,6 +1207,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             codes, uniques = self.native.factorize(sort=sort)
             if sentinel != -1:
                 codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1, sentinel)
+        else:
+            assert_never(null_policy)
 
         return (
             self._with_native(pdx.Series(codes)),

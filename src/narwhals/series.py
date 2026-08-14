@@ -2983,7 +2983,7 @@ class Series(Generic[IntoSeriesT]):
                 msg = "Must supply `sentinel` when null_policy='sentinel'"
                 raise TypeError(msg)
         elif sentinel is not NO_DEFAULT:
-            msg = f"Argument `sentinel` is ignored when null_policy={null_policy}"
+            msg = f"Argument `sentinel` is ignored when null_policy='{null_policy}'"
             raise TypeError(msg)
 
         codes, uniques = self._compliant_series.factorize(

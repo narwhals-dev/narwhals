@@ -1043,14 +1043,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     ) -> tuple[Self, Self]:
         if len(self.native) == 0:
             codes = pa.chunked_array([[]], type=pa.int32())
-            uniques = pa.chunked_array([[]], type=self.native.type)
+            uniques = pa.chunked_array([[]]).cast(self.native.type)
             return (self._with_native(codes), self._with_native(uniques))
 
         # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
         if pa.types.is_null(self.native.type):
             if null_policy == "preserve":
                 codes, uniques = (
-                    pa.nulls(len(self.native), type=pa.int32()),
+                    pa.nulls(len(self.native), type=pa.int8()),
                     pa.nulls(0, type=self.native.type),
                 )
             elif null_policy == "encode":
@@ -1060,9 +1060,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 )
             elif null_policy == "sentinel":
                 codes, uniques = (
-                    pa.repeat(sentinel, len(self.native)),
+                    pa.repeat(sentinel, len(self.native)),  # type: ignore[reportArgumentType]
                     pa.nulls(0, type=self.native.type),
                 )
+            else:
+                assert_never(null_policy)
 
             return (self._with_native(codes), self._with_native(uniques))
 
@@ -1074,7 +1076,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         null_encoding: Literal["encode", "mask"] = (
             "encode" if (null_policy == "encode") else "mask"
         )
-        encoded = pc.dictionary_encode(
+        encoded: Incomplete = pc.dictionary_encode(
             native, null_encoding=null_encoding
         ).combine_chunks()
         uniques, codes = encoded.dictionary, encoded.indices
@@ -1085,7 +1087,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             codes = pc.take(mapping, codes)
 
         if null_policy == "sentinel":
-            codes = pc.fill_null(codes, sentinel)
+            codes = pc.fill_null(codes, sentinel)  # type: ignore[reportArgumentType]
 
         return (self._with_native(codes), self._with_native(uniques))
 
