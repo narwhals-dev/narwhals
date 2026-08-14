@@ -972,6 +972,10 @@ class Series(Generic[IntoSeriesT]):
     def is_in(self, other: Any) -> Self:
         """Check if the elements of this Series are in the other sequence.
 
+        Null values give null results, and nulls in `other` are ignored. See
+        [null preservation](../concepts/boolean.md#null-preservation) for the
+        exception which applies to pandas with classical NumPy dtypes.
+
         Arguments:
             other: Sequence of primitive type.
 

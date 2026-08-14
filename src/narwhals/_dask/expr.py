@@ -16,7 +16,11 @@ from narwhals._dask.utils import (
 )
 from narwhals._expression_parsing import evaluate_nodes, evaluate_output_names_and_aliases
 from narwhals._pandas_like.expr import window_kwargs_to_pandas_equivalent
-from narwhals._pandas_like.utils import get_dtype_backend, native_to_narwhals_dtype
+from narwhals._pandas_like.utils import (
+    get_dtype_backend,
+    isin_preserving_nulls,
+    native_to_narwhals_dtype,
+)
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
@@ -521,7 +525,9 @@ class DaskExpr(
         return self._with_callable(func)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_callable(lambda expr: expr.isin(other))
+        return self._with_callable(
+            lambda expr: isin_preserving_nulls(expr, other, self._implementation)
+        )
 
     def null_count(self) -> Self:
         return self._with_callable(lambda expr: expr.isna().sum().to_series())

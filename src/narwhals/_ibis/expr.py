@@ -267,7 +267,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(func)
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_callable(lambda expr: expr.isin(other))
+        # Polars ignores nulls in the member collection, whereas SQL `IN` would make
+        # non-matching rows null, so drop them up front.
+        values = [x for x in other if x is not None]
+        return self._with_callable(
+            lambda expr: ibis.ifelse(expr.isnull(), None, expr.isin(values))
+        )
 
     def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward

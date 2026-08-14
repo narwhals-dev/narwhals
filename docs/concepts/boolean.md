@@ -58,6 +58,10 @@ so we hope that the classical NumPy dtypes not supporting null values will just
 be a temporary legacy pandas issue which will eventually go
 away anyway.
 
+The same rule applies to `nw.col('a').is_in([1, 2])`: a null input gives a null result.
+A null in the collection being searched is ignored, so `nw.col('a').is_in([1, 2])` and
+`nw.col('a').is_in([1, 2, None])` always produce the same result.
+
 ```python exec="yes" source="above" session="boolean"
 from narwhals.typing import FrameT
 

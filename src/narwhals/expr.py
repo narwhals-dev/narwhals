@@ -980,6 +980,10 @@ class Expr:
     def is_in(self, other: Any) -> Self:
         """Check if elements of this expression are present in the other iterable.
 
+        Null values give null results, and nulls in `other` are ignored. See
+        [null preservation](../concepts/boolean.md#null-preservation) for the
+        exception which applies to pandas with classical NumPy dtypes.
+
         Arguments:
             other: iterable
 

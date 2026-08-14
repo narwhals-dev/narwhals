@@ -365,6 +365,25 @@ def get_dtype_backend(dtype: Any, implementation: Implementation) -> DTypeBacken
     return "numpy_nullable" if is_dtype_numpy_nullable(dtype) else None
 
 
+NULLABLE_BOOL: Mapping[str, str] = {
+    "pyarrow": "bool[pyarrow]",
+    "numpy_nullable": "boolean",
+}
+
+
+def isin_preserving_nulls(native: Any, other: Any, implementation: Implementation) -> Any:
+    """`Series.isin`, but null-in-null-out, to match Polars.
+
+    `isin` reports `False` for a null input, and (for pyarrow dtypes) lets a null in
+    `other` match it. Boolean columns backed by classic NumPy dtypes can't hold nulls,
+    so those keep the `False`.
+    """
+    result = native.isin(other)
+    if backend := get_dtype_backend(native.dtype, implementation):
+        result = result.astype(NULLABLE_BOOL[backend]).mask(native.isna())
+    return result
+
+
 # NOTE: Use this to avoid annotating inline
 def iter_dtype_backends(
     dtypes: Iterable[Any], implementation: Implementation

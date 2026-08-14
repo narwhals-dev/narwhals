@@ -17,6 +17,7 @@ from narwhals._pandas_like.utils import (
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    isin_preserving_nulls,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -371,7 +372,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(res).alias(ser.name)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_native(self.native.isin(other))
+        return self._with_native(
+            isin_preserving_nulls(self.native, other, self._implementation)
+        )
 
     def arg_true(self) -> Self:
         ser = self.native

@@ -570,7 +570,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             value_set: ArrayOrChunkedArray = other
         else:
             value_set = pa.array(other)
-        return self._with_native(pc.is_in(self.native, value_set=value_set))
+        result = pc.is_in(self.native, value_set=value_set)
+        # `SetLookupOptions` can't express "null in, null out", so restore nulls
+        # ourselves. This also stops a null in `value_set` from matching null inputs.
+        return self._with_native(
+            pc.if_else(pc.is_null(self.native), lit(None, pa.bool_()), result)
+        )
 
     def arg_true(self) -> Self:
         import numpy as np  # ignore-banned-import

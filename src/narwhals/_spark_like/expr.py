@@ -307,8 +307,15 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_finite)
 
     def is_in(self, other: Sequence[Any]) -> Self:
+        # Polars ignores nulls in the member collection, whereas SQL `IN` would make
+        # non-matching rows null, so drop them up front.
+        values = [x for x in other if x is not None]
+
         def _is_in(expr: Column) -> Column:
-            return expr.isin(other) if other else self._F.lit(False)
+            if values:
+                return expr.isin(values)
+            # `isin()` with no arguments isn't allowed, and nulls stay null.
+            return self._F.when(self._F.isnull(expr), None).otherwise(self._F.lit(False))
 
         return self._with_elementwise(_is_in)
 
