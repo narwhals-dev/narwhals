@@ -189,22 +189,22 @@ def sqlframe_session() -> DuckDBSession:
 
 def pyspark_session() -> SparkSession:  # pragma: no cover
     if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
+        from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        from pyspark.sql import SparkSession as _SparkSession
+    builder = cast("_SparkSession.Builder", _SparkSession.builder).appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect
         else builder.master("local[1]").config("spark.ui.enabled", "false")
     )
-    return (
-        # Don't remove pyrefly-ignore, needed in CI when pyspark is installed.
-        builder.config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
+    ret = (
+        builder.config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    return cast("SparkSession", ret)
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover

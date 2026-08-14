@@ -41,7 +41,7 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # `modin.pandas.__version__`. The latter is the one that we make
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
-# https://github.com/narwhals-dev/narwhals/issues/817 
+# https://github.com/narwhals-dev/narwhals/issues/817
 pandas = ["pandas>=1.3.4"]
 modin = ["modin>=0.22.0"]
 cudf = ["cudf-cu12>=24.10.0; sys_platform == 'linux'"]
@@ -88,18 +88,18 @@ tests = [
 sklearn = [
   "scikit-learn",
 ]
-typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
+typing = [
   # Type checkers
-  "mypy==2.1.0",
-  "pyrefly==1.1.1",
+  "mypy>=2.1.0",
+  "pyrefly>=1.2.0",
   "pyright",
   # Dependencies
   "hypothesis>=6.0.0",
   "pytest>=9.0.3",
-  "pandas-stubs==2.3.0.250703",
-  "pyarrow-stubs==19.2",
+  "pandas-stubs>=2.3.0.250703",
+  "pyarrow-stubs>=19.2",
   "rich>=12.4.4",  # type import to resolve ibis
-  "typing-extensions==4.15.0",
+  "typing-extensions>=4.15.0",
   "narwhals[dask,duckdb,ibis,pandas,polars,pyarrow,sql,sqlframe]",
   {include-group = "plugins"},
 ]
@@ -301,23 +301,23 @@ builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
-  "Series", 
-  "DataFrame", 
-  "_Window", 
-  "F", 
+  "Series",
+  "DataFrame",
+  "_Window",
+  "F",
   "_F",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"src/narwhals/expr_dt.py" = ["RUF002"] 
+"src/narwhals/expr_dt.py" = ["RUF002"]
 "src/narwhals/typing.py" = [
   "PYI042",  # snake-case-type-alias (catches `_1DArray`)
-] 
+]
 "src/narwhals/_*/utils.py" = [
   "PLR0911", # too-many-return-statements
 ]
 "tests/*" = [
-  "S101", 
+  "S101",
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
@@ -363,7 +363,7 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
-  
+
   # Deprecation raised by DuckDB
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:sqlframe',
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:ibis',
