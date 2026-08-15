@@ -214,11 +214,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def skew(self) -> Self:
         def func(expr: ir.Value) -> ir.Value:
-            # There is a one-pass version that utilizes an identify for the variance
-            # var(x) = E[x^2] - E[x]^2. But this suffers from catastrophic cancellation
-            # for values with a large offset but small spread. So we instead use a more
-            # stable two-pass version. However, SQL engines don't allow nested
-            # reductions, we have to materialize the first pass mean :(.
+            # Skewness can be expressed in one aggregation using the raw-moment
+            # identities (e.g. m2 = E[x^2] - E[x]^2). But this is subject to
+            # catastrophic cancellation. So use a more stable two-pass calculation. SQL
+            # engines don't allow nested aggregates, so represent the first-pass mean as
+            # a scalar subquery. Note that this does not materialize and pull the
+            # first-pass mean into memory to be used as a python scalar.
             expr = cast("ir.FloatingColumn", expr.cast("float64"))
             count = expr.count()
 
