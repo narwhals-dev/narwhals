@@ -105,15 +105,29 @@ def pandas_constructor(obj: Data) -> pd.DataFrame:
     return pd.DataFrame(obj)
 
 
+def _convert_dtypes_keep_int_like_floats(
+    v: list[Any], dtype_backend: str
+) -> pd.Series[Any]:
+    import pandas as pd
+
+    # `convert_integer` (and friends) are deprecated as of pandas 3.1, and
+    # there's no direct replacement, so we emulate `convert_integer=False`
+    # by converting and then casting back to a nullable float dtype.
+    series = pd.Series(v)
+    if any_integer_like_floats(v):
+        float_dtype = (
+            "Float64" if dtype_backend == "numpy_nullable" else "double[pyarrow]"
+        )
+        return series.astype(float_dtype)  # type: ignore[no-any-return]
+    return series.convert_dtypes(dtype_backend=dtype_backend)  # type: ignore[no-any-return]
+
+
 def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(
         {
-            k: pd.Series(v).convert_dtypes(
-                convert_integer=not any_integer_like_floats(v),
-                dtype_backend="numpy_nullable",
-            )
+            k: _convert_dtypes_keep_int_like_floats(v, "numpy_nullable")
             for k, v in obj.items()
         }
     )
@@ -124,12 +138,7 @@ def pandas_pyarrow_constructor(obj: Data) -> pd.DataFrame:
     import pandas as pd
 
     return pd.DataFrame(
-        {
-            k: pd.Series(v).convert_dtypes(
-                convert_integer=not any_integer_like_floats(v), dtype_backend="pyarrow"
-            )
-            for k, v in obj.items()
-        }
+        {k: _convert_dtypes_keep_int_like_floats(v, "pyarrow") for k, v in obj.items()}
     )
 
 
@@ -143,15 +152,9 @@ def modin_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
 
 def modin_pyarrow_constructor(obj: Data) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
-    import pandas as pd
 
     df = mpd.DataFrame(
-        {
-            k: pd.Series(v).convert_dtypes(
-                convert_integer=not any_integer_like_floats(v), dtype_backend="pyarrow"
-            )
-            for k, v in obj.items()
-        }
+        {k: _convert_dtypes_keep_int_like_floats(v, "pyarrow") for k, v in obj.items()}
     )
     return cast("IntoDataFrame", df)
 
@@ -274,7 +277,7 @@ EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
     "cudf": cudf_constructor,
     "polars[eager]": polars_eager_constructor,
 }
-LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {  # pyrefly: ignore[bad-assignment]
+LAZY_CONSTRUCTORS: dict[str, ConstructorLazy] = {
     "dask": dask_lazy_p2_constructor,
     "polars[lazy]": polars_lazy_constructor,
     "duckdb": duckdb_lazy_constructor,
