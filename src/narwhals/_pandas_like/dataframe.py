@@ -207,6 +207,12 @@ class PandasLikeDataFrame(
             native = DataFrame.from_records(data)
         else:
             native = DataFrame.from_dict({col: [] for col in schema})
+        if schema and data:
+            # `DataFrame.from_records` derives columns from the row dicts'
+            # keys, ignoring `schema`. Reindex so the result matches
+            # `schema`'s column selection and order, adding any missing
+            # columns (filled with null) and dropping any extra ones.
+            native = native.reindex(columns=list(schema))
         if schema:
             backends: Iterable[DTypeBackend]
             if data:

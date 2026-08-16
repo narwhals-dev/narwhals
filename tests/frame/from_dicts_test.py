@@ -37,6 +37,41 @@ def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
     assert result.collect_schema() == schema
 
 
+def test_from_dicts_schema_reordered_keys(eager_backend: EagerAllowed) -> None:
+    # Row dicts have keys in a different order than `schema`: the result
+    # should still follow `schema`'s column order.
+    schema = {"a": nw.Int16(), "b": nw.Float32()}
+    result = nw.DataFrame.from_dicts(
+        [{"b": 5, "a": 1}, {"b": 6, "a": 2}], backend=eager_backend, schema=schema
+    )
+    assert result.columns == list(schema)
+    assert result.collect_schema() == schema
+
+
+def test_from_dicts_schema_extra_key(eager_backend: EagerAllowed) -> None:
+    # Row dicts have a key not present in `schema`: it should be dropped.
+    schema = {"a": nw.Int16(), "b": nw.Float32()}
+    result = nw.DataFrame.from_dicts(
+        [{"a": 1, "b": 5, "c": 100}, {"a": 2, "b": 6, "c": 200}],
+        backend=eager_backend,
+        schema=schema,
+    )
+    assert result.columns == list(schema)
+    assert result.collect_schema() == schema
+
+
+def test_from_dicts_schema_missing_key(eager_backend: EagerAllowed) -> None:
+    # Row dicts are missing a key present in `schema`: it should be added,
+    # filled with nulls.
+    schema = {"a": nw.Int16(), "b": nw.Float32()}
+    result = nw.DataFrame.from_dicts(
+        [{"a": 1}, {"a": 2}], backend=eager_backend, schema=schema
+    )
+    assert result.columns == list(schema)
+    assert result.collect_schema() == schema
+    assert_equal_data(result, {"a": [1, 2], "b": [None, None]})
+
+
 def test_from_dicts_non_eager() -> None:
     pytest.importorskip("duckdb")
     with pytest.raises(ValueError, match="lazy-only"):
