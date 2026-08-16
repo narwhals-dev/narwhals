@@ -10,6 +10,7 @@ from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
     arange,
     concat_tables,
+    is_dictionary,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     repeat,
@@ -487,17 +488,42 @@ class ArrowDataFrame(
             ]
 
         null_placement = "at_end" if nulls_last else "at_start"
+        native = self.native
+
+        dict_keys = [key for key in by if is_dictionary(native.schema.field(key).type)]
+        if dict_keys:
+            # `sort_by`/`sort_indices` have no kernel for dictionary-encoded columns
+            # (https://github.com/apache/arrow/issues/29887). Sort on the decoded
+            # values instead - lexicographically, matching `pandas`/`polars`
+            # categorical sort semantics - then reorder the original table so the
+            # output keeps its dictionary encoding.
+            sort_source = native
+            for key in dict_keys:
+                value_type = sort_source.schema.field(key).type.value_type
+                sort_source = sort_source.set_column(
+                    sort_source.schema.get_field_index(key),
+                    key,
+                    pc.cast(sort_source[key], value_type),
+                )
+            if self._backend_version < (25,):  # pragma: no cover
+                indices = pc.sort_indices(
+                    sort_source, sort_keys=sorting, null_placement=null_placement
+                )
+            else:
+                keyed = [(key, order, null_placement) for key, order in sorting]
+                indices = pc.sort_indices(sort_source, sort_keys=keyed)  # type: ignore[arg-type]
+            return self._with_native(native.take(indices), validate_column_names=False)
 
         if self._backend_version < (25,):  # pragma: no cover
             return self._with_native(
-                self.native.sort_by(sorting, null_placement=null_placement),
+                native.sort_by(sorting, null_placement=null_placement),
                 validate_column_names=False,
             )
         # `null_placement` in `SortOptions` is deprecated since 25.0.0;
         # it must be specified per sort key instead.
         keyed = [(key, order, null_placement) for key, order in sorting]
         return self._with_native(
-            self.native.sort_by(keyed),  # type: ignore[arg-type]
+            native.sort_by(keyed),  # type: ignore[arg-type]
             validate_column_names=False,
         )
 

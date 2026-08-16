@@ -31,3 +31,20 @@ def test_sort_nulls(
     df = nw.from_native(constructor(data))
     result = df.sort("b", descending=True, nulls_last=nulls_last)
     assert_equal_data(result, expected)
+
+
+def test_sort_pyarrow_dictionary() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    col = pa.array(["dog", "cat", "cat", "bird", "dog"]).dictionary_encode()
+    table = pa.table({"col": col, "n": [1, 2, 3, 4, 5]})
+    df = nw.from_native(table)
+
+    result = df.sort("col")
+    # lexicographical on the decoded value, matching pandas/polars categorical
+    # sort semantics - not on the (arbitrary) dictionary encoding order.
+    expected = {"col": ["bird", "cat", "cat", "dog", "dog"], "n": [4, 2, 3, 1, 5]}
+    assert_equal_data(result, expected)
+    assert result.to_native()["col"].type == col.type
