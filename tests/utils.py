@@ -57,13 +57,6 @@ ID_PANDAS_LIKE = frozenset(
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
 )
 ID_CUDF = frozenset(("cudf",))
-ID_NO_CATEGORICAL_ORDERING = ("pyspark", "duckdb", "ibis", "dask")
-"""Backends which cannot order a `Categorical` column by its values.
-
-`pyspark`, `duckdb` and `ibis` have no categorical support at all; `dask` encodes the
-categories per partition, so ordering them by value would need a compute.
-"""
-
 _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
     ("constructor_eager", "constructor", "constructor_pandas_like")
 )
@@ -85,6 +78,28 @@ def _to_comparable_list(column_values: Any) -> Any:
     if hasattr(column_values, "to_list"):
         return column_values.to_list()
     return list(column_values)
+
+
+def skip_if_no_categorical_ordering(
+    constructor: Constructor | ConstructorEager, /
+) -> None:
+    """Skip if the backend cannot order a `Categorical` column by its values.
+
+    - `pyspark`, `duckdb` and `ibis` have no categorical dtype.
+    - `dask` encodes the categories per partition, so ordering them by value would
+      need a compute.
+    - `polars<1.32` orders by the physical encoding instead of by value
+      (https://github.com/pola-rs/polars/pull/23779).
+    - `pyarrow<15` cannot cast `string` to `dictionary`, so the column cannot even be
+      created.
+    """
+    id_ = str(constructor)
+    if any(x in id_ for x in ("pyspark", "duckdb", "ibis", "dask")):
+        pytest.skip(reason="no `Categorical` dtype")
+    if "polars" in id_ and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="orders `Categorical` by physical encoding")
+    if "pyarrow_table" in id_ and PYARROW_VERSION < (15,):
+        pytest.skip(reason="cannot cast `string` to `dictionary`")
 
 
 def is_pd_na(value: Any) -> bool:

@@ -5,10 +5,10 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    ID_NO_CATEGORICAL_ORDERING,
     POLARS_VERSION,
     Constructor,
     assert_equal_data,
+    skip_if_no_categorical_ordering,
 )
 
 
@@ -65,8 +65,7 @@ def test_top_k_by_multiple(constructor: Constructor) -> None:
 
 def test_top_k_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
-    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
-        pytest.skip(reason="cannot order `Categorical` by value")
+    skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}
     df = nw.from_native(constructor(data)).with_columns(

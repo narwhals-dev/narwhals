@@ -8,12 +8,12 @@ import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
     DUCKDB_VERSION,
-    ID_NO_CATEGORICAL_ORDERING,
     PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    skip_if_no_categorical_ordering,
 )
 
 data = {
@@ -434,8 +434,7 @@ def test_over_without_partition_by(
 
 def test_over_without_partition_by_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
-    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
-        pytest.skip(reason="cannot order `Categorical` by value")
+    skip_if_no_categorical_ordering(constructor)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
 

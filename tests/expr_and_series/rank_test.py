@@ -8,13 +8,13 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    ID_NO_CATEGORICAL_ORDERING,
     PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    skip_if_no_categorical_ordering,
 )
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
@@ -428,8 +428,7 @@ def test_rank_with_order_by_and_partition_by(
 
 def test_rank_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
-    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
-        pytest.skip(reason="cannot order `Categorical` by value")
+    skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat", "cat", "bird", "dog"], "i": [1, 2, 3, 4, 5]}
     df = nw.from_native(constructor(data))

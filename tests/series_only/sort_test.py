@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import assert_equal_data
+from tests.utils import assert_equal_data, skip_if_no_categorical_ordering
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -33,6 +33,7 @@ def test_sort_series(
 
 def test_sort_series_categorical(constructor_eager: ConstructorEager) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
+    skip_if_no_categorical_ordering(constructor_eager)
     series = nw.from_native(
         constructor_eager({"a": ["dog", "bird", "cat"]}), eager_only=True
     )["a"].cast(nw.Categorical())

@@ -7,11 +7,11 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    ID_NO_CATEGORICAL_ORDERING,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    skip_if_no_categorical_ordering,
 )
 
 if TYPE_CHECKING:
@@ -89,8 +89,7 @@ def test_with_row_index_lazy_meaner_examples(
 
 def test_with_row_index_order_by_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
-    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
-        pytest.skip(reason="cannot order `Categorical` by value")
+    skip_if_no_categorical_ordering(constructor)
 
     df = nw.from_native(constructor({"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}))
     result = (

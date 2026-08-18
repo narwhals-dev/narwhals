@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import ID_NO_CATEGORICAL_ORDERING, Constructor, assert_equal_data
+from tests.utils import Constructor, assert_equal_data, skip_if_no_categorical_ordering
 
 
 def test_sort(constructor: Constructor) -> None:
@@ -53,8 +53,7 @@ def test_sort_categorical(
 ) -> None:
     # (unordered) categoricals order lexicographically on the value, not on the
     # encoding: https://github.com/narwhals-dev/narwhals/issues/3841
-    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
-        pytest.skip(reason="cannot order `Categorical` by value")
+    skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", None, "cat", "bird", None], "n": [1, 2, 3, 4, 5]}
     df = nw.from_native(constructor(data)).with_columns(
@@ -65,8 +64,7 @@ def test_sort_categorical(
 
 
 def test_sort_categorical_empty(constructor: Constructor) -> None:
-    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
-        pytest.skip(reason="cannot order `Categorical` by value")
+    skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat"], "n": [1, 2]}
     df = nw.from_native(constructor(data)).with_columns(
