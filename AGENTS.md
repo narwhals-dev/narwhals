@@ -191,6 +191,10 @@ Always document the reason in a comment. Details and examples:
   backend is used across the docs. See
   [CONTRIBUTING.md → Writing the doc(strings)](CONTRIBUTING.md#8-writing-the-docstrings).
 * Static typing with mypy (strict), pyright, and pyrefly.
+* Inline comments: default to none. Only add one when the *why* is non-obvious
+  (a hidden constraint, a workaround, a subtle invariant). Never to restate what the code
+  already says, and never to narrate a diff. Comments that merely repeat the following
+  line are a common tell of unreviewed AI-assisted output and are removed on sight in review.
 * In `_pandas_like/`, native types are typed as pandas types (the package is shared with Modin and
   cuDF). In `_spark_like/`, native types are typed as SQLFrame (shared with PySpark).
 * Public API changes must be reflected in `docs/api-reference/` — `prek` fails otherwise.
