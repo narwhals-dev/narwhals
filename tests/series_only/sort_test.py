@@ -29,3 +29,12 @@ def test_sort_series(
     result = series.sort(descending=descending, nulls_last=nulls_last)
 
     assert_equal_data({"a": result}, {"a": expected})
+
+
+def test_sort_series_categorical(constructor_eager: ConstructorEager) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    series = nw.from_native(
+        constructor_eager({"a": ["dog", "bird", "cat"]}), eager_only=True
+    )["a"].cast(nw.Categorical())
+    assert_equal_data({"a": series.sort()}, {"a": ["bird", "cat", "dog"]})
+    assert_equal_data({"a": series.sort(descending=True)}, {"a": ["dog", "cat", "bird"]})

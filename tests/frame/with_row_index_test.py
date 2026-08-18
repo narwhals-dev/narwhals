@@ -7,6 +7,7 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
+    ID_NO_CATEGORICAL_ORDERING,
     POLARS_VERSION,
     Constructor,
     ConstructorEager,
@@ -84,3 +85,18 @@ def test_with_row_index_lazy_meaner_examples(
     result = df.with_row_index(name="index", order_by=order_by).sort("b")
     expected = {"index": expected_index, **data}
     assert_equal_data(result, expected)
+
+
+def test_with_row_index_order_by_categorical(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
+        pytest.skip(reason="cannot order `Categorical` by value")
+
+    df = nw.from_native(constructor({"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}))
+    result = (
+        df.with_columns(nw.col("c").cast(nw.Categorical()))
+        .with_row_index("i", order_by="c")
+        .sort("n")
+        .select("i", "n")
+    )
+    assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})

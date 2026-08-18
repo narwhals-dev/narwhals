@@ -57,6 +57,13 @@ ID_PANDAS_LIKE = frozenset(
     ("pandas", "pandas[nullable]", "pandas[pyarrow]", "modin", "modin[pyarrow]", "cudf")
 )
 ID_CUDF = frozenset(("cudf",))
+ID_NO_CATEGORICAL_ORDERING = ("pyspark", "duckdb", "ibis", "dask")
+"""Backends which cannot order a `Categorical` column by its values.
+
+`pyspark`, `duckdb` and `ibis` have no categorical support at all; `dask` encodes the
+categories per partition, so ordering them by value would need a compute.
+"""
+
 _CONSTRUCTOR_FIXTURE_NAMES = frozenset[str](
     ("constructor_eager", "constructor", "constructor_pandas_like")
 )

@@ -13,6 +13,8 @@ from narwhals._arrow.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     repeat,
+    sort_indices,
+    sortable_table,
 )
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
@@ -44,6 +46,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.namespace import ArrowNamespace
     from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ChunkedArrayAny,
+        NullPlacement,
         Order,
     )
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
@@ -486,20 +489,11 @@ class ArrowDataFrame(
                 for key, is_descending in zip(by, descending, strict=True)
             ]
 
-        null_placement = "at_end" if nulls_last else "at_start"
-
-        if self._backend_version < (25,):  # pragma: no cover
-            return self._with_native(
-                self.native.sort_by(sorting, null_placement=null_placement),
-                validate_column_names=False,
-            )
-        # `null_placement` in `SortOptions` is deprecated since 25.0.0;
-        # it must be specified per sort key instead.
-        keyed = [(key, order, null_placement) for key, order in sorting]
-        return self._with_native(
-            self.native.sort_by(keyed),  # type: ignore[arg-type]
-            validate_column_names=False,
-        )
+        null_placement: NullPlacement = "at_end" if nulls_last else "at_start"
+        # NOTE: sort on `sortable_table`, take from the original, so that
+        # dictionary-encoded (categorical) keys keep their encoding in the output.
+        indices = sort_indices(sortable_table(self.native, by), sorting, null_placement)
+        return self._with_native(self.native.take(indices), validate_column_names=False)
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         if isinstance(reverse, bool):
@@ -510,10 +504,10 @@ class ArrowDataFrame(
                 (key, "ascending" if is_ascending else "descending")
                 for key, is_ascending in zip(by, reverse, strict=True)
             ]
-        return self._with_native(
-            self.native.take(pc.select_k_unstable(self.native, k, sorting)),  # type: ignore[call-overload]
-            validate_column_names=False,
-        )
+        keys = [name for name, _ in sorting]
+        table = sortable_table(self.native, keys)
+        indices = pc.select_k_unstable(table, k, sorting)  # type: ignore[call-overload]
+        return self._with_native(self.native.take(indices), validate_column_names=False)
 
     def to_pandas(self) -> pd.DataFrame:
         return self.native.to_pandas()
@@ -551,7 +545,8 @@ class ArrowDataFrame(
                 plx._series.from_iterable(data, context=self, name=name)
             )
             return self.select(row_index, plx.all())
-        indices = pc.sort_indices(self.native, [(by, "ascending") for by in order_by])
+        sorting: list[tuple[str, Order]] = [(name, "ascending") for name in order_by]
+        indices = sort_indices(sortable_table(self.native, order_by), sorting, "at_end")
         if self._backend_version < (20,):
             new_col = data.take(pc.sort_indices(indices))
         else:

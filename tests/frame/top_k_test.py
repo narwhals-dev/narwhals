@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    ID_NO_CATEGORICAL_ORDERING,
+    POLARS_VERSION,
+    Constructor,
+    assert_equal_data,
+)
 
 
 def test_top_k(constructor: Constructor) -> None:
@@ -55,3 +61,18 @@ def test_top_k_by_multiple(constructor: Constructor) -> None:
         "sf_c": ["a", "d", "k", "s"],
     }
     assert_equal_data(result.sort("sf_c"), expected)
+
+
+def test_top_k_categorical(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    if any(x in str(constructor) for x in ID_NO_CATEGORICAL_ORDERING):
+        pytest.skip(reason="cannot order `Categorical` by value")
+
+    data = {"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}
+    df = nw.from_native(constructor(data)).with_columns(
+        nw.col("c").cast(nw.Categorical())
+    )
+    result = df.top_k(2, by="c").sort("n")
+    assert_equal_data(result, {"c": ["dog", "cat"], "n": [1, 2]})
+    result = df.top_k(2, by="c", reverse=True).sort("n")
+    assert_equal_data(result, {"c": ["cat", "bird"], "n": [2, 3]})
