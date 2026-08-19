@@ -23,13 +23,13 @@ class PandasLikeSeriesStringNamespace(
             result.dtype == object
             and get_dtype_backend(self.native.dtype, self.implementation) is None
         ):
-            notna = result.notna()
-            all_valid = notna.all()
+            not_na = result.notna()
+            all_valid = not_na.all()
             if not all_valid and self.implementation._backend_version() < (3,):
-                result.where(result.notna(), False, inplace=True)
+                result.where(not_na, False, inplace=True)
                 result = result.astype(bool, copy=False)
             elif not all_valid:
-                result = result.where(result.notna(), False).astype(bool)
+                result = result.where(not_na, False).astype(bool)
         return self.with_native(result)
 
     def len_chars(self) -> PandasLikeSeries:
