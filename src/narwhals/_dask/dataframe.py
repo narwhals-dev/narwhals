@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
 
-from narwhals._dask.utils import evaluate_exprs
+from narwhals._dask.utils import add_row_index, evaluate_exprs
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
@@ -223,9 +223,12 @@ class DaskLazyFrame(
 
         return self._with_native(self.native.drop(columns=to_drop))
 
-    def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+    def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         # Implementation is based on the following StackOverflow reply:
         # https://stackoverflow.com/questions/60831518/in-dask-how-does-one-add-a-range-of-integersauto-increment-to-a-new-column/60852409#60852409
+        if order_by is None:
+            # Keep for backcompat, Narwhals used to allow no `order_by` in Dask.
+            return self._with_native(add_row_index(self.native, name))
         plx = self.__narwhals_namespace__()
         columns = self.columns
         const_expr = plx.lit(1, dtype=None).alias(name).broadcast()

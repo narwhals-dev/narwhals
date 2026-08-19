@@ -558,6 +558,9 @@ class DuckDBLazyFrame(
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        if not order_by:
+            msg = "Must pass `order_by` to `with_row_index` for DuckDB"
+            raise TypeError(msg)
         expr = (window_expression(F("row_number"), order_by=order_by) - lit(1)).alias(
             name
         )
