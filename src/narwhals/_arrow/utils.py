@@ -590,6 +590,9 @@ def sortable_table(table: pa.Table, keys: Iterable[str], /) -> pa.Table:
     """Replace every `dictionary`-typed column named in `keys` with `sortable` ranks."""
     for name in keys:
         index = table.schema.get_field_index(name)
+        if index == -1:  # pragma: no cover
+            msg = f"Column '{name}' not found in table."
+            raise KeyError(msg)
         if is_dictionary(table.field(index).type):
             table = table.set_column(index, name, sortable(table.column(index)))
     return table
