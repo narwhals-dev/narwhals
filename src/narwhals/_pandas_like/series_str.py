@@ -23,10 +23,12 @@ class PandasLikeSeriesStringNamespace(
             result.dtype == object
             and get_dtype_backend(self.native.dtype, self.implementation) is None
         ):
-            if self.implementation._backend_version() < (3,):
+            notna = result.notna()
+            all_valid = notna.all()
+            if not all_valid and self.implementation._backend_version() < (3,):
                 result.where(result.notna(), False, inplace=True)
                 result = result.astype(bool, copy=False)
-            else:
+            elif not all_valid:
                 result = result.where(result.notna(), False).astype(bool)
         return self.with_native(result)
 
