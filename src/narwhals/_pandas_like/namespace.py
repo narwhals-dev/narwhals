@@ -18,11 +18,7 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import (
-    is_dtype_pyarrow,
-    is_non_nullable_boolean,
-    set_index,
-)
+from narwhals._pandas_like.utils import is_dtype_pyarrow, is_non_nullable_boolean
 from narwhals._utils import validate_separators
 
 if TYPE_CHECKING:
@@ -332,17 +328,11 @@ class PandasLikeNamespace(
 
     def _concat_horizontal(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`:
-        # the result takes on the index of the longest input (the left-most
-        # one, in case of a tie), and every other input is aligned to it
-        # *positionally*, ignoring its own index.
-        lengths = [len(df) for df in dfs]
-        target_index = dfs[lengths.index(max(lengths))].index
-        reset_dfs = [df.set_axis(range(len(df)), axis=VERTICAL) for df in dfs]
-        return set_index(
-            self.concat_by_index(reset_dfs),
-            target_index,
-            implementation=self._implementation,
-        )
+        # every input is aligned to the left-most one *positionally*, ignoring
+        # its own index.
+        target_index = dfs[0].index
+        aligned_dfs = [df.set_axis(target_index, axis=VERTICAL) for df in dfs]
+        return self.concat_by_index(aligned_dfs)
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns
