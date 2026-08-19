@@ -18,7 +18,12 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_dtype_pyarrow, is_non_nullable_boolean
+from narwhals._pandas_like.utils import (
+    import_array_module,
+    is_dtype_pyarrow,
+    is_non_nullable_boolean,
+    set_index,
+)
 from narwhals._utils import validate_separators
 
 if TYPE_CHECKING:
@@ -331,8 +336,13 @@ class PandasLikeNamespace(
         # every input is aligned to the left-most one *positionally*, ignoring
         # its own index.
         target_index = dfs[0].index
-        aligned_dfs = [df.set_axis(target_index, axis=VERTICAL) for df in dfs]
-        return self.concat_by_index(aligned_dfs)
+        arange = import_array_module(self._implementation).arange
+        reset_dfs = [df.set_axis(arange(len(df)), axis=VERTICAL) for df in dfs]
+        return set_index(
+            self.concat_by_index(reset_dfs),
+            target_index,
+            implementation=self._implementation,
+        )
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns
