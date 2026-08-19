@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pandas as pd
 import pytest
 
 import narwhals as nw
@@ -139,6 +138,8 @@ def test_starts_with_null(constructor: Constructor) -> None:
 def test_pandas_object_dtype_starts_with_null() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3850
     pytest.importorskip("pandas")
+    import pandas as pd
+
     df_native = pd.DataFrame({"a": ["x", "y", None, "z"]}).astype(object)
     df = nw.from_native(df_native, eager_only=True)
 
