@@ -570,7 +570,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             value_set: ArrayOrChunkedArray = other
         else:
             value_set = pa.array(other)
-        return self._with_native(pc.is_in(self.native, value_set=value_set))
+        native = self.native
+        is_in = pc.is_in(native, value_set=value_set)
+        return self._with_native(pc.if_else(native.is_null(), None, is_in))
 
     def arg_true(self) -> Self:
         import numpy as np  # ignore-banned-import

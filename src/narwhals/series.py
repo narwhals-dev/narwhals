@@ -956,6 +956,10 @@ class Series(Generic[IntoSeriesT]):
         Returns:
             A scalar value or `None` if the Series is empty.
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
