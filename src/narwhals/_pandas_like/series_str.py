@@ -23,7 +23,7 @@ class PandasLikeSeriesStringNamespace(
             result.dtype == object
             and get_dtype_backend(self.native.dtype, self.implementation) is None
         ):
-            result = result.fillna(False).astype(bool)
+            result = result.where(result.notna(), False).astype(bool)
         return self.with_native(result)
 
     def len_chars(self) -> PandasLikeSeries:
