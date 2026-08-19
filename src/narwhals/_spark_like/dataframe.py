@@ -567,7 +567,9 @@ class SparkLikeLazyFrame(
             raise TypeError(msg)
         row_index_expr = (
             self._F.row_number().over(
-                self._Window.partitionBy(self._F.lit(1)).orderBy(*order_by)
+                self._Window.partitionBy(self._F.lit(1)).orderBy(
+                    *[self._F.asc_nulls_first(x) for x in order_by]
+                )
             )
             - 1
         ).alias(name)

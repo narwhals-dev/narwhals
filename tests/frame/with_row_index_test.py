@@ -99,3 +99,9 @@ def test_with_row_index_order_by_categorical(constructor: Constructor) -> None:
         .select("i", "n")
     )
     assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})
+
+
+def test_with_row_index_order_by_w_null(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"c": ["dog", "cat", None], "n": [1, 2, 3]}))
+    result = df.with_row_index("i", order_by="c").sort("n").select("i", "n")
+    assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})
