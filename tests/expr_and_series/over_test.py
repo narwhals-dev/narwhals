@@ -435,9 +435,6 @@ def test_over_without_partition_by(
 def test_over_without_partition_by_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
     skip_if_no_categorical_ordering(constructor)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
-        pytest.skip()
-
     df = nw.from_native(constructor({"a": [1, 2, 3], "i": ["dog", "cat", "bird"]}))
     result = (
         df.with_columns(nw.col("i").cast(nw.Categorical()))

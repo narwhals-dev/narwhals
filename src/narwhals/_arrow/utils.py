@@ -8,6 +8,7 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -592,7 +593,7 @@ def sortable_table(table: pa.Table, keys: Iterable[str], /) -> pa.Table:
         index = table.schema.get_field_index(name)
         if index == -1:  # pragma: no cover
             msg = f"Column '{name}' not found in table."
-            raise KeyError(msg)
+            raise ColumnNotFoundError(msg)
         if is_dictionary(table.field(index).type):
             table = table.set_column(index, name, sortable(table.column(index)))
     return table
