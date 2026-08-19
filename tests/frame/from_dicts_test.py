@@ -57,9 +57,9 @@ def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
         ),
         ([{}, {}], {"a": nw.Float64()}, {"a": [None, None]}),
         (
-            [{"a": 1, "b": "x"}, {"a": 2}],
-            {"a": nw.Int64(), "b": nw.String()},
-            {"a": [1, 2], "b": ["x", None]},
+            [{"a": 1, "b": 5.5}, {"a": 2}],
+            {"a": nw.Int64(), "b": nw.Float64()},
+            {"a": [1, 2], "b": [5.5, None]},
         ),
     ],
     ids=["reordered-keys", "extra-key", "missing-key", "empty-rows", "partial-rows"],
