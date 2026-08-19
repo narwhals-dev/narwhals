@@ -63,6 +63,27 @@ def test_concat_horizontal_mismatched(
     assert_equal_data(result, expected)
 
 
+def test_concat_horizontal_pandas_left_hand_rule() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3864
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df_left = nw.from_native(
+        pd.DataFrame({"a": [1, 2, 3]}, index=[10, 20, 30]), eager_only=True
+    )
+    df_right = nw.from_native(
+        pd.DataFrame({"b": [4, 5, 6]}, index=[0, 1, 2]), eager_only=True
+    )
+
+    result = nw.concat([df_left, df_right], how="horizontal")
+
+    # the index of the left-most argument is preserved, and the other
+    # argument is aligned to it positionally, rather than by label.
+    assert result.to_native().index.tolist() == [10, 20, 30]
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    assert_equal_data(result, expected)
+
+
 def test_concat_vertical(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (

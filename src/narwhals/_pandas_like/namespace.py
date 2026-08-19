@@ -18,7 +18,11 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_dtype_pyarrow, is_non_nullable_boolean
+from narwhals._pandas_like.utils import (
+    is_dtype_pyarrow,
+    is_non_nullable_boolean,
+    set_index,
+)
 from narwhals._utils import validate_separators
 
 if TYPE_CHECKING:
@@ -304,9 +308,16 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def _concat_horizontal(
+    def concat_by_index(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
+        """Concatenate horizontally, aligning inputs by their (label-based) index.
+
+        Use this only when inputs are already known to share a meaningful,
+        aligned index (e.g. multiple aggregations from the same `group_by`).
+        For the general case, where inputs' indices may be unrelated, use
+        `_concat_horizontal` instead.
+        """
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -318,6 +329,20 @@ class PandasLikeNamespace(
         elif self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(dfs, axis=HORIZONTAL, copy=False)
         return self._concat(dfs, axis=HORIZONTAL)
+
+    def _concat_horizontal(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
+        # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`:
+        # the result takes on the index of the longest input (the left-most
+        # one, in case of a tie), and every other input is aligned to it
+        # *positionally*, ignoring its own index.
+        lengths = [len(df) for df in dfs]
+        target_index = dfs[lengths.index(max(lengths))].index
+        reset_dfs = [df.set_axis(range(len(df)), axis=VERTICAL) for df in dfs]
+        return set_index(
+            self.concat_by_index(reset_dfs),
+            target_index,
+            implementation=self._implementation,
+        )
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns
@@ -479,7 +504,7 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = self._concat_horizontal([a_series.native, b_series.native])
+            _df = self.concat_by_index([a_series.native, b_series.native])
             corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
             return [
                 PandasLikeSeries(
@@ -499,8 +524,7 @@ class PandasLikeNamespace(
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
             _df = cast(
-                "pd.DataFrame",
-                self._concat_horizontal([a_series.native, b_series.native]),
+                "pd.DataFrame", self.concat_by_index([a_series.native, b_series.native])
             )
             n = _df.count(axis=1).eq(2).sum()
             if ddof == 0 and n == 1:
