@@ -983,6 +983,10 @@ class Expr:
         Arguments:
             other: iterable
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
