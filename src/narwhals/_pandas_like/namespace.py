@@ -340,12 +340,10 @@ class PandasLikeNamespace(
             [df.set_axis(arange(len(df)), axis=VERTICAL) for df in dfs],
         )
         concatenated = self._concat_by_index(reset_dfs)
-        ret = set_index(
-            cast("pd.DataFrame", concatenated),
-            target_index,
-            implementation=self._implementation,
+        # Value of type variable "NativeNDFrameT" of "set_index" cannot be "NativeDataFrameT"
+        return set_index(  # type: ignore[type-var]
+            concatenated, target_index, implementation=self._implementation
         )
-        return cast("NativeDataFrameT", ret)
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns
