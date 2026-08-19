@@ -37,39 +37,52 @@ def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
     assert result.collect_schema() == schema
 
 
-def test_from_dicts_schema_reordered_keys(eager_backend: EagerAllowed) -> None:
-    # Row dicts have keys in a different order than `schema`: the result
-    # should still follow `schema`'s column order.
-    schema = {"a": nw.Int16(), "b": nw.Float32()}
-    result = nw.DataFrame.from_dicts(
-        [{"b": 5, "a": 1}, {"b": 6, "a": 2}], backend=eager_backend, schema=schema
-    )
+@pytest.mark.parametrize(
+    ("data", "schema", "expected"),
+    [
+        (
+            [{"b": 5, "a": 1}, {"b": 6, "a": 2}],
+            {"a": nw.Int16(), "b": nw.Float32()},
+            {"a": [1, 2], "b": [5.0, 6.0]},
+        ),
+        (
+            [{"a": 1, "b": 5, "c": 100}, {"a": 2, "b": 6, "c": 200}],
+            {"a": nw.Int16(), "b": nw.Float32()},
+            {"a": [1, 2], "b": [5.0, 6.0]},
+        ),
+        (
+            [{"a": 1}, {"a": 2}],
+            {"a": nw.Int16(), "b": nw.Float32()},
+            {"a": [1, 2], "b": [None, None]},
+        ),
+        ([{}, {}], {"a": nw.Int64()}, {"a": [None, None]}),
+        (
+            [{"a": 1, "b": True}, {"a": 2}],
+            {"a": nw.Int64(), "b": nw.Boolean()},
+            {"a": [1, 2], "b": [True, None]},
+        ),
+    ],
+    ids=["reordered-keys", "extra-key", "missing-key", "empty-rows", "partial-rows"],
+)
+def test_from_dicts_schema_mismatched_keys(
+    eager_backend: EagerAllowed,
+    request: pytest.FixtureRequest,
+    data: list[dict[str, Any]],
+    schema: dict[str, Any],
+    expected: dict[str, Any],
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3837
+    if "pandas" in str(eager_backend):
+        if not data[0]:
+            # `DataFrame.from_records` returns 0 rows for all-empty row dicts
+            request.applymarker(pytest.mark.xfail)
+        if nw.Boolean() in schema.values():
+            # NaN -> bool astype coerces missing values to True
+            request.applymarker(pytest.mark.xfail)
+    result = nw.DataFrame.from_dicts(data, backend=eager_backend, schema=schema)
     assert result.columns == list(schema)
     assert result.collect_schema() == schema
-
-
-def test_from_dicts_schema_extra_key(eager_backend: EagerAllowed) -> None:
-    # Row dicts have a key not present in `schema`: it should be dropped.
-    schema = {"a": nw.Int16(), "b": nw.Float32()}
-    result = nw.DataFrame.from_dicts(
-        [{"a": 1, "b": 5, "c": 100}, {"a": 2, "b": 6, "c": 200}],
-        backend=eager_backend,
-        schema=schema,
-    )
-    assert result.columns == list(schema)
-    assert result.collect_schema() == schema
-
-
-def test_from_dicts_schema_missing_key(eager_backend: EagerAllowed) -> None:
-    # Row dicts are missing a key present in `schema`: it should be added,
-    # filled with nulls.
-    schema = {"a": nw.Int16(), "b": nw.Float32()}
-    result = nw.DataFrame.from_dicts(
-        [{"a": 1}, {"a": 2}], backend=eager_backend, schema=schema
-    )
-    assert result.columns == list(schema)
-    assert result.collect_schema() == schema
-    assert_equal_data(result, {"a": [1, 2], "b": [None, None]})
+    assert_equal_data(result, expected)
 
 
 def test_from_dicts_non_eager() -> None:
