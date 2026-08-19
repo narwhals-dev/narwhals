@@ -481,10 +481,10 @@ def test_with_row_index(constructor: Constructor) -> None:
 
     frame = nw_v1.from_native(constructor(data))
 
-    msg = "Cannot pass `order_by`"
+    msg = "Must pass `order_by`"
     context = (
         pytest.raises(TypeError, match=msg)
-        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
+        if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis"))
         else does_not_raise()
     )
 
