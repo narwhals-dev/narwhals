@@ -290,7 +290,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             result = frame.with_row_index(name)
         else:
             if self._backend_version < (1, 10):
-                msg = "Cannot pass `order_by` to `with_row_index` for Polars<1.1"
+                msg = "Cannot pass `order_by` to `with_row_index` for Polars<1.10"
                 raise NotImplementedError(msg)
             result = frame.select(
                 pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
