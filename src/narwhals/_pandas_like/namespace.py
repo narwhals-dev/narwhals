@@ -309,7 +309,7 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def concat_by_index(
+    def _concat_by_index(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
         """Concatenate horizontally, aligning inputs by their (label-based) index.
@@ -339,7 +339,7 @@ class PandasLikeNamespace(
         arange = import_array_module(self._implementation).arange
         reset_dfs = [df.set_axis(arange(len(df)), axis=VERTICAL) for df in dfs]
         return set_index(
-            self.concat_by_index(reset_dfs),
+            self._concat_by_index(reset_dfs),
             target_index,
             implementation=self._implementation,
         )
@@ -504,7 +504,7 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = self.concat_by_index([a_series.native, b_series.native])
+            _df = self._concat_by_index([a_series.native, b_series.native])
             corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
             return [
                 PandasLikeSeries(
@@ -524,7 +524,7 @@ class PandasLikeNamespace(
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
             _df = cast(
-                "pd.DataFrame", self.concat_by_index([a_series.native, b_series.native])
+                "pd.DataFrame", self._concat_by_index([a_series.native, b_series.native])
             )
             n = _df.count(axis=1).eq(2).sum()
             if ddof == 0 and n == 1:

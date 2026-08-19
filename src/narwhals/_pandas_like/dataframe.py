@@ -448,7 +448,7 @@ class PandasLikeDataFrame(
             return self._with_native(type(self.native)(), validate_column_names=False)
         new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
-        df = namespace.concat_by_index([s.native for s in new_series])
+        df = namespace._concat_by_index([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
@@ -511,7 +511,7 @@ class PandasLikeDataFrame(
             to_concat.append(series)
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         namespace = self.__narwhals_namespace__()
-        df = namespace.concat_by_index(to_concat)
+        df = namespace._concat_by_index(to_concat)
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=False)
