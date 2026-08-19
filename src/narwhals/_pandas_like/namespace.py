@@ -335,7 +335,10 @@ class PandasLikeNamespace(
         # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`.
         target_index = dfs[0].index
         arange = import_array_module(self._implementation).arange
-        reset_dfs = [df.set_axis(arange(len(df)), axis=VERTICAL) for df in dfs]
+        reset_dfs = cast(
+            "list[NativeDataFrameT]",
+            [df.set_axis(arange(len(df)), axis=VERTICAL) for df in dfs],
+        )
         concatenated = self._concat_by_index(reset_dfs)
         ret = set_index(
             cast("pd.DataFrame", concatenated),
