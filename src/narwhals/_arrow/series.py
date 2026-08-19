@@ -348,7 +348,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise InvalidOperationError(msg)
 
         return maybe_extract_py_scalar(
-            pc.approximate_median(self.native), _return_py_scalar
+            pc.quantile(self.native, q=0.5, interpolation="linear")[0], _return_py_scalar
         )
 
     def min(self, *, _return_py_scalar: bool = True) -> Any:
