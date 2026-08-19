@@ -45,11 +45,13 @@ def test_median_series(
 def test_median_group_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    # PyArrow has no exact hashed quantile kernel, only `hash_approximate_median` and
-    # `hash_tdigest`, so a grouped median stays approximate there.
-    # https://github.com/apache/arrow/issues/28985
     if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+        reason = (
+            "PyArrow has no exact hashed quantile kernel, only `hash_approximate_median` "
+            " and `hash_tdigest`, so a grouped median stays approximate there. "
+            "See: https://github.com/apache/arrow/issues/28985"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(group_data))
     result = df.group_by("g").agg(nw.col("a").median()).sort("g")
     assert_equal_data(result, {"g": [1, 2], "a": [1.5, 15.0]})
