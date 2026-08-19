@@ -55,34 +55,47 @@ def test_from_dicts_schema(eager_backend: EagerAllowed) -> None:
             {"a": nw.Int16(), "b": nw.Float32()},
             {"a": [1, 2], "b": [None, None]},
         ),
-        ([{}, {}], {"a": nw.Int64()}, {"a": [None, None]}),
+        ([{}, {}], {"a": nw.Float64()}, {"a": [None, None]}),
         (
-            [{"a": 1, "b": True}, {"a": 2}],
-            {"a": nw.Int64(), "b": nw.Boolean()},
-            {"a": [1, 2], "b": [True, None]},
+            [{"a": 1, "b": "x"}, {"a": 2}],
+            {"a": nw.Int64(), "b": nw.String()},
+            {"a": [1, 2], "b": ["x", None]},
         ),
     ],
     ids=["reordered-keys", "extra-key", "missing-key", "empty-rows", "partial-rows"],
 )
 def test_from_dicts_schema_mismatched_keys(
     eager_backend: EagerAllowed,
-    request: pytest.FixtureRequest,
     data: list[dict[str, Any]],
-    schema: dict[str, Any],
+    schema: dict[str, nw.dtypes.DType],
     expected: dict[str, Any],
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3837
-    if "pandas" in str(eager_backend):
-        if not data[0]:
-            # `DataFrame.from_records` returns 0 rows for all-empty row dicts
-            request.applymarker(pytest.mark.xfail)
-        if nw.Boolean() in schema.values():
-            # NaN -> bool astype coerces missing values to True
-            request.applymarker(pytest.mark.xfail)
     result = nw.DataFrame.from_dicts(data, backend=eager_backend, schema=schema)
     assert result.columns == list(schema)
     assert result.collect_schema() == schema
     assert_equal_data(result, expected)
+
+
+def test_from_dicts_schema_pandas_non_nullable() -> None:
+    """Missing keys are filled with `NaN`, which numpy-backed dtypes may not represent.
+
+    Unlike polars and pyarrow, pandas' default (numpy) `bool` and `int64` have no null,
+    so `astype` either coerces or raises. Narwhals can only avoid this by deviating from
+    the requested schema, e.g. silently using pandas' nullable extension dtypes instead.
+    """
+    pytest.importorskip("pandas")
+    # `bool(nan)` is `True`, so missing values become `True` rather than null
+    result = nw.DataFrame.from_dicts(
+        [{"a": True}, {}], backend="pandas", schema={"a": nw.Boolean()}
+    )
+    assert_equal_data(result, {"a": [True, True]})
+
+    # integer casting is stricter, `pandas.errors.IntCastingNaNError` is surfaced as-is
+    with pytest.raises(ValueError, match="Cannot convert non-finite values"):
+        nw.DataFrame.from_dicts(
+            [{"a": 1}, {}], backend="pandas", schema={"a": nw.Int64()}
+        )
 
 
 def test_from_dicts_non_eager() -> None:

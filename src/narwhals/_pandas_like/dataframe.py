@@ -203,18 +203,14 @@ class PandasLikeDataFrame(
         implementation = context._implementation
         ns = implementation.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
-        if data or not schema:
-            native = DataFrame.from_records(data)
-        else:
-            native = DataFrame.from_dict({col: [] for col in schema})
+        # NOTE: `DataFrame.from_records` returns *zero* rows when every mapping is
+        # empty, while the constructor keeps `len(data)` (empty) rows.
+        native = DataFrame(data)
         if schema:
-            # https://github.com/narwhals-dev/narwhals/issues/3837
+            # Missing columns become all-null, extra ones are dropped, and the schema
+            # order wins: https://github.com/narwhals-dev/narwhals/issues/3837
             native = native.reindex(columns=list(schema))
-            backends: Iterable[DTypeBackend]
-            if data:
-                backends = iter_dtype_backends(native.dtypes, implementation)
-            else:
-                backends = (None for _ in range(len(schema)))
+            backends = iter_dtype_backends(native.dtypes, implementation)
             native_schema = {
                 key: narwhals_to_native_dtype(
                     dtype,
