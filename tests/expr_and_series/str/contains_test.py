@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+import pandas as pd
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"pets": ["cat", "dog", "rabbit and parrot", "dove", "Parrot|dove", None]}
 """Test data for string literal pattern tests"""
@@ -97,7 +98,7 @@ def test_expr_contains_str_pattern(
         nw.col("pets").str.contains(pattern, literal=literal).alias("match")
     )
 
-    if "pandas_constructor" in str(constructor) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor):
         expected = expected_without_null
     else:
         expected = expected_with_null
@@ -123,7 +124,7 @@ def test_series_contains_str_pattern(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(match=df["pets"].str.contains(pattern, literal=literal))
 
-    if "pandas_constructor" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor_eager):
         expected = expected_without_null
     else:
         expected = expected_with_null
@@ -173,7 +174,7 @@ def test_expr_contains_literal_vs_regex(constructor: Constructor) -> None:
         nw.col("pets").str.contains("Parrot|dove", literal=False).alias("regex_match"),
         nw.col("pets").str.contains("Parrot|dove", literal=True).alias("literal_match"),
     )
-    if "pandas_constructor" in str(constructor) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor):
         expected: dict[str, Any] = {
             "regex_match": [False, False, False, True, True, False],
             "literal_match": [False, False, False, False, True, False],
@@ -186,6 +187,18 @@ def test_expr_contains_literal_vs_regex(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_pandas_object_dtype_contains_null() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3850
+    df_native = pd.DataFrame(data).astype(object)
+    df = nw.from_native(df_native, eager_only=True)
+
+    mask = df["pets"].str.contains("parrot")
+    assert mask.dtype == nw.Boolean
+    assert_equal_data(
+        {"match": mask}, {"match": [False, False, True, False, False, False]}
+    )
+
+
 def test_series_contains_literal_vs_regex(constructor_eager: ConstructorEager) -> None:
     """Test that literal=True vs literal=False behaves differently for regex patterns."""
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -193,7 +206,7 @@ def test_series_contains_literal_vs_regex(constructor_eager: ConstructorEager) -
         regex_match=df["pets"].str.contains("Parrot|dove", literal=False),
         literal_match=df["pets"].str.contains("Parrot|dove", literal=True),
     )
-    if "pandas_constructor" in str(constructor_eager) and PANDAS_VERSION >= (3,):
+    if "pandas_constructor" in str(constructor_eager):
         expected: dict[str, Any] = {
             "regex_match": [False, False, False, True, True, False],
             "literal_match": [False, False, False, False, True, False],

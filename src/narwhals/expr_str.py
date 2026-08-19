@@ -142,6 +142,10 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             prefix: prefix substring
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -168,6 +172,10 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             suffix: suffix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -203,6 +211,10 @@ class ExprStringNamespace(Generic[ExprT]):
             Passing an expression as `pattern` is only supported by DuckDB, Ibis, Polars,
             PySpark and SQLFrame. Other backends, such as pandas and PyArrow, will raise
             a `TypeError`.
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
