@@ -332,9 +332,7 @@ class PandasLikeNamespace(
         return self._concat(dfs, axis=HORIZONTAL)
 
     def _concat_horizontal(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
-        # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`:
-        # every input is aligned to the left-most one *positionally*, ignoring
-        # its own index.
+        # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`.
         target_index = dfs[0].index
         arange = import_array_module(self._implementation).arange
         reset_dfs = [df.set_axis(arange(len(df)), axis=VERTICAL) for df in dfs]
