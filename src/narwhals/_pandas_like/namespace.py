@@ -335,17 +335,18 @@ class PandasLikeNamespace(
         # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`.
         target_index = dfs[0].index
         arange = import_array_module(self._implementation).arange
+        impl = self._implementation
 
         def reset(df: NativeDataFrameT) -> NativeDataFrameT:
             # Value of type variable "NativeNDFrameT" of "set_index" cannot be "NativeDataFrameT"
             return set_index(  # type: ignore[type-var]
-                df, arange(len(df)), implementation=self._implementation
+                df, arange(len(df)), implementation=impl
             )
 
         concatenated = self._concat_by_index([reset(df) for df in dfs])
         # Value of type variable "NativeNDFrameT" of "set_index" cannot be "NativeDataFrameT"
         return set_index(  # type: ignore[type-var]
-            concatenated, target_index, implementation=self._implementation
+            concatenated, target_index, implementation=impl
         )
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
