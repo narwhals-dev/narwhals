@@ -2624,6 +2624,9 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └──────────────────┘
         """
         order_by_ = [order_by] if isinstance(order_by, str) else order_by
+        if not order_by:
+            msg = "`order_by` must be specified when calling `LazyFrame.with_row_index`"
+            raise TypeError(msg)
         return self._with_compliant(
             self._compliant_frame.with_row_index(name, order_by=order_by_)
         )
