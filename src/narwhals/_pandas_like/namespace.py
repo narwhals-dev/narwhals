@@ -505,12 +505,11 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = self._concat_by_index(
-                cast(
-                    "list[NativeSeriesT]",
-                    [df._extract_comparand(a_series), df._extract_comparand(b_series)],
-                )
+            aligned = cast(
+                "list[NativeSeriesT]",
+                [df._extract_comparand(a_series), df._extract_comparand(b_series)],
             )
+            _df = self._concat_by_index(aligned)
             corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
             return [
                 PandasLikeSeries(
@@ -529,18 +528,11 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = cast(
-                "pd.DataFrame",
-                self._concat_by_index(
-                    cast(
-                        "list[NativeSeriesT]",
-                        [
-                            df._extract_comparand(a_series),
-                            df._extract_comparand(b_series),
-                        ],
-                    )
-                ),
+            aligned = cast(
+                "list[NativeSeriesT]",
+                [df._extract_comparand(a_series), df._extract_comparand(b_series)],
             )
+            _df = cast("pd.DataFrame", self._concat_by_index(aligned))
             n = _df.count(axis=1).eq(2).sum()
             if ddof == 0 and n == 1:
                 value = 0.0
