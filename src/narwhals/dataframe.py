@@ -634,8 +634,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
         Notes:
+            Keys missing from some (or all) rows are filled with null.
+
             For pandas-like dataframes, conversion to schema is applied after dataframe
-            creation.
+            creation. A `schema` requesting a dtype which cannot hold null values (e.g.
+            `Int64` or `Boolean` with the default numpy dtypes) will therefore coerce or
+            raise on those missing values.
 
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
