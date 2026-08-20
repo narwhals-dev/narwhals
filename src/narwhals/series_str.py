@@ -132,8 +132,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     "mango"
             ]
         """
-        characters = parse_str_strip_chars(characters)
-        if characters == "":
+        if (characters := parse_str_strip_chars(characters)) == "":
             return self._narwhals_series
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_start(characters)
