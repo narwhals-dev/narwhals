@@ -200,19 +200,23 @@ class PandasLikeDataFrame(
         context: _LimitedContext,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
-        implementation = context._implementation
-        ns = implementation.to_native_namespace()
+        impl = context._implementation
+        ns = impl.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
-        if data or not schema:
-            native = DataFrame.from_records(data)
-        else:
-            native = DataFrame.from_dict({col: [] for col in schema})
+        # NOTE: `DataFrame.from_records` returns *zero* rows when every mapping is
+        # empty, while the constructor keeps `len(data)` (empty) rows.
+        native = DataFrame(data)
         if schema:
-            backends: Iterable[DTypeBackend]
-            if data:
-                backends = iter_dtype_backends(native.dtypes, implementation)
-            else:
-                backends = (None for _ in range(len(schema)))
+            # Missing columns become all-null, extra ones are dropped, and the schema
+            # order wins: https://github.com/narwhals-dev/narwhals/issues/3837
+            use_copy_flag = impl.is_pandas() and impl._backend_version() < (3,)
+
+            native = (
+                native.reindex(columns=list(schema), copy=False)  # type: ignore[call-arg]
+                if use_copy_flag
+                else native.reindex(columns=list(schema))
+            )
+            backends = iter_dtype_backends(native.dtypes, impl)
             native_schema = {
                 key: narwhals_to_native_dtype(
                     dtype,
@@ -223,7 +227,11 @@ class PandasLikeDataFrame(
                 for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
-            native = native.astype(native_schema)
+            native = (
+                native.astype(native_schema, copy=False)  # type: ignore[call-arg]
+                if use_copy_flag
+                else native.astype(native_schema)
+            )
         return cls.from_native(native, context=context)
 
     @staticmethod
