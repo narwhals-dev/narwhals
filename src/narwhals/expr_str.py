@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals._utils import parse_str_strip_chars
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -154,6 +155,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... ).to_dict(as_series=False)
             {'fruits': [' apple ', '\nmango'], 'stripped': ['apple ', 'mango']}
         """
+        characters = parse_str_strip_chars(characters)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_start", characters=characters)
         )
@@ -176,6 +178,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': [' apple ', 'mango\n'], 'stripped': [' apple', 'mango']}
         """
+        characters = parse_str_strip_chars(characters)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_end", characters=characters)
         )

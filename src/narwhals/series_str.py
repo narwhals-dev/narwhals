@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Generic
 
+from narwhals._utils import parse_str_strip_chars
 from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
@@ -131,6 +132,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     "mango"
             ]
         """
+        characters = parse_str_strip_chars(characters)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_start(characters)
         )
@@ -156,6 +158,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
                     "mango"
             ]
         """
+        characters = parse_str_strip_chars(characters)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_end(characters)
         )

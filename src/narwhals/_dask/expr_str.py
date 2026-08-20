@@ -39,10 +39,10 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def strip_chars(self, characters: str | None) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.strip(characters))
 
-    def strip_chars_start(self, characters: str | None) -> DaskExpr:
+    def strip_chars_start(self, characters: str) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.lstrip(characters))
 
-    def strip_chars_end(self, characters: str | None) -> DaskExpr:
+    def strip_chars_end(self, characters: str) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.rstrip(characters))
 
     def starts_with(self, prefix: DaskExpr) -> DaskExpr:

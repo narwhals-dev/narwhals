@@ -104,26 +104,14 @@ class SQLExprStringNamespace(
             )
         )
 
-    def strip_chars_start(self, characters: str | None) -> SQLExprT:
-        import string
-
+    def strip_chars_start(self, characters: str) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function(
-                "ltrim",
-                expr,
-                self._lit(string.whitespace if characters is None else characters),
-            )
+            lambda expr: self._function("ltrim", expr, self._lit(characters))
         )
 
-    def strip_chars_end(self, characters: str | None) -> SQLExprT:
-        import string
-
+    def strip_chars_end(self, characters: str) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function(
-                "rtrim",
-                expr,
-                self._lit(string.whitespace if characters is None else characters),
-            )
+            lambda expr: self._function("rtrim", expr, self._lit(characters))
         )
 
     def to_lowercase(self) -> SQLExprT:

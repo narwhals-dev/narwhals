@@ -47,6 +47,7 @@ def test_str_strip_chars_series(
     [
         (None, {"a": ["foobar  ", "xyxbarxy", "baz\n\t", "", None]}),
         ("xy", {"a": ["  foobar  ", "barxy", "\n\tbaz\n\t", "", None]}),
+        ("", directional_data),
     ],
 )
 def test_str_strip_chars_start(
@@ -63,6 +64,7 @@ def test_str_strip_chars_start(
     [
         (None, {"a": ["  foobar", "xyxbarxy", "\n\tbaz", "", None]}),
         ("xy", {"a": ["  foobar  ", "xyxbar", "\n\tbaz\n\t", "", None]}),
+        ("", directional_data),
     ],
 )
 def test_str_strip_chars_end(
@@ -79,6 +81,7 @@ def test_str_strip_chars_end(
     [
         (None, {"a": ["foobar  ", "xyxbarxy", "baz\n\t", "", None]}),
         ("xy", {"a": ["  foobar  ", "barxy", "\n\tbaz\n\t", "", None]}),
+        ("", directional_data),
     ],
 )
 def test_str_strip_chars_start_series(
@@ -95,6 +98,7 @@ def test_str_strip_chars_start_series(
     [
         (None, {"a": ["  foobar", "xyxbarxy", "\n\tbaz", "", None]}),
         ("xy", {"a": ["  foobar  ", "xyxbar", "\n\tbaz\n\t", "", None]}),
+        ("", directional_data),
     ],
 )
 def test_str_strip_chars_end_series(

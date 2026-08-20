@@ -1274,6 +1274,12 @@ def parse_columns_to_drop(
     return to_drop
 
 
+def parse_str_strip_chars(characters: str | None) -> str:
+    import string
+
+    return string.whitespace if characters is None else characters
+
+
 def is_sequence_but_not_str(sequence: Sequence[_T] | Any) -> TypeIs[Sequence[_T]]:
     return isinstance(sequence, Sequence) and not isinstance(sequence, str)
 

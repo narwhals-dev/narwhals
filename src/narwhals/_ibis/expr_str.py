@@ -21,19 +21,15 @@ IntoStringValue: TypeAlias = "str | ir.StringValue"
 
 
 class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
-    def strip_chars_start(self, characters: str | None) -> IbisExpr:
-        if characters is None:
-            return self.compliant._with_callable(lambda expr: expr.lstrip())
-        if not characters:
+    def strip_chars_start(self, characters: str) -> IbisExpr:
+        if characters == "":
             return self.compliant
 
         pattern = rf"^[{re.escape(characters)}]+"
         return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
 
-    def strip_chars_end(self, characters: str | None) -> IbisExpr:
-        if characters is None:
-            return self.compliant._with_callable(lambda expr: expr.rstrip())
-        if not characters:
+    def strip_chars_end(self, characters: str) -> IbisExpr:
+        if characters == "":
             return self.compliant
 
         pattern = rf"[{re.escape(characters)}]+$"
