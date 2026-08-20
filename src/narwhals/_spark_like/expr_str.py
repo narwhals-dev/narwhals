@@ -16,9 +16,6 @@ if TYPE_CHECKING:
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
     def _strip_chars(self, characters: str, *, start: bool) -> SparkLikeExpr:
-        if characters == "":
-            return self.compliant
-
         escaped = re.escape(characters)
         pattern = rf"^[{escaped}]+" if start else rf"[{escaped}]+$"
         F = self.compliant._F

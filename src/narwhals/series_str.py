@@ -133,6 +133,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         characters = parse_str_strip_chars(characters)
+        if characters == "":
+            return self._narwhals_series
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_start(characters)
         )
@@ -159,6 +161,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             ]
         """
         characters = parse_str_strip_chars(characters)
+        if characters == "":
+            return self._narwhals_series
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars_end(characters)
         )

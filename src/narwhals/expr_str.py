@@ -156,6 +156,8 @@ class ExprStringNamespace(Generic[ExprT]):
             {'fruits': [' apple ', '\nmango'], 'stripped': ['apple ', 'mango']}
         """
         characters = parse_str_strip_chars(characters)
+        if characters == "":
+            return self._expr
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_start", characters=characters)
         )
@@ -179,6 +181,8 @@ class ExprStringNamespace(Generic[ExprT]):
             {'fruits': [' apple ', 'mango\n'], 'stripped': [' apple', 'mango']}
         """
         characters = parse_str_strip_chars(characters)
+        if characters == "":
+            return self._expr
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_end", characters=characters)
         )
