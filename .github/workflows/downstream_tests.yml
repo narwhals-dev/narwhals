@@ -149,6 +149,8 @@ jobs:
       - name: install-scikit-lego-dev
         run: |
           cd scikit-lego
+          # Temporary pin to get CI green https://github.com/koaning/scikit-lego/issues/818.
+          uv pip install "pandas<3"
           uv pip install -e ".[test]"
       - name: install-narwhals-dev
         run: |
