@@ -155,8 +155,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... ).to_dict(as_series=False)
             {'fruits': [' apple ', '\nmango'], 'stripped': ['apple ', 'mango']}
         """
-        characters = parse_str_strip_chars(characters)
-        if characters == "":
+        if (characters := parse_str_strip_chars(characters)) == "":
             return self._expr
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_start", characters=characters)
