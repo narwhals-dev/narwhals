@@ -30,6 +30,8 @@ class PandasLikeSeriesStringNamespace(
                 result = result.astype(bool, copy=False)
             elif not all_valid:
                 result = result.where(not_na, False).astype(bool)
+            else:  # pragma: no cover
+                pass
         return self.with_native(result)
 
     def len_chars(self) -> PandasLikeSeries:
