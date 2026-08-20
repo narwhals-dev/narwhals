@@ -146,14 +146,24 @@ class ExprStringNamespace(Generic[ExprT]):
                 to None (default), all leading whitespace is removed instead.
 
         Examples:
-            >>> import polars as pl
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> df_native = pl.DataFrame({"fruits": [" apple ", "\nmango"]})
+            >>> df_native = duckdb.sql(
+            ...     r"SELECT * FROM VALUES (' apple '), (E'mango\n') df(fruits)"
+            ... )
             >>> df = nw.from_native(df_native)
-            >>> df.with_columns(
-            ...     stripped=nw.col("fruits").str.strip_chars_start()
-            ... ).to_dict(as_series=False)
-            {'fruits': [' apple ', '\nmango'], 'stripped': ['apple ', 'mango']}
+            >>> df.with_columns(stripped=nw.col("fruits").str.strip_chars_start())
+            ┌──────────────────────┐
+            |  Narwhals LazyFrame  |
+            |----------------------|
+            |┌─────────┬──────────┐|
+            |│ fruits  │ stripped │|
+            |│ varchar │ varchar  │|
+            |├─────────┼──────────┤|
+            |│  apple  │ apple    │|
+            |│ mango\n │ mango\n  │|
+            |└─────────┴──────────┘|
+            └──────────────────────┘
         """
         if (characters := parse_str_strip_chars(characters)) == "":
             return self._expr
