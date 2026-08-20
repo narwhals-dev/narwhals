@@ -179,8 +179,7 @@ class ExprStringNamespace(Generic[ExprT]):
             ... )
             {'fruits': [' apple ', 'mango\n'], 'stripped': [' apple', 'mango']}
         """
-        characters = parse_str_strip_chars(characters)
-        if characters == "":
+        if (characters := parse_str_strip_chars(characters)) == "":
             return self._expr
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_end", characters=characters)
