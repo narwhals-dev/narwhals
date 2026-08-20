@@ -105,7 +105,7 @@ def test_with_row_index_order_by_w_null(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "dask" in str(constructor):
-        request.node.add_marker(pytest.mark.xfail(reason="not implemented in dask"))
+        request.applymarker(pytest.mark.xfail(reason="not implemented in dask"))
     if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
