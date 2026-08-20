@@ -1318,7 +1318,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pyarrow as pa
@@ -1652,7 +1652,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pandas as pd
@@ -2590,7 +2590,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb
@@ -2855,7 +2855,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 * 'none': Don't keep duplicate rows.
                 * 'first': Keep the first row. Requires `order_by` to be specified.
                 * 'last': Keep the last row. Requires `order_by` to be specified.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb
