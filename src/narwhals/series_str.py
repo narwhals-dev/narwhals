@@ -171,6 +171,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             prefix: prefix substring
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -193,6 +197,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             suffix: suffix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -223,6 +231,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Warning:
             Passing a Series as `pattern` is only supported by Polars. Other backends
             will raise a `TypeError`.
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
