@@ -125,7 +125,7 @@ class PandasLikeNamespace(
                 # Use ArrowExtensionArray to avoid pandas unpacking the nested structure
                 ns = self._implementation.to_native_namespace()
                 pandas_series_native = ns.Series(
-                    pd.arrays.ArrowExtensionArray(pa_array),  # type: ignore[attr-defined]
+                    pd.arrays.ArrowExtensionArray(pa_array),
                     name="literal",
                     index=df._native_frame.index[0:1],
                 )
@@ -409,7 +409,7 @@ class PandasLikeNamespace(
             ns = impl.to_native_namespace()
 
             result_native = ns.Series(
-                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                pd.arrays.ArrowExtensionArray(result),
                 name=name,
                 index=series[0].native.index,
             )
@@ -449,7 +449,7 @@ class PandasLikeNamespace(
 
             impl = self._implementation
             result_native = impl.to_native_namespace().Series(
-                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                pd.arrays.ArrowExtensionArray(result),
                 name=series[0].name,
                 index=series[0].native.index,
             )
