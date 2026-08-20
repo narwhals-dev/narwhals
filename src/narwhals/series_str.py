@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Generic
 
+from narwhals._utils import parse_str_strip_chars
 from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
@@ -108,6 +109,60 @@ class SeriesStringNamespace(Generic[SeriesT]):
         """
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.strip_chars(characters)
+        )
+
+    def strip_chars_start(self, characters: str | None = None) -> SeriesT:
+        r"""Remove leading characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start of the string. If set
+                to None (default), all leading whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([" apple ", "\nmango"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.strip_chars_start().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                    "apple "
+                    "mango"
+            ]
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._narwhals_series
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.strip_chars_start(characters)
+        )
+
+    def strip_chars_end(self, characters: str | None = None) -> SeriesT:
+        r"""Remove trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the end of the string. If set
+                to None (default), all trailing whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([" apple ", "mango\n"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.strip_chars_end().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                    " apple"
+                    "mango"
+            ]
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._narwhals_series
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.strip_chars_end(characters)
         )
 
     def starts_with(self, prefix: str | SeriesT) -> SeriesT:
