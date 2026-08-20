@@ -209,3 +209,8 @@ breaking changes). The title becomes the changelog entry.
 is accountable for every line. Read
 [CONTRIBUTING.md → AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions) before
 opening a PR.
+
+**A human opens the pull request or issue, not you.** Draft the diff, the description, and the
+commit messages if asked, but the submission is made by the person you are working with, under their
+account, in their words, after they have read the whole diff. The same holds for review replies and
+issue discussion. Unattended agent-filed issues and PRs can be closed without discussion.
