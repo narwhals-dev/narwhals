@@ -80,6 +80,28 @@ def _to_comparable_list(column_values: Any) -> Any:
     return list(column_values)
 
 
+def skip_if_no_categorical_ordering(
+    constructor: Constructor | ConstructorEager, /
+) -> None:
+    """Skip if the backend cannot order a `Categorical` column by its values.
+
+    - `pyspark`, `duckdb` and `ibis` have no categorical dtype.
+    - `dask` encodes the categories per partition, so ordering them by value would
+      need a compute.
+    - `polars<1.32` orders by the physical encoding instead of by value
+      (https://github.com/pola-rs/polars/pull/23779).
+    - `pyarrow<15` cannot cast `string` to `dictionary`, so the column cannot even be
+      created.
+    """
+    id_ = str(constructor)
+    if any(x in id_ for x in ("pyspark", "duckdb", "ibis", "dask")):
+        pytest.skip(reason="no `Categorical` dtype")
+    if "polars" in id_ and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="orders `Categorical` by physical encoding")
+    if "pyarrow_table" in id_ and PYARROW_VERSION < (15,):
+        pytest.skip(reason="cannot cast `string` to `dictionary`")
+
+
 def is_pd_na(value: Any) -> bool:
     return (pd := get_pandas()) is not None and pd.isna(value)
 
@@ -189,22 +211,22 @@ def sqlframe_session() -> DuckDBSession:
 
 def pyspark_session() -> SparkSession:  # pragma: no cover
     if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
+        from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        from pyspark.sql import SparkSession as _SparkSession
+    builder = cast("_SparkSession.Builder", _SparkSession.builder).appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect
         else builder.master("local[1]").config("spark.ui.enabled", "false")
     )
-    return (
-        # Don't remove pyrefly-ignore, needed in CI when pyspark is installed.
-        builder.config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
+    ret = (
+        builder.config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    return cast("SparkSession", ret)
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover

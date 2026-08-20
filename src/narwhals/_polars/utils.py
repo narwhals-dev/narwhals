@@ -347,6 +347,8 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
     strip_chars: Method[CompliantT]
+    strip_chars_start: Method[CompliantT]
+    strip_chars_end: Method[CompliantT]
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]

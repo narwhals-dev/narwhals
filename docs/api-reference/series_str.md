@@ -16,6 +16,8 @@
         - split
         - starts_with
         - strip_chars
+        - strip_chars_end
+        - strip_chars_start
         - tail
         - to_date
         - to_datetime

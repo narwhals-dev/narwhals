@@ -91,7 +91,7 @@ sklearn = [
 typing = [
   # Type checkers
   "mypy>=2.1.0",
-  "pyrefly>=1.1.1",
+  "pyrefly>=1.2.0",
   "pyright",
   # Dependencies
   "hypothesis>=6.0.0",
