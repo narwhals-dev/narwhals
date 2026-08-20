@@ -546,7 +546,7 @@ class ArrowDataFrame(
             )
             return self.select(row_index, plx.all())
         sorting: list[tuple[str, Order]] = [(name, "ascending") for name in order_by]
-        indices = sort_indices(sortable_table(self.native, order_by), sorting, "at_end")
+        indices = sort_indices(sortable_table(self.native, order_by), sorting, "at_start")
         if self._backend_version < (20,):
             new_col = data.take(pc.sort_indices(indices))
         else:

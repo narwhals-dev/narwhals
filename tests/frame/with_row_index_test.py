@@ -99,3 +99,18 @@ def test_with_row_index_order_by_categorical(constructor: Constructor) -> None:
         .select("i", "n")
     )
     assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})
+
+
+def test_with_row_index_order_by_w_null(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="not implemented in dask"))
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
+    df = nw.from_native(constructor({"c": ["dog", "cat", None], "n": [1, 2, 3]}))
+    result = df.with_row_index("i", order_by="c").sort("n").select("i", "n")
+    assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})
