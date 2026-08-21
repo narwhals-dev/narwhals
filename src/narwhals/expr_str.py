@@ -308,8 +308,8 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice, which must be non-negative. If set to `None`
-                (default), the slice is taken to the end of the string.
+            length: Length of the slice. If set to `None` (default), the slice is taken to the
+                end of the string.
 
         Examples:
             >>> import pandas as pd
@@ -326,8 +326,6 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
-        if length is not None:
-            validate_is_non_negative_int(length, "length")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=offset, length=length)
         )
@@ -382,7 +380,6 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
-        validate_is_non_negative_int(n, "n")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=0, length=n)
         )
@@ -391,12 +388,10 @@ class ExprStringNamespace(Generic[ExprT]):
         r"""Take the last n elements of each string.
 
         Arguments:
-            n: Number of elements to take. Negative indexing is supported (see note (1.))
+            n: Number of elements to take. Negative indexing is **not** supported.
 
         Notes:
-            1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
-            the string. For example, if `n = -3`, then all characters except the first three are returned.
-            2. If the length of the string has fewer than `n` characters, the full string is returned.
+            If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:
             >>> import pyarrow as pa

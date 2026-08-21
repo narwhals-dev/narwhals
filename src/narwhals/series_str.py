@@ -262,8 +262,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice, which must be non-negative. If set to `None`
-                (default), the slice is taken to the end of the string.
+            length: Length of the slice. If set to `None` (default), the slice is taken to the
+                end of the string.
 
         Examples:
             >>> import pandas as pd
@@ -276,8 +276,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
             2     ya
             dtype: str
         """
-        if length is not None:
-            validate_is_non_negative_int(length, "length")
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(
                 offset=offset, length=length
@@ -311,10 +309,12 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Take the first n elements of each string.
 
         Arguments:
-            n: Number of elements to take. Negative indexing is **not** supported.
+            n: Number of elements to take. Negative indexing is supported (see note (1.))
 
         Notes:
-            If the length of the string has fewer than `n` characters, the full string is returned.
+            1. When the `n` input is negative, `head` returns characters up to the n-th from the end of the string.
+            For example, if `n = -3`, then all characters except the last three are returned.
+            2. If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:
             >>> import pyarrow as pa
@@ -331,7 +331,6 @@ class SeriesStringNamespace(Generic[SeriesT]):
               ]
             ]
         """
-        validate_is_non_negative_int(n, "n")
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(offset=0, length=n)
         )
