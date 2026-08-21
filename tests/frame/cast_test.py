@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import narwhals as nw
@@ -40,7 +42,8 @@ def test_cast_preserves_arrow_schema() -> None:
 
     field_a = pa.field("a", pa.int64(), nullable=False, metadata={b"k": b"v"})
     field_b = pa.field("b", pa.float64(), nullable=False)
-    schema = pa.schema([field_a, field_b])
+    fields: list[pa.Field[Any]] = [field_a, field_b]
+    schema = pa.schema(fields)
     schema_metadata = {b"pandas": b"{}"}
     # NOTE: `b` is declared non-nullable yet holds a null,
     # which `pa.Table.cast` rejects even when only `a` is being cast.
@@ -61,5 +64,5 @@ def test_cast_invalid_raises_narwhals_error() -> None:
     import polars as pl
 
     df = nw.from_native(pl.DataFrame(data), eager_only=True)
-    with pytest.raises(nw.exceptions.InvalidOperationError):
+    with pytest.raises(nw.exceptions.NarwhalsError):
         df.cast({"c": nw.Int64})
