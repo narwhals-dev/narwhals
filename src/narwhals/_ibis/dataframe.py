@@ -192,7 +192,6 @@ class IbisLazyFrame(
         return self._with_native(self.native.mutate(**new_columns_map))
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
-        # Ibis tables cast natively; a partial mapping leaves other columns untouched.
         native_dtypes = {
             name: narwhals_to_native_dtype(dtype, self._version)
             for name, dtype in dtypes.items()

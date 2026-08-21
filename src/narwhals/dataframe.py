@@ -248,6 +248,9 @@ class BaseFrame(Generic[_FrameT]):
         return self._with_compliant(self._compliant_frame.rename(mapping))
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        if not dtypes:
+            # NOTE: Some compliant `with_columns` cannot plan a projection over zero columns.
+            return self
         if error := self._check_columns_exist(list(dtypes)):
             raise error
         return self._with_compliant(self._compliant_frame.cast(dtypes))
@@ -1584,8 +1587,8 @@ class DataFrame(BaseFrame[DataFrameT]):
         """Cast columns to the given dtypes.
 
         Arguments:
-            dtypes: Mapping from column name to the dtype to cast it to. Columns not
-                in the mapping are left unchanged.
+            dtypes: Mapping from column name to target dtype. Columns not in the
+                mapping are left unchanged.
 
         Examples:
             >>> import pyarrow as pa
@@ -2824,8 +2827,8 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         r"""Cast columns to the given dtypes.
 
         Arguments:
-            dtypes: Mapping from column name to the dtype to cast it to. Columns not
-                in the mapping are left unchanged.
+            dtypes: Mapping from column name to target dtype. Columns not in the
+                mapping are left unchanged.
 
         Examples:
             >>> import duckdb

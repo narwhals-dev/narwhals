@@ -67,12 +67,6 @@ class SQLLazyFrame(
         return self._filter(predicate)
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
-        if not dtypes:
-            # An empty mapping is a no-op, and it has to be answered as one
-            # here rather than passed through: `with_columns()` with nothing
-            # to add asks the engine to plan a projection over no columns, and
-            # PySpark Connect asserts against that in `plan.py`.
-            return self
         ns = self.__narwhals_namespace__()
         return self.with_columns(
             *(ns.col(name).cast(dtype) for name, dtype in dtypes.items())
