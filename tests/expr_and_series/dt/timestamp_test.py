@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal, get_args, get_type_hints
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
 
 import narwhals as nw
+from narwhals.expr_dt import ExprDateTimeNamespace
+from narwhals.series_dt import SeriesDateTimeNamespace
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -19,6 +21,8 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from narwhals.typing import IntoSeriesT
 
 data = {
@@ -205,8 +209,10 @@ def test_timestamp_invalid_date(
         df_num.select(nw.col("a").dt.timestamp())
 
 
-def test_timestamp_invalid_unit_expr(constructor: Constructor) -> None:
-    time_unit_invalid = "i"
+@pytest.mark.parametrize("time_unit_invalid", ["i", "s"])
+def test_timestamp_invalid_unit_expr(
+    constructor: Constructor, time_unit_invalid: str
+) -> None:
     msg = (
         "invalid `time_unit`"
         f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit_invalid!r}."
@@ -217,14 +223,26 @@ def test_timestamp_invalid_unit_expr(constructor: Constructor) -> None:
         )
 
 
-def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> None:
-    time_unit_invalid = "i"
+@pytest.mark.parametrize("time_unit_invalid", ["i", "s"])
+def test_timestamp_invalid_unit_series(
+    constructor_eager: ConstructorEager, time_unit_invalid: str
+) -> None:
     msg = (
         "invalid `time_unit`"
         f"\n\nExpected one of {{'ns', 'us', 'ms'}}, got {time_unit_invalid!r}."
     )
     with pytest.raises(ValueError, match=msg):
         nw.from_native(constructor_eager(data))["a"].dt.timestamp(time_unit_invalid)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "method", [ExprDateTimeNamespace.timestamp, SeriesDateTimeNamespace.timestamp]
+)
+def test_timestamp_unit_annotation(method: Callable[..., Any]) -> None:
+    # `narwhals.typing.TimeUnit` also allows 's', which `nw.Datetime` accepts
+    # but `timestamp` rejects at runtime.
+    hints = get_type_hints(method)
+    assert set(get_args(hints["time_unit"])) == {"ns", "us", "ms"}
 
 
 @given(
