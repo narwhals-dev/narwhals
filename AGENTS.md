@@ -79,58 +79,21 @@ Backend-specific rules (no pandas `apply`/`map`/`assign`/`drop`/`reset_index`/`r
 SQL) are listed in full under
 [CONTRIBUTING.md → Backend-specific considerations](CONTRIBUTING.md#backend-specific-considerations).
 
-## The harness: run all of this before committing
+## Verify changes before committing
 
 Run these from the repo root. If you have not activated `.venv`, prefix the non-`make` commands with
 `uv run`.
 
-**1. Lint and formatting** (also runs the repo's custom checks: docstring validation, banned
-imports, API-reference sync, slotted classes, `uv.lock` freshness):
+1. `prek run --all-files` — lint, format, docstring/import checks
+2. `make typing` — static type checking (mypy, pyright, and pyrefly)
+   (Optional: `make typing-coverage` for type-completeness)
+3. `make test-full-coverage` — full test suite with 100% coverage. Very slow, see [Faster testing](#faster-testing) for alternatives.
+4. `make doctest` — tests docstring examples
+5. `make docs-build` — run only if you touched `docs/` or a docstring. The build *executes* `exec="yes"`
+   code blocks, so a stale snippet is a build failure. Docs are built with `zensical` (configured in
+   [zensical.toml](zensical.toml)), not mkdocs — the nav lives there, so a new page must be added to it.
 
-```bash
-prek run --all-files
-```
-
-**2. Static typing** (mypy, pyright, and pyrefly, per the `typing` target in
-[Makefile](Makefile)):
-
-```bash
-make typing
-```
-
-Optionally, the type-completeness gate that CI also runs:
-
-```bash
-make typing-coverage
-```
-
-**3. Full test suite with 100% coverage** (this is the `pytest-full-coverage` CI job, and the one
-that catches missing `# pragma: no cover`):
-
-```bash
-make test-full-coverage
-```
-
-**4. Doctests** (docstring examples are executed; reprs differ across versions, so CI only runs
-these on the latest Python):
-
-```bash
-make doctest
-```
-
-**5. Docs build**, if you touched anything under `docs/` or any docstring. The build *executes* the
-`exec="yes"` code blocks, so a stale snippet is a build failure:
-
-```bash
-make docs-build
-```
-
-To preview instead of just building: `make docs-clean-serve` (or plain `make docs-serve` for a
-quicker preview without the clean rebuild).
-Docs are built with `zensical` (configured in [zensical.toml](zensical.toml)), not mkdocs
-— the nav lives there, so a new page must be added to it.
-
-### Faster inner loop
+### Faster testing
 
 Full coverage runs are slow. While iterating:
 
