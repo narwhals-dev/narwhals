@@ -172,9 +172,10 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             name: narwhals_to_native_dtype(dtype, self._version)
             for name, dtype in dtypes.items()
         }
-        return self._with_native(
-            self.native.cast(native_dtypes)  # type: ignore[arg-type]
-        )
+        try:
+            return self._with_native(self.native.cast(native_dtypes))  # type: ignore[arg-type]
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
 
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, version=version)
