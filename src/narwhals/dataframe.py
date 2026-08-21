@@ -639,8 +639,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
         Notes:
+            Keys missing from some (or all) rows are filled with null.
+
             For pandas-like dataframes, conversion to schema is applied after dataframe
-            creation.
+            creation. A `schema` requesting a dtype which cannot hold null values (e.g.
+            `Int64` or `Boolean` with the default numpy dtypes) will therefore coerce or
+            raise on those missing values.
 
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
@@ -1323,7 +1327,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pyarrow as pa
@@ -1678,7 +1682,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pandas as pd
@@ -2620,7 +2624,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb
@@ -2911,7 +2915,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 * 'none': Don't keep duplicate rows.
                 * 'first': Keep the first row. Requires `order_by` to be specified.
                 * 'last': Keep the last row. Requires `order_by` to be specified.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb
