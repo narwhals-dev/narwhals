@@ -39,6 +39,7 @@ from tests.utils import (
     assert_equal_data,
     assert_equal_hash,
     assert_equal_series,
+    interchange_frame,
 )
 
 if TYPE_CHECKING:
@@ -281,9 +282,9 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    df = pd.DataFrame(
-        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
-    ).__dataframe__()
+    df = interchange_frame(
+        pd.DataFrame({"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True))
+    )
     assert nw_v1.is_ordered_categorical(
         nw_v1.from_native(df, eager_or_interchange_only=True)["a"]
     )

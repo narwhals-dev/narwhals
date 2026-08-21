@@ -5,7 +5,7 @@ import uuid
 from copy import deepcopy
 from functools import lru_cache
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
 
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
+    from pandas.api.typing.aliases import DtypeBackend
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals._typing import EagerAllowed
@@ -106,7 +107,7 @@ def pandas_constructor(obj: Data) -> pd.DataFrame:
 
 
 def _convert_dtypes_keep_int_like_floats(
-    v: list[Any], dtype_backend: str
+    v: list[Any], dtype_backend: DtypeBackend
 ) -> pd.Series[Any]:
     import pandas as pd
 
@@ -115,11 +116,11 @@ def _convert_dtypes_keep_int_like_floats(
     # by converting and then casting back to a nullable float dtype.
     series = pd.Series(v)
     if any_integer_like_floats(v):
-        float_dtype = (
+        float_dtype: Literal["Float64", "double[pyarrow]"] = (
             "Float64" if dtype_backend == "numpy_nullable" else "double[pyarrow]"
         )
-        return series.astype(float_dtype)  # type: ignore[no-any-return]
-    return series.convert_dtypes(dtype_backend=dtype_backend)  # type: ignore[no-any-return]
+        return series.astype(float_dtype)
+    return series.convert_dtypes(dtype_backend=dtype_backend)
 
 
 def pandas_nullable_constructor(obj: Data) -> pd.DataFrame:
