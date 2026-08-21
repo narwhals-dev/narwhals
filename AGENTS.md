@@ -34,51 +34,25 @@ touching anything in `_pandas_like/`, `_arrow/`, or `_compliant/`:
 
 > An expression is a function from a DataFrame to a sequence of Series.
 
-## Layered design
+## Code structure and design
+
+Narwhals follows a layered design:
 
 1. **Public API** ([src/narwhals/dataframe.py](src/narwhals/dataframe.py),
    [series.py](src/narwhals/series.py), [expr.py](src/narwhals/expr.py), ...): the user-facing
    Polars-like API. Thin wrappers that build `ExprNode`s and dispatch to compliant backends.
-2. **Compliant wrappers** (`src/narwhals/_pandas_like/`, `_arrow/`, `_polars/`, `_duckdb/`,
-   `_spark_like/`, `_dask/`, `_ibis/`): each backend implements Narwhals-compliant DataFrames,
+2. **Compliant wrappers**: one folder per backend (`_pandas_like/`, `_arrow/`, `_polars/`, `_duckdb/`,
+   `_spark_like/`, `_dask/`, `_ibis/`), each backend implements Narwhals-compliant DataFrames,
    Series, Exprs, and Namespaces that translate the Polars-like API to native calls. Shared
    protocols and base classes live in `src/narwhals/_compliant/`.
 3. **Native libraries** (pandas, Polars, PyArrow, ...): the actual computation engines, never
    directly depended on.
 
-## Source layout
+Outside `src/`, the project has:
 
-```
-src/narwhals/
-  _pandas_like/    # Compliant layer for pandas, Modin, cuDF (fireducks is silently allowed here
-                   # as a pandas drop-in; see `IMPORT_HOOKS` in dependencies.py)
-  _arrow/          # Compliant layer for PyArrow
-  _polars/         # Compliant layer for Polars
-  _duckdb/         # Compliant layer for DuckDB
-  _spark_like/     # Compliant layer for PySpark, Spark Connect, SQLFrame
-  _dask/           # Compliant layer for Dask
-  _ibis/           # Compliant layer for Ibis
-  _interchange/    # Interchange protocol support
-  _sql/            # Shared SQL generation utilities
-  _compliant/      # Protocols and base classes shared across backends
-  stable/          # Frozen stable API namespaces (v1, v2)
-  testing/         # Public testing utilities (e.g. asserts)
-  _expression_parsing.py  # ExprNode, ExprMetadata, ExpansionKind, node evaluation, `over`
-                          # push-down (entry point is `Expr._with_over_node` in expr.py)
-  _utils.py        # Implementation, Version, and shared helpers
-  compliant.py     # Re-exports of the protocols that backends must implement
-  plugins.py       # Plugin system for external backends
-  dataframe.py     # Public DataFrame/LazyFrame API
-  series.py        # Public Series API
-  expr.py          # Public Expr API
-  sql.py           # Public `narwhals.sql` (SQL generation; requires DuckDB)
-  translate.py     # from_native / to_native (re-exported via narwhals/__init__.py)
-  _translate.py    # Conversion/structural-typing protocols (NOT from_native/to_native)
-  dependencies.py  # Backend detection (isinstance checks without imports)
-tests/             # Test suite
-tpch/              # TPC-H benchmark queries
-packages/          # uv workspace members (currently: test-plugin)
-```
+- [tests/](tests/): test suite, see [CONTRIBUTING.md → Running tests](CONTRIBUTING.md#7-running-tests)
+- [tpch/](tpch/): TPC-H benchmark queries, see [tpch/README.md](tpch/README.md)
+- `packages/`: uv workspace members, built and installed independently of `src/narwhals`. Currently just a `test-plugin` that is a minimal fake backend used to test `narwhals.plugins`.
 
 ## Hard rules
 
