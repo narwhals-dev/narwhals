@@ -164,18 +164,17 @@ Default to none. Only add one when the *why* is non-obvious
 already says, and never to narrate a diff. Comments that merely repeat the following
 line are a common tell of unreviewed AI-assisted output and are removed on sight in review.
 
-## Pull requests
-
-Title must start with a [conventional commit](https://www.conventionalcommits.org/) type: `build`,
-`chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test` (append `!` for
-breaking changes). The title becomes the changelog entry.
-
-**AI-assisted contributions must be disclosed** in the dedicated PR-template field, and the author
-is accountable for every line. Read
-[CONTRIBUTING.md → AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions) before
-opening a PR.
+## Pull requests and issues
 
 **A human opens the pull request or issue, not you.** Draft the diff, the description, and the
 commit messages if asked, but the submission is made by the person you are working with, under their
 account, in their words, after they have read the whole diff. The same holds for review replies and
 issue discussion. Unattended agent-filed issues and PRs can be closed without discussion.
+
+For guidelines about PRs (e.g. title rules) see
+[CONTRIBUTING.md → Pull requests](CONTRIBUTING.md#6-pull-requests).
+
+**AI-assisted contributions must be disclosed** in the dedicated PR-template field, and the author
+is accountable for every line. Read
+[CONTRIBUTING.md → AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions) before
+opening a PR.
