@@ -5,7 +5,7 @@ import uuid
 from copy import deepcopy
 from functools import lru_cache
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
-    from pandas._typing import DtypeBackend, FloatDtypeArg
+    from pandas.api.typing.aliases import DtypeBackend
 
     from narwhals._native import NativeDask, NativeDuckDB, NativePySpark, NativeSQLFrame
     from narwhals._typing import EagerAllowed
@@ -116,7 +116,7 @@ def _convert_dtypes_keep_int_like_floats(
     # by converting and then casting back to a nullable float dtype.
     series = pd.Series(v)
     if any_integer_like_floats(v):
-        float_dtype: FloatDtypeArg = (
+        float_dtype: Literal["Float64", "double[pyarrow]"] = (
             "Float64" if dtype_backend == "numpy_nullable" else "double[pyarrow]"
         )
         return series.astype(float_dtype)
