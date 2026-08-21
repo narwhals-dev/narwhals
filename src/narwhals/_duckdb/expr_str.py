@@ -13,6 +13,16 @@ if TYPE_CHECKING:
 
 
 class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
+    def strip_chars_start(self, characters: str) -> DuckDBExpr:
+        return self.compliant._with_elementwise(
+            lambda expr: F("ltrim", expr, lit(characters))
+        )
+
+    def strip_chars_end(self, characters: str) -> DuckDBExpr:
+        return self.compliant._with_elementwise(
+            lambda expr: F("rtrim", expr, lit(characters))
+        )
+
     def to_datetime(self, format: str | None) -> DuckDBExpr:
         if format is None:
             msg = "Cannot infer format with DuckDB backend, please specify `format` explicitly."

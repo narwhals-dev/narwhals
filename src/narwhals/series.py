@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault
+    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -121,7 +121,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 
@@ -186,7 +186,7 @@ class Series(Generic[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         """Construct a Series from an iterable.
 
@@ -955,6 +955,10 @@ class Series(Generic[IntoSeriesT]):
 
         Returns:
             A scalar value or `None` if the Series is empty.
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pyarrow as pa

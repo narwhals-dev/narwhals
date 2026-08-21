@@ -18,14 +18,25 @@ from narwhals._pandas_like.expr import PandasLikeExpr
 from narwhals._pandas_like.selectors import PandasSelectorNamespace
 from narwhals._pandas_like.series import PandasLikeSeries
 from narwhals._pandas_like.typing import NativeDataFrameT, NativeSeriesT
-from narwhals._pandas_like.utils import is_dtype_pyarrow, is_non_nullable_boolean
+from narwhals._pandas_like.utils import (
+    import_array_module,
+    is_dtype_pyarrow,
+    is_non_nullable_boolean,
+    set_index,
+)
+from narwhals._utils import validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from typing import TypeAlias
 
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 
 Incomplete: TypeAlias = Any
@@ -68,6 +79,18 @@ class PandasLikeNamespace(
     def __init__(self, implementation: Implementation, version: Version) -> None:
         self._implementation = implementation
         self._version = version
+
+    def read_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> PandasLikeDataFrame:
+        validate_separators(separator, ("sep",), kwds)
+        ns = self._implementation.to_native_namespace()
+        native = ns.read_csv(source, sep=separator, **kwds)
+        return self._dataframe.from_native(native, context=self)
+
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PandasLikeDataFrame:
+        ns = self._implementation.to_native_namespace()
+        return self._dataframe.from_native(ns.read_parquet(source, **kwds), context=self)
 
     def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
@@ -286,9 +309,16 @@ class PandasLikeNamespace(
             return self._concat(dfs, axis=VERTICAL, copy=False)
         return self._concat(dfs, axis=VERTICAL)
 
-    def _concat_horizontal(
+    def _concat_by_index(
         self, dfs: Sequence[NativeDataFrameT | NativeSeriesT], /
     ) -> NativeDataFrameT:
+        """Concatenate horizontally, aligning inputs by their (label-based) index.
+
+        Use this only when inputs are already known to share a meaningful,
+        aligned index (e.g. multiple aggregations from the same `group_by`).
+        For the general case, where inputs' indices may be unrelated, use
+        `_concat_horizontal` instead.
+        """
         if self._implementation.is_cudf():
             with warnings.catch_warnings():
                 warnings.filterwarnings(
@@ -300,6 +330,24 @@ class PandasLikeNamespace(
         elif self._implementation.is_pandas() and self._backend_version < (3,):
             return self._concat(dfs, axis=HORIZONTAL, copy=False)
         return self._concat(dfs, axis=HORIZONTAL)
+
+    def _concat_horizontal(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
+        # Follow the left-hand-rule documented in `docs/concepts/pandas_index.md`.
+        target_index = dfs[0].index
+        arange = import_array_module(self._implementation).arange
+        impl = self._implementation
+
+        def reset(df: NativeDataFrameT) -> NativeDataFrameT:
+            # Value of type variable "NativeNDFrameT" of "set_index" cannot be "NativeDataFrameT"
+            return set_index(  # type: ignore[type-var]
+                df, arange(len(df)), implementation=impl
+            )
+
+        concatenated = self._concat_by_index([reset(df) for df in dfs])
+        # Value of type variable "NativeNDFrameT" of "set_index" cannot be "NativeDataFrameT"
+        return set_index(  # type: ignore[type-var]
+            concatenated, target_index, implementation=impl
+        )
 
     def _concat_vertical(self, dfs: Sequence[NativeDataFrameT], /) -> NativeDataFrameT:
         cols_0 = dfs[0].columns
@@ -461,7 +509,11 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = self._concat_horizontal([a_series.native, b_series.native])
+            aligned = cast(
+                "list[NativeSeriesT]",
+                [df._extract_comparand(a_series), df._extract_comparand(b_series)],
+            )
+            _df = self._concat_by_index(aligned)
             corr = _df.corr(method=method).iloc[0, [1]]  # type: ignore[union-attr]
             return [
                 PandasLikeSeries(
@@ -480,10 +532,11 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             a_series = df._evaluate_single_output_expr(a)
             b_series = df._evaluate_single_output_expr(b)
-            _df = cast(
-                "pd.DataFrame",
-                self._concat_horizontal([a_series.native, b_series.native]),
+            aligned = cast(
+                "list[NativeSeriesT]",
+                [df._extract_comparand(a_series), df._extract_comparand(b_series)],
             )
+            _df = cast("pd.DataFrame", self._concat_by_index(aligned))
             n = _df.count(axis=1).eq(2).sum()
             if ddof == 0 and n == 1:
                 value = 0.0

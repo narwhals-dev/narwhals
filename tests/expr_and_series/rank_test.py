@@ -14,6 +14,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    skip_if_no_categorical_ordering,
 )
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
@@ -423,3 +424,17 @@ def test_rank_with_order_by_and_partition_by(
             "c": [2, 1, 3, 1, 2, 3],
         }
         assert_equal_data(result, expected)
+
+
+def test_rank_categorical(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    skip_if_no_categorical_ordering(constructor)
+
+    data = {"c": ["dog", "cat", "cat", "bird", "dog"], "i": [1, 2, 3, 4, 5]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(r=nw.col("c").cast(nw.Categorical()).rank("dense"))
+        .sort("i")
+        .select("i", "r")
+    )
+    assert_equal_data(result, {"i": [1, 2, 3, 4, 5], "r": [3, 2, 2, 1, 3]})
