@@ -34,51 +34,25 @@ touching anything in `_pandas_like/`, `_arrow/`, or `_compliant/`:
 
 > An expression is a function from a DataFrame to a sequence of Series.
 
-## Layered design
+## Code structure and design
+
+Narwhals follows a layered design:
 
 1. **Public API** ([src/narwhals/dataframe.py](src/narwhals/dataframe.py),
    [series.py](src/narwhals/series.py), [expr.py](src/narwhals/expr.py), ...): the user-facing
    Polars-like API. Thin wrappers that build `ExprNode`s and dispatch to compliant backends.
-2. **Compliant wrappers** (`src/narwhals/_pandas_like/`, `_arrow/`, `_polars/`, `_duckdb/`,
-   `_spark_like/`, `_dask/`, `_ibis/`): each backend implements Narwhals-compliant DataFrames,
+2. **Compliant wrappers**: one folder per backend (`_pandas_like/`, `_arrow/`, `_polars/`, `_duckdb/`,
+   `_spark_like/`, `_dask/`, `_ibis/`), each backend implements Narwhals-compliant DataFrames,
    Series, Exprs, and Namespaces that translate the Polars-like API to native calls. Shared
    protocols and base classes live in `src/narwhals/_compliant/`.
 3. **Native libraries** (pandas, Polars, PyArrow, ...): the actual computation engines, never
    directly depended on.
 
-## Source layout
+Outside `src/`, the project has:
 
-```
-src/narwhals/
-  _pandas_like/    # Compliant layer for pandas, Modin, cuDF (fireducks is silently allowed here
-                   # as a pandas drop-in; see `IMPORT_HOOKS` in dependencies.py)
-  _arrow/          # Compliant layer for PyArrow
-  _polars/         # Compliant layer for Polars
-  _duckdb/         # Compliant layer for DuckDB
-  _spark_like/     # Compliant layer for PySpark, Spark Connect, SQLFrame
-  _dask/           # Compliant layer for Dask
-  _ibis/           # Compliant layer for Ibis
-  _interchange/    # Interchange protocol support
-  _sql/            # Shared SQL generation utilities
-  _compliant/      # Protocols and base classes shared across backends
-  stable/          # Frozen stable API namespaces (v1, v2)
-  testing/         # Public testing utilities (e.g. asserts)
-  _expression_parsing.py  # ExprNode, ExprMetadata, ExpansionKind, node evaluation, `over`
-                          # push-down (entry point is `Expr._with_over_node` in expr.py)
-  _utils.py        # Implementation, Version, and shared helpers
-  compliant.py     # Re-exports of the protocols that backends must implement
-  plugins.py       # Plugin system for external backends
-  dataframe.py     # Public DataFrame/LazyFrame API
-  series.py        # Public Series API
-  expr.py          # Public Expr API
-  sql.py           # Public `narwhals.sql` (SQL generation; requires DuckDB)
-  translate.py     # from_native / to_native (re-exported via narwhals/__init__.py)
-  _translate.py    # Conversion/structural-typing protocols (NOT from_native/to_native)
-  dependencies.py  # Backend detection (isinstance checks without imports)
-tests/             # Test suite
-tpch/              # TPC-H benchmark queries
-packages/          # uv workspace members (currently: test-plugin)
-```
+- [tests/](tests/): test suite, see [CONTRIBUTING.md → Running tests](CONTRIBUTING.md#7-running-tests)
+- [tpch/](tpch/): TPC-H benchmark queries, see [tpch/README.md](tpch/README.md)
+- `packages/`: uv workspace members, built and installed independently of `src/narwhals`. Currently just a `test-plugin` that is a minimal fake backend used to test `narwhals.plugins`.
 
 ## Hard rules
 
@@ -105,58 +79,21 @@ Backend-specific rules (no pandas `apply`/`map`/`assign`/`drop`/`reset_index`/`r
 SQL) are listed in full under
 [CONTRIBUTING.md → Backend-specific considerations](CONTRIBUTING.md#backend-specific-considerations).
 
-## The harness: run all of this before committing
+## Verify changes before committing
 
 Run these from the repo root. If you have not activated `.venv`, prefix the non-`make` commands with
 `uv run`.
 
-**1. Lint and formatting** (also runs the repo's custom checks: docstring validation, banned
-imports, API-reference sync, slotted classes, `uv.lock` freshness):
+1. `prek run --all-files` — lint, format, docstring/import checks
+2. `make typing` — static type checking (mypy, pyright, and pyrefly)
+   (Optional: `make typing-coverage` for type-completeness)
+3. `make test-full-coverage` — full test suite with 100% coverage. Very slow, see [Faster testing](#faster-testing) for alternatives.
+4. `make doctest` — tests docstring examples
+5. `make docs-build` — run only if you touched `docs/` or a docstring. The build *executes* `exec="yes"`
+   code blocks, so a stale snippet is a build failure. Docs are built with `zensical` (configured in
+   [zensical.toml](zensical.toml)), not mkdocs — the nav lives there, so a new page must be added to it.
 
-```bash
-prek run --all-files
-```
-
-**2. Static typing** (mypy, pyright, and pyrefly, per the `typing` target in
-[Makefile](Makefile)):
-
-```bash
-make typing
-```
-
-Optionally, the type-completeness gate that CI also runs:
-
-```bash
-make typing-coverage
-```
-
-**3. Full test suite with 100% coverage** (this is the `pytest-full-coverage` CI job, and the one
-that catches missing `# pragma: no cover`):
-
-```bash
-make test-full-coverage
-```
-
-**4. Doctests** (docstring examples are executed; reprs differ across versions, so CI only runs
-these on the latest Python):
-
-```bash
-make doctest
-```
-
-**5. Docs build**, if you touched anything under `docs/` or any docstring. The build *executes* the
-`exec="yes"` code blocks, so a stale snippet is a build failure:
-
-```bash
-make docs-build
-```
-
-To preview instead of just building: `make docs-clean-serve` (or plain `make docs-serve` for a
-quicker preview without the clean rebuild).
-Docs are built with `zensical` (configured in [zensical.toml](zensical.toml)), not mkdocs
-— the nav lives there, so a new page must be added to it.
-
-### Faster inner loop
+### Faster testing
 
 Full coverage runs are slow. While iterating:
 
@@ -183,34 +120,24 @@ Do not treat a green fast run as sufficient: the coverage gate and the lazy/SQL 
 Always document the reason in a comment. Details and examples:
 [CONTRIBUTING.md → Test Failure Patterns](CONTRIBUTING.md#test-failure-patterns).
 
-## Code style
+## Inline Comments
 
-* Line length: 90 characters. ruff for both formatting and linting.
-* Docstrings: Google style, validated by `utils/check_docstrings.py` and darglint via `prek`.
-  Docstring examples should import *one* dataframe library, and we deliberately balance which
-  backend is used across the docs. See
-  [CONTRIBUTING.md → Writing the doc(strings)](CONTRIBUTING.md#8-writing-the-docstrings).
-* Static typing with mypy (strict), pyright, and pyrefly.
-* Inline comments: default to none. Only add one when the *why* is non-obvious
-  (a hidden constraint, a workaround, a subtle invariant). Never to restate what the code
-  already says, and never to narrate a diff. Comments that merely repeat the following
-  line are a common tell of unreviewed AI-assisted output and are removed on sight in review.
-* In `_pandas_like/`, native types are typed as pandas types (the package is shared with Modin and
-  cuDF). In `_spark_like/`, native types are typed as SQLFrame (shared with PySpark).
-* Public API changes must be reflected in `docs/api-reference/` — `prek` fails otherwise.
+Default to none. Only add one when the *why* is non-obvious
+(a hidden constraint, a workaround, a subtle invariant). Never to restate what the code
+already says, and never to narrate a diff. Comments that merely repeat the following
+line are a common tell of unreviewed AI-assisted output and are removed on sight in review.
 
-## Pull requests
-
-Title must start with a [conventional commit](https://www.conventionalcommits.org/) type: `build`,
-`chore`, `ci`, `depr`, `docs`, `feat`, `fix`, `perf`, `refactor`, `release`, `test` (append `!` for
-breaking changes). The title becomes the changelog entry.
-
-**AI-assisted contributions must be disclosed** in the dedicated PR-template field, and the author
-is accountable for every line. Read
-[CONTRIBUTING.md → AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions) before
-opening a PR.
+## Pull requests and issues
 
 **A human opens the pull request or issue, not you.** Draft the diff, the description, and the
 commit messages if asked, but the submission is made by the person you are working with, under their
 account, in their words, after they have read the whole diff. The same holds for review replies and
 issue discussion. Unattended agent-filed issues and PRs can be closed without discussion.
+
+For guidelines about PRs (e.g. title rules) see
+[CONTRIBUTING.md → Pull requests](CONTRIBUTING.md#6-pull-requests).
+
+**AI-assisted contributions must be disclosed** in the dedicated PR-template field, and the author
+is accountable for every line. Read
+[CONTRIBUTING.md → AI-assisted contributions](CONTRIBUTING.md#ai-assisted-contributions) before
+opening a PR.
