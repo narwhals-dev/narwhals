@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals._utils import validate_is_non_negative
+from narwhals._utils import parse_str_strip_chars, validate_is_non_negative
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -137,11 +137,73 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
+    def strip_chars_start(self, characters: str | None = None) -> ExprT:
+        r"""Remove leading characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start of the string. If set
+                to None (default), all leading whitespace is removed instead.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     r"SELECT * FROM VALUES (' apple '), (E'mango\n') df(fruits)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(stripped=nw.col("fruits").str.strip_chars_start())
+            ┌──────────────────────┐
+            |  Narwhals LazyFrame  |
+            |----------------------|
+            |┌─────────┬──────────┐|
+            |│ fruits  │ stripped │|
+            |│ varchar │ varchar  │|
+            |├─────────┼──────────┤|
+            |│  apple  │ apple    │|
+            |│ mango\n │ mango\n  │|
+            |└─────────┴──────────┘|
+            └──────────────────────┘
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._expr
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_start", characters=characters)
+        )
+
+    def strip_chars_end(self, characters: str | None = None) -> ExprT:
+        r"""Remove trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the end of the string. If set
+                to None (default), all trailing whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"fruits": [" apple ", "mango\n"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(stripped=nw.col("fruits").str.strip_chars_end()).to_dict(
+            ...     as_series=False
+            ... )
+            {'fruits': [' apple ', 'mango\n'], 'stripped': [' apple', 'mango']}
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._expr
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_end", characters=characters)
+        )
+
     def starts_with(self, prefix: str | IntoExpr) -> ExprT:
         r"""Check if string values start with a substring.
 
         Arguments:
             prefix: prefix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -169,6 +231,10 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             suffix: suffix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -204,6 +270,10 @@ class ExprStringNamespace(Generic[ExprT]):
             Passing an expression as `pattern` is only supported by DuckDB, Ibis, Polars,
             PySpark and SQLFrame. Other backends, such as pandas and PyArrow, will raise
             a `TypeError`.
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
