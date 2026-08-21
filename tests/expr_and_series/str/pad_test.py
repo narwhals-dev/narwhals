@@ -110,20 +110,27 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+def test_str_pad_zero_length(constructor: Constructor) -> None:
+    data = {"a": ["foo", "hi", None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("a").str.pad_start(0).alias("start"),
+        nw.col("a").str.pad_end(0).alias("end"),
+    )
+    assert_equal_data(result, {"start": data["a"], "end": data["a"]})
+
+
 def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> None:
-    # Same divergence as zfill: the length reaches the same backend calls.
-    s = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)["a"]
+    df = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)
     msg = r"`length` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        s.str.pad_start(-1)
+        df["a"].str.pad_start(-1)
+
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        s.str.pad_end(-1)
+        df["a"].str.pad_end(-1)
 
-
-def test_str_pad_negative_length_expr_raises(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"a": ["abc"]}))
-    msg = r"`length` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         df.select(nw.col("a").str.pad_start(-1))
+
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         df.select(nw.col("a").str.pad_end(-1))

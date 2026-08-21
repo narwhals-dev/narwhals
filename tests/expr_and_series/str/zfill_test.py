@@ -53,7 +53,6 @@ def test_str_zfill_series(
 def test_str_zfill_zero_width(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # pyarrow special-cases width zero; run every backend to confirm the rest do not.
     _skip_unsupported_zfill(request, constructor)
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").str.zfill(0))
@@ -70,20 +69,21 @@ def test_str_zfill_zero_width_series(
 
 
 def test_str_zfill_negative_width_raises(constructor_eager: ConstructorEager) -> None:
-    # Before, pandas returned the string unchanged, Polars raised its own
-    # "conversion from `i128` to `u64` failed", and pyarrow crashed inside utf8_lpad.
-    # The message is pinned rather than just the exception type because Polars already
-    # raised InvalidOperationError, so a type-only check passes against unfixed code.
-    s = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    # Polars already raised InvalidOperationError, so pin the message, not the type.
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     msg = r"`width` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        s.str.zfill(-1)
+        df["a"].str.zfill(-1)
 
-
-def test_str_zfill_negative_width_expr_raises(constructor: Constructor) -> None:
-    # Separate from the series test: Series.str goes straight to the compliant series,
-    # so this is the only one of the two that covers the lazy backends.
-    df = nw.from_native(constructor(data))
-    msg = r"`width` must be non-negative but got -1"
     with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
         df.select(nw.col("a").str.zfill(-1))
+
+
+def test_str_zfill_non_int_width_raises(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    msg = r"Expected '.+?', got: '.+?'\s+width="
+    with pytest.raises(TypeError, match=msg):
+        df["a"].str.zfill(2.5)  # type: ignore[arg-type]
+
+    with pytest.raises(TypeError, match=msg):
+        df.select(nw.col("a").str.zfill(None))  # type: ignore[arg-type]

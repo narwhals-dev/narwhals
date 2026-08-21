@@ -60,6 +60,7 @@ from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
     InvalidOperationError,
+    NarwhalsError,
     ShapeError,
 )
 
@@ -1461,10 +1462,17 @@ def _validate_rolling_arguments(
     return window_size, min_samples
 
 
-def validate_is_non_negative(value: int, arg_name: str) -> None:
+def validate_is_non_negative(
+    value: float, arg_name: str, exception: type[NarwhalsError] = InvalidOperationError
+) -> None:
     if value < 0:
         msg = f"`{arg_name}` must be non-negative but got {value}"
-        raise InvalidOperationError(msg)
+        raise exception(msg)
+
+
+def validate_is_non_negative_int(value: int, arg_name: str) -> None:
+    ensure_type(value, int, param_name=arg_name)
+    validate_is_non_negative(value, arg_name)
 
 
 def _resolve_sample_size(

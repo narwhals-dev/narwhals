@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals._utils import parse_str_strip_chars, validate_is_non_negative
+from narwhals._utils import parse_str_strip_chars, validate_is_non_negative_int
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -308,8 +308,8 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice. If set to `None` (default), the slice is taken to the
-                end of the string.
+            length: Length of the slice, which must be non-negative. If set to `None`
+                (default), the slice is taken to the end of the string.
 
         Examples:
             >>> import pandas as pd
@@ -326,6 +326,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
+        if length is not None:
+            validate_is_non_negative_int(length, "length")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=offset, length=length)
         )
@@ -380,6 +382,7 @@ class ExprStringNamespace(Generic[ExprT]):
             lyrics: [["taata","taatatata","zukkyun"]]
             lyrics_head: [["taata","taata","zukky"]]
         """
+        validate_is_non_negative_int(n, "n")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=0, length=n)
         )
@@ -388,10 +391,12 @@ class ExprStringNamespace(Generic[ExprT]):
         r"""Take the last n elements of each string.
 
         Arguments:
-            n: Number of elements to take. Negative indexing is **not** supported.
+            n: Number of elements to take. Negative indexing is supported (see note (1.))
 
         Notes:
-            If the length of the string has fewer than `n` characters, the full string is returned.
+            1. When the `n` input is negative, `tail` returns characters starting from the n-th from the beginning of
+            the string. For example, if `n = -3`, then all characters except the first three are returned.
+            2. If the length of the string has fewer than `n` characters, the full string is returned.
 
         Examples:
             >>> import pyarrow as pa
@@ -623,7 +628,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
-        validate_is_non_negative(width, "width")
+        validate_is_non_negative_int(width, "width")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
@@ -652,7 +657,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
-        validate_is_non_negative(length, "length")
+        validate_is_non_negative_int(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -683,7 +688,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
-        validate_is_non_negative(length, "length")
+        validate_is_non_negative_int(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char

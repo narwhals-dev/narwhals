@@ -120,8 +120,6 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
-        if width == 0:
-            return self.with_native(self.native)
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
@@ -142,7 +140,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         )
 
         # Cases
-        padded_remaining_chars = pc.utf8_lpad(remaining_chars, width - 1, padding="0")
+        padded_remaining_chars = pc.utf8_lpad(
+            remaining_chars, max(width - 1, 0), padding="0"
+        )
 
         result = pc.case_when(
             conditions,

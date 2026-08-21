@@ -33,3 +33,13 @@ def test_str_slice_series(
 
     result_series = df["a"].str.slice(offset, length)
     assert_equal_data({"a": result_series}, expected)
+
+
+def test_str_slice_negative_length_raises(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    msg = r"`length` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df["a"].str.slice(0, -1)
+
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df.select(nw.col("a").str.slice(0, -1))
