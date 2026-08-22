@@ -102,9 +102,9 @@ def test_full_join(
     df1: dict[str, list[Any]],
     df2: dict[str, list[Any]],
     expected: dict[str, list[Any]],
-    on: None | str | list[str],
-    left_on: None | str | list[str],
-    right_on: None | str | list[str],
+    on: str | list[str] | None,
+    left_on: str | list[str] | None,
+    right_on: str | list[str] | None,
     constructor: Constructor,
 ) -> None:
     df_left = from_native_lazy(constructor(df1))

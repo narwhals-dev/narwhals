@@ -17,10 +17,9 @@ expected_pyarrow = [2.5, -1, None, None, None, 3]
 
 
 def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf", "ibis")) or (
+    if any(backend in str(constructor) for backend in ("dask", "cudf")) or (
         "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)
     ):
-        # ibis issue: https://github.com/ibis-project/ibis/issues/11788
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
         if PANDAS_VERSION < (2, 2):

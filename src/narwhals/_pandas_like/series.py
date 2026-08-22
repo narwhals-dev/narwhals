@@ -371,7 +371,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(res).alias(ser.name)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_native(self.native.isin(other))
+        ser = self.native
+        res = ser.isin(other)
+        dtype_backend = get_dtype_backend(ser.dtype, self._implementation)
+        if dtype_backend is not None:
+            res = res.convert_dtypes(dtype_backend=dtype_backend)
+            if self._implementation.is_pandas() and self._backend_version < (3, 0):
+                res.mask(ser.isna(), inplace=True)  # noqa: PD002
+            else:
+                res = res.mask(ser.isna())
+        return self._with_native(res)
 
     def arg_true(self) -> Self:
         ser = self.native
@@ -749,18 +758,24 @@ class PandasLikeSeries(EagerSeries[Any]):
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         dtypes = self._version.dtypes
-        if isinstance(self.dtype, dtypes.Datetime) and self.dtype.time_zone is not None:
+        self_dtype = self.dtype
+        if isinstance(self_dtype, dtypes.Datetime) and self_dtype.time_zone is not None:
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None).native
         else:
             s = self.native
 
-        has_missing = s.isna().any()
         kwargs: dict[Any, Any] = {"copy": copy or self._implementation.is_cudf()}
-        if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-            kwargs.update({"na_value": float("nan")})
-            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
-        if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
-            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
+        dtype_str = str(s.dtype)
+        if (
+            dtype_str in PANDAS_TO_NUMPY_DTYPE_MISSING
+            or dtype_str in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
+        ):
+            has_missing = s.isna().any()
+            if has_missing and dtype_str in PANDAS_TO_NUMPY_DTYPE_MISSING:
+                kwargs.update({"na_value": float("nan")})
+                dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[dtype_str]
+            if not has_missing and dtype_str in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
+                dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[dtype_str]
         return s.to_numpy(dtype=dtype, **kwargs)
 
     def to_pandas(self) -> pd.Series[Any]:

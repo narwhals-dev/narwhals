@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
 
@@ -581,7 +581,7 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).dtypes.to_dict()
+    return cast("IntoPandasSchema", constructor_pandas_like(data).dtypes.to_dict())
 
 
 @pytest.fixture
@@ -606,7 +606,7 @@ def origin_pandas_like_pyarrow(
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )
-    return df_nw.to_native().dtypes.to_dict()
+    return cast("IntoPandasSchema", df_nw.to_native().dtypes.to_dict())
 
 
 def test_schema_from_polars(
@@ -707,3 +707,23 @@ def test_schema_from_to_roundtrip() -> None:
     assert nw_schema_1 == nw_schema_2
     assert nw_schema_2 == nw_schema_3
     assert py_schema_1 == py_schema_2
+
+
+def test_schema_uninstantiated_dtypes() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3257
+    schema = nw.Schema({"a": nw.Int64, "b": nw.String(), "c": nw.Datetime})
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String(), "c": nw.Datetime()})
+    assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_tuples_uninstantiated_dtypes() -> None:
+    schema = nw.Schema([("a", nw.Int64), ("b", nw.String())])
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})
+    assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_generator() -> None:
+    schema = nw.Schema(
+        (name, dtype()) for name, dtype in [("a", nw.Int64), ("b", nw.String)]
+    )
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})

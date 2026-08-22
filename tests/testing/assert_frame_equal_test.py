@@ -12,7 +12,9 @@ from narwhals.testing.asserts.frame import GUARANTEES_ROW_ORDER
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from narwhals.typing import IntoSchema
+    from collections.abc import Mapping
+
+    from narwhals.typing import IntoDType
     from tests.conftest import Data
     from tests.utils import Constructor, ConstructorEager
 
@@ -150,8 +152,8 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
 )
 def test_check_schema_mismatch(
     constructor: Constructor,
-    left_schema: IntoSchema,
-    right_schema: IntoSchema,
+    left_schema: Mapping[str, IntoDType],
+    right_schema: Mapping[str, IntoDType],
     *,
     check_dtypes: bool,
     check_column_order: bool,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -181,8 +181,10 @@ def set_index(
     if implementation is Implementation.PANDAS and (
         (1, 5) <= implementation._backend_version() < (3,)
     ):  # pragma: no cover
-        return obj.set_axis(index, axis=0, copy=False)
-    return obj.set_axis(index, axis=0)  # pragma: no cover
+        result = obj.set_axis(index, axis=0, copy=False)  # type: ignore[call-arg]
+    else:
+        result = obj.set_axis(index, axis=0)
+    return result  # pyright: ignore[reportReturnType]
 
 
 def rename(
@@ -192,10 +194,10 @@ def rename(
     if implementation is Implementation.PANDAS and (
         implementation._backend_version() < (3,)
     ):  # pragma: no cover
-        result = obj.rename(*args, **kwargs, copy=False, inplace=False)
+        result = obj.rename(*args, **kwargs, copy=False, inplace=False)  # type: ignore[call-overload]
     else:
         result = obj.rename(*args, **kwargs)
-    return cast("NativeNDFrameT", result)
+    return result  # pyright: ignore[reportReturnType]
 
 
 @functools.lru_cache(maxsize=16)
@@ -620,7 +622,9 @@ def select_columns_by_name(
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1] and (df.columns == column_names).all():
+    if len(column_names) == df.shape[1] and all(
+        x == y for x, y in zip(df.columns, column_names, strict=True)
+    ):
         return df
     if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS
@@ -696,7 +700,7 @@ def broadcast_series_to_index(
 
         # NOTE: Ignore typing because `pandas-stubs` are wrong
         # TODO(FBruzzesi): Should we pass the `copy=False` flag?
-        pa_array = pd.array(repeat(value, len(index)), dtype=native.dtype)  # type: ignore[arg-type]
+        pa_array = pd.array(repeat(value, len(index)), dtype=native.dtype)  # type: ignore[call-overload]
 
         return series_class(pa_array, index=index, name=native.name)
 
@@ -714,7 +718,7 @@ def binary_string_sum_fallback(  # pragma: no cover
     if left_dtype_str == "large_string[pyarrow]" and isinstance(right, str):
         import pyarrow as pa  # ignore-banned-import
 
-        return left + pa.scalar(right, type=pa.large_string())
+        return left + pa.scalar(right, type=pa.large_string())  # pyright: ignore[reportOperatorIssue]
     if isinstance(right, pdx.Series):
         right_dtype = right.dtype
         if left_dtype_str == "object":

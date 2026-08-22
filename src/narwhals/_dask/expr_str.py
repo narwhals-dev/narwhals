@@ -31,13 +31,19 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
                 pattern, value.compute(), regex=not literal, n=n
             )
 
-        return self.compliant._with_callable(_replace, value=value)
+        return self.compliant._with_callable(_replace, expression_args={"value": value})
 
     def replace_all(self, value: DaskExpr, pattern: str, *, literal: bool) -> DaskExpr:
         return self.replace(value, pattern, literal=literal, n=-1)
 
     def strip_chars(self, characters: str | None) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.strip(characters))
+
+    def strip_chars_start(self, characters: str) -> DaskExpr:
+        return self.compliant._with_callable(lambda expr: expr.str.lstrip(characters))
+
+    def strip_chars_end(self, characters: str) -> DaskExpr:
+        return self.compliant._with_callable(lambda expr: expr.str.rstrip(characters))
 
     def starts_with(self, prefix: DaskExpr) -> DaskExpr:
         if not prefix._metadata.is_literal:
@@ -48,7 +54,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
             # OK to call `compute` here as `value` is just a literal expression.
             return expr.str.startswith(prefix.compute())  # pyright: ignore[reportAttributeAccessIssue]
 
-        return self.compliant._with_callable(_starts_with, prefix=prefix)
+        return self.compliant._with_callable(
+            _starts_with, expression_args={"prefix": prefix}
+        )
 
     def ends_with(self, suffix: DaskExpr) -> DaskExpr:
         if not suffix._metadata.is_literal:
@@ -59,7 +67,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
             # OK to call `compute` here as `value` is just a literal expression.
             return expr.str.endswith(suffix.compute())  # pyright: ignore[reportAttributeAccessIssue]
 
-        return self.compliant._with_callable(_ends_with, suffix=suffix)
+        return self.compliant._with_callable(
+            _ends_with, expression_args={"suffix": suffix}
+        )
 
     def contains(self, pattern: DaskExpr, *, literal: bool) -> DaskExpr:
         if not pattern._metadata.is_literal:
@@ -72,7 +82,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
                 pat=pattern.compute(), regex=not literal
             )
 
-        return self.compliant._with_callable(_contains, pattern=pattern)
+        return self.compliant._with_callable(
+            _contains, expression_args={"pattern": pattern}
+        )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
         return self.compliant._with_callable(

@@ -13,7 +13,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation, parse_version
-from narwhals.dependencies import get_pandas
+from narwhals.dependencies import get_numpy, get_pandas
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
@@ -80,6 +80,28 @@ def _to_comparable_list(column_values: Any) -> Any:
     return list(column_values)
 
 
+def skip_if_no_categorical_ordering(
+    constructor: Constructor | ConstructorEager, /
+) -> None:
+    """Skip if the backend cannot order a `Categorical` column by its values.
+
+    - `pyspark`, `duckdb` and `ibis` have no categorical dtype.
+    - `dask` encodes the categories per partition, so ordering them by value would
+      need a compute.
+    - `polars<1.32` orders by the physical encoding instead of by value
+      (https://github.com/pola-rs/polars/pull/23779).
+    - `pyarrow<15` cannot cast `string` to `dictionary`, so the column cannot even be
+      created.
+    """
+    id_ = str(constructor)
+    if any(x in id_ for x in ("pyspark", "duckdb", "ibis", "dask")):
+        pytest.skip(reason="no `Categorical` dtype")
+    if "polars" in id_ and POLARS_VERSION < (1, 32):
+        pytest.skip(reason="orders `Categorical` by physical encoding")
+    if "pyarrow_table" in id_ and PYARROW_VERSION < (15,):
+        pytest.skip(reason="cannot cast `string` to `dictionary`")
+
+
 def is_pd_na(value: Any) -> bool:
     return (pd := get_pandas()) is not None and pd.isna(value)
 
@@ -111,15 +133,13 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
         result = result.collect(**kwargs.get(result.implementation, {}))
 
-    if hasattr(result, "columns"):
-        for idx, (col, key) in enumerate(
-            zip(result.columns, list(expected.keys()), strict=True)
-        ):
-            assert col == key, f"Expected column name {key} at index {idx}, found {col}"
-    result = {key: _to_comparable_list(result[key]) for key in expected}
-    assert list(result.keys()) == list(expected.keys()), (
-        f"Result keys {result.keys()}, expected keys: {expected.keys()}"
+    result_keys = (
+        list(result.columns) if hasattr(result, "columns") else list(result.keys())
     )
+    assert result_keys == list(expected.keys()), (
+        f"Result keys {result_keys}, expected keys: {list(expected.keys())}"
+    )
+    result = {key: _to_comparable_list(result[key]) for key in expected}
 
     for key, expected_value in expected.items():
         result_value = result[key]
@@ -157,7 +177,12 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             else:
                 are_equivalent_values = lhs == rhs
 
-            assert are_equivalent_values, (
+            if (np := get_numpy()) is not None and isinstance(
+                are_equivalent_values, np.bool_
+            ):
+                are_equivalent_values = bool(are_equivalent_values)
+
+            assert are_equivalent_values is True, (
                 f"Mismatch at index {i}, key {key}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
 
@@ -186,22 +211,22 @@ def sqlframe_session() -> DuckDBSession:
 
 def pyspark_session() -> SparkSession:  # pragma: no cover
     if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
+        from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        from pyspark.sql import SparkSession as _SparkSession
+    builder = cast("_SparkSession.Builder", _SparkSession.builder).appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect
         else builder.master("local[1]").config("spark.ui.enabled", "false")
     )
-    return (
-        # Don't remove pyrefly-ignore, needed in CI when pyspark is installed.
-        builder.config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
+    ret = (
+        builder.config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    return cast("SparkSession", ret)
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
@@ -214,6 +239,15 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             return mpd.DataFrame(df_pandas.to_dict(orient="list"))
+
+
+def interchange_frame(df: pd.DataFrame) -> Any:
+    """Return the interchange object of a pandas DataFrame.
+
+    `pandas-stubs` no longer declares `DataFrame.__dataframe__`, as the
+    interchange protocol is deprecated since pandas 3.0.
+    """
+    return df.__dataframe__()  # type: ignore[operator]
 
 
 def is_windows() -> bool:
@@ -276,3 +310,8 @@ def xfail_if_pyspark_connect(  # pragma: no cover
 ) -> None:
     if is_pyspark_connect(constructor):
         request.applymarker(pytest.mark.xfail(reason=reason))
+
+
+def any_integer_like_floats(values: list[Any]) -> bool:
+    """Return True if any value is a float that represents an integer (e.g. 1.0, 2.0)."""
+    return any(isinstance(v, float) and v.is_integer() for v in values)

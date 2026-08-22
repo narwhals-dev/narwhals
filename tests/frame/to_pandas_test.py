@@ -25,7 +25,9 @@ def test_convert_pandas(constructor_eager: ConstructorEager) -> None:
     if constructor_eager.__name__.startswith("pandas"):
         expected = cast("pd.DataFrame", constructor_eager(data))
     elif "modin_pyarrow" in str(constructor_eager):
-        expected = pd.DataFrame(data).convert_dtypes(dtype_backend="pyarrow")
+        from modin.pandas.io import to_pandas
+
+        expected = to_pandas(constructor_eager(data))
     else:
         expected = pd.DataFrame(data)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from itertools import islice
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol
 
@@ -229,7 +230,7 @@ class DepthTrackingExpr(
         Elementary expressions are the only ones supported properly in
         pandas, PyArrow, and Dask.
         """
-        return len(list(self._metadata.op_nodes_reversed())) <= 2
+        return len(list(islice(self._metadata.op_nodes_reversed(), 3))) <= 2
 
 
 class EagerExpr(
@@ -1054,8 +1055,10 @@ class EagerExprListNamespace(
     def len(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "len")
 
-    def unique(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("list", "unique")
+    def unique(self, *, maintain_order: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "unique", maintain_order=maintain_order
+        )
 
     def contains(self, item: NonNestedLiteral) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "contains", item=item)
@@ -1161,6 +1164,16 @@ class EagerExprStringNamespace(
     def strip_chars(self, characters: str | None) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "strip_chars", characters=characters
+        )
+
+    def strip_chars_start(self, characters: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "strip_chars_start", characters=characters
+        )
+
+    def strip_chars_end(self, characters: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "strip_chars_end", characters=characters
         )
 
     def starts_with(self, prefix: EagerExprT) -> EagerExprT:

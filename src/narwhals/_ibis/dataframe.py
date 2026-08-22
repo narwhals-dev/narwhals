@@ -314,10 +314,7 @@ class IbisLazyFrame(
         ]
 
     def collect_schema(self) -> dict[str, DType]:
-        return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in self.native.schema().fields.items()
-        }
+        return self.schema
 
     def unique(
         self,
@@ -406,8 +403,16 @@ class IbisLazyFrame(
         return self._with_native(unpivoted.select(*final_columns))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        if not order_by:
+            msg = "Must pass `order_by` to `with_row_index` for Ibis"
+            raise TypeError(msg)
+        sort_cols = (
+            list(IbisExpr._sort(*order_by, descending=False, nulls_last=False))
+            if order_by
+            else None
+        )
         to_select = [
-            ibis.row_number().over(ibis.window(order_by=order_by)).name(name),
+            ibis.row_number().over(ibis.window(order_by=sort_cols)).name(name),
             ibis.selectors.all(),
         ]
         return self._with_native(self.native.select(*to_select))

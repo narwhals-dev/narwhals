@@ -590,6 +590,7 @@ def is_cudf_dtype(
 
 
 def _is_native_series(obj: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
+    from narwhals import plugins
     from narwhals._utils import _hasattr_static
 
     return (
@@ -597,10 +598,12 @@ def _is_native_series(obj: Any | IntoSeriesT) -> TypeIs[IntoSeriesT]:
         or _is_polars_series(obj)
         or _is_pyarrow_chunked_array(obj)
         or _is_pandas_like_series(obj)
+        or plugins.is_native_series(obj)
     )
 
 
 def _is_native_dataframe(obj: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
+    from narwhals import plugins
     from narwhals._utils import _hasattr_static
 
     return (
@@ -608,10 +611,12 @@ def _is_native_dataframe(obj: Any | IntoDataFrameT) -> TypeIs[IntoDataFrameT]:
         or _is_polars_dataframe(obj)
         or _is_pyarrow_table(obj)
         or _is_pandas_like_dataframe(obj)
+        or plugins.is_native_dataframe(obj)
     )
 
 
 def _is_native_lazyframe(obj: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
+    from narwhals import plugins
     from narwhals._utils import _hasattr_static
 
     return (
@@ -623,6 +628,7 @@ def _is_native_lazyframe(obj: Any | IntoLazyFrameT) -> TypeIs[IntoLazyFrameT]:
         or _is_pyspark_dataframe(obj)
         or _is_pyspark_connect_dataframe(obj)
         or _is_sqlframe_dataframe(obj)
+        or plugins.is_native_lazyframe(obj)
     )
 
 
