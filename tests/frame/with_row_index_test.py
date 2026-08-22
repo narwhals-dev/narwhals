@@ -11,6 +11,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    skip_if_no_categorical_ordering,
 )
 
 if TYPE_CHECKING:
@@ -84,3 +85,32 @@ def test_with_row_index_lazy_meaner_examples(
     result = df.with_row_index(name="index", order_by=order_by).sort("b")
     expected = {"index": expected_index, **data}
     assert_equal_data(result, expected)
+
+
+def test_with_row_index_order_by_categorical(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    skip_if_no_categorical_ordering(constructor)
+
+    df = nw.from_native(constructor({"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}))
+    result = (
+        df.with_columns(nw.col("c").cast(nw.Categorical()))
+        .with_row_index("i", order_by="c")
+        .sort("n")
+        .select("i", "n")
+    )
+    assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})
+
+
+def test_with_row_index_order_by_w_null(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="not implemented in dask"))
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
+    df = nw.from_native(constructor({"c": ["dog", "cat", None], "n": [1, 2, 3]}))
+    result = df.with_row_index("i", order_by="c").sort("n").select("i", "n")
+    assert_equal_data(result, {"i": [2, 1, 0], "n": [1, 2, 3]})

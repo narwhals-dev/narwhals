@@ -247,6 +247,8 @@ def test_timestamp_hypothesis(
     import polars as pl
     import pyarrow as pa
 
+    from narwhals._arrow.utils import chunked_array
+
     @nw.narwhalify
     def func(s: nw.Series[IntoSeriesT]) -> nw.Series[IntoSeriesT]:
         return s.dt.timestamp(time_unit)
@@ -256,7 +258,7 @@ def test_timestamp_hypothesis(
     result_pdpa = func(
         pd.Series([inputs], dtype=f"timestamp[{starting_time_unit}][pyarrow]")
     )
-    result_pa = func(pa.chunked_array([[inputs]], type=pa.timestamp(starting_time_unit)))
+    result_pa = func(chunked_array([[inputs]], pa.timestamp(starting_time_unit)))
     assert result_pl[0] == result_pd[0]
     assert result_pl[0] == result_pdpa[0]
     assert result_pl[0] == result_pa[0].as_py()

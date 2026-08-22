@@ -99,6 +99,24 @@ def test_cov_over(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_cov_series_foreign_index() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3864
+    # A `Series` with an index unrelated to `df`'s own must be aligned
+    # positionally (left-hand-rule), not by pandas' automatic label join.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]}), eager_only=True
+    )
+    foreign = nw.from_native(
+        pd.Series([3, 1, 2], index=[5, 6, 7], name="a"), series_only=True
+    )
+    result = df.select(nw.cov(foreign, nw.col("b")))
+    expected = {"a": [-5.0]}
+    assert_equal_data(result, expected)
+
+
 def test_cov_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(

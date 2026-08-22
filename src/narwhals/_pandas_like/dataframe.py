@@ -34,7 +34,6 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_pandas_like_dataframe
 from narwhals.exceptions import InvalidOperationError, ShapeError
-from narwhals.functions import col as nw_col
 
 if TYPE_CHECKING:
     from io import BytesIO
@@ -200,19 +199,23 @@ class PandasLikeDataFrame(
         context: _LimitedContext,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
-        implementation = context._implementation
-        ns = implementation.to_native_namespace()
+        impl = context._implementation
+        ns = impl.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
-        if data or not schema:
-            native = DataFrame.from_records(data)
-        else:
-            native = DataFrame.from_dict({col: [] for col in schema})
+        # NOTE: `DataFrame.from_records` returns *zero* rows when every mapping is
+        # empty, while the constructor keeps `len(data)` (empty) rows.
+        native = DataFrame(data)
         if schema:
-            backends: Iterable[DTypeBackend]
-            if data:
-                backends = iter_dtype_backends(native.dtypes, implementation)
-            else:
-                backends = (None for _ in range(len(schema)))
+            # Missing columns become all-null, extra ones are dropped, and the schema
+            # order wins: https://github.com/narwhals-dev/narwhals/issues/3837
+            use_copy_flag = impl.is_pandas() and impl._backend_version() < (3,)
+
+            native = (
+                native.reindex(columns=list(schema), copy=False)  # type: ignore[call-arg]
+                if use_copy_flag
+                else native.reindex(columns=list(schema))
+            )
+            backends = iter_dtype_backends(native.dtypes, impl)
             native_schema = {
                 key: narwhals_to_native_dtype(
                     dtype,
@@ -223,7 +226,11 @@ class PandasLikeDataFrame(
                 for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
-            native = native.astype(native_schema)
+            native = (
+                native.astype(native_schema, copy=False)  # type: ignore[call-arg]
+                if use_copy_flag
+                else native.astype(native_schema)
+            )
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -448,7 +455,7 @@ class PandasLikeDataFrame(
             return self._with_native(type(self.native)(), validate_column_names=False)
         new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
-        df = namespace._concat_horizontal([s.native for s in new_series])
+        df = namespace._concat_by_index([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=True)
@@ -468,22 +475,22 @@ class PandasLikeDataFrame(
 
     def with_row_index(self, name: str, order_by: Sequence[str] | None) -> Self:
         plx = self.__narwhals_namespace__()
-        if order_by is None:
-            data = self._array_funcs.arange(len(self))
-            row_index = plx._expr._from_series(
-                plx._series.from_iterable(
-                    data, context=self, index=self.native.index, name=name
-                )
+        data = plx._series.from_iterable(
+            self._array_funcs.arange(len(self)),
+            context=self,
+            index=self.native.index,
+            name=name,
+        )
+        if order_by is not None:
+            token = generate_temporary_column_name(8, order_by)
+            sorting_indices = (
+                self.simple_select(*order_by)
+                .with_row_index(token, order_by=None)
+                .sort(*order_by, descending=False, nulls_last=False)
+                .get_column(token)
             )
-        else:
-            rank = cast(
-                "PandasLikeExpr",
-                nw_col(order_by[0]).rank(method="ordinal")._to_compliant_expr(plx),
-            )
-            row_index = (
-                rank.over(partition_by=[], order_by=order_by)
-                - plx.lit(1, None).broadcast()
-            ).alias(name)
+            data.scatter(sorting_indices, data, in_place=True)
+        row_index = plx._expr._from_series(data)
         return self.select(row_index, plx.all())
 
     def row(self, index: int) -> tuple[Any, ...]:
@@ -511,7 +518,7 @@ class PandasLikeDataFrame(
             to_concat.append(series)
         to_concat.extend(self._extract_comparand(s) for s in name_columns.values())
         namespace = self.__narwhals_namespace__()
-        df = namespace._concat_horizontal(to_concat)
+        df = namespace._concat_by_index(to_concat)
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
         df.columns.name = self.native.columns.name
         return self._with_native(df, validate_column_names=False)
