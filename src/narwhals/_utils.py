@@ -11,6 +11,7 @@ from collections.abc import (
     Iterator,
     Mapping,
     Sequence,
+    Sized,
 )
 from datetime import timezone
 from enum import Enum, auto
@@ -47,6 +48,7 @@ from narwhals.dependencies import (
     get_pyspark_connect,
     get_pyspark_sql,
     get_sqlframe,
+    is_into_series,
     is_narwhals_series,
     is_narwhals_series_bool,
     is_narwhals_series_int,
@@ -54,6 +56,7 @@ from narwhals.dependencies import (
     is_numpy_array_1d_bool,
     is_numpy_array_1d_int,
     is_pandas_like_dataframe,
+    is_pandas_like_index,
     is_pandas_like_series,
 )
 from narwhals.exceptions import (
@@ -100,6 +103,7 @@ if TYPE_CHECKING:
     from narwhals._typing import (
         Backend,
         IntoBackend,
+        NoDefault,
         PluginName,
         _ArrowImpl,
         _CuDFImpl,
@@ -126,7 +130,7 @@ if TYPE_CHECKING:
         CompliantSeries,
         DTypes,
         FileSource,
-        IntoSeriesT,
+        IntoSeries,
         MultiIndexSelector,
         NestedLiteral,
         NormalizedPath,
@@ -173,6 +177,22 @@ _IntoContext: TypeAlias = "_FullContext | NamespaceAccessor[_FullContext]"
 _IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
 _Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
+
+
+class _NoDefault(Enum):
+    # "borrowed" from
+    # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
+    no_default = "NO_DEFAULT"
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return "<no_default>"
+
+
+# the "no_default" sentinel should typically be used when one of the valid parameter
+# values is None, as otherwise we cannot determine if the caller has set that value.
+NO_DEFAULT = _NoDefault.no_default
+# keep this for tubular https://github.com/azukds/tubular/issues/725
+no_default = NO_DEFAULT
 
 
 class _StoresNative(Protocol[NativeT_co]):
@@ -911,6 +931,9 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         rely on the Index.
         For non-pandas-like inputs, this returns `None`.
 
+        The result can be passed straight back into
+        [`maybe_set_index`][narwhals.maybe_set_index], for any backend.
+
     Examples:
         >>> import pandas as pd
         >>> import polars as pl
@@ -924,18 +947,68 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
         >>> nw.maybe_get_index(series)
         RangeIndex(start=0, stop=2, step=1)
     """
-    obj_any = cast("Any", obj)
-    native_obj = obj_any.to_native()
+    native_obj = obj.to_native()
     if is_pandas_like_dataframe(native_obj) or is_pandas_like_series(native_obj):
         return native_obj.index
     return None
+
+
+def _is_index_values(obj: Any) -> bool:
+    """Whether `obj` is one index *level* of values, as opposed to a column label."""
+    return is_into_series(obj) or is_pandas_like_index(obj) or is_numpy_array_1d(obj)
+
+
+def _is_index_level(obj: Any) -> bool:
+    """Whether `obj` is one index *level*, as opposed to a column label.
+
+    Raises:
+        TypeError: If `obj` is a native dataframe, lazyframe or expression.
+    """
+    return _is_index_values(obj) or _is_iterable(obj)
+
+
+def _into_index_level(level: Any, *, implementation: Implementation) -> Any:
+    """Convert one index level into something a pandas-like `set_index` accepts."""
+    from narwhals.translate import to_native
+
+    level = to_native(level, pass_through=True)
+    ns = implementation.to_native_namespace()
+    if isinstance(level, (ns.Index, ns.Series)) or is_numpy_array_1d(level):
+        return level
+    name = getattr(level, "name", None)
+    # NOTE: `Index` does not accept an iterator in older pandas versions.
+    return ns.Index(level if isinstance(level, Sized) else list(level), name=name)
+
+
+def _into_keys(keys: Any, *, implementation: Implementation) -> Any:
+    """Interpret `column_names` or `index` as `keys` for a pandas-like `set_index`.
+
+    Scalars and sequences of `str` are column labels, any other container holds index
+    values, mirroring `DataFrame.set_index` itself.
+    """
+    if not _is_index_level(keys):
+        return keys
+    if _is_index_values(keys):
+        return _into_index_level(keys, implementation=implementation)
+
+    levels = keys if is_sequence_but_not_str(keys) else list(keys)
+    if all(isinstance(level, str) for level in levels):
+        return list(levels)
+    if any(_is_index_level(level) for level in levels):
+        return [
+            _into_index_level(level, implementation=implementation)
+            if _is_index_level(level)
+            else level
+            for level in levels
+        ]
+    return _into_index_level(levels, implementation=implementation)
 
 
 def maybe_set_index(
     obj: FrameOrSeriesT,
     column_names: str | list[str] | None = None,
     *,
-    index: Series[IntoSeriesT] | list[Series[IntoSeriesT]] | None = None,
+    index: Series[Any] | IntoSeries | Sequence[Any] | NoDefault | None = NO_DEFAULT,
 ) -> FrameOrSeriesT:
     """Set the index of a DataFrame or a Series, if it's pandas-like.
 
@@ -946,7 +1019,18 @@ def maybe_set_index(
             For dataframes, only one of `column_names` and `index` can be specified but
             not both. If `column_names` is passed and `df` is a Series, then a
             `ValueError` is raised.
-        index: series or list of series to set as index.
+        index: index to set, as any of:
+
+            - a Narwhals or native `Series`, a native `Index`, a NumPy array, or any
+              other sequence of values, from any backend.
+            - a list of the above, to set a `MultiIndex`.
+            - `None`, in which case `obj` is returned unchanged. This is what makes
+              `index=nw.maybe_get_index(other)` work for every backend, as
+              [`maybe_get_index`][narwhals.maybe_get_index] returns `None` for
+              non-pandas-like objects.
+            - a scalar column label, or a sequence of `str` column labels, which is
+              interpreted just like `column_names`. To set *string values* as index,
+              pass a native container such as `pd.Index(["a", "b"])` instead of a `list`.
 
     Raises:
         ValueError: If one of the following conditions happens
@@ -954,6 +1038,7 @@ def maybe_set_index(
             - none of `column_names` and `index` are provided
             - both `column_names` and `index` are provided
             - `column_names` is provided and `df` is a Series
+        TypeError: If `index` is a dataframe, lazyframe or expression.
 
     Notes:
         This is only really intended for backwards-compatibility purposes, for example if
@@ -974,47 +1059,62 @@ def maybe_set_index(
         b
         4  1
         5  2
+
+        The index of another object can be transferred over by piping
+        `maybe_get_index` into `maybe_set_index`:
+
+        >>> other = nw.from_native(pd.DataFrame({"c": [7, 8]}, index=[10, 20]))
+        >>> nw.to_native(nw.maybe_set_index(df, index=nw.maybe_get_index(other)))
+            a  b
+        10  1  4
+        20  2  5
+
+        For non-pandas-like objects `maybe_get_index` returns `None` and
+        `maybe_set_index` is a no-op, so the same code runs for any backend:
+
+        >>> df_pl = nw.from_native(pl.DataFrame({"a": [1, 2], "b": [4, 5]}))
+        >>> nw.maybe_set_index(df_pl, index=nw.maybe_get_index(df_pl)) is df_pl
+        True
     """
-    from narwhals.translate import to_native
+    native_obj = obj.to_native()
+    impl = obj.implementation
 
-    df_any = cast("Any", obj)
-    native_obj = df_any.to_native()
-
-    if column_names is not None and index is not None:
-        msg = "Only one of `column_names` or `index` should be provided"
-        raise ValueError(msg)
-
-    if not column_names and index is None:
-        msg = "Either `column_names` or `index` should be provided"
-        raise ValueError(msg)
-
-    if index is not None:
-        keys = (
-            [to_native(idx, pass_through=True) for idx in index]
-            if _is_iterable(index)
-            else to_native(index, pass_through=True)
-        )
-    else:
-        keys = column_names
-
-    if is_pandas_like_dataframe(native_obj):
-        return df_any._with_compliant(
-            df_any._compliant_frame._with_native(native_obj.set_index(keys))
-        )
-    if is_pandas_like_series(native_obj):
-        from narwhals._pandas_like.utils import set_index
-
-        if column_names:
-            msg = "Cannot set index using column names on a Series"
+    match (column_names, index):
+        case (None, _NoDefault()):
+            msg = "Either `column_names` or `index` should be provided"
+            raise ValueError(msg)
+        case (None, None):
+            # NOTE: `maybe_get_index` returns `None` for non-pandas-like objects.
+            return obj
+        case (None, _):
+            keys = index
+        case (_, _NoDefault()) | (_, None):
+            keys = column_names
+        case _:
+            msg = "Only one of `column_names` or `index` should be provided"
             raise ValueError(msg)
 
-        native_obj = set_index(
-            native_obj,
-            keys,
-            implementation=obj._compliant_series._implementation,  # type: ignore[union-attr]
-        )
-        return df_any._with_compliant(df_any._compliant_series._with_native(native_obj))
-    return df_any
+    if impl.is_pandas_like():
+        from narwhals.dataframe import DataFrame
+        from narwhals.series import Series
+
+        if isinstance(obj, DataFrame):
+            keys = _into_keys(keys, implementation=impl)
+            return obj._with_compliant(
+                obj._compliant_frame._with_native(native_obj.set_index(keys))
+            )
+        if isinstance(obj, Series):
+            from narwhals._pandas_like.utils import set_index
+
+            if column_names:
+                msg = "Cannot set index using column names on a Series"
+                raise ValueError(msg)
+
+            native_obj = set_index(
+                native_obj, _into_keys(keys, implementation=impl), implementation=impl
+            )
+            return obj._with_compliant(obj._compliant_series._with_native(native_obj))
+    return obj
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
@@ -2191,21 +2291,6 @@ def extend_bool(
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
 
-
-class _NoDefault(Enum):
-    # "borrowed" from
-    # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748
-    no_default = "NO_DEFAULT"
-
-    def __repr__(self) -> str:  # pragma: no cover
-        return "<no_default>"
-
-
-# the "no_default" sentinel should typically be used when one of the valid parameter
-# values is None, as otherwise we cannot determine if the caller has set that value.
-NO_DEFAULT = _NoDefault.no_default
-# keep this for tubular https://github.com/azukds/tubular/issues/725
-no_default = NO_DEFAULT
 
 # Can be imported from types in Python 3.10
 NoneType = type(None)
