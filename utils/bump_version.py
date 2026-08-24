@@ -58,4 +58,3 @@ new_version = sp.run(
 sp.run([GIT, COMMIT, "-a", "-m", f"release: Bump version to {new_version}"], check=False)
 sp.run([GIT, TAG, "-a", f"v{new_version}", "-m", f"v{new_version}"], check=False)
 sp.run([GIT, PUSH, UPSTREAM, "HEAD", "--follow-tags"], check=False)
-sp.run([GIT, PUSH, UPSTREAM, "HEAD:stable", "-f", "--follow-tags"], check=False)

@@ -22,6 +22,7 @@ from narwhals._arrow.utils import (
     native_to_narwhals_dtype,
     nulls_like,
     pad_series,
+    sortable,
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
@@ -347,7 +348,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise InvalidOperationError(msg)
 
         return maybe_extract_py_scalar(
-            pc.approximate_median(self.native), _return_py_scalar
+            pc.quantile(self.native, q=0.5, interpolation="linear")[0], _return_py_scalar
         )
 
     def min(self, *, _return_py_scalar: bool = True) -> Any:
@@ -570,7 +571,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             value_set: ArrayOrChunkedArray = other
         else:
             value_set = pa.array(other)
-        return self._with_native(pc.is_in(self.native, value_set=value_set))
+        native = self.native
+        is_in = pc.is_in(native, value_set=value_set)
+        return self._with_native(pc.if_else(native.is_null(), None, is_in))
 
     def arg_true(self) -> Self:
         import numpy as np  # ignore-banned-import
@@ -678,7 +681,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def to_pandas(self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
 
-        return pd.Series(self.native, name=self.name)
+        # NOTE: `pandas-stubs` doesn't know `pd.Series` accepts arrow-native input
+        return pd.Series(self.native, name=self.name)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import
@@ -778,7 +782,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         order: Order = "descending" if descending else "ascending"
         null_placement: NullPlacement = "at_end" if nulls_last else "at_start"
         sorted_indices = pc.array_sort_indices(
-            self.native, order=order, null_placement=null_placement
+            sortable(self.native), order=order, null_placement=null_placement
         )
         return self._with_native(self.native.take(sorted_indices))
 
@@ -1008,10 +1012,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         tiebreaker: TieBreaker = "first" if method == "ordinal" else method
 
         native_series: ArrayOrChunkedArray
+        sortable_series = sortable(self.native)
         if self._backend_version < (14, 0, 0):  # pragma: no cover
-            native_series = self.native.combine_chunks()
+            native_series = sortable_series.combine_chunks()
         else:
-            native_series = self.native
+            native_series = sortable_series
 
         null_mask = pc.is_null(native_series)
 

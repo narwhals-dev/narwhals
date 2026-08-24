@@ -371,7 +371,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(res).alias(ser.name)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_native(self.native.isin(other))
+        ser = self.native
+        res = ser.isin(other)
+        dtype_backend = get_dtype_backend(ser.dtype, self._implementation)
+        if dtype_backend is not None:
+            res = res.convert_dtypes(dtype_backend=dtype_backend)
+            if self._implementation.is_pandas() and self._backend_version < (3, 0):
+                res.mask(ser.isna(), inplace=True)  # noqa: PD002
+            else:
+                res = res.mask(ser.isna())
+        return self._with_native(res)
 
     def arg_true(self) -> Self:
         ser = self.native
