@@ -362,6 +362,10 @@ def test_factorize_categoricals(
         pytest.skip(reason=pl_skip_reason)
 
     df_native = constructor_eager({"a": values})
+
+    if "pyarrow" in str(constructor_eager):
+        encoded_col = df_native.column("a").dictionary_encode()
+        df_native = df_native.set_column(0, "a", encoded_col)
     df = nw.from_native(df_native).select(nw.col("a").cast(nw.Categorical))
     encoded_result = df["a"].factorize(**null_policy_args)
     codes, uniqs = encoded_result
