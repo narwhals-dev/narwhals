@@ -44,6 +44,11 @@ def test_empty_select(constructor_eager: ConstructorEager) -> None:
     assert result.shape == (0, 0)
 
 
+def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    assert df.select(ncs.string()).shape == (0, 0)
+
+
 def test_non_string_select() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -190,11 +195,11 @@ def test_select_duplicates(constructor: Constructor) -> None:
         # cudf already raises its own error
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
-    with pytest.raises(
-        ValueError,
-        match=r"Expected unique|[Dd]uplicate|more than one|Duplicate column name",
-    ):
+    msg = r"Expected unique|[Dd]uplicate|more than one|Duplicate column name"
+    with pytest.raises(ValueError, match=msg):
         df.select("a", nw.col("a") + 1).collect()
+    with pytest.raises(ValueError, match=msg):
+        df.select(ncs.numeric(), ncs.matches("^a$")).collect()
 
 
 def test_binary_window_aggregation(constructor_eager: ConstructorEager) -> None:
