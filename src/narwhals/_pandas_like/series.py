@@ -1047,8 +1047,18 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self.native.isna().any() if other is None else (self.native == other).any()
 
     def is_finite(self) -> Self:
-        s = self.native
-        return self._with_native((s > float("-inf")) & (s < float("inf")))
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.is_finite,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.isfinite
+            result_native = self._apply_array_func(native, array_func)
+        return self._with_native(result_native)
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         pd_method = "first" if method == "ordinal" else method
