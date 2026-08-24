@@ -62,6 +62,7 @@ if TYPE_CHECKING:
         Polars,
         SparkLike,
     )
+    from narwhals.plugins import Plugin
 
     EagerNamespaceKnown: TypeAlias = (
         PandasLikeNamespace | ArrowNamespace | PolarsNamespace
@@ -73,19 +74,24 @@ __all__ = ["Namespace"]
 
 @cache
 def _compliant_namespace(
-    impl: Implementation, version: Version, /
+    backend: Implementation | Plugin, version: Version, /
 ) -> CompliantNamespaceAny:
-    """Construct the compliant namespace of a **built-in** backend.
+    """Construct the compliant namespace of a **resolved** `backend`.
 
-    One instance per `(impl, version)` is shared by every caller: a compliant namespace
-    stores nothing but `_implementation` and `_version`, so it is immutable in practice.
-    `Implementation.UNKNOWN` is *not* accepted; plugin namespaces come from
-    plugin-authored code and are built afresh by `Namespace.from_backend`.
+    One instance per `(backend, version)` is shared by every caller, plugins included:
+    a compliant namespace stores nothing but `_implementation` and `_version`, and
+    `Plugin.__narwhals_namespace__` is documented to return one which is equally safe
+    to reuse.
     """
+    ns: CompliantNamespaceAny
+    if not isinstance(backend, Implementation):
+        from narwhals.plugins import _plugin_namespace
+
+        return _plugin_namespace(backend, version=version)
+    impl = backend
     # NOTE: Called for its side effect, so that a backend which is not installed raises
     # here rather than on first use.
     impl._backend_version()
-    ns: CompliantNamespaceAny
     if impl.is_pandas_like():
         from narwhals._pandas_like.namespace import PandasLikeNamespace
 
@@ -206,17 +212,16 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             Namespace[PolarsNamespace]
         """
         impl = Implementation.from_backend(backend)
-        ns: CompliantNamespaceAny
+        resolved: Implementation | Plugin
         if is_into_plugin(backend, impl):
             # NOTE: Anything unknown to `Implementation` is resolved as a plugin,
             # either by entry point name, by module name, or as the plugin module itself.
-            from narwhals.plugins import _plugin_namespace, _resolve_plugin
+            from narwhals.plugins import _resolve_plugin
 
-            plugin = _resolve_plugin(backend)
-            ns = _plugin_namespace(plugin, version=cls._version)
+            resolved = _resolve_plugin(backend)
         else:
-            ns = _compliant_namespace(impl, cls._version)
-        return cls(ns)
+            resolved = impl
+        return cls(_compliant_namespace(resolved, cls._version))
 
     @overload
     @classmethod

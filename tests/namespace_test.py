@@ -120,11 +120,35 @@ def test_namespace_from_backend_cached_per_version(backend: BackendName) -> None
         assert ns._version is version
 
 
-def test_namespace_from_backend_plugin_not_cached() -> None:
-    """`__narwhals_namespace__` is plugin-authored, so we call it afresh every time."""
-    pytest.importorskip("test_plugin")
-    first = Namespace.from_backend(PluginName("test-plugin")).compliant
-    assert Namespace.from_backend(PluginName("test-plugin")).compliant is not first
+def test_namespace_from_backend_plugin_cached() -> None:
+    """A plugin is cached like a built-in: one namespace per plugin, whatever the spelling."""
+    plugin = pytest.importorskip("test_plugin")
+    compliant = Namespace.from_backend(PluginName("test-plugin")).compliant
+    assert Namespace.from_backend(PluginName("test-plugin")).compliant is compliant
+    # Resolving first is what makes the module spellings share the entry point's entry.
+    assert Namespace.from_backend(PluginName("test_plugin")).compliant is compliant
+    assert Namespace.from_backend(plugin).compliant is compliant
+    assert Version.V1.namespace.from_backend(PluginName("test-plugin")).compliant is not (
+        compliant
+    )
+
+
+def test_namespace_from_backend_plugin_hook_called_once() -> None:
+    """`__narwhals_namespace__` is called once per version, not once per resolution."""
+    plugin = pytest.importorskip("test_plugin")
+    calls = 0
+    original = plugin.__narwhals_namespace__
+
+    def counting(*args: Any, **kwds: Any) -> Any:
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwds)
+
+    fresh = ModuleType("test_plugin_counting")
+    fresh.__narwhals_namespace__ = counting  # type: ignore[attr-defined]
+    for _ in range(3):
+        Namespace.from_backend(fresh)
+    assert calls == 1
 
 
 def test_namespace_from_backend_plugin_not_installed() -> None:

@@ -71,6 +71,7 @@ def _plugin_names() -> tuple[str, ...]:
     return tuple(entry_point.name for entry_point in _discover_entrypoints())
 
 
+@cache
 def _find_plugin(backend_name: str, /) -> Plugin | None:
     """Return the first installed plugin matching `backend_name`.
 
@@ -212,6 +213,11 @@ class Plugin(Protocol[FrameT, FromNativeR_co]):
         eager constructors use its `_dataframe`/`_series` classes (see the
         [`backend=...` section](../extending.md/#supporting-backend-in-narwhals-functions)
         of the extension docs).
+
+        Important:
+            Narwhals calls this **once per version** and reuses the result, exactly as it
+            reuses the namespaces of its own backends. The returned namespace must
+            therefore be safe to reuse: like a built-in compliant namespace.
         """
         ...
 
