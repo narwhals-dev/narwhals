@@ -36,17 +36,8 @@ from narwhals._enum import NoAutoEnum
 from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
-    get_cudf,
-    get_dask_dataframe,
-    get_duckdb,
-    get_ibis,
-    get_modin,
     get_pandas,
     get_polars,
-    get_pyarrow,
-    get_pyspark_connect,
-    get_pyspark_sql,
-    get_sqlframe,
     is_narwhals_series,
     is_narwhals_series_bool,
     is_narwhals_series_int,
@@ -395,32 +386,21 @@ class Implementation(NoAutoEnum):
         Arguments:
             native_namespace: Native namespace.
         """
-        mapping = {
-            get_pandas(): Implementation.PANDAS,
-            get_modin(): Implementation.MODIN,
-            get_cudf(): Implementation.CUDF,
-            get_pyarrow(): Implementation.PYARROW,
-            get_pyspark_sql(): Implementation.PYSPARK,
-            get_polars(): Implementation.POLARS,
-            get_dask_dataframe(): Implementation.DASK,
-            get_duckdb(): Implementation.DUCKDB,
-            get_ibis(): Implementation.IBIS,
-            get_sqlframe(): Implementation.SQLFRAME,
-            get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
-        }
-        return mapping.get(native_namespace, Implementation.UNKNOWN)
+        name = getattr(native_namespace, "__name__", "")
+        if (impl := _MODULE_NAME_TO_IMPLEMENTATION.get(name)) is not None and (
+            sys.modules.get(name) is native_namespace
+        ):
+            return impl
+        return Implementation.UNKNOWN
 
     @classmethod
     def from_string(cls: type[Self], backend_name: str) -> Implementation:
-        """Instantiate Implementation object from a native namespace module.
+        """Instantiate Implementation object from a backend name, expressed as string.
 
         Arguments:
             backend_name: Name of backend, expressed as string.
         """
-        try:
-            return cls(backend_name)
-        except ValueError:
-            return Implementation.UNKNOWN
+        return _BACKEND_NAME_TO_IMPLEMENTATION.get(backend_name, Implementation.UNKNOWN)
 
     @classmethod
     def from_backend(
@@ -655,6 +635,18 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
 }
 """Stores non default mapping from Implementation to module name"""
+
+_BACKEND_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    impl.value: impl for impl in Implementation
+}
+"""Inverse of `Implementation.value`, so `from_string` is a lookup instead of a `try/except`."""
+
+_MODULE_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value): impl
+    for impl in Implementation
+    if impl is not Implementation.UNKNOWN
+}
+"""Inverse of `_IMPLEMENTATION_TO_MODULE_NAME`, derived so the two cannot drift apart."""
 
 
 @lru_cache(maxsize=16)

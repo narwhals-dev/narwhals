@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import cache
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
 
 from narwhals._compliant.typing import CompliantNamespaceAny, CompliantNamespaceT_co
@@ -68,6 +69,58 @@ if TYPE_CHECKING:
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
 
 __all__ = ["Namespace"]
+
+
+@cache
+def _compliant_namespace(
+    impl: Implementation, version: Version, /
+) -> CompliantNamespaceAny:
+    """Construct the compliant namespace of a **built-in** backend.
+
+    One instance per `(impl, version)` is shared by every caller: a compliant namespace
+    stores nothing but `_implementation` and `_version`, so it is immutable in practice.
+    `Implementation.UNKNOWN` is *not* accepted; plugin namespaces come from
+    plugin-authored code and are built afresh by `Namespace.from_backend`.
+    """
+    # NOTE: Called for its side effect, so that a backend which is not installed raises
+    # here rather than on first use.
+    impl._backend_version()
+    ns: CompliantNamespaceAny
+    if impl.is_pandas_like():
+        from narwhals._pandas_like.namespace import PandasLikeNamespace
+
+        ns = PandasLikeNamespace(implementation=impl, version=version)
+    elif impl.is_polars():
+        from narwhals._polars.namespace import PolarsNamespace
+
+        ns = PolarsNamespace(version=version)
+    elif impl.is_pyarrow():
+        from narwhals._arrow.namespace import ArrowNamespace
+
+        ns = ArrowNamespace(version=version)
+    elif impl.is_spark_like():
+        from narwhals._spark_like.namespace import SparkLikeNamespace
+
+        ns = SparkLikeNamespace(implementation=impl, version=version)
+    elif impl.is_duckdb():
+        from narwhals._duckdb.namespace import DuckDBNamespace
+
+        ns = DuckDBNamespace(version=version)
+    elif impl.is_dask():
+        from narwhals._dask.namespace import DaskNamespace
+
+        ns = DaskNamespace(version=version)
+    elif impl.is_ibis():
+        from narwhals._ibis.namespace import IbisNamespace
+
+        ns = IbisNamespace(version=version)
+    else:  # pragma: no cover
+        # NOTE: Unreachable and defensive only check; `UNKNOWN` is handled by the
+        # caller and every other member of `Implementation` is matched by one of
+        # the branches.
+        msg = "Not supported Implementation"
+        raise AssertionError(msg)
+    return ns
 
 
 class Namespace(Generic[CompliantNamespaceT_co]):
@@ -153,51 +206,16 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             Namespace[PolarsNamespace]
         """
         impl = Implementation.from_backend(backend)
-        backend_version = impl._backend_version()  # noqa: F841
-        version = cls._version
         ns: CompliantNamespaceAny
-        if impl.is_pandas_like():
-            from narwhals._pandas_like.namespace import PandasLikeNamespace
-
-            ns = PandasLikeNamespace(implementation=impl, version=version)
-
-        elif impl.is_polars():
-            from narwhals._polars.namespace import PolarsNamespace
-
-            ns = PolarsNamespace(version=version)
-        elif impl.is_pyarrow():
-            from narwhals._arrow.namespace import ArrowNamespace
-
-            ns = ArrowNamespace(version=version)
-        elif impl.is_spark_like():
-            from narwhals._spark_like.namespace import SparkLikeNamespace
-
-            ns = SparkLikeNamespace(implementation=impl, version=version)
-        elif impl.is_duckdb():
-            from narwhals._duckdb.namespace import DuckDBNamespace
-
-            ns = DuckDBNamespace(version=version)
-        elif impl.is_dask():
-            from narwhals._dask.namespace import DaskNamespace
-
-            ns = DaskNamespace(version=version)
-        elif impl.is_ibis():
-            from narwhals._ibis.namespace import IbisNamespace
-
-            ns = IbisNamespace(version=version)
-        elif is_into_plugin(backend, impl):
+        if is_into_plugin(backend, impl):
             # NOTE: Anything unknown to `Implementation` is resolved as a plugin,
             # either by entry point name, by module name, or as the plugin module itself.
             from narwhals.plugins import _plugin_namespace, _resolve_plugin
 
             plugin = _resolve_plugin(backend)
-            ns = _plugin_namespace(plugin, version=version)
-        else:  # pragma: no cover
-            # NOTE: Unreachable and defensive only check; `UNKNOWN` is handled
-            # above and every other member of `Implementation` is matched by one
-            # of the branches.
-            msg = "Not supported Implementation"
-            raise AssertionError(msg)
+            ns = _plugin_namespace(plugin, version=cls._version)
+        else:
+            ns = _compliant_namespace(impl, cls._version)
         return cls(ns)
 
     @overload

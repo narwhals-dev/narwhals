@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.expr import PandasLikeExpr
     from narwhals._pandas_like.namespace import PandasLikeNamespace  # noqa: F401
     from narwhals._polars.namespace import PolarsNamespace  # noqa: F401
-    from narwhals._typing import BackendName, _EagerAllowed
+    from narwhals._typing import Backend, BackendName, IntoBackend, _EagerAllowed
     from narwhals.typing import _2DArray
     from tests.utils import Constructor
 
@@ -37,6 +37,12 @@ _EAGER_ALLOWED = "polars", "pandas", "pyarrow", "modin", "cudf"
 _LAZY_ONLY = "dask", "duckdb", "pyspark", "sqlframe"
 _LAZY_ALLOWED = ("polars", *_LAZY_ONLY)
 _BACKENDS = (*_EAGER_ALLOWED, *_LAZY_ONLY)
+_BACKEND_MODULE_NAME = {
+    "dask": "dask.dataframe",
+    "modin": "modin.pandas",
+    "pyspark": "pyspark.sql",
+}
+"""Backends whose native namespace module is not named after the backend itself."""
 
 eager_allowed = pytest.mark.parametrize("backend", _EAGER_ALLOWED)
 lazy_allowed = pytest.mark.parametrize("backend", _LAZY_ALLOWED)
@@ -88,6 +94,37 @@ def test_namespace_from_backend_plugin(backend: PluginName) -> None:
     assert repr(namespace) == "Namespace[DictNamespace]"
     assert namespace.implementation is nw.Implementation.UNKNOWN
     assert namespace.version is Version.MAIN
+
+
+@backends
+def test_namespace_from_backend_cached(backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    module = pytest.importorskip(_BACKEND_MODULE_NAME.get(backend, backend))
+    # `from_string` widens to `Implementation`, which no single overload accepts.
+    impl = cast("IntoBackend[Backend]", nw.Implementation.from_string(backend))
+    compliant = Namespace.from_backend(backend).compliant
+    assert Namespace.from_backend(impl).compliant is compliant
+    assert Namespace.from_backend(module).compliant is compliant
+    # The `Namespace` wrapper itself stays cheap and unshared.
+    assert Namespace.from_backend(backend) is not Namespace.from_backend(backend)
+
+
+@backends
+def test_namespace_from_backend_cached_per_version(backend: BackendName) -> None:
+    pytest.importorskip(backend)
+    namespaces = {
+        version: version.namespace.from_backend(backend).compliant for version in Version
+    }
+    assert len({id(ns) for ns in namespaces.values()}) == len(Version)
+    for version, ns in namespaces.items():
+        assert ns._version is version
+
+
+def test_namespace_from_backend_plugin_not_cached() -> None:
+    """`__narwhals_namespace__` is plugin-authored, so we call it afresh every time."""
+    pytest.importorskip("test_plugin")
+    first = Namespace.from_backend(PluginName("test-plugin")).compliant
+    assert Namespace.from_backend(PluginName("test-plugin")).compliant is not first
 
 
 def test_namespace_from_backend_plugin_not_installed() -> None:
