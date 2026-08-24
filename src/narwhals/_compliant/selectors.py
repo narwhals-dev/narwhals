@@ -173,8 +173,7 @@ class EagerSelectorNamespace(
     CompliantSelectorNamespace[DataFrameT, SeriesT], Protocol[DataFrameT, SeriesT]
 ):
     def _iter_schema(self, df: DataFrameT, /) -> Iterator[tuple[str, DType]]:
-        for ser in self._iter_columns(df):
-            yield ser.name, ser.dtype
+        yield from df.schema.items()
 
     def _iter_columns(self, df: DataFrameT, /) -> Iterator[SeriesT]:
         yield from df.iter_columns()
