@@ -560,8 +560,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         if len(ser_not_null) == 2:
             return 0.0
         m = ser_not_null - ser_not_null.mean()
-        m2 = (m**2).mean()
-        m3 = (m**3).mean()
+        m_squared = m * m
+        m2 = m_squared.mean()
+        m3 = (m_squared * m).mean()
         return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
     def kurtosis(self) -> float | None:
@@ -571,8 +572,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         if len(ser_not_null) == 1:
             return float("nan")
         m = ser_not_null - ser_not_null.mean()
-        m2 = (m**2).mean()
-        m4 = (m**4).mean()
+        m_squared = m * m
+        m2 = m_squared.mean()
+        m4 = (m_squared * m_squared).mean()
         return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
 
     def len(self) -> int:
@@ -1146,7 +1148,21 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result_native)
 
     def sqrt(self) -> Self:
-        return self._with_native(self.native.pow(0.5))
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow as pa  # ignore-banned-import()
+            import pyarrow.compute as pc
+
+            def pc_sqrt(ca: ChunkedArrayAny) -> ChunkedArrayAny:
+                result = pc.sqrt(pc.cast(ca, pa.float64()))
+                null = pa.scalar(None, pa.float64())
+                return pc.if_else(pc.is_nan(result), null, result)
+
+            result_native = self._apply_pyarrow_compute_func(native, pc_sqrt)
+        else:
+            array_func = self._array_funcs.sqrt
+            result_native = self._apply_array_func(native, array_func)
+        return self._with_native(result_native)
 
     def sin(self) -> Self:
         native = self.native
