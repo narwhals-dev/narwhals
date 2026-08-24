@@ -57,8 +57,33 @@ handle plugins. For this integration to work, any plugin architecture must conta
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
     which wraps the native dataframe.
 
+    Narwhals calls `__narwhals_namespace__` **once per version** and reuses the namespace
+    it returns, exactly as it reuses the namespaces of its own backends. The namespace must
+    therefore be safe to reuse.
+
     Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
     signatures.
+
+  3. an `_implementation` attribute set to `narwhals.Implementation.UNKNOWN`, on every
+    compliant class the plugin exposes (namespace, dataframe, lazyframe, series):
+
+    ```py
+    from narwhals import Implementation
+
+
+    class GrizzliesNamespace:
+        _implementation = Implementation.UNKNOWN
+        ...
+
+
+    class GrizzliesDataFrame:
+        _implementation = Implementation.UNKNOWN
+        ...
+    ```
+
+    A plugin's backend is, by definition, not one of Narwhals' own `Implementation`
+    members, and this attribute is what says so, telling plugin objects apart from
+    built-in ones.
 
 ## Supporting `backend=...` in Narwhals functions
 
@@ -69,8 +94,9 @@ plugin. Users can pass:
 - the plugin's module name (e.g. `backend="narwhals_grizzlies"`),
 - or the plugin's module itself (e.g. `backend=narwhals_grizzlies`).
 
-In all cases, dispatch goes through the compliant namespace returned by the plugin's
-`__narwhals_namespace__`:
+All three spellings are resolved the same way built-in backends are, onto the same
+[cached namespace](#creating-a-plugin), and dispatch goes through the compliant namespace
+returned by the plugin's `__narwhals_namespace__`:
 
 1. **IO functions** (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`): these
    call same-named methods on the compliant namespace, following the

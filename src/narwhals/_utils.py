@@ -36,17 +36,8 @@ from narwhals._enum import NoAutoEnum
 from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
-    get_cudf,
-    get_dask_dataframe,
-    get_duckdb,
-    get_ibis,
-    get_modin,
     get_pandas,
     get_polars,
-    get_pyarrow,
-    get_pyspark_connect,
-    get_pyspark_sql,
-    get_sqlframe,
     is_narwhals_series,
     is_narwhals_series_bool,
     is_narwhals_series_int,
@@ -67,7 +58,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import Concatenate, TypeAlias
+    from typing import Concatenate, TypeAlias, TypeGuard
 
     import pandas as pd
     import polars as pl
@@ -395,32 +386,21 @@ class Implementation(NoAutoEnum):
         Arguments:
             native_namespace: Native namespace.
         """
-        mapping = {
-            get_pandas(): Implementation.PANDAS,
-            get_modin(): Implementation.MODIN,
-            get_cudf(): Implementation.CUDF,
-            get_pyarrow(): Implementation.PYARROW,
-            get_pyspark_sql(): Implementation.PYSPARK,
-            get_polars(): Implementation.POLARS,
-            get_dask_dataframe(): Implementation.DASK,
-            get_duckdb(): Implementation.DUCKDB,
-            get_ibis(): Implementation.IBIS,
-            get_sqlframe(): Implementation.SQLFRAME,
-            get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
-        }
-        return mapping.get(native_namespace, Implementation.UNKNOWN)
+        name = getattr(native_namespace, "__name__", "")
+        if (impl := _MODULE_NAME_TO_IMPLEMENTATION.get(name)) is not None and (
+            sys.modules.get(name) is native_namespace
+        ):
+            return impl
+        return Implementation.UNKNOWN
 
     @classmethod
     def from_string(cls: type[Self], backend_name: str) -> Implementation:
-        """Instantiate Implementation object from a native namespace module.
+        """Instantiate Implementation object from a backend name, expressed as string.
 
         Arguments:
             backend_name: Name of backend, expressed as string.
         """
-        try:
-            return cls(backend_name)
-        except ValueError:
-            return Implementation.UNKNOWN
+        return _BACKEND_NAME_TO_IMPLEMENTATION.get(backend_name, Implementation.UNKNOWN)
 
     @classmethod
     def from_backend(
@@ -655,6 +635,18 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
 }
 """Stores non default mapping from Implementation to module name"""
+
+_BACKEND_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    impl.value: impl for impl in Implementation
+}
+"""Inverse of `Implementation.value`, so `from_string` is a lookup instead of a `try/except`."""
+
+_MODULE_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value): impl
+    for impl in Implementation
+    if impl is not Implementation.UNKNOWN
+}
+"""Inverse of `_IMPLEMENTATION_TO_MODULE_NAME`, derived so the two cannot drift apart."""
 
 
 @lru_cache(maxsize=16)
@@ -1660,6 +1652,24 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
+# NOTE: Keep `TypeGuard`, not `TypeIs`, as the two narrow by different rules.
+def is_into_plugin(
+    backend: IntoBackend[Backend | PluginName],  # noqa: ARG001
+    impl: Implementation,
+    /,
+) -> TypeGuard[IntoBackend[PluginName]]:
+    """Return True if `backend` names a plugin, rather than a built-in backend.
+
+    `Implementation.UNKNOWN` means exactly "not one of Narwhals' own backends", so a
+    `backend` which resolves to it can only be a plugin's name or a plugin module.
+
+    Arguments:
+        backend: Backend spelling, as given by the user.
+        impl: Result of `Implementation.from_backend(backend)`.
+    """
+    return impl is Implementation.UNKNOWN
+
+
 # TODO(Unassigned): Generalize _hasattr_static?
 # See https://github.com/narwhals-dev/narwhals/pull/3753#discussion_r3653098839
 def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
@@ -1731,30 +1741,29 @@ def eager_namespace(
 ) -> EagerNamespaceAny | EagerNamespaceKnown:
     """Resolve `backend` to an eager-allowed compliant namespace.
 
-    Built-in eager backends resolve directly. Anything unknown to `Implementation` is
-    resolved via the plugin entry-point registry, in which case the plugin's
-    `__narwhals_namespace__` must return a namespace implementing the `EagerNamespace`
-    protocol (in particular, the `_series` and `_dataframe` properties).
+    Built-in eager backends and plugins resolve through the same
+    `Namespace.from_backend`; for a plugin, the namespace returned by
+    `__narwhals_namespace__` must implement the `EagerNamespace` protocol (in
+    particular, the `_series` and `_dataframe` properties).
     Built-in lazy-only backends raise an informative `ValueError`, suggesting the
     `EAGER_HINT_EXAMPLES` entry for `function_name` followed by a `.lazy(...)` call.
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         return version.namespace.from_backend(implementation).compliant
-    if implementation is not Implementation.UNKNOWN:
-        msg = (
-            f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
-            "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-            f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
-        )
-        raise ValueError(msg)
-    from narwhals.plugins import _backend_namespace, _plugin_namespace
+    if is_into_plugin(backend, implementation):
+        from narwhals.plugins import _backend_name
 
-    plugin = _backend_namespace(backend)
-    namespace = _plugin_namespace(plugin, version=version)
-    return _ensure_eager_allowed(
-        namespace, source=plugin.__name__, function_name=function_name
+        namespace = version.namespace.from_backend(backend).compliant
+        return _ensure_eager_allowed(
+            namespace, source=_backend_name(backend), function_name=function_name
+        )
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
     )
+    raise ValueError(msg)
 
 
 def eager_namespace_from_compliant(
