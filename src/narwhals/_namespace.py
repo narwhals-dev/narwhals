@@ -221,7 +221,9 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             resolved = _resolve_plugin(backend)
         else:
             resolved = impl
-        return cls(_compliant_namespace(resolved, cls._version))
+        # NOTE: `type: ignore` as `functools.cache` requires resolved to be hashable;
+        # a plugin is a module, so it always is.
+        return cls(_compliant_namespace(resolved, cls._version))  # type: ignore[arg-type]
 
     @overload
     @classmethod
