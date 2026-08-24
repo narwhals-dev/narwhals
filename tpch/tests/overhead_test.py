@@ -4,10 +4,13 @@ Adapted from the benchmark notebook referenced in `docs/overhead.md`
 (https://www.kaggle.com/code/marcogorelli/narwhals-vs-pandas-overhead-tpc-h-s2), which
 compares hand-written pandas queries against their Narwhals equivalents. We don't
 require Narwhals to be faster, just that it doesn't add significant overhead.
+
+To see timing results, run as `pytest tpch/tests/overhead_test.py -s`.
 """
 
 from __future__ import annotations
 
+import sys
 import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
@@ -196,6 +199,9 @@ def test_overhead(
     narwhals_time = _best_of(run_narwhals)
 
     threshold = native_time * MAX_SLOWDOWN_FACTOR
+    sys.stdout.write(
+        f"\n{name}: pandas via Narwhals took {narwhals_time * 1000:.1f}ms, vs {native_time * 1000:.1f}ms for native pandas"
+    )
     assert narwhals_time <= threshold, (
         f"{name}: pandas via Narwhals took {narwhals_time * 1000:.1f}ms, "
         f"vs {native_time * 1000:.1f}ms for native pandas - more than "
