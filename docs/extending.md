@@ -5,7 +5,7 @@
     The extension mechanism in Narwhals is experimental and under development.
     If anything is not clear, or doesn't work, please do raise an issue or
     contact us on Discord (see the link on the README).
-  
+
 If you would like to make a new library Narwhals-compatible, then there are
 three ways to go about it:
 
@@ -45,18 +45,18 @@ handle plugins. For this integration to work, any plugin architecture must conta
     own library name, for example `narwhals-grizzlies = 'narwhals_grizzlies'`
 
   2. a top-level `__init__.py` file containing the following:
-  
+
     - `is_native` and `__narwhals_namespace__` functions.
     - a string constant `NATIVE_PACKAGE` which holds the name of the library for which the plugin is made.
 
-    `is_native` accepts a native object and returns a boolean indicating whether the native object is 
+    `is_native` accepts a native object and returns a boolean indicating whether the native object is
     a dataframe of the library the plugin was written for.
 
     `__narwhals_namespace__` takes the Narwhals version and returns a compliant namespace for the library,
-    i.e. one that complies with the CompliantNamespace protocol. This protocol specifies a `from_native` 
+    i.e. one that complies with the CompliantNamespace protocol. This protocol specifies a `from_native`
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
-    which wraps the native dataframe. 
-  
+    which wraps the native dataframe.
+
     Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
     signatures.
 

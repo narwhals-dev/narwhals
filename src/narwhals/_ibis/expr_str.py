@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import ibis
@@ -20,6 +21,14 @@ IntoStringValue: TypeAlias = "str | ir.StringValue"
 
 
 class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
+    def strip_chars_start(self, characters: str) -> IbisExpr:
+        pattern = rf"^[{re.escape(characters)}]+"
+        return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
+
+    def strip_chars_end(self, characters: str) -> IbisExpr:
+        pattern = rf"[{re.escape(characters)}]+$"
+        return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
+
     def strip_chars(self, characters: str | None) -> IbisExpr:
         if characters is not None:
             msg = "Ibis does not support `characters` argument in `str.strip_chars`"
