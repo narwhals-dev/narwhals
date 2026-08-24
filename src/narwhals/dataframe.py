@@ -15,10 +15,12 @@ from typing import (
     overload,
 )
 
+from narwhals._compliant.selectors import is_compliant_selector
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     _parse_into_expr,
     check_expressions_preserve_length,
+    is_bare_selector,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
@@ -234,6 +236,24 @@ class BaseFrame(Generic[_FrameT]):
                     raise error from e
                 raise
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if (
+            (not named_exprs)
+            and flat_exprs
+            and all(is_bare_selector(x) for x in flat_exprs)
+            and all(is_compliant_selector(x) for x in compliant_exprs)
+        ):
+            # fast path: bare selectors resolve to a subset of the frame's existing
+            # columns, in frame order, which is what `simple_select` does natively.
+            frame = self._compliant_frame
+            names = [
+                name
+                for expr in compliant_exprs
+                for name in expr._evaluate_output_names(frame)
+            ]
+            # An empty selection and duplicate output names both get dedicated handling
+            # further down (an empty frame, and a `DuplicateError`), so leave them be.
+            if names and len(set(names)) == len(names):
+                return self._with_compliant(frame.simple_select(*names))
         if compliant_exprs and all(is_scalar_like(x) for x in compliant_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
