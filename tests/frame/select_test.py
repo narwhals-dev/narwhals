@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
+import narwhals.selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
 from tests.utils import (
     DASK_VERSION,
@@ -25,6 +26,17 @@ def test_select(constructor: Constructor) -> None:
     result = df.select("a")
     expected = {"a": [1, 3, 2]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("name", ["order", "SELECT", "my col"])
+def test_select_names_which_are_not_sql_identifiers(
+    constructor: Constructor, name: str
+) -> None:
+    data = {name: [1, 3, 2], "b": ["x", "y", "z"]}
+    df = nw.from_native(constructor(data))
+    assert_equal_data(df.select(name), {name: [1, 3, 2]})
+    assert_equal_data(df.select(ncs.numeric()), {name: [1, 3, 2]})
+    assert_equal_data(df.select(~ncs.numeric()), {"b": ["x", "y", "z"]})
 
 
 def test_empty_select(constructor_eager: ConstructorEager) -> None:
