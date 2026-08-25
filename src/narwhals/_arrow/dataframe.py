@@ -643,8 +643,6 @@ class ArrowDataFrame(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
-            from narwhals._arrow.dataframe import ArrowDataFrame
-
             return ArrowDataFrame(
                 self.native, version=self._version, validate_column_names=False
             )
