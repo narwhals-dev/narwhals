@@ -390,8 +390,9 @@ class DuckDBLazyFrame(
             for name in keep_cols
         )
         # `rhs` is resolved via replacement scan.
-        # `rel.query` creates a view, so this fails on read-only databases (#3567);
-        # unavoidable until the relational API gains ASOF join support.
+        # `rel.query` registers a view on the relation's connection, with the caveats
+        # described in `temporary_view_name`. Unavoidable until the relational API
+        # gains ASOF join support.
         view = temporary_view_name()
         joined = lhs.query(
             view,
@@ -547,8 +548,8 @@ class DuckDBLazyFrame(
             raise NotImplementedError(msg)
 
         unpivot_on = join_column_names(*on_)
-        # `rel.query` creates a view, so this fails on read-only databases (#3567).
-        # Replace with Python API once
+        # `rel.query` registers a view on the relation's connection, with the caveats
+        # described in `temporary_view_name`. Replace with the Python API once
         # https://github.com/duckdb/duckdb/discussions/16980 is addressed.
         view = temporary_view_name()
         unpivoted = self.native.query(

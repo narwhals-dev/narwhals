@@ -214,6 +214,10 @@ gives us no way to reach its own connection to open a per-thread `.cursor()`.
 This keeps `collect_schema()` safe on relations sharing a connection; explicit execution
 (`collect`, ...) still follows DuckDB's rules, see [docs/concepts/thread_safety.md].
 
+Note that it only serializes Narwhals against *itself*: a caller running its own query
+on the same connection from another thread still races us, and no lock we hold can
+prevent that.
+
 [multiple threads]: https://duckdb.org/docs/stable/guides/python/multiple_threads
 """
 
@@ -369,11 +373,24 @@ def temporary_view_name() -> str:
     The name must be unique per call: views persist and the lazy result re-binds by
     name on execution, so a reused name shadows earlier views and corrupts their plans.
     `rel.query` must also run in the frame whose locals the SQL references, as
-    [replacement scans] only see the caller's frame [3].
+    [replacement scans] only see the caller's frame.
+
+    We cannot clean the view up: the returned relation is lazy and re-binds the name
+    every time it executes, so dropping the view before the caller is done with the
+    frame turns any later execution into a `CatalogException`. Where the view lands
+    depends on the DuckDB version:
+
+    * duckdb-python >= 1.5.4 ([#471]) puts it in the `temp` catalog, so it is scoped to
+      the cursor and released when that cursor is closed.
+    * Older versions put it in the relation's own catalog. It then fails outright on a
+      read-only database (#3567), and on a file-backed one it is written to disk and
+      survives reopening. See [thread safety] for the user-facing note.
 
     [relational api]: https://duckdb.org/docs/current/clients/python/relational_api
     [using connections in parallel pythonprograms]: https://duckdb.org/docs/current/clients/python/overview#using-connections-in-parallel-python-programs
     [replacement scans]: https://duckdb.org/docs/current/clients/c/replacement_scans
+    [#471]: https://github.com/duckdb/duckdb-python/pull/471
+    [thread safety]: https://narwhals-dev.github.io/narwhals/concepts/thread_safety/
     """
     return generate_temporary_column_name(8, [], prefix="_narwhals_")
 

@@ -76,14 +76,16 @@ class DuckDBNamespace(
         validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
         # Without an explicit `connection`, DuckDB reads through the
         # process-global default connection.
-        reader = kwds.pop("connection", None) or duckdb
+        connection = kwds.pop("connection", None)
+        reader = duckdb if connection is None else connection
         native_frame = reader.read_csv(source, delimiter=separator, **kwds)
         return self._lazyframe.from_native(native_frame, context=self)
 
     def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DuckDBLazyFrame:
         # Without an explicit `connection`, DuckDB reads through the
         # process-global default connection.
-        reader = kwds.pop("connection", None) or duckdb
+        connection = kwds.pop("connection", None)
+        reader = duckdb if connection is None else connection
         native_frame = reader.read_parquet(source, **kwds)
         return self._lazyframe.from_native(native_frame, context=self)
 
@@ -121,7 +123,8 @@ class DuckDBNamespace(
             for _item in native_items[1:]:
                 # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
                 # `_item` is resolved via replacement scan.
-                # `rel.query` creates a view, so this fails on read-only databases (#3567).
+                # `rel.query` registers a view on the relation's connection, with the
+                # caveats described in `temporary_view_name`.
                 view = temporary_view_name()
                 res = res.query(
                     view,

@@ -85,6 +85,18 @@ def worker(con: duckdb.DuckDBPyConnection) -> None:
    not**: a time-zone-aware dtype is the one case where Narwhals queries your connection
    *implicitly*, and it serializes that query. Explicit execution (`collect`, `to_arrow`,
    ...) runs on the connection you gave it and follows DuckDB's rules.
+4. **`join_asof`, `unpivot` and `concat(how="diagonal")` leave a view behind on
+   duckdb-python < 1.5.4**: DuckDB has no relational-API equivalent for ASOF joins,
+   `UNPIVOT` ([duckdb#16980]) or `UNION ALL BY NAME` ([duckdb#16996]), so Narwhals runs
+   them through [`DuckDBPyRelation.query`][relational-api], which registers a
+   uniquely-named view on the relation's own connection. Since [duckdb-python 1.5.4]
+   that view goes to the `temp` catalog: it is scoped to the cursor and released when
+   the cursor is closed. On **older versions it goes to the relation's catalog
+   instead**, which means it is written to disk for a file-backed database and is still
+   there when you reopen it, and these methods fail outright on a read-only database.
+   Narwhals cannot clean the view up, because the frame it hands back is lazy and
+   re-resolves the view by name on every execution. If this matters to you, upgrade to
+   duckdb-python >= 1.5.4.
 
 [`scan_csv`](../api-reference/narwhals.md#narwhals.scan_csv) and
 [`scan_parquet`](../api-reference/narwhals.md#narwhals.scan_parquet) read through DuckDB's
@@ -112,11 +124,15 @@ reproduces it, ideally on a free-threaded build or with `sys.setswitchinterval(1
 [arrow-immutable]: https://arrow.apache.org/docs/python/data.html
 [copy-on-write]: https://pandas.pydata.org/docs/user_guide/copy_on_write.html
 [duckdb-config]: https://duckdb.org/docs/stable/configuration/overview
+[duckdb-python 1.5.4]: https://github.com/duckdb/duckdb-python/pull/471
+[duckdb#16980]: https://github.com/duckdb/duckdb/discussions/16980
+[duckdb#16996]: https://github.com/duckdb/duckdb/discussions/16996
 [duckdb-join-relation]: https://github.com/duckdb/duckdb/blob/fabf1d60bb0565032ad7d48e64f689fdbf616719/src/main/relation/join_relation.cpp#L25-L26
 [free-threaded]: https://docs.python.org/3/howto/free-threading-python.html
 [loading]: https://docs.python.org/3/reference/import.html#loading
 [lru_cache]: https://docs.python.org/3/library/functools.html#functools.lru_cache
 [multiple threads]: https://duckdb.org/docs/stable/guides/python/multiple_threads
+[relational-api]: https://duckdb.org/docs/stable/clients/python/relational_api
 [numpy-thread-safety]: https://numpy.org/doc/stable/reference/thread_safety.html
 [polars-immutable]: https://github.com/pola-rs/polars/issues/17447
 [pytest-run-parallel]: https://github.com/Quansight-Labs/pytest-run-parallel
