@@ -15,10 +15,12 @@ from typing import (
     overload,
 )
 
+from narwhals._compliant.selectors import is_compliant_selector
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     _parse_into_expr,
     check_expressions_preserve_length,
+    is_bare_selector,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
@@ -28,6 +30,7 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     can_lazyframe_collect,
+    check_column_names_are_unique,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -234,6 +237,24 @@ class BaseFrame(Generic[_FrameT]):
                     raise error from e
                 raise
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if (
+            (not named_exprs)
+            and flat_exprs
+            and all(is_bare_selector(x) for x in flat_exprs)
+            and all(is_compliant_selector(x) for x in compliant_exprs)
+        ):
+            # fast path: bare selectors resolve to a subset of the frame's existing
+            # columns, in frame order, which is what `simple_select` does natively.
+            frame = self._compliant_frame
+            names = [
+                name
+                for expr in compliant_exprs
+                for name in expr._evaluate_output_names(frame)
+            ]
+            if not names:
+                return self._with_compliant(frame.select())
+            check_column_names_are_unique(names)
+            return self._with_compliant(frame.simple_select(*names))
         if compliant_exprs and all(is_scalar_like(x) for x in compliant_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
@@ -634,8 +655,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
         Notes:
+            Keys missing from some (or all) rows are filled with null.
+
             For pandas-like dataframes, conversion to schema is applied after dataframe
-            creation.
+            creation. A `schema` requesting a dtype which cannot hold null values (e.g.
+            `Int64` or `Boolean` with the default numpy dtypes) will therefore coerce or
+            raise on those missing values.
 
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
@@ -1318,7 +1343,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pyarrow as pa
@@ -1652,7 +1677,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pandas as pd
@@ -2590,7 +2615,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb
@@ -2855,7 +2880,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 * 'none': Don't keep duplicate rows.
                 * 'first': Keep the first row. Requires `order_by` to be specified.
                 * 'last': Keep the last row. Requires `order_by` to be specified.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb

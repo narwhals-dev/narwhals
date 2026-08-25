@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
 
@@ -583,7 +583,7 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).dtypes.to_dict()
+    return cast("IntoPandasSchema", constructor_pandas_like(data).dtypes.to_dict())
 
 
 @pytest.fixture
@@ -608,7 +608,7 @@ def origin_pandas_like_pyarrow(
     df_nw = nw.from_native(df_pd).with_columns(
         nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
     )
-    return df_nw.to_native().dtypes.to_dict()
+    return cast("IntoPandasSchema", df_nw.to_native().dtypes.to_dict())
 
 
 def test_schema_from_polars(
