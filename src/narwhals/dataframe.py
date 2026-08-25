@@ -30,6 +30,7 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     can_lazyframe_collect,
+    check_column_names_are_unique,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -250,10 +251,10 @@ class BaseFrame(Generic[_FrameT]):
                 for expr in compliant_exprs
                 for name in expr._evaluate_output_names(frame)
             ]
-            # An empty selection and duplicate output names both get dedicated handling
-            # further down (an empty frame, and a `DuplicateError`), so leave them be.
-            if names and len(set(names)) == len(names):
-                return self._with_compliant(frame.simple_select(*names))
+            if not names:
+                return self._with_compliant(frame.select())
+            check_column_names_are_unique(names)
+            return self._with_compliant(frame.simple_select(*names))
         if compliant_exprs and all(is_scalar_like(x) for x in compliant_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
