@@ -11,6 +11,11 @@ TPC-H queries, comparing running pandas directly vs running pandas via Narwhals:
 
 [Complete code to reproduce](https://www.kaggle.com/code/marcogorelli/narwhals-vs-pandas-overhead-tpc-h-s2).
 
+This comparison is also run as a regression test in CI, see
+[`tpch/tests/overhead_test.py`](https://github.com/narwhals-dev/narwhals/blob/main/tpch/tests/overhead_test.py):
+it fails if pandas via Narwhals ever becomes meaningfully slower than native pandas
+for the same TPC-H queries.
+
 ## Plotly's story
 
 One big difference between Plotly v5 and Plotly v6 is the handling of non-pandas inputs:
