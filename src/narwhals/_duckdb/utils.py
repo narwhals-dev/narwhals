@@ -174,12 +174,12 @@ def native_to_narwhals_dtype(
         child, size = duckdb_dtype.children
         shape = [size[1]]
 
-        while child[1].id == "array":
-            child, size = child[1].children
+        while child[1].id == "array":  # pyrefly: ignore[missing-attribute]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
+            child, size = child[1].children  # pyrefly: ignore[missing-attribute]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
             shape.insert(0, size[1])
 
-        inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)
-        return dtypes.Array(inner=inner, shape=tuple(shape))
+        inner = native_to_narwhals_dtype(child[1], version, deferred_time_zone)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
+        return dtypes.Array(inner=inner, shape=tuple(shape))  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
 
     if duckdb_dtype_id == "enum":
         if version is Version.V1:
@@ -194,7 +194,7 @@ def native_to_narwhals_dtype(
         precision: Incomplete
         scale: Incomplete
         (_, precision), (_, scale) = duckdb_dtype.children
-        return dtypes.Decimal(precision, scale)
+        return dtypes.Decimal(precision, scale)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
 
     return _non_nested_native_to_narwhals_dtype(duckdb_dtype_id, version)
 

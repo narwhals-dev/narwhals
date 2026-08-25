@@ -74,8 +74,8 @@ def trivial_binary_right(op: Callable[..., dx.Series]) -> Any:
 
 
 class DaskExpr(
-    LazyExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]
-    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]
+    LazyExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]  # pyrefly: ignore[bad-specialization]
+    DepthTrackingExpr["DaskLazyFrame", "dx.Series"],  # pyright: ignore[reportInvalidTypeArguments]  # pyrefly: ignore[bad-specialization]
 ):
     _implementation: Implementation = Implementation.DASK
 
@@ -121,7 +121,7 @@ class DaskExpr(
 
     def __init__(
         self,
-        call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]
+        call: EvalSeries[DaskLazyFrame, dx.Series],  # pyright: ignore[reportInvalidTypeForm]  # pyrefly: ignore[bad-specialization]
         *,
         evaluate_output_names: EvalNames[DaskLazyFrame],
         alias_output_names: AliasNames | None,
@@ -447,7 +447,7 @@ class DaskExpr(
                 expr.dtype, self._version, self._implementation
             )
             if dtype.is_numeric():
-                return expr != expr  # pyright: ignore[reportReturnType] # noqa: PLR0124
+                return expr != expr  # pyright: ignore[reportReturnType] # noqa: PLR0124  # pyrefly: ignore[bad-return]
             msg = f"`.is_nan` only supported for numeric dtypes and not {dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
 
@@ -588,7 +588,7 @@ class DaskExpr(
             plx = self.__narwhals_namespace__()
             if meta.prev is not None:
                 df = df.with_columns(cast("DaskExpr", evaluate_nodes(nodes[:-1], plx)))
-            _, aliases = evaluate_output_names_and_aliases(self, df, [])
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
 
             with warnings.catch_warnings():
                 # https://github.com/dask/dask/issues/11804

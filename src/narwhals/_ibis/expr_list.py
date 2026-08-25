@@ -49,11 +49,11 @@ class IbisExprListNamespace(LazyExprNamespace["IbisExpr"], ListNamespace["IbisEx
             mid = n // 2
             hi = arr_sorted[mid].cast("float64")
             # Works without the cast, but this satisfies pyright
-            lo = arr_sorted[(mid - 1).cast("int64")].cast("float64")
+            lo = arr_sorted[(mid - 1).cast("int64")].cast("float64")  # pyrefly: ignore[bad-index]
             return cases(
                 (n.isnull(), literal(None)),
                 (n == literal(0), literal(None)),
-                (n % 2 == 0, (lo + hi) / 2),
+                (n % 2 == 0, (lo + hi) / 2),  # pyrefly: ignore[unsupported-operation]
                 else_=hi,
             )
 

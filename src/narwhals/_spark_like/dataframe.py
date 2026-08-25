@@ -155,7 +155,7 @@ class SparkLikeLazyFrame(
                 # If we can't convert the type, just set it to `pa.null`, and warn.
                 # Avoid the warning if we're starting from PySpark's void type.
                 # We can avoid the check when we introduce `nw.Null` dtype.
-                null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]
+                null_type = self._native_dtypes.NullType  # pyright: ignore[reportAttributeAccessIssue]  # pyrefly: ignore[missing-attribute]
                 if not isinstance(native_spark_dtype, null_type):
                     issue_warning(
                         f"Could not convert dtype {native_spark_dtype} to PyArrow dtype, {exc!r}",
@@ -261,7 +261,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.agg(*new_columns_list))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
         return self._with_native(self.native.agg(*new_columns_list))
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
@@ -271,7 +271,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.select(*new_columns_list))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
@@ -280,7 +280,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.withColumns(dict(new_columns)))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
 
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
@@ -291,7 +291,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.where(condition))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
         return self._with_native(self.native.where(condition))
 
     @property
@@ -602,7 +602,7 @@ class SparkLikeLazyFrame(
             data = tuple(frame.iter_rows(named=True, buffer_size=512))
 
         return cls(
-            session.createDataFrame(data),
+            session.createDataFrame(data),  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
             version=version,
             implementation=implementation,
             validate_backend_version=True,

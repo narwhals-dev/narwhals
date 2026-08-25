@@ -760,7 +760,7 @@ class PandasLikeDataFrame(
         """
         implementation = self._implementation
         return rename(
-            select_columns_by_name(
+            select_columns_by_name(  # pyrefly: ignore[bad-argument-type]
                 other.native,
                 column_names=columns_to_select,
                 implementation=implementation,
@@ -883,7 +883,7 @@ class PandasLikeDataFrame(
     ) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
-            return self
+            return self  # pyrefly: ignore[bad-return]  # pyrefly-issues/01-self-nested-generic.md
         if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 

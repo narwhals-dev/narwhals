@@ -64,7 +64,9 @@ To learn more see [moist], [dry], or [even drier] - depending on how deep you wa
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, Literal, Protocol
+
+from typing_extensions import TypedDict
 
 from narwhals._typing_compat import TypeVar
 
@@ -195,16 +197,16 @@ class _ExcludeSeries(TypedDict, total=False):
     allow_series: Literal[False] | None
 
 
-class ExcludeSeries(_ExcludeSeries, total=False):
+class ExcludeSeries(_ExcludeSeries, total=False, closed=True):
     pass_through: bool
 
 
-class ExcludeSeriesV1(_ExcludeSeries, total=False):
+class ExcludeSeriesV1(_ExcludeSeries, total=False, closed=True):
     pass_through: bool | None
     eager_or_interchange_only: Literal[False]
 
 
-class ExcludeSeriesStrictV1(_ExcludeSeries, total=False):
+class ExcludeSeriesStrictV1(_ExcludeSeries, total=False, closed=True):
     strict: bool | None
     eager_or_interchange_only: Literal[False]
 
@@ -215,16 +217,16 @@ class _AllowSeries(TypedDict, total=False):
     allow_series: Required[Literal[True]]
 
 
-class AllowSeries(_AllowSeries, total=False):
+class AllowSeries(_AllowSeries, total=False, closed=True):
     pass_through: bool
 
 
-class AllowSeriesV1(_AllowSeries, total=False):
+class AllowSeriesV1(_AllowSeries, total=False, closed=True):
     pass_through: bool | None
     eager_or_interchange_only: Literal[False]
 
 
-class AllowSeriesStrictV1(_AllowSeries, total=False):
+class AllowSeriesStrictV1(_AllowSeries, total=False, closed=True):
     strict: bool | None
     eager_or_interchange_only: Literal[False]
 
@@ -235,16 +237,16 @@ class _OnlySeries(TypedDict, total=False):
     allow_series: bool | None
 
 
-class OnlySeries(_OnlySeries, total=False):
+class OnlySeries(_OnlySeries, total=False, closed=True):
     pass_through: bool
 
 
-class OnlySeriesV1(_OnlySeries, total=False):
+class OnlySeriesV1(_OnlySeries, total=False, closed=True):
     pass_through: bool | None
     eager_or_interchange_only: Literal[False]
 
 
-class OnlySeriesStrictV1(_OnlySeries, total=False):
+class OnlySeriesStrictV1(_OnlySeries, total=False, closed=True):
     strict: bool | None
     eager_or_interchange_only: Literal[False]
 
@@ -255,11 +257,11 @@ class _OnlyEagerOrInterchange(TypedDict, total=False):
     allow_series: bool | None
 
 
-class OnlyEagerOrInterchange(_OnlyEagerOrInterchange, total=False):
+class OnlyEagerOrInterchange(_OnlyEagerOrInterchange, total=False, closed=True):
     pass_through: bool | None
 
 
-class OnlyEagerOrInterchangeStrict(_OnlyEagerOrInterchange, total=False):
+class OnlyEagerOrInterchangeStrict(_OnlyEagerOrInterchange, total=False, closed=True):
     strict: bool | None
 
 
@@ -269,16 +271,16 @@ class _AllowLazy(TypedDict, total=False):
     allow_series: bool | None
 
 
-class AllowLazy(_AllowLazy, total=False):
+class AllowLazy(_AllowLazy, total=False, closed=True):
     pass_through: bool
 
 
-class AllowLazyV1(_AllowLazy, total=False):
+class AllowLazyV1(_AllowLazy, total=False, closed=True):
     pass_through: bool | None
     eager_or_interchange_only: Literal[False]
 
 
-class AllowLazyStrictV1(_AllowLazy, total=False):
+class AllowLazyStrictV1(_AllowLazy, total=False, closed=True):
     strict: bool | None
     eager_or_interchange_only: Literal[False]
 
@@ -289,16 +291,16 @@ class _AllowAny(TypedDict, total=False):
     allow_series: Required[Literal[True]]
 
 
-class AllowAny(_AllowAny, total=False):
+class AllowAny(_AllowAny, total=False, closed=True):
     pass_through: bool
 
 
-class AllowAnyV1(_AllowAny, total=False):
+class AllowAnyV1(_AllowAny, total=False, closed=True):
     pass_through: bool | None
     eager_or_interchange_only: Literal[False]
 
 
-class AllowAnyStrictV1(_AllowAny, total=False):
+class AllowAnyStrictV1(_AllowAny, total=False, closed=True):
     strict: bool | None
     eager_or_interchange_only: Literal[False]
 
@@ -309,15 +311,15 @@ class _Unknown(TypedDict, total=False):
     allow_series: bool | None
 
 
-class PassThroughUnknown(_Unknown, total=False):
+class PassThroughUnknown(_Unknown, total=False, closed=True):
     pass_through: Required[Literal[True]]
 
 
-class PassThroughUnknownV1(_Unknown, total=False):
+class PassThroughUnknownV1(_Unknown, total=False, closed=True):
     pass_through: Required[Literal[True]]
     eager_or_interchange_only: bool
 
 
-class StrictUnknownV1(_Unknown, total=False):
+class StrictUnknownV1(_Unknown, total=False, closed=True):
     strict: Required[Literal[False]]
     eager_or_interchange_only: bool

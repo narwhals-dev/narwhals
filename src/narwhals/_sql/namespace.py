@@ -35,7 +35,7 @@ class SQLNamespace(
                 cols = (self._coalesce(col, self._lit(False)) for col in cols)
             return reduce(operator.or_, cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def all_horizontal(self, *exprs: SQLExprT, ignore_nulls: bool) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
@@ -43,19 +43,19 @@ class SQLNamespace(
                 cols = (self._coalesce(col, self._lit(True)) for col in cols)
             return reduce(operator.and_, cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def max_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return self._function("greatest", *cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def min_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return self._function("least", *cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def sum_horizontal(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
@@ -64,14 +64,14 @@ class SQLNamespace(
                 (self._coalesce(col, self._lit(0)) for col in cols),
             )
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     # Other
     def coalesce(self, *exprs: SQLExprT) -> SQLExprT:
         def func(cols: Iterable[NativeExprT]) -> NativeExprT:
             return self._coalesce(*cols)
 
-        return self._expr._from_elementwise_horizontal_op(func, *exprs)
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def when_then(
         self, predicate: SQLExprT, then: SQLExprT, otherwise: SQLExprT | None = None
@@ -83,7 +83,10 @@ class SQLNamespace(
             return self._when(cols[1], cols[0], cols[2])
 
         if otherwise is None:
-            return self._expr._from_elementwise_horizontal_op(func, then, predicate)
+            return self._expr._from_elementwise_horizontal_op(func, then, predicate)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         return self._expr._from_elementwise_horizontal_op(
-            func_with_otherwise, then, predicate, otherwise
+            func_with_otherwise,
+            then,
+            predicate,
+            otherwise,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         )

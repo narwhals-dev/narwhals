@@ -324,8 +324,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return cls(
             call,
             window_function=window_function,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
+            evaluate_output_names=combine_evaluate_output_names(*exprs),  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            alias_output_names=combine_alias_output_names(*exprs),  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
             version=context._version,
             implementation=context._implementation,
         )

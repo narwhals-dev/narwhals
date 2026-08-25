@@ -200,7 +200,7 @@ class DaskNamespace(
             )
             num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
             den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
-            return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
+            return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]  # pyrefly: ignore[unsupported-operation]
 
         return self._expr(
             call=func,
