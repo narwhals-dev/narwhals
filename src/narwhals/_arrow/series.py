@@ -681,7 +681,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def to_pandas(self) -> pd.Series[Any]:
         import pandas as pd  # ignore-banned-import()
 
-        return pd.Series(self.native, name=self.name)
+        # NOTE: `pandas-stubs` doesn't know `pd.Series` accepts arrow-native input
+        return pd.Series(self.native, name=self.name)  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     def to_polars(self) -> pl.Series:
         import polars as pl  # ignore-banned-import
