@@ -85,8 +85,8 @@ class SQLNamespace(
         if otherwise is None:
             return self._expr._from_elementwise_horizontal_op(func, then, predicate)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         return self._expr._from_elementwise_horizontal_op(
-            func_with_otherwise,
+            func_with_otherwise,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
             then,
             predicate,
-            otherwise,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
+            otherwise,
         )

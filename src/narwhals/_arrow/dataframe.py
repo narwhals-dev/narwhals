@@ -634,10 +634,10 @@ class ArrowDataFrame(
                 raise ValueError(msg)
 
             return SparkLikeLazyFrame._from_compliant_dataframe(
-                self,
+                self,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 session=session,
                 implementation=backend,
-                version=self._version,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+                version=self._version,
             )
 
         raise AssertionError  # pragma: no cover

@@ -37,8 +37,8 @@ class SQLExprStringNamespace(
             else pattern
         )
         return self.compliant._with_elementwise(
-            func,
-            expression_args={"pattern": compliant_pattern},  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
+            func,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
+            expression_args={"pattern": compliant_pattern},
         )
 
     def ends_with(self, suffix: SQLExprT) -> SQLExprT:

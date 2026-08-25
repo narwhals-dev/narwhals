@@ -2429,11 +2429,11 @@ tests = [
 ]
 typing = [
     { name = "hypothesis", specifier = ">=6.0.0" },
-    { name = "mypy", specifier = ">=2.1.0" },
+    { name = "mypy" },
     { name = "narwhals", extras = ["dask", "duckdb", "ibis", "pandas", "polars", "pyarrow", "sql", "sqlframe"] },
     { name = "pandas-stubs", specifier = ">=2.3.0.250703" },
     { name = "pyarrow-stubs", specifier = ">=19.2" },
-    { name = "pyrefly", specifier = ">=1.2.0" },
+    { name = "pyrefly" },
     { name = "pyright" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "rich", specifier = ">=12.4.4" },
