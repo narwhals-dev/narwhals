@@ -7,6 +7,19 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, Protocol, TypeVar, cast,
 import polars as pl
 
 from narwhals._duration import Interval
+
+if TYPE_CHECKING:
+    import polars_map
+
+    HAS_POLARS_MAP = True
+else:
+    try:
+        import polars_map
+
+        HAS_POLARS_MAP = True
+    except ImportError:  # pragma: no cover
+        HAS_POLARS_MAP = False
+
 from narwhals._utils import (
     Implementation,
     Version,
@@ -178,6 +191,11 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Time()
     if dtype == pl.Binary:
         return dtypes.Binary()
+    if HAS_POLARS_MAP and isinstance_or_issubclass(dtype, polars_map.Map):
+        return dtypes.Map(
+            native_to_narwhals_dtype(dtype.key, version),
+            native_to_narwhals_dtype(dtype.value, version),
+        )
     return dtypes.Unknown()
 
 
@@ -248,6 +266,14 @@ def narwhals_to_native_dtype(  # noqa: C901
         return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         return pl.Decimal(dtype.precision, dtype.scale)
+    if HAS_POLARS_MAP and isinstance_or_issubclass(dtype, dtypes.Map):
+        return cast(
+            "pl.DataType",
+            polars_map.Map(
+                narwhals_to_native_dtype(dtype.key, version),
+                narwhals_to_native_dtype(dtype.value, version),
+            ),
+        )
     return pl.Unknown()  # pragma: no cover
 
 

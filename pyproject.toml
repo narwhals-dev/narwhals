@@ -49,6 +49,7 @@ pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
+polars-map = ["polars-map>=0.2.1"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
 ibis = [
@@ -227,6 +228,14 @@ conflicts = [
   # `extreme-*` group's old version pins.
   [
     { group = "core" },
+    { group = "extreme-minimum-versions" },
+    { group = "extreme-not-so-old-versions" },
+    { group = "extreme-pretty-old-versions" },
+  ],
+  # `polars-map>=0.2.1` requires `polars>=1.36`, conflicting with every
+  # `extreme-*` group's old `polars==0.20.x` pin.
+  [
+    { extra = "polars-map" },
     { group = "extreme-minimum-versions" },
     { group = "extreme-not-so-old-versions" },
     { group = "extreme-pretty-old-versions" },
@@ -478,6 +487,7 @@ module = [
   "joblib.*",
   "modin.*",
   "numpy.*",
+  "polars_map.*",
   "pyspark.*",
   "sklearn.*",
   "sqlparse.*",

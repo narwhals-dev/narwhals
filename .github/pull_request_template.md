@@ -46,6 +46,6 @@ See [AI-assisted contributions](https://github.com/narwhals-dev/narwhals/blob/ma
 
     ```bash
     PYTEST_ADDOPTS="--numprocesses=logical" \
-    make run-ci DEPS="--extra pandas --extra dask --group core-tests --group sklearn --group plugins" \
+    make run-ci DEPS="--extra pandas --extra dask --extra polars-map --group core-tests --group sklearn --group plugins" \
     CMD="pytest tests --cov=src --cov=tests --runslow --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow,polars[eager],polars[lazy],dask,duckdb,sqlframe"
     ```

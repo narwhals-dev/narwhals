@@ -46,7 +46,7 @@ Pick the workflow that matches how you manage your project's dependencies.
 
 Narwhals exposes optional extras that pull in a specific backend at a version known to be compatible. These are convenience pins, not requirements: if you already have the backend installed (or want to manage its version yourself), you can skip them.
 
-Available extras include `pandas`, `polars`, `pyarrow`, `modin`, `dask`, `duckdb`, `ibis`, `pyspark`, `pyspark-connect`, `sqlframe`, `sql`, and `cudf` (Linux only). For the authoritative list, see `[project.optional-dependencies]` in [`pyproject.toml`](https://github.com/narwhals-dev/narwhals/blob/main/pyproject.toml).
+Available extras include `pandas`, `polars`, `pyarrow`, `modin`, `dask`, `duckdb`, `ibis`, `pyspark`, `pyspark-connect`, `sqlframe`, `sql`, `polars-map` (experimental `Map` dtype support for Polars), and `cudf` (Linux only). For the authoritative list, see `[project.optional-dependencies]` in [`pyproject.toml`](https://github.com/narwhals-dev/narwhals/blob/main/pyproject.toml).
 
 Specify one or more extras in square brackets, for example:
 
