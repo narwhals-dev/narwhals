@@ -270,6 +270,14 @@ The docs follow [Diátaxis](https://diataxis.fr/), and the nav in `zensical.toml
 group per quadrant: tutorial (`docs/basics/`), how-to guides (`docs/how-to/`), concepts
 (`docs/concepts/`), and reference (`docs/api-reference/`, generated from docstrings).
 
+Two rules:
+
+- A `session="..."` name must be unique per page: `markdown_exec` shares those globals
+  across the whole build. Enforced by the `check-docs-sessions` hook.
+- Moving a page changes its URL, and some URLs are linked from released versions of
+  Narwhals. Add the old path to `utils/generate_docs_redirects.py`, which writes a
+  redirect stub after each build.
+
 ## 6. Pull requests
 
 When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.
