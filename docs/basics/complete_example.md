@@ -1,5 +1,8 @@
 # Complete example
 
+This is the last page of the tutorial. It puts the expressions from
+[DataFrame](dataframe.md) and the `Series` work from [Series](series.md) into one class.
+
 We're going to write a dataframe-agnostic "Standard Scaler". This class will have
 `fit` and `transform` methods (like `scikit-learn` transformers), and will work
 agnostically for pandas and Polars.
@@ -175,3 +178,16 @@ stay lazy!
     scaler.fit(df_train)
     print(scaler.transform(df_test).collect())
     ```
+
+## Where to go next
+
+That's the tutorial done. From here:
+
+- The how-to guides each answer one question:
+  [testing dataframe-agnostic code](../how-to/testing.md),
+  [converting between libraries](dataframe_conversion.md),
+  [avoiding the pandas `group_by` warning](../concepts/improve_group_by_operation.md), and
+  [generating SQL](../generating_sql.md).
+- The concepts pages explain the behaviour which tends to surprise people, starting with
+  [order dependence](../concepts/order_dependence.md) in lazy backends.
+- The [API Reference](../api-reference/index.md) lists everything Narwhals supports.

@@ -84,6 +84,53 @@ Notice how the classic pandas dtypes make no distinction between the concepts, w
 libraries do. Note however that discussion on what PyArrow-backed pandas dataframe should do
 [is ongoing](https://github.com/pandas-dev/pandas/issues/32265).
 
+## Null preservation
+
+Generally speaking, Narwhals operations preserve null values.
+For example, if you do `nw.col('a')*2`, then:
+
+- Values which were non-null get multiplied by 2.
+- Null values stay null.
+
+```python exec="yes" source="above" session="null-preservation"
+import narwhals as nw
+from narwhals.typing import IntoFrameT
+
+data = {"a": [1.4, None, 4.2]}
+
+
+def multiplication(df: IntoFrameT) -> IntoFrameT:
+    return nw.from_native(df).with_columns((nw.col("a") * 2).alias("a*2")).to_native()
+```
+
+=== "pandas"
+    ```python exec="yes" source="material-block" result="python" session="null-preservation"
+    import pandas as pd
+
+    df = pd.DataFrame(data)
+    print(multiplication(df))
+    ```
+
+=== "Polars (eager)"
+    ```python exec="yes" source="material-block" result="python" session="null-preservation"
+    import polars as pl
+
+    df = pl.DataFrame(data)
+    print(multiplication(df))
+    ```
+
+=== "PyArrow"
+    ```python exec="yes" source="material-block" result="python" session="null-preservation"
+    import pyarrow as pa
+
+    table = pa.table(data)
+    print(multiplication(table))
+    ```
+
+Boolean results are the exception. pandas backed by classic NumPy dtypes can't store
+nulls in a boolean column, so it fills them in. [Boolean logic](boolean.md) covers that,
+along with how `&` and `|` treat nulls.
+
 ## NaN comparisons
 
 According to the IEEE-754 standard, NaN should compare as not equal to itself, and cannot
