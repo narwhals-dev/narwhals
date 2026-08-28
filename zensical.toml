@@ -16,10 +16,10 @@ nav = [
         "basics/complete_example.md",
         ]},
     { "How-to guides" = [
-        "basics/dataframe_conversion.md",
+        "how-to/dataframe_conversion.md",
         "how-to/testing.md",
-        "concepts/improve_group_by_operation.md",
-        "generating_sql.md",
+        "how-to/improve_group_by_operation.md",
+        "how-to/generating_sql.md",
         "how-to/upgrading_to_stable_v2.md",
     ]},
     { "Concepts" = [

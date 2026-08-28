@@ -264,6 +264,12 @@ make docs-clean-serve
 
 which rebuilds everything from a clean state (via `make docs-build`) before serving.
 
+### Where a new page goes
+
+The docs follow [Diátaxis](https://diataxis.fr/), and the nav in `zensical.toml` has one
+group per quadrant: tutorial (`docs/basics/`), how-to guides (`docs/how-to/`), concepts
+(`docs/concepts/`), and reference (`docs/api-reference/`, generated from docstrings).
+
 ## 6. Pull requests
 
 When you have resolved your issue, [open a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork) in the Narwhals repository.

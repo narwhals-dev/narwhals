@@ -185,9 +185,9 @@ That's the tutorial done. From here:
 
 - The how-to guides each answer one question:
   [testing dataframe-agnostic code](../how-to/testing.md),
-  [converting between libraries](dataframe_conversion.md),
-  [avoiding the pandas `group_by` warning](../concepts/improve_group_by_operation.md), and
-  [generating SQL](../generating_sql.md).
+  [converting between libraries](../how-to/dataframe_conversion.md),
+  [avoiding the pandas `group_by` warning](../how-to/improve_group_by_operation.md), and
+  [generating SQL](../how-to/generating_sql.md).
 - The concepts pages explain the behaviour which tends to surprise people, starting with
   [order dependence](../concepts/order_dependence.md) in lazy backends.
 - The [API Reference](../api-reference/index.md) lists everything Narwhals supports.
