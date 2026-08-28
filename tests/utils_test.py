@@ -34,7 +34,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal, assert_series
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator
     from types import ModuleType
 
     from typing_extensions import Self
@@ -198,7 +198,7 @@ def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
 
 
 class _OnlyIterable:
-    """Iterable which is neither `Sized` nor an `Iterator`, as a custom container may be."""
+    """Iterable which is neither `Sized` nor an `Iterator`."""
 
     def __init__(self, values: Iterable[Any]) -> None:
         self._values = list(values)
@@ -226,7 +226,7 @@ class _OnlyIterable:
 )
 def test_maybe_set_index_pandas_index_values(
     native: pd.DataFrame | pd.Series[Any],
-    index: Series[Any] | IntoSeries | Sequence[Any] | NoDefault,
+    index: Series[Any] | IntoSeries | Iterable[Any] | NoDefault,
     expected_name: str | None,
 ) -> None:
     obj = nw.from_native(native, allow_series=True)
@@ -238,15 +238,15 @@ def test_maybe_set_index_pandas_index_values(
 
 def test_maybe_set_index_pandas_iterator_index() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
-    result = nw.maybe_set_index(df, index=cast("Any", iter([10, 20, 30])))
+    result = nw.maybe_set_index(df, index=iter([10, 20, 30]))
     assert_index_equal(nw.to_native(result).index, pd.Index([10, 20, 30]))
 
-    result = nw.maybe_set_index(df, index=cast("Any", (name for name in ["b"])))
+    result = nw.maybe_set_index(df, index=(name for name in ["b"]))
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index("b")
     assert_frame_equal(nw.to_native(result), expected)
 
     series = nw.from_native(pd.Series([1, 2, 3], name="a"), series_only=True)
-    result_s = nw.maybe_set_index(series, index=cast("Any", (x for x in [10, 20, 30])))
+    result_s = nw.maybe_set_index(series, index=(x for x in [10, 20, 30]))
     assert_index_equal(nw.to_native(result_s).index, pd.Index([10, 20, 30]))
 
 
@@ -258,11 +258,19 @@ def test_maybe_set_index_pandas_multi_index() -> None:
     expected = pd.MultiIndex.from_arrays([[1, 1, 2], [3, 4, 5]], names=["l1", "l2"])
     assert_index_equal(nw.to_native(result).index, expected)
 
-    # A column label can be mixed in with index values, and iterables are materialized.
+    # Column labels and index values can be mixed.
     result = nw.maybe_set_index(df, index=["a", (x for x in [3, 4, 5])])
     expected = pd.MultiIndex.from_arrays([[1, 2, 3], [3, 4, 5]], names=["a", None])
     assert_index_equal(nw.to_native(result).index, expected)
     assert nw.to_native(result).columns.tolist() == ["b"]
+
+    series = nw.from_native(pd.Series([1, 2, 3], name="a"), series_only=True)
+    levels = [pd.Index([1, 1, 2], name="l1"), pd.Index([3, 4, 5], name="l2")]
+    result_s = nw.maybe_set_index(series, index=levels)
+    assert_index_equal(
+        nw.to_native(result_s).index,
+        pd.MultiIndex.from_arrays([[1, 1, 2], [3, 4, 5]], names=["l1", "l2"]),
+    )
 
 
 def test_maybe_set_index_pandas_cross_backend() -> None:
@@ -274,6 +282,7 @@ def test_maybe_set_index_pandas_cross_backend() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     indices: list[tuple[Any, str | None]] = [
         (pl.Series("pl_name", [10, 20, 30]), "pl_name"),
+        (pa.array([10, 20, 30]), None),
         (pa.chunked_array([[10, 20, 30]]), None),
         (nw.from_native(pl.Series("nw_name", [10, 20, 30]), series_only=True), "nw_name"),
     ]
@@ -284,9 +293,7 @@ def test_maybe_set_index_pandas_cross_backend() -> None:
         )
 
 
-@pytest.mark.parametrize(
-    "index", ["b", ["b"], ("b",), frozenset({"b"}), _OnlyIterable(["b"])]
-)
+@pytest.mark.parametrize("index", ["b", ["b"], ("b",), _OnlyIterable(["b"])])
 def test_maybe_set_index_pandas_column_labels_via_index(index: Any) -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=index)
@@ -295,11 +302,43 @@ def test_maybe_set_index_pandas_column_labels_via_index(index: Any) -> None:
 
 
 def test_maybe_set_index_pandas_non_str_column_label() -> None:
-    # NOTE: non-`str` labels are supported, but deliberately not advertised in the type.
+    # Non-`str` labels work, but are deliberately not advertised in the type.
     data = {10: [1, 2, 3], 20: [4, 5, 6]}
     df = nw.from_native(pd.DataFrame(data))
     result = nw.maybe_set_index(df, index=cast("Any", 10))
     assert_frame_equal(nw.to_native(result), pd.DataFrame(data).set_index(10))
+
+
+def test_maybe_set_index_pandas_non_str_column_names() -> None:
+    data = {10: [1, 2, 3], 20: [4, 5, 6]}
+    df = nw.from_native(pd.DataFrame(data))
+    result = nw.maybe_set_index(df, cast("Any", [10, 20]))
+    assert_frame_equal(nw.to_native(result), pd.DataFrame(data).set_index([10, 20]))
+    with pytest.raises(ValueError, match="Either `column_names` or `index`"):
+        nw.maybe_set_index(df, [])
+
+
+def test_maybe_set_index_pandas_str_values_vs_column_labels() -> None:
+    data = {"a": [1, 2], "b": [3, 4]}
+    df = nw.from_native(pd.DataFrame(data))
+    # A `list` of `str` means column labels ...
+    result = nw.maybe_set_index(df, index=["a", "b"])
+    assert_frame_equal(nw.to_native(result), pd.DataFrame(data).set_index(["a", "b"]))
+    # ... any other container of `str` means index values.
+    result = nw.maybe_set_index(df, index=pd.Index(["a", "b"]))
+    assert_index_equal(nw.to_native(result).index, pd.Index(["a", "b"]))
+    # A Series has no columns to label, so `str` are always values.
+    series = nw.from_native(pd.Series([1, 2], name="a"), series_only=True)
+    result_s = nw.maybe_set_index(series, index=["a", "b"])
+    assert_index_equal(nw.to_native(result_s).index, pd.Index(["a", "b"]))
+
+
+def test_maybe_set_index_pandas_lazyframe() -> None:
+    lf = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})).lazy()
+    expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index("b")
+    assert_frame_equal(nw.to_native(nw.maybe_set_index(lf, "b")), expected)
+    result = nw.maybe_set_index(lf, index=pd.Index([10, 20, 30]))
+    assert_index_equal(nw.to_native(result).index, pd.Index([10, 20, 30]))
 
 
 def test_maybe_set_index_round_trip_pandas() -> None:
