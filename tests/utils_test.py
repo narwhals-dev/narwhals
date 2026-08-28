@@ -232,14 +232,16 @@ def test_maybe_set_index_pandas_index_values(
     obj = nw.from_native(native, allow_series=True)
     result = nw.maybe_set_index(obj, index=index)
     assert_index_equal(
-        result.to_native().index, pd.Index([10, 20, 30], name=expected_name)
+        result.to_native().index,
+        pd.Index([10, 20, 30], name=expected_name),
+        exact="equiv",
     )
 
 
 def test_maybe_set_index_pandas_iterator_index() -> None:
     df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
     result = nw.maybe_set_index(df, index=iter([10, 20, 30]))
-    assert_index_equal(nw.to_native(result).index, pd.Index([10, 20, 30]))
+    assert_index_equal(nw.to_native(result).index, pd.Index([10, 20, 30]), exact="equiv")
 
     result = nw.maybe_set_index(df, index=(name for name in ["b"]))
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index("b")
@@ -247,7 +249,9 @@ def test_maybe_set_index_pandas_iterator_index() -> None:
 
     series = nw.from_native(pd.Series([1, 2, 3], name="a"), series_only=True)
     result_s = nw.maybe_set_index(series, index=(x for x in [10, 20, 30]))
-    assert_index_equal(nw.to_native(result_s).index, pd.Index([10, 20, 30]))
+    assert_index_equal(
+        nw.to_native(result_s).index, pd.Index([10, 20, 30]), exact="equiv"
+    )
 
 
 def test_maybe_set_index_pandas_multi_index() -> None:
@@ -289,7 +293,9 @@ def test_maybe_set_index_pandas_cross_backend() -> None:
     for index, expected_name in indices:
         result = nw.maybe_set_index(df, index=index)
         assert_index_equal(
-            nw.to_native(result).index, pd.Index([10, 20, 30], name=expected_name)
+            nw.to_native(result).index,
+            pd.Index([10, 20, 30], name=expected_name),
+            exact="equiv",
         )
 
 
@@ -338,7 +344,7 @@ def test_maybe_set_index_pandas_lazyframe() -> None:
     expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index("b")
     assert_frame_equal(nw.to_native(nw.maybe_set_index(lf, "b")), expected)
     result = nw.maybe_set_index(lf, index=pd.Index([10, 20, 30]))
-    assert_index_equal(nw.to_native(result).index, pd.Index([10, 20, 30]))
+    assert_index_equal(nw.to_native(result).index, pd.Index([10, 20, 30]), exact="equiv")
 
 
 def test_maybe_set_index_round_trip_pandas() -> None:
