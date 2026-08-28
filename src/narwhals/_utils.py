@@ -67,7 +67,7 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Set  # noqa: PYI025
+    from collections.abc import Hashable, Set  # noqa: PYI025
     from types import ModuleType
     from typing import Concatenate, TypeAlias
 
@@ -955,7 +955,14 @@ def maybe_get_index(obj: DataFrame[Any] | LazyFrame[Any] | Series[Any]) -> Any |
     return None
 
 
-def _into_index_values(values: Any, ns: ModuleType) -> Any:
+_IndexValues: TypeAlias = "pd.Index[Any] | pd.Series[Any] | _1DArray"
+"""One index level, in a form a pandas-like `set_index` understands."""
+
+_IndexKeys: TypeAlias = "Hashable | list[Any] | _IndexValues"
+"""`keys` for a pandas-like `set_index`: a column label, index values, or a list of either."""
+
+
+def _into_index_values(values: Any, ns: ModuleType) -> _IndexValues:
     """Convert one index level into something a pandas-like `set_index` accepts."""
     from narwhals.translate import to_native
 
@@ -972,7 +979,7 @@ def _is_column_label(obj: Any) -> bool:
     return isinstance(obj, (str, bytes)) or not isinstance(obj, Iterable)
 
 
-def _into_index_keys(index: Any, ns: ModuleType, *, allow_labels: bool) -> Any:
+def _into_index_keys(index: Any, ns: ModuleType, *, allow_labels: bool) -> _IndexKeys:
     """Interpret `index` as `keys` for a pandas-like `set_index`.
 
     Scalars and `list`s of `str` are column labels, as in `DataFrame.set_index`; any
@@ -1083,30 +1090,30 @@ def maybe_set_index(
             # NOTE: `maybe_get_index` returns `None` for non-pandas-like objects.
             return obj
 
-    obj_any = cast("Any", obj)
-    native_obj = obj_any.to_native()
+    native_obj = obj.to_native()
     is_frame = is_pandas_like_dataframe(native_obj)
     if not is_frame and not is_pandas_like_series(native_obj):
         return obj
 
+    impl = obj.implementation
+    keys: _IndexKeys
     if column_names:
         if not is_frame:
             msg = "Cannot set index using column names on a Series"
             raise ValueError(msg)
         keys = column_names
     else:
-        ns = obj_any.implementation.to_native_namespace()
+        ns = impl.to_native_namespace()
         keys = _into_index_keys(index, ns, allow_labels=is_frame)
 
     if is_frame:
-        return obj_any._with_compliant(
-            obj_any._compliant_frame._with_native(native_obj.set_index(keys))
-        )
+        native_obj = native_obj.set_index(keys)
+    else:
+        from narwhals._pandas_like.utils import set_index
 
-    from narwhals._pandas_like.utils import set_index
-
-    native_obj = set_index(native_obj, keys, implementation=obj_any.implementation)
-    return obj_any._with_compliant(obj_any._compliant_series._with_native(native_obj))
+        native_obj = set_index(native_obj, keys, implementation=impl)
+    result = obj._with_compliant(obj._compliant._with_native(native_obj))
+    return cast("FrameOrSeriesT", result)
 
 
 def maybe_reset_index(obj: FrameOrSeriesT) -> FrameOrSeriesT:
