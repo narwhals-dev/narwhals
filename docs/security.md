@@ -44,8 +44,9 @@ good security practices. Here are some practices we follow:
     * Give off good vibes. This is hard to rigorously define, but it's there so we
         can refuse anyone who, despite satisfying the above two criteria, we don't
         feel like we can trust.
-    * There are fewer than 5 active people with release permissions. That is
-        to say, even if someone satisfies all of the above, if there are already 5
-        people with release permissions, then we will not be adding any more (though
-        you may still be added to `narwhals-dev` and get permission to merge pull
-        requests which you believe are ready). Note that we already meet that limit.
+
+    On top of those criteria, we cap the number of people with release permissions at 5.
+    Even if someone satisfies all of the above, if the cap is already reached then
+    we will not be adding any more (though you may still be added to `narwhals-dev`
+    and get permission to merge pull requests which you believe are ready). The cap is
+    currently reached.
