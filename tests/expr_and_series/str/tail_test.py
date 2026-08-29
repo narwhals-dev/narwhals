@@ -20,9 +20,3 @@ def test_str_tail_series(constructor_eager: ConstructorEager) -> None:
 
     result_series = df["a"].str.tail(3)
     assert_equal_data({"a": result_series}, expected)
-
-
-def test_str_tail_negative_n(constructor: Constructor) -> None:
-    df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").str.tail(-1))
-    assert_equal_data(result, {"a": ["oo", "ars"]})

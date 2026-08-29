@@ -21,7 +21,7 @@ repos:
   hooks:
     - id: codespell
       files: \.(py|rst|md)$
-      args: ["--ignore-words-list=ser,fo"]
+      args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
 - repo: https://github.com/zizmorcore/zizmor-pre-commit
   rev: 'v1.29.0'
