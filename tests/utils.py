@@ -241,6 +241,15 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
             return mpd.DataFrame(df_pandas.to_dict(orient="list"))
 
 
+def interchange_frame(df: pd.DataFrame) -> Any:
+    """Return the interchange object of a pandas DataFrame.
+
+    `pandas-stubs` no longer declares `DataFrame.__dataframe__`, as the
+    interchange protocol is deprecated since pandas 3.0.
+    """
+    return df.__dataframe__()  # type: ignore[operator]
+
+
 def is_windows() -> bool:
     """Check if the current platform is Windows."""
     return sys.platform in {"win32", "cygwin"}

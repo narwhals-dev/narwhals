@@ -14,10 +14,10 @@ import numpy as np
 import pandas as pd
 import pyarrow as pa
 
-STRING_DTYPE_NAN = pd.StringDtype("pyarrow", na_value=np.nan)  # type: ignore[call-arg]
-STRING_DTYPE_NA = pd.StringDtype("pyarrow", na_value=pd.NA)  # type: ignore[call-arg]
-STRING_DTYPE_PYTHON_NAN = pd.StringDtype("python", na_value=np.nan)  # type: ignore[call-arg]
-STRING_DTYPE_PYTHON_NA = pd.StringDtype("python", na_value=pd.NA)  # type: ignore[call-arg]
+STRING_DTYPE_NAN = pd.StringDtype("pyarrow", na_value=np.nan)
+STRING_DTYPE_NA = pd.StringDtype("pyarrow", na_value=pd.NA)
+STRING_DTYPE_PYTHON_NAN = pd.StringDtype("python", na_value=np.nan)
+STRING_DTYPE_PYTHON_NA = pd.StringDtype("python", na_value=pd.NA)
 
 
 @pytest.mark.parametrize(

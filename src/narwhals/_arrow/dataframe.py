@@ -9,6 +9,7 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
     arange,
+    chunked_array,
     concat_tables,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -130,7 +131,7 @@ class ArrowDataFrame(
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
         if not schema:
-            return cls.from_native(pa.table(data), context=context)  # type: ignore[arg-type]
+            return cls.from_native(pa.table(data), context=context)
         if not any(dtype is None for dtype in schema.values()):
             from narwhals.schema import Schema
 
@@ -143,18 +144,18 @@ class ArrowDataFrame(
         if context._implementation._backend_version() < (14,):
             msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
             raise NotImplementedError(msg)
-        res = pa.table(
-            {
-                name: pa.chunked_array(  # type: ignore[misc]
-                    [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
-                    if nw_dtype is not None
-                    else None,
-                )
-                for name, nw_dtype in schema.items()
-            }
-        )
-        return cls.from_native(pa.table(res), context=context)
+        version = context._version
+        # NOTE: stubs don't allow `ChunkedArray` values, but `pa.table` accepts them
+        arrays: Mapping[str, Any] = {
+            name: chunked_array(
+                [data[name] if data else []],
+                narwhals_to_native_dtype(nw_dtype, version=version)
+                if nw_dtype is not None
+                else None,
+            )
+            for name, nw_dtype in schema.items()
+        }
+        return cls.from_native(pa.table(arrays), context=context)
 
     @classmethod
     def from_dicts(
@@ -642,8 +643,6 @@ class ArrowDataFrame(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
-            from narwhals._arrow.dataframe import ArrowDataFrame
-
             return ArrowDataFrame(
                 self.native, version=self._version, validate_column_names=False
             )
@@ -735,10 +734,12 @@ class ArrowDataFrame(
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
         native = pa.chunked_array(
-            pc.and_(
-                pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
-                pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
-            )
+            [
+                pc.and_(
+                    pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
+                    pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+                )
+            ]
         )
         return ArrowSeries.from_native(native, context=self)
 

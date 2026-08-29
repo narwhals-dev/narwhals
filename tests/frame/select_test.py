@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
+import narwhals.selectors as ncs
 from narwhals.exceptions import ColumnNotFoundError, InvalidIntoExprError, NarwhalsError
 from tests.utils import (
     DASK_VERSION,
@@ -27,9 +28,25 @@ def test_select(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("name", ["order", "SELECT", "my col"])
+def test_select_names_which_are_not_sql_identifiers(
+    constructor: Constructor, name: str
+) -> None:
+    data = {name: [1, 3, 2], "b": ["x", "y", "z"]}
+    df = nw.from_native(constructor(data))
+    assert_equal_data(df.select(name), {name: [1, 3, 2]})
+    assert_equal_data(df.select(ncs.numeric()), {name: [1, 3, 2]})
+    assert_equal_data(df.select(~ncs.numeric()), {"b": ["x", "y", "z"]})
+
+
 def test_empty_select(constructor_eager: ConstructorEager) -> None:
     result = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True).select()
     assert result.shape == (0, 0)
+
+
+def test_select_selector_matching_nothing(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
+    assert df.select(ncs.string()).shape == (0, 0)
 
 
 def test_non_string_select() -> None:
@@ -178,11 +195,11 @@ def test_select_duplicates(constructor: Constructor) -> None:
         # cudf already raises its own error
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2]})).lazy()
-    with pytest.raises(
-        ValueError,
-        match=r"Expected unique|[Dd]uplicate|more than one|Duplicate column name",
-    ):
+    msg = r"Expected unique|[Dd]uplicate|more than one|Duplicate column name"
+    with pytest.raises(ValueError, match=msg):
         df.select("a", nw.col("a") + 1).collect()
+    with pytest.raises(ValueError, match=msg):
+        df.select(ncs.numeric(), ncs.matches("^a$")).collect()
 
 
 def test_binary_window_aggregation(constructor_eager: ConstructorEager) -> None:
