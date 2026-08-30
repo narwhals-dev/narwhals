@@ -34,6 +34,7 @@ from narwhals._utils import (
     qualified_type_name,
 )
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
+from narwhals.dtypes import _validate_cast_temporal_to_numeric
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
@@ -937,6 +938,30 @@ class LazyExpr(  # type: ignore[misc]
     @property
     def name(self) -> LazyExprNameNamespace[Self]:
         return LazyExprNameNamespace(self)
+
+    def _validate_temporal_to_numeric_cast(
+        self, lf: CompliantLazyFrameT, dtype: IntoDType
+    ) -> None:
+        """Guard against casting a temporal expression to a numeric dtype.
+
+        Unlike the eager backends, lazy backends have no materialized dtype for an
+        arbitrary expression, so we resolve the true pre-cast dtype from the schema.
+        """
+        if not dtype.is_numeric():
+            return
+        try:
+            if (md := self._opt_metadata) is not None and md.is_pure_selection:
+                frame_schema = lf.collect_schema()
+                sources = [frame_schema[name] for name in self._evaluate_output_names(lf)]
+            else:
+                sources = list(lf.select(self).collect_schema().values())
+        except Exception:  # noqa: BLE001
+            # NOTE: The guard is best-effort: some lazy backends (e.g. `sqlframe`) fail
+            # to resolve schemas for certain expressions (such as all-null columns).
+            # Without the source dtype we cannot validate, so we let the cast proceed.
+            return
+        for source in sources:
+            _validate_cast_temporal_to_numeric(source=source, target=dtype)
 
     ewm_mean = not_implemented()  # type: ignore[misc]
     map_batches = not_implemented()  # type: ignore[misc]
