@@ -7,6 +7,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
@@ -34,7 +35,7 @@ from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
-from narwhals.typing import IntoSeriesT
+from narwhals.typing import Encode, IntoSeriesT, Preserve, Sentinel
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -55,7 +56,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
-        NullPolicy,
+        NullPolicyLiteral,
         NumericLiteral,
         PythonLiteral,
         RankMethod,
@@ -2916,7 +2917,7 @@ class Series(Generic[IntoSeriesT]):
         self,
         *,
         sort: bool = False,
-        null_policy: NullPolicy = "preserve",
+        null_policy: NullPolicyLiteral = "preserve",
         sentinel: Any | NoDefault = NO_DEFAULT,
     ) -> Encoded[IntoSeriesT]:
         """Encode values as integer codes and unique values.
@@ -2977,17 +2978,23 @@ class Series(Generic[IntoSeriesT]):
             |]                      |
             └───────────────────────┘
         """
-        if null_policy == "sentinel":
-            if sentinel is NO_DEFAULT:
-                msg = "Must supply `sentinel` when null_policy='sentinel'"
-                raise TypeError(msg)
-        elif sentinel is not NO_DEFAULT:
+        if null_policy == "sentinel" and sentinel is NO_DEFAULT:
+            msg = "Must supply `sentinel` when null_policy='sentinel'"
+            raise TypeError(msg)
+        if null_policy != "sentinel" and sentinel is not NO_DEFAULT:
             msg = f"Argument `sentinel` is ignored when null_policy='{null_policy}'"
             raise TypeError(msg)
 
-        codes, uniques = self._compliant_series.factorize(
-            null_policy=null_policy, sentinel=sentinel, sort=sort
-        )
+        if null_policy == "preserve":
+            policy = Preserve()
+        elif null_policy == "encode":
+            policy = Encode()
+        elif null_policy == "sentinel":
+            policy = Sentinel(sentinel)
+        else:
+            assert_never(null_policy)
+
+        codes, uniques = self._compliant_series.factorize(null_policy=policy, sort=sort)
         return Encoded(
             self._with_compliant(codes).alias("codes"),
             self._with_compliant(uniques).alias("uniques"),

@@ -29,6 +29,7 @@ from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import Encode, Preserve, Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
@@ -1173,9 +1174,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         impl = self._implementation
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
 
-    def factorize(
-        self, *, sort: bool, null_policy: NullPolicy, sentinel: Any | NoDefault
-    ) -> tuple[Self, Self]:
+    def factorize(self, *, sort: bool, null_policy: NullPolicy) -> tuple[Self, Self]:
         pdx = self.__native_namespace__()
 
         if self.is_native_dtype_pyarrow(self.native.dtype):
@@ -1187,7 +1186,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 pa.chunked_array(pa.array(self.native)),
                 name=self._name,
                 version=self._version,
-            ).factorize(null_policy=null_policy, sentinel=sentinel, sort=sort)
+            ).factorize(null_policy=null_policy, sort=sort)
             return (
                 self._with_native(
                     pdx.Series(
@@ -1200,25 +1199,29 @@ class PandasLikeSeries(EagerSeries[Any]):
                 ),
             )
 
-        if null_policy == "preserve":
-            codes, uniques = self.native.factorize(sort=sort)
-            codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1)
+        match null_policy:
+            case Preserve():
+                codes, uniques = self.native.factorize(sort=sort)
+                codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1)
 
-        elif null_policy == "encode":
-            if self._implementation is Implementation.PANDAS and self._backend_version < (
-                1.5,
-            ):
-                kwargs = {"sort": sort, "na_sentinel": None}
-            else:
-                kwargs = {"sort": sort, "use_na_sentinel": False}
-            codes, uniques = self.native.factorize(**kwargs)
+            case Encode():
+                if (
+                    self._implementation is Implementation.PANDAS
+                    and self._backend_version < (1.5,)
+                ):
+                    kwargs = {"sort": sort, "na_sentinel": None}
+                else:
+                    kwargs = {"sort": sort, "use_na_sentinel": False}
+                codes, uniques = self.native.factorize(**kwargs)
 
-        elif null_policy == "sentinel":
-            codes, uniques = self.native.factorize(sort=sort)
-            if sentinel != -1:
-                codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1, sentinel)
-        else:
-            assert_never(null_policy)
+            case Sentinel(value):
+                codes, uniques = self.native.factorize(sort=sort)
+                if value != -1:
+                    codes = pdx.Series(codes, dtype="Int64").mask(
+                        lambda s: s == -1, value
+                    )
+            case _:
+                assert_never(null_policy)
 
         return (
             self._with_native(pdx.Series(codes)),

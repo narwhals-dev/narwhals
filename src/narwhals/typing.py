@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, NewType, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
@@ -220,7 +221,23 @@ JoinStrategy: TypeAlias = Literal["inner", "left", "full", "cross", "semi", "ant
 - *"anti"*: Filter rows that do not have a match in the right table.
 """
 
-NullPolicy: TypeAlias = Literal["preserve", "encode", "sentinel"]
+
+class Preserve:
+    pass
+
+
+class Encode:
+    pass
+
+
+@dataclass
+class Sentinel:
+    value: Any
+
+
+NullPolicyLiteral: TypeAlias = Literal["preserve", "encode", "sentinel"]
+NullPolicy: TypeAlias = Preserve | Encode | Sentinel
+
 
 PivotAgg: TypeAlias = Literal[
     "min", "max", "first", "last", "sum", "mean", "median", "len"
@@ -428,4 +445,6 @@ __all__ = [
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",
+    "NullPolicy",
+    "NullPolicyLiteral",
 ]

@@ -22,6 +22,7 @@ from narwhals._polars.utils import (
 )
 from narwhals._utils import NO_DEFAULT, Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals.typing import Preserve, Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -671,12 +672,10 @@ class PolarsSeries:
     def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
         return self.drop_nulls().first() if ignore_nulls else self.first()
 
-    def factorize(
-        self, *, sort: bool, null_policy: NullPolicy, sentinel: Any | NoDefault
-    ) -> tuple[Self, Self]:
+    def factorize(self, *, sort: bool, null_policy: NullPolicy) -> tuple[Self, Self]:
 
         unique_expr = pl.col(self.native.name).unique()
-        if null_policy in {"preserve", "sentinel"}:
+        if isinstance(null_policy, (Preserve, Sentinel)):
             unique_expr = unique_expr.drop_nulls()
 
         if sort:
@@ -690,14 +689,13 @@ class PolarsSeries:
             .get_column(self.native.name)
         )
 
-        if null_policy == "sentinel":
-            codes = self.native.replace_strict(
-                old=uniques,
-                new=range(len(uniques)),
-                default=sentinel,  # type: ignore[arg-type]
-            )
-        else:
-            codes = self.native.replace_strict(old=uniques, new=range(len(uniques)))
+        match null_policy:
+            case Sentinel(value):
+                codes = self.native.replace_strict(
+                    old=uniques, new=range(len(uniques)), default=value
+                )
+            case _:
+                codes = self.native.replace_strict(old=uniques, new=range(len(uniques)))
         return self._with_native(codes.cast(pl.Int32())), self._with_native(uniques)
 
     @property

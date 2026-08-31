@@ -36,6 +36,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.typing import Encode, Preserve, Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -1044,9 +1045,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             .to_frame()
         )
 
-    def factorize(
-        self, *, sort: bool, null_policy: NullPolicy, sentinel: Any | NoDefault
-    ) -> tuple[Self, Self]:
+    def factorize(self, *, sort: bool, null_policy: NullPolicy) -> tuple[Self, Self]:
         if len(self.native) == 0:
             codes = pa.chunked_array([[]], type=pa.int32())
             uniques = pa.chunked_array([[]]).cast(self.native.type)
@@ -1054,23 +1053,24 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
         # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
         if pa.types.is_null(self.native.type):
-            if null_policy == "preserve":
-                codes, uniques = (
-                    pa.nulls(len(self.native), type=pa.int8()),
-                    pa.nulls(0, type=self.native.type),
-                )
-            elif null_policy == "encode":
-                codes, uniques = (
-                    pa.repeat(0, len(self.native)),
-                    pa.nulls(1, type=self.native.type),
-                )
-            elif null_policy == "sentinel":
-                codes, uniques = (
-                    pa.repeat(cast("Any", sentinel), len(self.native)),
-                    pa.nulls(0, type=self.native.type),
-                )
-            else:
-                assert_never(null_policy)
+            match null_policy:
+                case Preserve():
+                    codes, uniques = (
+                        pa.nulls(len(self.native), type=pa.int8()),
+                        pa.nulls(0, type=self.native.type),
+                    )
+                case Encode():
+                    codes, uniques = (
+                        pa.repeat(0, len(self.native)),
+                        pa.nulls(1, type=self.native.type),
+                    )
+                case Sentinel(value):
+                    codes, uniques = (
+                        pa.repeat(value, len(self.native)),
+                        pa.nulls(0, type=self.native.type),
+                    )
+                case _:
+                    assert_never(null_policy)
 
             return (self._with_native(codes), self._with_native(uniques))
 
@@ -1080,7 +1080,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             native = native.cast(native.type.value_type)
 
         null_encoding: Literal["encode", "mask"] = (
-            "encode" if (null_policy == "encode") else "mask"
+            "encode" if (isinstance(null_policy, Encode)) else "mask"
         )
         encoded: Incomplete = pc.dictionary_encode(
             native, null_encoding=null_encoding
@@ -1092,8 +1092,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             mapping = pc.index_in(uniques, value_set=uniques)
             codes = pc.take(mapping, codes)
 
-        if null_policy == "sentinel" and sentinel is not NO_DEFAULT:
-            codes = pc.fill_null(codes, sentinel)
+        if isinstance(null_policy, Sentinel):
+            codes = pc.fill_null(codes, null_policy.value)
 
         return (self._with_native(codes), self._with_native(uniques))
 
