@@ -46,13 +46,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._typing import (
-        EagerAllowed,
-        IntoBackend,
-        NoDefault,
-        NullPolicy,
-        PluginName,
-    )
+    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -61,6 +55,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NullPolicy,
         NumericLiteral,
         PythonLiteral,
         RankMethod,

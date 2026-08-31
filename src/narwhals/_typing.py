@@ -177,4 +177,3 @@ IntoBackendEager: TypeAlias = IntoBackend[EagerAllowed]
 IntoBackendLazy: TypeAlias = IntoBackend[LazyAllowed]
 
 NoDefault: TypeAlias = Literal[_NoDefault.no_default]
-NullPolicy: TypeAlias = Literal["preserve", "encode", "sentinel"]

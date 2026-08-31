@@ -220,6 +220,8 @@ JoinStrategy: TypeAlias = Literal["inner", "left", "full", "cross", "semi", "ant
 - *"anti"*: Filter rows that do not have a match in the right table.
 """
 
+NullPolicy: TypeAlias = Literal["preserve", "encode", "sentinel"]
+
 PivotAgg: TypeAlias = Literal[
     "min", "max", "first", "last", "sum", "mean", "median", "len"
 ]

@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.namespace import PandasLikeNamespace
     from narwhals._pandas_like.typing import NativeSeriesT
-    from narwhals._typing import NoDefault, NullPolicy
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NullPolicy,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -1183,7 +1184,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             from narwhals._arrow.series import ArrowSeries
 
             codes, uniques = ArrowSeries(
-                pa.chunked_array(self.native.array._pa_array),
+                pa.chunked_array(pa.array(self.native)),
                 name=self._name,
                 version=self._version,
             ).factorize(null_policy=null_policy, sentinel=sentinel, sort=sort)

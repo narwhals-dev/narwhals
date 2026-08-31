@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
     from narwhals._polars.dataframe import Method, PolarsDataFrame
     from narwhals._polars.namespace import PolarsNamespace
-    from narwhals._typing import NoDefault, NullPolicy
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -44,6 +44,7 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
+        NullPolicy,
         PythonLiteral,
         _1DArray,
     )
@@ -693,7 +694,7 @@ class PolarsSeries:
             codes = self.native.replace_strict(
                 old=uniques,
                 new=range(len(uniques)),
-                default=sentinel,  # type: ignore[reportArgumentType]
+                default=sentinel,  # type: ignore[arg-type]
             )
         else:
             codes = self.native.replace_strict(old=uniques, new=range(len(uniques)))

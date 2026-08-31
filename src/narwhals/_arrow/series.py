@@ -62,7 +62,7 @@ if TYPE_CHECKING:
         _BasicDataType,
     )
     from narwhals._compliant.series import HistData
-    from narwhals._typing import NoDefault, NullPolicy
+    from narwhals._typing import NoDefault
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -72,6 +72,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NullPolicy,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -1065,7 +1066,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 )
             elif null_policy == "sentinel":
                 codes, uniques = (
-                    pa.repeat(sentinel, len(self.native)),  # type: ignore[reportArgumentType]
+                    pa.repeat(cast("Any", sentinel), len(self.native)),
                     pa.nulls(0, type=self.native.type),
                 )
             else:
@@ -1091,8 +1092,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             mapping = pc.index_in(uniques, value_set=uniques)
             codes = pc.take(mapping, codes)
 
-        if null_policy == "sentinel":
-            codes = pc.fill_null(codes, sentinel)  # type: ignore[reportArgumentType]
+        if null_policy == "sentinel" and sentinel is not NO_DEFAULT:
+            codes = pc.fill_null(codes, sentinel)
 
         return (self._with_native(codes), self._with_native(uniques))
 

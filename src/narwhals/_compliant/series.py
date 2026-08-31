@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.dataframe import CompliantDataFrame
     from narwhals._compliant.namespace import EagerNamespace
-    from narwhals._typing import NoDefault, NullPolicy
+    from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.series import Series
@@ -47,6 +47,7 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         MultiIndexSelector,
+        NullPolicy,
         PythonLiteral,
         RollingInterpolationMethod,
         SizedMultiIndexSelector,

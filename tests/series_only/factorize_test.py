@@ -7,7 +7,6 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
-    PANDAS_VERSION,
     POLARS_VERSION,
     ConstructorEager,
     assert_equal_data,
@@ -43,7 +42,6 @@ NULL_ARGS = [
     ],
 )
 @pytest.mark.parametrize("null_policy_args", NULL_ARGS)
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_factorize_nonnull(
     constructor_eager: ConstructorEager,
     *,
@@ -106,7 +104,6 @@ def test_factorize_nonnull(
         ([1.1, 2.2, 3.3, 2.2, None, None], NULL_SENTINEL, [1.1, 2.2, 3.3]),
     ],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_factorize_null(
     constructor_eager: ConstructorEager,
     *,
@@ -117,12 +114,14 @@ def test_factorize_null(
     if "polars" in str(constructor_eager) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
-    df_native = constructor_eager({"a": values})
     if constructor_eager.__name__ == "pandas_constructor" and all(
         v is None for v in values
     ):
-        df_native["a"] = df_native["a"].astype(float)  # type: ignore[reportIndexIssue]
+        import pandas as pd
 
+        df_native = constructor_eager({"a": pd.Series(values, dtype=float)})
+    else:
+        df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
     encoded_result = df["a"].factorize(**null_policy_args)
     codes, uniqs = encoded_result
@@ -159,7 +158,6 @@ def test_factorize_null(
     ],
 )
 @pytest.mark.parametrize("null_policy_args", NULL_ARGS)
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_factorize_sort_nonnull(
     constructor_eager: ConstructorEager,
     *,
@@ -232,7 +230,6 @@ def test_factorize_sort_nonnull(
         ),
     ],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_factorize_sort_null(
     constructor_eager: ConstructorEager,
     *,
@@ -244,11 +241,14 @@ def test_factorize_sort_null(
     if "polars" in str(constructor_eager) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
-    df_native = constructor_eager({"a": values})
     if constructor_eager.__name__ == "pandas_constructor" and all(
         v is None for v in values
     ):
-        df_native["a"] = df_native["a"].astype(float)  # type: ignore[reportIndexIssue]
+        import pandas as pd
+
+        df_native = constructor_eager({"a": pd.Series(values, dtype=float)})
+    else:
+        df_native = constructor_eager({"a": values})
     df = nw.from_native(df_native)
     codes, uniqs = df["a"].factorize(sort=True, **null_policy_args)
 
@@ -297,7 +297,6 @@ def test_factorize_sort_null(
         ),
     ],
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
 def test_factorize_nan_semantics(
     constructor_eager: ConstructorEager,
     *,
@@ -319,36 +318,6 @@ def test_factorize_nan_semantics(
     assert_equal_series(result.uniques, expected, name="uniques")
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
-def test_factorize_non_sentinel_policy_w_sentinel_arg() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    if polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
-    s = nw.from_native(pl.Series("a", ["x", "y", "z"]), series_only=True)
-    with pytest.raises(
-        TypeError, match="Argument `sentinel` is ignored when null_policy="
-    ):
-        s.factorize(null_policy="preserve", sentinel=-1)
-
-
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1, 0), reason="nullable types require pandas2+")
-def test_factorize_sentinel_policy_w_no_sentinel_arg() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
-
-    if polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
-    s = nw.from_native(pl.Series("a", ["x", "y", "z"]), series_only=True)
-    with pytest.raises(
-        TypeError, match="Must supply `sentinel` when null_policy='sentinel'"
-    ):
-        s.factorize(null_policy="sentinel")
-
-
 @pytest.mark.parametrize(("values", "expected_unique"), [([*"abcabc"], ["a", "b", "c"])])
 @pytest.mark.parametrize("null_policy_args", NULL_ARGS)
 def test_factorize_categoricals(
@@ -361,11 +330,14 @@ def test_factorize_categoricals(
     if "polars" in str(constructor_eager) and polars_lt_v1:
         pytest.skip(reason=pl_skip_reason)
 
-    df_native = constructor_eager({"a": values})
+    if "pyarrow_table" in str(constructor_eager):
+        import pyarrow as pa
+        import pyarrow.compute as pc
 
-    if "pyarrow" in str(constructor_eager):
-        encoded_col = df_native.column("a").dictionary_encode()
-        df_native = df_native.set_column(0, "a", encoded_col)
+        df_native = constructor_eager({"a": pc.dictionary_encode(pa.array(values))})
+    else:
+        df_native = constructor_eager({"a": values})
+
     df = nw.from_native(df_native).select(nw.col("a").cast(nw.Categorical))
     encoded_result = df["a"].factorize(**null_policy_args)
     codes, uniqs = encoded_result
@@ -385,3 +357,31 @@ def test_factorize_categoricals(
         encoded_result.uniques, [*encoded_result.mapping.keys()], name=uniqs.name
     )
     assert [*encoded_result.mapping.values()] == [*range(len(encoded_result.uniques))]
+
+
+def test_factorize_sentinel_policy_w_no_sentinel_arg() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    if polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    s = nw.from_native(pl.Series("a", ["x", "y", "z"]), series_only=True)
+    with pytest.raises(
+        TypeError, match="Must supply `sentinel` when null_policy='sentinel'"
+    ):
+        s.factorize(null_policy="sentinel")
+
+
+def test_factorize_non_sentinel_policy_w_sentinel_arg() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    if polars_lt_v1:
+        pytest.skip(reason=pl_skip_reason)
+
+    s = nw.from_native(pl.Series("a", ["x", "y", "z"]), series_only=True)
+    with pytest.raises(
+        TypeError, match="Argument `sentinel` is ignored when null_policy="
+    ):
+        s.factorize(null_policy="preserve", sentinel=-1)
