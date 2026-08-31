@@ -630,6 +630,11 @@ class DaskExpr(
 
         return self._with_callable(da.isfinite)
 
+    def is_infinite(self) -> Self:
+        import dask.array as da
+
+        return self._with_callable(da.isinf)
+
     def log(self, base: float) -> Self:
         import dask.array as da
 

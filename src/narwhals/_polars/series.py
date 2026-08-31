@@ -107,6 +107,7 @@ INHERITED_METHODS = frozenset(
         "is_first_distinct",
         "is_in",
         "is_last_distinct",
+        "is_not_null",
         "is_null",
         "is_sorted",
         "is_unique",
@@ -378,6 +379,23 @@ class PolarsSeries:
             select = pl.when(self.native.is_not_null()).then(native_is_finite)
             return self._with_native(pl.select(select)[self.name])
         return self._with_native(native_is_finite)
+
+    def is_not_nan(self) -> Self:
+        try:
+            native_is_not_nan = self.native.is_not_nan()
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
+        if self._backend_version < (1, 18):  # pragma: no cover
+            select = pl.when(self.native.is_not_null()).then(native_is_not_nan)
+            return self._with_native(pl.select(select)[self.name])
+        return self._with_native(native_is_not_nan)
+
+    def is_infinite(self) -> Self:
+        native_is_infinite = self.native.is_infinite()
+        if self._backend_version < (1, 18):  # pragma: no cover
+            select = pl.when(self.native.is_not_null()).then(native_is_infinite)
+            return self._with_native(pl.select(select)[self.name])
+        return self._with_native(native_is_infinite)
 
     def median(self) -> Any:
         from narwhals.exceptions import InvalidOperationError

@@ -153,6 +153,20 @@ class PolarsExpr:
             native = pl.when(self.native.is_not_null()).then(self.native.is_finite())
         return self._with_native(native)
 
+    def is_not_nan(self) -> Self:
+        if self._backend_version >= (1, 18):
+            native = self.native.is_not_nan()
+        else:  # pragma: no cover
+            native = pl.when(self.native.is_not_null()).then(self.native.is_not_nan())
+        return self._with_native(native)
+
+    def is_infinite(self) -> Self:
+        if self._backend_version >= (1, 18):
+            native = self.native.is_infinite()
+        else:  # pragma: no cover
+            native = pl.when(self.native.is_not_null()).then(self.native.is_infinite())
+        return self._with_native(native)
+
     def _is_close_float_promote(self) -> Self:
         # This is scoped to `is_close` (Boolean output), so widening `Float16/Float32`
         # here is harmless for the final result.

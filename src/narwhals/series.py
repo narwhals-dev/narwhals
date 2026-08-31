@@ -1431,6 +1431,32 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.is_null())
 
+    def is_not_null(self) -> Self:
+        """Returns a boolean Series indicating which values are not null.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> nw.from_native(
+            ...     s_native, series_only=True
+            ... ).is_not_null().to_native()  # doctest:+ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                true,
+                true,
+                false
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.is_not_null())
+
     def is_nan(self) -> Self:
         """Returns a boolean Series indicating which values are NaN.
 
@@ -1450,6 +1476,26 @@ class Series(Generic[IntoSeriesT]):
             dtype: boolean
         """
         return self._with_compliant(self._compliant_series.is_nan())
+
+    def is_not_nan(self) -> Self:
+        """Returns a boolean Series indicating which values are not NaN.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
+
+        Examples:
+            >>> import pandas as pd
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pd.Series([0.0, None, 2.0], dtype="Float64")
+            >>> nw.from_native(s_native, series_only=True).is_not_nan().to_native()
+            0    True
+            1    <NA>
+            2    True
+            dtype: boolean
+        """
+        return self._with_compliant(self._compliant_series.is_not_nan())
 
     def fill_null(
         self,
@@ -2318,6 +2364,34 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         return self._with_compliant(self._compliant_series.is_finite())
+
+    def is_infinite(self) -> Self:
+        """Returns a boolean Series indicating which values are infinite.
+
+        Warning:
+            Different backend handle null values differently. `is_infinite` will return
+            False for NaN and Null's in the Dask and pandas non-nullable backend, while
+            for Polars, PyArrow and pandas nullable backends null values are kept as such.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[float("nan"), float("inf"), 2.0, None]])
+            >>> nw.from_native(
+            ...     s_native, series_only=True
+            ... ).is_infinite().to_native()  # doctest: +ELLIPSIS
+            <pyarrow.lib.ChunkedArray object at ...>
+            [
+              [
+                false,
+                true,
+                false,
+                null
+              ]
+            ]
+        """
+        return self._with_compliant(self._compliant_series.is_infinite())
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the series.

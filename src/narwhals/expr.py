@@ -1075,6 +1075,38 @@ class Expr:
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_null"))
 
+    def is_not_null(self) -> Self:
+        """Returns a boolean Series indicating which values are not null.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_is_not_null=nw.col("a").is_not_null(),
+            ...     b_is_not_null=nw.col("b").is_not_null(),
+            ... )
+            ┌──────────────────────────────────────────────────┐
+            |                Narwhals LazyFrame                |
+            |--------------------------------------------------|
+            |┌───────┬────────┬───────────────┬───────────────┐|
+            |│   a   │   b    │ a_is_not_null │ b_is_not_null │|
+            |│ int32 │ double │    boolean    │    boolean    │|
+            |├───────┼────────┼───────────────┼───────────────┤|
+            |│  NULL │    nan │ false         │ true          │|
+            |│     2 │    2.0 │ true          │ true          │|
+            |└───────┴────────┴───────────────┴───────────────┘|
+            └──────────────────────────────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_not_null"))
+
     def is_nan(self) -> Self:
         """Indicate which values are NaN.
 
@@ -1105,6 +1137,38 @@ class Expr:
             └────────────────────────────────────────┘
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_nan"))
+
+    def is_not_nan(self) -> Self:
+        """Indicate which values are not NaN.
+
+        Notes:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES (null, CAST('NaN' AS DOUBLE)), (2, 2.) df(a, b)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(
+            ...     a_is_not_nan=nw.col("a").is_not_nan(),
+            ...     b_is_not_nan=nw.col("b").is_not_nan(),
+            ... )
+            ┌────────────────────────────────────────────────┐
+            |               Narwhals LazyFrame               |
+            |------------------------------------------------|
+            |┌───────┬────────┬──────────────┬──────────────┐|
+            |│   a   │   b    │ a_is_not_nan │ b_is_not_nan │|
+            |│ int32 │ double │   boolean    │   boolean    │|
+            |├───────┼────────┼──────────────┼──────────────┤|
+            |│  NULL │    nan │ NULL         │ false        │|
+            |│     2 │    2.0 │ true         │ true         │|
+            |└───────┴────────┴──────────────┴──────────────┘|
+            └────────────────────────────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_not_nan"))
 
     def fill_null(
         self,
@@ -1799,6 +1863,40 @@ class Expr:
             └──────────────────────┘
         """
         return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_finite"))
+
+    def is_infinite(self) -> Self:
+        """Returns boolean values indicating which original values are infinite.
+
+        Warning:
+            pandas handles null values differently from Polars and PyArrow.
+            See [null_handling](../concepts/null_handling.md) for reference.
+            `is_infinite` will return False for NaN and Null's in the Dask and
+            pandas non-nullable backend, while for Polars, PyArrow and pandas
+            nullable backends null values are kept as such.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"a": [float("nan"), float("inf"), 2.0, None]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_is_infinite=nw.col("a").is_infinite())
+            ┌────────────────────────┐
+            |   Narwhals DataFrame   |
+            |------------------------|
+            |shape: (4, 2)           |
+            |┌──────┬───────────────┐|
+            |│ a    ┆ a_is_infinite │|
+            |│ ---  ┆ ---           │|
+            |│ f64  ┆ bool          │|
+            |╞══════╪═══════════════╡|
+            |│ NaN  ┆ false         │|
+            |│ inf  ┆ true          │|
+            |│ 2.0  ┆ false         │|
+            |│ null ┆ null          │|
+            |└──────┴───────────────┘|
+            └────────────────────────┘
+        """
+        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "is_infinite"))
 
     def cum_count(self, *, reverse: bool = False) -> Self:
         r"""Return the cumulative count of the non-null values in the column.
