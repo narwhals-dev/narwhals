@@ -1246,7 +1246,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                     codes = pdx.Series(codes, dtype="Int64").mask(
                         lambda s: s == -1, value
                     )
-            case _:
+            case _:  # pragma: no cover
                 assert_never(null_policy)
 
         return (

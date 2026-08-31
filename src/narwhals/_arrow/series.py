@@ -1069,7 +1069,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                         pa.repeat(value, len(self.native)),
                         pa.nulls(0, type=self.native.type),
                     )
-                case _:
+                case _:  # pragma: no cover
                     assert_never(null_policy)
 
             return (self._with_native(codes), self._with_native(uniques))
