@@ -87,7 +87,7 @@ class PandasLikeSeriesStringNamespace(
         )
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
-        stop = offset + length if length else None
+        stop = offset + length if length is not None else None
         return self.with_native(self.native.str.slice(start=offset, stop=stop))
 
     def split(self, by: str) -> PandasLikeSeries:
