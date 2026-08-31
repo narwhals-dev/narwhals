@@ -57,8 +57,7 @@ handle plugins. For this integration to work, any plugin architecture must conta
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
     which wraps the native dataframe.
 
-    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
-    signatures.
+    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the signatures.
 
 ## IO functions: the namespace contract
 
