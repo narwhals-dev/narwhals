@@ -1,0 +1,24 @@
+{% macro project_card_light_dark(name, homepage, logo_light, logo_dark) %}
+<div class="project-card">
+  <a href="{{ homepage }}" aria-label="{{ name }} homepage">
+    <div class="logo-area bg-toggle-dark">
+      <img class="logo-light" src="{{ logo_light }}" alt="{{ name }} logo">
+      <img class="logo-dark" src="{{ logo_dark }}" alt="{{ name }} logo" aria-hidden="true">
+    </div>
+    <hr/>
+    <h3>{{ name }}</h3>
+  </a>
+</div>
+{% endmacro %}
+
+{% macro project_card(name, homepage, logo) %}
+<div class="project-card">
+  <a href="{{ homepage }}" aria-label="{{ name }} homepage">
+    <div class="logo-area bg-toggle-darkish">
+      <img src="{{ logo }}" alt="{{ name }} logo">
+    </div>
+    <hr/>
+    <h3>{{ name }}</h3>
+  </a>
+</div>
+{% endmacro %}
