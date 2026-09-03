@@ -212,6 +212,47 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         neg = cast("Callable[..., ir.Value]", operator.neg)
         return self._with_callable(neg)
 
+    def skew(self) -> Self:
+        def func(expr: ir.Value) -> ir.Value:
+            # Skewness can be expressed in one aggregation using the raw-moment
+            # identities (e.g. m2 = E[x^2] - E[x]^2). But this is subject to
+            # catastrophic cancellation. So use a more stable two-pass calculation. SQL
+            # engines don't allow nested aggregates, so represent the first-pass mean as
+            # a scalar subquery. Note that this does not materialize and pull the
+            # first-pass mean into memory to be used as a python scalar.
+            expr = cast("ir.FloatingColumn", expr.cast("float64"))
+            count = expr.count()
+
+            input_name = "_narwhals_skew_input"
+            input_table = expr.name(input_name).as_table()
+            input_column = cast("ir.FloatingColumn", input_table[input_name])
+            origin = cast(
+                "ir.FloatingScalar",
+                input_table.aggregate(_mean=input_column.mean())["_mean"].as_scalar(),
+            )
+
+            shifted = cast("ir.FloatingColumn", expr - origin)
+            shifted_mean = shifted.mean()
+            second_shifted_moment = cast("ir.FloatingColumn", shifted**2).mean()
+            second_central_moment = second_shifted_moment - shifted_mean**2
+            third_central_moment = (
+                cast("ir.FloatingColumn", shifted**3).mean()
+                - 3 * shifted_mean * second_shifted_moment
+                + 2 * shifted_mean**3
+            )
+
+            # polars default is bias=True so use the biased fisher pearson coefficient
+            # m3 / m2**1.5
+            biased_population_skewness = third_central_moment / second_central_moment**1.5
+            return ibis.cases(
+                (count == 0, lit(None)),
+                (count == 1, lit(float("nan"))),
+                (count == 2, lit(0.0)),
+                else_=biased_population_skewness,
+            )
+
+        return self._with_callable(func)
+
     def quantile(
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> Self:
@@ -403,7 +444,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     cum_prod = not_implemented()
 
     # NOTE: https://github.com/ibis-project/ibis/issues/11176
-    skew = not_implemented()
     kurtosis = not_implemented()
 
     _count_star = not_implemented()
