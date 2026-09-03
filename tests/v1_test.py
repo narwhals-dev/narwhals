@@ -424,14 +424,14 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
 
 
 def test_get_level() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
+    tbl = pa.table({"a": [1, 2, 3]})
+    assert nw_v1.get_level(nw_v1.from_native(tbl)) == "full"
     assert (
         nw_v1.get_level(
-            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+            nw_v1.from_native(tbl.__dataframe__(), eager_or_interchange_only=True)
         )
         == "interchange"
     )
