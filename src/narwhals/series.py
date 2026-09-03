@@ -614,11 +614,13 @@ class Series(Generic[IntoSeriesT]):
             )
         )
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         """Cast between data types.
 
         Arguments:
             dtype: Data type that the object will be cast into.
+            strict: If `True` (default), raise an error if a value can't be cast into the
+                target type. If `False`, replace it with `null` instead.
 
         Examples:
             >>> import pyarrow as pa
@@ -636,7 +638,7 @@ class Series(Generic[IntoSeriesT]):
             ]
         """
         _validate_dtype(dtype)
-        return self._with_compliant(self._compliant_series.cast(dtype))
+        return self._with_compliant(self._compliant_series.cast(dtype, strict=strict))
 
     def to_frame(self) -> DataFrame[Any]:
         """Convert to dataframe.

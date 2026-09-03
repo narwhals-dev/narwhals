@@ -166,11 +166,13 @@ class Expr:
         """
         return function(self, *args, **kwargs)
 
-    def cast(self, dtype: IntoDType) -> Self:
+    def cast(self, dtype: IntoDType, *, strict: bool = True) -> Self:
         """Redefine an object's data type.
 
         Arguments:
             dtype: Data type that the object will be cast into.
+            strict: If `True` (default), raise an error if a value can't be cast into the
+                target type. If `False`, replace it with `null` instead.
 
         Examples:
             >>> import pandas as pd
@@ -188,7 +190,9 @@ class Expr:
             └──────────────────┘
         """
         _validate_dtype(dtype)
-        return self._append_node(ExprNode(ExprKind.ELEMENTWISE, "cast", dtype=dtype))
+        return self._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "cast", dtype=dtype, strict=strict)
+        )
 
     # --- binary ---
     def _with_binary(self, attr: str, other: Self | Any) -> Self:
