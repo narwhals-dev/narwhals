@@ -21,13 +21,14 @@ def test_contains(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     other: float | None,
-    expected: bool,  # noqa: FBT001
+    *,
+    expected: bool,
 ) -> None:
     if (
         isinstance(other, float)
         and "polars" in str(constructor_eager)
         and POLARS_VERSION >= (2,)
-    ):
+    ):  # pragma: no cover
         reason = "Polars>=2.0 rejects operands which can't be coerced losslessly"
         request.applymarker(pytest.mark.xfail(reason=reason))
 
