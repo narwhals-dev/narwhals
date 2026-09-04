@@ -12,6 +12,7 @@ from narwhals._utils import (
     ensure_type,
     flatten,
     unstable,
+    validate_is_non_negative,
 )
 from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import ComputeError, InvalidOperationError
@@ -2423,9 +2424,7 @@ class Expr:
             |└────────┴────────┴──────────┘|
             └──────────────────────────────┘
         """
-        if abs_tol < 0:
-            msg = f"`abs_tol` must be non-negative but got {abs_tol}"
-            raise ComputeError(msg)
+        validate_is_non_negative(abs_tol, "abs_tol", exception=ComputeError)
 
         if not (0 <= rel_tol < 1):
             msg = f"`rel_tol` must be in the range [0, 1) but got {rel_tol}"

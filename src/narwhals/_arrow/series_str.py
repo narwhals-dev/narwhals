@@ -140,7 +140,9 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         )
 
         # Cases
-        padded_remaining_chars = pc.utf8_lpad(remaining_chars, width - 1, padding="0")
+        padded_remaining_chars = pc.utf8_lpad(
+            remaining_chars, max(width - 1, 0), padding="0"
+        )
 
         result = pc.case_when(
             conditions,

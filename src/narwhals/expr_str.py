@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals._utils import parse_str_strip_chars
+from narwhals._utils import parse_str_strip_chars, validate_is_non_negative_int
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -606,7 +606,6 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             width: The desired length of the string after padding. If the length of the
                 string is greater than `width`, no padding is applied.
-                If `width` is less than 0, no padding is applied.
 
         Examples:
             >>> import pandas as pd
@@ -624,6 +623,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
+        validate_is_non_negative_int(width, "width")
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
@@ -652,6 +652,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        validate_is_non_negative_int(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -682,6 +683,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        validate_is_non_negative_int(length, "length")
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char

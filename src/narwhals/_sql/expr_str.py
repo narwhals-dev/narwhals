@@ -125,7 +125,8 @@ class SQLExprStringNamespace(
         def func(expr: NativeExpr) -> NativeExpr:
             less_than_width = self._function("length", expr) < self._lit(width)
             zero = "0" if _is_pyspark_pre_4 else self._lit("0")
-            width_after_sign = width - 1 if _is_pyspark_pre_4 else self._lit(width - 1)
+            after_sign = max(width - 1, 0)
+            width_after_sign = after_sign if _is_pyspark_pre_4 else self._lit(after_sign)
             full_width = width if _is_pyspark_pre_4 else self._lit(width)
             hyphen, plus = self._lit("-"), self._lit("+")
 

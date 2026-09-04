@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -106,3 +108,29 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     expected = {"a": ["Café日日", "345日日日", "東京日日日日", None]}
 
     assert_equal_data(result, expected)
+
+
+def test_str_pad_zero_length(constructor: Constructor) -> None:
+    data = {"a": ["foo", "hi", None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.col("a").str.pad_start(0).alias("start"),
+        nw.col("a").str.pad_end(0).alias("end"),
+    )
+    assert_equal_data(result, {"start": data["a"], "end": data["a"]})
+
+
+def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)
+    msg = r"`length` must be non-negative but got -1"
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df["a"].str.pad_start(-1)
+
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df["a"].str.pad_end(-1)
+
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df.select(nw.col("a").str.pad_start(-1))
+
+    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
+        df.select(nw.col("a").str.pad_end(-1))
