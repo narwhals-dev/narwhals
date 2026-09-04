@@ -5,6 +5,7 @@
     options:
       members:
         - __arrow_c_stream__
+        - __contains__
         - __getitem__
         - __iter__
         - abs
