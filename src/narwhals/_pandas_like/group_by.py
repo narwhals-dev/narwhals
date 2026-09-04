@@ -415,6 +415,6 @@ def warn_complex_group_by() -> None:
         "pandas API. If you can, please rewrite your query such that group-by aggregations "
         "are simple (e.g. mean, std, min, max, ...). \n\n"
         "Please see: "
-        "https://narwhals-dev.github.io/narwhals/concepts/improve_group_by_operation/",
+        "https://narwhals-dev.github.io/narwhals/how-to/improve_group_by_operation/",
         UserWarning,
     )

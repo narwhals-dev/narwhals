@@ -1,4 +1,4 @@
-# Conversion between libraries
+# Converting between dataframe libraries
 
 Some library maintainers must apply complex dataframe operations, using methods and functions that may not (yet) be implemented in Narwhals. In such cases, Narwhals can still be highly beneficial, by allowing easy dataframe conversion.
 
