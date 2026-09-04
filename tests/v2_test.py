@@ -586,3 +586,35 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
     assert schema._version is Version.V2
+
+
+def test_selectors_are_stable_v2() -> None:
+    # Selectors built from `narwhals.stable.v2.selectors` must behave like `v2`
+    # expressions, not like main-namespace ones.
+    selector = nw_v2.selectors.numeric()
+    assert isinstance(selector, nw_v2.Expr)
+    assert isinstance(selector | nw_v2.selectors.string(), nw_v2.Expr)
+    assert isinstance(selector + 1, nw_v2.Expr)
+
+    # Only `stable.v2` warns that `any_value` is unstable.
+    with pytest.warns(NarwhalsUnstableWarning):
+        nw_v2.selectors.numeric().any_value()
+
+
+def test_selectors_all_stableified_v2() -> None:
+    args: dict[str, tuple[Any, ...]] = {
+        "all": (),
+        "boolean": (),
+        "by_dtype": (nw_v2.Int64,),
+        "categorical": (),
+        "datetime": (),
+        "enum": (),
+        "matches": ("^a$",),
+        "numeric": (),
+        "string": (),
+    }
+    # Fail if a new selector is added but not covered here.
+    assert set(args) == set(nw_v2.selectors.__all__)
+
+    for name, arg in args.items():
+        assert isinstance(getattr(nw_v2.selectors, name)(*arg), nw_v2.Expr), name

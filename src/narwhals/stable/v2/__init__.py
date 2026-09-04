@@ -57,6 +57,7 @@ from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
+from narwhals.selectors import Selector as NwSelector
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.stable.v2.typing import (
@@ -350,6 +351,11 @@ class Expr(NwExpr):
     def last(self) -> Self:  # type: ignore[override]
         """Get the last value."""
         return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+
+
+class Selector(NwSelector, Expr):
+    def _to_expr(self) -> Expr:
+        return Expr(*self._nodes)
 
 
 class Schema(NwSchema):
