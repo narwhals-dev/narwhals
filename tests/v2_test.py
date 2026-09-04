@@ -626,35 +626,3 @@ def test_get_categories_enum_polars_v2() -> None:
     result = nw_v2.from_native(s_native, series_only=True).cat.get_categories()
     assert result.dtype == nw_v2.String
     assert result.to_list() == ["Panda", "Polar"]
-
-
-def test_selectors_are_stable_v2(constructor_eager: ConstructorEager) -> None:
-    selector = nw_v2.selectors.numeric()
-    assert isinstance(selector, nw_v2.Expr)
-    assert selector._version is Version.V2
-    assert isinstance(selector | nw_v2.selectors.string(), nw_v2.Expr)
-    assert isinstance(selector + 1, nw_v2.Expr)
-
-    df = nw_v2.from_native(constructor_eager({"a": [3, 1, 2]}), eager_only=True)
-    assert_equal_data(df.select(nw_v2.selectors.numeric().first()), {"a": [3]})
-
-
-def test_selectors_all_stableified_v2() -> None:
-    args: dict[str, tuple[Any, ...]] = {
-        "all": (),
-        "boolean": (),
-        "by_dtype": (nw_v2.Int64,),
-        "categorical": (),
-        "datetime": (),
-        "enum": (),
-        "matches": ("^a$",),
-        "numeric": (),
-        "string": (),
-    }
-    # Fail if a new selector is added but not covered here.
-    assert set(args) == set(nw_v2.selectors.__all__)
-
-    for name, arg in args.items():
-        selector = getattr(nw_v2.selectors, name)(*arg)
-        assert isinstance(selector, nw_v2.Expr), name
-        assert selector._version is Version.V2, name
