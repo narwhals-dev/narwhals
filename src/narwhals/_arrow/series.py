@@ -544,6 +544,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def is_null(self) -> Self:
         return self._with_native(self.native.is_null(), preserve_broadcast=True)
 
+    def is_not_null(self) -> Self:
+        return self._with_native(pc.is_valid(self.native), preserve_broadcast=True)
+
     def is_nan(self) -> Self:
         return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
 
@@ -865,6 +868,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def is_finite(self) -> Self:
         return self._with_native(pc.is_finite(self.native))
+
+    def is_infinite(self) -> Self:
+        return self._with_native(pc.is_inf(self.native))
 
     def cum_count(self, *, reverse: bool) -> Self:
         dtypes = self._version.dtypes

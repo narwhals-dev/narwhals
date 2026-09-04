@@ -590,6 +590,9 @@ class EagerExpr(
     def is_null(self) -> Self:
         return self._reuse_series("is_null")
 
+    def is_not_null(self) -> Self:
+        return self._reuse_series("is_not_null")
+
     def is_nan(self) -> Self:
         return self._reuse_series("is_nan")
 
@@ -735,6 +738,9 @@ class EagerExpr(
 
     def is_finite(self) -> Self:
         return self._reuse_series("is_finite")
+
+    def is_infinite(self) -> Self:
+        return self._reuse_series("is_infinite")
 
     def rolling_mean(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         return self._reuse_series(
