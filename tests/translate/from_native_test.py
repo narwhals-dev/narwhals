@@ -228,6 +228,20 @@ def test_init_already_narwhals_unstable() -> None:
 
 
 @pytest.mark.skipif(lf_pl is None, reason="polars not found")
+def test_init_already_narwhals_lazy_eager_only() -> None:
+    # An already-narwhals LazyFrame must still be rejected by `eager_only`, just
+    # like a native one (https://github.com/narwhals-dev/narwhals/issues/3226).
+    lf = nw.from_native(pl.LazyFrame({"a": [1, 2, 3]}))
+    with pytest.raises(TypeError, match="Cannot only use `eager_only`"):
+        nw.from_native(lf, eager_only=True)  # type: ignore[call-overload]
+    # `pass_through` returns the frame unchanged instead of raising.
+    assert nw.from_native(lf, eager_only=True, pass_through=True) is lf
+    # An already-narwhals DataFrame is eager, so `eager_only` is a no-op.
+    df = nw.from_native(pl.DataFrame({"a": [1, 2, 3]}))
+    assert nw.from_native(df, eager_only=True) is df
+
+
+@pytest.mark.skipif(lf_pl is None, reason="polars not found")
 def test_init_already_narwhals_unstable_to_stable() -> None:
     from narwhals.stable import v1 as nw_v1
 
