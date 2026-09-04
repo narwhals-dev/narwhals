@@ -25,7 +25,13 @@ from narwhals._pandas_like.utils import (
     set_index,
 )
 from narwhals._typing_compat import assert_never
-from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    check_comparable_dtype,
+    check_comparable_values,
+    is_list_of,
+)
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
@@ -372,6 +378,18 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def is_in(self, other: Any) -> Self:
         ser = self.native
+        dtypes = self._version.dtypes
+        if is_pandas_like_series(other):
+            check_comparable_dtype(
+                "is_in",
+                self.dtype,
+                native_to_narwhals_dtype(
+                    other.dtype, self._version, self._implementation
+                ),
+                dtypes,
+            )
+        else:
+            check_comparable_values("is_in", self.dtype, other, dtypes)
         res = ser.isin(other)
         dtype_backend = get_dtype_backend(ser.dtype, self._implementation)
         if dtype_backend is not None:
@@ -1046,6 +1064,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         yield from self.native.__iter__()
 
     def __contains__(self, other: Any) -> bool:
+        check_comparable_values("contains", self.dtype, (other,), self._version.dtypes)
         return self.native.isna().any() if other is None else (self.native == other).any()
 
     def is_finite(self) -> Self:

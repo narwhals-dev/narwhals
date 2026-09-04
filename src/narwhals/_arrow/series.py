@@ -30,6 +30,8 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
+    check_comparable_dtype,
+    check_comparable_values,
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
@@ -567,9 +569,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.slice(abs(n)))
 
     def is_in(self, other: Any) -> Self:
+        dtypes = self._version.dtypes
         if self._is_native(other):
             value_set: ArrayOrChunkedArray = other
+            check_comparable_dtype(
+                "is_in",
+                self.dtype,
+                native_to_narwhals_dtype(value_set.type, self._version),
+                dtypes,
+            )
         else:
+            check_comparable_values("is_in", self.dtype, other, dtypes)
             value_set = pa.array(other)
         native = self.native
         is_in = pc.is_in(native, value_set=value_set)
@@ -1048,6 +1058,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             yield maybe_extract_py_scalar(x, return_py_scalar=True)
 
     def __contains__(self, other: Any) -> bool:
+        check_comparable_values("contains", self.dtype, (other,), self._version.dtypes)
         from pyarrow import (
             ArrowInvalid,  # ignore-banned-imports
             ArrowNotImplementedError,  # ignore-banned-imports

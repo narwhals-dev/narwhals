@@ -987,6 +987,12 @@ class Expr:
             Null values are preserved, unless `self` is backed by a non-nullable pandas Series
             (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
+            Values are only compared against the column when doing so is lossless:
+            looking for floats in an integer column (or vice versa) raises an
+            `InvalidOperationError` rather than coercing both to a common dtype.
+            Lazy backends other than Polars can't resolve the column dtype while
+            building the expression, so they don't perform this validation.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw

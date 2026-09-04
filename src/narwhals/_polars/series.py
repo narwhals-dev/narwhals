@@ -20,7 +20,13 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, requires
+from narwhals._utils import (
+    NO_DEFAULT,
+    Implementation,
+    check_comparable_dtype,
+    check_comparable_values,
+    requires,
+)
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -105,7 +111,6 @@ INHERITED_METHODS = frozenset(
         "is_empty",
         "is_finite",
         "is_first_distinct",
-        "is_in",
         "is_last_distinct",
         "is_null",
         "is_sorted",
@@ -535,8 +540,31 @@ class PolarsSeries:
         return self._with_native(self.native.cum_count(reverse=reverse))
 
     def __contains__(self, other: Any) -> bool:
+        if BACKEND_VERSION < (2,):
+            # Polars>=2.0 rejects comparisons which would need a lossy cast itself.
+            check_comparable_values(
+                "contains", self.dtype, (other,), self._version.dtypes
+            )
         try:
             return self.native.__contains__(other)
+        except Exception as e:  # noqa: BLE001
+            raise catch_polars_exception(e) from None
+
+    def is_in(self, other: Any) -> Self:
+        if BACKEND_VERSION < (2,):
+            # Polars>=2.0 rejects comparisons which would need a lossy cast itself.
+            dtypes = self._version.dtypes
+            if isinstance(other, pl.Series):
+                check_comparable_dtype(
+                    "is_in",
+                    self.dtype,
+                    native_to_narwhals_dtype(other.dtype, self._version),
+                    dtypes,
+                )
+            else:
+                check_comparable_values("is_in", self.dtype, other, dtypes)
+        try:
+            return self._with_native(self.native.is_in(other))
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None
 
@@ -731,7 +759,6 @@ class PolarsSeries:
     is_duplicated: Method[Self]
     is_empty: Method[bool]
     is_first_distinct: Method[Self]
-    is_in: Method[Self]
     is_last_distinct: Method[Self]
     is_null: Method[Self]
     is_sorted: Method[bool]

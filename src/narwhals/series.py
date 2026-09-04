@@ -979,6 +979,11 @@ class Series(Generic[IntoSeriesT]):
         Arguments:
             other: Sequence of primitive type.
 
+        Notes:
+            Values are only compared against the Series when doing so is lossless:
+            looking for floats in an integer column (or vice versa) raises an
+            `InvalidOperationError` rather than coercing both to a common dtype.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -2626,6 +2631,32 @@ class Series(Generic[IntoSeriesT]):
         yield from self._compliant_series.__iter__()
 
     def __contains__(self, other: Any) -> bool:
+        """Check whether `other` is present in the Series.
+
+        Arguments:
+            other: Value to look for. `None` matches null values.
+
+        Returns:
+            Whether the value was found.
+
+        Notes:
+            `other` is only compared against the Series when doing so is lossless:
+            looking for a float in an integer Series (or vice versa) raises an
+            `InvalidOperationError` rather than coercing both to a common dtype.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> 2 in s
+            True
+            >>> None in s
+            True
+            >>> 3 in s
+            False
+        """
         return self._compliant_series.__contains__(other)
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:

@@ -11,8 +11,10 @@ from collections.abc import (
     Iterator,
     Mapping,
     Sequence,
+    Set as AbstractSet,
 )
-from datetime import timezone
+from datetime import date, datetime, time, timedelta, timezone
+from decimal import Decimal
 from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
@@ -64,7 +66,6 @@ from narwhals.exceptions import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
     from typing import Concatenate, TypeAlias
 
@@ -130,6 +131,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NestedLiteral,
         NormalizedPath,
+        PythonLiteral,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -145,6 +147,9 @@ if TYPE_CHECKING:
     FrameOrSeriesT = TypeVar(
         "FrameOrSeriesT", bound=LazyFrame[Any] | DataFrame[Any] | Series[Any]
     )
+
+    ComparisonOperation: TypeAlias = Literal["contains", "is_in"]
+    """Narwhals operation which compares values against a column."""
 
     _T1 = TypeVar("_T1")
     _T2 = TypeVar("_T2")
@@ -1547,15 +1552,15 @@ def check_column_names_are_unique(columns: Collection[str]) -> None:
 def _parse_time_unit_and_time_zone(
     time_unit: TimeUnit | Iterable[TimeUnit] | None,
     time_zone: str | timezone | Iterable[str | timezone | None] | None,
-) -> tuple[Set[TimeUnit], Set[str | None]]:
-    time_units: Set[TimeUnit] = (
+) -> tuple[AbstractSet[TimeUnit], AbstractSet[str | None]]:
+    time_units: AbstractSet[TimeUnit] = (
         {"ms", "us", "ns", "s"}
         if time_unit is None
         else {time_unit}
         if isinstance(time_unit, str)
         else set(time_unit)
     )
-    time_zones: Set[str | None] = (
+    time_zones: AbstractSet[str | None] = (
         {None}
         if time_zone is None
         else {str(time_zone)}
@@ -1566,7 +1571,10 @@ def _parse_time_unit_and_time_zone(
 
 
 def dtype_matches_time_unit_and_time_zone(
-    dtype: DType, dtypes: DTypes, time_units: Set[TimeUnit], time_zones: Set[str | None]
+    dtype: DType,
+    dtypes: DTypes,
+    time_units: AbstractSet[TimeUnit],
+    time_zones: AbstractSet[str | None],
 ) -> bool:
     return (
         isinstance(dtype, dtypes.Datetime)
@@ -1576,6 +1584,106 @@ def dtype_matches_time_unit_and_time_zone(
             or ("*" in time_zones and dtype.time_zone is not None)
         )
     )
+
+
+def is_comparable_dtype(dtype: DType, other: DType, dtypes: DTypes, /) -> bool:
+    """Whether `other` values can be compared against `dtype` data without a lossy cast.
+
+    Narwhals follows the strictness Polars introduced in 2.0: rather than silently
+    coercing both operands into a common dtype (e.g. `Int64` and `Float64` into
+    `Float64`), comparing values of incompatible dtypes is rejected.
+    """
+    opaque = (dtypes.Object, dtypes.Unknown)
+    if isinstance(dtype, opaque) or isinstance(other, opaque):
+        # Nothing is known about these, so leave it to the backend.
+        return True
+    if dtype.is_numeric() and other.is_numeric():
+        # `Decimal` is exact, so it is comparable against any other numeric dtype.
+        # Integers and floats are kept apart, as neither holds the other exactly.
+        return (
+            dtype.is_decimal()
+            or other.is_decimal()
+            or (dtype.is_integer() and other.is_integer())
+            or (dtype.is_float() and other.is_float())
+        )
+    if dtype.is_numeric() or other.is_numeric():
+        return False
+    string_like = (dtypes.String, dtypes.Categorical, dtypes.Enum)
+    if isinstance(dtype, string_like) or isinstance(other, string_like):
+        return isinstance(dtype, string_like) and isinstance(other, string_like)
+    # `Datetime`/`Duration` are deliberately compared without their time unit, and
+    # nested dtypes without their inner ones: those are inferred from the values,
+    # where the backend may well have settled on another (equivalent) resolution.
+    return type(dtype) is type(other)
+
+
+# TODO(FBruzzesi): Convert into `DType.from_python`
+# Issue tracker: https://github.com/narwhals-dev/narwhals/issues/2264
+# Polars implementation: https://github.com/pola-rs/polars/blob/7f5b79435d4d9671cc704eadfafbe50cba93102a/py-polars/src/polars/datatypes/classes.py#L251-L252
+def python_literal_dtype(  # noqa: C901, PLR0911
+    value: PythonLiteral, dtypes: DTypes, /
+) -> DType | None:
+    """Dtype Narwhals infers for a Python literal, or `None` if it can't tell.
+
+    `bool` subclasses `int`, `datetime` subclasses `date` and `str` is a `Sequence`,
+    so the order of these checks matters.
+    """
+    if isinstance(value, bool):
+        return dtypes.Boolean()
+    if isinstance(value, int):
+        return dtypes.Int64()
+    if isinstance(value, float):
+        return dtypes.Float64()
+    if isinstance(value, str):
+        return dtypes.String()
+    if isinstance(value, Decimal):
+        return dtypes.Decimal()
+    if isinstance(value, (bytes, bytearray)):
+        return dtypes.Binary()
+    if isinstance(value, datetime):
+        return dtypes.Datetime()
+    if isinstance(value, date):
+        return dtypes.Date()
+    if isinstance(value, time):
+        return dtypes.Time()
+    if isinstance(value, timedelta):
+        return dtypes.Duration()
+    if isinstance(value, (Sequence, AbstractSet, Mapping)):
+        # TODO(Unassigned): Parse inner dtype
+        # TODO(Unassigned): Should Mapping map to Struct?
+        return dtypes.List(dtypes.Unknown())
+    return None
+
+
+def check_comparable_dtype(
+    operation: ComparisonOperation, dtype: DType, other: DType, dtypes: DTypes, /
+) -> None:
+    """Raise if `other` values can't be compared against `dtype` data."""
+    if not is_comparable_dtype(dtype, other, dtypes):
+        msg = (
+            f"'{operation}' cannot check for {other} values in {dtype} data.\n\n"
+            "Hint: cast one of the operands so that both have compatible dtypes."
+        )
+        raise InvalidOperationError(msg)
+
+
+def check_comparable_values(
+    operation: ComparisonOperation,
+    dtype: DType,
+    values: Iterable[PythonLiteral],
+    dtypes: DTypes,
+    /,
+) -> None:
+    """Raise if `values` can't be compared against `dtype` data.
+
+    Like Polars, a collection's dtype is inferred from its first non-null element,
+    so that is the only one which needs looking at.
+    """
+    for value in values:
+        if value is not None:
+            if (other := python_literal_dtype(value, dtypes)) is not None:
+                check_comparable_dtype(operation, dtype, other, dtypes)
+            return
 
 
 def get_column_names(frame: _StoresColumns, /) -> Sequence[str]:
