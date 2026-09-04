@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 import dask.dataframe as dd
 
-from narwhals._dask.utils import add_row_index, evaluate_exprs
+from narwhals._dask.utils import add_row_index, evaluate_exprs, narwhals_to_native_dtype
 from narwhals._pandas_like.utils import native_to_narwhals_dtype, select_columns_by_name
 from narwhals._typing_compat import assert_never
 from narwhals._utils import (
@@ -39,7 +39,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        IntoDType,
+        JoinStrategy,
+        UniqueKeepStrategy,
+    )
 
 Incomplete: TypeAlias = "Any"
 """Using `_pandas_like` utils with `_dask`.
@@ -240,6 +245,13 @@ class DaskLazyFrame(
 
     def rename(self, mapping: Mapping[str, str]) -> Self:
         return self._with_native(self.native.rename(columns=mapping))
+
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        native_dtypes = {
+            name: narwhals_to_native_dtype(dtype, self._version)
+            for name, dtype in dtypes.items()
+        }
+        return self._with_native(self.native.astype(native_dtypes))
 
     def head(self, n: int) -> Self:
         return self._with_native(self.native.head(n=n, compute=False, npartitions=-1))

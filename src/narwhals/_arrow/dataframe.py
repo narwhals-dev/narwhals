@@ -702,6 +702,25 @@ class ArrowDataFrame(
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        # NOTE: `pa.Table.cast` needs a full target schema, which drops table-level
+        # metadata and re-validates every field, raising on unrelated non-nullable
+        # ones that hold nulls. Replace only the mapped columns instead.
+        # See tests/frame/cast_test.py::test_cast_preserves_arrow_schema
+        native = self.native
+        schema = native.schema
+        fields, columns = list(schema), list(native.columns)
+        for name, dtype in dtypes.items():
+            index = schema.get_field_index(name)
+            target = narwhals_to_native_dtype(dtype, self._version)
+            # `with_type` keeps the field's name, nullability and metadata.
+            fields[index] = schema.field(index).with_type(target)
+            columns[index] = pc.cast(columns[index], target)
+        result = pa.Table.from_arrays(columns, schema=pa.schema(fields))
+        return self._with_native(
+            result.replace_schema_metadata(schema.metadata), validate_column_names=False
+        )
+
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
