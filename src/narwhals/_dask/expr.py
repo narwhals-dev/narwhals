@@ -21,6 +21,7 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
+    length_changing_hint,
     not_implemented,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -710,7 +711,12 @@ class DaskExpr(
         return DaskExprDateTimeNamespace(self)
 
     any_value = not_implemented()
-    filter = not_implemented()
+    filter = not_implemented(
+        hint=length_changing_hint(
+            instead_of="lf.select(nw.col('a').filter(nw.col('b') > 0))",
+            use="lf.filter(nw.col('b') > 0).select('a')",
+        )
+    )
     first = not_implemented()
     rank = not_implemented()
     last = not_implemented()
