@@ -27,6 +27,7 @@ from narwhals.exceptions import InvalidIntoExprError, NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
 from narwhals.functions import _new_series_impl, concat, show_versions
 from narwhals.schema import Schema as NwSchema
+from narwhals.selectors import Selector as NwSelector
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dependencies, dtypes, selectors
 from narwhals.stable.v1.dtypes import (
@@ -399,6 +400,8 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
+    _version = Version.V1
+
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
@@ -496,6 +499,11 @@ class Expr(NwExpr):
         return self._append_node(
             ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
+
+
+class Selector(NwSelector, Expr):
+    def _to_expr(self) -> Expr:
+        return Expr(*self._nodes)
 
 
 class Schema(NwSchema):
