@@ -298,9 +298,18 @@ class DaskLazyFrame(
         )
 
     def _join_inner(
-        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str,
+        nulls_equal: bool,
     ) -> dd.DataFrame:
-        return self.native.dropna(subset=left_on, how="any").merge(
+        left_native = (
+            self.native if nulls_equal else self.native.dropna(subset=left_on, how="any")
+        )
+        return left_native.merge(
             other.native,
             left_on=left_on,
             right_on=right_on,
@@ -309,10 +318,21 @@ class DaskLazyFrame(
         )
 
     def _join_left(
-        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str,
+        nulls_equal: bool,
     ) -> dd.DataFrame:
+        right_native = (
+            other.native
+            if nulls_equal
+            else other.native.dropna(subset=right_on, how="any")
+        )
         result_native = self.native.merge(
-            other.native.dropna(subset=right_on, how="any"),
+            right_native,
             how="left",
             left_on=left_on,
             right_on=right_on,
@@ -326,7 +346,13 @@ class DaskLazyFrame(
         return result_native.drop(columns=extra)
 
     def _join_full(
-        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str], suffix: str
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str,
+        nulls_equal: bool,
     ) -> dd.DataFrame:
         # dask does not retain keys post-join
         # we must append the suffix to each key before-hand
@@ -335,6 +361,16 @@ class DaskLazyFrame(
         other_native = other.native.rename(columns=right_on_mapper)
         check_column_names_are_unique(other_native.columns)
         right_suffixed = list(right_on_mapper.values())
+
+        if nulls_equal:
+            # dask merges null keys natively, so a plain outer merge is enough.
+            return self_native.merge(
+                other_native,
+                left_on=left_on,
+                right_on=right_suffixed,
+                how="outer",
+                suffixes=("", suffix),
+            )
 
         left_null_mask = self_native[list(left_on)].isna().any(axis=1)
         right_null_mask = other_native[right_suffixed].isna().any(axis=1)
@@ -375,19 +411,32 @@ class DaskLazyFrame(
         )
 
     def _join_semi(
-        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        nulls_equal: bool,
     ) -> dd.DataFrame:
         other_native = self._join_filter_rename(
             other=other,
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
-        return self.native.dropna(subset=left_on, how="any").merge(
+        left_native = (
+            self.native if nulls_equal else self.native.dropna(subset=left_on, how="any")
+        )
+        return left_native.merge(
             other_native, how="inner", left_on=left_on, right_on=left_on
         )
 
     def _join_anti(
-        self, other: Self, *, left_on: Sequence[str], right_on: Sequence[str]
+        self,
+        other: Self,
+        *,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        nulls_equal: bool,
     ) -> dd.DataFrame:
         indicator_token = generate_temporary_column_name(
             n_bytes=8, columns=(*self.columns, *other.columns), prefix="join_indicator_"
@@ -397,8 +446,13 @@ class DaskLazyFrame(
             columns_to_select=list(right_on),
             columns_mapping=dict(zip(right_on, left_on, strict=False)),
         )
+        right_native = (
+            other_native
+            if nulls_equal
+            else other_native.dropna(subset=left_on, how="any")
+        )
         df = self.native.merge(
-            other_native.dropna(subset=left_on, how="any"),
+            right_native,
             how="left",
             indicator=indicator_token,  # pyright: ignore[reportArgumentType]
             left_on=left_on,
@@ -431,6 +485,7 @@ class DaskLazyFrame(
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         if how == "cross":
             result = self._join_cross(other=other, suffix=suffix)
@@ -440,19 +495,35 @@ class DaskLazyFrame(
 
         elif how == "inner":
             result = self._join_inner(
-                other=other, left_on=left_on, right_on=right_on, suffix=suffix
+                other=other,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         elif how == "anti":
-            result = self._join_anti(other=other, left_on=left_on, right_on=right_on)
+            result = self._join_anti(
+                other=other, left_on=left_on, right_on=right_on, nulls_equal=nulls_equal
+            )
         elif how == "semi":
-            result = self._join_semi(other=other, left_on=left_on, right_on=right_on)
+            result = self._join_semi(
+                other=other, left_on=left_on, right_on=right_on, nulls_equal=nulls_equal
+            )
         elif how == "left":
             result = self._join_left(
-                other=other, left_on=left_on, right_on=right_on, suffix=suffix
+                other=other,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         elif how == "full":
             result = self._join_full(
-                other=other, left_on=left_on, right_on=right_on, suffix=suffix
+                other=other,
+                left_on=left_on,
+                right_on=right_on,
+                suffix=suffix,
+                nulls_equal=nulls_equal,
             )
         else:
             assert_never(how)
