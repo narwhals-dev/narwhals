@@ -118,7 +118,17 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v2` differences
 
-There are none so far: everything not labelled "unstable" in the main namespace is also
+- Since Narwhals 2.26:
+
+    - `Expr.cat.get_categories` and `Series.cat.get_categories` are deprecated in the main
+      Narwhals namespace, as Polars removed their own `cat.get_categories`. To get the
+      distinct values present in a Categorical column, use `unique`; for the fixed category
+      list of an Enum, use its `dtype.categories`. Until they are removed, they are
+      implemented as `unique().drop_nulls().cast(String)`.
+      In `narwhals.stable.v1` and `narwhals.stable.v2` they remain available and keep
+      dispatching to each backend's native implementation.
+
+Other than that, everything not labelled "unstable" in the main namespace is also
 available in `narwhals.stable.v2`.
 
 ## `main` vs `stable.v1` differences

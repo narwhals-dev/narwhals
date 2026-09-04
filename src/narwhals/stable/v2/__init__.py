@@ -333,6 +333,8 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
+    _version = Version.V2
+
     def any_value(self, *, ignore_nulls: bool = False) -> Self:
         msg = (
             "`Expr.any_value` is being called from the stable API although considered "
