@@ -38,7 +38,7 @@ class ExprCatNamespace(Generic[ExprT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import narwhals as nw
+            >>> import narwhals.stable.v1 as nw
             >>> df_native = pd.DataFrame(
             ...     {"fruits": ["apple", "mango", "mango"]}, dtype="category"
             ... )

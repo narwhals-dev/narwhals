@@ -33,7 +33,7 @@ class SeriesCatNamespace(Generic[SeriesT]):
 
         Examples:
             >>> import pandas as pd
-            >>> import narwhals as nw
+            >>> import narwhals.stable.v2 as nw
             >>> s_native = pd.Series(["apple", "mango", "mango"], dtype="category")
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.cat.get_categories().to_native()
