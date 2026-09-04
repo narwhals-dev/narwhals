@@ -1247,3 +1247,51 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.String()})
     assert schema._version is Version.V1
+
+
+def test_get_categories_v1(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    expected = {"a": ["one", "two"]}
+    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+
+    # This must not warn, neither from Narwhals nor from Polars.
+    result = df.select(nw_v1.col("a").cast(nw_v1.Categorical).cat.get_categories())
+    result_series = df["a"].cast(nw_v1.Categorical).cat.get_categories()
+
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data({"a": result_series.sort()}, expected)
+
+
+def test_get_categories_lazy_v1(constructor_eager: ConstructorEager) -> None:
+    # `stable.v1` allows length-changing expressions in `LazyFrame.select`.
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    lf = nw_v1.from_native(constructor_eager(data)).lazy()
+    expr = nw_v1.col("a").cast(nw_v1.Categorical).cat.get_categories()
+    assert_equal_data(lf.select(expr).sort("a").collect(), {"a": ["one", "two"]})
+
+
+def test_get_categories_enum_polars_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
+    result = nw_v1.from_native(s_native, series_only=True).cat.get_categories()
+    assert result.dtype == nw_v1.String
+    assert result.to_list() == ["Panda", "Polar"]
+
+
+def test_selectors_are_stable_v1(constructor_eager: ConstructorEager) -> None:
+    selector = nw_v1.selectors.numeric()
+    assert isinstance(selector, nw_v1.Expr)
+    assert selector._version is Version.V1
+    assert isinstance(selector | nw_v1.selectors.string(), nw_v1.Expr)
+    assert isinstance(selector + 1, nw_v1.Expr)
+
+    df = nw_v1.from_native(constructor_eager({"a": [3, 1, 2]}), eager_only=True)
+    assert_equal_data(df.select(nw_v1.selectors.numeric().sort().head(2)), {"a": [1, 2]})

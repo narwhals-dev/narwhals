@@ -12,7 +12,7 @@ import pytest
 import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 from narwhals._utils import Implementation
-from narwhals.exceptions import NarwhalsUnstableWarning, ShapeError
+from narwhals.exceptions import InvalidOperationError, NarwhalsUnstableWarning, ShapeError
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
@@ -586,3 +586,54 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
     assert schema._version is Version.V2
+
+
+def test_get_categories_v2(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    expected = {"a": ["one", "two"]}
+    df = nw_v2.from_native(constructor_eager(data), eager_only=True)
+
+    # This must not warn, neither from Narwhals nor from Polars.
+    result = df.select(nw_v2.col("a").cast(nw_v2.Categorical).cat.get_categories())
+    result_series = df["a"].cast(nw_v2.Categorical).cat.get_categories()
+
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data({"a": result_series.sort()}, expected)
+
+
+def test_get_categories_lazy_v2(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    lf = nw_v2.from_native(constructor_eager(data)).lazy()
+    expr = nw_v2.col("a").cast(nw_v2.Categorical).cat.get_categories()
+    msg = "Length-changing expressions are not supported for use in LazyFrame"
+    with pytest.raises(InvalidOperationError, match=msg):
+        lf.select(expr).collect()
+
+    assert_equal_data(lf.select(expr.min()), {"a": ["one"]})
+
+
+def test_get_categories_enum_polars_v2() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
+    result = nw_v2.from_native(s_native, series_only=True).cat.get_categories()
+    assert result.dtype == nw_v2.String
+    assert result.to_list() == ["Panda", "Polar"]
+
+
+def test_selectors_are_stable_v2(constructor_eager: ConstructorEager) -> None:
+    selector = nw_v2.selectors.numeric()
+    assert isinstance(selector, nw_v2.Expr)
+    assert selector._version is Version.V2
+    assert isinstance(selector | nw_v2.selectors.string(), nw_v2.Expr)
+    assert isinstance(selector + 1, nw_v2.Expr)
+
+    df = nw_v2.from_native(constructor_eager({"a": [3, 1, 2]}), eager_only=True)
+    assert_equal_data(df.select(nw_v2.selectors.numeric().first()), {"a": [3]})
