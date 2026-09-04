@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from contextlib import AbstractContextManager, nullcontext as does_not_raise
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -12,7 +13,7 @@ from narwhals.testing.asserts.frame import GUARANTEES_ROW_ORDER
 from tests.utils import PANDAS_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
     from narwhals.typing import IntoDType
     from tests.conftest import Data
@@ -71,7 +72,7 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
             {"a": nw.Int32(), "b": nw.Float32()},
             True,
             True,
-            does_not_raise(),
+            does_not_raise,
         ),
         # Same order, different dtypes
         (
@@ -79,14 +80,14 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
             {"a": nw.Int32(), "b": nw.Float64()},
             False,
             True,
-            does_not_raise(),
+            does_not_raise,
         ),
         (
             {"a": nw.Int32(), "b": nw.Float32()},
             {"a": nw.Int32(), "b": nw.Float64()},
             True,
             True,
-            _assertion_error("dtypes do not match"),
+            partial(_assertion_error, "dtypes do not match"),
         ),
         # Different order, same dtype
         (
@@ -94,14 +95,14 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
             {"b": nw.Float32(), "a": nw.Int32()},
             True,
             False,
-            does_not_raise(),
+            does_not_raise,
         ),
         (
             {"a": nw.Int32(), "b": nw.Float32()},
             {"b": nw.Float32(), "a": nw.Int32()},
             True,
             True,
-            _assertion_error("columns are not in the same order"),
+            partial(_assertion_error, "columns are not in the same order"),
         ),
         # Different order, different dtype
         (
@@ -109,28 +110,28 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
             {"b": nw.Float64(), "a": nw.Int16()},
             False,
             False,
-            does_not_raise(),
+            does_not_raise,
         ),
         (
             {"a": nw.Int32(), "b": nw.Float32()},
             {"b": nw.Float64(), "a": nw.Int16()},
             True,
             False,
-            _assertion_error("dtypes do not match"),
+            partial(_assertion_error, "dtypes do not match"),
         ),
         (
             {"a": nw.Int32(), "b": nw.Float32()},
             {"b": nw.Float64(), "a": nw.Int16()},
             False,
             True,
-            _assertion_error("columns are not in the same order"),
+            partial(_assertion_error, "columns are not in the same order"),
         ),
         (
             {"a": nw.Int32(), "b": nw.Float32()},
             {"b": nw.Float64(), "a": nw.Int16()},
             True,
             True,
-            _assertion_error("columns are not in the same order"),
+            partial(_assertion_error, "columns are not in the same order"),
         ),
         # Different columns (left not in right)
         (
@@ -138,7 +139,7 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
             {"b": nw.Float64()},
             True,
             True,
-            _assertion_error("['a', 'z'] in left, but not in right"),
+            partial(_assertion_error, "['a', 'z'] in left, but not in right"),
         ),
         # Different columns (right not in left)
         (
@@ -146,7 +147,7 @@ def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:
             {"z": nw.String(), "b": nw.Float64()},
             True,
             True,
-            _assertion_error("['b'] in right, but not in left"),
+            partial(_assertion_error, "['b'] in right, but not in left"),
         ),
     ],
 )
@@ -157,7 +158,7 @@ def test_check_schema_mismatch(
     *,
     check_dtypes: bool,
     check_column_order: bool,
-    context: AbstractContextManager[Any],
+    context: Callable[[], AbstractContextManager[Any]],
 ) -> None:
     data = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["foo", "bar", "baz"]}
     left = nw.from_native(constructor(data)).select(
@@ -167,7 +168,7 @@ def test_check_schema_mismatch(
         nw.col(name).cast(dtype) for name, dtype in right_schema.items()
     )
 
-    with context:
+    with context():
         assert_frame_equal(
             left, right, check_column_order=check_column_order, check_dtypes=check_dtypes
         )
@@ -206,12 +207,12 @@ def test_check_row_order(
     )
 
     context = (
-        _assertion_error('value mismatch for column "a"')
+        partial(_assertion_error, 'value mismatch for column "a"')
         if check_row_order and left.implementation in GUARANTEES_ROW_ORDER
-        else does_not_raise()
+        else does_not_raise
     )
 
-    with context:
+    with context():
         assert_frame_equal(left, right, check_row_order=check_row_order)
 
 
