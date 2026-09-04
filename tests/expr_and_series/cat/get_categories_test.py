@@ -11,11 +11,19 @@ data = {"a": ["one", "two", "two", None]}
 expected = {"a": ["one", "two"]}
 
 DEPRECATION_MSG = r"`(Expr|Series)\.cat\.get_categories` is deprecated"
+# Modin's `astype(str)` returns a NumPy unicode dtype (e.g. `<U3`) where pandas
+# returns `object`, and Narwhals maps that to `Unknown` rather than `String`.
+MODIN_STR_CAST_REASON = "Modin returns a NumPy unicode dtype when casting to String"
 
 
-def test_get_categories_eager(constructor_eager: ConstructorEager) -> None:
+def test_get_categories_eager(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
+
+    if "modin" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail(reason=MODIN_STR_CAST_REASON))
 
     with pytest.warns(DeprecationWarning, match=DEPRECATION_MSG):
         expr = nw.col("a").cast(nw.Categorical).cat.get_categories()
@@ -28,9 +36,14 @@ def test_get_categories_eager(constructor_eager: ConstructorEager) -> None:
     assert result.collect_schema() == {"a": nw.String}
 
 
-def test_get_categories_series(constructor_eager: ConstructorEager) -> None:
+def test_get_categories_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
         pytest.skip()
+
+    if "modin" in str(constructor_eager):
+        request.applymarker(pytest.mark.xfail(reason=MODIN_STR_CAST_REASON))
 
     s = nw.from_native(constructor_eager(data), eager_only=True)["a"].cast(nw.Categorical)
     with pytest.warns(DeprecationWarning, match=DEPRECATION_MSG):
