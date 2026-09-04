@@ -20,7 +20,7 @@ class SeriesCatNamespace(Generic[SeriesT]):
             This is deprecated and it will be removed in a future version, as Polars
             removed its own `cat.get_categories`.
             To get the distinct values present in a Categorical column, use
-            [`Series.unique`][narwhals.Series.unique].
+            [`Series.unique`][narwhals.series.Series.unique].
             For the fixed category list of an Enum, use its `dtype.categories`.
 
             Until it is removed, it is implemented as
