@@ -1295,3 +1295,24 @@ def test_selectors_are_stable_v1(constructor_eager: ConstructorEager) -> None:
 
     df = nw_v1.from_native(constructor_eager({"a": [3, 1, 2]}), eager_only=True)
     assert_equal_data(df.select(nw_v1.selectors.numeric().sort().head(2)), {"a": [1, 2]})
+
+
+def test_selectors_all_stableified_v1() -> None:
+    args: dict[str, tuple[Any, ...]] = {
+        "all": (),
+        "boolean": (),
+        "by_dtype": (nw_v1.Int64,),
+        "categorical": (),
+        "datetime": (),
+        "enum": (),
+        "matches": ("^a$",),
+        "numeric": (),
+        "string": (),
+    }
+    # Fail if a new selector is added but not covered here.
+    assert set(args) == set(nw_v1.selectors.__all__)
+
+    for name, arg in args.items():
+        selector = getattr(nw_v1.selectors, name)(*arg)
+        assert isinstance(selector, nw_v1.Expr), name
+        assert selector._version is Version.V1, name
