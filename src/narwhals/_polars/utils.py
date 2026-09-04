@@ -366,7 +366,6 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "cat"
 
-    # NOTE: not a passthrough, Polars removes `cat.get_categories` in 2.0.
     @abc.abstractmethod
     def get_categories(self) -> CompliantT: ...
 
