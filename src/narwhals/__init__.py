@@ -85,7 +85,7 @@ from narwhals.functions import (
     when,
 )
 from narwhals.schema import Schema
-from narwhals.series import Series
+from narwhals.series import Encoded, Series
 from narwhals.translate import (
     from_native,
     get_native_namespace,
@@ -106,6 +106,7 @@ __all__ = [
     "Datetime",
     "Decimal",
     "Duration",
+    "Encoded",
     "Enum",
     "Expr",
     "Field",

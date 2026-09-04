@@ -80,6 +80,7 @@ SERIES_ONLY_METHODS = {
     "arg_min",
     "arg_true",
     "dtype",
+    "factorize",
     "from_iterable",
     "from_numpy",
     "gather_every",

@@ -29,6 +29,7 @@ from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
 from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
+from narwhals.typing import Encode, Preserve, Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
@@ -55,6 +56,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NullPolicy,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -1197,6 +1199,60 @@ class PandasLikeSeries(EagerSeries[Any]):
     def is_native_dtype_pyarrow(self, native_dtype: Any) -> bool:
         impl = self._implementation
         return get_dtype_backend(native_dtype, implementation=impl) == "pyarrow"
+
+    def factorize(self, *, sort: bool, null_policy: NullPolicy) -> tuple[Self, Self]:
+        pdx = self.__native_namespace__()
+
+        if self.is_native_dtype_pyarrow(self.native.dtype):
+            import pyarrow as pa  # ignore-banned-import()
+
+            from narwhals._arrow.series import ArrowSeries
+
+            codes, uniques = ArrowSeries(
+                pa.chunked_array(pa.array(self.native)),
+                name=self._name,
+                version=self._version,
+            ).factorize(null_policy=null_policy, sort=sort)
+            return (
+                self._with_native(
+                    pdx.Series(
+                        pdx.arrays.ArrowExtensionArray(codes.native),
+                        dtype="int32[pyarrow]",
+                    )
+                ),
+                self._with_native(
+                    pdx.Series(pdx.arrays.ArrowExtensionArray(uniques.native))
+                ),
+            )
+
+        match null_policy:
+            case Preserve():
+                codes, uniques = self.native.factorize(sort=sort)
+                codes = pdx.Series(codes, dtype="Int64").mask(lambda s: s == -1)
+
+            case Encode():
+                if (
+                    self._implementation is Implementation.PANDAS
+                    and self._backend_version < (1.5,)
+                ):
+                    kwargs = {"sort": sort, "na_sentinel": None}
+                else:
+                    kwargs = {"sort": sort, "use_na_sentinel": False}
+                codes, uniques = self.native.factorize(**kwargs)
+
+            case Sentinel(value):
+                codes, uniques = self.native.factorize(sort=sort)
+                if value != -1:
+                    codes = pdx.Series(codes, dtype="Int64").mask(
+                        lambda s: s == -1, value
+                    )
+            case _:  # pragma: no cover
+                assert_never(null_policy)
+
+        return (
+            self._with_native(pdx.Series(codes)),
+            self._with_native(pdx.Series(uniques)),
+        )
 
     def _apply_pyarrow_compute_func(
         self, native: NativeSeriesT, pc_func: Callable[[ChunkedArrayAny], ChunkedArrayAny]

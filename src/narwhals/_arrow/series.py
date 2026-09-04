@@ -36,6 +36,7 @@ from narwhals._utils import (
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import InvalidOperationError, ShapeError
+from narwhals.typing import Encode, Preserve, Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NullPolicy,
         PythonLiteral,
         RankMethod,
         RollingInterpolationMethod,
@@ -1042,6 +1044,58 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             .with_bin_count(bin_count)
             .to_frame()
         )
+
+    def factorize(self, *, sort: bool, null_policy: NullPolicy) -> tuple[Self, Self]:
+        if len(self.native) == 0:
+            codes = pa.chunked_array([[]], type=pa.int32())
+            uniques = pa.chunked_array([[]]).cast(self.native.type)
+            return (self._with_native(codes), self._with_native(uniques))
+
+        # https://github.com/apache/arrow/issues/33297; input pa.NullArray's don't dictionary_encode properly
+        if pa.types.is_null(self.native.type):
+            match null_policy:
+                case Preserve():
+                    codes, uniques = (
+                        pa.nulls(len(self.native), type=pa.int8()),
+                        pa.nulls(0, type=self.native.type),
+                    )
+                case Encode():
+                    codes, uniques = (
+                        pa.repeat(0, len(self.native)),
+                        pa.nulls(1, type=self.native.type),
+                    )
+                case Sentinel(value):
+                    codes, uniques = (
+                        pa.repeat(value, len(self.native)),
+                        pa.nulls(0, type=self.native.type),
+                    )
+                case _:  # pragma: no cover
+                    assert_never(null_policy)
+
+            return (self._with_native(codes), self._with_native(uniques))
+
+        native = self.native
+        if pa.types.is_dictionary(native.type):
+            # re-encode if already dict encoded; can't be certain how the original dict encoding was done
+            native = native.cast(native.type.value_type)
+
+        null_encoding: Literal["encode", "mask"] = (
+            "encode" if (isinstance(null_policy, Encode)) else "mask"
+        )
+        encoded: Incomplete = pc.dictionary_encode(
+            native, null_encoding=null_encoding
+        ).combine_chunks()
+        uniques, codes = encoded.dictionary, encoded.indices
+
+        if sort:
+            uniques = pc.take(uniques, pc.sort_indices(uniques))
+            mapping = pc.index_in(uniques, value_set=uniques)
+            codes = pc.take(mapping, codes)
+
+        if isinstance(null_policy, Sentinel):
+            codes = pc.fill_null(codes, null_policy.value)
+
+        return (self._with_native(codes), self._with_native(uniques))
 
     def __iter__(self) -> Iterator[Any]:
         for x in self.native:

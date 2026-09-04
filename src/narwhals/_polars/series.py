@@ -22,6 +22,7 @@ from narwhals._polars.utils import (
 )
 from narwhals._utils import NO_DEFAULT, Implementation, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals.typing import Preserve, Sentinel
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -44,6 +45,7 @@ if TYPE_CHECKING:
         ModeKeepStrategy,
         MultiIndexSelector,
         NonNestedLiteral,
+        NullPolicy,
         PythonLiteral,
         _1DArray,
     )
@@ -669,6 +671,32 @@ class PolarsSeries:
 
     def any_value(self, *, ignore_nulls: bool) -> PythonLiteral:
         return self.drop_nulls().first() if ignore_nulls else self.first()
+
+    def factorize(self, *, sort: bool, null_policy: NullPolicy) -> tuple[Self, Self]:
+
+        unique_expr = pl.col(self.native.name).unique()
+        if isinstance(null_policy, (Preserve, Sentinel)):
+            unique_expr = unique_expr.drop_nulls()
+
+        if sort:
+            unique_expr = unique_expr.sort(nulls_last=True)
+
+        uniques = (
+            self.native.to_frame()
+            .lazy()
+            .select(unique_expr)
+            .collect()
+            .get_column(self.native.name)
+        )
+
+        match null_policy:
+            case Sentinel(value):
+                codes = self.native.replace_strict(
+                    old=uniques, new=range(len(uniques)), default=value
+                )
+            case _:
+                codes = self.native.replace_strict(old=uniques, new=range(len(uniques)))
+        return self._with_native(codes.cast(pl.Int32())), self._with_native(uniques)
 
     @property
     def dt(self) -> PolarsSeriesDateTimeNamespace:

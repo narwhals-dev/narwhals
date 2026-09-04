@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, cast, overload
 
 from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
@@ -33,7 +35,7 @@ from narwhals.series_list import SeriesListNamespace
 from narwhals.series_str import SeriesStringNamespace
 from narwhals.series_struct import SeriesStructNamespace
 from narwhals.translate import to_native
-from narwhals.typing import IntoSeriesT
+from narwhals.typing import Encode, IntoSeriesT, Preserve, Sentinel
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -54,6 +56,7 @@ if TYPE_CHECKING:
         IntoDType,
         ModeKeepStrategy,
         NonNestedLiteral,
+        NullPolicyLiteral,
         NumericLiteral,
         PythonLiteral,
         RankMethod,
@@ -2910,6 +2913,94 @@ class Series(Generic[IntoSeriesT]):
         return cast("Self", result)
 
     @unstable
+    def factorize(
+        self,
+        *,
+        sort: bool = False,
+        null_policy: NullPolicyLiteral = "preserve",
+        sentinel: Any | NoDefault = NO_DEFAULT,
+    ) -> Encoded[IntoSeriesT]:
+        """Encode values as integer codes and unique values.
+
+        The integer codes are index locations that map each value in the
+        original array to its corresponding position in the unique values.
+
+        Warning:
+            This functionality is considered **unstable** as it diverges from the polars API.
+            It may be changed at any point without it being considered a breaking change.
+
+        Arguments:
+            sort: Whether to sort the unique values before assigning codes.
+            null_policy:
+                "preserve": Preserve null values in the returned codes. Null values are
+                    not included in the unique values.
+                "encode": Encode null values as a unique value. Null values are included
+                    in the unique values, and their codes index that null value.
+                "sentinel": Replace null values in the returned codes with ``sentinel``.
+                    Null values are not included in the unique values.
+            sentinel: The value placed into the returned codes when specifying
+                ``null_policy='sentinel'``
+
+        Returns:
+            codes: An integer series where each value represents the index
+                of the corresponding value in `uniques`.
+            uniques: A series containing the unique values.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df = pl.DataFrame({"groups": ["a", "b", "a", None]})
+            >>> nw_df = nw.from_native(df)
+            >>> codes, uniques = nw_df["groups"].factorize(sort=True)
+            >>> codes
+            ┌─────────────────────┐
+            |   Narwhals Series   |
+            |---------------------|
+            |shape: (4,)          |
+            |Series: 'codes' [i32]|
+            |[                    |
+            |        0            |
+            |        1            |
+            |        0            |
+            |        null         |
+            |]                    |
+            └─────────────────────┘
+
+            >>> uniques
+            ┌───────────────────────┐
+            |    Narwhals Series    |
+            |-----------------------|
+            |shape: (2,)            |
+            |Series: 'uniques' [str]|
+            |[                      |
+            |        "a"            |
+            |        "b"            |
+            |]                      |
+            └───────────────────────┘
+        """
+        if null_policy == "sentinel" and sentinel is NO_DEFAULT:
+            msg = "Must supply `sentinel` when null_policy='sentinel'"
+            raise TypeError(msg)
+        if null_policy != "sentinel" and sentinel is not NO_DEFAULT:
+            msg = f"Argument `sentinel` is ignored when null_policy='{null_policy}'"
+            raise TypeError(msg)
+
+        if null_policy == "preserve":
+            policy = Preserve()
+        elif null_policy == "encode":
+            policy = Encode()
+        elif null_policy == "sentinel":
+            policy = Sentinel(sentinel)
+        else:
+            assert_never(null_policy)
+
+        codes, uniques = self._compliant_series.factorize(null_policy=policy, sort=sort)
+        return Encoded(
+            self._with_compliant(codes).alias("codes"),
+            self._with_compliant(uniques).alias("uniques"),
+        )
+
+    @unstable
     def any_value(self, *, ignore_nulls: bool = False) -> PythonLiteral:
         """Get a random value from the column.
 
@@ -2950,3 +3041,26 @@ class Series(Generic[IntoSeriesT]):
     @property
     def struct(self) -> SeriesStructNamespace[Self]:
         return SeriesStructNamespace(self)
+
+
+@unstable
+@dataclass(frozen=True)
+class Encoded(Generic[IntoSeriesT]):
+    """Result of `factorize`. Unpacks as `(codes, uniques)` like pandas.
+
+    Warning:
+        This functionality is considered **unstable** as it diverges from the polars API.
+        It may be changed at any point without it being considered a breaking change.
+    """
+
+    codes: Series[IntoSeriesT]
+    uniques: Series[IntoSeriesT]
+
+    def __iter__(self) -> Iterator[Series[IntoSeriesT]]:
+        yield self.codes
+        yield self.uniques
+
+    @property
+    def mapping(self) -> Mapping[Any, int]:
+        """Forward map as a joinable ``(value, code)`` frame; works for any dtype."""
+        return {value: idx for idx, value in enumerate(self.uniques)}
