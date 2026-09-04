@@ -182,7 +182,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.aggregate(selection))
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_exception(e, self) from None
+            raise catch_duckdb_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
 
     def select(self, *exprs: DuckDBExpr) -> Self:
         selection = (
@@ -191,7 +191,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.select(*selection))
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_exception(e, self) from None
+            raise catch_duckdb_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         columns_to_drop = parse_columns_to_drop(self, columns, strict=strict)
@@ -220,7 +220,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.select(*result))
         except Exception as e:  # noqa: BLE001
-            raise catch_duckdb_exception(e, self) from None
+            raise catch_duckdb_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
 
     def _filter(self, predicate: DuckDBExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
@@ -228,7 +228,7 @@ class DuckDBLazyFrame(
         try:
             return self._with_native(self.native.filter(mask))
         except Exception as e:
-            raise catch_duckdb_exception(e, self) from e
+            raise catch_duckdb_exception(e, self) from e  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
 
     @property
     def schema(self) -> dict[str, DType]:

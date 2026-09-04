@@ -11,13 +11,13 @@ if TYPE_CHECKING:
     from narwhals._dask.dataframe import DaskLazyFrame  # noqa: F401
 
 
-class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]
+class DaskSelectorNamespace(LazySelectorNamespace["DaskLazyFrame", "dx.Series"]):  # pyright: ignore[reportInvalidTypeArguments]  # pyrefly: ignore[bad-specialization]
     @property
     def _selector(self) -> type[DaskSelector]:
         return DaskSelector
 
 
-class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # pyright: ignore[reportInvalidTypeArguments]
+class DaskSelector(CompliantSelector["DaskLazyFrame", "dx.Series"], DaskExpr):  # pyright: ignore[reportInvalidTypeArguments]  # pyrefly: ignore[bad-specialization]
     def _to_expr(self) -> DaskExpr:
         return DaskExpr(
             self._call,

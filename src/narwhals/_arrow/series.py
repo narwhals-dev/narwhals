@@ -173,7 +173,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         if dtype is not None:
             dtype_pa: pa.DataType | None = narwhals_to_native_dtype(dtype, version)
             if is_array_or_scalar(data):
-                data = data.cast(dtype_pa)
+                data = data.cast(dtype_pa)  # pyrefly: ignore[bad-assignment, bad-specialization]
                 dtype_pa = None
             native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
         else:
@@ -328,7 +328,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             _, other_native = extract_native(self, predicate)
         else:
             other_native = predicate
-        return self._with_native(self.native.filter(other_native))
+        return self._with_native(self.native.filter(other_native))  # pyrefly: ignore[bad-argument-type]
 
     def first(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
         result = self.native[0] if len(self.native) else None
@@ -986,7 +986,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 (rolling_sum_sq - (rolling_sum**2 / count_in_window)).native,
                 None,
             )
-        ) / self._with_native(pc.max_element_wise((count_in_window - ddof).native, 0))
+        ) / self._with_native(pc.max_element_wise((count_in_window - ddof).native, 0))  # pyrefly: ignore[no-matching-overload]
 
         return result._gather_slice(slice(offset, None, None))
 
@@ -1029,7 +1029,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
             .with_bins(bins)
             .to_frame()
         )
@@ -1038,7 +1038,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
             .with_bin_count(bin_count)
             .to_frame()
         )
@@ -1064,7 +1064,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise InvalidOperationError(msg) from exc
 
     def log(self, base: float) -> Self:
-        return self._with_native(pc.logb(self.native, lit(base)))
+        return self._with_native(pc.logb(self.native, lit(base)))  # pyrefly: ignore[bad-argument-type]
 
     def exp(self) -> Self:
         return self._with_native(pc.exp(self.native))
@@ -1096,7 +1096,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesStringNamespace(self)
 
     @property
-    def list(self) -> ArrowSeriesListNamespace:
+    def list(self) -> ArrowSeriesListNamespace:  # pyrefly: ignore[bad-override]  # pyrefly-issues/01-self-nested-generic.md
         return ArrowSeriesListNamespace(self)
 
     @property
@@ -1109,7 +1109,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 class _ArrowHist(
     EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
 ):
-    _series: ArrowSeries
+    _series: ArrowSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # pyrefly-issues/01-self-nested-generic.md
 
     def to_frame(self) -> ArrowDataFrame:
         # NOTE: Constructor typing is too strict for `TypedDict`
@@ -1170,7 +1170,7 @@ class _ArrowHist(
             is_between_bins = pc.and_(
                 pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
             )
-            count = pc.sum(is_between_bins.cast(pa.uint8()))
+            count = pc.sum(is_between_bins.cast(pa.uint8()))  # pyrefly: ignore[bad-specialization]
             if self._breakpoint:
                 return {"breakpoint": [bins[-1]], "count": [count]}
             return {"count": [count]}

@@ -250,7 +250,7 @@ class CompliantSelector(
         if self._is_selector(other):
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
-                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 rhs_set = frozenset(rhs_names)
                 return [
                     x
@@ -259,7 +259,7 @@ class CompliantSelector(
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
-                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 rhs_set = frozenset(rhs_names)
                 return [x for x in lhs_names if x not in rhs_set]
 
@@ -278,7 +278,7 @@ class CompliantSelector(
         if self._is_selector(other):
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
-                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 rhs_set = frozenset(rhs_names)
                 return [
                     *(
@@ -290,7 +290,7 @@ class CompliantSelector(
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
-                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 rhs_set = frozenset(rhs_names)
                 return [*(x for x in lhs_names if x not in rhs_set), *rhs_names]
 
@@ -309,7 +309,7 @@ class CompliantSelector(
         if self._is_selector(other):
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
-                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 rhs_set = frozenset(rhs_names)
                 return [
                     x
@@ -318,7 +318,7 @@ class CompliantSelector(
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
-                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 rhs_set = frozenset(rhs_names)
                 return [x for x in lhs_names if x in rhs_set]
 

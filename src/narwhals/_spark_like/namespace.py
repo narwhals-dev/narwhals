@@ -122,7 +122,7 @@ class SparkLikeNamespace(
 
     def _function(self, name: str, *args: Column | PythonLiteral) -> Column:
         if name in _BINARY_OPS:
-            return _BINARY_OPS[name](*args)
+            return _BINARY_OPS[name](*args)  # pyrefly: ignore[no-matching-overload]  # pyrefly-issues/05-operator-overload-with-star-args.md
         if name == "isnotnull":
             return args[0].isNotNull()  # type: ignore[union-attr]
         return getattr(self._F, FUNCTION_REMAPPINGS.get(name, name))(*args)

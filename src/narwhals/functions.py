@@ -1357,7 +1357,7 @@ class Then(Expr):
     _otherwise: IntoExpr | NonNestedLiteral | None = None
 
     @property
-    def _nodes(self) -> tuple[ExprNode, ...]:
+    def _nodes(self) -> tuple[ExprNode, ...]:  # pyrefly: ignore[bad-override]  # pyrefly-issues/07-property-overriding-mutable-attribute.md
         if self._cached_nodes:
             return self._cached_nodes
         expr = self._otherwise
