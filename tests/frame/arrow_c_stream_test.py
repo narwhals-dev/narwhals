@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, NoReturn
+
 import pytest
 
 import narwhals as nw
@@ -17,6 +19,11 @@ import pyarrow as pa
 import pyarrow.compute as pc
 
 
+def _poison(*_: Any) -> NoReturn:
+    msg = "__arrow_c_stream__ was poisoned"
+    raise RuntimeError(msg)
+
+
 def test_arrow_c_stream_test() -> None:
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
     result = pa.table(df)
@@ -26,11 +33,9 @@ def test_arrow_c_stream_test() -> None:
 
 def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     # "poison" the dunder method to make sure it actually got called above
-    monkeypatch.setattr(
-        "narwhals.dataframe.DataFrame.__arrow_c_stream__", lambda *_: 1 / 0
-    )
+    monkeypatch.setattr("narwhals.dataframe.DataFrame.__arrow_c_stream__", _poison)
     df = nw.from_native(pl.Series([1, 2, 3]).to_frame("a"), eager_only=True)
-    with pytest.raises(ZeroDivisionError, match="division by zero"):
+    with pytest.raises(RuntimeError, match="poisoned"):
         pa.table(df)
 
 

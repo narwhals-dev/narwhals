@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, NoReturn
+
 import pytest
 
 import narwhals as nw
@@ -12,6 +14,11 @@ pytest.importorskip("pyarrow.compute")
 import polars as pl
 import pyarrow as pa
 import pyarrow.compute as pc
+
+
+def _poison(*_: Any) -> NoReturn:
+    msg = "__arrow_c_stream__ was poisoned"
+    raise RuntimeError(msg)
 
 
 @pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
@@ -31,9 +38,9 @@ def test_arrow_c_stream_test() -> None:
 )
 def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     # "poison" the dunder method to make sure it actually got called above
-    monkeypatch.setattr("narwhals.series.Series.__arrow_c_stream__", lambda *_: 1 / 0)
+    monkeypatch.setattr("narwhals.series.Series.__arrow_c_stream__", _poison)
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
-    with pytest.raises(ZeroDivisionError, match="division by zero"):
+    with pytest.raises(RuntimeError, match="poisoned"):
         pa.chunked_array(s)
 
 
