@@ -69,6 +69,12 @@ class DictSeriesStringNamespace(
     def strip_chars(self, characters: str | None) -> DictSeries:
         return self._unary(lambda value: value.strip(characters))
 
+    def strip_chars_start(self, characters: str | None) -> DictSeries:
+        return self._unary(lambda value: value.lstrip(characters))
+
+    def strip_chars_end(self, characters: str | None) -> DictSeries:
+        return self._unary(lambda value: value.rstrip(characters))
+
     def starts_with(self, prefix: DictSeries) -> DictSeries:
         return self._with_other(str.startswith, prefix)
 
