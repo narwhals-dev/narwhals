@@ -1048,17 +1048,15 @@ class DictDataFrame(
             writer.writerow(self.columns)
             writer.writerows(self.iter_rows(named=False, buffer_size=512))
 
-        if file is None:
-            buffer = StringIO()
-            dump(buffer)
-            return buffer.getvalue()
         if isinstance(file, (str, Path)):
             with Path(file).open("w", newline="", encoding="utf-8") as stream:
                 dump(stream)
-        else:  # binary stream, e.g. `BytesIO`
-            buffer = StringIO()
-            dump(buffer)
-            file.write(buffer.getvalue().encode())
+            return None
+        buffer = StringIO()
+        dump(buffer)
+        if file is None:
+            return buffer.getvalue()
+        file.write(buffer.getvalue().encode())  # binary stream, e.g. `BytesIO`
         return None
 
     def unpivot(

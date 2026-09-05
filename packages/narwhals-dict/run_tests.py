@@ -1,20 +1,24 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Run narwhals' own test suite against `narwhals-dict`.
 
 Mirrors the approach of `narwhals-daft`: narwhals' `tests/conftest.py` skips its
 own constructor parametrization when `--use-external-constructor` is passed, and
 the `narwhals_dict.testing` pytest plugin injects a plain-dict constructor
 instead. Tests that are known to fail (mostly `not_implemented` functionality)
-are excluded via `--deselect`, keyed by full `file::name` node id so that
-same-named tests in different files are not conflated.
+are listed in `known_failures.txt` and excluded via `--deselect`, keyed by full
+`file::name` node id so that same-named tests in different files are not
+conflated.
 
 Usage, from anywhere inside the repository:
 
     python packages/narwhals-dict/run_tests.py             # excludes known failures
-    python packages/narwhals-dict/run_tests.py --update    # regenerate TESTS_THAT_NEED_FIX
+    python packages/narwhals-dict/run_tests.py --all       # includes known failures
+    python packages/narwhals-dict/run_tests.py --update    # regenerate known_failures.txt
     python packages/narwhals-dict/run_tests.py -x -q ...   # extra args pass through to pytest
 
 Fixing a `not_implemented` method? Run with `--update` afterwards to shrink the list.
+`--update` prints what it added and removed, and exits non-zero on any addition,
+so a new failure cannot be absorbed into the baseline unnoticed.
 """
 
 from __future__ import annotations
@@ -26,60 +30,7 @@ from pathlib import Path
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parents[1]
-
-# fmt: off
-# --- BEGIN TESTS_THAT_NEED_FIX (auto-generated, see --update) ---
-TESTS_THAT_NEED_FIX: list[str] = [
-    "tests/dependencies/is_into_dataframe_test.py::test_is_into_dataframe",
-    "tests/dependencies/is_into_dataframe_test.py::test_is_into_dataframe_other",
-    "tests/dependencies/is_into_lazyframe_test.py::test_is_into_lazyframe",
-    "tests/dependencies/is_into_series_test.py::test_is_into_series",
-    "tests/dtypes/dtypes_test.py::test_2d_array",
-    "tests/expr_and_series/cast_test.py::test_cast",
-    "tests/expr_and_series/cast_test.py::test_cast_series",
-    "tests/expr_and_series/cast_test.py::test_cast_struct",
-    "tests/expr_and_series/cast_test.py::test_cast_to_float16",
-    "tests/expr_and_series/is_close_test.py::test_is_close_series_with_scalar",
-    "tests/expr_and_series/is_close_test.py::test_is_close_series_with_series",
-    "tests/expr_and_series/replace_strict_test.py::test_replace_strict_expr_basic",
-    "tests/expr_and_series/struct_test.py::test_struct_with_schema",
-    "tests/expr_and_series/when_test.py::test_otherwise_numpy_array",
-    "tests/expr_and_series/when_test.py::test_value_numpy_array",
-    "tests/frame/collect_test.py::test_collect_to_default_backend",
-    "tests/frame/filter_test.py::test_filter_with_boolean_list_predicates_eager",
-    "tests/frame/filter_test.py::test_filter_with_predicates_and_constraints",
-    "tests/frame/lazy_test.py::test_lazy_to_default",
-    "tests/frame/sink_parquet_test.py::test_sink_parquet",
-    "tests/frame/with_columns_sequence_test.py::test_with_columns",
-    "tests/frame/with_columns_test.py::test_with_columns_dtypes_single_row",
-    "tests/frame/write_parquet_test.py::test_write_parquet",
-    "tests/from_numpy_test.py::test_from_numpy",
-    "tests/from_numpy_test.py::test_from_numpy_schema_dict",
-    "tests/from_numpy_test.py::test_from_numpy_schema_list",
-    "tests/from_numpy_test.py::test_from_numpy_square",
-    "tests/from_numpy_test.py::test_from_numpy_square_roundtrip",
-    "tests/namespace_test.py::test_namespace_from_native_object",
-    "tests/new_series_test.py::test_new_series",
-    "tests/plugins_test.py::test_is_into_dataframe",
-    "tests/plugins_test.py::test_not_implemented",
-    "tests/plugins_test.py::test_plugin",
-    "tests/read_scan_test.py::test_scan_csv",
-    "tests/read_scan_test.py::test_scan_parquet",
-    "tests/selectors_test.py::test_categorical",
-    "tests/selectors_test.py::test_datetime",
-    "tests/selectors_test.py::test_enum_distinct_from_categorical",
-    "tests/series_only/getitem_test.py::test_by_slice",
-    "tests/series_only/scatter_test.py::test_scatter",
-    "tests/series_only/scatter_test.py::test_scatter_2862",
-    "tests/series_only/to_dummy_test.py::test_to_dummies_drop_first_na",
-    "tests/testing/assert_frame_equal_test.py::test_check_schema_mismatch",
-    "tests/testing/assert_series_equal_test.py::test_metadata_checks",
-    "tests/testing/assert_series_equal_test.py::test_metadata_checks_with_flags",
-    "tests/translate/get_native_namespace_test.py::test_native_namespace_frame",
-    "tests/translate/get_native_namespace_test.py::test_native_namespace_series",
-]
-# --- END TESTS_THAT_NEED_FIX ---
-# fmt: on
+KNOWN_FAILURES = PACKAGE_ROOT / "known_failures.txt"
 
 BASE_COMMAND = [
     "uv",
@@ -91,13 +42,30 @@ BASE_COMMAND = [
     "--use-external-constructor",
 ]
 
-FAILED_PATTERN = re.compile(r"^(?:FAILED|ERROR) (tests/\S+?::\w+)", re.MULTILINE)
+# The parametrization id is part of the node id, so one failing case does not
+# deselect every other case of the same test.
+FAILED_PATTERN = re.compile(
+    r"^(?:FAILED|ERROR) (tests/\S+?::\w+(?:\[[^\]]*\])?)", re.MULTILINE
+)
 
 
-def run_tests(extra_args: list[str]) -> int:
+def read_known_failures(*, required: bool) -> list[str]:
+    if KNOWN_FAILURES.exists():
+        return KNOWN_FAILURES.read_text(encoding="utf-8").split()
+    if required:
+        msg = (
+            f"{KNOWN_FAILURES} is missing; run with --update to generate it, "
+            f"or --all to skip deselection."
+        )
+        raise SystemExit(msg)
+    return []
+
+
+def run_tests(extra_args: list[str], *, deselect_known_failures: bool) -> int:
     command = [*BASE_COMMAND, *extra_args]
-    for node_id in TESTS_THAT_NEED_FIX:
-        command.extend(["--deselect", node_id])
+    if deselect_known_failures:
+        for node_id in read_known_failures(required=True):
+            command.extend(["--deselect", node_id])
     return subprocess.run(command, check=False, cwd=REPO_ROOT).returncode  # noqa: S603
 
 
@@ -106,31 +74,35 @@ def update_known_failures() -> int:
     result = subprocess.run(  # noqa: S603
         command, check=False, cwd=REPO_ROOT, capture_output=True, text=True
     )
-    failures = sorted(set(FAILED_PATTERN.findall(result.stdout)))
+    # Only rc 0 (all passed) and rc 1 (some failed) describe the suite. Anything
+    # else is a crash, and rewriting the baseline from it would destroy it.
+    if result.returncode not in {0, 1}:
+        sys.stdout.write(result.stdout[-4000:])
+        msg = f"pytest exited {result.returncode}; {KNOWN_FAILURES.name} left untouched."
+        raise SystemExit(msg)
 
-    this_file = Path(__file__)
-    content = this_file.read_text(encoding="utf-8")
-    lines = ",\n".join(f'    "{name}"' for name in failures)
-    replacement = (
-        "# --- BEGIN TESTS_THAT_NEED_FIX (auto-generated, see --update) ---\n"
-        f"TESTS_THAT_NEED_FIX: list[str] = [\n{lines},\n]\n"
-        if failures
-        else "# --- BEGIN TESTS_THAT_NEED_FIX (auto-generated, see --update) ---\n"
-        "TESTS_THAT_NEED_FIX: list[str] = []\n"
-    )
-    content = re.sub(
-        r"# --- BEGIN TESTS_THAT_NEED_FIX \(auto-generated, see --update\) ---\n.*?(?=# --- END TESTS_THAT_NEED_FIX ---)",
-        replacement,
-        content,
-        flags=re.DOTALL,
-    )
-    this_file.write_text(content, encoding="utf-8")
-    sys.stdout.write(f"Updated TESTS_THAT_NEED_FIX with {len(failures)} entries.\n")
-    return 0
+    failures = sorted(set(FAILED_PATTERN.findall(result.stdout)))
+    previous = set(read_known_failures(required=False))
+    added = sorted(set(failures) - previous)
+    removed = sorted(previous - set(failures))
+    KNOWN_FAILURES.write_text("\n".join(failures) + "\n", encoding="utf-8")
+
+    for node_id in removed:
+        sys.stdout.write(f"  fixed: {node_id}\n")
+    for node_id in added:
+        sys.stdout.write(f"  NEW:   {node_id}\n")
+    sys.stdout.write(f"Updated {KNOWN_FAILURES.name} with {len(failures)} entries.\n")
+    if added:
+        sys.stdout.write(
+            f"{len(added)} new failure(s) added to the baseline -- review them.\n"
+        )
+    return 1 if added else 0
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
     if "--update" in args:
         raise SystemExit(update_known_failures())
-    raise SystemExit(run_tests(args))
+    include_known = "--all" in args
+    args = [arg for arg in args if arg != "--all"]
+    raise SystemExit(run_tests(args, deselect_known_failures=not include_known))

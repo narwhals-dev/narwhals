@@ -9,6 +9,7 @@ from functools import lru_cache
 from itertools import islice
 from typing import TYPE_CHECKING, Any, cast
 
+from narwhals._datetime_formats import DATE_FORMATS, FULL_RE, TIME_FORMATS
 from narwhals._utils import Version, isinstance_or_issubclass
 from narwhals.dependencies import get_numpy
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -28,8 +29,10 @@ __all__ = [
     "is_native_frame",
     "narwhals_to_native_dtype",
     "native_to_narwhals_dtype",
+    "non_null",
     "parse_datetime_format",
     "parse_time_format",
+    "sort_with_nulls",
     "trunc_div",
 ]
 
@@ -231,9 +234,7 @@ def datetime_to_us(value: datetime, /) -> int:
 
 
 def timedelta_to_us(value: timedelta, /) -> int:
-    return (value.days * 86_400 + value.seconds) * MICROSECONDS_PER_UNIT[
-        "s"
-    ] + value.microseconds
+    return (value.days * 86_400 + value.seconds) * 1_000_000 + value.microseconds
 
 
 def duration_to_ns(value: Any, /) -> int | None:
@@ -541,6 +542,21 @@ def cast_values(values: Iterable[Any], dtype: IntoDType, version: Version) -> li
     return [None if value is None else caster(value) for value in values]
 
 
+def non_null(values: Iterable[Any]) -> list[Any]:
+    return [value for value in values if value is not None]
+
+
+def sort_with_nulls(
+    values: Iterable[Any], *, descending: bool, nulls_last: bool
+) -> list[Any]:
+    """Sort the non-null values, keeping the nulls together at one end."""
+    values = list(values)
+    rest = non_null(values)
+    nulls = [None] * (len(values) - len(rest))
+    rest.sort(reverse=descending)
+    return rest + nulls if nulls_last else nulls + rest
+
+
 def _first_non_null(values: Iterable[Any]) -> Any:
     return next((value for value in values if value is not None), None)
 
@@ -627,92 +643,9 @@ def binary_op(
     ]
 
 
-_FULL_DATETIME_RE = re.compile(
-    r"""
-    (?P<date>                            # date component
-        \d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}  #   separated, e.g. 2020-01-02, 01/02/2020
-        | \d{8}                          #   compact, e.g. 20200102
-    )
-    (?P<sep>\s|T)?                       # date/time separator: whitespace or 'T'
-    (?P<time>                            # time component
-        \d{2}:\d{2}(?::\d{2})?           #   separated, e.g. 12:34 or 12:34:56
-        | \d{6}?                         #   compact, e.g. 123456
-    )?
-    (?P<tz>Z|[+-]\d{2}:?\d{2})?          # timezone: 'Z', '+02:00', '+0200'
-    $
-    """,
-    re.VERBOSE,
-)
-
-_YEAR_RE = r"(?:[12][0-9])?[0-9]{2}"  # 2- or 4-digit year, e.g. 2020 or 20
-_MONTH_RE = r"0[1-9]|1[0-2]"  # 01-12
-_DAY_RE = r"0[1-9]|[12][0-9]|3[01]"  # 01-31
-
-_DATE_FORMATS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (
-        re.compile(
-            rf"""
-            ^
-            {_YEAR_RE}          # year
-            (?:{_MONTH_RE})     # month
-            (?:{_DAY_RE})       # day
-            $
-            """,
-            re.VERBOSE,
-        ),
-        "%Y%m%d",
-    ),
-    (
-        re.compile(
-            rf"""
-            ^
-            (?:{_YEAR_RE})      # year
-            (?P<sep1>[-/.])
-            (?:{_MONTH_RE})     # month
-            (?P<sep2>[-/.])
-            (?:{_DAY_RE})       # day
-            $
-            """,
-            re.VERBOSE,
-        ),
-        "%Y-%m-%d",
-    ),
-    (
-        re.compile(
-            rf"""
-            ^
-            (?:{_DAY_RE})       # day
-            (?P<sep1>[-/.])
-            (?:{_MONTH_RE})     # month
-            (?P<sep2>[-/.])
-            (?:{_YEAR_RE})      # year
-            $
-            """,
-            re.VERBOSE,
-        ),
-        "%d-%m-%Y",
-    ),
-    (
-        re.compile(
-            rf"""
-            ^
-            (?:{_MONTH_RE})     # month
-            (?P<sep1>[-/.])
-            (?:{_DAY_RE})       # day
-            (?P<sep2>[-/.])
-            (?:{_YEAR_RE})      # year
-            $
-            """,
-            re.VERBOSE,
-        ),
-        "%m-%d-%Y",
-    ),
-)
-_TIME_FORMATS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"^\d{2}:\d{2}:\d{2}$"), "%H:%M:%S"),
-    (re.compile(r"^\d{2}:\d{2}$"), "%H:%M"),
-    (re.compile(r"^\d{6}$"), "%H%M%S"),
-)
+_FULL_DATETIME_RE = re.compile(FULL_RE)
+_DATE_FORMATS = tuple((re.compile(pattern), fmt) for pattern, fmt in DATE_FORMATS)
+_TIME_FORMATS = tuple((re.compile(pattern), fmt) for pattern, fmt in TIME_FORMATS)
 
 
 def _sample_strings(values: Iterable[Any]) -> list[str]:

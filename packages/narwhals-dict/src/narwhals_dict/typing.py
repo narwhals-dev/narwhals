@@ -12,6 +12,5 @@ if TYPE_CHECKING:
     NativeSeries: TypeAlias = "Sequence[Any]"
     """Native column: any non-string sequence with consistent element type, `None` is null."""
 
-    Incomplete: TypeAlias = "Any"
 
-__all__ = ["DictFrame", "Incomplete", "NativeSeries"]
+__all__ = ["DictFrame", "NativeSeries"]

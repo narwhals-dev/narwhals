@@ -8,7 +8,7 @@ from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals_dict.series import DictSeries
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
     from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals._expression_parsing import ExprNode
@@ -37,12 +37,9 @@ def _bucket_by_keys(key_columns: Sequence[Sequence[Any]]) -> dict[Any, list[int]
 class _GroupedRows:
     """Per-`agg` cache of grouped row indices, gathered columns, and sub-frames.
 
-    `first`/`last` may each request a *different* `order_by`.
-
-    Each column is gathered by group indices at most once per `agg` call,
-    no matter how many expressions reference it. Sharing the gathered lists
-    (rather than copying) is safe: series and frame operations never mutate
-    native lists in place.
+    Everything is keyed by `order_by`, because `first`/`last` may each request a
+    different one. Callers get the cached lists rather than copies, which is safe
+    because series and frame operations never mutate native lists in place.
     """
 
     def __init__(self, frame: DictDataFrame, keys: Sequence[str]) -> None:
@@ -74,11 +71,9 @@ class _GroupedRows:
 
     def key_column(self, position: int) -> list[Any]:
         """The distinct key values for key-column `position`, in group order."""
-        return (
-            self.keys.copy()
-            if len(self._key_columns) == 1
-            else [key[position] for key in self.keys]
-        )
+        if len(self._key_columns) == 1:
+            return self.keys
+        return [key[position] for key in self.keys]
 
     def indices(self, order_by: tuple[str, ...]) -> list[list[int]]:
         """Each group's row indices, ordered by `order_by` (ascending, nulls first)."""
@@ -165,7 +160,7 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
             return tuple(leaf.kwargs.get("order_by", ()))
         return ()
 
-    def _agg_simple(
+    def _agg_simple(  # noqa: PLR0917
         self,
         expr: DictExpr,
         frame: DictDataFrame,
@@ -193,7 +188,7 @@ class DictGroupBy(EagerGroupBy["DictDataFrame", "DictExpr", str]):
 
     @staticmethod
     def _agg_complex(
-        expr: DictExpr, group_frames: Sequence[DictDataFrame], aliases: Sequence[str]
+        expr: DictExpr, group_frames: Iterable[DictDataFrame], aliases: Sequence[str]
     ) -> dict[str, list[Any]]:
         """Fallback: evaluate the full expression against each group's sub-frame.
 

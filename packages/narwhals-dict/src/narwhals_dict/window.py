@@ -38,7 +38,7 @@ GROUPED_WINDOW_LEAVES: frozenset[str] = frozenset(
 )
 
 
-def apply_window_kernel(
+def apply_window_kernel(  # noqa: PLR0917
     method_name: str,
     column: Sequence[Any],
     groups: Mapping[Any, list[int]],

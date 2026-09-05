@@ -19,6 +19,7 @@ from narwhals_dict.utils import (
     is_native_column,
     kleene_and,
     kleene_or,
+    sort_with_nulls,
 )
 
 if TYPE_CHECKING:
@@ -963,9 +964,9 @@ class DictSeries(EagerSeries["NativeSeries"]):  # type: ignore[type-var]
         return self._with_native(list(dict.fromkeys(self.native)))
 
     def sort(self, *, descending: bool, nulls_last: bool) -> Self:
-        nulls = [value for value in self.native if value is None]
-        rest = sorted(self._non_null(), reverse=descending)
-        return self._with_native(rest + nulls if nulls_last else nulls + rest)
+        return self._with_native(
+            sort_with_nulls(self.native, descending=descending, nulls_last=nulls_last)
+        )
 
     def is_sorted(self, *, descending: bool) -> bool:
         if not isinstance(descending, bool):
