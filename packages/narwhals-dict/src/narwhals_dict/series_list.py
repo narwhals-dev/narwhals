@@ -32,7 +32,8 @@ class DictSeriesListNamespace(
     def contains(self, item: NonNestedLiteral) -> DictSeries:
         return self._unary(lambda values: item in values)
 
-    def unique(self) -> DictSeries:
+    def unique(self, *, maintain_order: bool) -> DictSeries:
+        # `dict.fromkeys` keeps first-appearance order, which satisfies both settings.
         return self._unary(lambda values: list(dict.fromkeys(values)))
 
     def min(self) -> DictSeries:
