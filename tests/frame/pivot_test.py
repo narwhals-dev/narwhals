@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import LazyPivotAgg
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -25,92 +28,114 @@ data_no_dups = {
     "bar": ["x", "y", "z", "w"],
 }
 
+data_missing_combination = {
+    "name": ["Cady", "Cady", "Karen"],
+    "subject": ["maths", "physics", "maths"],
+    "score": [98, 99, 61],
+}
 
-@pytest.mark.parametrize(
-    ("agg_func", "expected"),
-    [
-        (
-            "min",
-            {
-                "ix": [1, 2],
-                "foo_a": [0, 2],
-                "foo_b": [7, 1],
-                "bar_a": [0, 0],
-                "bar_b": [9, 4],
-            },
-        ),
-        (
-            "max",
-            {
-                "ix": [1, 2],
-                "foo_a": [1, 2],
-                "foo_b": [7, 1],
-                "bar_a": [2, 0],
-                "bar_b": [9, 4],
-            },
-        ),
-        (
-            "first",
-            {
-                "ix": [1, 2],
-                "foo_a": [0, 2],
-                "foo_b": [7, 1],
-                "bar_a": [0, 0],
-                "bar_b": [9, 4],
-            },
-        ),
-        (
-            "last",
-            {
-                "ix": [1, 2],
-                "foo_a": [1, 2],
-                "foo_b": [7, 1],
-                "bar_a": [2, 0],
-                "bar_b": [9, 4],
-            },
-        ),
-        (
-            "sum",
-            {
-                "ix": [1, 2],
-                "foo_a": [1, 4],
-                "foo_b": [7, 1],
-                "bar_a": [2, 0],
-                "bar_b": [9, 4],
-            },
-        ),
-        (
-            "mean",
-            {
-                "ix": [1, 2],
-                "foo_a": [0.5, 2.0],
-                "foo_b": [7.0, 1.0],
-                "bar_a": [1.0, 0.0],
-                "bar_b": [9.0, 4.0],
-            },
-        ),
-        (
-            "median",
-            {
-                "ix": [1, 2],
-                "foo_a": [0.5, 2.0],
-                "foo_b": [7.0, 1.0],
-                "bar_a": [1.0, 0.0],
-                "bar_b": [9.0, 4.0],
-            },
-        ),
-        (
-            "len",
-            {
-                "ix": [1, 2],
-                "foo_a": [2, 2],
-                "foo_b": [1, 1],
-                "bar_a": [2, 2],
-                "bar_b": [1, 1],
-            },
-        ),
-    ],
-)
+PIVOT_MISSING_COMBINATION_CASES = [
+    ("sum", {"name": ["Cady", "Karen"], "maths": [98, 61], "physics": [99, 0]}),
+    ("len", {"name": ["Cady", "Karen"], "maths": [1, 1], "physics": [1, 0]}),
+    ("mean", {"name": ["Cady", "Karen"], "maths": [98.0, 61.0], "physics": [99.0, None]}),
+]
+
+
+PIVOT_CASES = [
+    (
+        "min",
+        {
+            "ix": [1, 2],
+            "foo_a": [0, 2],
+            "foo_b": [7, 1],
+            "bar_a": [0, 0],
+            "bar_b": [9, 4],
+        },
+    ),
+    (
+        "max",
+        {
+            "ix": [1, 2],
+            "foo_a": [1, 2],
+            "foo_b": [7, 1],
+            "bar_a": [2, 0],
+            "bar_b": [9, 4],
+        },
+    ),
+    (
+        "first",
+        {
+            "ix": [1, 2],
+            "foo_a": [0, 2],
+            "foo_b": [7, 1],
+            "bar_a": [0, 0],
+            "bar_b": [9, 4],
+        },
+    ),
+    (
+        "last",
+        {
+            "ix": [1, 2],
+            "foo_a": [1, 2],
+            "foo_b": [7, 1],
+            "bar_a": [2, 0],
+            "bar_b": [9, 4],
+        },
+    ),
+    (
+        "sum",
+        {
+            "ix": [1, 2],
+            "foo_a": [1, 4],
+            "foo_b": [7, 1],
+            "bar_a": [2, 0],
+            "bar_b": [9, 4],
+        },
+    ),
+    (
+        "mean",
+        {
+            "ix": [1, 2],
+            "foo_a": [0.5, 2.0],
+            "foo_b": [7.0, 1.0],
+            "bar_a": [1.0, 0.0],
+            "bar_b": [9.0, 4.0],
+        },
+    ),
+    (
+        "median",
+        {
+            "ix": [1, 2],
+            "foo_a": [0.5, 2.0],
+            "foo_b": [7.0, 1.0],
+            "bar_a": [1.0, 0.0],
+            "bar_b": [9.0, 4.0],
+        },
+    ),
+    (
+        "len",
+        {
+            "ix": [1, 2],
+            "foo_a": [2, 2],
+            "foo_b": [1, 1],
+            "bar_a": [2, 2],
+            "bar_b": [1, 1],
+        },
+    ),
+]
+
+
+def make_lazy_frame(data_: Any, constructor: Constructor) -> nw.LazyFrame[Any]:
+    frame = nw.from_native(constructor(data_))
+    if isinstance(frame, nw.LazyFrame):
+        if frame.implementation is nw.Implementation.POLARS and POLARS_VERSION < (1, 43):
+            pytest.skip("Polars LazyFrame.pivot")
+        return frame
+    msg = "LazyFrame.pivot"
+    raise pytest.skip.Exception(msg)
+
+
+@pytest.mark.parametrize(("agg_func", "expected"), PIVOT_CASES)
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot(
     constructor_eager: ConstructorEager,
@@ -258,3 +283,143 @@ def test_pivot_no_index(
         "b": [None, 2.0, 4.0, None],
     }
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(("agg_func", "expected"), PIVOT_CASES)
+@pytest.mark.parametrize("index", ["ix", ["ix"]])
+def test_pivot_lazy(
+    constructor: Constructor,
+    agg_func: LazyPivotAgg,
+    expected: dict[str, list[Any]],
+    index: str | list[str],
+) -> None:
+    df = make_lazy_frame(data, constructor)
+    result = (
+        df.pivot(
+            "col",
+            on_columns=["a", "b"],
+            index=index,
+            values=["foo", "bar"],
+            aggregate_function=agg_func,
+            maintain_order=df.implementation is nw.Implementation.POLARS,
+        )
+        .sort("ix")
+        .collect()
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(("agg_func", "expected"), PIVOT_MISSING_COMBINATION_CASES)
+def test_pivot_lazy_missing_combination(
+    constructor: Constructor, agg_func: LazyPivotAgg, expected: dict[str, list[Any]]
+) -> None:
+    df = make_lazy_frame(data_missing_combination, constructor)
+    result = (
+        df.pivot(
+            "subject",
+            on_columns=["maths", "physics"],
+            index="name",
+            values="score",
+            aggregate_function=agg_func,
+            maintain_order=df.implementation is nw.Implementation.POLARS,
+        )
+        .sort("name")
+        .collect()
+    )
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data_", "context"),
+    [
+        (data_no_dups, does_not_raise()),
+        (data, pytest.raises((ValueError, NarwhalsError))),
+    ],
+)
+def test_pivot_lazy_no_agg(constructor: Constructor, data_: Any, context: Any) -> None:
+    df = make_lazy_frame(data_, constructor)
+    if df.implementation is not nw.Implementation.POLARS:
+        context = pytest.raises(
+            NotImplementedError, match="cannot validate that each group"
+        )
+    with context:
+        df.pivot("col", ["a", "b"], index="ix").collect()
+
+
+def test_pivot_lazy_no_index_no_values(constructor: Constructor) -> None:
+    df = make_lazy_frame(data_no_dups, constructor)
+    with pytest.raises(ValueError, match="At least one of `values` and `index` must"):
+        df.pivot("col", ["a", "b"])
+
+
+def test_pivot_lazy_no_index(constructor: Constructor) -> None:
+    df = make_lazy_frame(data_no_dups, constructor)
+    aggregate_function: LazyPivotAgg = (
+        "min" if df.implementation is nw.Implementation.SQLFRAME else "first"
+    )
+    result = (
+        df.pivot(
+            "col",
+            ["a", "b"],
+            values="foo",
+            aggregate_function=aggregate_function,
+            maintain_order=df.implementation is nw.Implementation.POLARS,
+        )
+        .sort("ix", "bar")
+        .collect()
+    )
+    expected = {
+        "ix": [1, 1, 2, 2],
+        "bar": ["x", "y", "w", "z"],
+        "a": [1, None, None, 3],
+        "b": [None, 2, 4, None],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_pivot_lazy_no_values(constructor: Constructor) -> None:
+    df = make_lazy_frame(data_no_dups, constructor)
+    result = (
+        df.pivot(
+            "col",
+            ["a", "b"],
+            index="ix",
+            aggregate_function="min",
+            maintain_order=df.implementation is nw.Implementation.POLARS,
+        )
+        .sort("ix")
+        .collect()
+    )
+    expected = {
+        "ix": [1, 2],
+        "foo_a": [1, 3],
+        "foo_b": [2, 4],
+        "bar_a": ["x", "z"],
+        "bar_b": ["y", "w"],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_pivot_lazy_no_index_columns(constructor: Constructor) -> None:
+    df = make_lazy_frame({"col": ["a", "b"], "foo": [1, 2]}, constructor)
+    if df.implementation is nw.Implementation.DASK:
+        with pytest.raises(NotImplementedError, match="no index columns"):
+            df.pivot("col", ["a", "b"], values="foo", aggregate_function="sum")
+        return
+    result = df.pivot("col", ["a", "b"], values="foo", aggregate_function="sum").collect()
+    assert_equal_data(result, {"a": [1], "b": [2]})
+
+
+def test_pivot_lazy_maintain_order(constructor: Constructor) -> None:
+    df = make_lazy_frame(data, constructor)
+    if df.implementation is nw.Implementation.POLARS:
+        pytest.skip("Polars supports maintaining row order during a pivot")
+    with pytest.raises(NotImplementedError, match="maintaining row order"):
+        df.pivot(
+            "col",
+            ["a", "b"],
+            index="ix",
+            values="foo",
+            aggregate_function="sum",
+            maintain_order=True,
+        )

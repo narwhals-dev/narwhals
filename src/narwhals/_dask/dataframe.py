@@ -13,9 +13,11 @@ from narwhals._utils import (
     _remap_full_join_keys,
     check_column_names_are_unique,
     check_columns_exist,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    resolve_pivot_index_values,
 )
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.typing import CompliantLazyFrame
@@ -39,7 +41,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        LazyPivotAgg,
+        UniqueKeepStrategy,
+    )
 
 Incomplete: TypeAlias = "Any"
 """Using `_pandas_like` utils with `_dask`.
@@ -533,6 +540,51 @@ class DaskLazyFrame(
                 value_name=value_name,
             )
         )
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: LazyPivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        if maintain_order:
+            msg = "Dask does not support maintaining row order during a pivot."
+            raise NotImplementedError(msg)
+        if aggregate_function is None or aggregate_function == "item":
+            msg = (
+                "Dask does not support pivoting without aggregation because it "
+                "cannot validate that each group contains a single value."
+            )
+            raise NotImplementedError(msg)
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+        if not index:
+            msg = "Dask does not support a pivot with no index columns."
+            raise NotImplementedError(msg)
+
+        columns: dict[str, Any] = {}
+        for value, on_value, output_name in generate_pivot_column_names(
+            on_columns, values, separator=separator
+        ):
+            condition = self.native[on] == on_value
+            columns[output_name] = (
+                condition.astype("uint32")
+                if aggregate_function == "len"
+                else self.native[value].where(condition)
+            )
+
+        aggregate = "sum" if aggregate_function == "len" else aggregate_function
+        result = (
+            self.native.assign(**columns)
+            .groupby(list(index), dropna=False, sort=False)[list(columns)]
+            .agg(aggregate)
+            .reset_index()
+        )
+        return self._with_native(result)
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.to_parquet(file)

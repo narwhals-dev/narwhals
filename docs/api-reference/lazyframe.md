@@ -19,6 +19,7 @@
         - join_asof
         - lazy
         - pipe
+        - pivot
         - rename
         - schema
         - select

@@ -225,6 +225,9 @@ PivotAgg: TypeAlias = Literal[
 ]
 """A predefined aggregate function string."""
 
+LazyPivotAgg: TypeAlias = PivotAgg | Literal["item"]
+"""A predefined aggregate function string for a lazy pivot operation."""
+
 RankMethod: TypeAlias = Literal["average", "min", "max", "dense", "ordinal"]
 """The method used to assign ranks to tied elements.
 

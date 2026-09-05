@@ -1263,6 +1263,33 @@ def generate_temporary_column_name(
             raise AssertionError(msg)
 
 
+def generate_pivot_column_names(
+    on_columns: Sequence[Any], values: Sequence[str], *, separator: str
+) -> list[tuple[str, Any, str]]:
+    result = []
+    for value in values:
+        for on_value in on_columns:
+            pivot_name = str(on_value)
+            output_name = (
+                separator.join((value, pivot_name)) if len(values) > 1 else pivot_name
+            )
+            result.append((value, on_value, output_name))
+    return result
+
+
+def resolve_pivot_index_values(
+    columns: Sequence[str],
+    on: str,
+    index: Sequence[str] | None,
+    values: Sequence[str] | None,
+) -> tuple[list[str], list[str]]:
+    if values is None:
+        values = [name for name in columns if name not in {on, *(index or ())}]
+    if index is None:
+        index = [name for name in columns if name not in {on, *values}]
+    return list(index), list(values)
+
+
 def parse_columns_to_drop(
     frame: _StoresColumns, subset: Iterable[str], /, *, strict: bool
 ) -> list[str]:

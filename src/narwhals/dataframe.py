@@ -92,6 +92,7 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
+        LazyPivotAgg,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
@@ -3320,6 +3321,86 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         This is a no-op, and exists only for compatibility with `DataFrame.lazy`.
         """
         return self
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: LazyPivotAgg | None = None,
+        maintain_order: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        r"""Create a spreadsheet-style pivot table as a LazyFrame.
+
+        Arguments:
+            on: Name of the column whose values will be used as the header of the
+                output LazyFrame.
+            on_columns: What value combinations will be considered for the output table.
+            index: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `values` will be used. At least one of `index` and
+                `values` must be specified.
+            values: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `index` will be used. At least one of `index` and
+                `values` must be specified.
+            aggregate_function: Choose from
+
+                - None: no aggregation takes place, will raise error if multiple values
+                    are in group.
+                - A predefined aggregate function string, one of
+                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len',
+                    'item'}
+            maintain_order: Ensure the values of `index` are sorted by discovery order.
+            separator: Used as separator/delimiter in generated column names in case of
+                multiple `values` columns.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> data = {
+            ...     "ix": [1, 1, 2, 2, 1, 2],
+            ...     "col": ["a", "a", "a", "a", "b", "b"],
+            ...     "foo": [0, 1, 2, 2, 7, 1],
+            ...     "bar": [0, 2, 0, 0, 9, 4],
+            ... }
+            >>> df_native = pl.LazyFrame(data)
+            >>> (
+            ...     nw.from_native(df_native)
+            ...     .pivot(
+            ...         "col", on_columns=["a", "b"], index="ix", aggregate_function="sum"
+            ...     )
+            ...     .sort("ix")
+            ...     .collect()
+            ...     .to_native()
+            ... )
+            shape: (2, 5)
+            ┌─────┬───────┬───────┬───────┬───────┐
+            │ ix  ┆ foo_a ┆ foo_b ┆ bar_a ┆ bar_b │
+            │ --- ┆ ---   ┆ ---   ┆ ---   ┆ ---   │
+            │ i64 ┆ i64   ┆ i64   ┆ i64   ┆ i64   │
+            ╞═════╪═══════╪═══════╪═══════╪═══════╡
+            │ 1   ┆ 1     ┆ 7     ┆ 2     ┆ 9     │
+            │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
+            └─────┴───────┴───────┴───────┴───────┘
+        """
+        if values is None and index is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+        values = [values] if isinstance(values, str) else values
+        index = [index] if isinstance(index, str) else index
+        return self._with_compliant(
+            self._compliant_frame.pivot(
+                on=on,
+                on_columns=on_columns,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                maintain_order=maintain_order,
+                separator=separator,
+            )
+        )
 
     def unpivot(
         self,

@@ -14,9 +14,11 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    resolve_pivot_index_values,
     to_pyarrow_table,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -41,7 +43,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        LazyPivotAgg,
+        UniqueKeepStrategy,
+    )
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -406,6 +413,53 @@ class IbisLazyFrame(
             s.cols(*on_), names_to=variable_name, values_to=value_name
         )
         return self._with_native(unpivoted.select(*final_columns))
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: LazyPivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        import ibis.selectors as s
+
+        if maintain_order:
+            msg = "Ibis does not support maintaining row order during a pivot."
+            raise NotImplementedError(msg)
+        if aggregate_function is None or aggregate_function == "item":
+            msg = (
+                "Ibis does not support pivoting without aggregation because it "
+                "cannot validate that each group contains a single value."
+            )
+            raise NotImplementedError(msg)
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+
+        aggregate = "count" if aggregate_function == "len" else aggregate_function
+        result = self.native.pivot_wider(
+            id_cols=s.cols(*index),
+            names_from=on,
+            names=on_columns,
+            names_sep=separator,
+            values_from=values,
+            # ibis will treat missing pivot combination as null for these, instead of 0
+            # as polars does.
+            values_fill=0 if aggregate in {"sum", "count"} else None,
+            values_agg=aggregate,
+        )
+
+        # ibis orders pivoted columns by `on_columns` first, while polars orders
+        # them by `values` first.
+        output_names = [
+            output_name
+            for _, _, output_name in generate_pivot_column_names(
+                on_columns, values, separator=separator
+            )
+        ]
+        return self._with_native(result.select(*index, *output_names))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
         if not order_by:
