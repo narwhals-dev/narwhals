@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from collections import deque
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import pytest
 
@@ -32,6 +32,9 @@ if TYPE_CHECKING:
     from narwhals._typing import EagerAllowed
     from narwhals.stable.v2.typing import IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
+
+# Mirrors the `TypeVar` from https://github.com/narwhals-dev/narwhals/issues/3897.
+_V2FrameT = TypeVar("_V2FrameT", "nw_v2.Series[Any]", "nw_v2.DataFrame[Any]")
 
 
 def test_toplevel() -> None:
@@ -207,17 +210,38 @@ def test_is_duplicated_unique() -> None:
     assert isinstance(df.is_unique(), nw_v2.Series)
 
 
+def _identity(obj: _V2FrameT) -> _V2FrameT:
+    return obj
+
+
 def test_concat() -> None:
+    # `concat` must keep the `stable.v2` classes, rather than widening to
+    # `narwhals.dataframe.DataFrame` / `narwhals.dataframe.LazyFrame`.
+    # https://github.com/narwhals-dev/narwhals/issues/3897
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
     df = nw_v2.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
+    lf = df.lazy()
     result = nw_v2.concat([df, df], how="vertical")
+    horizontal = nw_v2.concat([df], how="horizontal")
+    lazy = nw_v2.concat([lf, lf], how="vertical")
+
+    if TYPE_CHECKING:
+        # NOTE: these must come *before* any `isinstance` narrowing, else they are no-ops.
+        assert_type(result, nw_v2.DataFrame[Any])
+        assert_type(horizontal, nw_v2.DataFrame[Any])
+        assert_type(lazy, nw_v2.LazyFrame[Any])
+        # The reported symptom: the result wasn't accepted by a `TypeVar` constrained
+        # to the *stable* classes.
+        assert_type(_identity(result), nw_v2.DataFrame[Any])
+
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
+    assert_equal_data(lazy.collect(), expected)
     assert isinstance(result, nw_v2.DataFrame)
-    if TYPE_CHECKING:
-        assert_type(result, nw_v2.DataFrame[Any])
+    assert isinstance(horizontal, nw_v2.DataFrame)
+    assert isinstance(lazy, nw_v2.LazyFrame)
 
 
 def test_to_dict_as_series() -> None:

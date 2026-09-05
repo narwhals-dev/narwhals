@@ -55,12 +55,13 @@ from narwhals.dtypes import (
 )
 from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, show_versions
+from narwhals.functions import _new_series_impl, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.stable.v2.typing import (
     DataFrameT,
+    FrameT,
     IntoDataFrameT,
     IntoFrame,
     IntoLazyFrameT,
@@ -97,6 +98,7 @@ if TYPE_CHECKING:
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.typing import (
+        ConcatMethod,
         IntoDType,
         IntoExpr,
         IntoSchema,
@@ -924,6 +926,26 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
         A "When" object, which `.then` can be called on.
     """
     return When.from_when(nw_f.when(*predicates))
+
+
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
+
+    Arguments:
+        items: DataFrames, LazyFrames to concatenate.
+        how: concatenating strategy
+
+            - vertical: Concatenate vertically. Column names must match.
+            - horizontal: Concatenate horizontally. If lengths don't match, then
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
+
+    Raises:
+        TypeError: The items to concatenate should either all be eager, or all lazy
+    """
+    return _stableify(nw_f.concat(items, how=how))
 
 
 def new_series(

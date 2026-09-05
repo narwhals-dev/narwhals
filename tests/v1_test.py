@@ -222,12 +222,20 @@ def test_concat() -> None:
     import pyarrow as pa
 
     df = nw_v1.from_native(pa.table({"a": [1, 2, 3]}), eager_only=True)
+    lf = df.lazy()
     result = nw_v1.concat([df, df], how="vertical")
+    lazy = nw_v1.concat([lf, lf], how="vertical")
+
+    if TYPE_CHECKING:
+        # NOTE: these must come *before* any `isinstance` narrowing, else they are no-ops.
+        assert_type(result, nw_v1.DataFrame[Any])
+        assert_type(lazy, nw_v1.LazyFrame[Any])
+
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
+    assert_equal_data(lazy.collect(), expected)
     assert isinstance(result, nw_v1.DataFrame)
-    if TYPE_CHECKING:
-        assert_type(result, nw_v1.DataFrame[Any])
+    assert isinstance(lazy, nw_v1.LazyFrame)
 
 
 def test_to_dict() -> None:
