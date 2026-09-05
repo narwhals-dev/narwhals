@@ -1325,7 +1325,12 @@ class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
         count = categories.value_counts(dropna=True, sort=False).reindex(
             categories.cat.categories, fill_value=0
         )
-        count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        impl = self._series._implementation
+        if impl.is_pandas() and impl._backend_version() < (3, 0):  # pragma: no cover
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        else:
+            count = count.reset_index(drop=True)
         if self._breakpoint:
             return {"breakpoint": bins[1:], "count": count}
         return {"count": count}
