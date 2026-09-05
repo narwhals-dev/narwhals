@@ -100,7 +100,7 @@ Here are exceptions to our backwards compatibility policy:
 - We may sometimes need to bump the minimum versions of supported backends.
 - We will drop support for old python versions, roughly in sync with [their end of life](https://devguide.python.org/versions/#supported-versions)
 
-In general, decision are driven by use-cases, and we conduct a search of public GitHub repositories
+In general, decisions are driven by use-cases, and we conduct a search of public GitHub repositories
 before making any change.
 
 ### `import narwhals as nw`, `import narwhals.stable.v2 as nw`, or `import narwhals.stable.v1 as nw`?
@@ -118,7 +118,8 @@ Which should you use? In general we recommend:
 
 ## `main` vs `stable.v2` differences
 
-So far, nothing, everything non-unstable from the main namespace should be available in `narwhals.stable.v2`.
+There are none so far: everything not labelled "unstable" in the main namespace is also
+available in `narwhals.stable.v2`.
 
 ## `main` vs `stable.v1` differences
 
@@ -130,7 +131,8 @@ So far, nothing, everything non-unstable from the main namespace should be avail
 - Since Narwhals 1.45:
 
     - `nw.any_horizontal` and `nw.all_horizontal` have a `ignore_nulls` keyword. In `narwhals.stable.v1`,
-      it defaults to `False`, but in Narwhals 2.0 it will become a required argument in the main namespace.
+      it defaults to `False`; since Narwhals 2.0 it is a required argument in the main namespace
+      (and in `narwhals.stable.v2`).
     - `LazyFrame.with_row_index` requires `order_by` to be specified as it is an order-dependent operation, in the main Narwhals namespace.
 
 - Since Narwhals 1.43:
@@ -164,17 +166,19 @@ So far, nothing, everything non-unstable from the main namespace should be avail
 
 - Since Narwhals 1.15, `Series` is generic in the native Series, meaning that you can
   write:
-  ```py
-  import narwhals as nw
-  import polars as pl
 
-  s_pl = pl.Series([1, 2, 3])
-  s = nw.from_native(s, series_only=True)
-  # mypy infers `s.to_native()` to be `polars.Series`
-  reveal_type(s.to_native())
-  ```
-  Previously, `Series` was not generic, so in the above example
-  `s.to_native()` would have been inferred as `Any`.
+    ```py
+    import narwhals as nw
+    import polars as pl
+
+    s_pl = pl.Series([1, 2, 3])
+    s = nw.from_native(s_pl, series_only=True)
+    # mypy infers `s.to_native()` to be `polars.Series`
+    reveal_type(s.to_native())
+    ```
+
+    Previously, `Series` was not generic, so in the above example
+    `s.to_native()` would have been inferred as `Any`.
 
 - Since Narwhals 1.13.0, the `strict` parameter in `from_native`, `to_native`, and `narwhalify`
     has been deprecated in favour of `pass_through`. This is because several users expressed

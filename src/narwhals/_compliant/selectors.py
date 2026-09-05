@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import partial
-from typing import TYPE_CHECKING, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, TypeVar, overload
 
 from narwhals._compliant.expr import CompliantExpr
 from narwhals._utils import (
@@ -41,6 +41,7 @@ __all__ = [
     "CompliantSelectorNamespace",
     "EagerSelectorNamespace",
     "LazySelectorNamespace",
+    "is_compliant_selector",
 ]
 
 
@@ -173,8 +174,7 @@ class EagerSelectorNamespace(
     CompliantSelectorNamespace[DataFrameT, SeriesT], Protocol[DataFrameT, SeriesT]
 ):
     def _iter_schema(self, df: DataFrameT, /) -> Iterator[tuple[str, DType]]:
-        for ser in self._iter_columns(df):
-            yield ser.name, ser.dtype
+        yield from df.schema.items()
 
     def _iter_columns(self, df: DataFrameT, /) -> Iterator[SeriesT]:
         yield from df.iter_columns()
@@ -204,6 +204,12 @@ class CompliantSelector(
     _function_name: str
     _implementation: Implementation
     _version: Version
+
+    # NOTE: This `Protocol` isn't `runtime_checkable`, and `PolarsExpr.__getattr__`
+    # forwards *any* attribute to the native object, so neither `isinstance` nor
+    # `hasattr` can identify a selector. Subclasses inherit this marker, and
+    # `is_compliant_selector` reads it off the class, which `__getattr__` never sees.
+    _is_compliant_selector: ClassVar[Literal[True]] = True
 
     @classmethod
     def from_callables(
@@ -245,15 +251,17 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                rhs_set = frozenset(rhs_names)
                 return [
                     x
                     for x, name in zip(self(df), lhs_names, strict=True)
-                    if name not in rhs_names
+                    if name not in rhs_set
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [x for x in lhs_names if x not in rhs_names]
+                rhs_set = frozenset(rhs_names)
+                return [x for x in lhs_names if x not in rhs_set]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() - other
@@ -271,18 +279,20 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                rhs_set = frozenset(rhs_names)
                 return [
                     *(
                         x
                         for x, name in zip(self(df), lhs_names, strict=True)
-                        if name not in rhs_names
+                        if name not in rhs_set
                     ),
                     *other(df),
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [*(x for x in lhs_names if x not in rhs_names), *rhs_names]
+                rhs_set = frozenset(rhs_names)
+                return [*(x for x in lhs_names if x not in rhs_set), *rhs_names]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() | other
@@ -300,21 +310,28 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
+                rhs_set = frozenset(rhs_names)
                 return [
                     x
                     for x, name in zip(self(df), lhs_names, strict=True)
-                    if name in rhs_names
+                    if name in rhs_set
                 ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                return [x for x in lhs_names if x in rhs_names]
+                rhs_set = frozenset(rhs_names)
+                return [x for x in lhs_names if x in rhs_set]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() & other
 
     def __invert__(self) -> CompliantSelector[FrameT, SeriesOrExprT]:
         return self.selectors.all() - self
+
+
+def is_compliant_selector(obj: Any, /) -> TypeIs[CompliantSelector[Any, Any]]:
+    """Check whether `obj` is a `CompliantSelector`."""
+    return getattr(type(obj), "_is_compliant_selector", False)
 
 
 def _eval_lhs_rhs(

@@ -11,7 +11,7 @@ There are two ways to do this:
 Expressions are by far the preferred way:
 
 - They're inherently lazy and allow for optimisations.
-- They the most idiomatic and portable solution.
+- They're the most idiomatic and portable solution.
 - Series is only available for eager backends.
 
 Nonetheless, you might need to write dataframe-agnostic code which accepts
@@ -43,7 +43,7 @@ This can stay lazy, so we just use expressions:
         return df.filter(nw.col("a") > 0)
     ```
 
-and call it either on a eager or lazy dataframe:
+and call it on either an eager or a lazy dataframe:
 
 === "pandas"
     ```python exec="yes" source="material-block" result="python" session="series_ex1"
@@ -103,7 +103,7 @@ Let's write a dataframe-agnostic function which multiplies the values in column
         return df.with_columns(nw.col("a") * 2)
     ```
 
-and call it either on a eager or lazy dataframe:
+and call it on either an eager or a lazy dataframe:
 
 === "pandas"
     ```python exec="yes" source="material-block" result="python" session="series_ex2"
@@ -210,7 +210,7 @@ and then, instead of using expressions, we'll extract a `Series`.
         return df["a"].mean()
     ```
 
-Now we can call it on a eager dataframe only:
+Now we can call it on an eager dataframe only:
 
 === "pandas"
     ```python exec="yes" source="material-block" result="python" session="series_ex3"

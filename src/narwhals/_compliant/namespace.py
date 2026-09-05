@@ -45,6 +45,7 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
+        NormalizedPath,
         _2DArray,
     )
 
@@ -109,6 +110,10 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def selectors(self) -> CompliantSelectorNamespace[Any, Any]: ...
     def struct(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> CompliantFrameT: ...
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrameT: ...
     # NOTE: typing this accurately requires 2x more `TypeVar`s
     def from_native(self, data: Any, /) -> Any: ...
     def is_native(self, obj: Any, /) -> TypeIs[Any]:
@@ -219,6 +224,18 @@ class EagerNamespace(
     def _dataframe(self) -> type[EagerDataFrameT]: ...
     @property
     def _series(self) -> type[EagerSeriesT_co]: ...
+    def read_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> EagerDataFrameT: ...
+    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> EagerDataFrameT: ...
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> EagerDataFrameT:
+        return self.read_csv(source, separator=separator, **kwds)
+
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> EagerDataFrameT:
+        return self.read_parquet(source, **kwds)
+
     def _if_then_else(
         self,
         when: NativeSeriesT,
@@ -233,10 +250,6 @@ class EagerNamespace(
             align = predicate_s._align_full_broadcast
 
             then_s = df._evaluate_single_output_expr(then)
-            if otherwise is None:
-                predicate_s, then_s = align(predicate_s, then_s)
-                result = self._if_then_else(predicate_s.native, then_s.native)
-
             if otherwise is None:
                 predicate_s, then_s = align(predicate_s, then_s)
                 result = self._if_then_else(predicate_s.native, then_s.native)

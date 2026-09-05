@@ -47,6 +47,12 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
             pc.utf8_trim(self.native, characters or string.whitespace)
         )
 
+    def strip_chars_start(self, characters: str) -> ArrowSeries:
+        return self.with_native(pc.utf8_ltrim(self.native, characters))
+
+    def strip_chars_end(self, characters: str) -> ArrowSeries:
+        return self.with_native(pc.utf8_rtrim(self.native, characters))
+
     def starts_with(self, prefix: ArrowSeries) -> ArrowSeries:
         _, prefix_native = extract_native(self.compliant, prefix)
         if not isinstance(prefix_native, pa.StringScalar):

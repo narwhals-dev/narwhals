@@ -562,12 +562,14 @@ class SparkLikeLazyFrame(
         return self._with_native(unpivoted_native_frame)
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
-        if order_by is None:
-            msg = "Cannot pass `order_by` to `with_row_index` for PySpark-like"
+        if not order_by:
+            msg = "Must pass `order_by` to `with_row_index` for PySpark-like"
             raise TypeError(msg)
         row_index_expr = (
             self._F.row_number().over(
-                self._Window.partitionBy(self._F.lit(1)).orderBy(*order_by)
+                self._Window.partitionBy(self._F.lit(1)).orderBy(
+                    *[self._F.asc_nulls_first(x) for x in order_by]
+                )
             )
             - 1
         ).alias(name)

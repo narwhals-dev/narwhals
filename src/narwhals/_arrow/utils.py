@@ -8,22 +8,26 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from typing import Literal, TypeAlias
 
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import (
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
         ArrayOrScalar,
         ArrayOrScalarT1,
         ArrayOrScalarT2,
         ChunkedArrayAny,
+        DictionaryArrayAny,
         Incomplete,
         NativeIntervalUnit,
+        NullPlacement,
+        Order,
         PromoteOptions,
         ScalarAny,
     )
@@ -53,7 +57,7 @@ if TYPE_CHECKING:
 else:
     from pyarrow.compute import extract_regex
     from pyarrow.types import (
-        is_dictionary,  # noqa: F401
+        is_dictionary,
         is_duration,
         is_fixed_size_list,
         is_large_list,
@@ -126,9 +130,9 @@ def chunked_array(
 ) -> ChunkedArrayAny:
     if isinstance(arr, pa.ChunkedArray):
         return arr
-    if isinstance(arr, list):
-        return pa.chunked_array(arr, dtype)
-    return pa.chunked_array([arr], dtype)
+    # NOTE: stubs only overload on *concrete* types, so a dynamic `pa.DataType` never matches
+    ca: Incomplete = pa.chunked_array
+    return ca(arr, dtype) if isinstance(arr, list) else ca([arr], dtype)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
@@ -533,7 +537,7 @@ def list_agg(
         if func == "sum"
         else ("values", func)
     )
-    agg = pa.array(
+    agg = (
         pa.Table.from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
             names=["values", "offsets"],
@@ -542,8 +546,9 @@ def list_agg(
         .aggregate([aggregation])
         .sort_by("offsets")
         .column(f"values_{func}")
+        .combine_chunks()
     )
-    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
+    non_empty_mask = pc.not_equal(pc.list_value_length(array.combine_chunks()), lit(0))
     if func == "sum":
         # Make sure sum of empty list is 0.
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
@@ -552,12 +557,57 @@ def list_agg(
     return pa.chunked_array(
         [
             pc.replace_with_mask(
-                base_array,
-                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
-                agg,
+                base_array, cast("pa.BooleanArray", non_empty_mask.fill_null(False)), agg
             )
         ]
     )
+
+
+def sortable(array: ChunkedArrayAny, /) -> ChunkedArrayAny:
+    """Return an array which orders like `array`, but with a type `pyarrow` can sort.
+
+    `pyarrow` has no ordering kernels for `dictionary` types
+    (https://github.com/apache/arrow/issues/29887), so replace the dictionary indices
+    with the rank of the value they point at. Ranking the (typically small) dictionary
+    is much cheaper than decoding every row, and gives the lexicographic order which
+    `polars` and `pandas` use for (unordered) categoricals.
+    """
+    if not is_dictionary(array.type):
+        return array
+    # NOTE: stubs type the chunks as `Array`, which is missing `DictionaryArray` members
+    chunks = cast("list[DictionaryArrayAny]", array.unify_dictionaries().chunks)
+    if not chunks:
+        return chunked_array([[]], pa.uint64())
+    dictionary = chunks[0].dictionary
+    ranks = pc.rank(dictionary, sort_keys="ascending", tiebreaker="min")
+    if dictionary.null_count:
+        # NOTE: a null *value* must stay null, `rank` would give it a (largest) rank.
+        ranks = pc.if_else(pc.is_null(dictionary), lit(None, ranks.type), ranks)
+    return pa.chunked_array([ranks.take(chunk.indices) for chunk in chunks])
+
+
+def sortable_table(table: pa.Table, keys: Iterable[str], /) -> pa.Table:
+    """Replace every `dictionary`-typed column named in `keys` with `sortable` ranks."""
+    for name in keys:
+        index = table.schema.get_field_index(name)
+        if index == -1:  # pragma: no cover
+            msg = f"Column '{name}' not found in table."
+            raise ColumnNotFoundError(msg)
+        if is_dictionary(table.field(index).type):
+            table = table.set_column(index, name, sortable(table.column(index)))
+    return table
+
+
+def sort_indices(
+    table: pa.Table, sorting: Sequence[tuple[str, Order]], null_placement: NullPlacement
+) -> pa.UInt64Array:
+    """`pc.sort_indices`, hiding how `null_placement` must be passed per version."""
+    if BACKEND_VERSION < (25,):  # pragma: no cover
+        return pc.sort_indices(table, sort_keys=sorting, null_placement=null_placement)
+    # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+    # it must be specified per sort key instead.
+    keyed = [(name, order, null_placement) for name, order in sorting]
+    return pc.sort_indices(table, sort_keys=keyed)  # type: ignore[arg-type]
 
 
 def list_sort(
@@ -577,21 +627,13 @@ def list_sort(
     exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )
-    if BACKEND_VERSION < (25,):  # pragma: no cover
-        sorted_indices = pc.sort_indices(
-            exploded,
-            sort_keys=[(idx, "ascending"), (v, sort_direction)],
-            null_placement=nulls_position,
-        )
-    else:
-        # `null_placement` in `SortOptions` is deprecated since 25.0.0;
-        # it must be specified per sort key instead.
-        keyed = [(idx, "ascending", nulls_position), (v, sort_direction, nulls_position)]
-        sorted_indices = pc.sort_indices(exploded, sort_keys=keyed)  # type: ignore[arg-type]
+    sorted_indices = sort_indices(
+        exploded, [(idx, "ascending"), (v, sort_direction)], nulls_position
+    )
 
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
     sorted_imploded = pa.ListArray.from_arrays(
-        offsets, pa.array(exploded.take(sorted_indices).column(v))
+        offsets, exploded.take(sorted_indices).column(v).combine_chunks()
     )
     imploded_by_idx = pa.Table.from_arrays(
         [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]

@@ -92,6 +92,13 @@ def test_datetime_attributes_series(
     assert_equal_data(result, {"a": expected})
 
 
+def test_ordinal_day_preserves_null(constructor: Constructor) -> None:
+    data_with_null = {"a": [datetime(2021, 3, 1), None]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.select(nw.col("a").dt.ordinal_day())
+    assert_equal_data(result, {"a": [60, None]})
+
+
 def test_datetime_chained_attributes(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:

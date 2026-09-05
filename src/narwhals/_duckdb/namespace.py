@@ -29,7 +29,7 @@ from narwhals._expression_parsing import (
     evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation, requires
+from narwhals._utils import Implementation, requires, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -38,7 +38,13 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedPath,
+        PythonLiteral,
+    )
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -63,6 +69,17 @@ class DuckDBNamespace(
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
 
+    def scan_csv(
+        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+    ) -> DuckDBLazyFrame:
+        validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
+        native = duckdb.read_csv(source, delimiter=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DuckDBLazyFrame:
+        native = duckdb.read_parquet(source, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
         return function(name, *args)
 
@@ -85,8 +102,8 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
         items = list(items)
+        native_items = [item._native_frame for item in items]
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):

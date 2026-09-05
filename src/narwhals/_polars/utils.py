@@ -111,7 +111,7 @@ def extract_args_kwargs(
     return it_args, {k: extract_native(v) for k, v in kwds.items()}
 
 
-@lru_cache(maxsize=16)
+@lru_cache(maxsize=128)
 def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: pl.DataType, version: Version
 ) -> DType:
@@ -347,6 +347,8 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
     strip_chars: Method[CompliantT]
+    strip_chars_start: Method[CompliantT]
+    strip_chars_end: Method[CompliantT]
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]

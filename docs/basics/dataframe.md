@@ -57,7 +57,7 @@ Make a Python file with the following content:
 Let's try it out:
 
 === "pandas"
-    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes" source="material-block" result="python" session="df_ex1"
     import pandas as pd
 
     df = pd.DataFrame({"a": [1, 1, 2]})
@@ -65,7 +65,7 @@ Let's try it out:
     ```
 
 === "Polars (eager)"
-    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
     df = pl.DataFrame({"a": [1, 1, 2]})
@@ -73,7 +73,7 @@ Let's try it out:
     ```
 
 === "Polars (lazy)"
-    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes" source="material-block" result="python" session="df_ex1"
     import polars as pl
 
     df = pl.LazyFrame({"a": [1, 1, 2]})
@@ -81,7 +81,7 @@ Let's try it out:
     ```
 
 === "PyArrow"
-    ```python exec="yes"" source="material-block" result="python" session="df_ex1"
+    ```python exec="yes" source="material-block" result="python" session="df_ex1"
     import pyarrow as pa
 
     table = pa.table({"a": [1, 1, 2]})
@@ -246,7 +246,7 @@ Let's try it out:
 
     df = pd.DataFrame({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
     s = pd.Series([1, 3])
-    print(func(df, s.to_numpy(), "a"))
+    print(func(df, s, "a"))
     ```
 
 === "Polars (eager)"
@@ -255,7 +255,7 @@ Let's try it out:
 
     df = pl.DataFrame({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
     s = pl.Series([1, 3])
-    print(func(df, s.to_numpy(), "a"))
+    print(func(df, s, "a"))
     ```
 
 === "PyArrow"
@@ -263,6 +263,6 @@ Let's try it out:
     import pyarrow as pa
 
     table = pa.table({"a": [1, 1, 2, 2, 3], "b": [4, 5, 6, 7, 8]})
-    a = pa.array([1, 3])
-    print(func(table, a.to_numpy(), "a"))
+    a = pa.chunked_array([[1, 3]])
+    print(func(table, a, "a"))
     ```

@@ -1,3 +1,16 @@
+"""Runtime discovery of, and dispatch to, Narwhals plugin backends.
+
+A plugin backend registers an [entry point](https://packaging.python.org/en/latest/specifications/entry-points/)
+in the `narwhals.plugins` group. Plugins are discovered at runtime, so their names
+cannot be enumerated in the `Literal` unions that describe built-in backends.
+
+`PluginName` bridges that gap: a plugin's entry point name, wrapped as
+`PluginName("my-plugin")`, is accepted wherever a `backend` is expected.
+
+The contract for plugin authors is that the wrapped string **must** name an
+installed plugin's entry point in the `narwhals.plugins` group.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -5,6 +18,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import CompliantNamespace
+from narwhals._typing import PluginName
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -23,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-__all__ = ["Plugin", "from_native"]
+__all__ = ["Plugin", "PluginName", "from_native"]
 
 CompliantAny: TypeAlias = (
     "CompliantDataFrameAny | CompliantLazyFrameAny | CompliantSeriesAny"

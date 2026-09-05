@@ -190,12 +190,15 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def _with_binary(self, op: Callable[..., ir.Value], other: Self) -> Self:
-        return self._with_callable(op, other=other)
+        return self._with_callable(op, expression_args={"other": other})
 
     def _with_elementwise(
-        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self
+        self,
+        op: Callable[..., ir.Value],
+        /,
+        expression_args: dict[str, Self] | None = None,
     ) -> Self:
-        return self._with_callable(op, **expressifiable_args)
+        return self._with_callable(op, expression_args=expression_args)
 
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
@@ -264,7 +267,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(func)
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_callable(lambda expr: expr.isin(other))
+        values = [v for v in other if v is not None]
+
+        def func(expr: ir.Value) -> ir.Value:
+            return ibis.ifelse(expr.isnull(), None, expr.isin(values))
+
+        return self._with_callable(func)
 
     def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
@@ -280,7 +288,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             return expr.fill_null(value)
 
         assert value is not None  # noqa: S101
-        return self._with_callable(_fill_null, value=value)
+        return self._with_callable(_fill_null, expression_args={"value": value})
 
     def cast(self, dtype: IntoDType) -> Self:
         def _func(expr: ir.Column) -> ir.Value:

@@ -3,10 +3,10 @@
 ## TL;DR
 
 All dataframe tools, except for those which piggy-back off of pandas, make a clear
-distinction between NaN and null values. 
+distinction between NaN and null values.
 
 !!! tip
-    **We recommend only handling null values in applications and leaving NaN values as an 
+    **We recommend only handling null values in applications and leaving NaN values as an
     edge case resulting from users having performed undefined mathematical operations.**
 
 ## What's the difference?
