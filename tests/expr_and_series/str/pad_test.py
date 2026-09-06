@@ -106,3 +106,26 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     expected = {"a": ["Café日日", "345日日日", "東京日日日日", None]}
 
     assert_equal_data(result, expected)
+
+
+def test_pad_length_zero_expr(constructor: Constructor) -> None:
+    # Length 0: every string is already at least that long, so input is
+    # returned unchanged (per docstring).
+    df = nw.from_native(constructor({"a": ["foo", "", None]}))
+    result = df.select(
+        nw.col("a").str.pad_start(0).alias("start"),
+        nw.col("a").str.pad_end(0).alias("end"),
+    )
+    expected = {"start": ["foo", "", None], "end": ["foo", "", None]}
+    assert_equal_data(result, expected)
+
+
+def test_pad_unicode_exact_length_expr(constructor: Constructor) -> None:
+    # Unicode input already exactly `length` characters long stays unchanged.
+    df = nw.from_native(constructor({"a": ["東京", "ab", None]}))
+    result = df.select(
+        nw.col("a").str.pad_start(2, "日").alias("start"),
+        nw.col("a").str.pad_end(2, "日").alias("end"),
+    )
+    expected = {"start": ["東京", "ab", None], "end": ["東京", "ab", None]}
+    assert_equal_data(result, expected)
