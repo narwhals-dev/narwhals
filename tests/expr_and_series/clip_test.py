@@ -69,8 +69,8 @@ def test_clip_invalid(constructor: Constructor) -> None:
         df.select(nw.col("a").clip(nw.all(), nw.col("a", "b")))
 
 
-def test_clip_preserves_null(constructor_eager: ConstructorEager) -> None:
+def test_clip_preserves_null(constructor: Constructor) -> None:
     # A null value must stay null through clip, not be replaced by a bound.
-    df = nw.from_native(constructor_eager({"a": [1, None, 3, -4, None]}), eager_only=True)
-    result = {"a": df["a"].clip(lower_bound=0, upper_bound=2)}
+    df = nw.from_native(constructor({"a": [1, None, 3, -4, None]}))
+    result = df.select(a=nw.col("a").clip(lower_bound=0, upper_bound=2))
     assert_equal_data(result, {"a": [1, None, 2, 0, None]})
