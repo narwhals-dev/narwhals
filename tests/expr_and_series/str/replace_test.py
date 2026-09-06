@@ -38,7 +38,7 @@ replace_all_data = [
 # Edge cases from differential testing: byte-vs-char offsets, match position
 # vs match text, re-matching inside inserted text, and boundary `n` values.
 replace_edge_data = [
-    ({"a": ["ααα-x"]}, "-", "@", 1, True, {"a": ["ααα@x"]}),
+    ({"a": ["ααα-x"]}, "-", "@", 1, True, {"a": ["ααα@x"]}),  # noqa: RUF001
     ({"a": ["héllo wörld"]}, "wörld", "@", 1, True, {"a": ["héllo @"]}),
     ({"a": ["abcx abc"]}, r"abc\b", "Z", 1, False, {"a": ["abcx Z"]}),
     ({"a": ["aa"]}, "a", "ab", 2, True, {"a": ["abab"]}),
