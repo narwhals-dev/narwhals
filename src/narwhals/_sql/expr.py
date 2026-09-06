@@ -576,7 +576,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def _clip(
             expr: NativeExprT, lower_bound: NativeExprT, upper_bound: NativeExprT
         ) -> NativeExprT:
-            # `least` / `greatest` skip nulls, so guard so a null stays null.
             clipped = self._function(
                 "greatest", self._function("least", expr, upper_bound), lower_bound
             )
