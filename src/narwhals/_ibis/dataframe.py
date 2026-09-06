@@ -445,21 +445,23 @@ class IbisLazyFrame(
             names=on_columns,
             names_sep=separator,
             values_from=values,
-            # ibis will treat missing pivot combination as null for these, instead of 0
-            # as polars does.
+            # ibis gives null for a missing combination, polars gives 0.
             values_fill=0 if aggregate in {"sum", "count"} else None,
             values_agg=aggregate,
         )
 
-        # ibis orders pivoted columns by `on_columns` first, while polars orders
-        # them by `values` first.
-        output_names = [
-            output_name
-            for _, _, output_name in generate_pivot_column_names(
+        # ibis orders pivoted columns by `on_columns` first, polars by `values`.
+        # Also, ibis generates the names the same as polars except for when the value is
+        # an empty string and the number of values is greater than 1 (foo vs foo_)
+        output = (
+            result[
+                value if len(values) > 1 and str(on_value) == "" else output_name
+            ].name(output_name)
+            for value, on_value, output_name in generate_pivot_column_names(
                 on_columns, values, separator=separator
             )
-        ]
-        return self._with_native(result.select(*index, *output_names))
+        )
+        return self._with_native(result.select(*index, *output))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
         if not order_by:

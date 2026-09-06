@@ -329,6 +329,18 @@ def test_pivot_lazy_missing_combination(
     assert_equal_data(result, expected)
 
 
+def test_pivot_lazy_empty_on_column(constructor: Constructor) -> None:
+    df = make_lazy_frame(
+        {"ix": [1, 1], "col": ["", "a"], "foo": [1, 2], "bar": [3, 4]}, constructor
+    )
+    result = df.pivot(
+        "col", ["", "a"], index="ix", values=["foo", "bar"], aggregate_function="sum"
+    ).collect()
+    assert_equal_data(
+        result, {"ix": [1], "foo_": [1], "foo_a": [2], "bar_": [3], "bar_a": [4]}
+    )
+
+
 @pytest.mark.parametrize(
     ("data_", "context"),
     [
