@@ -600,14 +600,11 @@ class SparkLikeLazyFrame(
             self.native.groupBy(*index).pivot(on, list(on_columns)).agg(*aggregations)
         )
         pivoted = []
-        for value, on_value, output_name in generate_pivot_column_names(
-            on_columns, values, separator=separator
-        ):
-            source_name = str(on_value) if len(values) == 1 else f"{on_value}_{value}"
-            expression = F.col(source_name)
+        for pivot in generate_pivot_column_names(on_columns, values, separator=separator):
+            expression = F.col(pivot.native_name)
             if aggregate_function in {"sum", "len"}:
                 expression = F.coalesce(expression, F.lit(0))
-            pivoted.append(expression.alias(output_name))
+            pivoted.append(expression.alias(pivot.output_name))
         return self._with_native(result.select(*index, *pivoted))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:

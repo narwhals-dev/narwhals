@@ -128,8 +128,6 @@ PIVOT_CASES = [
 def make_lazy_frame(data_: Any, constructor: Constructor) -> nw.LazyFrame[Any]:
     frame = nw.from_native(constructor(data_))
     if isinstance(frame, nw.LazyFrame):
-        if frame.implementation is nw.Implementation.POLARS and POLARS_VERSION < (1, 43):
-            pytest.skip("Polars LazyFrame.pivot")
         return frame
     msg = "LazyFrame.pivot"
     raise pytest.skip.Exception(msg)
@@ -350,9 +348,14 @@ def test_pivot_lazy_empty_on_column(constructor: Constructor) -> None:
 )
 def test_pivot_lazy_no_agg(constructor: Constructor, data_: Any, context: Any) -> None:
     df = make_lazy_frame(data_, constructor)
-    if df.implementation is not nw.Implementation.POLARS:
+    if df.implementation is not nw.Implementation.POLARS or POLARS_VERSION < (1, 43):
         context = pytest.raises(
-            NotImplementedError, match="cannot validate that each group"
+            NotImplementedError,
+            match=(
+                "does not support lazy pivoting without aggregation"
+                if df.implementation is nw.Implementation.POLARS
+                else "cannot validate that each group"
+            ),
         )
     with context:
         df.pivot("col", ["a", "b"], index="ix").collect()

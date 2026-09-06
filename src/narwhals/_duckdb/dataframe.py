@@ -575,7 +575,6 @@ class DuckDBLazyFrame(
         maintain_order: bool,
         separator: str,
     ) -> Self:
-        # DuckDB does not have pivot in its relational API
         if maintain_order:
             msg = "DuckDB does not support maintaining row order during a pivot."
             raise NotImplementedError(msg)
@@ -589,10 +588,10 @@ class DuckDBLazyFrame(
         index, values = resolve_pivot_index_values(self.columns, on, index, values)
 
         # Example generated query:
+        # DuckDB has no pivot in its relational API, so we hand-write the query, e.g.
         # PIVOT _rel ON "subject" IN ('maths', 'physics')
         # USING mean("test_1") AS "test_1", mean("test_2") AS "test_2"
         # GROUP BY "name"
-
         aggregate = "count" if aggregate_function == "len" else aggregate_function
         on_values = ", ".join(str(lit(name)) for name in on_columns)
         using = ", ".join(
@@ -609,33 +608,17 @@ class DuckDBLazyFrame(
         result = duckdb.sql(query)
 
         output: list[Expression] = []
-        for value, on_value, output_name in generate_pivot_column_names(
-            on_columns, values, separator=separator
-        ):
-            # duckdb won't append the value to the resulting column name if there is
-            # only one value
-            #
-            # Input:
-            # name | subject | test_1 | test_2
-            # Cady | maths   |      98 |     100
-            #
-            # One value:
-            # if values=["test_1"]
-            # name | maths
-            # Cady |    98
-            #
-            # Multiple Values:
-            # if values=["test_1", "test_2"]
-            # name | maths_test_1 | maths_test_2
-            # Cady |           98 |          100
-            source_name = str(on_value) if len(values) == 1 else f"{on_value}_{value}"
-            expression = col(source_name)
+        for pivot in generate_pivot_column_names(on_columns, values, separator=separator):
+            # DuckDB prefixes the value name only when there is more than one value:
+            # `maths` for values=["test_1"], `maths_test_1` and `maths_test_2` for
+            # values=["test_1", "test_2"].```
+
+            expression = col(pivot.native_name)
             if aggregate in {"sum", "count"}:
-                # duckdb returns null for a missing pivot combination, to match polars
-                # semantics we need to 0. For the other aggregations like mean, min,
-                # max, both duckdb and polars return null.
+                # DuckDB gives null for a missing combination, polars gives 0.
+                # Every other aggregation returns null in both.
                 expression = when(~expression.isnotnull(), lit(0)).otherwise(expression)
-            output.append(expression.alias(output_name))
+            output.append(expression.alias(pivot.output_name))
         return self._with_native(result.select(*index, *output))
 
     @requires.backend_version((1, 3))

@@ -567,14 +567,12 @@ class DaskLazyFrame(
             raise NotImplementedError(msg)
 
         columns: dict[str, Any] = {}
-        for value, on_value, output_name in generate_pivot_column_names(
-            on_columns, values, separator=separator
-        ):
-            condition = self.native[on] == on_value
-            columns[output_name] = (
+        for pivot in generate_pivot_column_names(on_columns, values, separator=separator):
+            condition = self.native[on] == pivot.on_value
+            columns[pivot.output_name] = (
                 condition.astype("uint32")
                 if aggregate_function == "len"
-                else self.native[value].where(condition)
+                else self.native[pivot.value].where(condition)
             )
 
         aggregate = "sum" if aggregate_function == "len" else aggregate_function

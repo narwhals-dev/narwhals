@@ -455,9 +455,11 @@ class IbisLazyFrame(
         # an empty string and the number of values is greater than 1 (foo vs foo_)
         output = (
             result[
-                value if len(values) > 1 and str(on_value) == "" else output_name
-            ].name(output_name)
-            for value, on_value, output_name in generate_pivot_column_names(
+                pivot.value
+                if len(values) > 1 and str(pivot.on_value) == ""
+                else pivot.output_name
+            ].name(pivot.output_name)
+            for pivot in generate_pivot_column_names(
                 on_columns, values, separator=separator
             )
         )

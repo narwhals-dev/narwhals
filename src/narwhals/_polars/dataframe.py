@@ -788,16 +788,16 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
             index, values = resolve_pivot_index_values(self.columns, on, index, values)
             output = (
                 getattr(
-                    pl.col(value).filter(pl.col(on) == pl.lit(on_value)),
+                    pl.col(pivot.value).filter(pl.col(on) == pl.lit(pivot.on_value)),
                     aggregate_function,
-                )().alias(output_name)
-                for value, on_value, output_name in generate_pivot_column_names(
+                )().alias(pivot.output_name)
+                for pivot in generate_pivot_column_names(
                     on_columns, values, separator=separator
                 )
             )
             result = (
                 self.native.group_by(index, maintain_order=maintain_order).agg(output)
-                if index is not None
+                if index
                 else self.native.select(output)
             )
             return self._with_native(result)
