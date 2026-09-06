@@ -51,19 +51,19 @@ def test_contains_numeric_coercion_expr(
     ):
         request.applymarker(pytest.mark.xfail)
     data_num = {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]}
-    cases: list[tuple[nw.DType, object, list[bool | None]]] = [
+    cases: list[tuple[nw.DType, int | float, list[bool | None]]] = [
         (nw.Int64(), 2.0, [True, None, False, False, False, False]),
         (nw.Int64(), 1.5, [False, None, False, False, False, False]),
         (nw.Int8(), 300, [False, None, False, False, False, False]),
     ]
     for inner, item, expected_num in cases:
         result = nw.from_native(constructor(data_num)).select(
-            nw.col("a").cast(nw.List(inner)).list.contains(item)  # type: ignore[arg-type]
+            nw.col("a").cast(nw.List(inner)).list.contains(item)
         )
         assert_equal_data(result, {"a": expected_num})
-    result = nw.from_native(
-        constructor({"a": [[1.0, 2.0], [3.0], None, []]})
-    ).select(nw.col("a").cast(nw.List(nw.Float64())).list.contains(1))
+    result = nw.from_native(constructor({"a": [[1.0, 2.0], [3.0], None, []]})).select(
+        nw.col("a").cast(nw.List(nw.Float64())).list.contains(1)
+    )
     assert_equal_data(result, {"a": [True, False, None, False]})
 
 
