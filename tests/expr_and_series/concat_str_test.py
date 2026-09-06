@@ -83,9 +83,7 @@ def test_concat_str_null_literal(constructor: Constructor) -> None:
     # A null literal poisons the row when `ignore_nulls=False` (default).
     df = nw.from_native(constructor({"b": ["a", None]}))
     result = df.select(
-        nw.concat_str(["b", nw.lit(None, dtype=nw.String())], separator=", ").alias(
-            "out"
-        )
+        nw.concat_str(["b", nw.lit(None, dtype=nw.String())], separator=", ").alias("out")
     )
     assert_equal_data(result, {"out": [None, None]})
 
