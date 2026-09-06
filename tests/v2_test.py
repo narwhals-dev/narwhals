@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
-    from narwhals.stable.v2.typing import IntoDataFrameT
+    from narwhals.stable.v2.typing import FrameT, IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
 
 
@@ -586,3 +586,35 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
     assert schema._version is Version.V2
+
+
+def test_concat_typing() -> None:
+    """`concat` in the stable API should be typed with the stable classes.
+
+    https://github.com/narwhals-dev/narwhals/issues/3897
+    """
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
+    result = nw_v2.concat([df], how="horizontal")
+    assert isinstance(result, nw_v2.DataFrame)
+    if TYPE_CHECKING:
+        assert_type(result, nw_v2.DataFrame[Any])
+
+
+def test_concat_typevar() -> None:
+    """The literal reproduction from issue #3897.
+
+    A constrained TypeVar over stable `Series` / `DataFrame` must accept the
+    result of stable `concat`.
+    """
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw_v2.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
+
+    def identity(x: FrameT) -> FrameT:
+        return x
+
+    identity(nw_v2.concat([df], how="horizontal"))

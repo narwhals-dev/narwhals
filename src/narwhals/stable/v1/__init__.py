@@ -25,7 +25,7 @@ from narwhals._utils import (
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.exceptions import InvalidIntoExprError, NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, show_versions
+from narwhals.functions import _new_series_impl, show_versions
 from narwhals.schema import Schema as NwSchema
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dependencies, dtypes, selectors
@@ -108,6 +108,7 @@ if TYPE_CHECKING:
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.typing import (
+        ConcatMethod,
         FileSource,
         IntoDType,
         IntoExpr,
@@ -123,6 +124,7 @@ if TYPE_CHECKING:
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
+    _FrameT = TypeVar("_FrameT", "DataFrame[Any]", "LazyFrame[Any]")
 
 
 # NOTE legit
@@ -946,6 +948,24 @@ class Then(nw_f.Then, Expr):
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When.from_when(nw_f.when(*predicates))
+
+
+@overload
+def concat(
+    items: Iterable[DataFrame[Any]], *, how: ConcatMethod = "vertical"
+) -> DataFrame[Any]: ...
+
+
+@overload
+def concat(
+    items: Iterable[LazyFrame[Any]], *, how: ConcatMethod = "vertical"
+) -> LazyFrame[Any]: ...
+
+
+def concat(
+    items: Iterable[_FrameT], *, how: ConcatMethod = "vertical"
+) -> DataFrame[Any] | LazyFrame[Any]:
+    return _stableify(nw_f.concat(items, how=how))
 
 
 @deprecate_native_namespace(required=True)
