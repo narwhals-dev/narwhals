@@ -247,6 +247,45 @@ def test_to_datetime_tz_aware(
         assert_equal_data(result, expected)
 
 
+def test_to_datetime_date_only_format(constructor: Constructor) -> None:
+    # Explicit date-only format parses to midnight. Previously only datetime
+    # formats were exercised, so backends that cannot parse dates went unnoticed.
+    from datetime import datetime
+
+    result = (
+        nw.from_native(constructor({"a": ["2020-01-01", None]}))
+        .lazy()
+        .select(b=nw.col("a").str.to_datetime(format="%Y-%m-%d"))
+    )
+    assert isinstance(result.collect_schema()["b"], nw.Datetime)
+    assert_equal_data(result, {"b": [datetime(2020, 1, 1), None]})
+
+
+def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
+    # Explicit (offset) format on an all-null column yields all nulls instead
+    # of panicking on the missing non-null sample.
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    df = nw.from_native(constructor({"a": [None, None]}))
+    df = df.with_columns(nw.col("a").cast(nw.String()))
+    result = df.select(nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z"))
+    assert isinstance(result.collect_schema()["a"], nw.Datetime)
+    assert_equal_data(result, {"a": [None, None]})
+
+
+def test_to_datetime_trailing_input_raises(constructor: Constructor) -> None:
+    # Trailing characters after an explicit format raise on all backends
+    # (each with its own error type), rather than parsing the prefix.
+    df = nw.from_native(constructor({"a": ["2020-01-01T12:34:56.789"]}))
+    expr = nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S")
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(Exception):  # noqa: BLE001, PT011
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(Exception):  # noqa: BLE001, PT011
+            df.select(expr)
+
+
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
 def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     # Remark that pandas doesn't have a numpy-nullable datetime dtype, so
