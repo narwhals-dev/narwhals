@@ -587,7 +587,6 @@ class DuckDBLazyFrame(
 
         index, values = resolve_pivot_index_values(self.columns, on, index, values)
 
-        # Example generated query:
         # DuckDB has no pivot in its relational API, so we hand-write the query, e.g.
         # PIVOT _rel ON "subject" IN ('maths', 'physics')
         # USING mean("test_1") AS "test_1", mean("test_2") AS "test_2"
