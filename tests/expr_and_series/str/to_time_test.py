@@ -147,11 +147,9 @@ def test_to_time_custom_format(
 
 
 @pytest.mark.parametrize(
-    ("data", "format"),
-    [({"a": ["12:34"]}, "%H:%M:%S"), ({"a": ["25:00:00"]}, None)],
+    ("data", "format"), [({"a": ["12:34"]}, "%H:%M:%S"), ({"a": ["25:00:00"]}, None)]
 )
 def test_to_time_invalid_raises(
-    request: pytest.FixtureRequest,
     constructor: Constructor,
     data: dict[str, list[str]],
     format: str | None,
@@ -166,9 +164,11 @@ def test_to_time_invalid_raises(
             pytest.skip("pandas requires pyarrow for the Time dtype")
     df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_time(format)
+    # Broad `Exception`: every backend raises, but each with its own error
+    # type. The pinned contract is only "raises rather than returning null".
     if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: BLE001, PT011
+        with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
     else:
-        with pytest.raises(Exception):  # noqa: BLE001, PT011
+        with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr)
