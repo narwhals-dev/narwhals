@@ -51,6 +51,29 @@ def test_quantile_expr(
         assert_equal_data(result, expected)
 
 
+def test_quantile_boundaries_expr(constructor: Constructor) -> None:
+    # `quantile(0.0)` is the min and `quantile(1.0)` the max.
+    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+    result = df.select(
+        nw.col("a").quantile(0.0, "linear").alias("min"),
+        nw.col("a").quantile(1.0, "linear").alias("max"),
+    )
+    assert_equal_data(result, {"min": [1.0], "max": [4.0]})
+
+
+def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
+    # Quantiles outside `[0, 1]` raise on all backends (each with its own
+    # error type) instead of returning a value.
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    expr = nw.col("a").quantile(1.5, "linear")
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(Exception):  # noqa: BLE001, PT011
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(Exception):  # noqa: BLE001, PT011
+            df.select(expr)
+
+
 def test_quantile_expr_group_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
