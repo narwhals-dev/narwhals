@@ -167,9 +167,7 @@ def test_struct_with_schema(
     assert_equal_data(result, expected)
 
 
-def test_struct_nested(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
+def test_struct_nested(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     # Nested structs round-trip through `collect_schema` (previously `List`/
     # `Struct` mapped to `Unknown` on some backends).
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
@@ -182,7 +180,12 @@ def test_struct_nested(
     )
     assert_equal_data(
         result,
-        {"s": [{"inner": {"a": 1, "b": "x"}, "c": "p"}, {"inner": {"a": 2, "b": "y"}, "c": "q"}]},
+        {
+            "s": [
+                {"inner": {"a": 1, "b": "x"}, "c": "p"},
+                {"inner": {"a": 2, "b": "y"}, "c": "q"},
+            ]
+        },
     )
 
 
