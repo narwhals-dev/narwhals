@@ -374,10 +374,15 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.drop_null())
 
     def shift(self, n: int) -> Self:
+        # Cap the number of null padding values at the length of the series:
+        # shifting by more than the length must still return a series of the
+        # same length (all null), and must not desync the array lengths that
+        # rolling windows rely on.
+        length = len(self.native)
         if n > 0:
-            arrays = [nulls_like(n, self), *self.native[:-n].chunks]
+            arrays = [nulls_like(min(n, length), self), *self.native[:-n].chunks]
         elif n < 0:
-            arrays = [*self.native[-n:].chunks, nulls_like(-n, self)]
+            arrays = [*self.native[-n:].chunks, nulls_like(min(-n, length), self)]
         else:
             return self._with_native(self.native)
         return self._with_native(pa.concat_arrays(arrays))
