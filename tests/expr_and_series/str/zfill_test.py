@@ -64,3 +64,30 @@ def test_str_zfill_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].str.zfill(3)
     assert_equal_data({"a": result}, expected)
+
+
+def test_str_zfill_sign_only(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Sign-only and empty strings hit a separate branch (sign handling) that
+    # returned null on some backends.
+    if uses_pyarrow_backend(constructor) and PANDAS_VERSION < (3,):
+        request.applymarker(pytest.mark.xfail(reason="pandas pyarrow str.zfill"))
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+        pytest.skip(reason="different zfill behavior")
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip(reason="old polars str.slice behaviour")
+    df = nw.from_native(constructor({"a": ["-", "+", ""]}))
+    result = df.select(nw.col("a").str.zfill(3))
+    assert_equal_data(result, {"a": ["-00", "+00", "000"]})
+
+
+def test_str_zfill_width_1(constructor: Constructor) -> None:
+    # Width 1: `""` becomes `"0"`, everything else is unchanged.
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+        pytest.skip(reason="different zfill behavior")
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip(reason="old polars str.slice behaviour")
+    df = nw.from_native(constructor({"a": ["-1", "+1", "1", "", None]}))
+    result = df.select(nw.col("a").str.zfill(1))
+    assert_equal_data(result, {"a": ["-1", "+1", "1", "0", None]})
