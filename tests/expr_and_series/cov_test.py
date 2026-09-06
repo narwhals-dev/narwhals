@@ -132,3 +132,21 @@ def test_cov_series(constructor_eager: ConstructorEager) -> None:
         "a_c_sample": [0.0],
     }
     assert_equal_data(result, expected)
+
+
+def test_cov_numerical_stability(constructor: Constructor) -> None:
+    # Large offsets stress single-pass variance implementations.
+    df = nw.from_native(
+        constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})
+    )
+    result = df.select(nw.cov("a", "b").round(2), nw.corr("a", "b").round(2).alias("corr"))
+    assert_equal_data(result, {"a": [2.5], "corr": [0.99]})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_cov_group_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    df = nw.from_native(constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "b": [1.0, 2.0, 3.0]}))
+    result = df.group_by("g").agg(nw.cov("a", "b").alias("cov")).sort("g")
+    assert_equal_data(result, {"g": [1, 2], "cov": [0.5, None]})

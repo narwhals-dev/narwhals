@@ -160,6 +160,13 @@ def test_corr_series_foreign_index() -> None:
     assert_equal_data(result, expected)
 
 
+def test_corr_constant_column(constructor: Constructor) -> None:
+    # A constant column has no variance, so correlation is undefined.
+    df = nw.from_native(constructor({"a": [1.0, 1.0, 1.0], "b": [1.0, 2.0, 3.0]}))
+    result = df.select(nw.corr("a", "b").alias("c"))
+    assert_equal_data(result, {"c": [None]})
+
+
 def test_corr_pairwise_nulls(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
