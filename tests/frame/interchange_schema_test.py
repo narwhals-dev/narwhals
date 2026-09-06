@@ -5,48 +5,32 @@ from datetime import date, datetime, timedelta
 import pytest
 
 import narwhals.stable.v1 as nw_v1
-from tests.utils import IBIS_VERSION, POLARS_VERSION
-
-pytest.importorskip("polars")
-import polars as pl
+from tests.utils import IBIS_VERSION
 
 
 def test_interchange_schema() -> None:
-    df_pl = pl.DataFrame(
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    tbl = pa.table(
         {
-            "a": [1, 1, 2],
-            "b": [4, 5, 6],
-            "c": [4, 5, 6],
-            "d": [4, 5, 6],
-            "e": [4, 5, 6],
-            "f": [4, 5, 6],
-            "g": [4, 5, 6],
-            "h": [4, 5, 6],
-            "i": [4, 5, 6],
-            "j": [4, 5, 6],
-            "k": ["fdafsd", "fdas", "ad"],
-            "l": ["fdafsd", "fdas", "ad"],
-            "m": [date(2021, 1, 1), date(2021, 1, 1), date(2021, 1, 1)],
-            "n": [True, True, False],
-        },
-        schema={
-            "a": pl.Int64,
-            "b": pl.Int32,
-            "c": pl.Int16,
-            "d": pl.Int8,
-            "e": pl.UInt64,
-            "f": pl.UInt32,
-            "g": pl.UInt16,
-            "h": pl.UInt8,
-            "i": pl.Float64,
-            "j": pl.Float32,
-            "k": pl.String,
-            "l": pl.Categorical,
-            "m": pl.Datetime,
-            "n": pl.Boolean,
-        },
+            "a": pa.array([1, 1, 2], pa.int64()),
+            "b": pa.array([4, 5, 6], pa.int32()),
+            "c": pa.array([4, 5, 6], pa.int16()),
+            "d": pa.array([4, 5, 6], pa.int8()),
+            "e": pa.array([4, 5, 6], pa.uint64()),
+            "f": pa.array([4, 5, 6], pa.uint32()),
+            "g": pa.array([4, 5, 6], pa.uint16()),
+            "h": pa.array([4, 5, 6], pa.uint8()),
+            "i": pa.array([4, 5, 6], pa.float64()),
+            "j": pa.array([4, 5, 6], pa.float32()),
+            "k": pa.array(["fdafsd", "fdas", "ad"], pa.string()),
+            "l": pa.array(["fdafsd", "fdas", "ad"], pa.string()).dictionary_encode(),
+            "m": pa.array([datetime(2021, 1, 1)] * 3, pa.timestamp("us")),
+            "n": pa.array([True, True, False], pa.bool_()),
+        }
     )
-    df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
+    df = nw_v1.from_native(tbl.__dataframe__(), eager_or_interchange_only=True)
     result = df.schema
     expected = {
         "a": nw_v1.Int64,
@@ -73,7 +57,9 @@ def test_interchange_schema_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     pytest.importorskip("ibis")
+    pytest.importorskip("polars")
     import ibis
+    import polars as pl
 
     try:
         ibis.set_backend("duckdb")
@@ -166,7 +152,9 @@ def test_interchange_schema_ibis(
 
 def test_interchange_schema_duckdb() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
     import duckdb
+    import polars as pl
 
     df_pl = pl.DataFrame(  # noqa: F841
         {
@@ -233,15 +221,22 @@ def test_interchange_schema_duckdb() -> None:
     assert df.collect_schema() == expected
 
 
-@pytest.mark.skipif(POLARS_VERSION < (1, 36), reason="Polars added `Float16` in 1.36.0")
 def test_interchange_schema_float16() -> None:
-    df_pl = pl.DataFrame({"a": [1.0, 2.0, 3.0]}, schema={"a": pl.Float16})
-    df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
+    pytest.importorskip("numpy")
+    pytest.importorskip("pyarrow")
+    import numpy as np
+    import pyarrow as pa
+
+    tbl = pa.table({"a": pa.array(np.array([1.0, 2.0, 3.0], dtype=np.float16))})
+    df = nw_v1.from_native(tbl.__dataframe__(), eager_or_interchange_only=True)
     assert df.schema["a"] == nw_v1.Float16
 
 
 def test_invalid() -> None:
-    df = pl.DataFrame({"a": [1, 2, 3]}).__dataframe__()
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = pa.table({"a": [1, 2, 3]}).__dataframe__()
     with pytest.raises(
         NotImplementedError, match="is not supported for interchange-level dataframes"
     ):

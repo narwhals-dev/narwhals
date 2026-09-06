@@ -39,6 +39,12 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def strip_chars(self, characters: str | None) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.strip(characters))
 
+    def strip_chars_start(self, characters: str) -> DaskExpr:
+        return self.compliant._with_callable(lambda expr: expr.str.lstrip(characters))
+
+    def strip_chars_end(self, characters: str) -> DaskExpr:
+        return self.compliant._with_callable(lambda expr: expr.str.rstrip(characters))
+
     def starts_with(self, prefix: DaskExpr) -> DaskExpr:
         if not prefix._metadata.is_literal:
             msg = "dask backed `Expr.str.starts_with` only supports str prefix values"
@@ -83,7 +89,7 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def slice(self, offset: int, length: int | None) -> DaskExpr:
         return self.compliant._with_callable(
             lambda expr: expr.str.slice(
-                start=offset, stop=offset + length if length else None
+                start=offset, stop=offset + length if length is not None else None
             )
         )
 

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
         Aggregation,  # noqa: F401
     )
     from pyarrow._stubs_typing import (  # pyright: ignore[reportMissingModuleSource]  # pyright: ignore[reportMissingModuleSource]  # pyright: ignore[reportMissingModuleSource]
-        Indices,  # noqa: F401
+        Indices,
         Mask,  # noqa: F401
         Order,  # noqa: F401
     )
@@ -46,6 +46,18 @@ if TYPE_CHECKING:
     ArrayOrChunkedArray: TypeAlias = "ArrayAny | ChunkedArrayAny"
     ScalarAny: TypeAlias = pa.Scalar[Any]
     ArrayOrScalar: TypeAlias = "ArrayOrChunkedArray | ScalarAny"
+
+    class DictionaryArrayAny(pa.Array[Any]):
+        """`pa.DictionaryArray`, declaring the attributes the stubs are missing.
+
+        https://arrow.apache.org/docs/python/generated/pyarrow.DictionaryArray.html
+        """
+
+        @property
+        def dictionary(self) -> ArrayAny: ...
+        @property
+        def indices(self) -> Indices: ...
+
     ArrayOrScalarT1 = TypeVar("ArrayOrScalarT1", ArrayAny, ChunkedArrayAny, ScalarAny)
     ArrayOrScalarT2 = TypeVar("ArrayOrScalarT2", ArrayAny, ChunkedArrayAny, ScalarAny)
     _AsPyType = TypeVar("_AsPyType")

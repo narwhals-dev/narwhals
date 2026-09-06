@@ -202,7 +202,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
-        return cast("ExprT", expr.name(name))
+        return expr.name(name)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
@@ -267,7 +267,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(func)
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_callable(lambda expr: expr.isin(other))
+        values = [v for v in other if v is not None]
+
+        def func(expr: ir.Value) -> ir.Value:
+            return ibis.ifelse(expr.isnull(), None, expr.isin(values))
+
+        return self._with_callable(func)
 
     def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
@@ -322,7 +327,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             elif method == "average":
                 partition = ibis.window(group_by=[expr])
                 cnt = expr.count().over(partition)
-                avg = cast("ir.NumericValue", (cnt - lit(1)) / lit(2.0))
+                avg = (cnt - lit(1)) / lit(2.0)
                 rank_ = rank_ + avg
 
             return ibis.cases((expr.notnull(), rank_))

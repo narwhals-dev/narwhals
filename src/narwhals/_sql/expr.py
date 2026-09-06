@@ -576,9 +576,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         def _clip(
             expr: NativeExprT, lower_bound: NativeExprT, upper_bound: NativeExprT
         ) -> NativeExprT:
-            return self._function(
+            clipped = self._function(
                 "greatest", self._function("least", expr, upper_bound), lower_bound
             )
+            return self._when(self._function("isnull", expr), self._lit(None), clipped)
 
         return self._with_elementwise(
             _clip,
@@ -587,13 +588,15 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def clip_lower(self, lower_bound: Self) -> Self:
         def _clip(expr: NativeExprT, lower_bound: NativeExprT) -> NativeExprT:
-            return self._function("greatest", expr, lower_bound)
+            clipped = self._function("greatest", expr, lower_bound)
+            return self._when(self._function("isnull", expr), self._lit(None), clipped)
 
         return self._with_elementwise(_clip, expression_args={"lower_bound": lower_bound})
 
     def clip_upper(self, upper_bound: Self) -> Self:
         def _clip(expr: NativeExprT, upper_bound: NativeExprT) -> NativeExprT:
-            return self._function("least", expr, upper_bound)
+            clipped = self._function("least", expr, upper_bound)
+            return self._when(self._function("isnull", expr), self._lit(None), clipped)
 
         return self._with_elementwise(_clip, expression_args={"upper_bound": upper_bound})
 

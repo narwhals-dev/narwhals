@@ -1166,6 +1166,16 @@ class EagerExprStringNamespace(
             "str", "strip_chars", characters=characters
         )
 
+    def strip_chars_start(self, characters: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "strip_chars_start", characters=characters
+        )
+
+    def strip_chars_end(self, characters: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "strip_chars_end", characters=characters
+        )
+
     def starts_with(self, prefix: EagerExprT) -> EagerExprT:
         return self.compliant._reuse_series_namespace("str", "starts_with", prefix=prefix)
 

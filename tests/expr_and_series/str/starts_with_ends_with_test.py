@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import narwhals as nw
+from tests.conftest import modin_constructor, pandas_constructor
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 EXPR_UNSUPPORTED = ("dask", "pyarrow", "pandas", "modin", "cudf")
 data = {"a": ["fdas", "edfas"], "prefix_suffix": ["fda", "fas"]}
+
+NON_NULLABLE_CONSTRUCTORS = [pandas_constructor, modin_constructor]
 
 
 @pytest.mark.parametrize(
@@ -113,3 +118,31 @@ def test_starts_with_series_multi(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].str.starts_with(prefix_series))
     assert_equal_data(result, {"a": expected})
+
+
+def test_starts_with_null(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3850
+    data_with_null = {"a": ["x", "y", None, "z"]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.select(nw.col("a").str.starts_with("x"))
+
+    expected: dict[str, list[Any]]
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+        expected = {"a": [True, False, False, False]}
+    else:
+        expected = {"a": [True, False, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+def test_pandas_object_dtype_starts_with_null() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3850
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df_native = pd.DataFrame({"a": ["x", "y", None, "z"]}).astype(object)
+    df = nw.from_native(df_native, eager_only=True)
+
+    mask = df["a"].str.starts_with("x")
+    assert mask.dtype == nw.Boolean
+    assert mask.to_list() == [True, False, False, False]

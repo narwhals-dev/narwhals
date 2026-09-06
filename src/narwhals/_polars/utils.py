@@ -347,6 +347,8 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
     strip_chars: Method[CompliantT]
+    strip_chars_start: Method[CompliantT]
+    strip_chars_end: Method[CompliantT]
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]
@@ -363,7 +365,9 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "cat"
-    get_categories: Method[CompliantT]
+
+    @abc.abstractmethod
+    def get_categories(self) -> CompliantT: ...
 
 
 class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

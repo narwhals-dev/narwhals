@@ -1,11 +1,11 @@
 # Reference: https://packaging.python.org/en/latest/guides/writing-pyproject-toml
 [build-system]
-requires = ["uv_build>=0.11.0,<0.12.0"]
+requires = ["uv_build>=0.11.0,<0.13.0"]
 build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.24.0"
+version = "2.25.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -90,8 +90,8 @@ sklearn = [
 ]
 typing = [
   # Type checkers
-  "mypy>=2.1.0",
-  "pyrefly>=1.2.0",
+  "mypy",
+  "pyrefly",
   "pyright",
   # Dependencies
   "hypothesis>=6.0.0",

@@ -139,7 +139,8 @@ def test_maybe_set_index_pandas_direct_index(
     result = nw.maybe_set_index(df, index=narwhals_index)
     if isinstance(native_df_or_series, pd.Series):
         assert isinstance(result, nw.Series)
-        native_df_or_series.index = pandas_index  # type: ignore[assignment]
+        # NOTE: a `list` of index-likes builds a `MultiIndex`, but the stubs don't allow it
+        native_df_or_series.index = pandas_index  # pyright: ignore[reportAttributeAccessIssue]  # pyrefly: ignore[bad-argument-type]
         assert_series_equal(nw.to_native(result), native_df_or_series)
     else:
         assert isinstance(result, nw.DataFrame)

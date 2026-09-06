@@ -241,7 +241,8 @@ def test_pandas_inplace_modification_1267() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    s = pd.Series([1, 2, 3])
+    # Without Any, the assignment `s[0] = 999.5` is correctly spotted as a typing issue
+    s: pd.Series[Any] = pd.Series([1, 2, 3])
     snw = nw.from_native(s, series_only=True)
     assert snw.dtype == nw.Int64
     s[0] = 999.5

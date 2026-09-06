@@ -4,7 +4,7 @@ import warnings
 from functools import lru_cache
 from itertools import chain
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
@@ -122,7 +122,7 @@ class AggExpr:
         elif self.is_len():
             result_single = grouped.size()
             ns = group_by.compliant.__narwhals_namespace__()
-            result = ns._concat_horizontal(
+            result = ns._concat_by_index(
                 [ns.from_native(result_single).alias(name).native for name in names]
             )
         elif self.is_mode():
@@ -143,7 +143,7 @@ class AggExpr:
             # Implementation based on the following suggestion:
             # https://github.com/pandas-dev/pandas/issues/19254#issuecomment-778661578
             ns = compliant.__narwhals_namespace__()
-            result = ns._concat_horizontal(
+            result = ns._concat_by_index(
                 [
                     native.groupby([*keys, col], **kwargs)
                     .size()
@@ -168,8 +168,10 @@ class AggExpr:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(grouped[select])
         if is_pandas_like_dataframe(result):
+            result = cast("pd.DataFrame", result)
             result.columns = list(self.aliases)
         else:
+            result = cast("pd.Series[Any]", result)
             result.name = self.aliases[0]
         return result
 
@@ -302,7 +304,7 @@ class PandasLikeGroupBy(
             result: pd.DataFrame
             if agg_exprs:
                 ns = self.compliant.__narwhals_namespace__()
-                result = ns._concat_horizontal(self._getitem_aggs(agg_exprs))
+                result = ns._concat_by_index(self._getitem_aggs(agg_exprs))
             else:
                 result = self.compliant.__native_namespace__().DataFrame(
                     list(grouped.groups), columns=self._keys

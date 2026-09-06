@@ -39,6 +39,7 @@ from tests.utils import (
     assert_equal_data,
     assert_equal_hash,
     assert_equal_series,
+    interchange_frame,
 )
 
 if TYPE_CHECKING:
@@ -281,9 +282,9 @@ def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
 
-    df = pd.DataFrame(
-        {"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True)
-    ).__dataframe__()
+    df = interchange_frame(
+        pd.DataFrame({"a": ["a", "b"]}, dtype=pd.CategoricalDtype(ordered=True))
+    )
     assert nw_v1.is_ordered_categorical(
         nw_v1.from_native(df, eager_or_interchange_only=True)["a"]
     )
@@ -423,14 +424,14 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
 
 
 def test_get_level() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
+    tbl = pa.table({"a": [1, 2, 3]})
+    assert nw_v1.get_level(nw_v1.from_native(tbl)) == "full"
     assert (
         nw_v1.get_level(
-            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+            nw_v1.from_native(tbl.__dataframe__(), eager_or_interchange_only=True)
         )
         == "interchange"
     )
@@ -481,10 +482,10 @@ def test_with_row_index(constructor: Constructor) -> None:
 
     frame = nw_v1.from_native(constructor(data))
 
-    msg = "Cannot pass `order_by`"
+    msg = "Must pass `order_by`"
     context = (
         pytest.raises(TypeError, match=msg)
-        if any(x in str(constructor) for x in ("duckdb", "pyspark"))
+        if any(x in str(constructor) for x in ("duckdb", "pyspark", "ibis"))
         else does_not_raise()
     )
 
@@ -1246,3 +1247,40 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.String()})
     assert schema._version is Version.V1
+
+
+def test_get_categories_v1(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    expected = {"a": ["one", "two"]}
+    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+
+    # This must not warn, neither from Narwhals nor from Polars.
+    result = df.select(nw_v1.col("a").cast(nw_v1.Categorical).cat.get_categories())
+    result_series = df["a"].cast(nw_v1.Categorical).cat.get_categories()
+
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data({"a": result_series.sort()}, expected)
+
+
+def test_get_categories_lazy_v1(constructor_eager: ConstructorEager) -> None:
+    # `stable.v1` allows length-changing expressions in `LazyFrame.select`.
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    lf = nw_v1.from_native(constructor_eager(data)).lazy()
+    expr = nw_v1.col("a").cast(nw_v1.Categorical).cat.get_categories()
+    assert_equal_data(lf.select(expr).sort("a").collect(), {"a": ["one", "two"]})
+
+
+def test_get_categories_enum_polars_v1() -> None:
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
+    result = nw_v1.from_native(s_native, series_only=True).cat.get_categories()
+    assert result.dtype == nw_v1.String
+    assert result.to_list() == ["Panda", "Polar"]
