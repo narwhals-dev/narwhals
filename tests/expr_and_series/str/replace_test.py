@@ -35,6 +35,17 @@ replace_all_data = [
     ),
 ]
 
+# Edge cases from differential testing: byte-vs-char offsets, match position
+# vs match text, re-matching inside inserted text, and boundary `n` values.
+replace_edge_data = [
+    ({"a": ["ααα-x"]}, "-", "@", 1, True, {"a": ["ααα@x"]}),
+    ({"a": ["héllo wörld"]}, "wörld", "@", 1, True, {"a": ["héllo @"]}),
+    ({"a": ["abcx abc"]}, r"abc\b", "Z", 1, False, {"a": ["abcx Z"]}),
+    ({"a": ["aa"]}, "a", "ab", 2, True, {"a": ["abab"]}),
+    ({"a": ["abc"]}, "abc", "Z", 0, False, {"a": ["abc"]}),
+    ({"a": ["abc"]}, "", "Z", 1, True, {"a": ["Zabc"]}),
+]
+
 replace_data_multivalue = [
     (
         {"a": ["123abc", "abc456"], "b": ["ghi", "jkl"]},
@@ -136,6 +147,52 @@ def test_str_replace_all_series_scalar(
     ("data", "pattern", "value", "n", "literal", "expected"), replace_data
 )
 def test_str_replace_expr_scalar(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    data: dict[str, list[str]],
+    pattern: str,
+    value: str,
+    n: int,
+    literal: bool,  # noqa: FBT001
+    expected: dict[str, list[str]],
+) -> None:
+    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason=f"{constructor} only supports `replace_all`.",
+                raises=NotImplementedError,
+            )
+        )
+    df = nw.from_native(constructor(data))
+    result_df = df.select(
+        nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
+    )
+    assert_equal_data(result_df, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "pattern", "value", "n", "literal", "expected"), replace_edge_data
+)
+def test_str_replace_edge_series_scalar(
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[str]],
+    pattern: str,
+    value: str,
+    n: int,
+    literal: bool,  # noqa: FBT001
+    expected: dict[str, list[str]],
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result_series = df["a"].str.replace(
+        pattern=pattern, value=value, n=n, literal=literal
+    )
+    assert_equal_data({"a": result_series}, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "pattern", "value", "n", "literal", "expected"), replace_edge_data
+)
+def test_str_replace_edge_expr_scalar(
     constructor: Constructor,
     request: pytest.FixtureRequest,
     data: dict[str, list[str]],
