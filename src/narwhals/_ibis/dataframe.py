@@ -14,6 +14,7 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_lazy_pivot_supported_options,
     generate_pivot_column_names,
     generate_temporary_column_name,
     not_implemented,
@@ -427,15 +428,9 @@ class IbisLazyFrame(
     ) -> Self:
         import ibis.selectors as s
 
-        if maintain_order:
-            msg = "Ibis does not support maintaining row order during a pivot."
-            raise NotImplementedError(msg)
-        if aggregate_function is None:
-            msg = (
-                "Ibis does not support pivoting without aggregation because it "
-                "cannot validate that each group contains a single value."
-            )
-            raise NotImplementedError(msg)
+        aggregate_function = check_lazy_pivot_supported_options(
+            self._implementation, aggregate_function, maintain_order=maintain_order
+        )
         index, values = resolve_pivot_index_values(self.columns, on, index, values)
 
         aggregate = "count" if aggregate_function == "len" else aggregate_function

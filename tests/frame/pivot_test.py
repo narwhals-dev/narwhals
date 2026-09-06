@@ -354,7 +354,7 @@ def test_pivot_lazy_no_agg(constructor: Constructor, data_: Any, context: Any) -
             match=(
                 "does not support lazy pivoting without aggregation"
                 if df.implementation is nw.Implementation.POLARS
-                else "cannot validate that each group"
+                else r"aggregate_function=None.*not supported"
             ),
         )
     with context:
@@ -429,7 +429,7 @@ def test_pivot_lazy_maintain_order(constructor: Constructor) -> None:
     df = make_lazy_frame(data, constructor)
     if df.implementation is nw.Implementation.POLARS:
         pytest.skip("Polars supports maintaining row order during a pivot")
-    with pytest.raises(NotImplementedError, match="maintaining row order"):
+    with pytest.raises(NotImplementedError, match=r"maintain_order=True.*not supported"):
         df.pivot(
             "col",
             ["a", "b"],

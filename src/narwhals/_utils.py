@@ -131,6 +131,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NestedLiteral,
         NormalizedPath,
+        PivotAgg,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -1279,6 +1280,25 @@ class PivotColumn:
     on_value: Any
     native_name: str
     output_name: str
+
+
+def check_lazy_pivot_supported_options(
+    implementation: Implementation,
+    aggregate_function: PivotAgg | None,
+    *,
+    maintain_order: bool,
+) -> PivotAgg:
+    """Reject pivot options no lazy backend other than Polars can honor."""
+    if maintain_order:
+        msg = f"`maintain_order=True` is not supported for {implementation}."
+        raise NotImplementedError(msg)
+    if aggregate_function is None:
+        msg = (
+            f"`aggregate_function=None` is not supported for {implementation}, as it "
+            "cannot validate that each group contains a single value."
+        )
+        raise NotImplementedError(msg)
+    return aggregate_function
 
 
 def generate_pivot_column_names(

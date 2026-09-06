@@ -19,6 +19,7 @@ from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
+    check_lazy_pivot_supported_options,
     extend_bool,
     generate_pivot_column_names,
     generate_temporary_column_name,
@@ -574,17 +575,9 @@ class SparkLikeLazyFrame(
         maintain_order: bool,
         separator: str,
     ) -> Self:
-        if maintain_order:
-            msg = (
-                "Spark-like backends do not support maintaining row order during a pivot."
-            )
-            raise NotImplementedError(msg)
-        if aggregate_function is None:
-            msg = (
-                "Spark-like backends do not support pivoting without aggregation "
-                "because they cannot validate that each group contains a single value."
-            )
-            raise NotImplementedError(msg)
+        aggregate_function = check_lazy_pivot_supported_options(
+            self._implementation, aggregate_function, maintain_order=maintain_order
+        )
         index, values = resolve_pivot_index_values(self.columns, on, index, values)
         F = self._F
 
