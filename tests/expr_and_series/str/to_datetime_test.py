@@ -278,11 +278,13 @@ def test_to_datetime_trailing_input_raises(constructor: Constructor) -> None:
     # (each with its own error type), rather than parsing the prefix.
     df = nw.from_native(constructor({"a": ["2020-01-01T12:34:56.789"]}))
     expr = nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S")
+    # Broad `Exception`: every backend raises, but each with its own error
+    # type. The pinned contract is only "raises rather than prefix-parses".
     if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: BLE001, PT011
+        with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
     else:
-        with pytest.raises(Exception):  # noqa: BLE001, PT011
+        with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr)
 
 
