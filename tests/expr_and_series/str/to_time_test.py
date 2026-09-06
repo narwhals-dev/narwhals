@@ -120,3 +120,55 @@ def test_to_time_series_infer_fmt(
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_time()
     assert str(result.item(0)) == expected
     assert isinstance(result.dtype, nw.Time)
+
+
+@pytest.mark.parametrize(
+    ("data", "format", "expected"),
+    [
+        ({"a": ["12-34"]}, "%H-%M", "12:34:00"),
+        ({"a": ["01:30 PM"]}, "%I:%M %p", "13:30:00"),
+    ],
+)
+def test_to_time_custom_format(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, list[str]],
+    format: str,
+    expected: str,
+) -> None:
+    # `format` must be honoured (previously ignored on some paths) and the
+    # lazy schema must already report `Time`.
+    requires_time_support(request, constructor)
+    result = (
+        nw.from_native(constructor(data)).lazy().select(b=nw.col("a").str.to_time(format))
+    )
+    assert isinstance(result.collect_schema()["b"], nw.Time)
+    assert str(result.collect().item(row=0, column="b")) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "format"),
+    [({"a": ["12:34"]}, "%H:%M:%S"), ({"a": ["25:00:00"]}, None)],
+)
+def test_to_time_invalid_raises(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, list[str]],
+    format: str | None,
+) -> None:
+    # Unparseable input raises (each backend with its own error type) instead
+    # of silently becoming null. Backends without `Time` support also raise,
+    # so no xfail is needed here (any exception counts).
+    if constructor.__name__.startswith(("pandas", "modin")):
+        if PANDAS_VERSION < (2, 2, 0):
+            pytest.skip("pandas < 2.2.0 has no Time dtype")
+        if PYARROW_VERSION == (0, 0, 0):
+            pytest.skip("pandas requires pyarrow for the Time dtype")
+    df = nw.from_native(constructor(data))
+    expr = nw.col("a").str.to_time(format)
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(Exception):  # noqa: BLE001, PT011
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(Exception):  # noqa: BLE001, PT011
+            df.select(expr)
