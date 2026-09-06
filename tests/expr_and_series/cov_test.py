@@ -145,7 +145,7 @@ def test_cov_numerical_stability(constructor: Constructor) -> None:
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
 def test_cov_group_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    if "pyarrow_table" in str(constructor):
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
     df = nw.from_native(constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "b": [1.0, 2.0, 3.0]}))
     result = df.group_by("g").agg(nw.cov("a", "b").alias("cov")).sort("g")
