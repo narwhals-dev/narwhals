@@ -72,6 +72,24 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_concat_str_single_expr(constructor: Constructor) -> None:
+    # A single expression is passed through (null preserved).
+    df = nw.from_native(constructor({"b": ["a", None]}))
+    result = df.select(nw.concat_str(["b"], separator=", ").alias("out"))
+    assert_equal_data(result, {"out": ["a", None]})
+
+
+def test_concat_str_null_literal(constructor: Constructor) -> None:
+    # A null literal poisons the row when `ignore_nulls=False` (default).
+    df = nw.from_native(constructor({"b": ["a", None]}))
+    result = df.select(
+        nw.concat_str(["b", nw.lit(None, dtype=nw.String())], separator=", ").alias(
+            "out"
+        )
+    )
+    assert_equal_data(result, {"out": [None, None]})
+
+
 @pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [
