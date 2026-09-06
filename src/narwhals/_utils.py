@@ -1330,7 +1330,7 @@ def is_range(obj: Any) -> TypeIs[range]:
 
 
 def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
-    return bool(isinstance(obj, int) and not isinstance(obj, bool))
+    return isinstance(obj, int) and not isinstance(obj, bool)
 
 
 def is_index_selector(
