@@ -167,6 +167,25 @@ def test_struct_with_schema(
     assert_equal_data(result, expected)
 
 
+def test_struct_nested(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Nested structs round-trip through `collect_schema` (previously `List`/
+    # `Struct` mapped to `Unknown` on some backends).
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
+        request.applymarker(pytest.mark.xfail)
+    maybe_skip(constructor=constructor)
+    df = nw.from_native(constructor({"a": [1, 2], "b": ["x", "y"], "c": ["p", "q"]}))
+    result = df.select(nw.struct(nw.struct("a", "b").alias("inner"), "c").alias("s"))
+    assert result.collect_schema()["s"] == nw.Struct(
+        {"inner": nw.Struct({"a": nw.Int64(), "b": nw.String()}), "c": nw.String()}
+    )
+    assert_equal_data(
+        result,
+        {"s": [{"inner": {"a": 1, "b": "x"}, "c": "p"}, {"inner": {"a": 2, "b": "y"}, "c": "q"}]},
+    )
+
+
 def test_struct_with_series(constructor_eager: ConstructorEager) -> None:
     maybe_skip(constructor=constructor_eager)
 
