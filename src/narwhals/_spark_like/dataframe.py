@@ -586,27 +586,15 @@ class SparkLikeLazyFrame(
             )
             raise NotImplementedError(msg)
         index, values = resolve_pivot_index_values(self.columns, on, index, values)
-
-        if aggregate_function == "len":
-            aggregations = [
-                self._F.sum(
-                    self._F.when(
-                        self._F.col(on) == self._F.lit(on_value), self._F.lit(1)
-                    ).otherwise(self._F.lit(0))
-                ).alias(output_name)
-                for _, on_value, output_name in generate_pivot_column_names(
-                    on_columns, values, separator=separator
-                )
-            ]
-            result = (
-                self.native.groupBy(*index).agg(*aggregations)
-                if index
-                else self.native.agg(*aggregations)
-            )
-            return self._with_native(result)
+        F = self._F
 
         aggregations = [
-            getattr(self._F, aggregate_function)(value).alias(value) for value in values
+            (
+                F.count(F.lit(1))
+                if aggregate_function == "len"
+                else getattr(F, aggregate_function)(value)
+            ).alias(value)
+            for value in values
         ]
         result = (
             self.native.groupBy(*index).pivot(on, list(on_columns)).agg(*aggregations)
@@ -616,9 +604,9 @@ class SparkLikeLazyFrame(
             on_columns, values, separator=separator
         ):
             source_name = str(on_value) if len(values) == 1 else f"{on_value}_{value}"
-            expression = self._F.col(source_name)
-            if aggregate_function == "sum":
-                expression = self._F.coalesce(expression, self._F.lit(0))
+            expression = F.col(source_name)
+            if aggregate_function in {"sum", "len"}:
+                expression = F.coalesce(expression, F.lit(0))
             pivoted.append(expression.alias(output_name))
         return self._with_native(result.select(*index, *pivoted))
 
