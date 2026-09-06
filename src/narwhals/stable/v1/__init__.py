@@ -400,6 +400,8 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
+    _version = Version.V1
+
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 

@@ -202,7 +202,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
-        return cast("ExprT", expr.name(name))
+        return expr.name(name)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
@@ -327,7 +327,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             elif method == "average":
                 partition = ibis.window(group_by=[expr])
                 cnt = expr.count().over(partition)
-                avg = cast("ir.NumericValue", (cnt - lit(1)) / lit(2.0))
+                avg = (cnt - lit(1)) / lit(2.0)
                 rank_ = rank_ + avg
 
             return ibis.cases((expr.notnull(), rank_))
