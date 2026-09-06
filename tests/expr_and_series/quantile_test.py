@@ -53,12 +53,21 @@ def test_quantile_expr(
 
 def test_quantile_boundaries_expr(constructor: Constructor) -> None:
     # `quantile(0.0)` is the min and `quantile(1.0)` the max.
-    df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
-    result = df.select(
-        nw.col("a").quantile(0.0, "linear").alias("min"),
-        nw.col("a").quantile(1.0, "linear").alias("max"),
+    msg = re.escape(
+        "`Expr.quantile` is not supported for Dask backend with multiple partitions."
     )
-    assert_equal_data(result, {"min": [1.0], "max": [4.0]})
+    context = (
+        pytest.raises(NotImplementedError, match=msg)
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+    with context:
+        df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+        result = df.select(
+            nw.col("a").quantile(0.0, "linear").alias("min"),
+            nw.col("a").quantile(1.0, "linear").alias("max"),
+        )
+        assert_equal_data(result, {"min": [1.0], "max": [4.0]})
 
 
 def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
