@@ -242,3 +242,32 @@ def test_series_contains_literal_vs_regex(constructor_eager: ConstructorEager) -
             "literal_match": [False, False, False, False, True, None],
         }
     assert_equal_data(result, expected)
+
+
+def test_expr_contains_empty_pattern(constructor: Constructor) -> None:
+    # Empty pattern matches every non-null row, null stays null (except
+    # plain pandas, which has no nullable boolean). Boundary case for
+    # regex vs literal handling.
+    df = nw.from_native(constructor({"pets": ["cat", None, ""]}))
+    result = df.select(nw.col("pets").str.contains("", literal=True).alias("match"))
+    expected: dict[str, Any] = (
+        {"match": [True, False, True]}
+        if "pandas_constructor" in str(constructor)
+        else {"match": [True, None, True]}
+    )
+    assert_equal_data(result, expected)
+
+
+def test_expr_contains_expr_pattern_with_null(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # A null pattern yields null for that row.
+    if any(x in str(constructor) for x in EXPR_PATTERN_UNSUPPORTED):
+        request.applymarker(pytest.mark.xfail(reason="Not supported", raises=TypeError))
+    df = nw.from_native(
+        constructor({"text": ["hello", "foo", None], "pattern": ["ell", None, "o"]})
+    )
+    result = df.select(
+        nw.col("text").str.contains(nw.col("pattern")).alias("result")
+    )
+    assert_equal_data(result, {"result": [True, None, None]})
