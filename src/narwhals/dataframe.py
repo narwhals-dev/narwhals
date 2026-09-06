@@ -92,7 +92,6 @@ if TYPE_CHECKING:
         IntoLazyFrame,
         IntoSchema,
         JoinStrategy,
-        LazyPivotAgg,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
         PivotAgg,
@@ -3329,7 +3328,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         *,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
-        aggregate_function: LazyPivotAgg | None = None,
+        aggregate_function: PivotAgg | None = None,
         maintain_order: bool = False,
         separator: str = "_",
     ) -> Self:
@@ -3350,8 +3349,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 - None: no aggregation takes place, will raise error if multiple values
                     are in group.
                 - A predefined aggregate function string, one of
-                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len',
-                    'item'}
+                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
             maintain_order: Ensure the values of `index` are sorted by discovery order.
             separator: Used as separator/delimiter in generated column names in case of
                 multiple `values` columns.

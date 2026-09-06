@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         JoinStrategy,
-        LazyPivotAgg,
+        PivotAgg,
         UniqueKeepStrategy,
     )
 
@@ -421,7 +421,7 @@ class IbisLazyFrame(
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: LazyPivotAgg | None,
+        aggregate_function: PivotAgg | None,
         maintain_order: bool,
         separator: str,
     ) -> Self:
@@ -430,7 +430,7 @@ class IbisLazyFrame(
         if maintain_order:
             msg = "Ibis does not support maintaining row order during a pivot."
             raise NotImplementedError(msg)
-        if aggregate_function is None or aggregate_function == "item":
+        if aggregate_function is None:
             msg = (
                 "Ibis does not support pivoting without aggregation because it "
                 "cannot validate that each group contains a single value."

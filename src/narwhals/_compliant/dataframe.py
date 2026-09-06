@@ -65,7 +65,6 @@ if TYPE_CHECKING:
         AsofJoinStrategy,
         IntoDType,
         JoinStrategy,
-        LazyPivotAgg,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
@@ -312,7 +311,7 @@ class CompliantLazyFrame(
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: LazyPivotAgg | None,
+        aggregate_function: PivotAgg | None,
         maintain_order: bool,
         separator: str,
     ) -> Self: ...

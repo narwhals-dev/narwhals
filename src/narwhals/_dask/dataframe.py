@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
 
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         AsofJoinStrategy,
         JoinStrategy,
-        LazyPivotAgg,
+        PivotAgg,
         UniqueKeepStrategy,
     )
 
@@ -548,14 +548,14 @@ class DaskLazyFrame(
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: LazyPivotAgg | None,
+        aggregate_function: PivotAgg | None,
         maintain_order: bool,
         separator: str,
     ) -> Self:
         if maintain_order:
             msg = "Dask does not support maintaining row order during a pivot."
             raise NotImplementedError(msg)
-        if aggregate_function is None or aggregate_function == "item":
+        if aggregate_function is None:
             msg = (
                 "Dask does not support pivoting without aggregation because it "
                 "cannot validate that each group contains a single value."
@@ -576,13 +576,14 @@ class DaskLazyFrame(
             )
 
         aggregate = "sum" if aggregate_function == "len" else aggregate_function
-        result = (
+        # Dask's stubs do not preserve the DataFrame return type through this aggregation.
+        result = cast(
+            "dx.DataFrame",
             self.native.assign(**columns)
             .groupby(list(index), dropna=False, sort=False)[list(columns)]
-            .agg(aggregate)
-            .reset_index()
+            .agg(aggregate),
         )
-        return self._with_native(result)
+        return self._with_native(result.reset_index())
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.to_parquet(file)

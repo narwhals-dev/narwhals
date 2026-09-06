@@ -56,7 +56,6 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         IntoDType,
         JoinStrategy,
-        LazyPivotAgg,
         MultiColSelector,
         MultiIndexSelector,
         PivotAgg,
@@ -777,12 +776,12 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: LazyPivotAgg | None,
+        aggregate_function: PivotAgg | None,
         maintain_order: bool,
         separator: str,
     ) -> Self:
         if self._backend_version < (1, 43):
-            if aggregate_function is None or aggregate_function == "item":
+            if aggregate_function is None:
                 msg = "Polars<1.43 does not support lazy pivoting without aggregation."
                 raise NotImplementedError(msg)
             index, values = resolve_pivot_index_values(self.columns, on, index, values)

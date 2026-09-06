@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
-    from narwhals.typing import JoinStrategy, LazyPivotAgg, UniqueKeepStrategy
+    from narwhals.typing import JoinStrategy, PivotAgg, UniqueKeepStrategy
 
     SQLFrameDataFrame = BaseDataFrame[Any, Any, Any, Any, Any]
 
@@ -570,7 +570,7 @@ class SparkLikeLazyFrame(
         *,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
-        aggregate_function: LazyPivotAgg | None,
+        aggregate_function: PivotAgg | None,
         maintain_order: bool,
         separator: str,
     ) -> Self:
@@ -579,7 +579,7 @@ class SparkLikeLazyFrame(
                 "Spark-like backends do not support maintaining row order during a pivot."
             )
             raise NotImplementedError(msg)
-        if aggregate_function is None or aggregate_function == "item":
+        if aggregate_function is None:
             msg = (
                 "Spark-like backends do not support pivoting without aggregation "
                 "because they cannot validate that each group contains a single value."

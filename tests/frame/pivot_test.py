@@ -10,7 +10,7 @@ from narwhals.exceptions import NarwhalsError
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
-    from narwhals.typing import LazyPivotAgg
+    from narwhals.typing import PivotAgg
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -287,7 +287,7 @@ def test_pivot_no_index(
 @pytest.mark.parametrize("index", ["ix", ["ix"]])
 def test_pivot_lazy(
     constructor: Constructor,
-    agg_func: LazyPivotAgg,
+    agg_func: PivotAgg,
     expected: dict[str, list[Any]],
     index: str | list[str],
 ) -> None:
@@ -309,7 +309,7 @@ def test_pivot_lazy(
 
 @pytest.mark.parametrize(("agg_func", "expected"), PIVOT_MISSING_COMBINATION_CASES)
 def test_pivot_lazy_missing_combination(
-    constructor: Constructor, agg_func: LazyPivotAgg, expected: dict[str, list[Any]]
+    constructor: Constructor, agg_func: PivotAgg, expected: dict[str, list[Any]]
 ) -> None:
     df = make_lazy_frame(data_missing_combination, constructor)
     result = (
@@ -369,7 +369,7 @@ def test_pivot_lazy_no_index_no_values(constructor: Constructor) -> None:
 
 def test_pivot_lazy_no_index(constructor: Constructor) -> None:
     df = make_lazy_frame(data_no_dups, constructor)
-    aggregate_function: LazyPivotAgg = (
+    aggregate_function: PivotAgg = (
         "min" if df.implementation is nw.Implementation.SQLFRAME else "first"
     )
     result = (
