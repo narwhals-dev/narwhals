@@ -3357,33 +3357,30 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 multiple `values` columns.
 
         Examples:
-            >>> import polars as pl
+            >>> import duckdb
             >>> import narwhals as nw
-            >>> data = {
-            ...     "ix": [1, 1, 2, 2, 1, 2],
-            ...     "col": ["a", "a", "a", "a", "b", "b"],
-            ...     "foo": [0, 1, 2, 2, 7, 1],
-            ...     "bar": [0, 2, 0, 0, 9, 4],
-            ... }
-            >>> df_native = pl.LazyFrame(data)
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES "
+            ...     "(1, 'a', 0, 0), (1, 'a', 1, 2), (2, 'a', 2, 0), "
+            ...     "(2, 'a', 2, 0), (1, 'b', 7, 9), (2, 'b', 1, 4) "
+            ...     "df(ix, col, foo, bar)"
+            ... )
             >>> (
             ...     nw.from_native(df_native)
             ...     .pivot(
             ...         "col", on_columns=["a", "b"], index="ix", aggregate_function="sum"
             ...     )
             ...     .sort("ix")
-            ...     .collect()
             ...     .to_native()
             ... )
-            shape: (2, 5)
-            ┌─────┬───────┬───────┬───────┬───────┐
-            │ ix  ┆ foo_a ┆ foo_b ┆ bar_a ┆ bar_b │
-            │ --- ┆ ---   ┆ ---   ┆ ---   ┆ ---   │
-            │ i64 ┆ i64   ┆ i64   ┆ i64   ┆ i64   │
-            ╞═════╪═══════╪═══════╪═══════╪═══════╡
-            │ 1   ┆ 1     ┆ 7     ┆ 2     ┆ 9     │
-            │ 2   ┆ 4     ┆ 1     ┆ 0     ┆ 4     │
-            └─────┴───────┴───────┴───────┴───────┘
+            ┌───────┬────────┬────────┬────────┬────────┐
+            │  ix   │ foo_a  │ foo_b  │ bar_a  │ bar_b  │
+            │ int32 │ int128 │ int128 │ int128 │ int128 │
+            ├───────┼────────┼────────┼────────┼────────┤
+            │     1 │      1 │      7 │      2 │      9 │
+            │     2 │      4 │      1 │      0 │      4 │
+            └───────┴────────┴────────┴────────┴────────┘
+            <BLANKLINE>
         """
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
