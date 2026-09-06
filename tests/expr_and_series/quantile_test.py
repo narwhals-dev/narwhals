@@ -75,11 +75,13 @@ def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
     # error type) instead of returning a value.
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     expr = nw.col("a").quantile(1.5, "linear")
+    # Broad `Exception`: every backend raises, but each with its own error
+    # type. The pinned contract is only "raises rather than returning a value".
     if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: BLE001, PT011
+        with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
     else:
-        with pytest.raises(Exception):  # noqa: BLE001, PT011
+        with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr)
 
 

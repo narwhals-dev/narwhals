@@ -63,7 +63,9 @@ def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -
         request.applymarker(pytest.mark.xfail(reason="pyarrow median over differs"))
     df = nw.from_native(constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0]}))
     result = df.with_columns(m=nw.col("a").median().over("g")).sort("g", "a")
-    assert_equal_data(result, {"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "m": [1.5, 1.5, 3.0]})
+    assert_equal_data(
+        result, {"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "m": [1.5, 1.5, 3.0]}
+    )
 
 
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
