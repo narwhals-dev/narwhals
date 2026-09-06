@@ -267,7 +267,5 @@ def test_expr_contains_expr_pattern_with_null(
     df = nw.from_native(
         constructor({"text": ["hello", "foo", None], "pattern": ["ell", None, "o"]})
     )
-    result = df.select(
-        nw.col("text").str.contains(nw.col("pattern")).alias("result")
-    )
+    result = df.select(nw.col("text").str.contains(nw.col("pattern")).alias("result"))
     assert_equal_data(result, {"result": [True, None, None]})
