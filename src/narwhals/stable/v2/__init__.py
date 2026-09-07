@@ -61,7 +61,6 @@ from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.stable.v2.typing import (
     DataFrameT,
-    Frame,
     FrameT,
     IntoDataFrameT,
     IntoFrame,
@@ -929,19 +928,7 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When.from_when(nw_f.when(*predicates))
 
 
-@overload
-def concat(
-    items: Iterable[DataFrame[Any]], *, how: ConcatMethod = "vertical"
-) -> DataFrame[Any]: ...
-
-
-@overload
-def concat(
-    items: Iterable[LazyFrame[Any]], *, how: ConcatMethod = "vertical"
-) -> LazyFrame[Any]: ...
-
-
-def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> Frame:
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
     """Concatenate multiple DataFrames, LazyFrames into a single entity.
 
     Arguments:

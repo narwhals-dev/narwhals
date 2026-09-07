@@ -50,7 +50,7 @@ if TYPE_CHECKING:
 
     from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.stable.v1.typing import FrameT as StableFrameT, IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
 
@@ -228,9 +228,31 @@ def test_concat() -> None:
     result = nw_v1.concat([df, df], how="vertical")
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
-    assert isinstance(result, nw_v1.DataFrame)
     if TYPE_CHECKING:
+        # Check the inferred return type before isinstance narrows it.
         assert_type(result, nw_v1.DataFrame[Any])
+    assert isinstance(result, nw_v1.DataFrame)
+
+    def identity(x: FrameT) -> FrameT:
+        return x
+
+    identity(nw_v1.concat([df], how="horizontal"))
+
+    def concat_generic(frame: StableFrameT) -> StableFrameT:
+        return nw_v1.concat([frame, frame])
+
+    def concat_sequence(frames: Sequence[StableFrameT]) -> StableFrameT:
+        return nw_v1.concat(frames)
+
+    assert_equal_data(concat_generic(df), expected)
+    assert_equal_data(concat_sequence([df, df]), expected)
+    lazy_result = concat_generic(df.lazy())
+    if TYPE_CHECKING:
+        assert_type(lazy_result, nw_v1.LazyFrame[Any])
+        assert_type(nw_v1.concat([df.lazy()]), nw_v1.LazyFrame[Any])
+    assert isinstance(lazy_result, nw_v1.LazyFrame)
+    assert_equal_data(lazy_result.collect(), expected)
+    assert_equal_data(concat_sequence([df.lazy(), df.lazy()]).collect(), expected)
 
 
 def test_to_dict() -> None:
@@ -1250,35 +1272,3 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.String()})
     assert schema._version is Version.V1
-
-
-def test_concat_typing() -> None:
-    """`concat` in the stable API should be typed with the stable classes.
-
-    https://github.com/narwhals-dev/narwhals/issues/3897
-    """
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
-    result = nw_v1.concat([df], how="horizontal")
-    assert isinstance(result, nw_v1.DataFrame)
-    if TYPE_CHECKING:
-        assert_type(result, nw_v1.DataFrame[Any])
-
-
-def test_concat_typevar() -> None:
-    """The literal reproduction from issue #3897.
-
-    A constrained TypeVar over stable `Series` / `DataFrame` must accept the
-    result of stable `concat`.
-    """
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    df = nw_v1.from_native(pd.DataFrame({"a": [1, 2, 3]}), eager_only=True)
-
-    def identity(x: FrameT) -> FrameT:
-        return x
-
-    identity(nw_v1.concat([df], how="horizontal"))
