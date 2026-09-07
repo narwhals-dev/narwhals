@@ -1,5 +1,12 @@
 # DataFrame
 
+This is the first of three pages building up to a dataframe-agnostic
+[Standard Scaler](complete_example.md), a class which works unchanged with pandas, Polars,
+PyArrow, and every other backend Narwhals supports.
+
+By the end of this page, you'll be able to write a function which takes a dataframe from
+any supported library, transforms it, and gives back a dataframe of that same library.
+
 To write a dataframe-agnostic function, the steps you'll want to follow are:
 
 1. Initialise a Narwhals DataFrame or LazyFrame by passing your dataframe to `nw.from_native`.
@@ -266,3 +273,8 @@ Let's try it out:
     a = pa.chunked_array([[1, 3]])
     print(func(table, a, "a"))
     ```
+
+## Next step
+
+In [Series](series.md), we'll look at what changes when you need a single column, or a
+plain Python scalar, out of a dataframe.

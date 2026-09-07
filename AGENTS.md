@@ -22,11 +22,11 @@ from the source, and update the page when you change the behaviour it describes.
 | Adding a backend: compliant protocols, plugin entry points, the IO namespace contract | [docs/extending.md](docs/extending.md) |
 | Row-order semantics: what `DataFrame` guarantees, what `LazyFrame` doesn't, `over(order_by=...)` | [docs/concepts/order_dependence.md](docs/concepts/order_dependence.md) |
 | Null vs NaN: which methods exist for which, and what pandas muddies | [docs/concepts/null_handling.md](docs/concepts/null_handling.md) |
-| Why the pandas `group_by` `UserWarning` exists and how to avoid triggering it | [docs/concepts/improve_group_by_operation.md](docs/concepts/improve_group_by_operation.md) |
+| Why the pandas `group_by` `UserWarning` exists and how to avoid triggering it | [docs/how-to/improve_group_by_operation.md](docs/how-to/improve_group_by_operation.md) |
 | Boolean semantics, the pandas index, non-string column names | [docs/concepts/](docs/concepts/) |
 | Which methods each backend implements | [docs/api-completeness/](docs/api-completeness/) (generated, do not hand-edit) |
 | Public API surface | [docs/api-reference/](docs/api-reference/) (member lists are validated by CI) |
-| `narwhals.sql`: generating SQL from Narwhals expressions | [docs/generating_sql.md](docs/generating_sql.md) |
+| `narwhals.sql`: generating SQL from Narwhals expressions | [docs/how-to/generating_sql.md](docs/how-to/generating_sql.md) |
 | Security reporting and release-permission policy | [docs/security.md](docs/security.md) |
 
 The one-sentence summary of [docs/how_it_works.md](docs/how_it_works.md), worth internalising before

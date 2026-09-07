@@ -1,50 +1,12 @@
-# Boolean columns
+# Boolean logic
 
-## Null preservation
+Narwhals operations preserve null values, as described in
+[Null/NaN handling](null_handling.md#null-preservation). Boolean columns are where that
+rule needs qualifying.
 
-Generally speaking, Narwhals operations preserve null values.
-For example, if you do `nw.col('a')*2`, then:
+## Nulls in a comparison's result
 
-- Values which were non-null get multiplied by 2.
-- Null values stay null.
-
-```python exec="yes" source="above" session="boolean"
-import narwhals as nw
-from narwhals.typing import IntoFrameT
-
-data = {"a": [1.4, None, 4.2]}
-
-
-def multiplication(df: IntoFrameT) -> IntoFrameT:
-    return nw.from_native(df).with_columns((nw.col("a") * 2).alias("a*2")).to_native()
-```
-
-=== "pandas"
-    ```python exec="yes" source="material-block" result="python" session="boolean"
-    import pandas as pd
-
-    df = pd.DataFrame(data)
-    print(multiplication(df))
-    ```
-
-=== "Polars (eager)"
-    ```python exec="yes" source="material-block" result="python" session="boolean"
-    import polars as pl
-
-    df = pl.DataFrame(data)
-    print(multiplication(df))
-    ```
-
-=== "PyArrow"
-    ```python exec="yes" source="material-block" result="python" session="boolean"
-    import pyarrow as pa
-
-    table = pa.table(data)
-    print(multiplication(table))
-    ```
-
-What do we do, however, when the result column is boolean? For
-example, `nw.col('a') > 0`?
+What happens when the result column is boolean? For example, `nw.col('a') > 2`?
 Unfortunately, this is backend-dependent:
 
 - for all backends except pandas, null values are preserved
@@ -59,10 +21,13 @@ be a temporary legacy pandas issue which will eventually go
 away anyway.
 
 ```python exec="yes" source="above" session="boolean"
-from narwhals.typing import FrameT
+import narwhals as nw
+from narwhals.typing import IntoFrameT
+
+data = {"a": [1.4, None, 4.2]}
 
 
-def comparison(df: FrameT) -> FrameT:
+def comparison(df: IntoFrameT) -> IntoFrameT:
     return nw.from_native(df).with_columns((nw.col("a") > 2).alias("a>2")).to_native()
 ```
 

@@ -1,5 +1,13 @@
 # API Reference
 
+!!! info
+    This reference documents the main `narwhals` namespace. `narwhals.stable.v2` matches
+    it, apart from anything labelled "unstable"; `narwhals.stable.v1` differs in the ways
+    listed under
+    [`main` vs `stable.v1` differences](../backcompat.md#main-vs-stablev1-differences).
+    To move between them, see
+    [Upgrading from `stable.v1` to `stable.v2`](../how-to/upgrading_to_stable_v2.md).
+
 - [Top-level functions](narwhals.md)
 - [narwhals.DataFrame](dataframe.md)
 - [narwhals.Expr](expr.md)

@@ -274,7 +274,7 @@ In Narwhals, here's what we do:
 - if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
   users of the performance penalty and advising them to refactor their code so that the aggregation they perform
   ends up being a simple one. See
-  [Avoiding the `UserWarning` when using pandas `group_by`](concepts/improve_group_by_operation.md).
+  [Avoiding the `UserWarning` when using pandas `group_by`](how-to/improve_group_by_operation.md).
 
 ## Nodes
 
