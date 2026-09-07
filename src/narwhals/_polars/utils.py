@@ -363,6 +363,23 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     pad_end: Method[CompliantT]
 
 
+def native_get_categories(native: pl.Series) -> pl.Series:
+    # NOTE: Polars deprecated `cat.get_categories` in v1.44 and removed it
+    # in v2.0, so we use the workaround they suggest.
+    # See https://github.com/narwhals-dev/narwhals/issues/3895.
+    #
+    # For `Enum`, the declared categories are already unique, ordered, and
+    # null-free, so when every declared category is actually present in the
+    # data we can return `dtype.categories` directly instead of paying for
+    # `unique().drop_nulls().cast(String)`.
+    dtype = native.dtype
+    if isinstance(dtype, pl.Enum):
+        categories = dtype.categories
+        if native.drop_nulls().n_unique() == len(categories):
+            return categories
+    return native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+
+
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "cat"
 
