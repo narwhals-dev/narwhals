@@ -205,6 +205,9 @@ jobs:
           cd py-shiny
           uv pip uninstall narwhals
           uv pip install -e ./..
+          # Temporary pin to get CI green: py-shiny's test suite (test_serialize_dtype)
+          # doesn't yet account for a categorical-category-ordering change in pandas 3.0.
+          uv pip install "pandas<3"
       - name: show-deps
         env:
           UV_SYSTEM_PYTHON: "1"
@@ -485,10 +488,6 @@ jobs:
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
           uv pip install . --group dev
-          # Temporary pin to get CI green: `mcp` 2.0.0 is a breaking release that the
-          # resolved `fastmcp` 2.x does not support (dropped `pydantic-settings`,
-          # renamed `McpError` -> `MCPError`).
-          uv pip install "mcp<2"
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
       - name: install-narwhals-dev
         run: |
