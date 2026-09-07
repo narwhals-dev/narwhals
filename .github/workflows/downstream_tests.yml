@@ -489,6 +489,12 @@ jobs:
           . .venv/bin/activate
           uv pip install . --group dev
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
+          # Temporary pin to get CI green: sqlglot 30.18.0 refactored `DROP TABLE`
+          # to use a `tables` argument instead of `this` (tobymao/sqlglot#8229),
+          # which breaks ibis's in-memory table creation (it still builds
+          # `sge.Drop(this=...)`), causing "syntax error at end of input" from
+          # duckdb/sqlite in pointblank's test fixtures.
+          uv pip install "sqlglot<30.18.0"
       - name: install-narwhals-dev
         run: |
           cd pointblank
