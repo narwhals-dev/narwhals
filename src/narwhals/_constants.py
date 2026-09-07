@@ -28,3 +28,13 @@ EPOCH_YEAR = 1970
 """See [Unix time](https://en.wikipedia.org/wiki/Unix_time)."""
 EPOCH = dt.datetime(EPOCH_YEAR, 1, 1).replace(tzinfo=None)
 """See [Unix time](https://en.wikipedia.org/wiki/Unix_time)."""
+
+GET_CATEGORIES_DEPRECATION_TEMPLATE = (
+    "`{cls}.cat.get_categories` is deprecated and it will be removed in a future version.\n\n"
+    "To get the distinct values present in a Categorical column, use `{cls}.unique`.\n"
+    "For the fixed category list of an Enum, use its `dtype.categories`.\n\n"
+    "Note: `cat.get_categories` will remain available in `narwhals.stable.v1` and\n"
+    "`narwhals.stable.v2`.\n"
+    "See https://narwhals-dev.github.io/narwhals/backcompat/ for more information.\n"
+)
+"""Deprecation message for `cat.get_categories`, mirroring Polars' one."""

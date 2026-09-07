@@ -3,11 +3,12 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
     NO_DEFAULT,
+    Version,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
@@ -50,6 +51,8 @@ if TYPE_CHECKING:
 
 
 class Expr:
+    _version: ClassVar[Version] = Version.MAIN
+
     def __init__(self, *nodes: ExprNode) -> None:
         self._nodes = nodes
 

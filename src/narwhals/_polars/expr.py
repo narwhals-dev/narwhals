@@ -504,7 +504,14 @@ class PolarsExprStringNamespace(
 
 class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
-): ...
+):
+    def get_categories(self) -> PolarsExpr:
+        # NOTE: Polars deprecated `cat.get_categories` in v1.44 and removed it
+        # in v2.0, so we use the workaround they suggest.
+        # See https://github.com/narwhals-dev/narwhals/issues/3895.
+        return self.compliant._with_native(
+            self.native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+        )
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):
