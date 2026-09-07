@@ -1315,6 +1315,26 @@ def test_get_categories_enum_polars_v1() -> None:
     assert result.to_list() == ["Panda", "Polar"]
 
 
+def test_get_categories_enum_all_present_polars_v1() -> None:
+    # When every declared `Enum` category is present in the data, Narwhals
+    # takes a fast path via `dtype.categories`, which preserves the *declared*
+    # category order rather than the order values first appear in the data.
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df_native = pl.DataFrame(
+        {"a": ["Panda", "Polar"]}, schema={"a": pl.Enum(["Polar", "Panda"])}
+    )
+    df = nw_v1.from_native(df_native, eager_only=True)
+
+    result_series = df["a"].cat.get_categories()
+    assert result_series.dtype == nw_v1.String
+    assert result_series.to_list() == ["Polar", "Panda"]
+
+    result = df.select(nw_v1.col("a").cat.get_categories())
+    assert_equal_data(result, {"a": ["Polar", "Panda"]})
+
+
 def test_selectors_are_stable_v1(constructor_eager: ConstructorEager) -> None:
     # Selectors built from `narwhals.stable.v1.selectors` must behave like `v1`
     # expressions, not like main-namespace ones.
