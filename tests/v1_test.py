@@ -1306,31 +1306,21 @@ def test_get_categories_lazy_v1(constructor_eager: ConstructorEager) -> None:
 
 
 def test_get_categories_enum_polars_v1() -> None:
+    # `Enum.get_categories` always returns the *declared* categories, in
+    # declared order, regardless of which ones are actually present in the
+    # data (matching Polars' own `cat.get_categories` behavior for `Enum`).
     pytest.importorskip("polars")
     import polars as pl
 
     s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
     result = nw_v1.from_native(s_native, series_only=True).cat.get_categories()
     assert result.dtype == nw_v1.String
-    assert result.to_list() == ["Panda", "Polar"]
-
-
-def test_get_categories_enum_all_present_polars_v1() -> None:
-    # When every declared `Enum` category is present in the data, Narwhals
-    # takes a fast path via `dtype.categories`, which preserves the *declared*
-    # category order rather than the order values first appear in the data.
-    pytest.importorskip("polars")
-    import polars as pl
+    assert result.to_list() == ["Polar", "Panda", "X"]
 
     df_native = pl.DataFrame(
         {"a": ["Panda", "Polar"]}, schema={"a": pl.Enum(["Polar", "Panda"])}
     )
     df = nw_v1.from_native(df_native, eager_only=True)
-
-    result_series = df["a"].cat.get_categories()
-    assert result_series.dtype == nw_v1.String
-    assert result_series.to_list() == ["Polar", "Panda"]
-
     result = df.select(nw_v1.col("a").cat.get_categories())
     assert_equal_data(result, {"a": ["Polar", "Panda"]})
 
