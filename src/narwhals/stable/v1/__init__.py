@@ -969,7 +969,8 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    return _stableify(nw_f.concat(items, how=how))
+    # Pyrefly needs this cast; concat and _stableify preserve the eager/lazy kind.
+    return cast("FrameT", _stableify(nw_f.concat(items, how=how)))  # type: ignore[redundant-cast]
 
 
 @deprecate_native_namespace(required=True)
