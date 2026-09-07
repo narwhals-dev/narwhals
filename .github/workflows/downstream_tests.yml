@@ -205,10 +205,7 @@ jobs:
           cd py-shiny
           uv pip uninstall narwhals
           uv pip install -e ./..
-          # Temporary pin to get CI green: py-shiny's test suite (test_serialize_dtype)
-          # doesn't yet account for a categorical-category-ordering change in pandas 3.0.
-          uv pip install "pandas<3"
-      - name: show-deps
+     - name: show-deps
         env:
           UV_SYSTEM_PYTHON: "1"
         run: |
