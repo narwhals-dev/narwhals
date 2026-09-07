@@ -969,7 +969,10 @@ def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT
     Raises:
         TypeError: The items to concatenate should either all be eager, or all lazy
     """
-    # Pyrefly needs this cast; concat and _stableify preserve the eager/lazy kind.
+    # `pyrefly` rejects the union `_stableify` returns while `FrameT` is still
+    # unsolved; `mypy` solves per-constraint and calls the cast redundant, hence
+    # the ignore. CI cannot catch removal of either, because `pyrefly check` only
+    # covers `tests`. Verify with: pyrefly check src/narwhals/stable/v1/__init__.py
     return cast("FrameT", _stableify(nw_f.concat(items, how=how)))  # type: ignore[redundant-cast]
 
 

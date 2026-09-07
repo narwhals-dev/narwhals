@@ -238,8 +238,12 @@ def test_concat() -> None:
     assert_equal_data(concat_sequence([df, df]), expected)
     lazy_result = concat_generic(df.lazy())
     if TYPE_CHECKING:
+        assert_type(concat_generic(df), nw_v2.DataFrame[Any])
         assert_type(lazy_result, nw_v2.LazyFrame[Any])
         assert_type(nw_v2.concat([df.lazy()]), nw_v2.LazyFrame[Any])
+        # Mixing eager and lazy must stay a type error. `warn_unused_ignores` (via
+        # `strict`) makes this self-verifying: the ignore goes unused if it regresses.
+        nw_v2.concat([df, df.lazy()])  # type: ignore[type-var]
     assert isinstance(lazy_result, nw_v2.LazyFrame)
     assert_equal_data(lazy_result.collect(), expected)
     assert_equal_data(concat_sequence([df.lazy(), df.lazy()]).collect(), expected)
