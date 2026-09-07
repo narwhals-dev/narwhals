@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import string
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
@@ -14,6 +13,7 @@ from narwhals._arrow.utils import (
     parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._utils import parse_str_strip_chars
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -44,7 +44,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
         return self.with_native(
-            pc.utf8_trim(self.native, characters or string.whitespace)
+            pc.utf8_trim(self.native, parse_str_strip_chars(characters))
         )
 
     def strip_chars_start(self, characters: str) -> ArrowSeries:
