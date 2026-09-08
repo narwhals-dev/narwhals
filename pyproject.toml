@@ -190,6 +190,10 @@ min-pyspark-version = [
 source-include = ["tests/**"]
 
 [tool.uv]
+# The published runtime predates Map; it must match the Polars Python source.
+override-dependencies = [
+  "polars-runtime-32 @ git+https://github.com/pola-rs/polars@2fec95c3d0f000898ecc80efe1c0a69736b1a9ee#subdirectory=py-polars/runtime/polars-runtime-32",
+]
 # NOTE: When updating these conflicts, every entry in a single inner list is
 # treated as mutually exclusive with every other entry in the same list.
 # See https://docs.astral.sh/uv/reference/settings/#conflicts.
@@ -231,6 +235,13 @@ conflicts = [
     { group = "extreme-not-so-old-versions" },
     { group = "extreme-pretty-old-versions" },
   ],
+  # The native Map build conflicts with the old Polars pins in these groups.
+  [
+    { extra = "polars" },
+    { group = "extreme-minimum-versions" },
+    { group = "extreme-not-so-old-versions" },
+    { group = "extreme-pretty-old-versions" },
+  ],
 ]
 
 [tool.uv.workspace]
@@ -238,6 +249,7 @@ members = ["packages/*"]
 
 [tool.uv.sources]
 test-plugin = { workspace = true }
+polars = { git = "https://github.com/pola-rs/polars", rev = "2fec95c3d0f000898ecc80efe1c0a69736b1a9ee", subdirectory = "py-polars", extra = "polars" }
 
 [tool.ruff]
 line-length = 90
