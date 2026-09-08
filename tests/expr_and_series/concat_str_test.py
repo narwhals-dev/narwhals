@@ -104,6 +104,11 @@ def test_concat_str_edge(
         or any(x in str(constructor) for x in ("modin", "dask"))
     ):
         request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
+    # Old pandas renders a null literal as the string `"None"`.
+    if "null_literal" in request.node.callspec.id and (
+        "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old pandas null literal"))
     df = nw.from_native(constructor(data))
     result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
     assert_equal_data(result, expected)
@@ -118,6 +123,8 @@ def test_concat_str_all_null_ignore_nulls(
         pytest.skip(reason="ibis cannot create all-null column")
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="pyarrow drops all-null rows"))
+    if "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,):
+        request.applymarker(pytest.mark.xfail(reason="old pandas all-null concat"))
     df = nw.from_native(constructor({"b": [None, None], "c": [None, None]}))
     df = df.with_columns(nw.col("b").cast(nw.String()), nw.col("c").cast(nw.String()))
     result = df.select(
