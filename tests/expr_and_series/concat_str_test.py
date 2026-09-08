@@ -112,11 +112,12 @@ def test_concat_str_edge(
         or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
     ):
         request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
-    # Old pandas renders a null literal as the string `"None"`.
+    # Old pandas renders a null literal as the string `"None"`, as does modin.
     if "null_literal" in request.node.callspec.id and (
-        "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,)
+        ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,))
+        or "modin" in str(constructor)
     ):
-        request.applymarker(pytest.mark.xfail(reason="old pandas null literal"))
+        request.applymarker(pytest.mark.xfail(reason="null literal as string"))
     df = nw.from_native(constructor(data))
     result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
     assert_equal_data(result, expected)
