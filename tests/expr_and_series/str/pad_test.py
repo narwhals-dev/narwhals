@@ -110,26 +110,37 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_pad_length_zero_expr(constructor: Constructor) -> None:
-    # Length 0: every string is already at least that long, so input is
-    # returned unchanged (per docstring).
-    df = nw.from_native(constructor({"a": ["foo", "", None]}))
-    result = df.select(
-        nw.col("a").str.pad_start(0).alias("start"),
-        nw.col("a").str.pad_end(0).alias("end"),
-    )
-    expected = {"start": ["foo", "", None], "end": ["foo", "", None]}
-    assert_equal_data(result, expected)
+pad_noop_cases = [
+    pytest.param(
+        {"a": ["foo", "", None]},
+        0,
+        " ",
+        {"start": ["foo", "", None], "end": ["foo", "", None]},
+        id="length_zero",
+    ),
+    pytest.param(
+        {"a": ["東京", "ab", None]},
+        2,
+        "日",
+        {"start": ["東京", "ab", None], "end": ["東京", "ab", None]},
+        id="unicode_exact",
+    ),
+]
 
 
-def test_pad_unicode_exact_length_expr(constructor: Constructor) -> None:
-    # Unicode input already exactly `length` characters long stays unchanged.
-    df = nw.from_native(constructor({"a": ["東京", "ab", None]}))
+@pytest.mark.parametrize(("data", "length", "fill_char", "expected"), pad_noop_cases)
+def test_pad_noop_expr(
+    constructor: Constructor,
+    data: dict[str, list[str | None]],
+    length: int,
+    fill_char: str,
+    expected: dict[str, list[str | None]],
+) -> None:
+    df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("a").str.pad_start(2, "日").alias("start"),
-        nw.col("a").str.pad_end(2, "日").alias("end"),
+        nw.col("a").str.pad_start(length, fill_char).alias("start"),
+        nw.col("a").str.pad_end(length, fill_char).alias("end"),
     )
-    expected = {"start": ["東京", "ab", None], "end": ["東京", "ab", None]}
     assert_equal_data(result, expected)
 
 
@@ -138,26 +149,19 @@ def test_pad_unicode_exact_length_expr(constructor: Constructor) -> None:
 def test_pad_invalid_fill_char(
     constructor: Constructor, request: pytest.FixtureRequest, method: str, fill_char: str
 ) -> None:
-    # Padding requires a single character, matching polars (`ValueError`;
-    # pyarrow's `ArrowInvalid` subclasses it). Dask only surfaces it at
-    # collect time instead.
+    # Messages differ per backend, hence no `match`; dask surfaces it at collect time.
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="deferred error"))
     df = nw.from_native(constructor({"a": ["foo", None]}))
-    # No `match`: polars, pyarrow, and narwhals-raised messages each word the
-    # single-character requirement differently.
     with pytest.raises(ValueError):  # noqa: PT011
         df.select(getattr(nw.col("a").str, method)(5, fill_char))
 
 
 @pytest.mark.parametrize("method", ["pad_start", "pad_end"])
 def test_pad_negative_length_raises(constructor: Constructor, method: str) -> None:
-    # A negative length raises on every backend (each with its own error type)
-    # instead of returning the input unchanged.
     df = nw.from_native(constructor({"a": ["foo", None]}))
     expr = getattr(nw.col("a").str, method)(-1)
-    # Broad `Exception`: every backend raises, but each with its own error
-    # type. The pinned contract is only "raises rather than padding".
+    # Broad `Exception`: error types differ per backend.
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
