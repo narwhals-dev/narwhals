@@ -99,3 +99,31 @@ def test_str_zfill_width_1(
     df = nw.from_native(constructor({"a": ["-1", "+1", "1", "", None]}))
     result = df.select(nw.col("a").str.zfill(1))
     assert_equal_data(result, {"a": ["-1", "+1", "1", "0", None]})
+
+
+def test_str_zfill_width_0(constructor: Constructor) -> None:
+    # Width 0: every string is already wide enough, so input is unchanged.
+    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+        pytest.skip(reason="different zfill behavior")
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip(reason="old polars str.slice behaviour")
+    df = nw.from_native(constructor({"a": ["-1", "+1", "1", "", None]}))
+    result = df.select(nw.col("a").str.zfill(0))
+    assert_equal_data(result, {"a": ["-1", "+1", "1", "", None]})
+
+
+def test_str_zfill_non_ascii(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Polars counts bytes here, so a two-character/two-codepoint string that
+    # is four bytes wide is already wider than 3 and stays unchanged. Other
+    # backends count characters and pad it instead.
+    if "polars" not in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(reason="non-polars backends count characters")
+        )
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+        pytest.skip(reason="old polars str.slice behaviour")
+    df = nw.from_native(constructor({"a": ["日本", None]}))
+    result = df.select(nw.col("a").str.zfill(3))
+    assert_equal_data(result, {"a": ["日本", None]})
