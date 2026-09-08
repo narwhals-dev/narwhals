@@ -6,7 +6,14 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    uses_pyarrow_backend,
+)
 
 replace_data = [
     ({"a": ["123abc", "abc456"]}, r"abc\b", "ABC", 1, False, {"a": ["123ABC", "abc456"]}),
@@ -38,12 +45,30 @@ replace_all_data = [
 # Edge cases from differential testing: byte-vs-char offsets, match position
 # vs match text, re-matching inside inserted text, and boundary `n` values.
 replace_edge_data = [
-    ({"a": ["ααα-x"]}, "-", "@", 1, True, {"a": ["ααα@x"]}),  # noqa: RUF001
-    ({"a": ["héllo wörld"]}, "wörld", "@", 1, True, {"a": ["héllo @"]}),
-    ({"a": ["abcx abc"]}, r"abc\b", "Z", 1, False, {"a": ["abcx Z"]}),
-    ({"a": ["aa"]}, "a", "ab", 2, True, {"a": ["abab"]}),
-    ({"a": ["abc"]}, "abc", "Z", 0, False, {"a": ["abc"]}),
-    ({"a": ["abc"]}, "", "Z", 1, True, {"a": ["Zabc"]}),
+    pytest.param({"a": ["ααα-x"]}, "-", "@", 1, True, {"a": ["ααα@x"]}, id="non_ascii"),  # noqa: RUF001
+    pytest.param(
+        {"a": ["héllo wörld"]},
+        "wörld",
+        "@",
+        1,
+        True,
+        {"a": ["héllo @"]},
+        id="non_ascii_word",
+    ),
+    pytest.param(
+        {"a": ["abcx abc"]},
+        r"abc\b",
+        "Z",
+        1,
+        False,
+        {"a": ["abcx Z"]},
+        id="word_boundary",
+    ),
+    pytest.param(
+        {"a": ["aa"]}, "a", "ab", 2, True, {"a": ["abab"]}, id="insert_replacement"
+    ),
+    pytest.param({"a": ["abc"]}, "abc", "Z", 0, False, {"a": ["abc"]}, id="n_zero"),
+    pytest.param({"a": ["abc"]}, "", "Z", 1, True, {"a": ["Zabc"]}, id="empty_pattern"),
 ]
 
 replace_data_multivalue = [
@@ -175,6 +200,7 @@ def test_str_replace_expr_scalar(
 )
 def test_str_replace_edge_series_scalar(
     constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
     data: dict[str, list[str]],
     pattern: str,
     value: str,
@@ -182,6 +208,14 @@ def test_str_replace_edge_series_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
+    # Old pandas treats `n=0` as replace-all.
+    if (
+        "n_zero" in request.node.callspec.id
+        and PANDAS_VERSION < (3,)
+        and not uses_pyarrow_backend(constructor_eager)
+        and "pandas" in str(constructor_eager)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old pandas n=0"))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
@@ -257,6 +291,8 @@ def test_str_replace_null_value_series(
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 37, 0):
+        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
     df = nw.from_native(
         constructor_eager({"a": ["abc", "def"], "b": ["X", None]}), eager_only=True
     )
@@ -278,6 +314,8 @@ def test_str_replace_null_value_expr(
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 37, 0):
+        request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
     df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
     result_df = df.select(
         nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=1, literal=True)
@@ -305,6 +343,14 @@ def test_str_replace_edge_expr_scalar(
                 raises=NotImplementedError,
             )
         )
+    # Old pandas treats `n=0` as replace-all.
+    if (
+        "n_zero" in request.node.callspec.id
+        and PANDAS_VERSION < (3,)
+        and not uses_pyarrow_backend(constructor)
+        and "pandas" in str(constructor)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old pandas n=0"))
     df = nw.from_native(constructor(data))
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
