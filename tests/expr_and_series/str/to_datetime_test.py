@@ -275,24 +275,45 @@ def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize(
-    ("format", "time_unit"),
-    [("%Y-%m-%dT%H:%M:%S%.3f", "ms"), ("%Y-%m-%dT%H:%M:%S%.f", "us")],
+    ("format", "time_unit", "value", "expected"),
+    [
+        (
+            "%Y-%m-%dT%H:%M:%S%.3f",
+            "ms",
+            "2020-01-01T12:34:56.123",
+            datetime(2020, 1, 1, 12, 34, 56, 123000),
+        ),
+        (
+            "%Y-%m-%dT%H:%M:%S%.f",
+            "us",
+            "2020-01-01T12:34:56.123",
+            datetime(2020, 1, 1, 12, 34, 56, 123000),
+        ),
+        (
+            "%Y-%m-%dT%H:%M:%S%.9f",
+            "ns",
+            "2020-01-01T12:34:56.123456789",
+            datetime(2020, 1, 1, 12, 34, 56, 123456),
+        ),
+    ],
 )
 def test_to_datetime_fractional_seconds(
     constructor: Constructor,
     request: pytest.FixtureRequest,
     format: str,
     time_unit: TimeUnit,
+    value: str,
+    expected: datetime,
 ) -> None:
     # Fractional-second formats determine the resulting `Datetime` precision,
     # matching polars. No other backend parses them.
     if "polars" not in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="fractional format unsupported"))
-    result = nw.from_native(constructor({"a": ["2020-01-01T12:34:56.123"]})).select(
+    result = nw.from_native(constructor({"a": [value]})).select(
         b=nw.col("a").str.to_datetime(format)
     )
     assert result.collect_schema()["b"] == nw.Datetime(time_unit)
-    assert_equal_data(result, {"b": [datetime(2020, 1, 1, 12, 34, 56, 123000)]})
+    assert_equal_data(result, {"b": [expected]})
 
 
 @pytest.mark.parametrize("format", ["%Y-%m-%dT%H:%M:%S", None])
