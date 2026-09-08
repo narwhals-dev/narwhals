@@ -137,8 +137,7 @@ def test_to_time_custom_format(
     format: str,
     expected: str,
 ) -> None:
-    # `format` must be honoured (previously ignored on some paths) and the
-    # lazy schema must already report `Time`.
+    # The plugin ignored `format` entirely; the schema assertion guards that.
     requires_time_support(request, constructor)
     result = (
         nw.from_native(constructor(data)).lazy().select(b=nw.col("a").str.to_time(format))
@@ -161,7 +160,6 @@ def test_to_time_series_custom_format(
     format: str,
     expected: time,
 ) -> None:
-    # Series variant: `format` is honoured elementwise, nulls preserved.
     requires_time_support(request, constructor_eager)
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_time(
         format
@@ -176,9 +174,6 @@ def test_to_time_series_custom_format(
 def test_to_time_invalid_raises(
     constructor: Constructor, data: dict[str, list[str]], format: str | None
 ) -> None:
-    # Unparseable input raises (each backend with its own error type) instead
-    # of silently becoming null. Backends without `Time` support also raise,
-    # so no xfail is needed here (any exception counts).
     if constructor.__name__.startswith(("pandas", "modin")):
         if PANDAS_VERSION < (2, 2, 0):
             pytest.skip("pandas < 2.2.0 has no Time dtype")
@@ -186,8 +181,7 @@ def test_to_time_invalid_raises(
             pytest.skip("pandas requires pyarrow for the Time dtype")
     df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_time(format)
-    # Broad `Exception`: every backend raises, but each with its own error
-    # type. The pinned contract is only "raises rather than returning null".
+    # Broad `Exception`: error types differ per backend.
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
