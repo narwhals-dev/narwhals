@@ -68,30 +68,22 @@ def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -
     )
 
 
-def test_median_all_null(constructor: Constructor) -> None:
-    # The median of an all-null column is null, matching polars (`NaN` on
-    # pandas-likes compares equal to it).
+@pytest.mark.parametrize(
+    "data", [{"a": [None, None]}, {"a": []}], ids=["all_null", "empty"]
+)
+def test_median_null_or_empty(
+    constructor: Constructor, data: dict[str, list[int]]
+) -> None:
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
-    df = nw.from_native(constructor({"a": [None, None]}))
+    df = nw.from_native(constructor(data))
     result = df.with_columns(nw.col("a").cast(nw.Float64())).select(nw.col("a").median())
     assert_equal_data(result, {"a": [None]})
 
 
-def test_median_empty(constructor: Constructor) -> None:
-    # The median of an empty column is null, matching polars.
-    if "ibis" in str(constructor):
-        pytest.skip(reason="ibis cannot create all-null column")
-    df = nw.from_native(constructor({"a": []}))
-    result = df.with_columns(nw.col("a").cast(nw.Int64())).select(nw.col("a").median())
-    assert_equal_data(result, {"a": [None]})
-
-
 def test_median_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    # The median of booleans coerces to float, matching polars (`1.0`). Only
-    # Spark's `percentile` still rejects non-numeric input (sqlframe transpiles
-    # it fine and passes via `True == 1.0`); dask's approximate median cannot
-    # pin the exact value across partitions.
+    # Only Spark still rejects non-numeric input; dask cannot pin the exact
+    # approximate value across partitions.
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="boolean median"))
     if "dask" in str(constructor):

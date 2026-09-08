@@ -52,7 +52,6 @@ def test_quantile_expr(
 
 
 def test_quantile_boundaries_expr(constructor: Constructor) -> None:
-    # `quantile(0.0)` is the min and `quantile(1.0)` the max.
     msg = re.escape(
         "`Expr.quantile` is not supported for Dask backend with multiple partitions."
     )
@@ -71,12 +70,9 @@ def test_quantile_boundaries_expr(constructor: Constructor) -> None:
 
 
 def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
-    # Quantiles outside `[0, 1]` raise on all backends (each with its own
-    # error type) instead of returning a value.
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     expr = nw.col("a").quantile(1.5, "linear")
-    # Broad `Exception`: every backend raises, but each with its own error
-    # type. The pinned contract is only "raises rather than returning a value".
+    # Broad `Exception`: error types differ per backend.
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
@@ -86,8 +82,7 @@ def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
 
 
 def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    # `NaN` sorts after every number, matching polars: the median of
-    # `[1.0, NaN, 2.0]` is `2.0`. pandas-likes and pyarrow drop it instead.
+
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
         request.applymarker(pytest.mark.xfail(reason="NaN handling"))
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
@@ -99,8 +94,7 @@ def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) 
 
 
 def test_quantile_inf(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    # Infinities participate in ordering, matching polars: the median of
-    # `[1.0, inf, 2.0]` is `2.0`. Plain pandas returns `NaN` instead.
+
     if any(
         x in str(constructor)
         for x in ("pandas_constructor", "pandas_nullable_constructor", "dask", "cudf")

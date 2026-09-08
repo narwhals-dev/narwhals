@@ -68,7 +68,6 @@ def test_any_value_expr(
 def test_any_value_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
 ) -> None:
-    # `any_value` of an all-null column is null, matching polars.
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
     if "dask" in str(constructor):
