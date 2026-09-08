@@ -152,6 +152,12 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(func)
 
     def pad_start(self, length: int, fill_char: str) -> SQLExprT:
+        if len(fill_char) != 1:
+            msg = f"`str.pad_start` only supports single-character `fill_char`, got {fill_char!r}."
+            raise ValueError(msg)
+        if length < 0:
+            msg = f"`str.pad_start` length must be non-negative, got {length}."
+            raise ValueError(msg)
         # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
         _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
@@ -168,6 +174,12 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> SQLExprT:
+        if len(fill_char) != 1:
+            msg = f"`str.pad_end` only supports single-character `fill_char`, got {fill_char!r}."
+            raise ValueError(msg)
+        if length < 0:
+            msg = f"`str.pad_end` length must be non-negative, got {length}."
+            raise ValueError(msg)
         # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
         _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)

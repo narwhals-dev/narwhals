@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
@@ -129,3 +131,36 @@ def test_pad_unicode_exact_length_expr(constructor: Constructor) -> None:
     )
     expected = {"start": ["東京", "ab", None], "end": ["東京", "ab", None]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("method", ["pad_start", "pad_end"])
+@pytest.mark.parametrize("fill_char", ["ab", ""])
+def test_pad_invalid_fill_char(
+    constructor: Constructor, request: pytest.FixtureRequest, method: str, fill_char: str
+) -> None:
+    # Padding requires a single character, matching polars (`ValueError`, and
+    # pyarrow's `ArrowInvalid` subclasses it). pandas-likes raise `TypeError`
+    # and dask only surfaces it at collect time instead.
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
+        request.applymarker(pytest.mark.xfail(reason="different error type"))
+    df = nw.from_native(constructor({"a": ["foo", None]}))
+    # No `match`: polars, pyarrow, and narwhals-raised messages each word the
+    # single-character requirement differently.
+    with pytest.raises(ValueError):  # noqa: PT011
+        df.select(getattr(nw.col("a").str, method)(5, fill_char))
+
+
+@pytest.mark.parametrize("method", ["pad_start", "pad_end"])
+def test_pad_negative_length_raises(constructor: Constructor, method: str) -> None:
+    # A negative length raises on every backend (each with its own error type)
+    # instead of returning the input unchanged.
+    df = nw.from_native(constructor({"a": ["foo", None]}))
+    expr = getattr(nw.col("a").str, method)(-1)
+    # Broad `Exception`: every backend raises, but each with its own error
+    # type. The pinned contract is only "raises rather than padding".
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(expr)
