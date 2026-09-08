@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import assert_equal_data
+from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -96,7 +96,9 @@ def test_contains_numeric_coercion_expr(
 def test_contains_none_item_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # SQL backends return null for every row instead.
+    # SQL backends return null for every row instead. Old polars does too.
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 24, 0):
+        request.applymarker(pytest.mark.xfail(reason="old polars null item"))
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
@@ -132,6 +134,13 @@ def test_contains_invalid_item_raises(
     item: bool | str | datetime,
 ) -> None:
     # Mismatched items raise, matching polars; SQL backends coerce instead.
+    # Old polars coerces precision-mismatched datetimes instead of raising.
+    if (
+        "datetime_precision" in request.node.callspec.id
+        and "polars" in str(constructor)
+        and POLARS_VERSION < (1, 28, 0)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old polars precision"))
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
