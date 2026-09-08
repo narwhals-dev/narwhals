@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    assert_equal_data,
+    uses_pyarrow_backend,
+)
 
 pytest.importorskip("pyarrow")
 
@@ -97,11 +103,13 @@ def test_concat_str_edge(
     columns: list[str | nw.Expr],
     expected: dict[str, list[str | None]],
 ) -> None:
-    # Plain pandas (and dask/modin) infer `object` dtype for mixed bool/null
-    # columns, where bools are indistinguishable from `"True"` strings.
+    # Plain pandas (and dask, and non-pyarrow modin) infer `object` dtype for
+    # mixed bool/null columns, where bools are indistinguishable from `"True"`
+    # strings. Pyarrow-backed frames keep a boolean dtype and render lowercase.
     if "bool" in request.node.callspec.id and (
         "pandas_constructor" in str(constructor)
-        or any(x in str(constructor) for x in ("modin", "dask"))
+        or "dask" in str(constructor)
+        or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
     ):
         request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
     # Old pandas renders a null literal as the string `"None"`.
