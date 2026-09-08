@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from datetime import time
 from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -147,12 +148,33 @@ def test_to_time_custom_format(
 
 
 @pytest.mark.parametrize(
+    ("data", "format", "expected"),
+    [
+        ({"a": ["12-34", None]}, "%H-%M", time(12, 34)),
+        ({"a": ["01:30 PM", None]}, "%I:%M %p", time(13, 30)),
+    ],
+)
+def test_to_time_series_custom_format(
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[str]],
+    format: str,
+    expected: time,
+) -> None:
+    # Series variant: `format` is honoured elementwise, nulls preserved.
+    requires_time_support(request, constructor_eager)
+    result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_time(
+        format
+    )
+    assert isinstance(result.dtype, nw.Time)
+    assert_equal_data({"a": result}, {"a": [expected, None]})
+
+
+@pytest.mark.parametrize(
     ("data", "format"), [({"a": ["12:34"]}, "%H:%M:%S"), ({"a": ["25:00:00"]}, None)]
 )
 def test_to_time_invalid_raises(
-    constructor: Constructor,
-    data: dict[str, list[str]],
-    format: str | None,
+    constructor: Constructor, data: dict[str, list[str]], format: str | None
 ) -> None:
     # Unparseable input raises (each backend with its own error type) instead
     # of silently becoming null. Backends without `Time` support also raise,
