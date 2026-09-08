@@ -143,7 +143,6 @@ def test_corr_over(constructor: Constructor) -> None:
 
 
 def test_corr_over_single_row_group(constructor: Constructor) -> None:
-    # A group with a single row has undefined correlation there.
     if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):

@@ -119,8 +119,7 @@ def test_cov_series_foreign_index() -> None:
 
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_cov_single_pair_ddof1(constructor: Constructor) -> None:
-    # A single valid pair leaves no degrees of freedom with `ddof=1`.
-    # Degenerate-slice `RuntimeWarning`s (e.g. from dask/numpy) are expected.
+    # No degrees of freedom left; dask/numpy warn on the degenerate slice.
     df = nw.from_native(constructor({"a": [1.0], "b": [2.0]}))
     result = df.select(nw.cov("a", "b", ddof=1).alias("cov"))
     assert_equal_data(result, {"cov": [None]})
