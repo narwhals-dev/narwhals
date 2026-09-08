@@ -316,31 +316,21 @@ def test_to_datetime_fractional_seconds(
     assert_equal_data(result, {"b": [expected]})
 
 
-@pytest.mark.parametrize("format", ["%Y-%m-%dT%H:%M:%S", None])
-def test_to_datetime_unparseable_raises(
-    constructor: Constructor, format: str | None
+@pytest.mark.parametrize(
+    ("data", "format"),
+    [
+        ({"a": ["abc"]}, "%Y-%m-%dT%H:%M:%S"),
+        ({"a": ["abc"]}, None),
+        ({"a": ["2020-01-01T12:34:56.789"]}, "%Y-%m-%dT%H:%M:%S"),
+    ],
+    ids=["unparseable_explicit", "unparseable_infer", "trailing"],
+)
+def test_to_datetime_invalid_raises(
+    constructor: Constructor, data: dict[str, list[str]], format: str | None
 ) -> None:
-    # Unparseable input raises on every backend (each with its own error type)
-    # instead of silently becoming null.
-    df = nw.from_native(constructor({"a": ["abc"]}))
+    df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_datetime(format)
-    # Broad `Exception`: every backend raises, but each with its own error
-    # type. The pinned contract is only "raises rather than returning null".
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr)
-
-
-def test_to_datetime_trailing_input_raises(constructor: Constructor) -> None:
-    # Trailing characters after an explicit format raise on all backends
-    # (each with its own error type), rather than parsing the prefix.
-    df = nw.from_native(constructor({"a": ["2020-01-01T12:34:56.789"]}))
-    expr = nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S")
-    # Broad `Exception`: every backend raises, but each with its own error
-    # type. The pinned contract is only "raises rather than prefix-parses".
+    # Broad `Exception`: error types differ per backend.
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
