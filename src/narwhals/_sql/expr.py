@@ -376,20 +376,10 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_binary(lambda expr, other: other**expr, other).alias("literal")
 
     def __mod__(self, other: Self) -> Self:
-        def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
-            # SQL backends implement `%` with the sign of the dividend (C
-            # semantics), while narwhals follows Python and Polars, where the
-            # result takes the sign of the divisor. The double-modulus
-            # identity `((a % b) + b) % b` restores floor-modulus.
-            return (expr.__mod__(other) + other).__mod__(other)
-
-        return self._with_binary(func, other=other)
+        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
 
     def __rmod__(self, other: Self) -> Self:
-        def func(expr: NativeExprT, other: NativeExprT) -> NativeExprT:
-            return ((other % expr) + expr) % expr
-
-        return self._with_binary(func, other=other).alias("literal")
+        return self._with_binary(lambda expr, other: other % expr, other).alias("literal")
 
     def __ge__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__ge__(other), other)

@@ -49,6 +49,22 @@ if TYPE_CHECKING:
 class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
 
+    def __mod__(self, other: Self) -> Self:
+        def _mod(expr: Expression, other: Expression) -> Expression:
+            # DuckDB's `%` follows C sign semantics (sign of the dividend),
+            # while narwhals follows Python and Polars (sign of the divisor).
+            # The double-modulus identity `((a % b) + b) % b` restores
+            # floor-modulus.
+            return ((expr % other) + other) % other
+
+        return self._with_binary(_mod, other)
+
+    def __rmod__(self, other: Self) -> Self:
+        def _rmod(expr: Expression, other: Expression) -> Expression:
+            return ((other % expr) + expr) % expr
+
+        return self._with_binary(_rmod, other).alias("literal")
+
     def __init__(
         self,
         call: EvalSeries[DuckDBLazyFrame, Expression],
