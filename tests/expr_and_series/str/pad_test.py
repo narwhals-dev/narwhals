@@ -116,25 +116,25 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-pad_noop_cases = [
-    pytest.param(
-        {"a": ["foo", "", None]},
-        0,
-        " ",
-        {"start": ["foo", "", None], "end": ["foo", "", None]},
-        id="length_zero",
-    ),
-    pytest.param(
-        {"a": ["東京", "ab", None]},
-        2,
-        "日",
-        {"start": ["東京", "ab", None], "end": ["東京", "ab", None]},
-        id="unicode_exact",
-    ),
-]
-
-
-@pytest.mark.parametrize(("data", "length", "fill_char", "expected"), pad_noop_cases)
+@pytest.mark.parametrize(
+    ("data", "length", "fill_char", "expected"),
+    [
+        pytest.param(
+            {"a": ["foo", "", None]},
+            0,
+            " ",
+            {"start": ["foo", "", None], "end": ["foo", "", None]},
+            id="length_zero",
+        ),
+        pytest.param(
+            {"a": ["東京", "ab", None]},
+            2,
+            "日",
+            {"start": ["東京", "ab", None], "end": ["東京", "ab", None]},
+            id="unicode_exact",
+        ),
+    ],
+)
 def test_pad_noop_expr(
     constructor: Constructor,
     data: dict[str, list[str | None]],
