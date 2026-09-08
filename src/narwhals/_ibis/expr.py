@@ -55,6 +55,23 @@ if TYPE_CHECKING:
 class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
 
+    def __mod__(self, other: Self) -> Self:
+        def _mod(expr: ir.Value, other: ir.Value) -> ir.Value:
+            # ibis compiles `%` to the backend's native modulo, which follows
+            # C sign semantics (sign of the dividend) on the SQL engines
+            # narwhals supports, while narwhals follows Python and Polars
+            # (sign of the divisor). The double-modulus identity
+            # `((a % b) + b) % b` restores floor-modulus.
+            return ((expr % other) + other) % other
+
+        return self._with_binary(_mod, other)
+
+    def __rmod__(self, other: Self) -> Self:
+        def _rmod(expr: ir.Value, other: ir.Value) -> ir.Value:
+            return ((other % expr) + expr) % expr
+
+        return self._with_binary(_rmod, other).alias("literal")
+
     def __init__(
         self,
         call: EvalSeries[IbisLazyFrame, ir.Value],
