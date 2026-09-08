@@ -44,7 +44,12 @@ def test_str_zfill(
     width: int,
     expected: dict[str, list[str | None]],
 ) -> None:
-    if uses_pyarrow_backend(constructor) and PANDAS_VERSION < (3,):
+    # Width 0 short-circuits before reaching the native implementation.
+    if (
+        "width_0" not in request.node.callspec.id
+        and uses_pyarrow_backend(constructor)
+        and PANDAS_VERSION < (3,)
+    ):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
             "https://github.com/pandas-dev/pandas/issues/61485"
@@ -80,7 +85,12 @@ def test_str_zfill_series(
     width: int,
     expected: dict[str, list[str | None]],
 ) -> None:
-    if uses_pyarrow_backend(constructor_eager) and PANDAS_VERSION < (3,):
+    # Width 0 short-circuits before reaching the native implementation.
+    if (
+        "width_0" not in request.node.callspec.id
+        and uses_pyarrow_backend(constructor_eager)
+        and PANDAS_VERSION < (3,)
+    ):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
             "https://github.com/pandas-dev/pandas/issues/61485"
