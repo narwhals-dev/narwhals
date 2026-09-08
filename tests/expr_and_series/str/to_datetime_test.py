@@ -18,6 +18,7 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from narwhals.typing import TimeUnit
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
@@ -271,6 +272,45 @@ def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
     result = df.select(nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z"))
     assert isinstance(result.collect_schema()["a"], nw.Datetime)
     assert_equal_data(result, {"a": [None, None]})
+
+
+@pytest.mark.parametrize(
+    ("format", "time_unit"),
+    [("%Y-%m-%dT%H:%M:%S%.3f", "ms"), ("%Y-%m-%dT%H:%M:%S%.f", "us")],
+)
+def test_to_datetime_fractional_seconds(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    format: str,
+    time_unit: TimeUnit,
+) -> None:
+    # Fractional-second formats determine the resulting `Datetime` precision,
+    # matching polars. No other backend parses them.
+    if "polars" not in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="fractional format unsupported"))
+    result = nw.from_native(constructor({"a": ["2020-01-01T12:34:56.123"]})).select(
+        b=nw.col("a").str.to_datetime(format)
+    )
+    assert result.collect_schema()["b"] == nw.Datetime(time_unit)
+    assert_equal_data(result, {"b": [datetime(2020, 1, 1, 12, 34, 56, 123000)]})
+
+
+@pytest.mark.parametrize("format", ["%Y-%m-%dT%H:%M:%S", None])
+def test_to_datetime_unparseable_raises(
+    constructor: Constructor, format: str | None
+) -> None:
+    # Unparseable input raises on every backend (each with its own error type)
+    # instead of silently becoming null.
+    df = nw.from_native(constructor({"a": ["abc"]}))
+    expr = nw.col("a").str.to_datetime(format)
+    # Broad `Exception`: every backend raises, but each with its own error
+    # type. The pinned contract is only "raises rather than returning null".
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(expr)
 
 
 def test_to_datetime_trailing_input_raises(constructor: Constructor) -> None:
