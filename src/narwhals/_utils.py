@@ -1765,6 +1765,9 @@ class not_implemented:  # noqa: N801
 
     Arguments:
         alias: optional name used instead of the data model hook [`__set_name__`].
+        hint: optional explanation of why this is unsupported and what to do instead.
+            When given, it replaces the "please open an issue" pointer, so use it for
+            functionality we deliberately won't implement (see `length_changing_hint`).
 
     Returns:
         An exception-raising [descriptor].
@@ -1796,10 +1799,11 @@ class not_implemented:  # noqa: N801
     [descriptor]: https://docs.python.org/3/howto/descriptor.html
     """
 
-    def __init__(self, alias: str | None = None, /) -> None:
+    def __init__(self, alias: str | None = None, /, *, hint: str = "") -> None:
         # NOTE: Don't like this
         # Trying to workaround `mypy` requiring `@property` everywhere
         self._alias: str | None = alias
+        self._hint: str = hint
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__}>: {self._name_owner}.{self._name}"
@@ -1824,7 +1828,7 @@ class not_implemented:  # noqa: N801
             who = repr(implementation)
         else:
             who = self._name_owner
-        _raise_not_implemented_error(self._name, who)
+        _raise_not_implemented_error(self._name, who, self._hint)
         return None  # pragma: no cover
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
@@ -1845,13 +1849,35 @@ class not_implemented:  # noqa: N801
         return deprecated(message)(obj)
 
 
-def _raise_not_implemented_error(what: str, who: str, /) -> NotImplementedError:
-    msg = (
-        f"{what!r} is not implemented for: {who!r}.\n\n"
+def _raise_not_implemented_error(
+    what: str, who: str, hint: str = "", /
+) -> NotImplementedError:
+    # A hint means we know *why* this isn't implemented, and what to do instead,
+    # so pointing users at the issue tracker would just be noise.
+    fallback_msg = (
         "If you would like to see this functionality in `narwhals`, "
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
+    tail = hint or fallback_msg
+    msg = f"{what!r} is not implemented for: {who!r}.\n\n{tail}"
     raise NotImplementedError(msg)
+
+
+def length_changing_hint(*, instead_of: str, use: str) -> str:
+    """Explain why a length-changing expression isn't available, and what to use instead.
+
+    Arguments:
+        instead_of: Unsupported usage example, e.g. `"lf.select(nw.col('a').unique())"`.
+        use: Supported alternative, e.g. `"lf.select('a').unique()"`.
+
+    Returns:
+        Message to pass as `not_implemented(hint=...)`.
+    """
+    return (
+        "Length-changing expressions (e.g. `unique`, `drop_nulls`, `filter`) are not\n"
+        "supported for this backend, not even when followed by an aggregation.\n\n"
+        f"Hint: instead of `{instead_of}`, use `{use}`."
+    )
 
 
 class requires:  # noqa: N801
