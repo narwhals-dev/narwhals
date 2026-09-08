@@ -143,11 +143,17 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> PandasLikeSeries:
+        if len(fill_char) != 1:
+            msg = f"`str.pad_start` only supports single-character `fill_char`, got {fill_char!r}."
+            raise ValueError(msg)
         return self.with_native(
             self.native.str.pad(width=length, fillchar=fill_char, side="left")
         )
 
     def pad_end(self, length: int, fill_char: str) -> PandasLikeSeries:
+        if len(fill_char) != 1:
+            msg = f"`str.pad_end` only supports single-character `fill_char`, got {fill_char!r}."
+            raise ValueError(msg)
         return self.with_native(
             self.native.str.pad(width=length, fillchar=fill_char, side="right")
         )

@@ -138,11 +138,11 @@ def test_pad_unicode_exact_length_expr(constructor: Constructor) -> None:
 def test_pad_invalid_fill_char(
     constructor: Constructor, request: pytest.FixtureRequest, method: str, fill_char: str
 ) -> None:
-    # Padding requires a single character, matching polars (`ValueError`, and
-    # pyarrow's `ArrowInvalid` subclasses it). pandas-likes raise `TypeError`
-    # and dask only surfaces it at collect time instead.
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
-        request.applymarker(pytest.mark.xfail(reason="different error type"))
+    # Padding requires a single character, matching polars (`ValueError`;
+    # pyarrow's `ArrowInvalid` subclasses it). Dask only surfaces it at
+    # collect time instead.
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="deferred error"))
     df = nw.from_native(constructor({"a": ["foo", None]}))
     # No `match`: polars, pyarrow, and narwhals-raised messages each word the
     # single-character requirement differently.

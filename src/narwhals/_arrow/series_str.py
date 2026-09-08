@@ -158,11 +158,17 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(result)
 
     def pad_start(self, length: int, fill_char: str) -> ArrowSeries:
+        if len(fill_char) != 1:
+            msg = f"`str.pad_start` only supports single-character `fill_char`, got {fill_char!r}."
+            raise ValueError(msg)
         return self.with_native(
             pc.utf8_lpad(self.native, width=length, padding=fill_char)
         )
 
     def pad_end(self, length: int, fill_char: str) -> ArrowSeries:
+        if len(fill_char) != 1:
+            msg = f"`str.pad_end` only supports single-character `fill_char`, got {fill_char!r}."
+            raise ValueError(msg)
         return self.with_native(
             pc.utf8_rpad(self.native, width=length, padding=fill_char)
         )
