@@ -169,8 +169,7 @@ def test_struct_with_schema(
 
 
 def test_struct_nested(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    # Nested structs round-trip through `collect_schema` (previously `List`/
-    # `Struct` mapped to `Unknown` on some backends).
+    # Nested structs round-trip through `collect_schema`.
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
     maybe_skip(constructor=constructor)
@@ -197,8 +196,7 @@ def test_struct_nested(request: pytest.FixtureRequest, constructor: Constructor)
 def test_struct_duplicate_names_raises(
     request: pytest.FixtureRequest, constructor: Constructor, exprs: tuple[nw.Expr, ...]
 ) -> None:
-    # Duplicate field names raise, matching polars, instead of silently
-    # keeping one of them.
+    # Duplicate field names raise instead of silently keeping one of them.
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
     maybe_skip(constructor=constructor)
