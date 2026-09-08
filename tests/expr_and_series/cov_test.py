@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 
@@ -157,8 +163,13 @@ def test_cov_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_cov_numerical_stability(constructor: Constructor) -> None:
-    # Large offsets stress single-pass variance implementations.
+def test_cov_numerical_stability(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Large offsets stress single-pass variance implementations. Old polars
+    # computes this the single-pass way and gets `0.0`/`NaN`.
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 11, 0):
+        request.applymarker(pytest.mark.xfail(reason="single-pass variance"))
     df = nw.from_native(
         constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})
     )
