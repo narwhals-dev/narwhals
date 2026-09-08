@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    uses_pyarrow_backend,
+)
 
 
 def test_str_pad_start_series(constructor_eager: ConstructorEager) -> None:
@@ -158,7 +164,16 @@ def test_pad_invalid_fill_char(
 
 
 @pytest.mark.parametrize("method", ["pad_start", "pad_end"])
-def test_pad_negative_length_raises(constructor: Constructor, method: str) -> None:
+def test_pad_negative_length_raises(
+    constructor: Constructor, request: pytest.FixtureRequest, method: str
+) -> None:
+    # Old pandas is lenient here (except with a pyarrow-backed dtype).
+    if (
+        PANDAS_VERSION < (3,)
+        and not uses_pyarrow_backend(constructor)
+        and ("pandas" in str(constructor) or "dask" in str(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old pandas is lenient"))
     df = nw.from_native(constructor({"a": ["foo", None]}))
     expr = getattr(nw.col("a").str, method)(-1)
     # Broad `Exception`: error types differ per backend.
