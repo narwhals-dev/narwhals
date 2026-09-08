@@ -189,24 +189,49 @@ def test_str_replace_edge_series_scalar(
     assert_equal_data({"a": result_series}, expected)
 
 
-def test_str_replace_group_expansion_series_scalar(
+replace_value_edge_cases = [
+    pytest.param(
+        "(b)",
+        "[$1]",
+        {"a": ["aa[b]"]},
+        "no capture-group expansion",
+        id="group_expansion",
+    ),
+    pytest.param(
+        "b", "\\1", {"a": ["aa\\1"]}, "invalid replacement string", id="backslash_literal"
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("pattern", "value", "expected", "reason"), replace_value_edge_cases
+)
+def test_str_replace_value_edge_series_scalar(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
+    pattern: str,
+    value: str,
+    expected: dict[str, list[str]],
+    reason: str,
 ) -> None:
-    # `$1` in a regex replacement expands the capture group, matching polars.
-    # pandas-likes and pyarrow splice it in literally instead.
+    # Special replacement strings follow polars; pandas-likes and pyarrow differ.
     if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
-        request.applymarker(pytest.mark.xfail(reason="no capture-group expansion"))
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor_eager({"a": ["aab"]}), eager_only=True)
-    result_series = df["a"].str.replace(
-        pattern="(b)", value="[$1]", n=1, literal=False
-    )
-    assert_equal_data({"a": result_series}, {"a": ["aa[b]"]})
+    result_series = df["a"].str.replace(pattern=pattern, value=value, n=1, literal=False)
+    assert_equal_data({"a": result_series}, expected)
 
 
-def test_str_replace_group_expansion_expr_scalar(
+@pytest.mark.parametrize(
+    ("pattern", "value", "expected", "reason"), replace_value_edge_cases
+)
+def test_str_replace_value_edge_expr_scalar(
     constructor: Constructor,
     request: pytest.FixtureRequest,
+    pattern: str,
+    value: str,
+    expected: dict[str, list[str]],
+    reason: str,
 ) -> None:
     if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
         request.applymarker(
@@ -215,77 +240,32 @@ def test_str_replace_group_expansion_expr_scalar(
                 raises=NotImplementedError,
             )
         )
-    if any(
-        x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")
-    ):
-        request.applymarker(pytest.mark.xfail(reason="no capture-group expansion"))
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": ["aab"]}))
     result_df = df.select(
-        nw.col("a").str.replace(pattern="(b)", value="[$1]", n=1, literal=False)
+        nw.col("a").str.replace(pattern=pattern, value=value, n=1, literal=False)
     )
-    assert_equal_data(result_df, {"a": ["aa[b]"]})
-
-
-def test_str_replace_backslash_series_scalar(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
-) -> None:
-    # `\\1` without a capture group stays literal, matching polars.
-    # pandas-likes and pyarrow reject it as an invalid replacement string.
-    if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
-        request.applymarker(pytest.mark.xfail(reason="invalid replacement string"))
-    df = nw.from_native(constructor_eager({"a": ["aab"]}), eager_only=True)
-    result_series = df["a"].str.replace(
-        pattern="b", value="\\1", n=1, literal=False
-    )
-    assert_equal_data({"a": result_series}, {"a": ["aa\\1"]})
-
-
-def test_str_replace_backslash_expr_scalar(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-) -> None:
-    if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
-        request.applymarker(
-            pytest.mark.xfail(
-                reason=f"{constructor} only supports `replace_all`.",
-                raises=NotImplementedError,
-            )
-        )
-    if any(
-        x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")
-    ):
-        request.applymarker(pytest.mark.xfail(reason="invalid replacement string"))
-    df = nw.from_native(constructor({"a": ["aab"]}))
-    result_df = df.select(
-        nw.col("a").str.replace(pattern="b", value="\\1", n=1, literal=False)
-    )
-    assert_equal_data(result_df, {"a": ["aa\\1"]})
+    assert_equal_data(result_df, expected)
 
 
 def test_str_replace_null_value_series(
-    constructor_eager: ConstructorEager,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
     # A null replacement leaves the input unchanged, matching polars.
-    # pandas-likes and pyarrow only accept string replacement values.
     if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
     df = nw.from_native(
-        constructor_eager({"a": ["abc", "def"], "b": ["X", None]}),
-        eager_only=True,
+        constructor_eager({"a": ["abc", "def"], "b": ["X", None]}), eager_only=True
     )
-    result_series = df["a"].str.replace(
-        pattern="b", value=df["b"], n=1, literal=True
-    )
+    result_series = df["a"].str.replace(pattern="b", value=df["b"], n=1, literal=True)
     assert_equal_data({"a": result_series}, {"a": ["aXc", "def"]})
 
 
 def test_str_replace_null_value_expr(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("pyspark", "duckdb", "ibis")):
         request.applymarker(
@@ -294,17 +274,13 @@ def test_str_replace_null_value_expr(
                 raises=NotImplementedError,
             )
         )
-    if any(
-        x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")
-    ):
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
     df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
     result_df = df.select(
-        nw.col("a").str.replace(
-            pattern="b", value=nw.col("b"), n=1, literal=True
-        )
+        nw.col("a").str.replace(pattern="b", value=nw.col("b"), n=1, literal=True)
     )
     assert_equal_data(result_df, {"a": ["aXc", "def"]})
 
