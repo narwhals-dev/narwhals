@@ -85,6 +85,32 @@ def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
             df.select(expr)
 
 
+def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    # `NaN` sorts after every number, matching polars: the median of
+    # `[1.0, NaN, 2.0]` is `2.0`. pandas-likes and pyarrow drop it instead.
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(pytest.mark.xfail(reason="NaN handling"))
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        # Spark's `percentile` drops `NaN`; sqlframe transpiles it fine.
+        request.applymarker(pytest.mark.xfail(reason="NaN handling"))
+    df = nw.from_native(constructor({"a": [1.0, float("nan"), 2.0]}))
+    result = df.select(nw.col("a").quantile(0.5, "linear").alias("q"))
+    assert_equal_data(result, {"q": [2.0]})
+
+
+def test_quantile_inf(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    # Infinities participate in ordering, matching polars: the median of
+    # `[1.0, inf, 2.0]` is `2.0`. Plain pandas returns `NaN` instead.
+    if any(
+        x in str(constructor)
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask", "cudf")
+    ):
+        request.applymarker(pytest.mark.xfail(reason="inf handling"))
+    df = nw.from_native(constructor({"a": [1.0, float("inf"), 2.0]}))
+    result = df.select(nw.col("a").quantile(0.5, "linear").alias("q"))
+    assert_equal_data(result, {"q": [2.0]})
+
+
 def test_quantile_expr_group_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:

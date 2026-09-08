@@ -68,6 +68,40 @@ def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -
     )
 
 
+def test_median_all_null(constructor: Constructor) -> None:
+    # The median of an all-null column is null, matching polars (`NaN` on
+    # pandas-likes compares equal to it).
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    df = nw.from_native(constructor({"a": [None, None]}))
+    result = df.with_columns(nw.col("a").cast(nw.Float64())).select(nw.col("a").median())
+    assert_equal_data(result, {"a": [None]})
+
+
+def test_median_empty(constructor: Constructor) -> None:
+    # The median of an empty column is null, matching polars.
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    df = nw.from_native(constructor({"a": []}))
+    result = df.with_columns(nw.col("a").cast(nw.Int64())).select(nw.col("a").median())
+    assert_equal_data(result, {"a": [None]})
+
+
+def test_median_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    # The median of booleans coerces to float, matching polars (`1.0`). Other
+    # backends reject non-numeric input; SQL backends returning `True`
+    # compare equal to `1.0` and so pass.
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(pytest.mark.xfail(reason="boolean median"))
+    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
+        # Spark's `percentile` rejects non-numeric input; sqlframe transpiles
+        # it fine and passes via `True == 1.0`.
+        request.applymarker(pytest.mark.xfail(reason="boolean median"))
+    df = nw.from_native(constructor({"b": [True, False, True]}))
+    result = df.select(nw.col("b").median())
+    assert_equal_data(result, {"b": [1.0]})
+
+
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
 def test_median_expr_raises_on_str(
     constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest
