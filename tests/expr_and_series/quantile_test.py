@@ -7,7 +7,7 @@ from typing import Literal
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -88,6 +88,10 @@ def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) 
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
         # Spark's `percentile` drops `NaN`; sqlframe transpiles it fine.
         request.applymarker(pytest.mark.xfail(reason="NaN handling"))
+    if (
+        "duckdb" in str(constructor) or "sqlframe" in str(constructor)
+    ) and DUCKDB_VERSION < (1, 3, 1):
+        request.applymarker(pytest.mark.xfail(reason="old duckdb NaN handling"))
     df = nw.from_native(constructor({"a": [1.0, float("nan"), 2.0]}))
     result = df.select(nw.col("a").quantile(0.5, "linear").alias("q"))
     assert_equal_data(result, {"q": [2.0]})

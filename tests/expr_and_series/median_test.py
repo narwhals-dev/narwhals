@@ -71,9 +71,11 @@ def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -
 @pytest.mark.parametrize(
     "data", [{"a": [None, None]}, {"a": []}], ids=["all_null", "empty"]
 )
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_median_null_or_empty(
     constructor: Constructor, data: dict[str, list[int]]
 ) -> None:
+    # Degenerate-slice `RuntimeWarning`s (old pandas on all-null input) are expected.
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
     df = nw.from_native(constructor(data))
