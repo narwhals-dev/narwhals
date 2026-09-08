@@ -72,20 +72,41 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_concat_str_single_expr(constructor: Constructor) -> None:
-    # A single expression is passed through (null preserved).
-    df = nw.from_native(constructor({"b": ["a", None]}))
-    result = df.select(nw.concat_str(["b"], separator=", ").alias("out"))
-    assert_equal_data(result, {"out": ["a", None]})
+concat_str_cases = [
+    pytest.param({"b": ["a", None]}, ["b"], {"out": ["a", None]}, id="single"),
+    pytest.param(
+        {"b": ["a", None]},
+        ["b", nw.lit(None, dtype=nw.String())],
+        {"out": [None, None]},
+        id="null_literal",
+    ),
+    pytest.param(
+        {"bo": [True, None], "b": ["x", "y"]},
+        ["bo", "b"],
+        {"out": ["true x", None]},
+        id="bool",
+    ),
+]
 
 
-def test_concat_str_null_literal(constructor: Constructor) -> None:
-    # A null literal poisons the row when `ignore_nulls=False` (default).
-    df = nw.from_native(constructor({"b": ["a", None]}))
-    result = df.select(
-        nw.concat_str(["b", nw.lit(None, dtype=nw.String())], separator=", ").alias("out")
-    )
-    assert_equal_data(result, {"out": [None, None]})
+@pytest.mark.parametrize(("data", "columns", "expected"), concat_str_cases)
+def test_concat_str_edge(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    data: dict[str, list[bool | str | None]],
+    columns: list[str | nw.Expr],
+    expected: dict[str, list[str | None]],
+) -> None:
+    # Plain pandas (and dask/modin) infer `object` dtype for mixed bool/null
+    # columns, where bools are indistinguishable from `"True"` strings.
+    if "bool" in request.node.callspec.id and (
+        "pandas_constructor" in str(constructor)
+        or any(x in str(constructor) for x in ("modin", "dask"))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
+    assert_equal_data(result, expected)
 
 
 def test_concat_str_all_null_ignore_nulls(
@@ -103,21 +124,6 @@ def test_concat_str_all_null_ignore_nulls(
         nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
     )
     assert_equal_data(result, {"out": ["", ""]})
-
-
-def test_concat_str_bool(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    # Booleans render lowercase, matching polars. Plain pandas (and modin and
-    # dask) infer `object` dtype for `[True, None]`, where bools are
-    # indistinguishable from the strings `"True"`/`"False"`.
-    if "pandas_constructor" in str(constructor) or any(
-        x in str(constructor) for x in ("modin", "dask")
-    ):
-        request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
-    df = nw.from_native(constructor({"bo": [True, None], "b": ["x", "y"]}))
-    result = df.select(nw.concat_str(["bo", "b"], separator=" ").alias("out"))
-    assert_equal_data(result, {"out": ["true x", None]})
 
 
 @pytest.mark.parametrize(
