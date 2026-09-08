@@ -62,13 +62,17 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             # narwhals supports, while narwhals follows Python and Polars
             # (sign of the divisor). The double-modulus identity
             # `((a % b) + b) % b` restores floor-modulus.
-            return ((expr % other) + other) % other
+            numeric_expr = cast("ir.NumericValue", expr)
+            numeric_other = cast("ir.NumericValue", other)
+            return ((numeric_expr % numeric_other) + numeric_other) % numeric_other
 
         return self._with_binary(_mod, other)
 
     def __rmod__(self, other: Self) -> Self:
         def _rmod(expr: ir.Value, other: ir.Value) -> ir.Value:
-            return ((other % expr) + expr) % expr
+            numeric_expr = cast("ir.NumericValue", expr)
+            numeric_other = cast("ir.NumericValue", other)
+            return ((numeric_other % numeric_expr) + numeric_expr) % numeric_expr
 
         return self._with_binary(_rmod, other).alias("literal")
 
