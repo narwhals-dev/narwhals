@@ -27,43 +27,43 @@ permissions: {}
 jobs:
   pytest:
     name: PyTest
-    uses: ./.github/workflows/pytest.yml
+    uses: $/.github/workflows/pytest.yml
     permissions:
       contents: read
 
   pytest-pyspark:
     name: PyTest PySpark
-    uses: ./.github/workflows/pytest-pyspark.yml
+    uses: $/.github/workflows/pytest-pyspark.yml
     permissions:
       contents: read
 
   pytest-ibis:
     name: PyTest Ibis
-    uses: ./.github/workflows/pytest-ibis.yml
+    uses: $/.github/workflows/pytest-ibis.yml
     permissions:
       contents: read
 
   pytest-modin:
     name: PyTest Modin
-    uses: ./.github/workflows/pytest-modin.yml
+    uses: $/.github/workflows/pytest-modin.yml
     permissions:
       contents: read
 
   pytest-fireducks:
     name: PyTest Fireducks
-    uses: ./.github/workflows/pytest-fireducks.yml
+    uses: $/.github/workflows/pytest-fireducks.yml
     permissions:
       contents: read
 
   typing:
     name: Type checking
-    uses: ./.github/workflows/typing.yml
+    uses: $/.github/workflows/typing.yml
     permissions:
       contents: read
 
   downstream-tests:
     name: Downstream tests
-    uses: ./.github/workflows/downstream_tests.yml
+    uses: $/.github/workflows/downstream_tests.yml
     with:
       skip-fairlearn: true
     permissions:
@@ -71,19 +71,19 @@ jobs:
 
   check-docs-build:
     name: Check docs build
-    uses: ./.github/workflows/check_docs_build.yml
+    uses: $/.github/workflows/check_docs_build.yml
     permissions:
       contents: read
 
   pre-commit-hooks:
     name: Pre-commit hooks
-    uses: ./.github/workflows/pre-commit-hooks.yml
+    uses: $/.github/workflows/pre-commit-hooks.yml
     permissions:
       contents: read
 
   test-sdist:
     name: Test sdist
-    uses: ./.github/workflows/test_sdist.yml
+    uses: $/.github/workflows/test_sdist.yml
     permissions:
       contents: read
 
