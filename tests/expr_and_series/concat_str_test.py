@@ -88,6 +88,38 @@ def test_concat_str_null_literal(constructor: Constructor) -> None:
     assert_equal_data(result, {"out": [None, None]})
 
 
+def test_concat_str_all_null_ignore_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # A row of only nulls concatenates to `""` with `ignore_nulls=True`.
+    # The pyarrow kernel returns no rows at all for all-null `skip` inputs.
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="pyarrow drops all-null rows"))
+    df = nw.from_native(constructor({"b": [None, None], "c": [None, None]}))
+    df = df.with_columns(nw.col("b").cast(nw.String()), nw.col("c").cast(nw.String()))
+    result = df.select(
+        nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
+    )
+    assert_equal_data(result, {"out": ["", ""]})
+
+
+def test_concat_str_bool(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Booleans render lowercase, matching polars. Plain pandas (and modin and
+    # dask) infer `object` dtype for `[True, None]`, where bools are
+    # indistinguishable from the strings `"True"`/`"False"`.
+    if "pandas_constructor" in str(constructor) or any(
+        x in str(constructor) for x in ("modin", "dask")
+    ):
+        request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
+    df = nw.from_native(constructor({"bo": [True, None], "b": ["x", "y"]}))
+    result = df.select(nw.concat_str(["bo", "b"], separator=" ").alias("out"))
+    assert_equal_data(result, {"out": ["true x", None]})
+
+
 @pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [
