@@ -229,6 +229,9 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def is_finite(self) -> Self:
         return self._with_elementwise(lambda expr: F("isfinite", expr))
 
+    def is_infinite(self) -> Self:
+        return self._with_elementwise(lambda expr: F("isinf", expr))
+
     def is_in(self, other: Sequence[Any]) -> Self:
         return self._with_elementwise(lambda expr: F("contains", lit(list(other)), expr))
 

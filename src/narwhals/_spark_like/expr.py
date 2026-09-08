@@ -306,6 +306,19 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_elementwise(_is_finite)
 
+    def is_infinite(self) -> Self:
+        def _is_infinite(expr: Column) -> Column:
+            # A value is infinite if it is +inf or -inf, while NaN and finite values
+            # are not. NULLs should be preserved.
+            is_infinite_condition = (expr == self._F.lit(float("inf"))) | (
+                expr == self._F.lit(float("-inf"))
+            )
+            return self._F.when(~self._F.isnull(expr), is_infinite_condition).otherwise(
+                None
+            )
+
+        return self._with_elementwise(_is_infinite)
+
     def is_in(self, other: Sequence[Any]) -> Self:
         values = [v for v in other if v is not None]
 

@@ -585,6 +585,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def is_null(self) -> Self:
         return self._with_native(self.native.isna(), preserve_broadcast=True)
 
+    def is_not_null(self) -> Self:
+        return self._with_native(self.native.notna(), preserve_broadcast=True)
+
     def is_nan(self) -> Self:
         ser = self.native
         if not self.dtype.is_numeric():
@@ -1059,6 +1062,20 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
         else:
             array_func = self._array_funcs.isfinite
+            result_native = self._apply_array_func(native, array_func)
+        return self._with_native(result_native)
+
+    def is_infinite(self) -> Self:
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.is_inf,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.isinf
             result_native = self._apply_array_func(native, array_func)
         return self._with_native(result_native)
 

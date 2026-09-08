@@ -266,6 +266,15 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
         return self._with_callable(func)
 
+    def is_infinite(self) -> Self:
+        def func(expr: ir.IntegerValue | ir.FloatingValue) -> ir.Value:
+            if is_floating(expr.type()):
+                expr = cast("ir.FloatingValue", expr)
+                return ibis.ifelse(expr.isnull(), None, expr.isinf())
+            return ibis.ifelse(expr.isnull(), None, lit(False))
+
+        return self._with_callable(func)
+
     def is_in(self, other: Sequence[Any]) -> Self:
         values = [v for v in other if v is not None]
 
