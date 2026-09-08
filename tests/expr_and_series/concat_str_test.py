@@ -72,24 +72,24 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-concat_str_cases = [
-    pytest.param({"b": ["a", None]}, ["b"], {"out": ["a", None]}, id="single"),
-    pytest.param(
-        {"b": ["a", None]},
-        ["b", nw.lit(None, dtype=nw.String())],
-        {"out": [None, None]},
-        id="null_literal",
-    ),
-    pytest.param(
-        {"bo": [True, None], "b": ["x", "y"]},
-        ["bo", "b"],
-        {"out": ["true x", None]},
-        id="bool",
-    ),
-]
-
-
-@pytest.mark.parametrize(("data", "columns", "expected"), concat_str_cases)
+@pytest.mark.parametrize(
+    ("data", "columns", "expected"),
+    [
+        pytest.param({"b": ["a", None]}, ["b"], {"out": ["a", None]}, id="single"),
+        pytest.param(
+            {"b": ["a", None]},
+            ["b", nw.lit(None, dtype=nw.String())],
+            {"out": [None, None]},
+            id="null_literal",
+        ),
+        pytest.param(
+            {"bo": [True, None], "b": ["x", "y"]},
+            ["bo", "b"],
+            {"out": ["true x", None]},
+            id="bool",
+        ),
+    ],
+)
 def test_concat_str_edge(
     constructor: Constructor,
     request: pytest.FixtureRequest,
