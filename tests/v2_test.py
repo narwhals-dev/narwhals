@@ -648,13 +648,23 @@ def test_get_categories_lazy_v2(constructor_eager: ConstructorEager) -> None:
 
 
 def test_get_categories_enum_polars_v2() -> None:
+    # `Enum.get_categories` always returns the *declared* categories, in
+    # declared order, regardless of which ones are actually present in the
+    # data (matching Polars' own `cat.get_categories` behavior for `Enum`).
     pytest.importorskip("polars")
     import polars as pl
 
     s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
     result = nw_v2.from_native(s_native, series_only=True).cat.get_categories()
     assert result.dtype == nw_v2.String
-    assert result.to_list() == ["Panda", "Polar"]
+    assert result.to_list() == ["Polar", "Panda", "X"]
+
+    df_native = pl.DataFrame(
+        {"a": ["Panda", "Polar"]}, schema={"a": pl.Enum(["Polar", "Panda"])}
+    )
+    df = nw_v2.from_native(df_native, eager_only=True)
+    result = df.select(nw_v2.col("a").cat.get_categories())
+    assert_equal_data(result, {"a": ["Polar", "Panda"]})
 
 
 def test_selectors_are_stable_v2() -> None:
