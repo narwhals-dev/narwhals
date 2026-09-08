@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import DuplicateError
 from tests.utils import (
     DUCKDB_VERSION,
     PANDAS_VERSION,
@@ -187,6 +188,28 @@ def test_struct_nested(request: pytest.FixtureRequest, constructor: Constructor)
             ]
         },
     )
+
+
+@pytest.mark.parametrize(
+    "exprs",
+    [(nw.col("a"), nw.col("a")), (nw.col("a").alias("x"), nw.col("b").alias("x"))],
+)
+def test_struct_duplicate_names_raises(
+    request: pytest.FixtureRequest, constructor: Constructor, exprs: tuple[nw.Expr, ...]
+) -> None:
+    # Duplicate field names raise, matching polars, instead of silently
+    # keeping one of them.
+    if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
+        request.applymarker(pytest.mark.xfail)
+    maybe_skip(constructor=constructor)
+    df = nw.from_native(constructor({"a": [1, 2], "b": [3, 4]}))
+    expr = nw.struct(*exprs).alias("s")
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(DuplicateError):
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(DuplicateError):
+            df.select(expr)
 
 
 def test_struct_with_series(constructor_eager: ConstructorEager) -> None:

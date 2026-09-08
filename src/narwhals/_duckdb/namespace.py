@@ -29,7 +29,12 @@ from narwhals._expression_parsing import (
     evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation, requires, validate_separators
+from narwhals._utils import (
+    Implementation,
+    check_column_names_are_unique,
+    requires,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -249,14 +254,18 @@ class DuckDBNamespace(
         version = self._version
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            names_to_cols: Mapping[str, Expression] = {
-                alias: native_expr
+            evaluated = [
+                (native_expr, alias)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
                     *evaluate_output_names_and_aliases(expr, df, []),
                     strict=True,
                 )
+            ]
+            check_column_names_are_unique([alias for _, alias in evaluated])
+            names_to_cols: Mapping[str, Expression] = {
+                alias: native_expr for native_expr, alias in evaluated
             }
             field_args = ", ".join(
                 f'"{name}" := {col}' for name, col in names_to_cols.items()

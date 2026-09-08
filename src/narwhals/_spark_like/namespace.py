@@ -20,7 +20,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import validate_separators
+from narwhals._utils import check_column_names_are_unique, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
@@ -336,14 +336,18 @@ class SparkLikeNamespace(
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F
-            names_to_cols: Mapping[str, Column] = {
-                alias: native_expr
+            evaluated = [
+                (native_expr, alias)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
                     *evaluate_output_names_and_aliases(expr, df, []),
                     strict=True,
                 )
+            ]
+            check_column_names_are_unique([alias for _, alias in evaluated])
+            names_to_cols: Mapping[str, Column] = {
+                alias: native_expr for native_expr, alias in evaluated
             }
             aliased = (col.alias(name) for name, col in names_to_cols.items())
             return [F.struct(*aliased)]

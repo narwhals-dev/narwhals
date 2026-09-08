@@ -19,7 +19,11 @@ from narwhals._ibis.expr import IbisExpr
 from narwhals._ibis.selectors import IbisSelectorNamespace
 from narwhals._ibis.utils import function, lit, narwhals_to_native_dtype
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation, validate_separators
+from narwhals._utils import (
+    Implementation,
+    check_column_names_are_unique,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping, Sequence
@@ -210,14 +214,18 @@ class IbisNamespace(
         version = self._version
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            names_to_cols: Mapping[str, ir.Value] = {
-                alias: native_expr
+            evaluated = [
+                (native_expr, alias)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
                     *evaluate_output_names_and_aliases(expr, df, []),
                     strict=True,
                 )
+            ]
+            check_column_names_are_unique([alias for _, alias in evaluated])
+            names_to_cols: Mapping[str, ir.Value] = {
+                alias: native_expr for native_expr, alias in evaluated
             }
             return [ibis.struct(names_to_cols)]
 
