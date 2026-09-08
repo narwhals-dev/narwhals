@@ -41,39 +41,62 @@ def test_contains_series(
     assert_equal_data({"a": result}, expected)
 
 
+coercion_cases = [
+    pytest.param(
+        {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
+        nw.Int64(),
+        2.0,
+        [True, None, False, False, False, False],
+        id="float_matches_int",
+    ),
+    pytest.param(
+        {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
+        nw.Int64(),
+        1.5,
+        [False, None, False, False, False, False],
+        id="non_integer",
+    ),
+    pytest.param(
+        {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
+        nw.Int8(),
+        300,
+        [False, None, False, False, False, False],
+        id="overflow",
+    ),
+    pytest.param(
+        {"a": [[1.0, 2.0], [3.0], None, []]},
+        nw.Float64(),
+        1,
+        [True, False, None, False],
+        id="int_matches_float",
+    ),
+]
+
+
+@pytest.mark.parametrize(("data", "inner", "item", "expected"), coercion_cases)
 def test_contains_numeric_coercion_expr(
-    request: pytest.FixtureRequest, constructor: Constructor
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, list[list[int | float | None] | None]],
+    inner: nw.DType,
+    item: float,
+    expected: list[bool | None],
 ) -> None:
-    # Different numeric widths/families coerce without matching spuriously:
-    # `2.0` matches ints, `1.5` does not, `300` overflows `Int8`, and `1`
-    # matches a `Float64` list.
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
-    data_num = {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]}
-    cases: list[tuple[nw.DType, int | float, list[bool | None]]] = [
-        (nw.Int64(), 2.0, [True, None, False, False, False, False]),
-        (nw.Int64(), 1.5, [False, None, False, False, False, False]),
-        (nw.Int8(), 300, [False, None, False, False, False, False]),
-    ]
-    for inner, item, expected_num in cases:
-        result = nw.from_native(constructor(data_num)).select(
-            nw.col("a").cast(nw.List(inner)).list.contains(item)
-        )
-        assert_equal_data(result, {"a": expected_num})
-    result = nw.from_native(constructor({"a": [[1.0, 2.0], [3.0], None, []]})).select(
-        nw.col("a").cast(nw.List(nw.Float64())).list.contains(1)
+    result = nw.from_native(constructor(data)).select(
+        nw.col("a").cast(nw.List(inner)).list.contains(item)
     )
-    assert_equal_data(result, {"a": [True, False, None, False]})
+    assert_equal_data(result, {"a": expected})
 
 
 def test_contains_none_item_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # `None` matches lists holding null, misses other lists, and preserves a
-    # null list, matching polars. SQL backends return null for every row.
+    # SQL backends return null for every row instead.
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
@@ -87,12 +110,28 @@ def test_contains_none_item_expr(
     assert_equal_data(result, {"a": [True, False, None, False]})
 
 
-@pytest.mark.parametrize("item", [True, "2"])
-def test_contains_mismatched_type_raises(
-    request: pytest.FixtureRequest, constructor: Constructor, *, item: bool | str
+invalid_item_cases = [
+    pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), True, id="bool_item"),
+    pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), "2", id="str_item"),
+    pytest.param(
+        {"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]},
+        nw.Datetime("ns"),
+        datetime(2020, 1, 1, 1, 2, 3),
+        id="datetime_precision",
+    ),
+]
+
+
+@pytest.mark.parametrize(("data", "inner", "item"), invalid_item_cases)
+def test_contains_invalid_item_raises(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, list[list[int | str | datetime] | None]],
+    inner: nw.DType,
+    *,
+    item: bool | str | datetime,
 ) -> None:
-    # A bool or str item on an int list raises, matching polars. SQL backends
-    # coerce and return a boolean instead.
+    # Mismatched items raise, matching polars; SQL backends coerce instead.
     if any(
         backend in str(constructor)
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
@@ -100,34 +139,8 @@ def test_contains_mismatched_type_raises(
         request.applymarker(pytest.mark.xfail)
     if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
         request.applymarker(pytest.mark.xfail(reason="mismatched item coerced"))
-    df = nw.from_native(constructor({"a": [[2, 3], [1], None]}))
-    expr = nw.col("a").cast(nw.List(nw.Int64())).list.contains(item)
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(InvalidOperationError):
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(InvalidOperationError):
-            df.select(expr)
-
-
-def test_contains_datetime_precision_mismatch_raises(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    # A `Datetime` item of a different precision than the list raises,
-    # matching polars. SQL backends coerce and return a boolean instead.
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
-    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
-        request.applymarker(pytest.mark.xfail(reason="precision coerced"))
-    df = nw.from_native(constructor({"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]}))
-    expr = (
-        nw.col("a")
-        .cast(nw.List(nw.Datetime("ns")))
-        .list.contains(datetime(2020, 1, 1, 1, 2, 3))
-    )
+    df = nw.from_native(constructor(data))
+    expr = nw.col("a").cast(nw.List(inner)).list.contains(item)
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(InvalidOperationError):
             df.select(expr).lazy().collect()
@@ -139,7 +152,6 @@ def test_contains_datetime_precision_mismatch_raises(
 def test_contains_all_null_inner_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # A list of only nulls contains nothing.
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
     if any(
