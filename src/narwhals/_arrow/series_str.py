@@ -70,6 +70,11 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         if not isinstance(suffix_native, pa.StringScalar):
             msg = "`.str.ends_with` only supports str suffix values for pyarrow backend"
             raise TypeError(msg)
+        if suffix_native.as_py() == "":
+            # Every string ends with the empty string, but `-0 == 0`, so the
+            # slice below would compare the whole string against `""`.
+            # `match_substring` with an empty pattern preserves nulls instead.
+            return self.with_native(pc.match_substring(self.native, ""))
         return self.with_native(
             pc.equal(
                 self.slice(-len(suffix_native.as_py()), None).native,

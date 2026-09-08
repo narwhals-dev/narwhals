@@ -148,6 +148,19 @@ def test_starts_with_empty(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_ends_with_empty(constructor: Constructor) -> None:
+    # Empty suffix matches every non-null row, null stays null (except plain
+    # pandas, which has no nullable boolean).
+    df = nw.from_native(constructor({"a": ["x", None, ""]}))
+    result = df.select(nw.col("a").str.ends_with(""))
+    expected: dict[str, list[Any]]
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+        expected = {"a": [True, False, True]}
+    else:
+        expected = {"a": [True, None, True]}
+    assert_equal_data(result, expected)
+
+
 def test_pandas_object_dtype_starts_with_null() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3850
     pytest.importorskip("pandas")

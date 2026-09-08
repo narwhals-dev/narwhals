@@ -258,6 +258,21 @@ def test_expr_contains_empty_pattern(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_expr_contains_invalid_regex(constructor: Constructor) -> None:
+    # An invalid regex raises on every backend (each with its own error type,
+    # at collect time for lazy backends) instead of returning a value.
+    df = nw.from_native(constructor({"pets": ["cat", "dog"]}))
+    expr = nw.col("pets").str.contains("(", literal=False)
+    # Broad `Exception`: every backend raises, but each with its own error
+    # type. The pinned contract is only "raises rather than matching".
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(Exception):  # noqa: B017, PT011
+            df.select(expr)
+
+
 def test_expr_contains_expr_pattern_with_null(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
