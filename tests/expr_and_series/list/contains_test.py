@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
 
 import narwhals as nw
+from narwhals.exceptions import InvalidOperationError
 from tests.utils import assert_equal_data
 
 if TYPE_CHECKING:
@@ -65,6 +67,73 @@ def test_contains_numeric_coercion_expr(
         nw.col("a").cast(nw.List(nw.Float64())).list.contains(1)
     )
     assert_equal_data(result, {"a": [True, False, None, False]})
+
+
+def test_contains_none_item_expr(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # `None` matches lists holding null, misses other lists, and preserves a
+    # null list, matching polars. SQL backends return null for every row.
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
+        request.applymarker(pytest.mark.xfail(reason="null item returns null"))
+    result = nw.from_native(constructor({"a": [[2, None], [1], None, []]})).select(
+        nw.col("a").cast(nw.List(nw.Int64())).list.contains(None)
+    )
+    assert_equal_data(result, {"a": [True, False, None, False]})
+
+
+@pytest.mark.parametrize("item", [True, "2"])
+def test_contains_mismatched_type_raises(
+    request: pytest.FixtureRequest, constructor: Constructor, *, item: bool | str
+) -> None:
+    # A bool or str item on an int list raises, matching polars. SQL backends
+    # coerce and return a boolean instead.
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
+        request.applymarker(pytest.mark.xfail(reason="mismatched item coerced"))
+    df = nw.from_native(constructor({"a": [[2, 3], [1], None]}))
+    expr = nw.col("a").cast(nw.List(nw.Int64())).list.contains(item)
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(InvalidOperationError):
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(InvalidOperationError):
+            df.select(expr)
+
+
+def test_contains_datetime_precision_mismatch_raises(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # A `Datetime` item of a different precision than the list raises,
+    # matching polars. SQL backends coerce and return a boolean instead.
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis", "pyspark")):
+        request.applymarker(pytest.mark.xfail(reason="precision coerced"))
+    df = nw.from_native(constructor({"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]}))
+    expr = (
+        nw.col("a")
+        .cast(nw.List(nw.Datetime("ns")))
+        .list.contains(datetime(2020, 1, 1, 1, 2, 3))
+    )
+    if isinstance(df, nw.LazyFrame):
+        with pytest.raises(InvalidOperationError):
+            df.select(expr).lazy().collect()
+    else:
+        with pytest.raises(InvalidOperationError):
+            df.select(expr)
 
 
 def test_contains_all_null_inner_expr(
