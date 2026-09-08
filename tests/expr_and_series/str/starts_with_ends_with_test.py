@@ -135,29 +135,17 @@ def test_starts_with_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_starts_with_empty(constructor: Constructor) -> None:
-    # Empty prefix matches every non-null row, null stays null (except plain
-    # pandas, which has no nullable boolean).
+@pytest.mark.parametrize("method", ["contains", "starts_with", "ends_with"])
+def test_empty_pattern(constructor: Constructor, method: str) -> None:
+    # An empty pattern matches every non-null row (null stays null, except on
+    # plain pandas, which has no nullable boolean).
     df = nw.from_native(constructor({"a": ["x", None, ""]}))
-    result = df.select(nw.col("a").str.starts_with(""))
+    result = df.select(getattr(nw.col("a").str, method)("").alias("match"))
     expected: dict[str, list[Any]]
     if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
-        expected = {"a": [True, False, True]}
+        expected = {"match": [True, False, True]}
     else:
-        expected = {"a": [True, None, True]}
-    assert_equal_data(result, expected)
-
-
-def test_ends_with_empty(constructor: Constructor) -> None:
-    # Empty suffix matches every non-null row, null stays null (except plain
-    # pandas, which has no nullable boolean).
-    df = nw.from_native(constructor({"a": ["x", None, ""]}))
-    result = df.select(nw.col("a").str.ends_with(""))
-    expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
-        expected = {"a": [True, False, True]}
-    else:
-        expected = {"a": [True, None, True]}
+        expected = {"match": [True, None, True]}
     assert_equal_data(result, expected)
 
 

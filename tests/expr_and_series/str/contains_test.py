@@ -244,27 +244,10 @@ def test_series_contains_literal_vs_regex(constructor_eager: ConstructorEager) -
     assert_equal_data(result, expected)
 
 
-def test_expr_contains_empty_pattern(constructor: Constructor) -> None:
-    # Empty pattern matches every non-null row, null stays null (except
-    # plain pandas, which has no nullable boolean). Boundary case for
-    # regex vs literal handling.
-    df = nw.from_native(constructor({"pets": ["cat", None, ""]}))
-    result = df.select(nw.col("pets").str.contains("", literal=True).alias("match"))
-    expected: dict[str, Any] = (
-        {"match": [True, False, True]}
-        if "pandas_constructor" in str(constructor)
-        else {"match": [True, None, True]}
-    )
-    assert_equal_data(result, expected)
-
-
 def test_expr_contains_invalid_regex(constructor: Constructor) -> None:
-    # An invalid regex raises on every backend (each with its own error type,
-    # at collect time for lazy backends) instead of returning a value.
     df = nw.from_native(constructor({"pets": ["cat", "dog"]}))
     expr = nw.col("pets").str.contains("(", literal=False)
-    # Broad `Exception`: every backend raises, but each with its own error
-    # type. The pinned contract is only "raises rather than matching".
+    # Broad `Exception`: error types differ per backend.
     if isinstance(df, nw.LazyFrame):
         with pytest.raises(Exception):  # noqa: B017, PT011
             df.select(expr).lazy().collect()
@@ -276,7 +259,6 @@ def test_expr_contains_invalid_regex(constructor: Constructor) -> None:
 def test_expr_contains_expr_pattern_with_null(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    # A null pattern yields null for that row.
     if any(x in str(constructor) for x in EXPR_PATTERN_UNSUPPORTED):
         request.applymarker(pytest.mark.xfail(reason="Not supported", raises=TypeError))
     df = nw.from_native(
