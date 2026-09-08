@@ -686,7 +686,7 @@ class Enum(DType):
         elif isinstance(categories, type) and issubclass(categories, enum.Enum):
             self._cached_categories = tuple(member.value for member in categories)
         else:
-            self._cached_categories = tuple(categories)
+            self._cached_categories = tuple(categories)  # pyrefly: ignore[bad-assignment]  # pyrefly-issues/06-isinstance-issubclass-narrowing.md
 
     @property
     def categories(self) -> tuple[str, ...]:

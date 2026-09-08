@@ -133,7 +133,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         starts_with_hyphen = pc.equal(first_char, hyphen)
         starts_with_plus = pc.equal(first_char, plus)
 
-        conditions = pc.make_struct(
+        conditions = pc.make_struct(  # pyrefly: ignore[no-matching-overload]
             pc.and_(starts_with_hyphen, less_than_width),
             pc.and_(starts_with_plus, less_than_width),
             less_than_width,

@@ -262,7 +262,7 @@ class EagerNamespace(
             return [then_s._with_native(result)]
 
         return self._expr._from_callable(
-            func=func,
+            func=func,  # pyrefly: ignore[bad-argument-type]
             evaluate_output_names=getattr(
                 then, "_evaluate_output_names", lambda _df: ["literal"]
             ),
@@ -322,4 +322,4 @@ class EagerNamespace(
             native = self._concat_diagonal(dfs)
         else:  # pragma: no cover
             raise NotImplementedError
-        return self._dataframe.from_native(native, context=self)
+        return self._dataframe.from_native(native, context=self)  # pyrefly: ignore[bad-argument-type]

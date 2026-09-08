@@ -158,13 +158,13 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
             plx = self.__narwhals_namespace__()
             if meta.prev is not None:
                 df = df.with_columns(cast("ArrowExpr", evaluate_nodes(nodes[:-1], plx)))
-                _, aliases = evaluate_output_names_and_aliases(self, df, [])
+                _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 leaf_ce = cast(
                     "ArrowExpr",
                     nw_col(*aliases)._append_node(nodes[-1])._to_compliant_expr(plx),
                 )
             else:
-                _, aliases = evaluate_output_names_and_aliases(self, df, [])
+                _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 leaf_ce = self
             if order_by:
                 df = df.sort(*order_by, descending=False, nulls_last=False)
@@ -207,7 +207,7 @@ class ArrowExpr(EagerExpr["ArrowDataFrame", ArrowSeries]):
 
                     indices = plx._series.from_native(
                         (
-                            tbl_native.column(col_name)
+                            tbl_native.column(col_name)  # pyrefly: ignore[missing-attribute]
                             .dictionary_encode("encode")
                             .combine_chunks()
                             .indices  # type: ignore[attr-defined]

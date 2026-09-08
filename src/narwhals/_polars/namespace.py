@@ -169,7 +169,7 @@ class PolarsNamespace:
             if how == "horizontal" and self._backend_version >= (1, 42, 1)
             else how
         )
-        result = pl.concat((item.native for item in items), how=_how)
+        result = pl.concat((item.native for item in items), how=_how)  # pyrefly: ignore[bad-specialization]
         if isinstance(result, pl.DataFrame):
             return self._dataframe(result, version=self._version)
         return self._lazyframe.from_native(result, context=self)
@@ -269,9 +269,9 @@ class PolarsNamespace:
     #    i. None of that is useful here
     # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
     @property
-    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
         return cast(
-            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
             PolarsSelectorNamespace(self),
         )
 

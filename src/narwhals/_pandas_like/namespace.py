@@ -566,11 +566,11 @@ class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
         copy: bool | None = ...,
     ) -> NativeDataFrameT: ...
     @overload
-    def __call__(
+    def __call__(  # pyrefly: ignore[inconsistent-overload]
         self, objs: Iterable[NativeSeriesT], *, axis: _Vertical, copy: bool | None = ...
     ) -> NativeSeriesT: ...
     @overload
-    def __call__(
+    def __call__(  # pyrefly: ignore[inconsistent-overload]
         self,
         objs: Iterable[NativeDataFrameT | NativeSeriesT],
         *,
@@ -578,7 +578,7 @@ class _NativeConcat(Protocol[NativeDataFrameT, NativeSeriesT]):
         copy: bool | None = ...,
     ) -> NativeDataFrameT: ...
     @overload
-    def __call__(
+    def __call__(  # pyrefly: ignore[inconsistent-overload]
         self,
         objs: Iterable[NativeDataFrameT | NativeSeriesT],
         *,

@@ -519,7 +519,7 @@ defineConstant = { "MYPY" = false }
 
 [tool.pyrefly]
 search-path = ["src", "."]
-project-includes = ["tests"]
+project-includes = ["src", "tests"]
 ignore-missing-imports = [
     "cudf.*",
     "cupy.*",

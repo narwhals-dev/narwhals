@@ -362,7 +362,7 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
-        return arrow_array.cast(pa.float64(), safe=False), pa_object.cast(
+        return arrow_array.cast(pa.float64(), safe=False), pa_object.cast(  # pyrefly: ignore[bad-return]
             pa.float64(), safe=False
         )
 
@@ -623,7 +623,7 @@ def list_sort(
         [arange(start=0, end=len(array), step=1), array], names=[idx, v]
     )
     not_sorted_part = indexed.filter(is_not_sorted)
-    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), lit(True)))  # pyright: ignore[reportArgumentType]
+    pass_through = indexed.filter(pc.fill_null(pc.invert(is_not_sorted), lit(True)))  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]
     exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )

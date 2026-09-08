@@ -718,7 +718,7 @@ def binary_string_sum_fallback(  # pragma: no cover
     if left_dtype_str == "large_string[pyarrow]" and isinstance(right, str):
         import pyarrow as pa  # ignore-banned-import
 
-        return left + pa.scalar(right, type=pa.large_string())  # pyright: ignore[reportOperatorIssue]
+        return left + pa.scalar(right, type=pa.large_string())  # pyright: ignore[reportOperatorIssue]  # pyrefly: ignore[unsupported-operation]
     if isinstance(right, pdx.Series):
         right_dtype = right.dtype
         if left_dtype_str == "object":

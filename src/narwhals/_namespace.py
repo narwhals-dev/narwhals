@@ -61,7 +61,7 @@ if TYPE_CHECKING:
         SparkLike,
     )
 
-    EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
+    EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
 
 __all__ = ["Namespace"]
 
@@ -103,7 +103,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
 
     @overload
     @classmethod
-    def from_backend(cls, backend: Polars, /) -> Namespace[PolarsNamespace]: ...
+    def from_backend(cls, backend: Polars, /) -> Namespace[PolarsNamespace]: ...  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
 
     @overload
     @classmethod
@@ -190,7 +190,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
     @classmethod
     def from_native_object(
         cls, native: NativePolars, /
-    ) -> Namespace[PolarsNamespace]: ...
+    ) -> Namespace[PolarsNamespace]: ...  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
 
     @overload
     @classmethod

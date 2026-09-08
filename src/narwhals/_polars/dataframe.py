@@ -227,7 +227,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
             other_native = other_native.drop_nulls(subset=right_on)
         return self._with_native(
             self.native.join(
-                other=other_native,
+                other=other_native,  # pyrefly: ignore[bad-argument-type]
                 how=how_native,
                 left_on=left_on,
                 right_on=right_on,
@@ -592,7 +592,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 raise ValueError(msg)
 
             return SparkLikeLazyFrame._from_compliant_dataframe(
-                self,  # pyright: ignore[reportArgumentType]
+                self,  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
                 session=session,
                 implementation=backend,
                 version=self._version,
