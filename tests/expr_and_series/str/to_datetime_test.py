@@ -262,11 +262,15 @@ def test_to_datetime_date_only_format(constructor: Constructor) -> None:
     assert_equal_data(result, {"b": [datetime(2020, 1, 1), None]})
 
 
-def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
+def test_to_datetime_all_null_offset_format(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
     # Explicit (offset) format on an all-null column yields all nulls instead
     # of panicking on the missing non-null sample.
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
+    if "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,):
+        request.applymarker(pytest.mark.xfail(reason="old pandas parses None"))
     df = nw.from_native(constructor({"a": [None, None]}))
     df = df.with_columns(nw.col("a").cast(nw.String()))
     result = df.select(nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z"))
@@ -285,7 +289,7 @@ def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
         ),
         (
             "%Y-%m-%dT%H:%M:%S%.f",
-            "us",
+            None,
             "2020-01-01T12:34:56.123",
             datetime(2020, 1, 1, 12, 34, 56, 123000),
         ),
@@ -301,18 +305,23 @@ def test_to_datetime_fractional_seconds(
     constructor: Constructor,
     request: pytest.FixtureRequest,
     format: str,
-    time_unit: TimeUnit,
+    time_unit: TimeUnit | None,
     value: str,
     expected: datetime,
 ) -> None:
     # Fractional-second formats determine the resulting `Datetime` precision,
-    # matching polars. No other backend parses them.
+    # matching polars. No other backend parses them. `%.f` parses on every
+    # supported polars, but its unit varies by version, so only its values
+    # are pinned.
     if "polars" not in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="fractional format unsupported"))
     result = nw.from_native(constructor({"a": [value]})).select(
         b=nw.col("a").str.to_datetime(format)
     )
-    assert result.collect_schema()["b"] == nw.Datetime(time_unit)
+    if time_unit is None:
+        assert isinstance(result.collect_schema()["b"], nw.Datetime)
+    else:
+        assert result.collect_schema()["b"] == nw.Datetime(time_unit)
     assert_equal_data(result, {"b": [expected]})
 
 
