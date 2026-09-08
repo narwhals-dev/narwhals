@@ -205,7 +205,7 @@ jobs:
           cd py-shiny
           uv pip uninstall narwhals
           uv pip install -e ./..
-     - name: show-deps
+      - name: show-deps
         env:
           UV_SYSTEM_PYTHON: "1"
         run: |
