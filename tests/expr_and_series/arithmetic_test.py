@@ -82,6 +82,46 @@ def test_right_arithmetic_expr(
 
 
 @pytest.mark.parametrize(
+    ("data", "divisor", "expected"),
+    [([-7, 7, -7], 3, [2, 1, 2]), ([7, -7], -3, [-2, -1]), ([-7.5, 7.5], 2, [0.5, 1.5])],
+)
+def test_mod_negative_operands(
+    data: list[Any],
+    divisor: float,
+    expected: list[Any],
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
+        # pandas[pyarrow] does not implement mod
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": data}))
+    result = df.select(nw.col("a") % divisor)
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("data", "dividend", "expected"),
+    [([-7, 7, -7], 3, [-4, 3, -4]), ([7, -7], -3, [4, -3])],
+)
+def test_rmod_negative_operands(
+    data: list[Any],
+    dividend: int,
+    expected: list[Any],
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+        pytest.skip()
+    if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
+        # pandas[pyarrow] does not implement mod
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": data}))
+    result = df.select(nw.lit(dividend) % nw.col("a"))
+    assert_equal_data(result, {"literal": expected})
+
+
+@pytest.mark.parametrize(
     ("attr", "rhs", "expected"),
     [
         ("__add__", 1, [2, 3, 4]),
