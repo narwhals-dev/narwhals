@@ -41,39 +41,39 @@ def test_contains_series(
     assert_equal_data({"a": result}, expected)
 
 
-coercion_cases = [
-    pytest.param(
-        {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
-        nw.Int64(),
-        2.0,
-        [True, None, False, False, False, False],
-        id="float_matches_int",
-    ),
-    pytest.param(
-        {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
-        nw.Int64(),
-        1.5,
-        [False, None, False, False, False, False],
-        id="non_integer",
-    ),
-    pytest.param(
-        {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
-        nw.Int8(),
-        300,
-        [False, None, False, False, False, False],
-        id="overflow",
-    ),
-    pytest.param(
-        {"a": [[1.0, 2.0], [3.0], None, []]},
-        nw.Float64(),
-        1,
-        [True, False, None, False],
-        id="int_matches_float",
-    ),
-]
-
-
-@pytest.mark.parametrize(("data", "inner", "item", "expected"), coercion_cases)
+@pytest.mark.parametrize(
+    ("data", "inner", "item", "expected"),
+    [
+        pytest.param(
+            {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
+            nw.Int64(),
+            2.0,
+            [True, None, False, False, False, False],
+            id="float_matches_int",
+        ),
+        pytest.param(
+            {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
+            nw.Int64(),
+            1.5,
+            [False, None, False, False, False, False],
+            id="non_integer",
+        ),
+        pytest.param(
+            {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]},
+            nw.Int8(),
+            300,
+            [False, None, False, False, False, False],
+            id="overflow",
+        ),
+        pytest.param(
+            {"a": [[1.0, 2.0], [3.0], None, []]},
+            nw.Float64(),
+            1,
+            [True, False, None, False],
+            id="int_matches_float",
+        ),
+    ],
+)
 def test_contains_numeric_coercion_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
@@ -112,19 +112,19 @@ def test_contains_none_item_expr(
     assert_equal_data(result, {"a": [True, False, None, False]})
 
 
-invalid_item_cases = [
-    pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), True, id="bool_item"),
-    pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), "2", id="str_item"),
-    pytest.param(
-        {"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]},
-        nw.Datetime("ns"),
-        datetime(2020, 1, 1, 1, 2, 3),
-        id="datetime_precision",
-    ),
-]
-
-
-@pytest.mark.parametrize(("data", "inner", "item"), invalid_item_cases)
+@pytest.mark.parametrize(
+    ("data", "inner", "item"),
+    [
+        pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), True, id="bool_item"),
+        pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), "2", id="str_item"),
+        pytest.param(
+            {"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]},
+            nw.Datetime("ns"),
+            datetime(2020, 1, 1, 1, 2, 3),
+            id="datetime_precision",
+        ),
+    ],
+)
 def test_contains_invalid_item_raises(
     request: pytest.FixtureRequest,
     constructor: Constructor,
