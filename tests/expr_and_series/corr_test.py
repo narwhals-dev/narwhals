@@ -142,6 +142,19 @@ def test_corr_over(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_corr_over_single_row_group(constructor: Constructor) -> None:
+    # A group with a single row has undefined correlation there.
+    if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(
+        constructor({"i": [0, 1, 2], "g": [1, 1, 2], "a": [1, 3, 2], "b": [1, 2, 1]})
+    )
+    result = df.with_columns(corr=nw.corr("a", "b").over("g")).sort("i").select("corr")
+    assert_equal_data(result, {"corr": [1.0, 1.0, None]})
+
+
 def test_corr_series_foreign_index() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3864
     # A `Series` with an index unrelated to `df`'s own must be aligned

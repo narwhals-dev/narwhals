@@ -117,6 +117,30 @@ def test_cov_series_foreign_index() -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+def test_cov_single_pair_ddof1(constructor: Constructor) -> None:
+    # A single valid pair leaves no degrees of freedom with `ddof=1`.
+    # Degenerate-slice `RuntimeWarning`s (e.g. from dask/numpy) are expected.
+    df = nw.from_native(constructor({"a": [1.0], "b": [2.0]}))
+    result = df.select(nw.cov("a", "b", ddof=1).alias("cov"))
+    assert_equal_data(result, {"cov": [None]})
+
+
+def test_cov_over_single_row_group(constructor: Constructor) -> None:
+    # Window function on a group with a single row yields null there.
+    if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(
+        constructor(
+            {"i": [0, 1, 2], "g": [1, 1, 2], "a": [1.0, 3.0, 2.0], "b": [1.0, 2.0, 1.0]}
+        )
+    )
+    result = df.with_columns(sample=nw.cov("a", "b").over("g")).sort("i").select("sample")
+    assert_equal_data(result, {"sample": [1.0, 1.0, None]})
+
+
 def test_cov_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
