@@ -12,11 +12,38 @@ from tests.utils import (
     uses_pyarrow_backend,
 )
 
-data = {"a": ["-1", "+1", "1", "12", "123", "99999", "+9999", None]}
-expected = {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]}
+zfill_cases = [
+    pytest.param(
+        {"a": ["-1", "+1", "1", "12", "123", "99999", "+9999", None]},
+        3,
+        {"a": ["-01", "+01", "001", "012", "123", "99999", "+9999", None]},
+        id="basic",
+    ),
+    pytest.param({"a": ["-", "+", ""]}, 3, {"a": ["-00", "+00", "000"]}, id="sign_only"),
+    pytest.param(
+        {"a": ["-1", "+1", "1", "", None]},
+        1,
+        {"a": ["-1", "+1", "1", "0", None]},
+        id="width_1",
+    ),
+    pytest.param(
+        {"a": ["-1", "+1", "1", "", None]},
+        0,
+        {"a": ["-1", "+1", "1", "", None]},
+        id="width_0",
+    ),
+    pytest.param({"a": ["日本", None]}, 3, {"a": ["日本", None]}, id="non_ascii"),
+]
 
 
-def test_str_zfill(request: pytest.FixtureRequest, constructor: Constructor) -> None:
+@pytest.mark.parametrize(("data", "width", "expected"), zfill_cases)
+def test_str_zfill(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, list[str | None]],
+    width: int,
+    expected: dict[str, list[str | None]],
+) -> None:
     if uses_pyarrow_backend(constructor) and PANDAS_VERSION < (3,):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
@@ -35,13 +62,23 @@ def test_str_zfill(request: pytest.FixtureRequest, constructor: Constructor) -> 
         )
         pytest.skip(reason=reason)
 
+    if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(reason="non-polars backends count characters")
+        )
+
     df = nw.from_native(constructor(data))
-    result = df.select(nw.col("a").str.zfill(3))
+    result = df.select(nw.col("a").str.zfill(width))
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(("data", "width", "expected"), zfill_cases)
 def test_str_zfill_series(
-    request: pytest.FixtureRequest, constructor_eager: ConstructorEager
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[str | None]],
+    width: int,
+    expected: dict[str, list[str | None]],
 ) -> None:
     if uses_pyarrow_backend(constructor_eager) and PANDAS_VERSION < (3,):
         reason = (
@@ -61,69 +98,11 @@ def test_str_zfill_series(
         )
         pytest.skip(reason=reason)
 
-    df = nw.from_native(constructor_eager(data), eager_only=True)
-    result = df["a"].str.zfill(3)
-    assert_equal_data({"a": result}, expected)
-
-
-def test_str_zfill_sign_only(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    # Sign-only and empty strings hit a separate branch (sign handling) that
-    # returned null on some backends.
-    if uses_pyarrow_backend(constructor) and PANDAS_VERSION < (3,):
-        request.applymarker(pytest.mark.xfail(reason="pandas pyarrow str.zfill"))
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
-        pytest.skip(reason="different zfill behavior")
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip(reason="old polars str.slice behaviour")
-    df = nw.from_native(constructor({"a": ["-", "+", ""]}))
-    result = df.select(nw.col("a").str.zfill(3))
-    assert_equal_data(result, {"a": ["-00", "+00", "000"]})
-
-
-def test_str_zfill_width_1(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    # Width 1: `""` becomes `"0"`, everything else is unchanged.
-    if uses_pyarrow_backend(constructor) and PANDAS_VERSION < (3,):
-        reason = (
-            "pandas with pyarrow backend doesn't support str.zfill, see "
-            "https://github.com/pandas-dev/pandas/issues/61485"
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
-        pytest.skip(reason="different zfill behavior")
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip(reason="old polars str.slice behaviour")
-    df = nw.from_native(constructor({"a": ["-1", "+1", "1", "", None]}))
-    result = df.select(nw.col("a").str.zfill(1))
-    assert_equal_data(result, {"a": ["-1", "+1", "1", "0", None]})
-
-
-def test_str_zfill_width_0(constructor: Constructor) -> None:
-    # Width 0: every string is already wide enough, so input is unchanged.
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
-        pytest.skip(reason="different zfill behavior")
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip(reason="old polars str.slice behaviour")
-    df = nw.from_native(constructor({"a": ["-1", "+1", "1", "", None]}))
-    result = df.select(nw.col("a").str.zfill(0))
-    assert_equal_data(result, {"a": ["-1", "+1", "1", "", None]})
-
-
-def test_str_zfill_non_ascii(
-    request: pytest.FixtureRequest, constructor: Constructor
-) -> None:
-    # Polars counts bytes here, so a two-character/two-codepoint string that
-    # is four bytes wide is already wider than 3 and stays unchanged. Other
-    # backends count characters and pad it instead.
-    if "polars" not in str(constructor):
+    if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor_eager):
         request.applymarker(
             pytest.mark.xfail(reason="non-polars backends count characters")
         )
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip(reason="old polars str.slice behaviour")
-    df = nw.from_native(constructor({"a": ["日本", None]}))
-    result = df.select(nw.col("a").str.zfill(3))
-    assert_equal_data(result, {"a": ["日本", None]})
+
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df["a"].str.zfill(width)
+    assert_equal_data({"a": result}, expected)

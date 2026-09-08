@@ -120,9 +120,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
-        if width <= 0:
-            # `pc.utf8_lpad` rejects negative widths even on untaken branches,
-            # and no string is shorter than a non-positive width anyway.
+        if width == 0:
             return self.compliant
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native

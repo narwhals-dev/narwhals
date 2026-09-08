@@ -138,6 +138,8 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.title())
 
     def zfill(self, width: int) -> PandasLikeSeries:
+        if width == 0:
+            return self.compliant
         return self.with_native(self.native.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> PandasLikeSeries:
