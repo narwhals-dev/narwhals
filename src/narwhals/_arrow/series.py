@@ -35,6 +35,7 @@ from narwhals._utils import (
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
+from narwhals.dtypes import Boolean, Float64
 from narwhals.exceptions import InvalidOperationError, ShapeError
 
 if TYPE_CHECKING:
@@ -343,6 +344,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
 
     def median(self, *, _return_py_scalar: bool = True) -> float:
+        if self.dtype == Boolean:
+            return self.cast(Float64()).median(_return_py_scalar=_return_py_scalar)
         if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)

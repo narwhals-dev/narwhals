@@ -88,15 +88,14 @@ def test_median_empty(constructor: Constructor) -> None:
 
 
 def test_median_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    # The median of booleans coerces to float, matching polars (`1.0`). Other
-    # backends reject non-numeric input; SQL backends returning `True`
-    # compare equal to `1.0` and so pass.
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
-        request.applymarker(pytest.mark.xfail(reason="boolean median"))
+    # The median of booleans coerces to float, matching polars (`1.0`). Only
+    # Spark's `percentile` still rejects non-numeric input (sqlframe transpiles
+    # it fine and passes via `True == 1.0`); dask's approximate median cannot
+    # pin the exact value across partitions.
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
-        # Spark's `percentile` rejects non-numeric input; sqlframe transpiles
-        # it fine and passes via `True == 1.0`.
         request.applymarker(pytest.mark.xfail(reason="boolean median"))
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="approximate median"))
     df = nw.from_native(constructor({"b": [True, False, True]}))
     result = df.select(nw.col("b").median())
     assert_equal_data(result, {"b": [1.0]})
