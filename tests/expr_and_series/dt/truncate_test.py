@@ -204,12 +204,12 @@ def test_truncate_tz_aware_duckdb() -> None:
 
     import duckdb
 
-    duckdb.sql("""set timezone = 'Europe/Amsterdam'""")
-    rel = duckdb.sql("""select * from values (timestamptz '2020-10-25') df(a)""")
+    conn = duckdb.connect()
+    conn.sql("""set timezone = 'Europe/Amsterdam'""")
+    rel = conn.sql("""select * from values (timestamptz '2020-10-25') df(a)""")
     result = nw.from_native(rel).with_columns(a_truncated=nw.col("a").dt.truncate("1mo"))
     expected = {
         "a": [datetime(2020, 10, 25, tzinfo=ZoneInfo("Europe/Amsterdam"))],
         "a_truncated": [datetime(2020, 10, 1, tzinfo=ZoneInfo("Europe/Amsterdam"))],
     }
     assert_equal_data(result, expected)
-    duckdb.sql("""set timezone = 'UTC'""")
