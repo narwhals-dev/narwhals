@@ -249,6 +249,14 @@ def test_str_replace_value_edge_series_scalar(
     reason: str,
 ) -> None:
     # Special replacement strings follow polars; pandas-likes and pyarrow differ.
+    # Old numpy-backed pandas treats a single-character pattern as a literal, so
+    # the invalid replacement string never reaches `re.sub` and polars is matched.
+    if (
+        "backslash_literal" in request.node.callspec.id
+        and "pandas_constructor" in str(constructor_eager)
+        and PANDAS_VERSION < (2,)
+    ):
+        pytest.skip(reason="single-character pattern treated as literal")
     if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor_eager({"a": ["aab"]}), eager_only=True)
@@ -274,6 +282,14 @@ def test_str_replace_value_edge_expr_scalar(
                 raises=NotImplementedError,
             )
         )
+    # Old numpy-backed pandas treats a single-character pattern as a literal, so
+    # the invalid replacement string never reaches `re.sub` and polars is matched.
+    if (
+        "backslash_literal" in request.node.callspec.id
+        and "pandas_constructor" in str(constructor)
+        and PANDAS_VERSION < (2,)
+    ):
+        pytest.skip(reason="single-character pattern treated as literal")
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
         request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": ["aab"]}))
