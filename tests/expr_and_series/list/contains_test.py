@@ -83,6 +83,14 @@ def test_contains_numeric_coercion_expr(
     item: float,
     expected: list[bool | None],
 ) -> None:
+    # Polars 2.0 requires an explicit cast rather than lossily coercing to `Float64`.
+    # `overflow` compares two integer types, so it still resolves.
+    if (
+        "polars" in str(constructor)
+        and POLARS_VERSION >= (2,)
+        and "overflow" not in request.node.callspec.id
+    ):
+        request.applymarker(pytest.mark.xfail(reason="polars 2.0 needs a cast"))
     if any(backend in str(constructor) for backend in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail(reason="`list.contains` unsupported"))
     result = nw.from_native(constructor(data)).select(
