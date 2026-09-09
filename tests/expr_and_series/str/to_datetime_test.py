@@ -335,8 +335,18 @@ def test_to_datetime_fractional_seconds(
     ids=["unparseable_explicit", "unparseable_infer", "trailing"],
 )
 def test_to_datetime_invalid_raises(
-    constructor: Constructor, data: dict[str, list[str]], format: str | None
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    data: dict[str, list[str]],
+    format: str | None,
 ) -> None:
+    # Old numpy-backed pandas ignores trailing input rather than rejecting it.
+    if (
+        "trailing" in request.node.callspec.id
+        and "pandas_constructor" in str(constructor)
+        and PANDAS_VERSION < (2,)
+    ):
+        pytest.skip(reason="old pandas ignores trailing input")
     df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_datetime(format)
     # Broad `Exception`: error types differ per backend.
