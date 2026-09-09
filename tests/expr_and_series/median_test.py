@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 # `a` has an even number of non-null values, where an approximate median disagrees
 # with the exact one.
@@ -59,6 +59,8 @@ def test_median_group_by(
 
 def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     # `median` composes with `over`, like `quantile` already does.
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="pyarrow median over differs"))
     df = nw.from_native(constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0]}))
