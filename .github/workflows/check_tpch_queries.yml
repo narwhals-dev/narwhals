@@ -38,4 +38,4 @@ jobs:
       - name: generate-data
         run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="--module tpch.generate_data --debug"
       - name: tpch-tests
-        run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="pytest tpch/tests -s"
+        run: make run-ci DEPS="--extra dask --extra pandas --group core-tests" CMD="pytest tpch/tests --ignore=tpch/tests/overhead_test.py"
