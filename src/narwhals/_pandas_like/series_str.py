@@ -2,20 +2,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._compliant.any_namespace import StringNamespace, ValidatesPadArgs
+from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._pandas_like.utils import (
     PandasLikeSeriesNamespace,
     align_and_extract_native,
     get_dtype_backend,
     is_dtype_pyarrow,
 )
+from narwhals._utils import validate_pad_arguments
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
 
 
 class PandasLikeSeriesStringNamespace(
-    PandasLikeSeriesNamespace, ValidatesPadArgs, StringNamespace["PandasLikeSeries"]
+    PandasLikeSeriesNamespace, StringNamespace["PandasLikeSeries"]
 ):
     def _with_native_bool(self, result: Any) -> PandasLikeSeries:
         # See https://narwhals-dev.github.io/narwhals/concepts/boolean/.
@@ -143,13 +144,13 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> PandasLikeSeries:
-        self._validate_pad_args("pad_start", length, fill_char)
+        validate_pad_arguments("pad_start", length, fill_char)
         return self.with_native(
             self.native.str.pad(width=length, fillchar=fill_char, side="left")
         )
 
     def pad_end(self, length: int, fill_char: str) -> PandasLikeSeries:
-        self._validate_pad_args("pad_end", length, fill_char)
+        validate_pad_arguments("pad_end", length, fill_char)
         return self.with_native(
             self.native.str.pad(width=length, fillchar=fill_char, side="right")
         )

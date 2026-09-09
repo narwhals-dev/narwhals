@@ -22,7 +22,6 @@ __all__ = [
     "NamespaceAccessor",
     "StringNamespace",
     "StructNamespace",
-    "ValidatesPadArgs",
 ]
 
 
@@ -88,27 +87,6 @@ class NameNamespace(_StoresCompliant[CompliantT_co], Protocol[CompliantT_co]):
     def suffix(self, suffix: str) -> CompliantT_co: ...
     def to_lowercase(self) -> CompliantT_co: ...
     def to_uppercase(self) -> CompliantT_co: ...
-
-
-class ValidatesPadArgs:
-    """Mixin for `StringNamespace`s whose native `pad_start`/`pad_end` need guarding.
-
-    Not part of `StringNamespace` itself, as `polars` validates natively and so
-    doesn't inherit this.
-    """
-
-    def _validate_pad_args(self, name: str, length: int, fill_char: str) -> None:
-        """Reject `pad_start`/`pad_end` arguments that backends disagree on.
-
-        Natively these either raise something inscrutable, or quietly return the
-        input unchanged, so raise up-front like `polars` does.
-        """
-        if len(fill_char) != 1:
-            msg = f"`str.{name}` only supports a single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
-        if length < 0:
-            msg = f"`str.{name}` only supports a non-negative `length`, got {length}."
-            raise ValueError(msg)
 
 
 class StringNamespace(_StoresCompliant[T], Protocol[T]):
