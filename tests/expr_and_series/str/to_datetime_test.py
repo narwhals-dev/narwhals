@@ -251,8 +251,6 @@ def test_to_datetime_tz_aware(
 def test_to_datetime_date_only_format(constructor: Constructor) -> None:
     # Explicit date-only format parses to midnight. Previously only datetime
     # formats were exercised, so backends that cannot parse dates went unnoticed.
-    from datetime import datetime
-
     result = (
         nw.from_native(constructor({"a": ["2020-01-01", None]}))
         .lazy()
