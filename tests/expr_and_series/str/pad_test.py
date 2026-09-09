@@ -3,13 +3,7 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-    uses_pyarrow_backend,
-)
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 def test_str_pad_start_series(constructor_eager: ConstructorEager) -> None:
@@ -153,27 +147,16 @@ def test_pad_noop_expr(
 @pytest.mark.parametrize("method", ["pad_start", "pad_end"])
 @pytest.mark.parametrize("fill_char", ["ab", ""])
 def test_pad_invalid_fill_char(
-    constructor: Constructor, request: pytest.FixtureRequest, method: str, fill_char: str
+    constructor: Constructor, method: str, fill_char: str
 ) -> None:
-    # Messages differ per backend, hence no `match`; dask surfaces it at collect time.
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="deferred error"))
+    # Messages differ per backend, hence no `match`.
     df = nw.from_native(constructor({"a": ["foo", None]}))
     with pytest.raises(ValueError):  # noqa: PT011
         df.select(getattr(nw.col("a").str, method)(5, fill_char))
 
 
 @pytest.mark.parametrize("method", ["pad_start", "pad_end"])
-def test_pad_negative_length_raises(
-    constructor: Constructor, request: pytest.FixtureRequest, method: str
-) -> None:
-    # Old pandas is lenient here (except with a pyarrow-backed dtype).
-    if (
-        PANDAS_VERSION < (3,)
-        and not uses_pyarrow_backend(constructor)
-        and ("pandas" in str(constructor) or "dask" in str(constructor))
-    ):
-        request.applymarker(pytest.mark.xfail(reason="old pandas is lenient"))
+def test_pad_negative_length_raises(constructor: Constructor, method: str) -> None:
     df = nw.from_native(constructor({"a": ["foo", None]}))
     expr = getattr(nw.col("a").str, method)(-1)
     # Broad `Exception`: error types differ per backend.

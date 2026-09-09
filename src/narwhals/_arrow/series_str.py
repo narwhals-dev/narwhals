@@ -12,7 +12,7 @@ from narwhals._arrow.utils import (
     parse_datetime_format,
     parse_time_format,
 )
-from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._compliant.any_namespace import StringNamespace, ValidatesPadArgs
 from narwhals._utils import parse_str_strip_chars
 
 if TYPE_CHECKING:
@@ -20,7 +20,9 @@ if TYPE_CHECKING:
     from narwhals._arrow.typing import Incomplete
 
 
-class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSeries"]):
+class ArrowSeriesStringNamespace(
+    ArrowSeriesNamespace, ValidatesPadArgs, StringNamespace["ArrowSeries"]
+):
     def len_chars(self) -> ArrowSeries:
         return self.with_native(pc.utf8_length(self.native))
 
@@ -158,17 +160,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(result)
 
     def pad_start(self, length: int, fill_char: str) -> ArrowSeries:
-        if len(fill_char) != 1:
-            msg = f"`str.pad_start` only supports single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
+        self._validate_pad_args("pad_start", length, fill_char)
         return self.with_native(
             pc.utf8_lpad(self.native, width=length, padding=fill_char)
         )
 
     def pad_end(self, length: int, fill_char: str) -> ArrowSeries:
-        if len(fill_char) != 1:
-            msg = f"`str.pad_end` only supports single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
+        self._validate_pad_args("pad_end", length, fill_char)
         return self.with_native(
             pc.utf8_rpad(self.native, width=length, padding=fill_char)
         )

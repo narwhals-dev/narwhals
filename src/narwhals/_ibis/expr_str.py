@@ -97,12 +97,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         )
 
     def pad_start(self, length: int, fill_char: str) -> IbisExpr:
-        if len(fill_char) != 1:
-            msg = f"`str.pad_start` only supports single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
-        if length < 0:
-            msg = f"`str.pad_start` length must be non-negative, got {length}."
-            raise ValueError(msg)
+        self._validate_pad_args("pad_start", length, fill_char)
 
         def _pad_start(expr: ir.StringColumn) -> ir.Value:
             padded = expr.lpad(length, fill_char)
@@ -111,12 +106,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> IbisExpr:
-        if len(fill_char) != 1:
-            msg = f"`str.pad_end` only supports single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
-        if length < 0:
-            msg = f"`str.pad_end` length must be non-negative, got {length}."
-            raise ValueError(msg)
+        self._validate_pad_args("pad_end", length, fill_char)
 
         def _pad_end(expr: ir.StringColumn) -> ir.Value:
             padded = expr.rpad(length, fill_char)

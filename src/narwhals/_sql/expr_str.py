@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Generic
 
 from narwhals._compliant import LazyExprNamespace
-from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._compliant.any_namespace import StringNamespace, ValidatesPadArgs
 from narwhals._sql.typing import SQLExprT
 from narwhals._utils import is_pyspark_pre_4
 
@@ -12,7 +12,10 @@ if TYPE_CHECKING:
 
 
 class SQLExprStringNamespace(
-    LazyExprNamespace[SQLExprT], StringNamespace[SQLExprT], Generic[SQLExprT]
+    LazyExprNamespace[SQLExprT],
+    ValidatesPadArgs,
+    StringNamespace[SQLExprT],
+    Generic[SQLExprT],
 ):
     def _lit(self, value: Any) -> NativeExpr:
         return self.compliant._lit(value)  # type: ignore[no-any-return]
@@ -152,12 +155,7 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(func)
 
     def pad_start(self, length: int, fill_char: str) -> SQLExprT:
-        if len(fill_char) != 1:
-            msg = f"`str.pad_start` only supports single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
-        if length < 0:
-            msg = f"`str.pad_start` length must be non-negative, got {length}."
-            raise ValueError(msg)
+        self._validate_pad_args("pad_start", length, fill_char)
         # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
         _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
@@ -174,12 +172,7 @@ class SQLExprStringNamespace(
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> SQLExprT:
-        if len(fill_char) != 1:
-            msg = f"`str.pad_end` only supports single-character `fill_char`, got {fill_char!r}."
-            raise ValueError(msg)
-        if length < 0:
-            msg = f"`str.pad_end` length must be non-negative, got {length}."
-            raise ValueError(msg)
+        self._validate_pad_args("pad_end", length, fill_char)
         # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`,
         # not Column literals.
         _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
