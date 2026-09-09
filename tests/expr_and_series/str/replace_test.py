@@ -9,6 +9,7 @@ import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
+    PYARROW_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -208,14 +209,15 @@ def test_str_replace_edge_series_scalar(
     literal: bool,  # noqa: FBT001
     expected: dict[str, list[str]],
 ) -> None:
-    # Old pandas treats `n=0` as replace-all.
+    # `n=0` is only a no-op on pandas' pyarrow-backed string path: that is the
+    # default from pandas 3 onwards, but only when pyarrow is actually installed.
     if (
         "n_zero" in request.node.callspec.id
-        and PANDAS_VERSION < (3,)
+        and (PANDAS_VERSION < (3,) or PYARROW_VERSION == (0, 0, 0))
         and not uses_pyarrow_backend(constructor_eager)
         and "pandas" in str(constructor_eager)
     ):
-        request.applymarker(pytest.mark.xfail(reason="old pandas n=0"))
+        request.applymarker(pytest.mark.xfail(reason="`n=0` replaces all"))
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result_series = df["a"].str.replace(
         pattern=pattern, value=value, n=n, literal=literal
@@ -359,14 +361,15 @@ def test_str_replace_edge_expr_scalar(
                 raises=NotImplementedError,
             )
         )
-    # Old pandas treats `n=0` as replace-all.
+    # `n=0` is only a no-op on pandas' pyarrow-backed string path: that is the
+    # default from pandas 3 onwards, but only when pyarrow is actually installed.
     if (
         "n_zero" in request.node.callspec.id
-        and PANDAS_VERSION < (3,)
+        and (PANDAS_VERSION < (3,) or PYARROW_VERSION == (0, 0, 0))
         and not uses_pyarrow_backend(constructor)
         and "pandas" in str(constructor)
     ):
-        request.applymarker(pytest.mark.xfail(reason="old pandas n=0"))
+        request.applymarker(pytest.mark.xfail(reason="`n=0` replaces all"))
     df = nw.from_native(constructor(data))
     result_df = df.select(
         nw.col("a").str.replace(pattern=pattern, value=value, n=n, literal=literal)
