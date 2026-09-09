@@ -10,6 +10,7 @@ from narwhals.exceptions import InvalidOperationError
 from tests.utils import POLARS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
+    from narwhals.typing import IntoDType
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[2, 2, 3, None, None], None, []]}
@@ -78,7 +79,7 @@ def test_contains_numeric_coercion_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     data: dict[str, list[list[int | float | None] | None]],
-    inner: nw.DType,
+    inner: IntoDType,
     item: float,
     expected: list[bool | None],
 ) -> None:
@@ -123,7 +124,7 @@ def test_contains_invalid_item_raises(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     data: dict[str, list[list[int | str | datetime] | None]],
-    inner: nw.DType,
+    inner: IntoDType,
     *,
     item: bool | str | datetime,
 ) -> None:
