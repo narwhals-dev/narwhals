@@ -260,15 +260,15 @@ def test_to_datetime_date_only_format(constructor: Constructor) -> None:
     assert_equal_data(result, {"b": [datetime(2020, 1, 1), None]})
 
 
-def test_to_datetime_all_null_offset_format(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
     # Explicit (offset) format on an all-null column yields all nulls instead
     # of panicking on the missing non-null sample.
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
-    if "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,):
-        request.applymarker(pytest.mark.xfail(reason="old pandas parses None"))
+    # Pandas < 3 handles this differently per dtype backend: numpy-backed parses
+    # `None`, while the nullable and pyarrow ones raise on the literal "None".
+    if "pandas" in str(constructor) and PANDAS_VERSION < (3,):
+        pytest.skip(reason="old pandas all-null offset parsing")
     df = nw.from_native(constructor({"a": [None, None]}))
     df = df.with_columns(nw.col("a").cast(nw.String()))
     result = df.select(nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z"))
@@ -330,7 +330,7 @@ def test_to_datetime_fractional_seconds(
         ({"a": ["abc"]}, None),
         ({"a": ["2020-01-01T12:34:56.789"]}, "%Y-%m-%dT%H:%M:%S"),
     ],
-    ids=["unparseable_explicit", "unparseable_infer", "trailing"],
+    ids=["unparsable_explicit", "unparsable_infer", "trailing"],
 )
 def test_to_datetime_invalid_raises(
     constructor: Constructor,
