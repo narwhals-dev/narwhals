@@ -12,6 +12,7 @@ from tests.utils import (
     PYARROW_VERSION,
     assert_equal_data,
     is_windows,
+    maybe_collect,
 )
 
 if TYPE_CHECKING:
@@ -202,9 +203,5 @@ def test_to_time_invalid_raises(
     df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_time(format)
     # Broad `Exception`: error types differ per backend.
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr)
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        maybe_collect(df.select(expr))
