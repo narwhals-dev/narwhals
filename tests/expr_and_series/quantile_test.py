@@ -7,7 +7,13 @@ from typing import Literal
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    maybe_collect,
+)
 
 
 @pytest.mark.parametrize(
@@ -73,12 +79,8 @@ def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     expr = nw.col("a").quantile(1.5, "linear")
     # Broad `Exception`: error types differ per backend.
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr)
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        maybe_collect(df.select(expr))
 
 
 def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
