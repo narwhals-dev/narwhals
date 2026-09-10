@@ -565,7 +565,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
         >>> import pandas as pd
@@ -596,7 +602,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
         >>> import pandas as pd
