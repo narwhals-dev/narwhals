@@ -584,3 +584,32 @@ def test_str_replace_errors_expr(constructor: Constructor) -> None:
     )
     with context:
         df.select(nw.col("a").str.replace_all("ab", nw.col("a")))
+
+
+def test_pandas_object_dtype_replace_n_zero() -> None:
+    # `n=0` must be a no-op, but pandas' object path forwards `n` to
+    # `re.sub(count=...)`, where `0` means "replace every match".
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(pd.DataFrame({"a": ["abcabc"]}).astype(object), eager_only=True)
+    assert df["a"].str.replace("abc", "Z", n=0).to_list() == ["abcabc"]
+
+
+def test_dask_object_dtype_replace_n_zero() -> None:
+    # Same `re.sub(count=0)` path as above. Dask converts object strings to
+    # pyarrow-backed ones by default, which hides it from the constructor fixtures.
+    pytest.importorskip("dask")
+    pytest.importorskip("pandas")
+    import dask
+    import dask.dataframe as dd
+    import pandas as pd
+
+    with dask.config.set({"dataframe.convert-string": False}):
+        df_native = dd.from_pandas(
+            pd.DataFrame({"a": ["abcabc"]}).astype(object), npartitions=1
+        )
+        result = nw.from_native(df_native).select(
+            nw.col("a").str.replace("abc", "Z", n=0)
+        )
+        assert_equal_data(result, {"a": ["abcabc"]})
