@@ -40,6 +40,8 @@ class PandasLikeSeriesStringNamespace(
     def replace(
         self, value: PandasLikeSeries, pattern: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
+        if n == 0:
+            return self.compliant
         _, value_native = align_and_extract_native(self.compliant, value)
         if not isinstance(value_native, str):
             msg = f"{self.compliant._implementation} backed `.str.replace` only supports str replacement values"
