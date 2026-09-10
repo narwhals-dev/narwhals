@@ -84,7 +84,6 @@ def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
 
 
 def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
         request.applymarker(pytest.mark.xfail(reason="NaN handling"))
     if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
@@ -100,7 +99,6 @@ def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) 
 
 
 def test_quantile_inf(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-
     if any(
         x in str(constructor)
         for x in ("pandas_constructor", "pandas_nullable_constructor", "dask", "cudf")

@@ -27,7 +27,7 @@ from narwhals._pandas_like.utils import (
 from narwhals._typing_compat import assert_never
 from narwhals._utils import NO_DEFAULT, Implementation, is_list_of
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_like_series
-from narwhals.dtypes import Boolean, Float64, String
+from narwhals.dtypes import String
 from narwhals.exceptions import InvalidOperationError
 
 if TYPE_CHECKING:
@@ -540,9 +540,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self.native.mean()
 
     def median(self) -> float:
-        if self.dtype == Boolean:
-            return self.cast(Float64()).median()
-        if not self.dtype.is_numeric():
+        if (dtype := self.dtype).is_boolean():
+            return self.cast(self._version.dtypes.Float64()).native.median()
+        if not dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
         return self.native.median()
