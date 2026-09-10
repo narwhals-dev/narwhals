@@ -83,18 +83,6 @@ def test_median_null_or_empty(
     assert_equal_data(result, {"a": [None]})
 
 
-def test_median_boolean(constructor: Constructor, request: pytest.FixtureRequest) -> None:
-    # Only Spark still rejects non-numeric input; dask cannot pin the exact
-    # approximate value across partitions.
-    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="boolean median"))
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="approximate median"))
-    df = nw.from_native(constructor({"b": [True, False, True]}))
-    result = df.select(nw.col("b").median())
-    assert_equal_data(result, {"b": [1.0]})
-
-
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
 def test_median_expr_raises_on_str(
     constructor: Constructor, expr: nw.Expr, request: pytest.FixtureRequest

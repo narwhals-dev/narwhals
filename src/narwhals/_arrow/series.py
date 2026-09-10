@@ -343,16 +343,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(pc.mean(self.native), _return_py_scalar)
 
     def median(self, *, _return_py_scalar: bool = True) -> float:
-        if (dtype := self.dtype).is_boolean():
-            native = self.cast(self._version.dtypes.Float64()).native
-        elif dtype.is_numeric():
-            native = self.native
-        else:
+        if not self.dtype.is_numeric():
             msg = "`median` operation not supported for non-numeric input type."
             raise InvalidOperationError(msg)
 
         return maybe_extract_py_scalar(
-            pc.quantile(native, q=0.5, interpolation="linear")[0], _return_py_scalar
+            pc.quantile(self.native, q=0.5, interpolation="linear")[0], _return_py_scalar
         )
 
     def min(self, *, _return_py_scalar: bool = True) -> Any:

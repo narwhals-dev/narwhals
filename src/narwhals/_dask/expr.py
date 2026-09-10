@@ -289,9 +289,7 @@ class DaskExpr(
 
         def func(s: dx.Series) -> dx.Series:
             dtype = native_to_narwhals_dtype(s.dtype, self._version, Implementation.DASK)
-            if dtype.is_boolean():
-                s = s.astype("float64")
-            elif not dtype.is_numeric():
+            if not dtype.is_numeric():
                 msg = "`median` operation not supported for non-numeric input type."
                 raise InvalidOperationError(msg)
             return s.median_approximate().to_series()
