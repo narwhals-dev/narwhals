@@ -450,6 +450,8 @@ class PolarsExprStringNamespace(
 
     @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
+        if width == 0:
+            return self.compliant._with_native(self.native)
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
 

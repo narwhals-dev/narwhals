@@ -58,24 +58,14 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         if not isinstance(prefix_native, pa.StringScalar):
             msg = "`.str.starts_with` only supports str prefix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(
-            pc.equal(
-                self.slice(0, len(prefix_native.as_py())).native,
-                lit(prefix_native.as_py()),
-            )
-        )
+        return self.with_native(pc.starts_with(self.native, prefix_native.as_py()))
 
     def ends_with(self, suffix: ArrowSeries) -> ArrowSeries:
         _, suffix_native = extract_native(self.compliant, suffix)
         if not isinstance(suffix_native, pa.StringScalar):
             msg = "`.str.ends_with` only supports str suffix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(
-            pc.equal(
-                self.slice(-len(suffix_native.as_py()), None).native,
-                lit(suffix_native.as_py()),
-            )
-        )
+        return self.with_native(pc.ends_with(self.native, suffix_native.as_py()))
 
     def contains(self, pattern: ArrowSeries, *, literal: bool) -> ArrowSeries:
         _, pattern_native = extract_native(self.compliant, pattern)
@@ -120,6 +110,8 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
+        if width == 0:
+            return self.compliant
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
