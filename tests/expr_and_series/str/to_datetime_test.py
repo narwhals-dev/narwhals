@@ -15,6 +15,7 @@ from tests.utils import (
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     is_windows,
+    maybe_collect,
 )
 
 if TYPE_CHECKING:
@@ -348,12 +349,8 @@ def test_to_datetime_invalid_raises(
     df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_datetime(format)
     # Broad `Exception`: error types differ per backend.
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr)
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        maybe_collect(df.select(expr))
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
