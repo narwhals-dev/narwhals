@@ -110,27 +110,86 @@ def test_pad_end_unicode_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
-def test_str_pad_zero_length(constructor: Constructor) -> None:
-    data = {"a": ["foo", "hi", None]}
+noop_pad_arguments = [
+    pytest.param(
+        {"a": ["foo", "", None]},
+        0,
+        " ",
+        {"start": ["foo", "", None], "end": ["foo", "", None]},
+        id="length_zero",
+    ),
+    pytest.param(
+        {"a": ["東京", "ab", None]},
+        2,
+        "日",
+        {"start": ["東京", "ab", None], "end": ["東京", "ab", None]},
+        id="unicode_exact",
+    ),
+]
+
+
+@pytest.mark.parametrize(("data", "length", "fill_char", "expected"), noop_pad_arguments)
+def test_pad_noop_expr(
+    constructor: Constructor,
+    data: dict[str, list[str | None]],
+    length: int,
+    fill_char: str,
+    expected: dict[str, list[str | None]],
+) -> None:
     df = nw.from_native(constructor(data))
     result = df.select(
-        nw.col("a").str.pad_start(0).alias("start"),
-        nw.col("a").str.pad_end(0).alias("end"),
+        nw.col("a").str.pad_start(length, fill_char).alias("start"),
+        nw.col("a").str.pad_end(length, fill_char).alias("end"),
     )
-    assert_equal_data(result, {"start": data["a"], "end": data["a"]})
+    assert_equal_data(result, expected)
 
 
-def test_str_pad_negative_length_raises(constructor_eager: ConstructorEager) -> None:
-    df = nw.from_native(constructor_eager({"a": ["abc"]}), eager_only=True)
-    msg = r"`length` must be non-negative but got -1"
-    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        df["a"].str.pad_start(-1)
+@pytest.mark.parametrize(("data", "length", "fill_char", "expected"), noop_pad_arguments)
+def test_pad_noop_series(
+    constructor_eager: ConstructorEager,
+    data: dict[str, list[str | None]],
+    length: int,
+    fill_char: str,
+    expected: dict[str, list[str | None]],
+) -> None:
+    series = nw.from_native(constructor_eager(data), eager_only=True)["a"]
+    result = {
+        "start": series.str.pad_start(length, fill_char),
+        "end": series.str.pad_end(length, fill_char),
+    }
+    assert_equal_data(result, expected)
 
-    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        df["a"].str.pad_end(-1)
 
-    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        df.select(nw.col("a").str.pad_start(-1))
+# The accessors validate before dispatching, so every backend raises the same
+# `ValueError`, up-front, rather than at collection time.
+invalid_pad_arguments = [
+    pytest.param(5, "ab", "single-character `fill_char`", id="multi_char"),
+    pytest.param(5, "", "single-character `fill_char`", id="empty_char"),
+    pytest.param(-1, " ", "non-negative `length`", id="negative_length"),
+]
 
-    with pytest.raises(nw.exceptions.InvalidOperationError, match=msg):
-        df.select(nw.col("a").str.pad_end(-1))
+
+@pytest.mark.parametrize("method", ["pad_start", "pad_end"])
+@pytest.mark.parametrize(("length", "fill_char", "match"), invalid_pad_arguments)
+def test_pad_invalid_arguments_expr(
+    constructor: Constructor, method: str, length: int, fill_char: str, match: str
+) -> None:
+    # NOTE: The expression raises while it is built, so `select` is never reached.
+    # The frame here allows to keep the test in case validation moves back into the backends.
+    df = nw.from_native(constructor({"a": ["foo", None]}))
+    with pytest.raises(ValueError, match=match):
+        df.select(getattr(nw.col("a").str, method)(length, fill_char))
+
+
+@pytest.mark.parametrize("method", ["pad_start", "pad_end"])
+@pytest.mark.parametrize(("length", "fill_char", "match"), invalid_pad_arguments)
+def test_pad_invalid_arguments_series(
+    constructor_eager: ConstructorEager,
+    method: str,
+    length: int,
+    fill_char: str,
+    match: str,
+) -> None:
+    series = nw.from_native(constructor_eager({"a": ["foo", None]}), eager_only=True)["a"]
+    with pytest.raises(ValueError, match=match):
+        getattr(series.str, method)(length, fill_char)

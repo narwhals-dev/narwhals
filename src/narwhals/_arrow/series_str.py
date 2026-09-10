@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import string
 from typing import TYPE_CHECKING
 
 import pyarrow as pa
@@ -14,6 +13,7 @@ from narwhals._arrow.utils import (
     parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
+from narwhals._utils import parse_str_strip_chars
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -44,7 +44,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
 
     def strip_chars(self, characters: str | None) -> ArrowSeries:
         return self.with_native(
-            pc.utf8_trim(self.native, characters or string.whitespace)
+            pc.utf8_trim(self.native, parse_str_strip_chars(characters))
         )
 
     def strip_chars_start(self, characters: str) -> ArrowSeries:
@@ -58,24 +58,14 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         if not isinstance(prefix_native, pa.StringScalar):
             msg = "`.str.starts_with` only supports str prefix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(
-            pc.equal(
-                self.slice(0, len(prefix_native.as_py())).native,
-                lit(prefix_native.as_py()),
-            )
-        )
+        return self.with_native(pc.starts_with(self.native, prefix_native.as_py()))
 
     def ends_with(self, suffix: ArrowSeries) -> ArrowSeries:
         _, suffix_native = extract_native(self.compliant, suffix)
         if not isinstance(suffix_native, pa.StringScalar):
             msg = "`.str.ends_with` only supports str suffix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(
-            pc.equal(
-                self.slice(-len(suffix_native.as_py()), None).native,
-                lit(suffix_native.as_py()),
-            )
-        )
+        return self.with_native(pc.ends_with(self.native, suffix_native.as_py()))
 
     def contains(self, pattern: ArrowSeries, *, literal: bool) -> ArrowSeries:
         _, pattern_native = extract_native(self.compliant, pattern)
@@ -120,6 +110,8 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
+        if width == 0:
+            return self.compliant
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
@@ -140,9 +132,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         )
 
         # Cases
-        padded_remaining_chars = pc.utf8_lpad(
-            remaining_chars, max(width - 1, 0), padding="0"
-        )
+        padded_remaining_chars = pc.utf8_lpad(remaining_chars, width - 1, padding="0")
 
         result = pc.case_when(
             conditions,

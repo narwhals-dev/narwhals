@@ -16,6 +16,7 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
+    native_get_categories,
 )
 from narwhals._utils import NO_DEFAULT, Implementation, requires
 
@@ -449,6 +450,8 @@ class PolarsExprStringNamespace(
 
     @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
+        if width == 0:
+            return self.compliant._with_native(self.native)
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
 
@@ -461,7 +464,7 @@ class PolarsExprStringNamespace(
                 pl.when(starts_with_plus & less_than_width)
                 .then(
                     self.native.str.slice(1, length)
-                    .str.zfill(max(width - 1, 0))
+                    .str.zfill(width - 1)
                     .str.pad_start(width, plus)
                 )
                 .otherwise(native_result)
@@ -504,7 +507,11 @@ class PolarsExprStringNamespace(
 
 class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
-): ...
+):
+    def get_categories(self) -> PolarsExpr:
+        return self.compliant._with_native(
+            self.native.map_batches(native_get_categories, return_dtype=pl.String)
+        )
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):

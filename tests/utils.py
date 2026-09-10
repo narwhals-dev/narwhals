@@ -214,7 +214,7 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
         from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
         from pyspark.sql import SparkSession as _SparkSession
-    builder = cast("_SparkSession.Builder", _SparkSession.builder).appName("unit-tests")
+    builder = _SparkSession.builder.appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect

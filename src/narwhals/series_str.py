@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Generic
 
-from narwhals._utils import parse_str_strip_chars, validate_is_non_negative_int
+from narwhals._utils import (
+    parse_str_strip_chars,
+    validate_pad_arguments,
+    validate_str_non_negative,
+)
 from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
@@ -541,7 +545,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Pad strings with zeros on the left.
 
         Arguments:
-            width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
+            width: The target width of the string. If the string is shorter than this
+                width, it will be padded with zeros on the left. Must be non-negative.
+
+        Raises:
+            ValueError: If `width` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -555,7 +563,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             3    123456
             dtype: str
         """
-        validate_is_non_negative_int(width, "width")
+        validate_str_non_negative("zfill", "width", width)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
         )
@@ -566,7 +574,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
         >>> import pandas as pd
@@ -584,7 +598,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
-        validate_is_non_negative_int(length, "length")
+        validate_pad_arguments("pad_start", length, fill_char)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_start(
                 length=length, fill_char=fill_char
@@ -597,7 +611,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
         >>> import pandas as pd
@@ -615,7 +635,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
-        validate_is_non_negative_int(length, "length")
+        validate_pad_arguments("pad_end", length, fill_char)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_end(
                 length=length, fill_char=fill_char

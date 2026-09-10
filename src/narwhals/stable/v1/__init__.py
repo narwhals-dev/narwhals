@@ -25,8 +25,9 @@ from narwhals._utils import (
 from narwhals.dataframe import DataFrame as NwDataFrame, LazyFrame as NwLazyFrame
 from narwhals.exceptions import InvalidIntoExprError, NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, show_versions
+from narwhals.functions import _new_series_impl, show_versions
 from narwhals.schema import Schema as NwSchema
+from narwhals.selectors import Selector as NwSelector
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v1 import dependencies, dtypes, selectors
 from narwhals.stable.v1.dtypes import (
@@ -62,6 +63,7 @@ from narwhals.stable.v1.dtypes import (
 )
 from narwhals.stable.v1.typing import (
     DataFrameT,
+    FrameT,
     IntoDataFrameT,
     IntoFrame,
     IntoLazyFrameT,
@@ -108,6 +110,7 @@ if TYPE_CHECKING:
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.typing import (
+        ConcatMethod,
         FileSource,
         IntoDType,
         IntoExpr,
@@ -399,6 +402,8 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
+    _version = Version.V1
+
     def _l1_norm(self) -> Self:
         return super()._taxicab_norm()
 
@@ -496,6 +501,11 @@ class Expr(NwExpr):
         return self._append_node(
             ExprNode(ExprKind.AGGREGATION, "any_value", ignore_nulls=ignore_nulls)
         )
+
+
+class Selector(NwSelector, Expr):
+    def _to_expr(self) -> Expr:
+        return Expr(*self._nodes)
 
 
 class Schema(NwSchema):
@@ -946,6 +956,30 @@ class Then(nw_f.Then, Expr):
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When.from_when(nw_f.when(*predicates))
+
+
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
+
+    Arguments:
+        items: DataFrames, LazyFrames to concatenate.
+        how: concatenating strategy
+
+            - vertical: Concatenate vertically. Column names must match.
+            - horizontal: Concatenate horizontally. If lengths don't match, then
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
+
+    Raises:
+        TypeError: The items to concatenate should either all be eager, or all lazy
+    """
+    # `pyrefly` rejects the union `_stableify` returns while `FrameT` is still
+    # unsolved; `mypy` solves per-constraint and calls the cast redundant, hence
+    # the ignore. CI cannot catch removal of either, because `pyrefly check` only
+    # covers `tests`. Verify with: pyrefly check src/narwhals/stable/v1/__init__.py
+    return cast("FrameT", _stableify(nw_f.concat(items, how=how)))  # type: ignore[redundant-cast]
 
 
 @deprecate_native_namespace(required=True)

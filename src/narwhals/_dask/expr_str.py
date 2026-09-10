@@ -21,6 +21,8 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int
     ) -> DaskExpr:
+        if n == 0:
+            return self.compliant
         if not value._metadata.is_literal:
             msg = "dask backed `Expr.str.replace` only supports str replacement values"
             raise TypeError(msg)
@@ -89,7 +91,7 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def slice(self, offset: int, length: int | None) -> DaskExpr:
         return self.compliant._with_callable(
             lambda expr: expr.str.slice(
-                start=offset, stop=offset + length if length else None
+                start=offset, stop=offset + length if length is not None else None
             )
         )
 
