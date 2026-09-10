@@ -59,8 +59,7 @@ def test_median_group_by(
 
 def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        reason = "broadcast requires `over`, which requires DuckDB 1.3.0"
-        pytest.skip(reason=reason)
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
     if "pyarrow_table" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="pyarrow median over differs"))
     df = nw.from_native(constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0]}))
