@@ -2175,6 +2175,21 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
+def validate_pad_arguments(name: str, length: int, fill_char: str, /) -> None:
+    """Reject `str.pad_start`/`str.pad_end` arguments that backends disagree on.
+
+    Natively these either raise something inscrutable, or quietly return the input
+    unchanged, so the public `Expr`/`Series` accessors validate up-front and every
+    backend gets the same error.
+    """
+    if len(fill_char) != 1:
+        msg = f"`str.{name}` only supports a single-character `fill_char`, got {fill_char!r}."
+        raise ValueError(msg)
+    if length < 0:
+        msg = f"`str.{name}` only supports a non-negative `length`, got {length}."
+        raise ValueError(msg)
+
+
 def validate_separators(
     separator: str, native_separators: tuple[str, ...], kwds: Mapping[str, Any], /
 ) -> None:
