@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
-    from narwhals.typing import TimeUnit
 
 ExprT = TypeVar("ExprT", bound="Expr")
 
@@ -609,7 +608,7 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "dt.convert_time_zone", time_zone=time_zone)
         )
 
-    def timestamp(self, time_unit: TimeUnit = "us") -> ExprT:
+    def timestamp(self, time_unit: Literal["ns", "us", "ms"] = "us") -> ExprT:
         """Return a timestamp in the given time unit.
 
         Arguments:
