@@ -6,7 +6,7 @@ import dask.dataframe as dd
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._utils import not_implemented, validate_pad_arguments
+from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -118,13 +118,11 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         return self.compliant._with_callable(lambda expr: expr.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> DaskExpr:
-        validate_pad_arguments("pad_start", length, fill_char)
         return self.compliant._with_callable(
             lambda expr: expr.str.rjust(width=length, fillchar=fill_char)
         )
 
     def pad_end(self, length: int, fill_char: str) -> DaskExpr:
-        validate_pad_arguments("pad_end", length, fill_char)
         return self.compliant._with_callable(
             lambda expr: expr.str.ljust(width=length, fillchar=fill_char)
         )

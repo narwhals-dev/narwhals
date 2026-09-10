@@ -144,25 +144,34 @@ def test_pad_noop_expr(
     assert_equal_data(result, expected)
 
 
+# The accessors validate before dispatching, so every backend raises the same
+# `ValueError`, up-front, rather than at collection time.
+invalid_pad_arguments = [
+    pytest.param(5, "ab", "single-character `fill_char`", id="multi_char"),
+    pytest.param(5, "", "single-character `fill_char`", id="empty_char"),
+    pytest.param(-1, " ", "non-negative `length`", id="negative_length"),
+]
+
+
 @pytest.mark.parametrize("method", ["pad_start", "pad_end"])
-@pytest.mark.parametrize("fill_char", ["ab", ""])
-def test_pad_invalid_fill_char(
-    constructor: Constructor, method: str, fill_char: str
+@pytest.mark.parametrize(("length", "fill_char", "match"), invalid_pad_arguments)
+def test_pad_invalid_arguments_expr(
+    constructor: Constructor, method: str, length: int, fill_char: str, match: str
 ) -> None:
-    # Messages differ per backend, hence no `match`.
     df = nw.from_native(constructor({"a": ["foo", None]}))
-    with pytest.raises(ValueError):  # noqa: PT011
-        df.select(getattr(nw.col("a").str, method)(5, fill_char))
+    with pytest.raises(ValueError, match=match):
+        df.select(getattr(nw.col("a").str, method)(length, fill_char))
 
 
 @pytest.mark.parametrize("method", ["pad_start", "pad_end"])
-def test_pad_negative_length_raises(constructor: Constructor, method: str) -> None:
-    df = nw.from_native(constructor({"a": ["foo", None]}))
-    expr = getattr(nw.col("a").str, method)(-1)
-    # Broad `Exception`: error types differ per backend.
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr)
+@pytest.mark.parametrize(("length", "fill_char", "match"), invalid_pad_arguments)
+def test_pad_invalid_arguments_series(
+    constructor_eager: ConstructorEager,
+    method: str,
+    length: int,
+    fill_char: str,
+    match: str,
+) -> None:
+    series = nw.from_native(constructor_eager({"a": ["foo", None]}), eager_only=True)["a"]
+    with pytest.raises(ValueError, match=match):
+        getattr(series.str, method)(length, fill_char)

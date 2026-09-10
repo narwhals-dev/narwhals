@@ -2179,8 +2179,8 @@ def validate_pad_arguments(name: str, length: int, fill_char: str, /) -> None:
     """Reject `str.pad_start`/`str.pad_end` arguments that backends disagree on.
 
     Natively these either raise something inscrutable, or quietly return the input
-    unchanged, so every backend except `polars` (which already validates) calls this
-    to raise up-front.
+    unchanged, so the public `Expr`/`Series` accessors validate up-front and every
+    backend gets the same error.
     """
     if len(fill_char) != 1:
         msg = f"`str.{name}` only supports a single-character `fill_char`, got {fill_char!r}."

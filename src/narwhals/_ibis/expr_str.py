@@ -7,7 +7,7 @@ import ibis
 from ibis.expr.datatypes import Timestamp
 
 from narwhals._sql.expr_str import SQLExprStringNamespace
-from narwhals._utils import _is_naive_format, not_implemented, validate_pad_arguments
+from narwhals._utils import _is_naive_format, not_implemented
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -97,8 +97,6 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         )
 
     def pad_start(self, length: int, fill_char: str) -> IbisExpr:
-        validate_pad_arguments("pad_start", length, fill_char)
-
         def _pad_start(expr: ir.StringColumn) -> ir.Value:
             padded = expr.lpad(length, fill_char)
             return ibis.cases((expr.notnull(), padded))
@@ -106,8 +104,6 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
         return self.compliant._with_callable(_pad_start)
 
     def pad_end(self, length: int, fill_char: str) -> IbisExpr:
-        validate_pad_arguments("pad_end", length, fill_char)
-
         def _pad_end(expr: ir.StringColumn) -> ir.Value:
             padded = expr.rpad(length, fill_char)
             return ibis.cases((expr.notnull(), padded))
