@@ -15,9 +15,11 @@ from tests.utils import (
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     is_windows,
+    maybe_collect,
 )
 
 if TYPE_CHECKING:
+    from narwhals.typing import TimeUnit
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": ["2020-01-01T12:34:56"]}
@@ -245,6 +247,110 @@ def test_to_datetime_tz_aware(
             "b": [datetime(2020, 1, 1, 0, 2, 3, tzinfo=timezone.utc)],
         }
         assert_equal_data(result, expected)
+
+
+def test_to_datetime_date_only_format(constructor: Constructor) -> None:
+    # Explicit date-only format parses to midnight. Previously only datetime
+    # formats were exercised, so backends that cannot parse dates went unnoticed.
+    result = (
+        nw.from_native(constructor({"a": ["2020-01-01", None]}))
+        .lazy()
+        .select(b=nw.col("a").str.to_datetime(format="%Y-%m-%d"))
+    )
+    assert isinstance(result.collect_schema()["b"], nw.Datetime)
+    assert_equal_data(result, {"b": [datetime(2020, 1, 1), None]})
+
+
+def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
+    # Explicit (offset) format on an all-null column yields all nulls instead
+    # of panicking on the missing non-null sample.
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    # Pandas < 3 handles this differently per dtype backend: numpy-backed parses
+    # `None`, while the nullable and pyarrow ones raise on the literal "None".
+    if "pandas" in str(constructor) and PANDAS_VERSION < (3,):
+        pytest.skip(reason="old pandas all-null offset parsing")
+    df = nw.from_native(constructor({"a": [None, None]}))
+    df = df.with_columns(nw.col("a").cast(nw.String()))
+    result = df.select(nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z"))
+    assert isinstance(result.collect_schema()["a"], nw.Datetime)
+    assert_equal_data(result, {"a": [None, None]})
+
+
+@pytest.mark.parametrize(
+    ("format", "time_unit", "value", "expected"),
+    [
+        (
+            "%Y-%m-%dT%H:%M:%S%.3f",
+            "ms",
+            "2020-01-01T12:34:56.123",
+            datetime(2020, 1, 1, 12, 34, 56, 123000),
+        ),
+        (
+            "%Y-%m-%dT%H:%M:%S%.f",
+            None,
+            "2020-01-01T12:34:56.123",
+            datetime(2020, 1, 1, 12, 34, 56, 123000),
+        ),
+        (
+            "%Y-%m-%dT%H:%M:%S%.9f",
+            "ns",
+            "2020-01-01T12:34:56.123456789",
+            datetime(2020, 1, 1, 12, 34, 56, 123456),
+        ),
+    ],
+)
+def test_to_datetime_fractional_seconds(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    format: str,
+    time_unit: TimeUnit | None,
+    value: str,
+    expected: datetime,
+) -> None:
+    # Fractional-second formats determine the resulting `Datetime` precision,
+    # matching polars. No other backend parses them. `%.f` parses on every
+    # supported polars, but its unit varies by version, so only its values
+    # are pinned.
+    if "polars" not in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="fractional format unsupported"))
+    result = nw.from_native(constructor({"a": [value]})).select(
+        b=nw.col("a").str.to_datetime(format)
+    )
+    if time_unit is None:
+        assert isinstance(result.collect_schema()["b"], nw.Datetime)
+    else:
+        assert result.collect_schema()["b"] == nw.Datetime(time_unit)
+    assert_equal_data(result, {"b": [expected]})
+
+
+@pytest.mark.parametrize(
+    ("data", "format"),
+    [
+        ({"a": ["abc"]}, "%Y-%m-%dT%H:%M:%S"),
+        ({"a": ["abc"]}, None),
+        ({"a": ["2020-01-01T12:34:56.789"]}, "%Y-%m-%dT%H:%M:%S"),
+    ],
+    ids=["unparsable_explicit", "unparsable_infer", "trailing"],
+)
+def test_to_datetime_invalid_raises(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    data: dict[str, list[str]],
+    format: str | None,
+) -> None:
+    # Old numpy-backed pandas ignores trailing input rather than rejecting it.
+    if (
+        "trailing" in request.node.callspec.id
+        and "pandas_constructor" in str(constructor)
+        and PANDAS_VERSION < (2,)
+    ):
+        pytest.skip(reason="old pandas ignores trailing input")
+    df = nw.from_native(constructor(data))
+    expr = nw.col("a").str.to_datetime(format)
+    # Broad `Exception`: error types differ per backend.
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        maybe_collect(df.select(expr))
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
