@@ -4,6 +4,7 @@
     handler: python
     options:
       members:
+        - cast
         - collect
         - collect_schema
         - columns
