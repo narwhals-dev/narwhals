@@ -58,29 +58,14 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         if not isinstance(prefix_native, pa.StringScalar):
             msg = "`.str.starts_with` only supports str prefix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(
-            pc.equal(
-                self.slice(0, len(prefix_native.as_py())).native,
-                lit(prefix_native.as_py()),
-            )
-        )
+        return self.with_native(pc.starts_with(self.native, prefix_native.as_py()))
 
     def ends_with(self, suffix: ArrowSeries) -> ArrowSeries:
         _, suffix_native = extract_native(self.compliant, suffix)
         if not isinstance(suffix_native, pa.StringScalar):
             msg = "`.str.ends_with` only supports str suffix values for pyarrow backend"
             raise TypeError(msg)
-        if suffix_native.as_py() == "":
-            # Every string ends with the empty string, but `-0 == 0`, so the
-            # slice below would compare the whole string against `""`.
-            # `match_substring` with an empty pattern preserves nulls instead.
-            return self.with_native(pc.match_substring(self.native, ""))
-        return self.with_native(
-            pc.equal(
-                self.slice(-len(suffix_native.as_py()), None).native,
-                lit(suffix_native.as_py()),
-            )
-        )
+        return self.with_native(pc.ends_with(self.native, suffix_native.as_py()))
 
     def contains(self, pattern: ArrowSeries, *, literal: bool) -> ArrowSeries:
         _, pattern_native = extract_native(self.compliant, pattern)

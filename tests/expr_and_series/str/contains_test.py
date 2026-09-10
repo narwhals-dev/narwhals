@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data, maybe_collect
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -244,16 +244,16 @@ def test_series_contains_literal_vs_regex(constructor_eager: ConstructorEager) -
     assert_equal_data(result, expected)
 
 
+# NOTE: the empty-pattern case lives in `test_empty_pattern` in
+# `starts_with_ends_with_test.py` for convenience.
 def test_expr_contains_invalid_regex(constructor: Constructor) -> None:
     df = nw.from_native(constructor({"pets": ["cat", "dog"]}))
     expr = nw.col("pets").str.contains("(", literal=False)
-    # Broad `Exception`: error types differ per backend.
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(Exception):  # noqa: B017, PT011
-            df.select(expr)
+    # Broad `Exception`: error types differ per backend, but it must be a
+    # genuine parsing failure rather than missing backend support.
+    with pytest.raises(Exception) as exc_info:  # noqa: PT011
+        maybe_collect(df.select(expr))
+    assert not isinstance(exc_info.value, NotImplementedError)
 
 
 def test_expr_contains_expr_pattern_with_null(
