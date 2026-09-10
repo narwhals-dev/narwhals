@@ -6,7 +6,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    assert_equal_data,
+    is_windows,
+)
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -126,8 +132,8 @@ def test_to_time_series_infer_fmt(
 @pytest.mark.parametrize(
     ("data", "format", "expected"),
     [
-        ({"a": ["12-34"]}, "%H-%M", "12:34:00"),
-        ({"a": ["01:30 PM"]}, "%I:%M %p", "13:30:00"),
+        pytest.param({"a": ["12-34"]}, "%H-%M", "12:34:00", id="dash"),
+        pytest.param({"a": ["01:30 PM"]}, "%I:%M %p", "13:30:00", id="ampm"),
     ],
 )
 def test_to_time_custom_format(
@@ -139,6 +145,13 @@ def test_to_time_custom_format(
 ) -> None:
     # The plugin ignored `format` entirely; the schema assertion guards that.
     requires_time_support(request, constructor)
+    if (
+        "ampm" in request.node.callspec.id
+        and is_windows()
+        and "pyarrow_table" in str(constructor)
+    ):
+        # pyarrow 25 on Windows cannot parse `%p`.
+        request.applymarker(pytest.mark.xfail(reason="pyarrow %p on Windows"))
     result = (
         nw.from_native(constructor(data)).lazy().select(b=nw.col("a").str.to_time(format))
     )
@@ -149,8 +162,8 @@ def test_to_time_custom_format(
 @pytest.mark.parametrize(
     ("data", "format", "expected"),
     [
-        ({"a": ["12-34", None]}, "%H-%M", time(12, 34)),
-        ({"a": ["01:30 PM", None]}, "%I:%M %p", time(13, 30)),
+        pytest.param({"a": ["12-34", None]}, "%H-%M", time(12, 34), id="dash"),
+        pytest.param({"a": ["01:30 PM", None]}, "%I:%M %p", time(13, 30), id="ampm"),
     ],
 )
 def test_to_time_series_custom_format(
@@ -161,6 +174,13 @@ def test_to_time_series_custom_format(
     expected: time,
 ) -> None:
     requires_time_support(request, constructor_eager)
+    if (
+        "ampm" in request.node.callspec.id
+        and is_windows()
+        and "pyarrow_table" in str(constructor_eager)
+    ):
+        # pyarrow 25 on Windows cannot parse `%p`.
+        request.applymarker(pytest.mark.xfail(reason="pyarrow %p on Windows"))
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].str.to_time(
         format
     )
