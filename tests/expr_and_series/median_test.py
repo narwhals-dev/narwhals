@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 # `a` has an even number of non-null values, where an approximate median disagrees
 # with the exact one.
@@ -55,6 +55,32 @@ def test_median_group_by(
     df = nw.from_native(constructor(group_data))
     result = df.group_by("g").agg(nw.col("a").median()).sort("g")
     assert_equal_data(result, {"g": [1, 2], "a": [1.5, 15.0]})
+
+
+def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="pyarrow median over differs"))
+    df = nw.from_native(constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0]}))
+    result = df.with_columns(m=nw.col("a").median().over("g")).sort("g", "a")
+    assert_equal_data(
+        result, {"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "m": [1.5, 1.5, 3.0]}
+    )
+
+
+@pytest.mark.parametrize(
+    "data", [{"a": [None, None]}, {"a": []}], ids=["all_null", "empty"]
+)
+@pytest.mark.filterwarnings("ignore:Mean of empty slice:RuntimeWarning:numpy")
+def test_median_null_or_empty(
+    constructor: Constructor, data: dict[str, list[int]]
+) -> None:
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    df = nw.from_native(constructor(data))
+    result = df.with_columns(nw.col("a").cast(nw.Float64())).select(nw.col("a").median())
+    assert_equal_data(result, {"a": [None]})
 
 
 @pytest.mark.parametrize("expr", [nw.col("s").median(), nw.median("s")])
