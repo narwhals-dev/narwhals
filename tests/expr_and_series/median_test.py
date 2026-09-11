@@ -69,17 +69,15 @@ def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -
     )
 
 
-@pytest.mark.parametrize(
-    "data", [{"a": [None, None]}, {"a": []}], ids=["all_null", "empty"]
-)
+@pytest.mark.parametrize("empty", [False, True], ids=["all_null", "empty"])
 @pytest.mark.filterwarnings("ignore:Mean of empty slice:RuntimeWarning:numpy")
-def test_median_null_or_empty(
-    constructor: Constructor, data: dict[str, list[int]]
-) -> None:
-    if "ibis" in str(constructor):
-        pytest.skip(reason="ibis cannot create all-null column")
-    df = nw.from_native(constructor(data))
-    result = df.with_columns(nw.col("a").cast(nw.Float64())).select(nw.col("a").median())
+def test_median_null_or_empty(constructor: Constructor, *, empty: bool) -> None:
+    # Derive the all-null / empty frame from a well-typed one: some backends
+    # cannot infer a dtype from all-null or empty data passed to the constructor.
+    df = nw.from_native(constructor({"a": [1.0, 2.0]}))
+    null_df = df.with_columns(a=nw.lit(None, dtype=nw.Float64))
+    df = df.filter(nw.col("a") < 0) if empty else null_df
+    result = df.select(nw.col("a").median())
     assert_equal_data(result, {"a": [None]})
 
 
