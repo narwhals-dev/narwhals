@@ -68,13 +68,13 @@ def test_any_value_expr(
 def test_any_value_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
 ) -> None:
-    if "ibis" in str(constructor):
-        pytest.skip(reason="ibis cannot create all-null column")
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="any_value unsupported"))
-    df = nw.from_native(constructor({"a": [None, None]}))
+    # Null the column out with `lit` rather than passing all-null data to the
+    # constructor: some backends cannot infer a dtype from that.
+    df = nw.from_native(constructor({"a": [1.0, 2.0]}))
     result = (
-        df.with_columns(nw.col("a").cast(nw.Float64()))
+        df.with_columns(a=nw.lit(None, dtype=nw.Float64))
         .select(nw.col("a").any_value(ignore_nulls=ignore_nulls))
         .lazy()
         .collect()
