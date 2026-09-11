@@ -11,7 +11,6 @@ from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
     PANDAS_VERSION,
-    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -94,11 +93,7 @@ def test_mod_negative_operands(
     request: pytest.FixtureRequest,
 ) -> None:
     if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
-        # pandas[pyarrow] does not implement mod
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 8):
-        # polars' `%` followed C sign semantics before 0.20.8
-        pytest.skip()
+        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.col("a") % divisor)
     assert_equal_data(result, {"a": expected})
@@ -116,13 +111,9 @@ def test_rmod_negative_operands(
     request: pytest.FixtureRequest,
 ) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
-        pytest.skip()
+        pytest.skip(reason="dask<2024.10 does not implement rmod with negative operands")
     if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
-        # pandas[pyarrow] does not implement mod
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 8):
-        # polars' `%` followed C sign semantics before 0.20.8
-        pytest.skip()
+        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.lit(dividend) % nw.col("a"))
     assert_equal_data(result, {"literal": expected})

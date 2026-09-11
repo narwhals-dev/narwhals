@@ -21,7 +21,7 @@ from narwhals._duckdb.utils import (
     window_expression,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool, floor_mod
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -52,16 +52,14 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     def __mod__(self, other: Self) -> Self:
         def _mod(expr: Expression, other: Expression) -> Expression:
             # DuckDB's `%` follows C sign semantics (sign of the dividend),
-            # while narwhals follows Python and Polars (sign of the divisor).
-            # The double-modulus identity `((a % b) + b) % b` restores
-            # floor-modulus.
-            return ((expr % other) + other) % other
+            # `floor_mod` restores Python's (sign of the divisor).
+            return floor_mod(expr, other)
 
         return self._with_binary(_mod, other)
 
     def __rmod__(self, other: Self) -> Self:
         def _rmod(expr: Expression, other: Expression) -> Expression:
-            return ((other % expr) + expr) % expr
+            return floor_mod(other, expr)
 
         return self._with_binary(_rmod, other).alias("literal")
 
