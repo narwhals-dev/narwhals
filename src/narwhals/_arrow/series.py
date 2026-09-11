@@ -145,8 +145,6 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _with_native(self, series: ArrayOrScalar) -> Self:
         native = chunked_array(series)
         result = self.from_native(native, name=self.name, context=self)
-        # `_broadcast` means "length-1 series standing for a scalar". Any operation
-        # on such a series which keeps it at length 1 still yields that scalar.
         result._broadcast = self._broadcast and len(native) == 1
         return result
 
@@ -202,7 +200,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _align_full_broadcast(cls, *series: Self) -> Sequence[Self]:
         lengths = [len(s) for s in series]
         target_length = max(
-            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
+            (ln for ln, s in zip(lengths, series, strict=False) if not s._broadcast),
+            default=1,
         )
         fast_path = all(_len == target_length for _len in lengths)
         if fast_path:
@@ -622,12 +621,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def zip_with(self, mask: Self, other: Self) -> Self:
-        if mask._broadcast and not self._broadcast:
-            # `pc.if_else` requires all arguments to have the same length, so a
-            # broadcast (length-1) mask has to be repeated over `self` first.
-            mask = mask._with_native(pa.repeat(mask.native[0], len(self)))
+        ser, mask, other = self._align_full_broadcast(self, mask, other)
         cond = mask.native.combine_chunks()
-        return self._with_native(pc.if_else(cond, self.native, other.native))
+        return ser._with_native(pc.if_else(cond, ser.native, other.native))
 
     def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         import numpy as np  # ignore-banned-import

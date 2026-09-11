@@ -143,18 +143,36 @@ def test_concat_str_with_large_string() -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("exprs", "expected", "expected_nulls"),
+    [
+        (
+            (nw.col("b"), nw.lit("!")),
+            ["dogs-!", "cats-!", "!"],
+            ["dogs-!", "cats-!", None],
+        ),
+        (
+            (nw.lit("!"), nw.col("b"), nw.col("c")),
+            ["!-dogs-play", "!-cats-swim", "!-walk"],
+            ["!-dogs-play", "!-cats-swim", None],
+        ),
+    ],
+    ids=["lit_last", "lit_first"],
+)
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_concat_str_with_lit_and_nulls(
-    constructor: Constructor, *, ignore_nulls: bool
+    constructor: Constructor,
+    exprs: tuple[nw.Expr, ...],
+    expected: list[str],
+    expected_nulls: list[str | None],
+    *,
+    ignore_nulls: bool,
 ) -> None:
     # `concat_str` zips series by hand, so a literal among the inputs only works
     # if the elementwise ops it routes through carry the `_broadcast` flag.
     df = nw.from_native(constructor(data))
-    result = df.select(
-        "a",
-        nw.concat_str(
-            nw.col("b"), nw.lit("!"), separator="-", ignore_nulls=ignore_nulls
-        ).alias("full_sentence"),
-    ).sort("a")
-    expected = ["dogs-!", "cats-!", "!" if ignore_nulls else None]
-    assert_equal_data(result.select("full_sentence"), {"full_sentence": expected})
+    expr = nw.concat_str(*exprs, separator="-", ignore_nulls=ignore_nulls).alias("r")
+    result = df.select("a", expr).sort("a")
+    assert_equal_data(
+        result.select("r"), {"r": expected if ignore_nulls else expected_nulls}
+    )

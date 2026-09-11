@@ -227,9 +227,7 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _with_native(self, series: NativeSeriesT) -> Self:
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
-        `_broadcast` carries over iff `self` was broadcast and the result is still
-        length-1: a length-1 series stands for a scalar, and any operation which
-        leaves it at length 1 still yields that scalar.
+        Keeps `_broadcast` when `self` is broadcast and the result is still length 1.
         """
         ...
 

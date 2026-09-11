@@ -163,8 +163,6 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = self.__class__(
             series, implementation=self._implementation, version=self._version
         )
-        # `_broadcast` means "length-1 series standing for a scalar". Any operation
-        # on such a series which keeps it at length 1 still yields that scalar.
         result._broadcast = self._broadcast and len(series) == 1
         return result
 
@@ -213,7 +211,8 @@ class PandasLikeSeries(EagerSeries[Any]):
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         target_length = max(
-            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
+            (ln for ln, s in zip(lengths, series, strict=False) if not s._broadcast),
+            default=1,
         )
         idx = series[lengths.index(target_length)].native.index
         reindexed = []
@@ -835,22 +834,10 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> float:
         return self.native.quantile(q=quantile, interpolation=interpolation)
 
-    def zip_with(self, mask: Any, other: Any) -> Self:
-        ser = self.native
-        if getattr(mask, "_broadcast", False):
-            # `align_and_extract_native` would reduce a broadcast mask to a scalar,
-            # but `Series.where` only accepts an array-like condition.
-            mask = broadcast_series_to_index(
-                mask.native,
-                ser.index,
-                is_nested=False,
-                series_class=self.__native_namespace__().Series,
-            )
-        else:
-            _, mask = align_and_extract_native(self, mask)
-        _, other = align_and_extract_native(self, other)
-        res = ser.where(mask, other)
-        return self._with_native(res)
+    def zip_with(self, mask: Self, other: Any) -> Self:
+        ser, mask = self._align_full_broadcast(self, mask)
+        _, other = align_and_extract_native(ser, other)
+        return ser._with_native(ser.native.where(mask.native, other))
 
     def head(self, n: int) -> Self:
         return self._with_native(self.native.head(n))
