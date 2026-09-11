@@ -413,6 +413,7 @@ __all__ = [
     "CompliantSeries",
     "DataFrameT",
     "EagerAllowed",
+    "FileSource",
     "Frame",
     "FrameT",
     "IntoBackend",
@@ -426,4 +427,5 @@ __all__ = [
     "IntoSeries",
     "IntoSeriesT",
     "LazyAllowed",
+    "NormalizedPath",
 ]

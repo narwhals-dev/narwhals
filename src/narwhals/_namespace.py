@@ -61,6 +61,9 @@ if TYPE_CHECKING:
         SparkLike,
     )
 
+    EagerNamespaceKnown: TypeAlias = (
+        PandasLikeNamespace | ArrowNamespace | PolarsNamespace
+    )
     EagerAllowedNamespace: TypeAlias = "Namespace[PandasLikeNamespace] | Namespace[ArrowNamespace] | Namespace[PolarsNamespace]"
 
 __all__ = ["Namespace"]

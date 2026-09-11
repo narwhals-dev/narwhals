@@ -28,3 +28,4 @@
 - [narwhals.testing](testing.md)
 - [narwhals.typing](typing.md)
 - [narwhals.utils](utils.md)
+- [narwhals.plugins](plugins.md)
