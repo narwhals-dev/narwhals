@@ -375,8 +375,11 @@ class PandasLikeNamespace(
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = [s.cast(string) for s in expr_results]
             null_mask = [s.is_null() for s in expr_results]
+            # NOTE: The masks below decide what a null row becomes, so blank the nulls
+            # out first: before pandas 3 a string column is `object`, where adding
+            # `None` raises instead of propagating.
+            series = [s.cast(string).fill_null("", None, None) for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -387,9 +390,7 @@ class PandasLikeNamespace(
                 # NOTE: Trying to help `mypy` later
                 # error: Cannot determine type of "values"  [has-type]
                 values: list[PandasLikeSeries]
-                init_value, *values = (
-                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask, strict=True)
-                )
+                init_value, *values = series
                 sep_array = init_value._with_native(
                     init_value.__native_namespace__().Series(
                         separator,
