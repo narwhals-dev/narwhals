@@ -116,15 +116,15 @@ conflicts = [[
     { package = "narwhals", group = "extreme-pretty-old-versions" },
     { package = "narwhals", group = "local-dev" },
 ], [
-    { package = "narwhals", group = "dev-core" },
-    { package = "narwhals", group = "extreme-minimum-versions" },
-    { package = "narwhals", group = "extreme-not-so-old-versions" },
-    { package = "narwhals", group = "extreme-pretty-old-versions" },
-], [
     { package = "narwhals", group = "extreme-minimum-versions" },
     { package = "narwhals", group = "extreme-not-so-old-versions" },
     { package = "narwhals", group = "extreme-pretty-old-versions" },
     { package = "narwhals", group = "min-pyspark-version" },
+], [
+    { package = "narwhals", group = "dev-core" },
+    { package = "narwhals", group = "extreme-minimum-versions" },
+    { package = "narwhals", group = "extreme-not-so-old-versions" },
+    { package = "narwhals", group = "extreme-pretty-old-versions" },
 ], [
     { package = "narwhals", group = "core-tests" },
     { package = "narwhals", group = "extreme-minimum-versions" },

@@ -20,7 +20,11 @@ if TYPE_CHECKING:
 
     from narwhals._arrow.dataframe import ArrowDataFrame
     from narwhals._arrow.expr import ArrowExpr
-    from narwhals._arrow.typing import AggregateOptions, Aggregation, Incomplete  # type: ignore[attr-defined]
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
+        AggregateOptions,
+        Aggregation,
+        Incomplete,
+    )
     from narwhals._compliant.typing import NarwhalsAggregation
     from narwhals.typing import UniqueKeepStrategy
 
