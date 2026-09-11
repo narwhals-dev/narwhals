@@ -116,3 +116,21 @@ def test_str_zfill_series(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].str.zfill(width)
     assert_equal_data({"a": result}, expected)
+
+
+# The accessors validate before dispatching, so every backend raises the same
+# `ValueError`, up-front, rather than at collection time. Without validation
+# pandas returns the input unchanged, PyArrow raises `ArrowInvalid: Negative
+# buffer resize`, and Polars raises an `i128`-to-`u64` cast error.
+def test_zfill_negative_width_expr(constructor: Constructor) -> None:
+    # NOTE: The expression raises while it is built, so `select` is never reached.
+    # The frame here allows to keep the test in case validation moves back into the backends.
+    df = nw.from_native(constructor({"a": ["foo", None]}))
+    with pytest.raises(ValueError, match="non-negative `width`"):
+        df.select(nw.col("a").str.zfill(-1))
+
+
+def test_zfill_negative_width_series(constructor_eager: ConstructorEager) -> None:
+    series = nw.from_native(constructor_eager({"a": ["foo", None]}), eager_only=True)["a"]
+    with pytest.raises(ValueError, match="non-negative `width`"):
+        series.str.zfill(-1)
