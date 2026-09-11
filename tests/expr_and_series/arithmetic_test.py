@@ -142,7 +142,7 @@ def test_arithmetic_series(
     if attr == "__mod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
-        request.applymarker(pytest.mark.xfail)
+        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -172,7 +172,9 @@ def test_right_arithmetic_series(
     if attr == "__rmod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
-        request.applymarker(pytest.mark.xfail)
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+        )
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -284,7 +286,7 @@ def test_arithmetic_series_left_literal(
     if attr == "__mod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
-        request.applymarker(pytest.mark.xfail)
+        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
 
     data = {"a": [1.0, 2.0, 4.0]}
     df = nw.from_native(constructor_eager(data))
