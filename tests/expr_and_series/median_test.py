@@ -71,7 +71,12 @@ def test_median_over(constructor: Constructor, request: pytest.FixtureRequest) -
 
 @pytest.mark.parametrize("empty", [False, True], ids=["all_null", "empty"])
 @pytest.mark.filterwarnings("ignore:Mean of empty slice:RuntimeWarning:numpy")
-def test_median_null_or_empty(constructor: Constructor, *, empty: bool) -> None:
+def test_median_null_or_empty(
+    constructor: Constructor, request: pytest.FixtureRequest, *, empty: bool
+) -> None:
+    if empty and "modin_pyarrow" in str(constructor):
+        # modin's `.loc[mask]` degrades the dtype to `object` when no row matches.
+        request.applymarker(pytest.mark.xfail(reason="modin empty-filter dtype"))
     # Derive the all-null / empty frame from a well-typed one: some backends
     # cannot infer a dtype from all-null or empty data passed to the constructor.
     df = nw.from_native(constructor({"a": [1.0, 2.0]}))
