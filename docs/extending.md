@@ -72,22 +72,18 @@ from narwhals.typing import NormalizedPath
 
 def read_csv(
     self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-) -> CompliantDataFrame:
-    ...
+) -> CompliantDataFrame: ...
 
 
 def scan_csv(
     self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-) -> CompliantFrame:
-    ...
+) -> CompliantFrame: ...
 
 
-def read_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantDataFrame:
-    ...
+def read_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantDataFrame: ...
 
 
-def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrame:
-    ...
+def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrame: ...
 ```
 
 In all cases:

@@ -262,7 +262,8 @@ class PandasLikeNamespace(
             return [
                 PandasLikeSeries(
                     self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
+                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
+                        how="horizontal",
                     )._native_frame.min(axis=1),
                     implementation=self._implementation,
                     version=self._version,
@@ -282,7 +283,8 @@ class PandasLikeNamespace(
             return [
                 PandasLikeSeries(
                     self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
+                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
+                        how="horizontal",
                     ).native.max(axis=1),
                     implementation=self._implementation,
                     version=self._version,

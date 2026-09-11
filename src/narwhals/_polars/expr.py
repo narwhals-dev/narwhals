@@ -16,6 +16,7 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
+    native_get_categories,
 )
 from narwhals._utils import NO_DEFAULT, Implementation, requires
 
@@ -449,6 +450,8 @@ class PolarsExprStringNamespace(
 
     @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
+        if width == 0:
+            return self.compliant._with_native(self.native)
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
 
@@ -506,11 +509,8 @@ class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
 ):
     def get_categories(self) -> PolarsExpr:
-        # NOTE: Polars deprecated `cat.get_categories` in v1.44 and removed it
-        # in v2.0, so we use the workaround they suggest.
-        # See https://github.com/narwhals-dev/narwhals/issues/3895.
         return self.compliant._with_native(
-            self.native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+            self.native.map_batches(native_get_categories, return_dtype=pl.String)
         )
 
 

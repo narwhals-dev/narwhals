@@ -100,8 +100,8 @@ jobs:
       - name: Create venv
         run: uv venv --python ${{ matrix.python-version }}
 
+      # temporary pin to get CI green
       - name: install-reqs
-        # temporary pin to get CI green
         run: uv pip install -e ".[pandas]" --group core-tests --group sklearn "pyarrow<22.0"
       - name: install pyspark
         run: uv pip install -e . "pyspark[connect]==${SPARK_VERSION}" "setuptools<78"
