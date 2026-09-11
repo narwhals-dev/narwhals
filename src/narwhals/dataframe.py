@@ -3321,6 +3321,82 @@ class LazyFrame(BaseFrame[LazyFrameT]):
         """
         return self
 
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: str | list[str] | None = None,
+        values: str | list[str] | None = None,
+        aggregate_function: PivotAgg | None = None,
+        maintain_order: bool = False,
+        separator: str = "_",
+    ) -> Self:
+        r"""Create a spreadsheet-style pivot table as a LazyFrame.
+
+        Arguments:
+            on: Name of the column whose values will be used as the header of the
+                output LazyFrame.
+            on_columns: What value combinations will be considered for the output table.
+            index: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `values` will be used. At least one of `index` and
+                `values` must be specified.
+            values: One or multiple keys to group by. If None, all remaining columns not
+                specified on `on` and `index` will be used. At least one of `index` and
+                `values` must be specified.
+            aggregate_function: Choose from
+
+                - None: no aggregation takes place, will raise error if multiple values
+                    are in group.
+                - A predefined aggregate function string, one of
+                    {'min', 'max', 'first', 'last', 'sum', 'mean', 'median', 'len'}
+            maintain_order: Ensure the values of `index` are sorted by discovery order.
+            separator: Used as separator/delimiter in generated column names in case of
+                multiple `values` columns.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     "SELECT * FROM VALUES "
+            ...     "(1, 'a', 0, 0), (1, 'a', 1, 2), (2, 'a', 2, 0), "
+            ...     "(2, 'a', 2, 0), (1, 'b', 7, 9), (2, 'b', 1, 4) "
+            ...     "df(ix, col, foo, bar)"
+            ... )
+            >>> (
+            ...     nw.from_native(df_native)
+            ...     .pivot(
+            ...         "col", on_columns=["a", "b"], index="ix", aggregate_function="sum"
+            ...     )
+            ...     .sort("ix")
+            ...     .to_native()
+            ... )
+            ┌───────┬────────┬────────┬────────┬────────┐
+            │  ix   │ foo_a  │ foo_b  │ bar_a  │ bar_b  │
+            │ int32 │ int128 │ int128 │ int128 │ int128 │
+            ├───────┼────────┼────────┼────────┼────────┤
+            │     1 │      1 │      7 │      2 │      9 │
+            │     2 │      4 │      1 │      0 │      4 │
+            └───────┴────────┴────────┴────────┴────────┘
+            <BLANKLINE>
+        """
+        if values is None and index is None:
+            msg = "At least one of `values` and `index` must be passed"
+            raise ValueError(msg)
+        values = [values] if isinstance(values, str) else values
+        index = [index] if isinstance(index, str) else index
+        return self._with_compliant(
+            self._compliant_frame.pivot(
+                on=on,
+                on_columns=on_columns,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                maintain_order=maintain_order,
+                separator=separator,
+            )
+        )
+
     def unpivot(
         self,
         on: str | list[str] | None = None,

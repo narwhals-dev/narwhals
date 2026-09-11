@@ -16,6 +16,7 @@ from narwhals._duckdb.utils import (
     join_column_names,
     lit,
     native_to_narwhals_dtype,
+    when,
     window_expression,
 )
 from narwhals._sql.dataframe import SQLLazyFrame
@@ -23,10 +24,13 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_lazy_pivot_supported_options,
     extend_bool,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     parse_columns_to_drop,
     requires,
+    resolve_pivot_index_values,
 )
 from narwhals.dependencies import get_duckdb
 from narwhals.exceptions import InvalidOperationError
@@ -53,7 +57,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        PivotAgg,
+        UniqueKeepStrategy,
+    )
 
 
 class DuckDBLazyFrame(
@@ -555,6 +564,56 @@ class DuckDBLazyFrame(
         return self._with_native(
             duckdb.sql(query).select(*[*index_, variable_name, value_name])
         )
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        aggregate_function = check_lazy_pivot_supported_options(
+            self._implementation, aggregate_function, maintain_order=maintain_order
+        )
+
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+
+        # DuckDB has no pivot in its relational API, so we hand-write the query, e.g.
+        # PIVOT _rel ON "subject" IN ('maths', 'physics')
+        # USING mean("test_1") AS "test_1", mean("test_2") AS "test_2"
+        # GROUP BY "name"
+        aggregate = "count" if aggregate_function == "len" else aggregate_function
+        on_values = ", ".join(str(lit(name)) for name in on_columns)
+        using = ", ".join(
+            (
+                f"{aggregate}({col(value)}) AS {col(value)}"
+                if len(values) > 1
+                else f"{aggregate}({col(value)})"
+            )
+            for value in values
+        )
+        group_by = f"GROUP BY {join_column_names(*index)}" if index else ""
+        _rel = self.native  # not actually unused, referenced in query
+        query = f"PIVOT _rel ON {col(on)} IN ({on_values}) USING {using} {group_by}"
+        result = duckdb.sql(query)
+
+        output: list[Expression] = []
+        for pivot in generate_pivot_column_names(on_columns, values, separator=separator):
+            # DuckDB prefixes the value name only when there is more than one value:
+            # `maths` for values=["test_1"], `maths_test_1` and `maths_test_2` for
+            # values=["test_1", "test_2"].```
+
+            expression = col(pivot.native_name)
+            if aggregate in {"sum", "count"}:
+                # DuckDB gives null for a missing combination, polars gives 0.
+                # Every other aggregation returns null in both.
+                expression = when(~expression.isnotnull(), lit(0)).otherwise(expression)
+            output.append(expression.alias(pivot.output_name))
+        return self._with_native(result.select(*index, *output))
 
     @requires.backend_version((1, 3))
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:

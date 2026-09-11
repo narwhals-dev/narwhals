@@ -19,6 +19,7 @@ from narwhals._utils import (
     Implementation,
     _into_arrow_table,
     convert_str_slice_to_int_slice,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     is_boolean_selector,
     is_compliant_series,
@@ -29,6 +30,7 @@ from narwhals._utils import (
     is_slice_none,
     parse_columns_to_drop,
     requires,
+    resolve_pivot_index_values,
 )
 from narwhals.dependencies import is_numpy_array_1d
 from narwhals.exceptions import ColumnNotFoundError
@@ -766,6 +768,49 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
 
         msg = f"Unsupported `backend` value: {backend}"  # pragma: no cover
         raise ValueError(msg)  # pragma: no cover
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        if self._backend_version < (1, 43):
+            if aggregate_function is None:
+                msg = "Polars<1.43 does not support lazy pivoting without aggregation."
+                raise NotImplementedError(msg)
+            index, values = resolve_pivot_index_values(self.columns, on, index, values)
+            output = (
+                getattr(
+                    pl.col(pivot.value).filter(pl.col(on) == pl.lit(pivot.on_value)),
+                    aggregate_function,
+                )().alias(pivot.output_name)
+                for pivot in generate_pivot_column_names(
+                    on_columns, values, separator=separator
+                )
+            )
+            result = (
+                self.native.group_by(index, maintain_order=maintain_order).agg(output)
+                if index
+                else self.native.select(output)
+            )
+            return self._with_native(result)
+        return self._with_native(
+            self.native.pivot(
+                on,
+                on_columns,
+                index=index,
+                values=values,
+                aggregate_function=aggregate_function,
+                maintain_order=maintain_order,
+                separator=separator,
+            )
+        )
 
     def group_by(
         self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool

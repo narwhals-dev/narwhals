@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
 
@@ -13,9 +13,12 @@ from narwhals._utils import (
     _remap_full_join_keys,
     check_column_names_are_unique,
     check_columns_exist,
+    check_lazy_pivot_supported_options,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    resolve_pivot_index_values,
 )
 from narwhals.exceptions import MultiOutputExpressionError
 from narwhals.typing import CompliantLazyFrame
@@ -39,7 +42,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.exceptions import ColumnNotFoundError
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        PivotAgg,
+        UniqueKeepStrategy,
+    )
 
 Incomplete: TypeAlias = "Any"
 """Using `_pandas_like` utils with `_dask`.
@@ -533,6 +541,44 @@ class DaskLazyFrame(
                 value_name=value_name,
             )
         )
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        aggregate_function = check_lazy_pivot_supported_options(
+            self._implementation, aggregate_function, maintain_order=maintain_order
+        )
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+        if not index:
+            msg = "Dask does not support a pivot with no index columns."
+            raise NotImplementedError(msg)
+
+        columns: dict[str, Any] = {}
+        for pivot in generate_pivot_column_names(on_columns, values, separator=separator):
+            condition = self.native[on] == pivot.on_value
+            columns[pivot.output_name] = (
+                condition.astype("uint32")
+                if aggregate_function == "len"
+                else self.native[pivot.value].where(condition)
+            )
+
+        aggregate = "sum" if aggregate_function == "len" else aggregate_function
+        # Dask's stubs do not preserve the DataFrame return type through this aggregation.
+        result = cast(
+            "dx.DataFrame",
+            self.native.assign(**columns)
+            .groupby(list(index), dropna=False, sort=False)[list(columns)]
+            .agg(aggregate),
+        )
+        return self._with_native(result.reset_index())
 
     def sink_parquet(self, file: str | Path | BytesIO) -> None:
         self.native.to_parquet(file)
