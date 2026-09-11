@@ -324,7 +324,13 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
-        return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
+        result = self.native.astype(pd_dtype)
+        if pd_dtype is str and result.dtype == object:
+            # NOTE: Before pandas 3, `astype(str)` renders nulls as `'None'` / `'nan'`
+            # instead of keeping them null. Newer versions cast to a string dtype which
+            # preserves them, so there's nothing to restore.
+            result = result.where(self.native.notna(), None)
+        return self._with_native(result, preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
