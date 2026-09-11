@@ -22,6 +22,6 @@ def test_arg_min_series(
         # not implemented yet
         request.applymarker(pytest.mark.xfail)
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]
-    series = nw.maybe_set_index(series, index=[1, 0, 9])  # type: ignore[arg-type]
+    series = nw.maybe_set_index(series, index=[1, 0, 9])
     result = series.arg_min()
     assert_equal_data({col: [result]}, {col: [expected]})

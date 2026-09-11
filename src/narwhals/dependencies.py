@@ -568,9 +568,7 @@ def is_pandas_like_index(index: Any) -> bool:
 
     By "pandas-like", we mean: pandas, Modin, cuDF.
     """
-    return (
-        is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index)
-    )  # pragma: no cover
+    return is_pandas_index(index) or is_modin_index(index) or is_cudf_index(index)
 
 
 def is_pandas_like_dtype(obj: Any) -> TypeIs[PandasLikeDType]:
