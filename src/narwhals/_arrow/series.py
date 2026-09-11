@@ -142,20 +142,17 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def _with_version(self, version: Version) -> Self:
         return self.__class__(self.native, name=self._name, version=version)
 
-    def _with_native(
-        self, series: ArrayOrScalar, *, preserve_broadcast: bool = False
-    ) -> Self:
-        result = self.from_native(chunked_array(series), name=self.name, context=self)
-        if preserve_broadcast:
-            result._broadcast = self._broadcast
+    def _with_native(self, series: ArrayOrScalar) -> Self:
+        native = chunked_array(series)
+        result = self.from_native(native, name=self.name, context=self)
+        # `_broadcast` means "length-1 series standing for a scalar". Any operation
+        # on such a series which keeps it at length 1 still yields that scalar.
+        result._broadcast = self._broadcast and len(native) == 1
         return result
 
     def _with_binary(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
         ser, other_native = extract_native(self, other)
-        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
-        return self._with_native(
-            op(ser, other_native), preserve_broadcast=preserve_broadcast
-        ).alias(self.name)
+        return self._with_native(op(ser, other_native)).alias(self.name)
 
     def _with_binary_right(self, op: Callable[..., ArrayOrScalar], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
@@ -296,24 +293,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def __mod__(self, other: Any) -> Self:
-        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         floor_div = (self // other).native
         ser, other = extract_native(self, other)
         res = pc.subtract(ser, pc.multiply(floor_div, other))
-        return self._with_native(res, preserve_broadcast=preserve_broadcast)
+        return self._with_native(res)
 
     def __rmod__(self, other: Any) -> Self:
-        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         floor_div = (other // self).native
         ser, other = extract_native(self, other)
         res = pc.subtract(other, pc.multiply(floor_div, ser))
-        return self._with_native(res, preserve_broadcast=preserve_broadcast)
+        return self._with_native(res)
 
     def __invert__(self) -> Self:
-        return self._with_native(pc.invert(self.native), preserve_broadcast=True)
+        return self._with_native(pc.invert(self.native))
 
     def __neg__(self) -> Self:
-        return self._with_native(pc.negate(self.native), preserve_broadcast=True)
+        return self._with_native(pc.negate(self.native))
 
     @property
     def _type(self) -> pa.DataType:
@@ -552,14 +547,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(res)
 
     def is_null(self) -> Self:
-        return self._with_native(self.native.is_null(), preserve_broadcast=True)
+        return self._with_native(self.native.is_null())
 
     def is_nan(self) -> Self:
-        return self._with_native(pc.is_nan(self.native), preserve_broadcast=True)
+        return self._with_native(pc.is_nan(self.native))
 
     def cast(self, dtype: IntoDType) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
-        return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
+        return self._with_native(pc.cast(self.native, data_type))
 
     def null_count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)
@@ -627,6 +622,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         )
 
     def zip_with(self, mask: Self, other: Self) -> Self:
+        if mask._broadcast and not self._broadcast:
+            # `pc.if_else` requires all arguments to have the same length, so a
+            # broadcast (length-1) mask has to be repeated over `self` first.
+            mask = mask._with_native(pa.repeat(mask.native[0], len(self)))
         cond = mask.native.combine_chunks()
         return self._with_native(pc.if_else(cond, self.native, other.native))
 
@@ -639,7 +638,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def fill_nan(self, value: float | None) -> Self:
         result = pc.if_else(pc.is_nan(self.native), value, self.native)
-        return self._with_native(result, preserve_broadcast=True)
+        return self._with_native(result)
 
     def fill_null(
         self,
@@ -680,7 +679,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 if strategy == "forward"
                 else fill_null_forward_limit(native[::-1], limit)[::-1]
             )
-        return self._with_native(series, preserve_broadcast=True)
+        return self._with_native(series)
 
     def to_frame(self) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame

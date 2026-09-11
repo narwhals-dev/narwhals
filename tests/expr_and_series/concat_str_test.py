@@ -141,3 +141,20 @@ def test_concat_str_with_large_string() -> None:
     assert_equal_data(result, expected)
     result = nw.from_native(native_pd).with_columns(expr)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_with_lit_and_nulls(
+    constructor: Constructor, *, ignore_nulls: bool
+) -> None:
+    # `concat_str` zips series by hand, so a literal among the inputs only works
+    # if the elementwise ops it routes through carry the `_broadcast` flag.
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        "a",
+        nw.concat_str(
+            nw.col("b"), nw.lit("!"), separator="-", ignore_nulls=ignore_nulls
+        ).alias("full_sentence"),
+    ).sort("a")
+    expected = ["dogs-!", "cats-!", "!" if ignore_nulls else None]
+    assert_equal_data(result.select("full_sentence"), {"full_sentence": expected})
