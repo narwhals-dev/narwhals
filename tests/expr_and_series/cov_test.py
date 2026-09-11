@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 
@@ -117,6 +123,29 @@ def test_cov_series_foreign_index() -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
+def test_cov_single_pair_ddof1(constructor: Constructor) -> None:
+    # No degrees of freedom left; dask/numpy warn on the degenerate slice.
+    df = nw.from_native(constructor({"a": [1.0], "b": [2.0]}))
+    result = df.select(nw.cov("a", "b", ddof=1).alias("cov"))
+    assert_equal_data(result, {"cov": [None]})
+
+
+def test_cov_over_single_row_group(constructor: Constructor) -> None:
+    # Window function on a group with a single row yields null there.
+    if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(
+        constructor(
+            {"i": [0, 1, 2], "g": [1, 1, 2], "a": [1.0, 3.0, 2.0], "b": [1.0, 2.0, 1.0]}
+        )
+    )
+    result = df.with_columns(sample=nw.cov("a", "b").over("g")).sort("i").select("sample")
+    assert_equal_data(result, {"sample": [1.0, 1.0, None]})
+
+
 def test_cov_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(
@@ -132,3 +161,30 @@ def test_cov_series(constructor_eager: ConstructorEager) -> None:
         "a_c_sample": [0.0],
     }
     assert_equal_data(result, expected)
+
+
+def test_cov_numerical_stability(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Large offsets stress single-pass variance implementations. Old polars
+    # computes this the single-pass way and gets `0.0`/`NaN`.
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 11, 0):
+        request.applymarker(pytest.mark.xfail(reason="single-pass variance"))
+    df = nw.from_native(
+        constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})
+    )
+    result = df.select(
+        nw.cov("a", "b").round(2), nw.corr("a", "b").round(2).alias("corr")
+    )
+    assert_equal_data(result, {"a": [2.5], "corr": [0.99]})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_cov_group_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    df = nw.from_native(
+        constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "b": [1.0, 2.0, 3.0]})
+    )
+    result = df.group_by("g").agg(nw.cov("a", "b").alias("cov")).sort("g")
+    assert_equal_data(result, {"g": [1, 2], "cov": [0.5, None]})

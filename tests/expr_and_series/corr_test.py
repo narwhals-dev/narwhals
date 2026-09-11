@@ -142,6 +142,18 @@ def test_corr_over(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_corr_over_single_row_group(constructor: Constructor) -> None:
+    if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    df = nw.from_native(
+        constructor({"i": [0, 1, 2], "g": [1, 1, 2], "a": [1, 3, 2], "b": [1, 2, 1]})
+    )
+    result = df.with_columns(corr=nw.corr("a", "b").over("g")).sort("i").select("corr")
+    assert_equal_data(result, {"corr": [1.0, 1.0, None]})
+
+
 def test_corr_series_foreign_index() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3864
     # A `Series` with an index unrelated to `df`'s own must be aligned
@@ -158,6 +170,13 @@ def test_corr_series_foreign_index() -> None:
     result = df.select(nw.corr(foreign, nw.col("b")).round(2))
     expected = {"a": [-0.5]}
     assert_equal_data(result, expected)
+
+
+def test_corr_constant_column(constructor: Constructor) -> None:
+    # A constant column has no variance, so correlation is undefined.
+    df = nw.from_native(constructor({"a": [1.0, 1.0, 1.0], "b": [1.0, 2.0, 3.0]}))
+    result = df.select(nw.corr("a", "b").alias("c"))
+    assert_equal_data(result, {"c": [None]})
 
 
 def test_corr_pairwise_nulls(
