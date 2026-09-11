@@ -37,7 +37,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Iterable
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
@@ -254,8 +254,8 @@ class DuckDBNamespace(
         version = self._version
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            evaluated = [
-                (native_expr, alias)
+            fields = [
+                (alias, native_expr)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
@@ -263,13 +263,8 @@ class DuckDBNamespace(
                     strict=True,
                 )
             ]
-            check_column_names_are_unique([alias for _, alias in evaluated])
-            names_to_cols: Mapping[str, Expression] = {
-                alias: native_expr for native_expr, alias in evaluated
-            }
-            field_args = ", ".join(
-                f'"{name}" := {col}' for name, col in names_to_cols.items()
-            )
+            check_column_names_are_unique([name for name, _ in fields])
+            field_args = ", ".join(f'"{name}" := {col}' for name, col in fields)
             return [sql_expression(f"struct_pack({field_args})")]
 
         return self._expr(

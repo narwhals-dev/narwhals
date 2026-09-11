@@ -11,6 +11,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    maybe_collect,
 )
 
 data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk"]}
@@ -169,24 +170,26 @@ def test_struct_with_schema(
 
 
 def test_struct_nested(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    # Nested structs round-trip through `collect_schema`.
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+
     maybe_skip(constructor=constructor)
+
     df = nw.from_native(constructor({"a": [1, 2], "b": ["x", "y"], "c": ["p", "q"]}))
     result = df.select(nw.struct(nw.struct("a", "b").alias("inner"), "c").alias("s"))
+
     assert result.collect_schema()["s"] == nw.Struct(
         {"inner": nw.Struct({"a": nw.Int64(), "b": nw.String()}), "c": nw.String()}
     )
-    assert_equal_data(
-        result,
-        {
-            "s": [
-                {"inner": {"a": 1, "b": "x"}, "c": "p"},
-                {"inner": {"a": 2, "b": "y"}, "c": "q"},
-            ]
-        },
-    )
+
+    expected = {
+        "s": [
+            {"inner": {"a": 1, "b": "x"}, "c": "p"},
+            {"inner": {"a": 2, "b": "y"}, "c": "q"},
+        ]
+    }
+
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
@@ -196,18 +199,15 @@ def test_struct_nested(request: pytest.FixtureRequest, constructor: Constructor)
 def test_struct_duplicate_names_raises(
     request: pytest.FixtureRequest, constructor: Constructor, exprs: tuple[nw.Expr, ...]
 ) -> None:
-    # Duplicate field names raise instead of silently keeping one of them.
     if any(x in str(constructor) for x in UNSUPPORTED_BACKENDS):
         request.applymarker(pytest.mark.xfail)
+
     maybe_skip(constructor=constructor)
+
     df = nw.from_native(constructor({"a": [1, 2], "b": [3, 4]}))
-    expr = nw.struct(*exprs).alias("s")
-    if isinstance(df, nw.LazyFrame):
-        with pytest.raises(DuplicateError):
-            df.select(expr).lazy().collect()
-    else:
-        with pytest.raises(DuplicateError):
-            df.select(expr)
+
+    with pytest.raises(DuplicateError):
+        maybe_collect(df.select(nw.struct(*exprs).alias("s")))
 
 
 def test_struct_with_series(constructor_eager: ConstructorEager) -> None:

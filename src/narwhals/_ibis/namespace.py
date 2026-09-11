@@ -26,7 +26,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Iterable, Sequence
 
     from narwhals._utils import Version
     from narwhals.typing import (
@@ -214,8 +214,8 @@ class IbisNamespace(
         version = self._version
 
         def func(df: IbisLazyFrame) -> list[ir.Value]:
-            evaluated = [
-                (native_expr, alias)
+            fields = [
+                (alias, native_expr)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
@@ -223,11 +223,8 @@ class IbisNamespace(
                     strict=True,
                 )
             ]
-            check_column_names_are_unique([alias for _, alias in evaluated])
-            names_to_cols: Mapping[str, ir.Value] = {
-                alias: native_expr for native_expr, alias in evaluated
-            }
-            return [ibis.struct(names_to_cols)]
+            check_column_names_are_unique([name for name, _ in fields])
+            return [ibis.struct(dict(fields))]
 
         return self._expr(
             call=func,
