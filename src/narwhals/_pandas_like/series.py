@@ -12,6 +12,7 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     NUMPY_VERSION,
+    PANDAS_VERSION,
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
@@ -325,11 +326,15 @@ class PandasLikeSeries(EagerSeries[Any]):
             version=self._version,
         )
         result = self.native.astype(pd_dtype)
-        if pd_dtype is str and result.dtype == object:
+        if (
+            pd_dtype is str
+            and PANDAS_VERSION < (3,)
+            and (null_mask := self.native.isna()).any()
+        ):
             # NOTE: Before pandas 3, `astype(str)` renders nulls as `'None'` / `'nan'`
             # instead of keeping them null. Newer versions cast to a string dtype which
             # preserves them, so there's nothing to restore.
-            result = result.where(self.native.notna(), None)
+            result = result.where(~null_mask, None)
         return self._with_native(result, preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
