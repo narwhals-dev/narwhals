@@ -609,7 +609,9 @@ _TIMESTAMP_DATE_FACTOR: Mapping[TimeUnit, int] = {
 
 
 def calculate_timestamp_date(s: NativeSeriesT, time_unit: TimeUnit) -> NativeSeriesT:
-    return s * SECONDS_PER_DAY * _TIMESTAMP_DATE_FACTOR[time_unit]
+    # NOTE: `pyright>=1.1.412` infers `pd.Series[Any] * int` as `Any` (nested `Any` now
+    # triggers overload materialization, https://github.com/microsoft/pyright/pull/11601)
+    return s * SECONDS_PER_DAY * _TIMESTAMP_DATE_FACTOR[time_unit]  # pyright: ignore[reportReturnType]
 
 
 def select_columns_by_name(

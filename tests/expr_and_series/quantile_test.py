@@ -86,9 +86,6 @@ def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
 def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
         request.applymarker(pytest.mark.xfail(reason="NaN handling"))
-    if "pyspark" in str(constructor) and "sqlframe" not in str(constructor):
-        # Spark's `percentile` drops `NaN`; sqlframe transpiles it fine.
-        request.applymarker(pytest.mark.xfail(reason="NaN handling"))
     if (
         "duckdb" in str(constructor) or "sqlframe" in str(constructor)
     ) and DUCKDB_VERSION < (1, 3, 1):

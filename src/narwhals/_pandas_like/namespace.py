@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     is_non_nullable_boolean,
     set_index,
 )
-from narwhals._utils import validate_separators
+from narwhals._utils import check_column_names_are_unique, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -429,6 +429,7 @@ class PandasLikeNamespace(
 
             align = self._series._align_full_broadcast
             series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            check_column_names_are_unique([s.name for s in series])
             name = series[0].name
             struct_array = pc.make_struct(
                 *(pa.array(s.native, from_pandas=True) for s in series),
