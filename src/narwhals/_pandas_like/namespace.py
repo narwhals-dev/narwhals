@@ -372,10 +372,17 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
         string = self._version.dtypes.String()
+        boolean = self._version.dtypes.Boolean()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = [s.cast(string) for s in expr_results]
+            # Polars renders booleans lowercase, pandas `astype(str)` does not.
+            series = [
+                s.cast(string).str.to_lowercase()
+                if s.dtype == boolean
+                else s.cast(string)
+                for s in expr_results
+            ]
             null_mask = [s.is_null() for s in expr_results]
 
             if not ignore_nulls:
