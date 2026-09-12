@@ -250,16 +250,19 @@ class EagerNamespace(
             align = predicate_s._align_full_broadcast
 
             then_s = df._evaluate_single_output_expr(then)
+            operands: tuple[EagerSeriesT_co, ...]
             if otherwise is None:
                 predicate_s, then_s = align(predicate_s, then_s)
                 result = self._if_then_else(predicate_s.native, then_s.native)
+                operands = (predicate_s,)
             else:
                 otherwise_s = df._evaluate_single_output_expr(otherwise)
                 predicate_s, then_s, otherwise_s = align(predicate_s, then_s, otherwise_s)
                 result = self._if_then_else(
                     predicate_s.native, then_s.native, otherwise_s.native
                 )
-            return [then_s._with_native(result)]
+                operands = (predicate_s, otherwise_s)
+            return [then_s._with_native(result)._broadcast_with(*operands)]
 
         return self._expr._from_callable(
             func=func,

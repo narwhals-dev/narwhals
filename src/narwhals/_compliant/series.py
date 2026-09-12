@@ -224,18 +224,28 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)
 
-    def _with_native(
-        self, series: NativeSeriesT, *, preserve_broadcast: bool = False
-    ) -> Self:
+    def _with_native(self, series: NativeSeriesT) -> Self:
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
-        In cases when operations are known to not affect whether a result should
-        be broadcast, we can pass `preserve_broadcast=True`.
-        Set this with care - it should only be set for unary expressions which don't
-        change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
-        set it, you probably don't need it.
+        Keeps `_broadcast` when `self` is broadcast and the result is still length 1.
         """
         ...
+
+    def _broadcast_with(self, *operands: Self | PythonLiteral) -> Self:
+        """Narrow `_broadcast` on a result which also depends on `operands`.
+
+        A length-1 result only stands for a scalar if *every* series operand did, so a
+        non-broadcast operand (e.g. a length-1 `unique()`) clears the flag. Literal
+        operands are scalars already, and never clear it.
+
+        Mutates `self`, so only call it on a result which was just created, typically
+        as `self._with_native(...)._broadcast_with(other)`.
+        """
+        cls = type(self)
+        self._broadcast = self._broadcast and all(
+            operand._broadcast for operand in operands if isinstance(operand, cls)
+        )
+        return self
 
     def __narwhals_namespace__(
         self,
