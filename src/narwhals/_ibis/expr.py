@@ -25,6 +25,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     extend_bool,
+    floor_mod,
     not_implemented,
 )
 
@@ -54,6 +55,22 @@ if TYPE_CHECKING:
 
 class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
+
+    def __mod__(self, other: Self) -> Self:
+        def _mod(expr: ir.Value, other: ir.Value) -> ir.Value:
+            return floor_mod(
+                cast("ir.NumericValue", expr), cast("ir.NumericValue", other)
+            )
+
+        return self._with_binary(_mod, other)
+
+    def __rmod__(self, other: Self) -> Self:
+        def _rmod(expr: ir.Value, other: ir.Value) -> ir.Value:
+            return floor_mod(
+                cast("ir.NumericValue", other), cast("ir.NumericValue", expr)
+            )
+
+        return self._with_binary(_rmod, other).alias("literal")
 
     def __init__(
         self,

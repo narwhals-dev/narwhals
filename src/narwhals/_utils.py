@@ -1974,6 +1974,32 @@ def convert_str_slice_to_int_slice(
     return (start, stop, step)
 
 
+class SupportsFloorMod(Protocol):
+    """Object supporting `%` and `+` with a same-typed operand.
+
+    Native expression types of backends whose `%` follows C sign semantics
+    (duckdb `Expression`, pyspark `Column`, ibis `Value`, polars `Expr` and
+    `Series` before 0.20.8) satisfy this structurally.
+    """
+
+    def __mod__(self, other: Self, /) -> Self: ...
+
+    def __add__(self, other: Self, /) -> Self: ...
+
+
+_SupportsFloorModT = TypeVar("_SupportsFloorModT", bound=SupportsFloorMod)
+
+
+def floor_mod(expr: _SupportsFloorModT, other: _SupportsFloorModT) -> _SupportsFloorModT:
+    """Restore Python-style (floored) modulo from C-style remainder semantics.
+
+    Backends whose `%` follows C sign semantics (sign of the dividend, like
+    `math.fmod`) can still compute the Python-style one (sign of the
+    divisor) with the double-modulus identity `((a % b) + b) % b`.
+    """
+    return ((expr % other) + other) % other
+
+
 def inherit_doc(
     tp_parent: Callable[P, R1], /
 ) -> Callable[[_Constructor[_T, P, R2]], _Constructor[_T, P, R2]]:

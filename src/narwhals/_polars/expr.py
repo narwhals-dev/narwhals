@@ -18,7 +18,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_get_categories,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, requires
+from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -311,7 +311,20 @@ class PolarsExpr:
         return self._with_native(result)
 
     def __mod__(self, other: Any) -> Self:
-        return self._with_native(self.native.__mod__(extract_native(other)))
+        native = (
+            floor_mod(self.native, extract_native(other))
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__mod__(extract_native(other))
+        )
+        return self._with_native(native)
+
+    def __rmod__(self, other: Any) -> Self:
+        native = (
+            floor_mod(extract_native(other), self.native)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__rmod__(extract_native(other))
+        )
+        return self._with_native(native)
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
@@ -407,7 +420,6 @@ class PolarsExpr:
     unique: Method[Self]
     var: Method[Self]
     __rsub__: Method[Self]
-    __rmod__: Method[Self]
     __rpow__: Method[Self]
     __rtruediv__: Method[Self]
 

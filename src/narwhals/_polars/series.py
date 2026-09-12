@@ -21,7 +21,7 @@ from narwhals._polars.utils import (
     native_get_categories,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, requires
+from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
 
 if TYPE_CHECKING:
@@ -62,7 +62,6 @@ INHERITED_METHODS = frozenset(
         "__floordiv__",
         "__invert__",
         "__iter__",
-        "__mod__",
         "__mul__",
         "__neg__",
         "__or__",
@@ -70,7 +69,6 @@ INHERITED_METHODS = frozenset(
         "__radd__",
         "__rand__",
         "__rfloordiv__",
-        "__rmod__",
         "__rmul__",
         "__ror__",
         "__rsub__",
@@ -268,6 +266,24 @@ class PolarsSeries:
                 .get_column(name)
             )
         return self._with_native(self.native.__rfloordiv__(extract_native(other)))
+
+    def __mod__(self, other: Any) -> PolarsSeries:
+        rhs = cast("pl.Series", extract_native(other))
+        native = (
+            floor_mod(self.native, rhs)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__mod__(rhs)
+        )
+        return self._with_native(native)
+
+    def __rmod__(self, other: Any) -> PolarsSeries:
+        lhs = cast("pl.Series", extract_native(other))
+        native = (
+            floor_mod(lhs, self.native)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__rmod__(lhs)
+        )
+        return self._with_native(native)
 
     @property
     def name(self) -> str:
@@ -692,14 +708,12 @@ class PolarsSeries:
     __floordiv__: Method[Self]
     __invert__: Method[Self]
     __iter__: Method[Iterator[Any]]
-    __mod__: Method[Self]
     __mul__: Method[Self]
     __neg__: Method[Self]
     __or__: Method[Self]
     __pow__: Method[Self]
     __radd__: Method[Self]
     __rand__: Method[Self]
-    __rmod__: Method[Self]
     __rmul__: Method[Self]
     __ror__: Method[Self]
     __rsub__: Method[Self]
