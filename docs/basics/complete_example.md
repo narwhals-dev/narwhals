@@ -62,13 +62,13 @@ We're going to take in a dataframe, and return a dataframe of the same type:
     ```py
     from typing import Self
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoFrameT, IntoLazyFrameT
 
 
     class StandardScaler:
         ...
 
-        def transform(self, df: IntoFrameT) -> IntoFrameT:
+        def transform(self, df: IntoFrameT | IntoLazyFrameT) -> IntoFrameT | IntoLazyFrameT:
             df_nw = nw.from_native(df)
             return df_nw.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -80,14 +80,14 @@ We're going to take in a dataframe, and return a dataframe of the same type:
     ```py
     from typing import Self
     import narwhals as nw
-    from narwhals.typing import FrameT
+    from narwhals.typing import FrameT, LazyFrameT
 
 
     class StandardScaler:
         ...
 
         @nw.narwhalify
-        def transform(self, df: FrameT) -> FrameT:
+        def transform(self, df: FrameT | LazyFrameT) -> FrameT | LazyFrameT:
             return df.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
                 for col in self._columns
@@ -108,6 +108,7 @@ Here is our dataframe-agnostic standard scaler:
     import narwhals as nw
     from narwhals.typing import IntoDataFrameT
     from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoLazyFrameT
 
 
     class StandardScaler:
@@ -118,7 +119,7 @@ Here is our dataframe-agnostic standard scaler:
             self._columns = df_nw.columns
             return self
 
-        def transform(self, df: IntoFrameT) -> IntoFrameT:
+        def transform(self, df: IntoFrameT | IntoLazyFrameT) -> IntoFrameT | IntoLazyFrameT:
             df_nw = nw.from_native(df)
             return df_nw.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -132,6 +133,7 @@ Here is our dataframe-agnostic standard scaler:
     import narwhals as nw
     from narwhals.typing import DataFrameT
     from narwhals.typing import FrameT
+    from narwhals.typing import LazyFrameT
 
 
     class StandardScaler:
@@ -143,7 +145,7 @@ Here is our dataframe-agnostic standard scaler:
             return self
 
         @nw.narwhalify
-        def transform(self, df: FrameT) -> FrameT:
+        def transform(self, df: FrameT | LazyFrameT) -> FrameT | LazyFrameT:
             return df.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
                 for col in self._columns

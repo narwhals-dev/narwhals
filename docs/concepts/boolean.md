@@ -9,13 +9,15 @@ For example, if you do `nw.col('a')*2`, then:
 - Null values stay null.
 
 ```python exec="yes" source="above" session="boolean"
+from typing import TypeVar
+
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoFrameT, IntoLazyFrameT
 
 data = {"a": [1.4, None, 4.2]}
 
 
-def multiplication(df: IntoFrameT) -> IntoFrameT:
+def multiplication(df: IntoFrameT | IntoLazyFrameT) -> IntoFrameT | LazyFrameT:
     return nw.from_native(df).with_columns((nw.col("a") * 2).alias("a*2")).to_native()
 ```
 

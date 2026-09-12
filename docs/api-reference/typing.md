@@ -12,6 +12,8 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - FrameT
         - IntoDataFrame
         - IntoDataFrameT
+        - IntoLazyFrame
+        - IntoLazyFrameT
         - IntoExpr
         - IntoFrame
         - IntoFrameT
@@ -21,6 +23,7 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - Backend
         - EagerAllowed
         - LazyAllowed
+        - LazyFrameT
         - IntoDType
         - IntoSchema
         - SizeUnit
@@ -46,12 +49,12 @@ Here's an example:
 ```py
 import polars as pl
 import narwhals as nw
-from narwhals.typing import IntoDataFrameT, DataFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT, DataFrameT, LazyFrameT
 
 df = pl.DataFrame({"a": [1, 2, 3]})
 
 
-def func(df_native: IntoDataFrameT) -> IntoDataFrameT:
+def func(df_native: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
     df = nw.from_native(df_native, eager_only=True)
     return df.select(b=nw.col("a")).to_native()
 
@@ -60,7 +63,7 @@ reveal_type(func(df))
 
 
 @nw.narwhalify(strict=True)
-def func_2(df: DataFrameT) -> DataFrameT:
+def func_2(df: DataFrameT | LazyFrameT) -> DataFrameT | LazyFrameT:
     return df.select(b=nw.col("a"))
 
 

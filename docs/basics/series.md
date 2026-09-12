@@ -25,21 +25,21 @@ This can stay lazy, so we just use expressions:
 === "from/to_native"
     ```python exec="yes" source="above" session="series_ex1"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoFrameT, IntoLazyFrameT
 
 
-    def my_func(df: IntoFrameT) -> IntoFrameT:
+    def my_func(df: IntoFrameT | IntoLazyFrameT) -> IntoFrameT | IntoLazyFrameT:
         return nw.from_native(df).filter(nw.col("a") > 0).to_native()
     ```
 
 === "@narwhalify"
     ```python exec="yes" source="above" session="series_ex1"
     import narwhals as nw
-    from narwhals.typing import FrameT
+    from narwhals.typing import FrameT, LazyFrameT
 
 
     @nw.narwhalify
-    def my_func(df: FrameT) -> FrameT:
+    def my_func(df: FrameT | LazyFrameT) -> FrameT | LazyFrameT:
         return df.filter(nw.col("a") > 0)
     ```
 
@@ -85,21 +85,21 @@ Let's write a dataframe-agnostic function which multiplies the values in column
 === "from/to_native"
     ```python exec="yes" source="above" session="series_ex2"
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoFrameT, IntoLazyFrameT
 
 
-    def my_func(df: IntoFrameT) -> IntoFrameT:
+    def my_func(df: IntoFrameT | IntoLazyFrameT) -> IntoFrameT | IntoLazyFrameT:
         return nw.from_native(df).with_columns(nw.col("a") * 2).to_native()
     ```
 
 === "@narwhalify"
     ```python exec="yes" source="above" session="series_ex2"
     import narwhals as nw
-    from narwhals.typing import FrameT
+    from narwhals.typing import FrameT, LazyFrameT
 
 
     @nw.narwhalify
-    def my_func(df: FrameT) -> FrameT:
+    def my_func(df: FrameT | LazyFrameT) -> FrameT | LazyFrameT:
         return df.with_columns(nw.col("a") * 2)
     ```
 
@@ -142,11 +142,11 @@ values multiplied by 2, we could have used `Expr.alias`:
 
 ```python exec="yes" source="above" session="series_ex2.1"
 import narwhals as nw
-from narwhals.typing import FrameT
+from narwhals.typing import FrameT, LazyFrameT
 
 
 @nw.narwhalify
-def my_func(df: FrameT) -> FrameT:
+def my_func(df: FrameT | LazyFrameT) -> FrameT | LazyFrameT:
     return df.with_columns((nw.col("a") * 2).alias("c"))
 ```
 
