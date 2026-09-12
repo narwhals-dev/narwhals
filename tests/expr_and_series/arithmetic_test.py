@@ -93,7 +93,9 @@ def test_mod_negative_operands(
     request: pytest.FixtureRequest,
 ) -> None:
     if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
-        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+        )
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.col("a") % divisor)
     assert_equal_data(result, {"a": expected})
@@ -113,7 +115,9 @@ def test_rmod_negative_operands(
     if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
         pytest.skip(reason="dask<2024.10 does not implement rmod with negative operands")
     if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
-        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+        )
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.lit(dividend) % nw.col("a"))
     assert_equal_data(result, {"literal": expected})
@@ -142,7 +146,9 @@ def test_arithmetic_series(
     if attr == "__mod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
-        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+        )
 
     data = {"a": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -286,7 +292,9 @@ def test_arithmetic_series_left_literal(
     if attr == "__mod__" and any(
         x in str(constructor_eager) for x in ["pandas_pyarrow", "modin_pyarrow"]
     ):
-        request.applymarker(pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod"))
+        request.applymarker(
+            pytest.mark.xfail(reason="pandas[pyarrow] does not implement mod")
+        )
 
     data = {"a": [1.0, 2.0, 4.0]}
     df = nw.from_native(constructor_eager(data))

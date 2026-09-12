@@ -50,12 +50,7 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
 
     def __mod__(self, other: Self) -> Self:
-        def _mod(expr: Expression, other: Expression) -> Expression:
-            # DuckDB's `%` follows C sign semantics (sign of the dividend),
-            # `floor_mod` restores Python's (sign of the divisor).
-            return floor_mod(expr, other)
-
-        return self._with_binary(_mod, other)
+        return self._with_binary(floor_mod, other)
 
     def __rmod__(self, other: Self) -> Self:
         def _rmod(expr: Expression, other: Expression) -> Expression:

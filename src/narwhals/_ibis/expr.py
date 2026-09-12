@@ -58,21 +58,17 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
 
     def __mod__(self, other: Self) -> Self:
         def _mod(expr: ir.Value, other: ir.Value) -> ir.Value:
-            # ibis compiles `%` to the backend's native modulo, which follows
-            # C sign semantics (sign of the dividend) on the SQL engines
-            # narwhals supports. `floor_mod` restores Python's semantics
-            # (sign of the divisor).
-            numeric_expr = cast("ir.NumericValue", expr)
-            numeric_other = cast("ir.NumericValue", other)
-            return floor_mod(numeric_expr, numeric_other)
+            return floor_mod(
+                cast("ir.NumericValue", expr), cast("ir.NumericValue", other)
+            )
 
         return self._with_binary(_mod, other)
 
     def __rmod__(self, other: Self) -> Self:
         def _rmod(expr: ir.Value, other: ir.Value) -> ir.Value:
-            numeric_expr = cast("ir.NumericValue", expr)
-            numeric_other = cast("ir.NumericValue", other)
-            return floor_mod(numeric_other, numeric_expr)
+            return floor_mod(
+                cast("ir.NumericValue", other), cast("ir.NumericValue", expr)
+            )
 
         return self._with_binary(_rmod, other).alias("literal")
 

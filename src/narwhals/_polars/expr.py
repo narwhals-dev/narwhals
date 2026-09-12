@@ -311,18 +311,20 @@ class PolarsExpr:
         return self._with_native(result)
 
     def __mod__(self, other: Any) -> Self:
-        if self._backend_version < (0, 20, 8):
-            # Polars 0.20.7 and earlier follows C sign semantics for `%`
-            # (sign of the dividend), restore Python's floor-modulus.
-            return self._with_native(floor_mod(self.native, extract_native(other)))
-        return self._with_native(self.native.__mod__(extract_native(other)))
+        native = (
+            floor_mod(self.native, extract_native(other))
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__mod__(extract_native(other))
+        )
+        return self._with_native(native)
 
     def __rmod__(self, other: Any) -> Self:
-        if self._backend_version < (0, 20, 8):
-            # Polars 0.20.7 and earlier follows C sign semantics for `%`
-            # (sign of the dividend), restore Python's floor-modulus.
-            return self._with_native(floor_mod(extract_native(other), self.native))
-        return self._with_native(self.native.__rmod__(extract_native(other)))
+        native = (
+            floor_mod(extract_native(other), self.native)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__rmod__(extract_native(other))
+        )
+        return self._with_native(native)
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())

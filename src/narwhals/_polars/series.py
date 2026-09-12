@@ -269,19 +269,21 @@ class PolarsSeries:
 
     def __mod__(self, other: Any) -> PolarsSeries:
         rhs = cast("pl.Series", extract_native(other))
-        if self._backend_version < (0, 20, 8):
-            # Polars 0.20.7 and earlier follows C sign semantics for `%`
-            # (sign of the dividend), restore Python's floor-modulus.
-            return self._with_native(cast("pl.Series", floor_mod(self.native, rhs)))
-        return self._with_native(self.native.__mod__(rhs))
+        native = (
+            floor_mod(self.native, rhs)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__mod__(rhs)
+        )
+        return self._with_native(native)
 
     def __rmod__(self, other: Any) -> PolarsSeries:
         lhs = cast("pl.Series", extract_native(other))
-        if self._backend_version < (0, 20, 8):
-            # Polars 0.20.7 and earlier follows C sign semantics for `%`
-            # (sign of the dividend), restore Python's floor-modulus.
-            return self._with_native(cast("pl.Series", floor_mod(lhs, self.native)))
-        return self._with_native(self.native.__rmod__(lhs))
+        native = (
+            floor_mod(lhs, self.native)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__rmod__(lhs)
+        )
+        return self._with_native(native)
 
     @property
     def name(self) -> str:

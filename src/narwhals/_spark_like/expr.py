@@ -232,13 +232,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_binary(_floordiv, other)
 
     def __mod__(self, other: Self) -> Self:
-        def _mod(expr: Column, other: Column) -> Column:
-            # Spark's `%` follows C sign semantics (sign of the dividend),
-            # `floor_mod` restores Python's (sign of the divisor), which is
-            # what Spark's `pmod` computes.
-            return floor_mod(expr, other)
-
-        return self._with_binary(_mod, other)
+        return self._with_binary(floor_mod, other)
 
     def __rmod__(self, other: Self) -> Self:
         def _rmod(expr: Column, other: Column) -> Column:
