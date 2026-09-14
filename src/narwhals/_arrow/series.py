@@ -31,7 +31,6 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
-    is_list_of,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
@@ -324,12 +323,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
 
     def filter(self, predicate: ArrowSeries | list[bool | None]) -> Self:
-        other_native: Any
-        if not is_list_of(predicate, bool):
-            _, other_native = extract_native(self, predicate)
-        else:
-            other_native = predicate
-        return self._with_native(self.native.filter(other_native))  # pyrefly: ignore[bad-argument-type]
+        mask = predicate.native if isinstance(predicate, ArrowSeries) else predicate
+        return self._with_native(self.native.filter(mask))
 
     def first(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
         result = self.native[0] if len(self.native) else None
