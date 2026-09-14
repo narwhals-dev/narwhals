@@ -18,7 +18,7 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation
+from narwhals._utils import Implementation, check_column_names_are_unique
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -274,6 +274,7 @@ class ArrowNamespace(
     def struct(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
             series = tuple(chain.from_iterable(expr(df) for expr in exprs))
+            check_column_names_are_unique([s.name for s in series])
             name = series[0].name
 
             struct_array = pc.make_struct(

@@ -44,14 +44,17 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+    from typing import TypeVar
 
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
     from narwhals.dtypes import DType
-    from narwhals.stable.v1.typing import IntoDataFrameT
+    from narwhals.stable.v1.typing import FrameT as StableFrameT, IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
     from tests.utils import Constructor, ConstructorEager
+
+    FrameT = TypeVar("FrameT", nw_v1.Series[Any], nw_v1.DataFrame[Any])
 
 
 def test_toplevel() -> None:
@@ -225,9 +228,35 @@ def test_concat() -> None:
     result = nw_v1.concat([df, df], how="vertical")
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
-    assert isinstance(result, nw_v1.DataFrame)
     if TYPE_CHECKING:
+        # Check the inferred return type before isinstance narrows it.
         assert_type(result, nw_v1.DataFrame[Any])
+    assert isinstance(result, nw_v1.DataFrame)
+
+    def identity(x: FrameT) -> FrameT:
+        return x
+
+    identity(nw_v1.concat([df], how="horizontal"))
+
+    def concat_generic(frame: StableFrameT) -> StableFrameT:
+        return nw_v1.concat([frame, frame])
+
+    def concat_sequence(frames: Sequence[StableFrameT]) -> StableFrameT:
+        return nw_v1.concat(frames)
+
+    assert_equal_data(concat_generic(df), expected)
+    assert_equal_data(concat_sequence([df, df]), expected)
+    lazy_result = concat_generic(df.lazy())
+    if TYPE_CHECKING:
+        assert_type(concat_generic(df), nw_v1.DataFrame[Any])
+        assert_type(lazy_result, nw_v1.LazyFrame[Any])
+        assert_type(nw_v1.concat([df.lazy()]), nw_v1.LazyFrame[Any])
+        # Mixing eager and lazy must stay a type error. `warn_unused_ignores` (via
+        # `strict`) makes this self-verifying: the ignore goes unused if it regresses.
+        nw_v1.concat([df, df.lazy()])  # type: ignore[type-var]
+    assert isinstance(lazy_result, nw_v1.LazyFrame)
+    assert_equal_data(lazy_result.collect(), expected)
+    assert_equal_data(concat_sequence([df.lazy(), df.lazy()]).collect(), expected)
 
 
 def test_to_dict() -> None:
@@ -424,14 +453,14 @@ def test_is_native_series(is_native_series: Callable[[Any], Any]) -> None:
 
 
 def test_get_level() -> None:
-    pytest.importorskip("polars")
-    import polars as pl
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
 
-    df = pl.DataFrame({"a": [1, 2, 3]})
-    assert nw_v1.get_level(nw_v1.from_native(df)) == "full"
+    tbl = pa.table({"a": [1, 2, 3]})
+    assert nw_v1.get_level(nw_v1.from_native(tbl)) == "full"
     assert (
         nw_v1.get_level(
-            nw_v1.from_native(df.__dataframe__(), eager_or_interchange_only=True)
+            nw_v1.from_native(tbl.__dataframe__(), eager_or_interchange_only=True)
         )
         == "interchange"
     )
@@ -1247,3 +1276,82 @@ def test_schema_from_generator() -> None:
     )
     assert schema == nw_v1.Schema({"a": nw_v1.Int64(), "b": nw_v1.String()})
     assert schema._version is Version.V1
+
+
+def test_get_categories_v1(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    expected = {"a": ["one", "two"]}
+    df = nw_v1.from_native(constructor_eager(data), eager_only=True)
+
+    # This must not warn, neither from Narwhals nor from Polars.
+    result = df.select(nw_v1.col("a").cast(nw_v1.Categorical).cat.get_categories())
+    result_series = df["a"].cast(nw_v1.Categorical).cat.get_categories()
+
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data({"a": result_series.sort()}, expected)
+
+
+def test_get_categories_lazy_v1(constructor_eager: ConstructorEager) -> None:
+    # `stable.v1` allows length-changing expressions in `LazyFrame.select`.
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (15, 0, 0):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    lf = nw_v1.from_native(constructor_eager(data)).lazy()
+    expr = nw_v1.col("a").cast(nw_v1.Categorical).cat.get_categories()
+    assert_equal_data(lf.select(expr).sort("a").collect(), {"a": ["one", "two"]})
+
+
+def test_get_categories_enum_polars_v1() -> None:
+    # `Enum.get_categories` always returns the *declared* categories, in
+    # declared order, regardless of which ones are actually present in the
+    # data (matching Polars' own `cat.get_categories` behavior for `Enum`).
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
+    result = nw_v1.from_native(s_native, series_only=True).cat.get_categories()
+    assert result.dtype == nw_v1.String
+    assert result.to_list() == ["Polar", "Panda", "X"]
+
+    df_native = pl.DataFrame(
+        {"a": ["Panda", "Polar"]}, schema={"a": pl.Enum(["Polar", "Panda"])}
+    )
+    df = nw_v1.from_native(df_native, eager_only=True)
+    result = df.select(nw_v1.col("a").cat.get_categories())
+    assert_equal_data(result, {"a": ["Polar", "Panda"]})
+
+
+def test_selectors_are_stable_v1(constructor_eager: ConstructorEager) -> None:
+    # Selectors built from `narwhals.stable.v1.selectors` must behave like `v1`
+    # expressions, not like main-namespace ones.
+    selector = nw_v1.selectors.numeric()
+    assert isinstance(selector, nw_v1.Expr)
+    assert isinstance(selector | nw_v1.selectors.string(), nw_v1.Expr)
+    assert isinstance(selector + 1, nw_v1.Expr)
+
+    df = nw_v1.from_native(constructor_eager({"a": [3, 1, 2]}), eager_only=True)
+    # `Expr.head` only exists in `stable.v1`.
+    assert_equal_data(df.select(nw_v1.selectors.numeric().sort().head(2)), {"a": [1, 2]})
+
+
+def test_selectors_all_stableified_v1() -> None:
+    args: dict[str, tuple[Any, ...]] = {
+        "all": (),
+        "boolean": (),
+        "by_dtype": (nw_v1.Int64,),
+        "categorical": (),
+        "datetime": (),
+        "enum": (),
+        "matches": ("^a$",),
+        "numeric": (),
+        "string": (),
+    }
+    # Fail if a new selector is added but not covered here.
+    assert set(args) == set(nw_v1.selectors.__all__)
+
+    for name, arg in args.items():
+        assert isinstance(getattr(nw_v1.selectors, name)(*arg), nw_v1.Expr), name

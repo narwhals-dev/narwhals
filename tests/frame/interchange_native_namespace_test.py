@@ -6,9 +6,6 @@ import pytest
 
 import narwhals.stable.v1 as nw_v1
 
-pytest.importorskip("polars")
-import polars as pl
-
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
@@ -16,8 +13,10 @@ data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y",
 
 
 def test_interchange() -> None:
-    df_pl = pl.DataFrame(data)
-    df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df = nw_v1.from_native(pa.table(data).__dataframe__(), eager_or_interchange_only=True)
     series = df["a"]
 
     with pytest.raises(
@@ -38,7 +37,9 @@ def test_ibis(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     pytest.importorskip("ibis")
+    pytest.importorskip("polars")
     import ibis
+    import polars as pl
 
     try:
         ibis.set_backend("duckdb")
@@ -58,7 +59,9 @@ def test_ibis(
 
 def test_duckdb() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
     import duckdb
+    import polars as pl
 
     df_pl = pl.DataFrame(data)  # noqa: F841
 

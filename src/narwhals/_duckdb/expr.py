@@ -21,7 +21,7 @@ from narwhals._duckdb.utils import (
     window_expression,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool, floor_mod
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -48,6 +48,15 @@ if TYPE_CHECKING:
 
 class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
+
+    def __mod__(self, other: Self) -> Self:
+        return self._with_binary(floor_mod, other)
+
+    def __rmod__(self, other: Self) -> Self:
+        def _rmod(expr: Expression, other: Expression) -> Expression:
+            return floor_mod(other, expr)
+
+        return self._with_binary(_rmod, other).alias("literal")
 
     def __init__(
         self,

@@ -40,6 +40,8 @@ class PandasLikeSeriesStringNamespace(
     def replace(
         self, value: PandasLikeSeries, pattern: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
+        if n == 0:
+            return self.compliant
         _, value_native = align_and_extract_native(self.compliant, value)
         if not isinstance(value_native, str):
             msg = f"{self.compliant._implementation} backed `.str.replace` only supports str replacement values"
@@ -87,7 +89,7 @@ class PandasLikeSeriesStringNamespace(
         )
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
-        stop = offset + length if length else None
+        stop = offset + length if length is not None else None
         return self.with_native(self.native.str.slice(start=offset, stop=stop))
 
     def split(self, by: str) -> PandasLikeSeries:
@@ -138,6 +140,8 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.title())
 
     def zfill(self, width: int) -> PandasLikeSeries:
+        if width == 0:
+            return self.compliant
         return self.with_native(self.native.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> PandasLikeSeries:

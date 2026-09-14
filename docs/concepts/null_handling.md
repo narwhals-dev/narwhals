@@ -41,10 +41,7 @@ def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
     return (
         nw.from_native(df)
         .with_columns(a=nw.col("a") / nw.col("a"))
-        .with_columns(
-            a_is_null=nw.col("a").is_null(),
-            a_is_nan=nw.col("a").is_nan(),
-        )
+        .with_columns(a_is_null=nw.col("a").is_null(), a_is_nan=nw.col("a").is_nan())
     ).to_native()
 ```
 
