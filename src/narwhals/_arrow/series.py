@@ -1082,7 +1082,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             raise InvalidOperationError(msg) from exc
 
     def log(self, base: float) -> Self:
-        return self._with_native(pc.logb(self.native, lit(base)))  # pyrefly: ignore[bad-argument-type]
+        return self._with_native(pc.logb(self.native, lit(base)))
 
     def exp(self) -> Self:
         return self._with_native(pc.exp(self.native))
