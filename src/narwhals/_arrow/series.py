@@ -172,10 +172,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         version = context._version
         if dtype is not None:
             dtype_pa: pa.DataType | None = narwhals_to_native_dtype(dtype, version)
-            if is_array_or_scalar(data):
-                data = data.cast(dtype_pa)  # pyrefly: ignore[bad-assignment, bad-specialization]
-                dtype_pa = None
-            native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
+            if dtype_pa is not None and is_array_or_scalar(data):
+                casted = data.cast(dtype_pa)
+                native = casted if cls._is_native(casted) else chunked_array(casted)
+            else:
+                native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
         else:
             native = chunked_array([data])
         return cls.from_native(native, context=context, name=name)
