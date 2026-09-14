@@ -322,4 +322,4 @@ class EagerNamespace(
             native = self._concat_diagonal(dfs)
         else:  # pragma: no cover
             raise NotImplementedError
-        return self._dataframe.from_native(native, context=self)  # pyrefly: ignore[bad-argument-type]
+        return self._dataframe.from_native(native, context=self)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md

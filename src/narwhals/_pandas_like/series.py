@@ -901,8 +901,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         if has_nulls:
             *cols, null_col_pd = list(result.columns)
             output_order = [null_col_pd, *cols]
+            selected = select_columns_by_name(result, output_order, self._implementation)
             result = rename(
-                select_columns_by_name(result, output_order, self._implementation),  # pyrefly: ignore[bad-argument-type]
+                selected,
                 columns={null_col_pd: null_col_pl},
                 implementation=self._implementation,
             )

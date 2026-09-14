@@ -310,6 +310,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 assert "reverse" not in scalar_kwargs  # noqa: S101
                 reverse = False
 
+            sorting_indices: PandasLikeSeries | None = None
             if order_by:
                 columns = list(set(partition_by).union(aliases).union(order_by))
                 token = generate_temporary_column_name(8, columns)
@@ -380,12 +381,12 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
             result_frame = df._with_native(res_native)
             results = [result_frame.get_column(name) for name in aliases]
-            if order_by:
+            if sorting_indices is not None:
                 with warnings.catch_warnings():
                     # Ignore settingwithcopy warnings/errors, they're false-positives here.
                     warnings.filterwarnings("ignore", message="\n.*copy of a slice")
                     for s in results:
-                        s.scatter(sorting_indices, s, in_place=True)  # pyrefly: ignore[unbound-name]
+                        s.scatter(sorting_indices, s, in_place=True)
                     return results
             if reverse:
                 return [s._gather_slice(slice(None, None, -1)) for s in results]

@@ -759,14 +759,11 @@ class PandasLikeDataFrame(
         Notice that a native object is returned.
         """
         implementation = self._implementation
+        selected = select_columns_by_name(
+            other.native, column_names=columns_to_select, implementation=implementation
+        )
         return rename(
-            select_columns_by_name(  # pyrefly: ignore[bad-argument-type]
-                other.native,
-                column_names=columns_to_select,
-                implementation=implementation,
-            ),
-            columns=columns_mapping,
-            implementation=implementation,
+            selected, columns=columns_mapping, implementation=implementation
         ).drop_duplicates()
 
     def join(
