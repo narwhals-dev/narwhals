@@ -1000,7 +1000,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 (rolling_sum_sq - (rolling_sum**2 / count_in_window)).native,
                 None,
             )
-        ) / self._with_native(pc.max_element_wise((count_in_window - ddof).native, 0))  # pyrefly: ignore[no-matching-overload]
+        ) / self._with_native(
+            pc.max_element_wise((count_in_window - ddof).native, lit(0))
+        )
 
         return result._gather_slice(slice(offset, None, None))
 
@@ -1184,7 +1186,7 @@ class _ArrowHist(
             is_between_bins = pc.and_(
                 pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
             )
-            count = pc.sum(is_between_bins.cast(pa.uint8()))  # pyrefly: ignore[bad-specialization]
+            count = pc.sum(is_between_bins.cast(pa.uint8()))  # pyrefly: ignore[bad-specialization]  # https://github.com/facebook/pyrefly/issues/4923
             if self._breakpoint:
                 return {"breakpoint": [bins[-1]], "count": [count]}
             return {"count": [count]}
