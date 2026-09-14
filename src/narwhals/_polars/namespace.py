@@ -269,9 +269,9 @@ class PolarsNamespace:
     #    i. None of that is useful here
     # 2. We don't have a `PolarsSelector` abstraction, and just use `PolarsExpr`
     @property
-    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
+    def selectors(self) -> CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]:  # pyrefly: ignore[bad-specialization]  # https://github.com/facebook/pyrefly/issues/4656
         return cast(
-            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",  # pyrefly: ignore[bad-specialization]  # pyrefly-issues/01-self-nested-generic.md
+            "CompliantSelectorNamespace[PolarsDataFrame, PolarsSeries]",  # pyrefly: ignore[bad-specialization]  # https://github.com/facebook/pyrefly/issues/4656
             PolarsSelectorNamespace(self),
         )
 

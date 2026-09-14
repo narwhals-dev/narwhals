@@ -1103,7 +1103,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         return (
-            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bins(bins)
             .to_frame()
         )
@@ -1112,7 +1112,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         return (
-            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bin_count(bin_count)
             .to_frame()
         )
@@ -1240,7 +1240,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeSeriesCatNamespace(self)
 
     @property
-    def list(self) -> PandasLikeSeriesListNamespace:  # pyrefly: ignore[bad-override]  # pyrefly-issues/01-self-nested-generic.md
+    def list(self) -> PandasLikeSeriesListNamespace:  # pyrefly: ignore[bad-override]  # https://github.com/facebook/pyrefly/issues/4656
         if not hasattr(self.native, "list"):
             msg = "Series must be of PyArrow List type to support list namespace."
             raise TypeError(msg)
@@ -1255,7 +1255,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
 
 class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
-    _series: PandasLikeSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # pyrefly-issues/01-self-nested-generic.md
+    _series: PandasLikeSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # https://github.com/facebook/pyrefly/issues/4656
 
     def to_frame(self) -> PandasLikeDataFrame:
         from_native = self._series.__narwhals_namespace__()._dataframe.from_native

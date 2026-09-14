@@ -589,7 +589,7 @@ class DaskExpr(
             plx = self.__narwhals_namespace__()
             if meta.prev is not None:
                 df = df.with_columns(cast("DaskExpr", evaluate_nodes(nodes[:-1], plx)))
-            _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
 
             with warnings.catch_warnings():
                 # https://github.com/dask/dask/issues/11804

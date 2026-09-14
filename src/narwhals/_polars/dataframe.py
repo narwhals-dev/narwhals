@@ -592,7 +592,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 raise ValueError(msg)
 
             return SparkLikeLazyFrame._from_compliant_dataframe(
-                self,  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+                self,  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
                 session=session,
                 implementation=backend,
                 version=self._version,

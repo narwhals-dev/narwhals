@@ -299,7 +299,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 df = df.with_columns(
                     cast("PandasLikeExpr", evaluate_nodes(nodes[:-1], plx))
                 )
-            _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             if function_name == "cum_count":
                 df = df.with_columns(~plx.col(*aliases).is_null())
 

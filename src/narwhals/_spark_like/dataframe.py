@@ -261,7 +261,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.agg(*new_columns_list))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
         return self._with_native(self.native.agg(*new_columns_list))
 
     def select(self, *exprs: SparkLikeExpr) -> Self:
@@ -271,7 +271,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.select(*new_columns_list))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
         return self._with_native(self.native.select(*new_columns_list))
 
     def with_columns(self, *exprs: SparkLikeExpr) -> Self:
@@ -280,7 +280,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.withColumns(dict(new_columns)))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
 
         return self._with_native(self.native.withColumns(dict(new_columns)))
 
@@ -291,7 +291,7 @@ class SparkLikeLazyFrame(
             try:
                 return self._with_native(self.native.where(condition))
             except Exception as e:  # noqa: BLE001
-                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+                raise catch_pyspark_sql_exception(e, self) from None  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
         return self._with_native(self.native.where(condition))
 
     @property
@@ -602,7 +602,10 @@ class SparkLikeLazyFrame(
             data = tuple(frame.iter_rows(named=True, buffer_size=512))
 
         return cls(
-            session.createDataFrame(data),  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/03-any-annotation-not-honored-across-branches.md
+            # `SparkSession` is sqlframe's generic `Session[...]` protocol, whose
+            # `createDataFrame` overloads don't cover the pyarrow-Table/tuple-of-dict
+            # shapes passed here for the real pyspark/no-pandas backends.
+            session.createDataFrame(data),  # pyrefly: ignore[bad-argument-type]
             version=version,
             implementation=implementation,
             validate_backend_version=True,

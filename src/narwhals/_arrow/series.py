@@ -1047,7 +1047,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bins(bins)
             .to_frame()
         )
@@ -1056,7 +1056,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/01-self-nested-generic.md
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bin_count(bin_count)
             .to_frame()
         )
@@ -1114,7 +1114,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesStringNamespace(self)
 
     @property
-    def list(self) -> ArrowSeriesListNamespace:  # pyrefly: ignore[bad-override]  # pyrefly-issues/01-self-nested-generic.md
+    def list(self) -> ArrowSeriesListNamespace:  # pyrefly: ignore[bad-override]  # https://github.com/facebook/pyrefly/issues/4656
         return ArrowSeriesListNamespace(self)
 
     @property
@@ -1127,7 +1127,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 class _ArrowHist(
     EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
 ):
-    _series: ArrowSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # pyrefly-issues/01-self-nested-generic.md
+    _series: ArrowSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # https://github.com/facebook/pyrefly/issues/4656
 
     def to_frame(self) -> ArrowDataFrame:
         # NOTE: Constructor typing is too strict for `TypedDict`

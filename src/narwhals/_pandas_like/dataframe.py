@@ -883,7 +883,7 @@ class PandasLikeDataFrame(
     ) -> CompliantLazyFrameAny:
         pandas_df = self.to_pandas()
         if backend is None:
-            return self  # pyrefly: ignore[bad-return]  # pyrefly-issues/01-self-nested-generic.md
+            return self  # pyrefly: ignore[bad-return]  # https://github.com/facebook/pyrefly/issues/4656
         if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
