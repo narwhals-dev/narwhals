@@ -262,7 +262,7 @@ class EagerNamespace(
             return [then_s._with_native(result)]
 
         return self._expr._from_callable(
-            func=func,  # pyrefly: ignore[bad-argument-type]
+            func=func,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
             evaluate_output_names=getattr(
                 then, "_evaluate_output_names", lambda _df: ["literal"]
             ),
