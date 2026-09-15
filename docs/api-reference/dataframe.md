@@ -11,6 +11,7 @@
         - columns
         - drop
         - drop_nulls
+        - equals
         - estimated_size
         - explode
         - filter
