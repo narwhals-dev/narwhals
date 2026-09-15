@@ -159,10 +159,13 @@ class PandasLikeSeries(EagerSeries[Any]):
             self.native, implementation=self._implementation, version=version
         )
 
-    def _with_native(self, series: Any) -> Self:
-        return self.__class__(
+    def _with_native(self, series: Any, *, preserve_broadcast: bool = False) -> Self:
+        result = self.__class__(
             series, implementation=self._implementation, version=self._version
         )
+        if preserve_broadcast:
+            result._broadcast = self._broadcast
+        return result
 
     @classmethod
     def from_iterable(
@@ -314,14 +317,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             # Avoid dealing with pandas' type-system if we can. Note that it's only
             # safe to do this if we're not starting with object dtype, see tests/expr_and_series/cast_test.py::test_cast_object_pandas
             # for an example of why.
-            return self._with_native(self.native)
+            return self._with_native(self.native, preserve_broadcast=True)
         pd_dtype = narwhals_to_native_dtype(
             dtype,
             dtype_backend=get_dtype_backend(self.native.dtype, self._implementation),
             implementation=self._implementation,
             version=self._version,
         )
-        return self._with_native(self.native.astype(pd_dtype))
+        return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
@@ -409,6 +412,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def _with_binary(self, op: Callable[..., pd.Series], other: Any) -> Self:
         ser, other_native = align_and_extract_native(self, other)
+        preserve_broadcast = self._broadcast and getattr(other, "_broadcast", True)
         try:
             res = op(ser, other_native)
         except TypeError:  # pragma: no cover
@@ -425,7 +429,9 @@ class PandasLikeSeries(EagerSeries[Any]):
                 res = binary_string_sum_fallback(ser, other_native, pdx)
             else:
                 raise
-        return self._with_native(res).alias(self.name)
+        return self._with_native(res, preserve_broadcast=preserve_broadcast).alias(
+            self.name
+        )
 
     def _with_binary_right(self, op: Callable[..., pd.Series], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
@@ -577,7 +583,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     # Transformations
 
     def is_null(self) -> Self:
-        return self._with_native(self.native.isna())
+        return self._with_native(self.native.isna(), preserve_broadcast=True)
 
     def is_nan(self) -> Self:
         ser = self.native
@@ -585,7 +591,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             msg = f"`.is_nan` only supported for numeric dtype and not {self.dtype}, did you mean `.is_null`?"
             raise InvalidOperationError(msg)
         # TODO(Unassigned): If/when pandas exposes an API which distinguishes NaN vs null, use that.
-        return self._with_native(ser != ser)  # noqa: PLR0124
+        return self._with_native(ser != ser, preserve_broadcast=True)  # noqa: PLR0124
 
     def fill_null(
         self,
@@ -606,12 +612,15 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
             if value is not None:
                 _, native_value = align_and_extract_native(self, value)
-                res_ser = self._with_native(ser.fillna(value=native_value, **kwargs))
+                res_ser = self._with_native(
+                    ser.fillna(value=native_value, **kwargs), preserve_broadcast=True
+                )
             else:
                 res_ser = self._with_native(
                     ser.ffill(limit=limit, **kwargs)
                     if strategy == "forward"
-                    else ser.bfill(limit=limit, **kwargs)
+                    else ser.bfill(limit=limit, **kwargs),
+                    preserve_broadcast=True,
                 )
         return res_ser
 
@@ -635,7 +644,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         else:
             mask = mask.fillna(False)
 
-        return self._with_native(s.mask(mask, fill))
+        return self._with_native(s.mask(mask, fill), preserve_broadcast=True)
 
     def drop_nulls(self) -> Self:
         return self._with_native(self.native.dropna())
@@ -674,12 +683,12 @@ class PandasLikeSeries(EagerSeries[Any]):
 
     def replace_strict(
         self,
-        default: Self | NoDefault,
+        default: PandasLikeSeries | NoDefault,
         old: Sequence[Any],
         new: Sequence[Any],
         *,
         return_dtype: IntoDType | None,
-    ) -> Self:
+    ) -> PandasLikeSeries:
         namespace = self.__native_namespace__()
         array_funcs = self._array_funcs
         native = self.native
@@ -736,7 +745,8 @@ class PandasLikeSeries(EagerSeries[Any]):
     def alias(self, name: str | Hashable) -> Self:
         if name != self.name:
             return self._with_native(
-                rename(self.native, name, implementation=self._implementation)
+                rename(self.native, name, implementation=self._implementation),
+                preserve_broadcast=True,
             )
         return self
 
@@ -831,10 +841,12 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> float:
         return self.native.quantile(q=quantile, interpolation=interpolation)
 
-    def zip_with(self, mask: Self, other: Any) -> Self:
-        ser, mask = self._align_full_broadcast(self, mask)
-        _, other_native = align_and_extract_native(ser, other)
-        return ser._with_native(ser.native.where(mask.native, other_native))
+    def zip_with(self, mask: Any, other: Any) -> Self:
+        ser = self.native
+        _, mask = align_and_extract_native(self, mask)
+        _, other = align_and_extract_native(self, other)
+        res = ser.where(mask, other)
+        return self._with_native(res)
 
     def head(self, n: int) -> Self:
         return self._with_native(self.native.head(n))

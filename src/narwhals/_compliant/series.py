@@ -224,13 +224,16 @@ class EagerSeries(CompliantSeries[NativeSeriesT], Protocol[NativeSeriesT]):
     def _from_scalar(self, value: Any) -> Self:
         return self.from_iterable([value], name=self.name, context=self)
 
-    def _with_native(self, series: NativeSeriesT) -> Self:
+    def _with_native(
+        self, series: NativeSeriesT, *, preserve_broadcast: bool = False
+    ) -> Self:
         """Return a new `CompliantSeries`, wrapping the native `series`.
 
-        The result never carries `_broadcast`: the flag is set once, by
-        `EagerExpr.broadcast`, on the final series of a scalar-like expression.
-        Code that combines such series by hand aligns them first with
-        `_align_full_broadcast`.
+        In cases when operations are known to not affect whether a result should
+        be broadcast, we can pass `preserve_broadcast=True`.
+        Set this with care - it should only be set for unary expressions which don't
+        change length or order, such as `.alias` or `.fill_null`. If in doubt, don't
+        set it, you probably don't need it.
         """
         ...
 

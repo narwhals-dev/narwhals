@@ -94,8 +94,7 @@ class PandasLikeNamespace(
 
     def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
+            series = (s for _expr in exprs for s in _expr(df))
             return [
                 reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
             ]
@@ -172,8 +171,7 @@ class PandasLikeNamespace(
     # --- horizontal ---
     def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            it = align(*chain.from_iterable(expr(df) for expr in exprs))
+            it = chain.from_iterable(expr(df) for expr in exprs)
             native_series = (s.fill_null(0, None, None) for s in it)
             return [reduce(operator.add, native_series)]
 
@@ -188,8 +186,7 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, ignore_nulls: bool
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
+            series = [s for _expr in exprs for s in _expr(df)]
             if not ignore_nulls and any(
                 s.native.dtype == "object" and s.is_null().any() for s in series
             ):
@@ -219,8 +216,7 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, ignore_nulls: bool
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*(s for _expr in exprs for s in _expr(df)))
+            series = [s for _expr in exprs for s in _expr(df)]
             if not ignore_nulls and any(
                 s.native.dtype == "object" and s.is_null().any() for s in series
             ):
@@ -248,8 +244,7 @@ class PandasLikeNamespace(
 
     def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            expr_results = align(*(s for _expr in exprs for s in _expr(df)))
+            expr_results = [s for _expr in exprs for s in _expr(df)]
             series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             non_na = (1 - s.is_null() for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
@@ -381,8 +376,7 @@ class PandasLikeNamespace(
         string = self._version.dtypes.String()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            align = self._series._align_full_broadcast
-            expr_results = align(*(s for _expr in exprs for s in _expr(df)))
+            expr_results = [s for _expr in exprs for s in _expr(df)]
             series = [s.cast(string) for s in expr_results]
             null_mask = [s.is_null() for s in expr_results]
 
@@ -392,17 +386,16 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
-                # NOTE: Trying to help `mypy` later
-                # error: Cannot determine type of "values"  [has-type]
-                values: list[PandasLikeSeries]
-                init_value, *values = (
-                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask, strict=True)
-                )
-                sep_array = init_value._with_native(
+                # Literals stay scalars: `fill_null` and the binary ops extract them.
+                # Only the boolean masks are aligned to full length, which is cheap
+                # and is what `zip_with` needs.
+                init_value, *values = (s.fill_null("", None, None) for s in series)
+                null_mask = self._series._align_full_broadcast(*null_mask)
+                sep_array = null_mask[0]._with_native(
                     init_value.__native_namespace__().Series(
                         separator,
                         name="sep",
-                        index=init_value.native.index,
+                        index=null_mask[0].native.index,
                         dtype=init_value.native.dtype,
                     )
                 )

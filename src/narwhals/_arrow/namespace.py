@@ -12,7 +12,11 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
+from narwhals._arrow.utils import (
+    build_list_array,
+    cast_to_comparable_string_types,
+    chunked_array,
+)
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -108,8 +112,7 @@ class ArrowNamespace(
 
     def all_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*chain.from_iterable(e(df) for e in exprs))
+            series: Iterator[ArrowSeries] = chain.from_iterable(e(df) for e in exprs)
             if ignore_nulls:
                 series = (s.fill_null(True, None, None) for s in series)
             return [reduce(operator.and_, series)]
@@ -123,8 +126,7 @@ class ArrowNamespace(
 
     def any_horizontal(self, *exprs: ArrowExpr, ignore_nulls: bool) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            series = align(*chain.from_iterable(e(df) for e in exprs))
+            series: Iterator[ArrowSeries] = chain.from_iterable(e(df) for e in exprs)
             if ignore_nulls:
                 series = (s.fill_null(False, None, None) for s in series)
             return [reduce(operator.or_, series)]
@@ -138,8 +140,7 @@ class ArrowNamespace(
 
     def sum_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            it = align(*chain.from_iterable(expr(df) for expr in exprs))
+            it = chain.from_iterable(expr(df) for expr in exprs)
             series = (s.fill_null(0, strategy=None, limit=None) for s in it)
             return [reduce(operator.add, series)]
 
@@ -154,8 +155,7 @@ class ArrowNamespace(
         int_64 = self._version.dtypes.Int64()
 
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            expr_results = align(*chain.from_iterable(expr(df) for expr in exprs))
+            expr_results = tuple(chain.from_iterable(expr(df) for expr in exprs))
             series = [s.fill_null(0, strategy=None, limit=None) for s in expr_results]
             non_na = [1 - s.is_null().cast(int_64) for s in expr_results]
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
@@ -169,13 +169,12 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.min_element_wise, [s.native for s in series], init_series.native
-            )
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            native = reduce(pc.min_element_wise, self.extract_native(*series))
             return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
+                ArrowSeries(
+                    chunked_array(native), name=series[0].name, version=self._version
+                )
             ]
 
         return self._expr._from_callable(
@@ -187,13 +186,12 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            align = self._series._align_full_broadcast
-            init_series, *series = align(*chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.max_element_wise, [s.native for s in series], init_series.native
-            )
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            native = reduce(pc.max_element_wise, self.extract_native(*series))
             return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
+                ArrowSeries(
+                    chunked_array(native), name=series[0].name, version=self._version
+                )
             ]
 
         return self._expr._from_callable(
