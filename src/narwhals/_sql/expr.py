@@ -375,12 +375,6 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def __rpow__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: other**expr, other).alias("literal")
 
-    def __mod__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: expr.__mod__(other), other)
-
-    def __rmod__(self, other: Self) -> Self:
-        return self._with_binary(lambda expr, other: other % expr, other).alias("literal")
-
     def __ge__(self, other: Self) -> Self:
         return self._with_binary(lambda expr, other: expr.__ge__(other), other)
 
