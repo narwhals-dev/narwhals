@@ -386,10 +386,15 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
-                # Literals stay scalars: `fill_null` and the binary ops extract them.
-                # Only the boolean masks are aligned to full length, which is cheap
-                # and is what `zip_with` needs.
-                init_value, *values = (s.fill_null("", None, None) for s in series)
+                # Literals stay scalars: blanking keeps the flag, the binary ops
+                # extract them. Only the boolean masks are aligned to full length,
+                # which is cheap and is what `zip_with` needs for the separators.
+                init_value, *values = (
+                    s._with_native(
+                        s.native.where(~nm.native, ""), preserve_broadcast=True
+                    )
+                    for s, nm in zip(series, null_mask, strict=True)
+                )
                 null_mask = self._series._align_full_broadcast(*null_mask)
                 sep_array = null_mask[0]._with_native(
                     init_value.__native_namespace__().Series(
