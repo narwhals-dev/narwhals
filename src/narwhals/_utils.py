@@ -946,7 +946,9 @@ def maybe_set_index(
             For dataframes, only one of `column_names` and `index` can be specified but
             not both. If `column_names` is passed and `df` is a Series, then a
             `ValueError` is raised.
-        index: series or list of series to set as index.
+        index: series or list of series to set as index. A list of values
+            (rather than a list of series) is also accepted, in which case the
+            values are used directly as the new index.
 
     Raises:
         ValueError: If one of the following conditions happens
@@ -998,6 +1000,20 @@ def maybe_set_index(
         keys = column_names
 
     if is_pandas_like_dataframe(native_obj):
+        if (
+            isinstance(keys, list)
+            and keys
+            and all(not isinstance(key, Iterable) for key in keys)
+        ):
+            # A list of values (rather than a list of Series) is used directly
+            # as the new index. Wrap it in a native Index so the values aren't
+            # mistaken for column names. Lists containing strings keep their
+            # existing meaning (column names), and lists containing Series keep
+            # theirs (levels of a MultiIndex).
+            native_namespace = (
+                df_any._compliant_frame._implementation.to_native_namespace()
+            )
+            keys = native_namespace.Index(keys)
         return df_any._with_compliant(
             df_any._compliant_frame._with_native(native_obj.set_index(keys))
         )

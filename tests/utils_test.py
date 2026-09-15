@@ -191,6 +191,27 @@ def test_maybe_set_index_pandas_either_index_or_column_names() -> None:
         nw.maybe_set_index(df)
 
 
+def test_maybe_set_index_pandas_list_of_values() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/2125
+    # A list of values (rather than a list of Series) is used directly
+    # as the new index.
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2]}))
+    result = nw.maybe_set_index(df, index=[1, 4, 5])  # type: ignore[arg-type]
+    expected = pd.DataFrame(
+        {"a": [1, 2, 3], "b": [1, 0, 2], "i": [0, 1, 2]}, index=[1, 4, 5]
+    )
+    assert_frame_equal(nw.to_native(result), expected)
+
+
+def test_maybe_set_index_pandas_list_of_column_names_unchanged() -> None:
+    # A list of strings keeps its existing meaning: names of the columns
+    # to use as (levels of) the new index.
+    df = nw.from_native(pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}))
+    result = nw.maybe_set_index(df, index=["a", "b"])  # type: ignore[arg-type]
+    expected = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]}).set_index(["a", "b"])
+    assert_frame_equal(nw.to_native(result), expected)
+
+
 def test_maybe_get_index_pandas() -> None:
     pandas_df = pd.DataFrame({"a": [1, 2, 3]}, index=[1, 2, 0])
     result = cast("pd.Index[Any]", nw.maybe_get_index(nw.from_native(pandas_df)))
