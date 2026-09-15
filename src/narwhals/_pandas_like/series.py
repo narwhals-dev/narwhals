@@ -209,7 +209,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         target_length = max(
-            ln for ln, s in zip(lengths, series, strict=False) if not s._broadcast
+            length for length, s in zip(lengths, series, strict=False) if not s._broadcast
         )
         idx = series[lengths.index(target_length)].native.index
         reindexed = []
@@ -353,20 +353,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, lower_bound: Any, upper_bound: Any, closed: ClosedInterval
     ) -> Self:
         ser = self.native
-        _, lower = align_and_extract_native(self, lower_bound)
-        _, upper = align_and_extract_native(self, upper_bound)
+        _, lower_bound = align_and_extract_native(self, lower_bound)
+        _, upper_bound = align_and_extract_native(self, upper_bound)
         if closed == "left":
-            res = ser.ge(lower) & ser.lt(upper)
+            res = ser.ge(lower_bound) & ser.lt(upper_bound)
         elif closed == "right":
-            res = ser.gt(lower) & ser.le(upper)
+            res = ser.gt(lower_bound) & ser.le(upper_bound)
         elif closed == "none":
-            res = ser.gt(lower) & ser.lt(upper)
+            res = ser.gt(lower_bound) & ser.lt(upper_bound)
         elif closed == "both":
-            res = ser.ge(lower) & ser.le(upper)
+            res = ser.ge(lower_bound) & ser.le(upper_bound)
         else:
             assert_never(closed)
-        result = self._with_native(res)
-        return result.alias(ser.name)
+        return self._with_native(res).alias(ser.name)
 
     def is_in(self, other: Any) -> Self:
         ser = self.native
@@ -725,7 +724,6 @@ class PandasLikeSeries(EagerSeries[Any]):
             # For unmatched values, use default
             _, default_native = align_and_extract_native(self, default)
             native_result = native_result.where(was_matched, default_native)
-            return self._with_native(native_result)
 
         return self._with_native(native_result)
 
