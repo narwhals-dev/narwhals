@@ -72,6 +72,25 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_concat_str_with_lit_ignore_nulls(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3951
+    data = {"s": [None, "y", "z"], "t": ["p", "q", "r"]}
+    df = nw.from_native(constructor(data))
+    expected = {"r": ["!-p", "!-y-q", "!-z-r"]}
+    result = df.select(
+        r=nw.concat_str(
+            nw.lit("!"), nw.col("s"), nw.col("t"), separator="-", ignore_nulls=True
+        )
+    )
+    assert_equal_data(result, expected)
+    result = df.select(
+        r=nw.concat_str(
+            nw.col("s"), nw.lit("!"), nw.col("t"), separator="-", ignore_nulls=True
+        )
+    )
+    assert_equal_data(result, {"r": ["!-p", "y-!-q", "z-!-r"]})
+
+
 @pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [

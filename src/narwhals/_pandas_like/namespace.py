@@ -51,6 +51,18 @@ VERTICAL: _Vertical = 0
 HORIZONTAL: _Horizontal = 1
 
 
+def _horizontal_min(left: PandasLikeSeries, right: PandasLikeSeries) -> PandasLikeSeries:
+    left_filled = left.zip_with(~left.is_null(), right)
+    right_filled = right.zip_with(~right.is_null(), left)
+    return left_filled.zip_with(left_filled <= right_filled, right_filled)
+
+
+def _horizontal_max(left: PandasLikeSeries, right: PandasLikeSeries) -> PandasLikeSeries:
+    left_filled = left.zip_with(~left.is_null(), right)
+    right_filled = right.zip_with(~right.is_null(), left)
+    return left_filled.zip_with(left_filled >= right_filled, right_filled)
+
+
 class PandasLikeNamespace(
     EagerNamespace[
         PandasLikeDataFrame,
@@ -259,16 +271,8 @@ class PandasLikeNamespace(
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = list(chain.from_iterable(expr(df) for expr in exprs))
-            return [
-                PandasLikeSeries(
-                    self.concat(
-                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
-                        how="horizontal",
-                    )._native_frame.min(axis=1),
-                    implementation=self._implementation,
-                    version=self._version,
-                ).alias(series[0].name)
-            ]
+            name = series[0].name
+            return [reduce(_horizontal_min, series).alias(name)]
 
         return self._expr._from_callable(
             func=func,
@@ -280,16 +284,8 @@ class PandasLikeNamespace(
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             series = list(chain.from_iterable(expr(df) for expr in exprs))
-            return [
-                PandasLikeSeries(
-                    self.concat(
-                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
-                        how="horizontal",
-                    ).native.max(axis=1),
-                    implementation=self._implementation,
-                    version=self._version,
-                ).alias(series[0].name)
-            ]
+            name = series[0].name
+            return [reduce(_horizontal_max, series).alias(name)]
 
         return self._expr._from_callable(
             func=func,
@@ -396,7 +392,8 @@ class PandasLikeNamespace(
                         name="sep",
                         index=init_value.native.index,
                         dtype=init_value.native.dtype,
-                    )
+                    ),
+                    preserve_broadcast=True,
                 )
                 separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
                 result = reduce(

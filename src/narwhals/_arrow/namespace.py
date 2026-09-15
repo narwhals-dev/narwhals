@@ -12,7 +12,11 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
+from narwhals._arrow.utils import (
+    build_list_array,
+    cast_to_comparable_string_types,
+    chunked_array,
+)
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -21,9 +25,14 @@ from narwhals._expression_parsing import (
 from narwhals._utils import Implementation, check_column_names_are_unique
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Callable, Iterator, Sequence
 
-    from narwhals._arrow.typing import ChunkedArrayAny, Incomplete, ScalarAny
+    from narwhals._arrow.typing import (
+        ArrayOrScalar,
+        ChunkedArrayAny,
+        Incomplete,
+        ScalarAny,
+    )
     from narwhals._utils import Version
     from narwhals.typing import (
         CorrelationMethod,
@@ -163,15 +172,28 @@ class ArrowNamespace(
             context=self,
         )
 
-    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+    def _extremum_horizontal(
+        self,
+        exprs: tuple[ArrowExpr, ...],
+        op: Callable[[ArrayOrScalar, ArrayOrScalar], ArrayOrScalar],
+    ) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.min_element_wise, [s.native for s in series], init_series.native
-            )
-            return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
-            ]
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            name = series[0].name
+            # Reduce pairwise, keeping the accumulator as a genuine (chunked)
+            # array whenever at least one operand isn't broadcast.
+            acc: ChunkedArrayAny = series[0].native
+            acc_broadcast = series[0]._broadcast
+            for s in series[1:]:
+                lhs = acc[0] if acc_broadcast and not s._broadcast else acc
+                rhs = s.native[0] if s._broadcast and not acc_broadcast else s.native
+                # `op` always sees at least one array-like operand, so it
+                # always returns an array (never a bare `pa.Scalar`).
+                acc = cast("ChunkedArrayAny", op(lhs, rhs))
+                acc_broadcast = acc_broadcast and s._broadcast
+            result = ArrowSeries(chunked_array(acc), name=name, version=self._version)
+            result._broadcast = acc_broadcast
+            return [result]
 
         return self._expr._from_callable(
             func=func,
@@ -179,23 +201,12 @@ class ArrowNamespace(
             alias_output_names=combine_alias_output_names(*exprs),
             context=self,
         )
+
+    def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
+        return self._extremum_horizontal(exprs, pc.min_element_wise)
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
-        def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.max_element_wise, [s.native for s in series], init_series.native
-            )
-            return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
-            ]
-
-        return self._expr._from_callable(
-            func=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            context=self,
-        )
+        return self._extremum_horizontal(exprs, pc.max_element_wise)
 
     def _concat_diagonal(self, dfs: Sequence[pa.Table], /) -> pa.Table:
         if self._backend_version >= (14,):
