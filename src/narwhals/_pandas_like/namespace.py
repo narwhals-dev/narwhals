@@ -94,7 +94,8 @@ class PandasLikeNamespace(
 
     def coalesce(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = (s for _expr in exprs for s in _expr(df))
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
             return [
                 reduce(lambda x, y: x.fill_null(y, strategy=None, limit=None), series)
             ]
@@ -171,7 +172,8 @@ class PandasLikeNamespace(
     # --- horizontal ---
     def sum_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            it = chain.from_iterable(expr(df) for expr in exprs)
+            align = self._series._align_full_broadcast
+            it = align(*chain.from_iterable(expr(df) for expr in exprs))
             native_series = (s.fill_null(0, None, None) for s in it)
             return [reduce(operator.add, native_series)]
 
@@ -186,7 +188,8 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, ignore_nulls: bool
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in exprs for s in _expr(df)]
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
             if not ignore_nulls and any(
                 s.native.dtype == "object" and s.is_null().any() for s in series
             ):
@@ -216,7 +219,8 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, ignore_nulls: bool
     ) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = [s for _expr in exprs for s in _expr(df)]
+            align = self._series._align_full_broadcast
+            series = align(*(s for _expr in exprs for s in _expr(df)))
             if not ignore_nulls and any(
                 s.native.dtype == "object" and s.is_null().any() for s in series
             ):
@@ -244,7 +248,8 @@ class PandasLikeNamespace(
 
     def mean_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
+            align = self._series._align_full_broadcast
+            expr_results = align(*(s for _expr in exprs for s in _expr(df)))
             series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
             non_na = (1 - s.is_null() for s in expr_results)
             return [reduce(operator.add, series) / reduce(operator.add, non_na)]
@@ -258,7 +263,8 @@ class PandasLikeNamespace(
 
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -279,7 +285,8 @@ class PandasLikeNamespace(
 
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -374,7 +381,8 @@ class PandasLikeNamespace(
         string = self._version.dtypes.String()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
+            align = self._series._align_full_broadcast
+            expr_results = align(*(s for _expr in exprs for s in _expr(df)))
             series = [s.cast(string) for s in expr_results]
             null_mask = [s.is_null() for s in expr_results]
 

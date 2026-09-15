@@ -160,11 +160,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         )
 
     def _with_native(self, series: Any) -> Self:
-        result = self.__class__(
+        return self.__class__(
             series, implementation=self._implementation, version=self._version
         )
-        result._broadcast = self._broadcast and len(series) == 1
-        return result
 
     @classmethod
     def from_iterable(
@@ -211,8 +209,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         Series = series[0].__native_namespace__().Series
         lengths = [len(s) for s in series]
         target_length = max(
-            (ln for ln, s in zip(lengths, series, strict=False) if not s._broadcast),
-            default=1,
+            ln for ln, s in zip(lengths, series, strict=False) if not s._broadcast
         )
         idx = series[lengths.index(target_length)].native.index
         reindexed = []
@@ -368,7 +365,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             res = ser.ge(lower) & ser.le(upper)
         else:
             assert_never(closed)
-        result = self._with_native(res)._broadcast_with(lower_bound, upper_bound)
+        result = self._with_native(res)
         return result.alias(ser.name)
 
     def is_in(self, other: Any) -> Self:
@@ -429,7 +426,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 res = binary_string_sum_fallback(ser, other_native, pdx)
             else:
                 raise
-        return self._with_native(res)._broadcast_with(other).alias(self.name)
+        return self._with_native(res).alias(self.name)
 
     def _with_binary_right(self, op: Callable[..., pd.Series], other: Any) -> Self:
         return self._with_binary(lambda x, y: op(y, x), other).alias(self.name)
@@ -728,7 +725,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             # For unmatched values, use default
             _, default_native = align_and_extract_native(self, default)
             native_result = native_result.where(was_matched, default_native)
-            return self._with_native(native_result)._broadcast_with(default)
+            return self._with_native(native_result)
 
         return self._with_native(native_result)
 
@@ -839,8 +836,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     def zip_with(self, mask: Self, other: Any) -> Self:
         ser, mask = self._align_full_broadcast(self, mask)
         _, other_native = align_and_extract_native(ser, other)
-        result = ser._with_native(ser.native.where(mask.native, other_native))
-        return result._broadcast_with(mask, other)
+        return ser._with_native(ser.native.where(mask.native, other_native))
 
     def head(self, n: int) -> Self:
         return self._with_native(self.native.head(n))
@@ -923,8 +919,7 @@ class PandasLikeSeries(EagerSeries[Any]):
                 result = result.where(result <= upper, upper)
                 upper = None
 
-        clipped = self._with_native(result.clip(lower, upper, **kwargs))
-        return clipped._broadcast_with(lower_bound, upper_bound)
+        return self._with_native(result.clip(lower, upper, **kwargs))
 
     def clip_lower(self, lower_bound: Self) -> Self:
         _, lower = align_and_extract_native(self, lower_bound)
@@ -939,8 +934,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             result = result.where(result >= lower, lower)
             lower = None
 
-        res = self._with_native(result.clip(lower, **kwargs))
-        return res._broadcast_with(lower_bound)
+        return self._with_native(result.clip(lower, **kwargs))
 
     def clip_upper(self, upper_bound: Self) -> Self:
         _, upper = align_and_extract_native(self, upper_bound)
@@ -955,8 +949,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             result = result.where(result <= upper, upper)
             upper = None
 
-        res = self._with_native(result.clip(upper=upper, **kwargs))
-        return res._broadcast_with(upper_bound)
+        return self._with_native(result.clip(upper=upper, **kwargs))
 
     def to_arrow(self) -> pa.Array[Any]:
         if self._implementation is Implementation.CUDF:
