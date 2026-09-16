@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
+from functools import partial
 from typing import Any
 
 import pytest
@@ -141,8 +142,8 @@ def test_pivot(
 @pytest.mark.parametrize(
     ("data_", "context"),
     [
-        (data_no_dups, does_not_raise()),
-        (data, pytest.raises((ValueError, NarwhalsError))),
+        (data_no_dups, does_not_raise),
+        (data, partial(pytest.raises, (ValueError, NarwhalsError))),
     ],
 )
 def test_pivot_no_agg(
@@ -155,7 +156,7 @@ def test_pivot_no_agg(
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_), eager_only=True)
-    with context:
+    with context():
         df.pivot("col", index="ix", aggregate_function=None)
 
 
