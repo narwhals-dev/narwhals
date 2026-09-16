@@ -79,6 +79,24 @@ df = df.with_columns(a_sorted=s.sort())
 print(nw.to_native(df))
 ```
 
-If you keep these two rules in mind, then Narwhals will both help you avoid
+## 3. Narwhals can copy an index from one object to another
+
+`nw.maybe_get_index` returns the index of a pandas-like object, and
+`nw.maybe_set_index` accepts whatever it returns. The two compose:
+
+```python exec="yes" source="material-block" session="ex3" result="python"
+import narwhals as nw
+import pandas as pd
+
+df = nw.from_native(pd.DataFrame({"a": [2, 1, 3]}, index=[7, 8, 9]))
+result = nw.from_native(pd.DataFrame({"b": [4, 5, 6]}))
+print(nw.to_native(nw.maybe_set_index(result, index=nw.maybe_get_index(df))))
+```
+
+For Polars, PyArrow and other non-pandas-like backends, `maybe_get_index` returns
+`None` and `maybe_set_index` returns its input unchanged, so the same code runs
+everywhere.
+
+If you keep these rules in mind, then Narwhals will both help you avoid
 Index-related surprises whilst letting you preserve the Index for the subset
 of your users who consciously make great use of it.
