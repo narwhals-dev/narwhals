@@ -118,10 +118,6 @@ def test_str_zfill_series(
     assert_equal_data({"a": result}, expected)
 
 
-# The accessors validate before dispatching, so every backend raises the same
-# `ValueError`, up-front, rather than at collection time. Without validation
-# pandas returns the input unchanged, PyArrow raises `ArrowInvalid: Negative
-# buffer resize`, and Polars raises an `i128`-to-`u64` cast error.
 def test_zfill_negative_width_expr(constructor: Constructor) -> None:
     # NOTE: The expression raises while it is built, so `select` is never reached.
     # The frame here allows to keep the test in case validation moves back into the backends.
