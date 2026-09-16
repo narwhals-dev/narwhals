@@ -12,17 +12,19 @@ If you haven't, this is also for you as you might experience it and you need to 
 Take the following two codes as an example.
 
 === "Approach 1"
-    ```python exec="yes" source="above" result="python" session="group_by_warning_1" hl_lines="12"
+    ```python exec="yes" source="above" result="python" session="group_by_warning_1" hl_lines="13"
     import narwhals as nw
     import pandas as pd
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
     data = {"a": [1, 2, 3, 4, 5], "b": [5, 4, 3, 2, 1], "c": [10, 20, 30, 40, 50]}
 
     df_pd = pd.DataFrame(data)
 
 
-    def approach_1(df_native: IntoFrameT) -> IntoFrameT:
+    def approach_1(
+        df_native: IntoDataFrameT | IntoLazyFrameT,
+    ) -> IntoDataFrameT | IntoLazyFrameT:
         df = nw.from_native(df_native)
         df = df.group_by("a").agg(d=(nw.col("b") + nw.col("c")).sum())
         return df.to_native()
@@ -32,17 +34,19 @@ Take the following two codes as an example.
     ```
 
 === "Approach 2"
-    ```python exec="yes" source="above" result="python" session="group_by_warning_2" hl_lines="12"
+    ```python exec="yes" source="above" result="python" session="group_by_warning_2" hl_lines="13"
     import narwhals as nw
     import pandas as pd
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
     data = {"a": [1, 2, 3, 4, 5], "b": [5, 4, 3, 2, 1], "c": [10, 20, 30, 40, 50]}
 
     df_pd = pd.DataFrame(data)
 
 
-    def approach_2(df_native: IntoFrameT) -> IntoFrameT:
+    def approach_2(
+        df_native: IntoDataFrameT | IntoLazyFrameT,
+    ) -> IntoDataFrameT | IntoLazyFrameT:
         df = nw.from_native(df_native)
         df = df.with_columns(d=nw.col("b") + nw.col("c")).group_by("a").agg(nw.sum("d"))
         return df.to_native()
