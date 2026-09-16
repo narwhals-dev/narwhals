@@ -103,6 +103,14 @@ class InvalidIntoExprError(TypeError, NarwhalsError):
         return InvalidIntoExprError(message)
 
 
+class PluginError(NarwhalsError):
+    """Exception raised when a plugin backend does not support the requested operation.
+
+    This includes missing extension hooks (e.g. `read_csv`, `__narwhals_namespace__`)
+    and lazy-only plugins used with eager-only functions.
+    """
+
+
 class UnsupportedDTypeError(NarwhalsError):
     """Exception raised when trying to convert to a DType which is not supported by the given backend."""
 
