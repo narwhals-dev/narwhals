@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    assert_equal_data,
+    uses_pyarrow_backend,
+)
 
 pytest.importorskip("pyarrow")
 
@@ -70,6 +76,70 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
     expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "columns", "expected"),
+    [
+        pytest.param({"b": ["a", None]}, ["b"], {"out": ["a", None]}, id="single"),
+        pytest.param(
+            {"b": ["a", None]},
+            ["b", nw.lit(None, dtype=nw.String())],
+            {"out": [None, None]},
+            id="null_literal",
+        ),
+        pytest.param(
+            {"bo": [True, None], "b": ["x", "y"]},
+            ["bo", "b"],
+            {"out": ["true x", None]},
+            id="bool",
+        ),
+    ],
+)
+def test_concat_str_edge(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    data: dict[str, list[bool | str | None]],
+    columns: list[str | nw.Expr],
+    expected: dict[str, list[str | None]],
+) -> None:
+    # Plain pandas (and dask, and non-pyarrow modin) infer `object` dtype for
+    # mixed bool/null columns, where bools are indistinguishable from `"True"`
+    # strings. Pyarrow-backed frames keep a boolean dtype and render lowercase.
+    if "bool" in request.node.callspec.id and (
+        "pandas_constructor" in str(constructor)
+        or "dask" in str(constructor)
+        or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
+    # Old pandas renders a null literal as the string `"None"`, as does modin.
+    if "null_literal" in request.node.callspec.id and (
+        ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,))
+        or "modin" in str(constructor)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="null literal as string"))
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
+    assert_equal_data(result, expected)
+
+
+def test_concat_str_all_null_ignore_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # A row of only nulls concatenates to `""` with `ignore_nulls=True`.
+    # The pyarrow kernel returns no rows at all for all-null `skip` inputs.
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    if "pyarrow_table" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="pyarrow drops all-null rows"))
+    if "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,):
+        request.applymarker(pytest.mark.xfail(reason="old pandas all-null concat"))
+    df = nw.from_native(constructor({"b": [None, None], "c": [None, None]}))
+    df = df.with_columns(nw.col("b").cast(nw.String()), nw.col("c").cast(nw.String()))
+    result = df.select(
+        nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
+    )
+    assert_equal_data(result, {"out": ["", ""]})
 
 
 @pytest.mark.parametrize(
