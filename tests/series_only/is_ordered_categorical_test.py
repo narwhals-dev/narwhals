@@ -64,8 +64,10 @@ def test_is_ordered_categorical_pyarrow_string() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
+    from narwhals._arrow.utils import chunked_array
+
     tp = pa.dictionary(pa.int32(), pa.string())
-    s = pa.chunked_array([pa.array(["a", "b"], type=tp)], type=tp)
+    s = chunked_array([pa.array(["a", "b"], type=tp)], tp)
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 
@@ -85,9 +87,11 @@ def test_is_ordered_categorical_pyarrow() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
+    from narwhals._arrow.utils import chunked_array
+
     tp = pa.dictionary(pa.int32(), pa.string(), ordered=True)
     arr = pa.array(["a", "b"], type=tp)
-    s = pa.chunked_array([arr], type=tp)
+    s = chunked_array([arr], tp)
     assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 

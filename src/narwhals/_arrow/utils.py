@@ -130,9 +130,9 @@ def chunked_array(
 ) -> ChunkedArrayAny:
     if isinstance(arr, pa.ChunkedArray):
         return arr
-    if isinstance(arr, list):
-        return pa.chunked_array(arr, dtype)
-    return pa.chunked_array([arr], dtype)
+    # NOTE: stubs only overload on *concrete* types, so a dynamic `pa.DataType` never matches
+    ca: Incomplete = pa.chunked_array
+    return ca(arr, dtype) if isinstance(arr, list) else ca([arr], dtype)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
@@ -537,7 +537,7 @@ def list_agg(
         if func == "sum"
         else ("values", func)
     )
-    agg = pa.array(
+    agg = (
         pa.Table.from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
             names=["values", "offsets"],
@@ -546,8 +546,9 @@ def list_agg(
         .aggregate([aggregation])
         .sort_by("offsets")
         .column(f"values_{func}")
+        .combine_chunks()
     )
-    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
+    non_empty_mask = pc.not_equal(pc.list_value_length(array.combine_chunks()), lit(0))
     if func == "sum":
         # Make sure sum of empty list is 0.
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
@@ -556,9 +557,7 @@ def list_agg(
     return pa.chunked_array(
         [
             pc.replace_with_mask(
-                base_array,
-                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
-                agg,
+                base_array, cast("pa.BooleanArray", non_empty_mask.fill_null(False)), agg
             )
         ]
     )
@@ -634,7 +633,7 @@ def list_sort(
 
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
     sorted_imploded = pa.ListArray.from_arrays(
-        offsets, pa.array(exploded.take(sorted_indices).column(v))
+        offsets, exploded.take(sorted_indices).column(v).combine_chunks()
     )
     imploded_by_idx = pa.Table.from_arrays(
         [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]

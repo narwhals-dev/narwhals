@@ -264,6 +264,7 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor(data))
     assert df.select(ncs.datetime()).collect_schema().names() == ["ts"]
+    assert_equal_data(df.select(ncs.datetime().dt.year()), {"ts": [2000, 2020]})
 
 
 @pytest.mark.parametrize(

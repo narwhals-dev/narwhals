@@ -222,7 +222,7 @@ class ArrowSeriesDateTimeNamespace(
             result = pc.assume_timezone(pc.add(native_naive, offset), dtype.time_zone)
             return self.with_native(result)
         if interval.unit == "ns":  # pragma: no cover
-            offset = lit(interval.multiple, pa.duration("ns"))  # type: ignore[assignment]
+            offset = lit(interval.multiple, pa.duration("ns"))
         else:
             offset = lit(interval.to_timedelta())
         return self.with_native(pc.add(native, offset))

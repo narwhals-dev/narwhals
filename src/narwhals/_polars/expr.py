@@ -16,8 +16,9 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
+    native_get_categories,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, requires
+from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -310,7 +311,20 @@ class PolarsExpr:
         return self._with_native(result)
 
     def __mod__(self, other: Any) -> Self:
-        return self._with_native(self.native.__mod__(extract_native(other)))
+        native = (
+            floor_mod(self.native, extract_native(other))
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__mod__(extract_native(other))
+        )
+        return self._with_native(native)
+
+    def __rmod__(self, other: Any) -> Self:
+        native = (
+            floor_mod(extract_native(other), self.native)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__rmod__(extract_native(other))
+        )
+        return self._with_native(native)
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
@@ -406,7 +420,6 @@ class PolarsExpr:
     unique: Method[Self]
     var: Method[Self]
     __rsub__: Method[Self]
-    __rmod__: Method[Self]
     __rpow__: Method[Self]
     __rtruediv__: Method[Self]
 
@@ -449,6 +462,8 @@ class PolarsExprStringNamespace(
 
     @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
+        if width == 0:
+            return self.compliant._with_native(self.native)
         backend_version = self.compliant._backend_version
         native_result = self.native.str.zfill(width)
 
@@ -504,7 +519,11 @@ class PolarsExprStringNamespace(
 
 class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
-): ...
+):
+    def get_categories(self) -> PolarsExpr:
+        return self.compliant._with_native(
+            self.native.map_batches(native_get_categories, return_dtype=pl.String)
+        )
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):

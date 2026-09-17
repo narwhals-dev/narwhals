@@ -13,7 +13,13 @@ directional_data = {"a": ["  foobar  ", "xyxbarxy", "\n\tbaz\n\t", "", None]}
 
 @pytest.mark.parametrize(
     ("characters", "expected"),
-    [(None, {"a": ["foobar", "bar", "baz"]}), ("foo", {"a": ["bar", "bar\n", " baz"]})],
+    [
+        (None, {"a": ["foobar", "bar", "baz"]}),
+        ("foo", {"a": ["bar", "bar\n", " baz"]}),
+        # An empty set of characters should strip nothing, see polars:
+        # `strip_chars("")` is a no-op, `strip_chars(None)` strips whitespace.
+        ("", {"a": ["foobar", "bar\n", " baz"]}),
+    ],
 )
 def test_str_strip_chars(
     constructor: Constructor,
@@ -31,7 +37,11 @@ def test_str_strip_chars(
 
 @pytest.mark.parametrize(
     ("characters", "expected"),
-    [(None, {"a": ["foobar", "bar", "baz"]}), ("foo", {"a": ["bar", "bar\n", " baz"]})],
+    [
+        (None, {"a": ["foobar", "bar", "baz"]}),
+        ("foo", {"a": ["bar", "bar\n", " baz"]}),
+        ("", {"a": ["foobar", "bar\n", " baz"]}),
+    ],
 )
 def test_str_strip_chars_series(
     constructor_eager: ConstructorEager, characters: str | None, expected: Any

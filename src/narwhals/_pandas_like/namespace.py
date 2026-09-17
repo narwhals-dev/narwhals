@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     is_non_nullable_boolean,
     set_index,
 )
-from narwhals._utils import validate_separators
+from narwhals._utils import check_column_names_are_unique, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -130,7 +130,7 @@ class PandasLikeNamespace(
                 # Use ArrowExtensionArray to avoid pandas unpacking the nested structure
                 ns = self._implementation.to_native_namespace()
                 pandas_series_native = ns.Series(
-                    pd.arrays.ArrowExtensionArray(pa_array),  # type: ignore[attr-defined]
+                    pd.arrays.ArrowExtensionArray(pa_array),
                     name="literal",
                     index=df._native_frame.index[0:1],
                 )
@@ -262,7 +262,8 @@ class PandasLikeNamespace(
             return [
                 PandasLikeSeries(
                     self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
+                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
+                        how="horizontal",
                     )._native_frame.min(axis=1),
                     implementation=self._implementation,
                     version=self._version,
@@ -282,7 +283,8 @@ class PandasLikeNamespace(
             return [
                 PandasLikeSeries(
                     self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
+                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
+                        how="horizontal",
                     ).native.max(axis=1),
                     implementation=self._implementation,
                     version=self._version,
@@ -427,6 +429,7 @@ class PandasLikeNamespace(
 
             align = self._series._align_full_broadcast
             series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            check_column_names_are_unique([s.name for s in series])
             name = series[0].name
             struct_array = pc.make_struct(
                 *(pa.array(s.native, from_pandas=True) for s in series),
@@ -439,7 +442,7 @@ class PandasLikeNamespace(
             ns = impl.to_native_namespace()
 
             result_native = ns.Series(
-                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                pd.arrays.ArrowExtensionArray(result),
                 name=name,
                 index=series[0].native.index,
             )
@@ -479,7 +482,7 @@ class PandasLikeNamespace(
 
             impl = self._implementation
             result_native = impl.to_native_namespace().Series(
-                pd.arrays.ArrowExtensionArray(result),  # type: ignore[attr-defined]
+                pd.arrays.ArrowExtensionArray(result),
                 name=series[0].name,
                 index=series[0].native.index,
             )

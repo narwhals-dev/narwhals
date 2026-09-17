@@ -102,6 +102,15 @@ def skip_if_no_categorical_ordering(
         pytest.skip(reason="cannot cast `string` to `dictionary`")
 
 
+def skip_if_no_windowed_corr_cov(constructor: Constructor, /) -> None:
+    """Skip unless the backend supports `corr`/`cov` with `over`."""
+    id_ = str(constructor)
+    if not any(x in id_ for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip(reason="no windowed `corr`/`cov`")
+    if "duckdb" in id_ and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="`over` requires DuckDB 1.3.0")
+
+
 def is_pd_na(value: Any) -> bool:
     return (pd := get_pandas()) is not None and pd.isna(value)
 
@@ -214,7 +223,7 @@ def pyspark_session() -> SparkSession:  # pragma: no cover
         from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
         from pyspark.sql import SparkSession as _SparkSession
-    builder = cast("_SparkSession.Builder", _SparkSession.builder).appName("unit-tests")
+    builder = _SparkSession.builder.appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect
@@ -239,6 +248,15 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             return mpd.DataFrame(df_pandas.to_dict(orient="list"))
+
+
+def interchange_frame(df: pd.DataFrame) -> Any:
+    """Return the interchange object of a pandas DataFrame.
+
+    `pandas-stubs` no longer declares `DataFrame.__dataframe__`, as the
+    interchange protocol is deprecated since pandas 3.0.
+    """
+    return df.__dataframe__()  # type: ignore[operator]
 
 
 def is_windows() -> bool:

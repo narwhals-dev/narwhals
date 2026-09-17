@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from itertools import chain, product
-from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
 
@@ -71,9 +71,6 @@ if TYPE_CHECKING:
 
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
 
-    class CopyKwargs(TypedDict, total=False):
-        copy: bool
-
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
     [
@@ -134,9 +131,7 @@ class PandasLikeDataFrame(
             if implementation._backend_version() >= (0, 26, 0):
                 from modin.pandas.io import from_arrow as mpd_from_arrow
             else:  # pragma: no cover
-                from modin.pandas.utils import (
-                    from_arrow as mpd_from_arrow,  # pyright: ignore[reportAttributeAccessIssue]
-                )
+                from modin.pandas.utils import from_arrow as mpd_from_arrow  # pyright: ignore[reportAttributeAccessIssue]
             native = mpd_from_arrow(tbl)
         elif implementation.is_cudf():  # pragma: no cover
             native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)
@@ -202,22 +197,23 @@ class PandasLikeDataFrame(
         context: _LimitedContext,
         schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
-        implementation = context._implementation
-        ns = implementation.to_native_namespace()
+        impl = context._implementation
+        ns = impl.to_native_namespace()
         DataFrame = cast("type[pd.DataFrame]", ns.DataFrame)
         # NOTE: `DataFrame.from_records` returns *zero* rows when every mapping is
         # empty, while the constructor keeps `len(data)` (empty) rows.
         native = DataFrame(data)
         if schema:
-            kwds: CopyKwargs = (
-                {"copy": False}
-                if implementation.is_pandas() and implementation._backend_version() < (3,)
-                else {}
-            )
             # Missing columns become all-null, extra ones are dropped, and the schema
             # order wins: https://github.com/narwhals-dev/narwhals/issues/3837
-            native = native.reindex(columns=list(schema), **kwds)
-            backends = iter_dtype_backends(native.dtypes, implementation)
+            use_copy_flag = impl.is_pandas() and impl._backend_version() < (3,)
+
+            native = (
+                native.reindex(columns=list(schema), copy=False)  # type: ignore[call-arg]
+                if use_copy_flag
+                else native.reindex(columns=list(schema))
+            )
+            backends = iter_dtype_backends(native.dtypes, impl)
             native_schema = {
                 key: narwhals_to_native_dtype(
                     dtype,
@@ -228,7 +224,11 @@ class PandasLikeDataFrame(
                 for ((key, dtype), backend) in zip(schema.items(), backends, strict=False)
                 if dtype is not None
             }
-            native = native.astype(native_schema, **kwds)
+            native = (
+                native.astype(native_schema, copy=False)  # type: ignore[call-arg]
+                if use_copy_flag
+                else native.astype(native_schema)
+            )
         return cls.from_native(native, context=context)
 
     @staticmethod

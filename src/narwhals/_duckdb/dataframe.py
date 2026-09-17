@@ -173,7 +173,7 @@ class DuckDBLazyFrame(
         return self._with_native(self.native.limit(n))
 
     def simple_select(self, *column_names: str) -> Self:
-        return self._with_native(self.native.select(*column_names))
+        return self._with_native(self.native.select(*map(col, column_names)))
 
     def aggregate(self, *exprs: DuckDBExpr) -> Self:
         selection = [

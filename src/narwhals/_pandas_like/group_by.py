@@ -4,7 +4,7 @@ import warnings
 from functools import lru_cache
 from itertools import chain
 from operator import methodcaller
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
@@ -168,8 +168,10 @@ class AggExpr:
             select = names[0] if len(names) == 1 else list(names)
             result = self.native_agg()(grouped[select])
         if is_pandas_like_dataframe(result):
+            result = cast("pd.DataFrame", result)
             result.columns = list(self.aliases)
         else:
+            result = cast("pd.Series[Any]", result)
             result.name = self.aliases[0]
         return result
 
@@ -361,7 +363,7 @@ class PandasLikeGroupBy(
         apply = grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             return apply(func, include_groups=False)  # type: ignore[call-overload]
-        return apply(func)  # pragma: no cover
+        return apply(func)  # type: ignore[return-value]  # pragma: no cover
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()

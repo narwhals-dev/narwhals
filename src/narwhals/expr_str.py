@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
-from narwhals._utils import parse_str_strip_chars
+from narwhals._utils import (
+    parse_str_strip_chars,
+    validate_pad_arguments,
+    validate_str_non_negative,
+)
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -606,7 +610,10 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             width: The desired length of the string after padding. If the length of the
                 string is greater than `width`, no padding is applied.
-                If `width` is less than 0, no padding is applied.
+                Must be non-negative.
+
+        Raises:
+            ValueError: If `width` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -624,6 +631,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
+        validate_str_non_negative("zfill", "width", width)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
@@ -634,7 +642,13 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
             >>> import pandas as pd
@@ -652,6 +666,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        validate_pad_arguments("pad_start", length, fill_char)
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -664,7 +679,13 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
             >>> import pandas as pd
@@ -682,6 +703,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        validate_pad_arguments("pad_end", length, fill_char)
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char

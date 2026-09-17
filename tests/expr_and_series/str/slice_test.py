@@ -12,7 +12,12 @@ data = {"a": ["fdas", "edfas"]}
 
 @pytest.mark.parametrize(
     ("offset", "length", "expected"),
-    [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
+    [
+        (1, 2, {"a": ["da", "df"]}),
+        (-2, None, {"a": ["as", "as"]}),
+        # length=0 must slice to an empty string, not be treated as "to the end".
+        (1, 0, {"a": ["", ""]}),
+    ],
 )
 def test_str_slice(
     constructor: Constructor, offset: int, length: int | None, expected: Any
@@ -24,7 +29,12 @@ def test_str_slice(
 
 @pytest.mark.parametrize(
     ("offset", "length", "expected"),
-    [(1, 2, {"a": ["da", "df"]}), (-2, None, {"a": ["as", "as"]})],
+    [
+        (1, 2, {"a": ["da", "df"]}),
+        (-2, None, {"a": ["as", "as"]}),
+        # length=0 must slice to an empty string, not be treated as "to the end".
+        (1, 0, {"a": ["", ""]}),
+    ],
 )
 def test_str_slice_series(
     constructor_eager: ConstructorEager, offset: int, length: int | None, expected: Any

@@ -1330,7 +1330,7 @@ def is_range(obj: Any) -> TypeIs[range]:
 
 
 def is_single_index_selector(obj: Any) -> TypeIs[SingleIndexSelector]:
-    return bool(isinstance(obj, int) and not isinstance(obj, bool))
+    return isinstance(obj, int) and not isinstance(obj, bool)
 
 
 def is_index_selector(
@@ -1765,6 +1765,9 @@ class not_implemented:  # noqa: N801
 
     Arguments:
         alias: optional name used instead of the data model hook [`__set_name__`].
+        hint: optional explanation of why this is unsupported and what to do instead.
+            When given, it replaces the "please open an issue" pointer, so use it for
+            functionality we deliberately won't implement (see `length_changing_hint`).
 
     Returns:
         An exception-raising [descriptor].
@@ -1796,10 +1799,11 @@ class not_implemented:  # noqa: N801
     [descriptor]: https://docs.python.org/3/howto/descriptor.html
     """
 
-    def __init__(self, alias: str | None = None, /) -> None:
+    def __init__(self, alias: str | None = None, /, *, hint: str = "") -> None:
         # NOTE: Don't like this
         # Trying to workaround `mypy` requiring `@property` everywhere
         self._alias: str | None = alias
+        self._hint: str = hint
 
     def __repr__(self) -> str:
         return f"<{type(self).__name__}>: {self._name_owner}.{self._name}"
@@ -1824,7 +1828,7 @@ class not_implemented:  # noqa: N801
             who = repr(implementation)
         else:
             who = self._name_owner
-        _raise_not_implemented_error(self._name, who)
+        _raise_not_implemented_error(self._name, who, self._hint)
         return None  # pragma: no cover
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
@@ -1845,13 +1849,35 @@ class not_implemented:  # noqa: N801
         return deprecated(message)(obj)
 
 
-def _raise_not_implemented_error(what: str, who: str, /) -> NotImplementedError:
-    msg = (
-        f"{what!r} is not implemented for: {who!r}.\n\n"
+def _raise_not_implemented_error(
+    what: str, who: str, hint: str = "", /
+) -> NotImplementedError:
+    # A hint means we know *why* this isn't implemented, and what to do instead,
+    # so pointing users at the issue tracker would just be noise.
+    fallback_msg = (
         "If you would like to see this functionality in `narwhals`, "
         "please open an issue at: https://github.com/narwhals-dev/narwhals/issues"
     )
+    tail = hint or fallback_msg
+    msg = f"{what!r} is not implemented for: {who!r}.\n\n{tail}"
     raise NotImplementedError(msg)
+
+
+def length_changing_hint(*, instead_of: str, use: str) -> str:
+    """Explain why a length-changing expression isn't available, and what to use instead.
+
+    Arguments:
+        instead_of: Unsupported usage example, e.g. `"lf.select(nw.col('a').unique())"`.
+        use: Supported alternative, e.g. `"lf.select('a').unique()"`.
+
+    Returns:
+        Message to pass as `not_implemented(hint=...)`.
+    """
+    return (
+        "Length-changing expressions (e.g. `unique`, `drop_nulls`, `filter`) are not\n"
+        "supported for this backend, not even when followed by an aggregation.\n\n"
+        f"Hint: instead of `{instead_of}`, use `{use}`."
+    )
 
 
 class requires:  # noqa: N801
@@ -1946,6 +1972,32 @@ def convert_str_slice_to_int_slice(
     stop = columns.index(str_slice.stop) + 1 if str_slice.stop is not None else None
     step = str_slice.step
     return (start, stop, step)
+
+
+class SupportsFloorMod(Protocol):
+    """Object supporting `%` and `+` with a same-typed operand.
+
+    Native expression types of backends whose `%` follows C sign semantics
+    (duckdb `Expression`, pyspark `Column`, ibis `Value`, polars `Expr` and
+    `Series` before 0.20.8) satisfy this structurally.
+    """
+
+    def __mod__(self, other: Self, /) -> Self: ...
+
+    def __add__(self, other: Self, /) -> Self: ...
+
+
+_SupportsFloorModT = TypeVar("_SupportsFloorModT", bound=SupportsFloorMod)
+
+
+def floor_mod(expr: _SupportsFloorModT, other: _SupportsFloorModT) -> _SupportsFloorModT:
+    """Restore Python-style (floored) modulo from C-style remainder semantics.
+
+    Backends whose `%` follows C sign semantics (sign of the dividend, like
+    `math.fmod`) can still compute the Python-style one (sign of the
+    divisor) with the double-modulus identity `((a % b) + b) % b`.
+    """
+    return ((expr % other) + other) % other
 
 
 def inherit_doc(
@@ -2147,6 +2199,26 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     if isinstance(tbl, pa.RecordBatchReader):  # pragma: no cover
         return pa.Table.from_batches(tbl)
     return tbl
+
+
+def validate_str_non_negative(name: str, arg_name: str, value: int, /) -> None:
+    """Reject a negative width/length for a `str` method that backends disagree on.
+
+    Natively these either raise something inscrutable, or quietly return the input
+    unchanged, so the public `Expr`/`Series` accessors validate up-front and every
+    backend gets the same error.
+    """
+    if value < 0:
+        msg = f"`str.{name}` only supports a non-negative `{arg_name}`, got {value}."
+        raise ValueError(msg)
+
+
+def validate_pad_arguments(name: str, length: int, fill_char: str, /) -> None:
+    """Reject `str.pad_start`/`str.pad_end` arguments that backends disagree on."""
+    if len(fill_char) != 1:
+        msg = f"`str.{name}` only supports a single-character `fill_char`, got {fill_char!r}."
+        raise ValueError(msg)
+    validate_str_non_negative(name, "length", length)
 
 
 def validate_separators(

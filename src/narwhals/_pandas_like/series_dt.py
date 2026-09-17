@@ -251,7 +251,7 @@ class PandasLikeSeriesDateTimeNamespace(
             import pyarrow as pa  # ignore-banned-import
 
             compliant = self.compliant
-            ca = pa.chunked_array([compliant.to_arrow()])  # type: ignore[arg-type]
+            ca = pa.chunked_array([compliant.to_arrow()])
             result = (
                 compliant._version.namespace.from_backend("pyarrow")
                 .compliant.from_native(ca)
