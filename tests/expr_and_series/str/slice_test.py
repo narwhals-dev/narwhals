@@ -67,10 +67,10 @@ def test_str_slice_negative_offset_short_strings(
     assert_equal_data(result_frame, expected)
 
 
-def test_str_slice_negative_length_raises() -> None:
-    import pandas as pd
-
-    df = nw.from_native(pd.DataFrame(data), eager_only=True)
+def test_str_slice_negative_length_raises(
+    constructor_eager: ConstructorEager,
+) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
     with pytest.raises(ValueError, match="non-negative"):
         df.select(nw.col("a").str.slice(1, -1))
     with pytest.raises(ValueError, match="non-negative"):

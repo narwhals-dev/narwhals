@@ -87,10 +87,12 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
-        def _slice(expr: Any) -> Any:
+        def _slice(expr: dx.Series) -> dx.Series:
             # Two-step, matching the pandas backend: a negative offset combined
             # with an explicit length would otherwise compute a nonsense stop.
-            result = expr.str.slice(start=offset)
+            result = expr.str.slice(  # pyright: ignore[reportAttributeAccessIssue]
+                start=offset
+            )
             if length is not None:
                 result = result.str[:length]
             return result
