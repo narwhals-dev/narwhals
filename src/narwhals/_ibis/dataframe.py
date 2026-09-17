@@ -8,7 +8,12 @@ import ibis
 import ibis.expr.types as ir
 
 from narwhals._ibis.expr import IbisExpr
-from narwhals._ibis.utils import evaluate_exprs, lit, native_to_narwhals_dtype
+from narwhals._ibis.utils import (
+    evaluate_exprs,
+    lit,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+)
 from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
@@ -41,7 +46,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        IntoDType,
+        JoinStrategy,
+        UniqueKeepStrategy,
+    )
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -180,6 +190,13 @@ class IbisLazyFrame(
     def with_columns(self, *exprs: IbisExpr) -> Self:
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         return self._with_native(self.native.mutate(**new_columns_map))
+
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        native_dtypes = {
+            name: narwhals_to_native_dtype(dtype, self._version)
+            for name, dtype in dtypes.items()
+        }
+        return self._with_native(self.native.cast(native_dtypes))
 
     def filter(self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
