@@ -86,10 +86,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(fn(self.native, pattern_native.as_py()))
 
     def slice(self, offset: int, length: int | None) -> ArrowSeries:
-        stop = offset + length if length is not None else None
-        return self.with_native(
-            pc.utf8_slice_codeunits(self.native, start=offset, stop=stop)
-        )
+        # Same two-step as the pandas backend: `utf8_slice_codeunits` handles a
+        # negative start natively, but start + length can compute a stop index
+        # that lands before the (end-relative) start.
+        result = pc.utf8_slice_codeunits(self.native, start=offset)
+        if length is not None:
+            result = pc.utf8_slice_codeunits(result, start=0, stop=length)
+        return self.with_native(result)
 
     def split(self, by: str) -> ArrowSeries:
         split_series = pc.split_pattern(self.native, by)  # type: ignore[call-overload]

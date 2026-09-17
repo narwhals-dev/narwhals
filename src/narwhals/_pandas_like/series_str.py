@@ -87,8 +87,13 @@ class PandasLikeSeriesStringNamespace(
         )
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
-        stop = offset + length if length is not None else None
-        return self.with_native(self.native.str.slice(start=offset, stop=stop))
+        # Slice from `offset` (which pandas handles natively, including negatives),
+        # then head-slice the result so that a negative offset combined with an
+        # explicit length doesn't compute a nonsense stop index.
+        result = self.native.str.slice(start=offset)
+        if length is not None:
+            result = result.str[:length]
+        return self.with_native(result)
 
     def split(self, by: str) -> PandasLikeSeries:
         implementation = self.implementation
