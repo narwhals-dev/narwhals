@@ -20,7 +20,11 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import check_column_names_are_unique, validate_separators
+from narwhals._utils import (
+    check_column_names_are_unique,
+    ensure_path_source,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -35,7 +39,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -84,23 +88,25 @@ class SparkLikeNamespace(
         return cast("SparkSession", session).read.format(fmt)
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> SparkLikeLazyFrame:
         validate_separators(separator, ("sep", "delimiter"), kwds)
+        path = ensure_path_source(source, str(self._implementation))
         reader = self._session_reader("csv", kwds)
         native = (
-            reader.load(source, sep=separator)
+            reader.load(path, sep=separator)
             if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
-            else reader.options(sep=separator, **kwds).load(source)
+            else reader.options(sep=separator, **kwds).load(path)
         )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> SparkLikeLazyFrame:
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> SparkLikeLazyFrame:
+        path = ensure_path_source(source, str(self._implementation))
         reader = self._session_reader("parquet", kwds)
         native = (
-            reader.load(source)
+            reader.load(path)
             if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
-            else reader.options(**kwds).load(source)
+            else reader.options(**kwds).load(path)
         )
         return self._lazyframe.from_native(native, context=self)
 

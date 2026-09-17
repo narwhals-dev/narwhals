@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from decimal import Decimal
     from types import ModuleType
-    from typing import TypeAlias
+    from typing import IO, TypeAlias
 
     import numpy as np
     import pandas as pd
@@ -365,20 +365,36 @@ IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
 IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 
-FileSource: TypeAlias = "str | os.PathLike[str]"
-"""Path to a file.
+FileSource: TypeAlias = "str | os.PathLike[str] | IO[bytes] | IO[str]"
+"""Path to a file, or a file-like object.
 
-Either a string or an object that implements [`__fspath__`], such as [`pathlib.Path`].
+Either a string, an object that implements [`__fspath__`] (such as [`pathlib.Path`]),
+or a file-like object such as [`io.BytesIO`] / [`io.StringIO`].
+
+File-like objects are forwarded to backends that support them (pandas, Polars,
+PyArrow, and pandas-like). Lazy-only backends such as DuckDB, Ibis, Dask, and
+Spark-like currently require a file path.
 
 [`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
 [`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
+[`io.BytesIO`]: https://docs.python.org/3/library/io.html#io.BytesIO
+[`io.StringIO`]: https://docs.python.org/3/library/io.html#io.StringIO
 """
 
 NormalizedPath = NewType("NormalizedPath", str)
-"""A [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_path`.
+"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_path`.
+
+Path-like inputs become a plain string. File-like objects are not wrapped in this
+type — see [`NormalizedSource`][narwhals.typing.NormalizedSource].
+"""
+
+NormalizedSource: TypeAlias = "NormalizedPath | IO[bytes] | IO[str]"
+"""A [`FileSource`][narwhals.typing.FileSource] after `narwhals._utils.normalize_path`.
 
 The compliant-namespace IO methods (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
-take an already-normalized path and forward `kwds` to the native reader.
+take an already-normalized source and forward `kwds` to the native reader. Path-like
+inputs are converted to [`NormalizedPath`][narwhals.typing.NormalizedPath]; file-like
+objects are passed through unchanged.
 """
 
 

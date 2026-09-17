@@ -636,7 +636,9 @@ def read_csv(
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. File-like objects are supported for eager backends
+            (pandas, Polars, PyArrow, and pandas-like).
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -697,7 +699,10 @@ def scan_csv(
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. File-like objects are supported for pandas, Polars,
+            PyArrow, and pandas-like backends. Lazy-only backends such as
+            DuckDB, Ibis, Dask, and Spark-like currently require a file path.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -749,7 +754,9 @@ def read_parquet(
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            File-like objects are supported for eager backends (pandas, Polars,
+            PyArrow, and pandas-like).
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -822,7 +829,10 @@ def scan_parquet(
         ```
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            File-like objects are supported for pandas, Polars, PyArrow, and
+            pandas-like backends. Lazy-only backends such as DuckDB, Ibis,
+            Dask, and Spark-like currently require a file path.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 

@@ -24,6 +24,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._utils import (
     Implementation,
+    ensure_path_source,
     is_nested_literal,
     not_implemented,
     validate_separators,
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
-        NormalizedPath,
+        NormalizedSource,
     )
 
 
@@ -66,14 +67,16 @@ class DaskNamespace(
         self._version = version
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DaskLazyFrame:
         validate_separators(separator, ("sep",), kwds)
-        native = dd.read_csv(source, sep=separator, **kwds)
+        native = dd.read_csv(ensure_path_source(source, "dask"), sep=separator, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DaskLazyFrame:
-        return self._lazyframe.from_native(dd.read_parquet(source, **kwds), context=self)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(
+            dd.read_parquet(ensure_path_source(source, "dask"), **kwds), context=self
+        )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):

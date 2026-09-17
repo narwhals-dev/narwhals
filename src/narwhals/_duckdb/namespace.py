@@ -32,6 +32,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import (
     Implementation,
     check_column_names_are_unique,
+    ensure_path_source,
     requires,
     validate_separators,
 )
@@ -47,7 +48,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -75,14 +76,16 @@ class DuckDBNamespace(
         return DuckDBLazyFrame
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DuckDBLazyFrame:
         validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
-        native = duckdb.read_csv(source, delimiter=separator, **kwds)
+        native = duckdb.read_csv(
+            ensure_path_source(source, "duckdb"), delimiter=separator, **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DuckDBLazyFrame:
-        native = duckdb.read_parquet(source, **kwds)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
+        native = duckdb.read_parquet(ensure_path_source(source, "duckdb"), **kwds)
         return self._lazyframe.from_native(native, context=self)
 
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]

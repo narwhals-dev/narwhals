@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
@@ -248,3 +249,70 @@ def test_scan_csv_raise_on_conflicting_separator(
     kwargs = into_kwargs()
     with pytest.raises(TypeError, match="do not match:"):
         nw.scan_csv("unused.csv", backend=backend, separator="|", **kwargs)
+
+
+def _csv_string_buffer() -> StringIO:
+    buf = StringIO()
+    pl.DataFrame(data).write_csv(buf)
+    buf.seek(0)
+    return buf
+
+
+def _csv_bytes_buffer() -> BytesIO:
+    buf = BytesIO()
+    pl.DataFrame(data).write_csv(buf)
+    buf.seek(0)
+    return buf
+
+
+def _parquet_bytes_buffer() -> BytesIO:
+    buf = BytesIO()
+    pl.DataFrame(data).write_parquet(buf)
+    buf.seek(0)
+    return buf
+
+
+@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+@pytest.mark.parametrize("into_buffer", [_csv_string_buffer, _csv_bytes_buffer])
+def test_read_csv_file_like(
+    backend: Literal["pandas", "polars", "pyarrow"], into_buffer: Callable[[], Any]
+) -> None:
+    pytest.importorskip(backend)
+    assert_equal_eager(nw.read_csv(into_buffer(), backend=backend))
+
+
+@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+@pytest.mark.parametrize("into_buffer", [_csv_string_buffer, _csv_bytes_buffer])
+def test_scan_csv_file_like(
+    backend: Literal["pandas", "polars", "pyarrow"], into_buffer: Callable[[], Any]
+) -> None:
+    pytest.importorskip(backend)
+    assert_equal_lazy(nw.scan_csv(into_buffer(), backend=backend))
+
+
+@skipif_pandas_lt_1_5
+@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+def test_read_parquet_file_like(backend: Literal["pandas", "polars", "pyarrow"]) -> None:
+    pytest.importorskip(backend)
+    assert_equal_eager(nw.read_parquet(_parquet_bytes_buffer(), backend=backend))
+
+
+@skipif_pandas_lt_1_5
+@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
+def test_scan_parquet_file_like(backend: Literal["pandas", "polars", "pyarrow"]) -> None:
+    pytest.importorskip(backend)
+    assert_equal_lazy(nw.scan_parquet(_parquet_bytes_buffer(), backend=backend))
+
+
+@lazy_core_backend
+def test_scan_csv_file_like_unsupported(backend: _LazyOnly) -> None:
+    pytest.importorskip(backend)
+    with pytest.raises(TypeError, match="file-like"):
+        nw.scan_csv(_csv_string_buffer(), backend=backend)
+
+
+@lazy_core_backend
+def test_scan_parquet_file_like_unsupported(backend: _LazyOnly) -> None:
+    pytest.importorskip(backend)
+    with pytest.raises(TypeError, match="file-like"):
+        nw.scan_parquet(_parquet_bytes_buffer(), backend=backend)

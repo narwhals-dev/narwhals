@@ -100,6 +100,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.typing import (
         ConcatMethod,
+        FileSource,
         IntoDType,
         IntoExpr,
         IntoSchema,
@@ -1074,7 +1075,7 @@ def from_numpy(
 
 
 def read_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[EagerAllowed | PluginName],
     separator: str = ",",
@@ -1083,7 +1084,8 @@ def read_csv(
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1102,7 +1104,7 @@ def read_csv(
 
 
 def scan_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[Backend | PluginName],
     separator: str = ",",
@@ -1114,7 +1116,8 @@ def scan_csv(
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1133,12 +1136,12 @@ def scan_csv(
 
 
 def read_parquet(
-    source: str, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1154,7 +1157,7 @@ def read_parquet(
 
 
 def scan_parquet(
-    source: str, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -1174,7 +1177,7 @@ def scan_parquet(
         ```
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 

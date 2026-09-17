@@ -17,6 +17,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from io import IOBase
 from operator import attrgetter
 from pathlib import Path
 from secrets import token_hex
@@ -66,7 +67,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import Concatenate, TypeAlias
+    from typing import IO, Concatenate, TypeAlias
 
     import pandas as pd
     import polars as pl
@@ -130,6 +131,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NestedLiteral,
         NormalizedPath,
+        NormalizedSource,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -2234,11 +2236,28 @@ def validate_separators(
             raise TypeError(msg)
 
 
+def is_file_like(obj: object, /) -> TypeIs[IO[bytes] | IO[str]]:
+    return isinstance(obj, IOBase)
+
+
+def ensure_path_source(source: NormalizedSource, backend: str, /) -> NormalizedPath:
+    """Reject file-like objects for backends that only accept paths."""
+    if is_file_like(source):
+        msg = (
+            f"Reading from file-like objects is not supported for the {backend} backend.\n\n"
+            "Hint: pass a file path, or use an eager backend such as pandas, polars, or pyarrow."
+        )
+        raise TypeError(msg)
+    return source
+
+
 if sys.platform != "win32":
 
-    def normalize_path(source: FileSource, /) -> NormalizedPath:
+    def normalize_path(source: FileSource, /) -> NormalizedSource:
         from narwhals.typing import NormalizedPath
 
+        if is_file_like(source):
+            return source
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
@@ -2247,9 +2266,11 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    def normalize_path(source: FileSource, /) -> NormalizedPath:
+    def normalize_path(source: FileSource, /) -> NormalizedSource:
         from narwhals.typing import NormalizedPath
 
+        if is_file_like(source):
+            return source
         return NormalizedPath(Path(source).as_posix())
 
 
