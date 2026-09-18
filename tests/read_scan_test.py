@@ -347,5 +347,4 @@ def test_scan_parquet_file_like_duckdb() -> None:
         else does_not_raise()
     )
     with context:
-        lf = nw.scan_parquet(_parquet_buffer(), backend="duckdb")
-    assert_equal_lazy(lf)
+        assert_equal_lazy(nw.scan_parquet(_parquet_buffer(), backend="duckdb"))
