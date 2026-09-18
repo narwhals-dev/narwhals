@@ -312,8 +312,8 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice. If set to `None` (default), the slice is taken to the
-                end of the string.
+            length: Length of the slice. Must be non-negative. If set to `None` (default),
+                the slice is taken to the end of the string.
 
         Examples:
             >>> import pandas as pd
@@ -330,6 +330,9 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
+        if length is not None and length < 0:
+            msg = f"`length` must be non-negative, got {length}"
+            raise ValueError(msg)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=offset, length=length)
         )

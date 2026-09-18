@@ -452,3 +452,20 @@ def test_cast_object_pandas() -> None:
     s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
     assert s[0] == 2
     assert s.cast(nw.String)[0] == "2"
+
+
+def test_cast_float_to_int_truncates(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Float-to-int casts truncate toward zero (matching pandas and polars);
+    # pyarrow's default safe cast used to raise on any fractional part.
+    if any(backend in str(constructor) for backend in ("duckdb", "sqlframe", "ibis")):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="DuckDB, Spark and Ibis round float->int casts natively instead of truncating"
+            )
+        )
+    data = {"a": [1.7, -2.5, 0.5]}
+    df = nw.from_native(constructor(data)).lazy()
+    result = df.select(nw.col("a").cast(nw.Int64)).collect()
+    assert_equal_data(result, {"a": [1, -2, 0]})

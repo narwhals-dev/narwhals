@@ -69,7 +69,15 @@ class SQLExprStringNamespace(
             col_length = self._function("length", expr)
 
             _offset = (
-                self._function("add", col_length, self._lit(offset + 1))
+                # For a negative offset, `length + offset + 1` is the 1-based start
+                # index, which can be <= 0 for strings shorter than |offset|. Clamp
+                # to 1: engines like DuckDB silently drop a character for a
+                # non-positive substring start.
+                self._function(
+                    "greatest",
+                    self._lit(1),
+                    self._function("add", col_length, self._lit(offset + 1)),
+                )
                 if offset < 0
                 else self._lit(offset + 1)
             )
