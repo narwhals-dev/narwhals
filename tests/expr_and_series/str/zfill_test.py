@@ -33,10 +33,19 @@ zfill_cases = [
         id="width_0",
     ),
     pytest.param({"a": ["日本", None]}, 3, {"a": ["日本", None]}, id="non_ascii"),
-    pytest.param({"a": ["+é", "+12"]}, 3, {"a": ["+é", "+12"]}, id="multibyte_plus_w3"),
-    pytest.param({"a": ["+é", "+12"]}, 4, {"a": ["+0é", "+012"]}, id="multibyte_plus_w4"),
+    # A `+` in front of a multibyte character: Polars pads to a byte count, every other
+    # backend to a character count.
+    pytest.param({"a": ["+é", "+12"]}, 3, {"a": ["+é", "+12"]}, id="non_ascii_plus_w3"),
+    pytest.param({"a": ["+é", "+12"]}, 4, {"a": ["+0é", "+012"]}, id="non_ascii_plus_w4"),
     pytest.param(
-        {"a": ["+é", "+12"]}, 5, {"a": ["+00é", "+0012"]}, id="multibyte_plus_w5"
+        {"a": ["+é", "+12"]}, 5, {"a": ["+00é", "+0012"]}, id="non_ascii_plus_w5"
+    ),
+    # Only the first character is a sign; the second one is padded like any other.
+    pytest.param(
+        {"a": ["+-1", "-+1", "+-", "-+"]},
+        4,
+        {"a": ["+0-1", "-0+1", "+00-", "-00+"]},
+        id="nested_sign",
     ),
 ]
 
@@ -72,9 +81,7 @@ def test_str_zfill(
         )
         pytest.skip(reason=reason)
 
-    if any(
-        case_id in request.node.callspec.id for case_id in ("non_ascii", "multibyte_plus")
-    ) and "polars" not in str(constructor):
+    if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor):
         request.applymarker(
             pytest.mark.xfail(reason="non-polars backends count characters")
         )
@@ -115,9 +122,7 @@ def test_str_zfill_series(
         )
         pytest.skip(reason=reason)
 
-    if any(
-        case_id in request.node.callspec.id for case_id in ("non_ascii", "multibyte_plus")
-    ) and "polars" not in str(constructor_eager):
+    if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor_eager):
         request.applymarker(
             pytest.mark.xfail(reason="non-polars backends count characters")
         )
