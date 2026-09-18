@@ -68,6 +68,7 @@ class DictLazyFrame(
     head = not_implemented()
     join = not_implemented()
     join_asof = not_implemented()
+    pivot = not_implemented()
     rename = not_implemented()
     select = not_implemented()
     simple_select = not_implemented()

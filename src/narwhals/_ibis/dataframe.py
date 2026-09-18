@@ -14,9 +14,12 @@ from narwhals._utils import (
     Implementation,
     ValidateBackendVersion,
     Version,
+    check_lazy_pivot_supported_options,
+    generate_pivot_column_names,
     generate_temporary_column_name,
     not_implemented,
     parse_columns_to_drop,
+    resolve_pivot_index_values,
     to_pyarrow_table,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -41,7 +44,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        JoinStrategy,
+        PivotAgg,
+        UniqueKeepStrategy,
+    )
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -406,6 +414,51 @@ class IbisLazyFrame(
             s.cols(*on_), names_to=variable_name, values_to=value_name
         )
         return self._with_native(unpivoted.select(*final_columns))
+
+    def pivot(
+        self,
+        on: str,
+        on_columns: Sequence[Any],
+        *,
+        index: Sequence[str] | None,
+        values: Sequence[str] | None,
+        aggregate_function: PivotAgg | None,
+        maintain_order: bool,
+        separator: str,
+    ) -> Self:
+        import ibis.selectors as s
+
+        aggregate_function = check_lazy_pivot_supported_options(
+            self._implementation, aggregate_function, maintain_order=maintain_order
+        )
+        index, values = resolve_pivot_index_values(self.columns, on, index, values)
+
+        aggregate = "count" if aggregate_function == "len" else aggregate_function
+        result = self.native.pivot_wider(
+            id_cols=s.cols(*index),
+            names_from=on,
+            names=on_columns,
+            names_sep=separator,
+            values_from=values,
+            # ibis gives null for a missing combination, polars gives 0.
+            values_fill=0 if aggregate in {"sum", "count"} else None,
+            values_agg=aggregate,
+        )
+
+        # ibis orders pivoted columns by `on_columns` first, polars by `values`.
+        # Also, ibis generates the names the same as polars except for when the value is
+        # an empty string and the number of values is greater than 1 (foo vs foo_)
+        output = (
+            result[
+                pivot.value
+                if len(values) > 1 and str(pivot.on_value) == ""
+                else pivot.output_name
+            ].name(pivot.output_name)
+            for pivot in generate_pivot_column_names(
+                on_columns, values, separator=separator
+            )
+        )
+        return self._with_native(result.select(*index, *output))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
         if not order_by:
