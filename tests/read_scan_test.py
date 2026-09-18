@@ -257,10 +257,14 @@ def test_scan_csv_raise_on_conflicting_separator(
 def _csv_buffer(
     into: type[StringIO | BytesIO] = BytesIO, /, *, separator: str = ","
 ) -> StringIO | BytesIO:
-    buf = into()
-    pl.DataFrame(data).write_csv(buf, separator=separator)
-    buf.seek(0)
-    return buf
+    # Polars `write_csv` emits bytes. Older versions raise if that lands in
+    # a text buffer (`OSError: string argument expected, got 'bytes'`).
+    raw = BytesIO()
+    pl.DataFrame(data).write_csv(raw, separator=separator)
+    payload = raw.getvalue()
+    if into is StringIO:
+        return StringIO(payload.decode())
+    return BytesIO(payload)
 
 
 def _parquet_buffer() -> BytesIO:
