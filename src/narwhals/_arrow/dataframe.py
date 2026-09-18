@@ -581,7 +581,7 @@ class ArrowDataFrame(
         session: SparkSession | None = None,
     ) -> CompliantLazyFrameAny:
         if backend is None:
-            return self
+            return self  # pyrefly: ignore[bad-return]  # https://github.com/facebook/pyrefly/issues/4656
         if backend is Implementation.DUCKDB:
             import duckdb  # ignore-banned-import
 
@@ -630,7 +630,10 @@ class ArrowDataFrame(
                 raise ValueError(msg)
 
             return SparkLikeLazyFrame._from_compliant_dataframe(
-                self, session=session, implementation=backend, version=self._version
+                self,  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
+                session=session,
+                implementation=backend,
+                version=self._version,
             )
 
         raise AssertionError  # pragma: no cover

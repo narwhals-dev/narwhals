@@ -901,8 +901,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         if has_nulls:
             *cols, null_col_pd = list(result.columns)
             output_order = [null_col_pd, *cols]
+            selected = select_columns_by_name(result, output_order, self._implementation)
             result = rename(
-                select_columns_by_name(result, output_order, self._implementation),
+                selected,
                 columns={null_col_pd: null_col_pl},
                 implementation=self._implementation,
             )
@@ -1103,7 +1104,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         return (
-            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)
+            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bins(bins)
             .to_frame()
         )
@@ -1112,7 +1113,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> PandasLikeDataFrame:
         return (
-            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)
+            _PandasHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bin_count(bin_count)
             .to_frame()
         )
@@ -1130,7 +1131,7 @@ class PandasLikeSeries(EagerSeries[Any]):
             log_func = self._array_funcs.log
 
             def array_log(arr: NativeSeriesT) -> NativeSeriesT:
-                return log_func(arr) / log_func(base)  # pyright: ignore[reportArgumentType, reportCallIssue]
+                return log_func(arr) / log_func(base)  # pyright: ignore[reportArgumentType, reportCallIssue]  # pyrefly: ignore[no-matching-overload]
 
             result_native = self._apply_array_func(native, array_log)
         return self._with_native(result_native)
@@ -1240,7 +1241,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         return PandasLikeSeriesCatNamespace(self)
 
     @property
-    def list(self) -> PandasLikeSeriesListNamespace:
+    def list(self) -> PandasLikeSeriesListNamespace:  # pyrefly: ignore[bad-override]  # https://github.com/facebook/pyrefly/issues/4656
         if not hasattr(self.native, "list"):
             msg = "Series must be of PyArrow List type to support list namespace."
             raise TypeError(msg)
@@ -1255,7 +1256,7 @@ class PandasLikeSeries(EagerSeries[Any]):
 
 
 class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
-    _series: PandasLikeSeries
+    _series: PandasLikeSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # https://github.com/facebook/pyrefly/issues/4656
 
     def to_frame(self) -> PandasLikeDataFrame:
         from_native = self._series.__narwhals_namespace__()._dataframe.from_native

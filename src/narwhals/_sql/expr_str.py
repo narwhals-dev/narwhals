@@ -37,18 +37,19 @@ class SQLExprStringNamespace(
             else pattern
         )
         return self.compliant._with_elementwise(
-            func, expression_args={"pattern": compliant_pattern}
+            func,  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
+            expression_args={"pattern": compliant_pattern},
         )
 
     def ends_with(self, suffix: SQLExprT) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr, suffix: self._function("ends_with", expr, suffix),
+            lambda expr, suffix: self._function("ends_with", expr, suffix),  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
             expression_args={"suffix": suffix},
         )
 
     def len_chars(self) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function("length", expr)
+            lambda expr: self._function("length", expr)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         )
 
     def replace_all(self, value: SQLExprT, pattern: str, *, literal: bool) -> SQLExprT:
@@ -58,7 +59,7 @@ class SQLExprStringNamespace(
         if not literal and self.compliant._implementation.is_duckdb():
             options = [self._lit("g")]
         return self.compliant._with_elementwise(
-            lambda expr, value: self._function(
+            lambda expr, value: self._function(  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
                 fname, expr, self._lit(pattern), value, *options
             ),
             expression_args={"value": value},
@@ -76,7 +77,7 @@ class SQLExprStringNamespace(
             _length = self._lit(length) if length is not None else col_length
             return self._function("substr", expr, _offset, _length)
 
-        return self.compliant._with_elementwise(func)
+        return self.compliant._with_elementwise(func)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def split(self, by: str) -> SQLExprT:
         # PySpark < 4.0's `split` expects a raw Python string for `pattern`,
@@ -84,12 +85,12 @@ class SQLExprStringNamespace(
         _is_pyspark_pre_4 = is_pyspark_pre_4(self.compliant._implementation)
         split_by = by if _is_pyspark_pre_4 else self._lit(by)
         return self.compliant._with_elementwise(
-            lambda expr: self._function("str_split", expr, split_by)
+            lambda expr: self._function("str_split", expr, split_by)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         )
 
     def starts_with(self, prefix: SQLExprT) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr, prefix: self._function("starts_with", expr, prefix),
+            lambda expr, prefix: self._function("starts_with", expr, prefix),  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
             expression_args={"prefix": prefix},
         )
 
@@ -97,7 +98,7 @@ class SQLExprStringNamespace(
         import string
 
         return self.compliant._with_elementwise(
-            lambda expr: self._function(
+            lambda expr: self._function(  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
                 "trim",
                 expr,
                 self._lit(string.whitespace if characters is None else characters),
@@ -106,12 +107,12 @@ class SQLExprStringNamespace(
 
     def to_lowercase(self) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function("lower", expr)
+            lambda expr: self._function("lower", expr)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         )
 
     def to_uppercase(self) -> SQLExprT:
         return self.compliant._with_elementwise(
-            lambda expr: self._function("upper", expr)
+            lambda expr: self._function("upper", expr)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
         )
 
     def zfill(self, width: int) -> SQLExprT:
@@ -149,7 +150,7 @@ class SQLExprStringNamespace(
 
         # can't use `_with_elementwise` due to `when` operator.
         # TODO(unassigned): implement `window_func` like we do in `Expr.cast`
-        return self.compliant._with_callable(func)
+        return self.compliant._with_callable(func)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def pad_start(self, length: int, fill_char: str) -> SQLExprT:
         # PySpark < 4.0's `lpad` expects raw Python values for `len` and `pad`,
@@ -165,7 +166,7 @@ class SQLExprStringNamespace(
                 expr,
             )
 
-        return self.compliant._with_callable(_pad_start)
+        return self.compliant._with_callable(_pad_start)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md
 
     def pad_end(self, length: int, fill_char: str) -> SQLExprT:
         # PySpark < 4.0's `rpad` expects raw Python values for `len` and `pad`,
@@ -181,4 +182,4 @@ class SQLExprStringNamespace(
                 expr,
             )
 
-        return self.compliant._with_callable(_pad_end)
+        return self.compliant._with_callable(_pad_end)  # pyrefly: ignore[bad-argument-type]  # pyrefly-issues/04-callable-typevar-through-nested-attr.md

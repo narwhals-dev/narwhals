@@ -67,7 +67,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
     def _to_datetime_naive(self, format: str) -> Callable[..., ir.TimestampValue]:
         def fn(expr: ir.StringColumn) -> ir.TimestampValue:
             dtype: Any = Timestamp(timezone=None)
-            return expr.as_timestamp(format).cast(dtype)
+            return expr.as_timestamp(format).cast(dtype)  # pyrefly: ignore[bad-return]
 
         return fn
 

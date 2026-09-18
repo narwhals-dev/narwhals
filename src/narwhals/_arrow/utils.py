@@ -362,7 +362,7 @@ def cast_for_truediv(
     if pa.types.is_integer(arrow_array.type) and pa.types.is_integer(pa_object.type):
         # GH: 56645.  # noqa: ERA001
         # https://github.com/apache/arrow/issues/35563
-        return arrow_array.cast(pa.float64(), safe=False), pa_object.cast(
+        return arrow_array.cast(pa.float64(), safe=False), pa_object.cast(  # pyrefly: ignore[bad-return]
             pa.float64(), safe=False
         )
 

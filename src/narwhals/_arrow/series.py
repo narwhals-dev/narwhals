@@ -31,7 +31,6 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
-    is_list_of,
     not_implemented,
 )
 from narwhals.dependencies import is_numpy_array_1d
@@ -172,10 +171,11 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         version = context._version
         if dtype is not None:
             dtype_pa: pa.DataType | None = narwhals_to_native_dtype(dtype, version)
-            if is_array_or_scalar(data):
-                data = data.cast(dtype_pa)
-                dtype_pa = None
-            native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
+            if dtype_pa is not None and is_array_or_scalar(data):
+                casted = data.cast(dtype_pa)
+                native = casted if cls._is_native(casted) else chunked_array(casted)
+            else:
+                native = data if cls._is_native(data) else chunked_array([data], dtype_pa)
         else:
             native = chunked_array([data])
         return cls.from_native(native, context=context, name=name)
@@ -323,12 +323,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return maybe_extract_py_scalar(len(self.native), _return_py_scalar)
 
     def filter(self, predicate: ArrowSeries | list[bool | None]) -> Self:
-        other_native: Any
-        if not is_list_of(predicate, bool):
-            _, other_native = extract_native(self, predicate)
-        else:
-            other_native = predicate
-        return self._with_native(self.native.filter(other_native))
+        mask = predicate.native if isinstance(predicate, ArrowSeries) else predicate
+        return self._with_native(self.native.filter(mask))
 
     def first(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
         result = self.native[0] if len(self.native) else None
@@ -1004,7 +1000,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 (rolling_sum_sq - (rolling_sum**2 / count_in_window)).native,
                 None,
             )
-        ) / self._with_native(pc.max_element_wise((count_in_window - ddof).native, 0))
+        ) / self._with_native(
+            pc.max_element_wise((count_in_window - ddof).native, lit(0))
+        )
 
         return result._gather_slice(slice(offset, None, None))
 
@@ -1047,7 +1045,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bins: list[float], *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bins(bins)
             .to_frame()
         )
@@ -1056,7 +1054,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         self, bin_count: int, *, include_breakpoint: bool
     ) -> ArrowDataFrame:
         return (
-            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)
+            _ArrowHist.from_series(self, include_breakpoint=include_breakpoint)  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             .with_bin_count(bin_count)
             .to_frame()
         )
@@ -1114,7 +1112,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return ArrowSeriesStringNamespace(self)
 
     @property
-    def list(self) -> ArrowSeriesListNamespace:
+    def list(self) -> ArrowSeriesListNamespace:  # pyrefly: ignore[bad-override]  # https://github.com/facebook/pyrefly/issues/4656
         return ArrowSeriesListNamespace(self)
 
     @property
@@ -1127,7 +1125,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 class _ArrowHist(
     EagerSeriesHist["ChunkedArrayAny", "list[ScalarAny] | pa.Int64Array | list[float]"]
 ):
-    _series: ArrowSeries
+    _series: ArrowSeries  # pyrefly: ignore[bad-override-mutable-attribute]  # https://github.com/facebook/pyrefly/issues/4656
 
     def to_frame(self) -> ArrowDataFrame:
         # NOTE: Constructor typing is too strict for `TypedDict`
@@ -1188,7 +1186,7 @@ class _ArrowHist(
             is_between_bins = pc.and_(
                 pc.greater_equal(ser, lit(bins[0])), pc.less_equal(ser, lit(bins[1]))
             )
-            count = pc.sum(is_between_bins.cast(pa.uint8()))
+            count = pc.sum(is_between_bins.cast(pa.uint8()))  # pyrefly: ignore[bad-specialization]  # https://github.com/facebook/pyrefly/issues/4923
             if self._breakpoint:
                 return {"breakpoint": [bins[-1]], "count": [count]}
             return {"count": [count]}

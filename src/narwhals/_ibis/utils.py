@@ -156,7 +156,7 @@ def native_to_narwhals_dtype(ibis_dtype: IbisDataType, version: Version) -> DTyp
         return dtypes.Date()
     if is_timestamp(ibis_dtype):
         _unit = cast("TimestampUnit", ibis_dtype.unit)
-        return dtypes.Datetime(time_unit=_unit.value, time_zone=ibis_dtype.timezone)
+        return dtypes.Datetime(time_unit=_unit.value, time_zone=ibis_dtype.timezone)  # pyrefly: ignore[bad-argument-type]
     if is_interval(ibis_dtype):
         _time_unit = ibis_dtype.unit.value
         if _time_unit not in {"ns", "us", "ms", "s"}:  # pragma: no cover
@@ -248,7 +248,7 @@ def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> IbisDataType
     if isinstance_or_issubclass(dtype, dtypes.Datetime):
         return ibis_dtypes.Timestamp.from_unit(dtype.time_unit, timezone=dtype.time_zone)
     if isinstance_or_issubclass(dtype, dtypes.Duration):
-        return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]
+        return ibis_dtypes.Interval(unit=dtype.time_unit)  # pyright: ignore[reportArgumentType]  # pyrefly: ignore[bad-argument-type]
     if isinstance_or_issubclass(dtype, dtypes.List):
         inner = narwhals_to_native_dtype(dtype.inner, version)
         return ibis_dtypes.Array(value_type=inner)
@@ -284,7 +284,7 @@ _BINARY_OPS = {
 def function(name: str, *args: ir.Value | PythonLiteral) -> ir.Value:
     # Workaround SQL vs Ibis differences.
     if name in _BINARY_OPS:
-        return _BINARY_OPS[name](*args)
+        return _BINARY_OPS[name](*args)  # pyrefly: ignore[no-matching-overload]  # pyrefly-issues/05-operator-overload-with-star-args.md
     if name == "row_number":
         return ibis.row_number() + lit(1)
     if name == "least":

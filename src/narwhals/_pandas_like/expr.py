@@ -299,7 +299,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 df = df.with_columns(
                     cast("PandasLikeExpr", evaluate_nodes(nodes[:-1], plx))
                 )
-            _, aliases = evaluate_output_names_and_aliases(self, df, [])
+            _, aliases = evaluate_output_names_and_aliases(self, df, [])  # pyrefly: ignore[bad-argument-type]  # https://github.com/facebook/pyrefly/issues/4656
             if function_name == "cum_count":
                 df = df.with_columns(~plx.col(*aliases).is_null())
 
@@ -310,6 +310,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 assert "reverse" not in scalar_kwargs  # noqa: S101
                 reverse = False
 
+            sorting_indices: PandasLikeSeries | None = None
             if order_by:
                 columns = list(set(partition_by).union(aliases).union(order_by))
                 token = generate_temporary_column_name(8, columns)
@@ -380,7 +381,7 @@ class PandasLikeExpr(EagerExpr["PandasLikeDataFrame", PandasLikeSeries]):
                 )
             result_frame = df._with_native(res_native)
             results = [result_frame.get_column(name) for name in aliases]
-            if order_by:
+            if sorting_indices is not None:
                 with warnings.catch_warnings():
                     # Ignore settingwithcopy warnings/errors, they're false-positives here.
                     warnings.filterwarnings("ignore", message="\n.*copy of a slice")
