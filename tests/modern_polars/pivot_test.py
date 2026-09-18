@@ -11,7 +11,7 @@ from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
 def test_pivot(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
+    if "modin" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
         pytest.skip()
