@@ -474,11 +474,7 @@ class PolarsExprStringNamespace(
             starts_with_plus = self.native.str.starts_with(plus)
             native_result = (
                 pl.when(starts_with_plus & less_than_width)
-                .then(
-                    self.native.str.slice(1, length)
-                    .str.zfill(width - 1)
-                    .str.pad_start(width, plus)
-                )
+                .then(plus + self.native.str.slice(1, length).str.zfill(width - 1))
                 .otherwise(native_result)
             )
 
