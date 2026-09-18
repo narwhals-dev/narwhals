@@ -368,18 +368,17 @@ IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 FileSource: TypeAlias = "str | os.PathLike[str] | IO[bytes] | IO[str]"
 """Path to a file, or a file-like object.
 
-Either a string, an object that implements [`__fspath__`] (such as [`pathlib.Path`]),
-or a file-like object such as [`io.BytesIO`] / [`io.StringIO`].
+Either a string, an object that implements
+[`__fspath__`](https://docs.python.org/3/library/os.html#os.PathLike)
+(such as [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)),
+or a file-like object such as
+[`io.BytesIO`](https://docs.python.org/3/library/io.html#io.BytesIO) /
+[`io.StringIO`](https://docs.python.org/3/library/io.html#io.StringIO).
 
-Only pandas (and pandas-like), Polars and PyArrow accept a file-like object.
-DuckDB also accepts one when `fsspec` is installed (CSV from the minimum
-supported DuckDB version; Parquet from 1.5.4). The other lazy-only backends
-require a path, and raise `TypeError` otherwise.
-
-[`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
-[`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
-[`io.BytesIO`]: https://docs.python.org/3/library/io.html#io.BytesIO
-[`io.StringIO`]: https://docs.python.org/3/library/io.html#io.StringIO
+pandas (and pandas-like), Polars and PyArrow accept a file-like object. DuckDB
+does too, but only with `fsspec` installed, and `scan_parquet` additionally needs
+`duckdb>=1.5.4`. Dask, Ibis and Spark-like require a path and raise `TypeError`
+for anything else.
 """
 
 NormalizedPath = NewType("NormalizedPath", str)

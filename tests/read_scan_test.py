@@ -39,6 +39,8 @@ skipif_pandas_lt_1_5 = pytest.mark.skipif(
 )
 lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
 spark_like_backend = pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
+# Backends whose native reader cannot take a file-like object.
+path_only_backend = pytest.mark.parametrize("backend", ["dask", "ibis", "sqlframe"])
 
 
 class MockPathLike:
@@ -252,84 +254,90 @@ def test_scan_csv_raise_on_conflicting_separator(
         nw.scan_csv("unused.csv", backend=backend, separator="|", **kwargs)
 
 
-def _csv_string_buffer() -> StringIO:
-    buf = StringIO()
-    pl.DataFrame(data).write_csv(buf)
+def _csv_buffer(
+    into: type[StringIO | BytesIO] = BytesIO, /, *, separator: str = ","
+) -> StringIO | BytesIO:
+    buf = into()
+    pl.DataFrame(data).write_csv(buf, separator=separator)
     buf.seek(0)
     return buf
 
 
-def _csv_bytes_buffer() -> BytesIO:
-    buf = BytesIO()
-    pl.DataFrame(data).write_csv(buf)
-    buf.seek(0)
-    return buf
-
-
-def _parquet_bytes_buffer() -> BytesIO:
+def _parquet_buffer() -> BytesIO:
     buf = BytesIO()
     pl.DataFrame(data).write_parquet(buf)
     buf.seek(0)
     return buf
 
 
-@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
-@pytest.mark.parametrize("into_buffer", [_csv_string_buffer, _csv_bytes_buffer])
+@pytest.mark.parametrize("into", [StringIO, BytesIO])
 def test_read_csv_file_like(
-    backend: Literal["pandas", "polars", "pyarrow"], into_buffer: Callable[[], Any]
+    eager_backend: EagerAllowed, into: type[StringIO | BytesIO]
 ) -> None:
-    pytest.importorskip(backend)
-    assert_equal_eager(nw.read_csv(into_buffer(), backend=backend))
+    assert_equal_eager(nw.read_csv(_csv_buffer(into), backend=eager_backend))
+    assert_equal_eager(
+        nw.read_csv(
+            _csv_buffer(into, separator="|"), backend=eager_backend, separator="|"
+        )
+    )
 
 
-@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
-@pytest.mark.parametrize("into_buffer", [_csv_string_buffer, _csv_bytes_buffer])
+@pytest.mark.parametrize("into", [StringIO, BytesIO])
 def test_scan_csv_file_like(
-    backend: Literal["pandas", "polars", "pyarrow"], into_buffer: Callable[[], Any]
+    eager_backend: EagerAllowed, into: type[StringIO | BytesIO]
 ) -> None:
-    pytest.importorskip(backend)
-    assert_equal_lazy(nw.scan_csv(into_buffer(), backend=backend))
+    assert_equal_lazy(nw.scan_csv(_csv_buffer(into), backend=eager_backend))
+
+
+def test_read_csv_file_like_pyarrow_encoding() -> None:
+    # A text buffer is re-encoded before reaching `pyarrow.csv`, so it has to use
+    # whatever `read_options.encoding` declares, else the values come back mojibake.
+    from pyarrow import csv
+
+    result = nw.read_csv(
+        StringIO("z\nrené\n"),
+        backend="pyarrow",
+        read_options=csv.ReadOptions(encoding="latin-1"),
+    )
+    assert result.rows() == [("rené",)]
 
 
 @skipif_pandas_lt_1_5
-@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
-def test_read_parquet_file_like(backend: Literal["pandas", "polars", "pyarrow"]) -> None:
-    pytest.importorskip(backend)
-    assert_equal_eager(nw.read_parquet(_parquet_bytes_buffer(), backend=backend))
+def test_read_parquet_file_like(eager_backend: EagerAllowed) -> None:
+    assert_equal_eager(nw.read_parquet(_parquet_buffer(), backend=eager_backend))
 
 
 @skipif_pandas_lt_1_5
-@pytest.mark.parametrize("backend", ["pandas", "polars", "pyarrow"])
-def test_scan_parquet_file_like(backend: Literal["pandas", "polars", "pyarrow"]) -> None:
-    pytest.importorskip(backend)
-    assert_equal_lazy(nw.scan_parquet(_parquet_bytes_buffer(), backend=backend))
+def test_scan_parquet_file_like(eager_backend: EagerAllowed) -> None:
+    assert_equal_lazy(nw.scan_parquet(_parquet_buffer(), backend=eager_backend))
 
 
-@pytest.mark.parametrize("backend", ["ibis", "sqlframe"])
-def test_scan_csv_file_like_unsupported(backend: Literal["ibis", "sqlframe"]) -> None:
+@path_only_backend
+def test_scan_csv_file_like_unsupported(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(TypeError, match="file-like"):
-        nw.scan_csv(_csv_string_buffer(), backend=backend)
+        nw.scan_csv(_csv_buffer(StringIO), backend=backend)
 
 
-@pytest.mark.parametrize("backend", ["ibis", "sqlframe"])
-def test_scan_parquet_file_like_unsupported(backend: Literal["ibis", "sqlframe"]) -> None:
+@path_only_backend
+def test_scan_parquet_file_like_unsupported(backend: _LazyOnly) -> None:
     pytest.importorskip(backend)
     with pytest.raises(TypeError, match="file-like"):
-        nw.scan_parquet(_parquet_bytes_buffer(), backend=backend)
+        nw.scan_parquet(_parquet_buffer(), backend=backend)
 
 
-def test_scan_csv_file_like_duckdb() -> None:
+@pytest.mark.parametrize("into", [StringIO, BytesIO])
+def test_scan_csv_file_like_duckdb(into: type[StringIO | BytesIO]) -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
-    assert_equal_lazy(nw.scan_csv(_csv_bytes_buffer(), backend="duckdb"))
-    assert_equal_lazy(nw.scan_csv(_csv_string_buffer(), backend="duckdb"))
+    assert_equal_lazy(nw.scan_csv(_csv_buffer(into), backend="duckdb"))
 
 
-@skipif_pandas_lt_1_5
 def test_scan_parquet_file_like_duckdb() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
     if DUCKDB_VERSION < (1, 5, 4):
-        pytest.skip("read_parquet(file-like) requires duckdb>=1.5.4")
-    assert_equal_lazy(nw.scan_parquet(_parquet_bytes_buffer(), backend="duckdb"))
+        with pytest.raises(NotImplementedError, match=r"duckdb>=1\.5\.4"):
+            nw.scan_parquet(_parquet_buffer(), backend="duckdb")
+        return
+    assert_equal_lazy(nw.scan_parquet(_parquet_buffer(), backend="duckdb"))

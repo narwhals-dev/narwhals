@@ -699,9 +699,8 @@ def scan_csv(
 
     Arguments:
         source: Path to a file, or a file-like object such as `io.StringIO` /
-            `io.BytesIO`. File-like objects are supported for pandas, Polars,
-            PyArrow, pandas-like backends, and DuckDB (when `fsspec` is installed).
-            Ibis, Dask, and Spark-like backends require a file path.
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -827,9 +826,8 @@ def scan_parquet(
 
     Arguments:
         source: Path to a file, or a file-like object such as `io.BytesIO`.
-            File-like objects are supported for pandas, Polars, PyArrow,
-            pandas-like backends, and DuckDB (when `fsspec` is installed).
-            Ibis, Dask, and Spark-like backends require a file path.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 

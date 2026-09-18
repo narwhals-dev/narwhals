@@ -32,6 +32,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import (
     Implementation,
     check_column_names_are_unique,
+    is_file_like,
     requires,
     validate_separators,
 )
@@ -82,6 +83,13 @@ class DuckDBNamespace(
         return self._lazyframe.from_native(native, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
+        if is_file_like(source) and (version := self._backend_version) < (1, 5, 4):
+            found = ".".join(str(part) for part in version)
+            msg = (
+                "`scan_parquet` from a file-like object is only available in "
+                f"'duckdb>=1.5.4', found version {found!r}."
+            )
+            raise NotImplementedError(msg)
         native = duckdb.read_parquet(source, **kwds)
         return self._lazyframe.from_native(native, context=self)
 

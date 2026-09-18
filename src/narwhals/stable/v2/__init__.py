@@ -1117,7 +1117,8 @@ def scan_csv(
 
     Arguments:
         source: Path to a file, or a file-like object such as `io.StringIO` /
-            `io.BytesIO`.
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1178,6 +1179,8 @@ def scan_parquet(
 
     Arguments:
         source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
