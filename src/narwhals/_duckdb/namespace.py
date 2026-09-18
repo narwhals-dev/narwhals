@@ -84,10 +84,9 @@ class DuckDBNamespace(
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
         if is_file_like(source) and (version := self._backend_version) < (1, 5, 4):
-            found = ".".join(str(part) for part in version)
             msg = (
                 "`scan_parquet` from a file-like object is only available in "
-                f"'duckdb>=1.5.4', found version {found!r}."
+                f"'duckdb>=1.5.4', found version {requires._unparse_version(version)!r}."
             )
             raise NotImplementedError(msg)
         native = duckdb.read_parquet(source, **kwds)

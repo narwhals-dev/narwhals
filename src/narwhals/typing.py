@@ -368,12 +368,9 @@ IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 FileSource: TypeAlias = "str | os.PathLike[str] | IO[bytes] | IO[str]"
 """Path to a file, or a file-like object.
 
-Either a string, an object that implements
-[`__fspath__`](https://docs.python.org/3/library/os.html#os.PathLike)
-(such as [`pathlib.Path`](https://docs.python.org/3/library/pathlib.html#pathlib.Path)),
-or a file-like object such as
-[`io.BytesIO`](https://docs.python.org/3/library/io.html#io.BytesIO) /
-[`io.StringIO`](https://docs.python.org/3/library/io.html#io.StringIO).
+Either a string, an object that implements [`os.PathLike`][os.PathLike]
+(such as [`pathlib.Path`][pathlib.Path]), or a file-like object such as
+[`io.BytesIO`][io.BytesIO] / [`io.StringIO`][io.StringIO].
 
 pandas (and pandas-like), Polars and PyArrow accept a file-like object. DuckDB
 does too, but only with `fsspec` installed, and `scan_parquet` additionally needs
