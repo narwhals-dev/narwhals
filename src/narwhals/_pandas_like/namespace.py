@@ -258,7 +258,8 @@ class PandasLikeNamespace(
 
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -279,7 +280,8 @@ class PandasLikeNamespace(
 
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
@@ -384,17 +386,21 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
-                # NOTE: Trying to help `mypy` later
-                # error: Cannot determine type of "values"  [has-type]
-                values: list[PandasLikeSeries]
+                # Literals stay scalars: blanking keeps the flag, the binary ops
+                # extract them. Only the boolean masks are aligned to full length,
+                # which is cheap and is what `zip_with` needs for the separators.
                 init_value, *values = (
-                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask, strict=True)
+                    s._with_native(
+                        s.native.where(~nm.native, ""), preserve_broadcast=True
+                    )
+                    for s, nm in zip(series, null_mask, strict=True)
                 )
-                sep_array = init_value._with_native(
+                null_mask = self._series._align_full_broadcast(*null_mask)
+                sep_array = null_mask[0]._with_native(
                     init_value.__native_namespace__().Series(
                         separator,
                         name="sep",
-                        index=init_value.native.index,
+                        index=null_mask[0].native.index,
                         dtype=init_value.native.dtype,
                     )
                 )
