@@ -91,7 +91,7 @@ class SparkLikeNamespace(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> SparkLikeLazyFrame:
         validate_separators(separator, ("sep", "delimiter"), kwds)
-        path = ensure_path_source(source, str(self._implementation))
+        path = ensure_path_source(source, self._implementation)
         reader = self._session_reader("csv", kwds)
         native = (
             reader.load(path, sep=separator)
@@ -101,7 +101,7 @@ class SparkLikeNamespace(
         return self._lazyframe.from_native(native, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> SparkLikeLazyFrame:
-        path = ensure_path_source(source, str(self._implementation))
+        path = ensure_path_source(source, self._implementation)
         reader = self._session_reader("parquet", kwds)
         native = (
             reader.load(path)

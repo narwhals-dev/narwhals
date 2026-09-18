@@ -2240,12 +2240,14 @@ def is_file_like(obj: object, /) -> TypeIs[IO[bytes] | IO[str]]:
     return isinstance(obj, IOBase)
 
 
-def ensure_path_source(source: NormalizedSource, backend: str, /) -> NormalizedPath:
-    """Reject file-like objects for backends that only accept paths."""
+def ensure_path_source(
+    source: NormalizedSource, backend: Implementation | PluginName, /
+) -> NormalizedPath:
+    """Reject file-like objects for backends whose native reader requires a path."""
     if is_file_like(source):
         msg = (
-            f"Reading from file-like objects is not supported for the {backend} backend.\n\n"
-            "Hint: pass a file path, or use an eager backend such as pandas, polars, or pyarrow."
+            f"Reading from a file-like object is not supported for the {backend} backend.\n\n"
+            "Hint: use 'pandas', 'polars' or 'pyarrow', or write the buffer to a file first."
         )
         raise TypeError(msg)
     return source
@@ -2253,11 +2255,9 @@ def ensure_path_source(source: NormalizedSource, backend: str, /) -> NormalizedP
 
 if sys.platform != "win32":
 
-    def normalize_path(source: FileSource, /) -> NormalizedSource:
+    def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
         from narwhals.typing import NormalizedPath
 
-        if is_file_like(source):
-            return source
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
 else:  # pragma: no cover
     # NOTE: On Windows, we need to ensure strings paths do not produce escape sequences.
@@ -2266,12 +2266,14 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    def normalize_path(source: FileSource, /) -> NormalizedSource:
+    def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
         from narwhals.typing import NormalizedPath
 
-        if is_file_like(source):
-            return source
         return NormalizedPath(Path(source).as_posix())
+
+
+def normalize_source(source: FileSource, /) -> NormalizedSource:
+    return source if is_file_like(source) else _normalize_path(source)
 
 
 def extend_bool(

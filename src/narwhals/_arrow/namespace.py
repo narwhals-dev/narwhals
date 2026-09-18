@@ -68,9 +68,11 @@ class ArrowNamespace(
                 raise TypeError(msg)
         else:
             kwds["parse_options"] = csv.ParseOptions(delimiter=separator)
-        # PyArrow's CSV reader accepts paths and binary streams, not text buffers.
+        # `pyarrow.csv` reads binary streams, but not text ones. Re-encode with the
+        # declared encoding, otherwise pyarrow decodes our bytes with the wrong codec.
         if isinstance(source, TextIOBase):
-            source = BytesIO(source.read().encode())  # pyright: ignore[reportAttributeAccessIssue]
+            encoding = getattr(kwds.get("read_options"), "encoding", "utf8")
+            source = BytesIO(source.read().encode(encoding))  # pyright: ignore[reportAttributeAccessIssue]
         return self._dataframe.from_native(csv.read_csv(source, **kwds), context=self)
 
     def read_parquet(self, source: NormalizedSource, **kwds: Any) -> ArrowDataFrame:

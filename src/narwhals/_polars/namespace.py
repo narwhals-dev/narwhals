@@ -127,6 +127,10 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
+    def _read_eagerly(self, source: NormalizedSource, /) -> bool:
+        """`pl.scan_*` only accepts a file-like object from `1.7.0` onwards."""
+        return is_file_like(source) and self._backend_version < (1, 7)
+
     def read_csv(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PolarsDataFrame:
@@ -136,10 +140,9 @@ class PolarsNamespace:
     def scan_csv(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PolarsLazyFrame:
-        # Polars lazy scans need a path; file-like objects are read eagerly.
         native = (
             pl.read_csv(source, separator=separator, **kwds).lazy()
-            if is_file_like(source)
+            if self._read_eagerly(source)
             else pl.scan_csv(source, separator=separator, **kwds)
         )
         return self._lazyframe.from_native(native, context=self)
@@ -151,8 +154,8 @@ class PolarsNamespace:
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsLazyFrame:
         native = (
             pl.read_parquet(cast("Any", source), **kwds).lazy()
-            if is_file_like(source)
-            else pl.scan_parquet(source, **kwds)
+            if self._read_eagerly(source)
+            else pl.scan_parquet(cast("Any", source), **kwds)
         )
         return self._lazyframe.from_native(native, context=self)
 

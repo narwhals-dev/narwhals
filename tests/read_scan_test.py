@@ -8,6 +8,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     Constructor,
     assert_equal_data,
@@ -304,15 +305,31 @@ def test_scan_parquet_file_like(backend: Literal["pandas", "polars", "pyarrow"])
     assert_equal_lazy(nw.scan_parquet(_parquet_bytes_buffer(), backend=backend))
 
 
-@lazy_core_backend
-def test_scan_csv_file_like_unsupported(backend: _LazyOnly) -> None:
+@pytest.mark.parametrize("backend", ["ibis", "sqlframe"])
+def test_scan_csv_file_like_unsupported(backend: Literal["ibis", "sqlframe"]) -> None:
     pytest.importorskip(backend)
     with pytest.raises(TypeError, match="file-like"):
         nw.scan_csv(_csv_string_buffer(), backend=backend)
 
 
-@lazy_core_backend
-def test_scan_parquet_file_like_unsupported(backend: _LazyOnly) -> None:
+@pytest.mark.parametrize("backend", ["ibis", "sqlframe"])
+def test_scan_parquet_file_like_unsupported(backend: Literal["ibis", "sqlframe"]) -> None:
     pytest.importorskip(backend)
     with pytest.raises(TypeError, match="file-like"):
         nw.scan_parquet(_parquet_bytes_buffer(), backend=backend)
+
+
+def test_scan_csv_file_like_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("fsspec")
+    assert_equal_lazy(nw.scan_csv(_csv_bytes_buffer(), backend="duckdb"))
+    assert_equal_lazy(nw.scan_csv(_csv_string_buffer(), backend="duckdb"))
+
+
+@skipif_pandas_lt_1_5
+def test_scan_parquet_file_like_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    pytest.importorskip("fsspec")
+    if DUCKDB_VERSION < (1, 5, 4):
+        pytest.skip("read_parquet(file-like) requires duckdb>=1.5.4")
+    assert_equal_lazy(nw.scan_parquet(_parquet_bytes_buffer(), backend="duckdb"))

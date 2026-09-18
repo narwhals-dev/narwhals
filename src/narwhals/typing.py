@@ -371,9 +371,10 @@ FileSource: TypeAlias = "str | os.PathLike[str] | IO[bytes] | IO[str]"
 Either a string, an object that implements [`__fspath__`] (such as [`pathlib.Path`]),
 or a file-like object such as [`io.BytesIO`] / [`io.StringIO`].
 
-File-like objects are forwarded to backends that support them (pandas, Polars,
-PyArrow, and pandas-like). Lazy-only backends such as DuckDB, Ibis, Dask, and
-Spark-like currently require a file path.
+Only pandas (and pandas-like), Polars and PyArrow accept a file-like object.
+DuckDB also accepts one when `fsspec` is installed (CSV from the minimum
+supported DuckDB version; Parquet from 1.5.4). The other lazy-only backends
+require a path, and raise `TypeError` otherwise.
 
 [`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
 [`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
@@ -382,14 +383,11 @@ Spark-like currently require a file path.
 """
 
 NormalizedPath = NewType("NormalizedPath", str)
-"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_path`.
-
-Path-like inputs become a plain string. File-like objects are not wrapped in this
-type — see [`NormalizedSource`][narwhals.typing.NormalizedSource].
+"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_source`.
 """
 
 NormalizedSource: TypeAlias = "NormalizedPath | IO[bytes] | IO[str]"
-"""A [`FileSource`][narwhals.typing.FileSource] after `narwhals._utils.normalize_path`.
+"""A [`FileSource`][narwhals.typing.FileSource] after `narwhals._utils.normalize_source`.
 
 The compliant-namespace IO methods (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
 take an already-normalized source and forward `kwds` to the native reader. Path-like

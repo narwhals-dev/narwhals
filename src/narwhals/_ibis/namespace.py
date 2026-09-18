@@ -64,11 +64,15 @@ class IbisNamespace(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> IbisLazyFrame:
         validate_separators(separator, ("sep",), kwds)
-        native = ibis.read_csv(ensure_path_source(source, "ibis"), sep=separator, **kwds)
+        native = ibis.read_csv(
+            ensure_path_source(source, self._implementation), sep=separator, **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> IbisLazyFrame:
-        native = ibis.read_parquet(ensure_path_source(source, "ibis"), **kwds)
+        native = ibis.read_parquet(
+            ensure_path_source(source, self._implementation), **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
     def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:

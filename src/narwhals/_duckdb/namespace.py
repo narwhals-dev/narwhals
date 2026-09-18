@@ -32,7 +32,6 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import (
     Implementation,
     check_column_names_are_unique,
-    ensure_path_source,
     requires,
     validate_separators,
 )
@@ -79,13 +78,11 @@ class DuckDBNamespace(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DuckDBLazyFrame:
         validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
-        native = duckdb.read_csv(
-            ensure_path_source(source, "duckdb"), delimiter=separator, **kwds
-        )
+        native = duckdb.read_csv(source, delimiter=separator, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
-        native = duckdb.read_parquet(ensure_path_source(source, "duckdb"), **kwds)
+        native = duckdb.read_parquet(source, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]

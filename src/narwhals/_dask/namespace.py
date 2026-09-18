@@ -70,12 +70,15 @@ class DaskNamespace(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DaskLazyFrame:
         validate_separators(separator, ("sep",), kwds)
-        native = dd.read_csv(ensure_path_source(source, "dask"), sep=separator, **kwds)
+        native = dd.read_csv(
+            ensure_path_source(source, self._implementation), sep=separator, **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DaskLazyFrame:
         return self._lazyframe.from_native(
-            dd.read_parquet(ensure_path_source(source, "dask"), **kwds), context=self
+            dd.read_parquet(ensure_path_source(source, self._implementation), **kwds),
+            context=self,
         )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:

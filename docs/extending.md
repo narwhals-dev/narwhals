@@ -88,15 +88,12 @@ def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> CompliantFrame:
 
 In all cases:
 
-- `source` is a [`NormalizedSource`][narwhals.typing.NormalizedSource]: either a
-  normalized path string ([`NormalizedPath`][narwhals.typing.NormalizedPath], a `str`
-  [`NewType`](https://docs.python.org/3/library/typing.html#newtype)) or a file-like
-  object (`io.BytesIO` / `io.StringIO`). Narwhals has already normalized `Path` and
-  path-like inputs, and passed file-like objects through, before dispatching to the
-  namespace.
-- File-like objects are supported where the native reader accepts them (pandas, Polars,
-  PyArrow, and pandas-like). Namespaces whose native readers require a path should
-  reject them with `TypeError`.
+- `source` is a `NormalizedSource`: either a `NormalizedPath` (a `str`
+  [`NewType`](https://docs.python.org/3/library/typing.html#newtype) tagging that
+  Narwhals has already normalized `Path` and path-like inputs), or a file-like object
+  such as `io.BytesIO` / `io.StringIO`, passed through untouched.
+- A namespace whose native reader cannot take a file-like object should reject it with
+  `TypeError`, via `narwhals._utils.ensure_path_source`.
 - `kwds` are forwarded to the native reader, and it is the namespace's responsibility
   to translate `separator` into whatever its native CSV reader expects (and to raise if
   the two conflict).
