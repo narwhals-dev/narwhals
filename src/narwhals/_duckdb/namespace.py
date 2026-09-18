@@ -12,6 +12,7 @@ from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import (
+    BACKEND_VERSION,
     DeferredTimeZone,
     F,
     concat_str,
@@ -83,10 +84,10 @@ class DuckDBNamespace(
         return self._lazyframe.from_native(native, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
-        if is_file_like(source) and (version := self._backend_version) < (1, 5, 4):
+        if is_file_like(source) and BACKEND_VERSION < (1, 5, 4):  # pragma: no cover
             msg = (
                 "`scan_parquet` from a file-like object is only available in "
-                f"'duckdb>=1.5.4', found version {requires._unparse_version(version)!r}."
+                f"'duckdb>=1.5.4', found version {requires._unparse_version(BACKEND_VERSION)!r}."
             )
             raise NotImplementedError(msg)
         native = duckdb.read_parquet(source, **kwds)

@@ -379,8 +379,7 @@ for anything else.
 """
 
 NormalizedPath = NewType("NormalizedPath", str)
-"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_source`.
-"""
+"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_source`."""
 
 NormalizedSource: TypeAlias = "NormalizedPath | IO[bytes] | IO[str]"
 """A [`FileSource`][narwhals.typing.FileSource] after `narwhals._utils.normalize_source`.

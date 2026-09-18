@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from contextlib import nullcontext as does_not_raise
 from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -340,8 +341,11 @@ def test_scan_csv_file_like_duckdb(into: type[StringIO | BytesIO]) -> None:
 def test_scan_parquet_file_like_duckdb() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
-    if DUCKDB_VERSION < (1, 5, 4):
-        with pytest.raises(NotImplementedError, match=r"duckdb>=1\.5\.4"):
-            nw.scan_parquet(_parquet_buffer(), backend="duckdb")
-        return
-    assert_equal_lazy(nw.scan_parquet(_parquet_buffer(), backend="duckdb"))
+    context = (
+        pytest.raises(NotImplementedError, match=r"duckdb>=1\.5\.4")
+        if DUCKDB_VERSION < (1, 5, 4)
+        else does_not_raise()
+    )
+    with context:
+        lf = nw.scan_parquet(_parquet_buffer(), backend="duckdb")
+    assert_equal_lazy(lf)
