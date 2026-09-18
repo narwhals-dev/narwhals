@@ -393,6 +393,47 @@ class SparkLikeLazyFrame(
         )
         return self._with_native(df)
 
+    def _join_nulls_equal(
+        self,
+        other: Self,
+        how: JoinStrategy,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        suffix: str,
+        left_columns: Sequence[str],
+        right_columns: Sequence[str],
+        /,
+    ) -> Self:
+        # Keep the right key columns distinct (do not rename them onto the left names) so
+        # the explicit `eqNullSafe` condition is unambiguous.
+        rename_mapping = {
+            name: f"{name}{suffix}" if name in left_columns else name
+            for name in right_columns
+        }
+        other_native = other.native.select(
+            [self._F.col(old).alias(new) for old, new in rename_mapping.items()]
+        )
+        right_remapped = [rename_mapping[name] for name in right_on]
+        condition = reduce(
+            and_,
+            (
+                getattr(self.native, left_key).eqNullSafe(
+                    getattr(other_native, right_key)
+                )
+                for left_key, right_key in zip(left_on, right_remapped, strict=True)
+            ),
+        )
+        if how == "full":
+            col_order = [*left_columns, *(rename_mapping[c] for c in right_columns)]
+        elif how in {"inner", "left"}:
+            extra = [rename_mapping[c] for c in right_columns if c not in right_on]
+            col_order = [*left_columns, *extra]
+        else:  # semi, anti
+            col_order = list(left_columns)
+        how_native = "full_outer" if how == "full" else how
+        joined = self.native.join(other_native, on=condition, how=how_native)
+        return self._with_native(joined.select(col_order))
+
     def join(
         self,
         other: Self,
@@ -401,12 +442,18 @@ class SparkLikeLazyFrame(
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         left_columns = self.columns
         right_columns = other.columns
 
         right_on_: list[str] = list(right_on) if right_on is not None else []
         left_on_: list[str] = list(left_on) if left_on is not None else []
+
+        if nulls_equal and how != "cross":
+            return self._join_nulls_equal(
+                other, how, left_on_, right_on_, suffix, left_columns, right_columns
+            )
 
         # create a mapping for columns on other
         # `right_on` columns will be renamed as `left_on`

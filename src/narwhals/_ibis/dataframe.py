@@ -248,6 +248,7 @@ class IbisLazyFrame(
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self:
         how_native = "outer" if how == "full" else how
         rname = "{name}" + suffix
@@ -260,7 +261,9 @@ class IbisLazyFrame(
         # help mypy
         assert left_on is not None  # noqa: S101
         assert right_on is not None  # noqa: S101
-        predicates = self._convert_predicates(other, left_on, right_on)
+        predicates = self._convert_predicates(
+            other, left_on, right_on, nulls_equal=nulls_equal
+        )
         joined = self.native.join(other.native, predicates, how=how_native, rname=rname)
         if how_native == "left":
             right_names = (n + suffix for n in right_on)
@@ -274,6 +277,11 @@ class IbisLazyFrame(
                     to_drop.append(right)
             if to_drop:
                 joined = joined.drop(*to_drop)
+        elif nulls_equal and how_native == "inner":
+            # `identical_to` keeps both key columns; drop the duplicate right key to
+            # coalesce, like the name-based join.
+            right_names = (n + suffix for n in right_on)
+            joined = self._join_drop_duplicate_columns(joined, right_names)
         return self._with_native(joined)
 
     def join_asof(
@@ -305,10 +313,24 @@ class IbisLazyFrame(
         return self._with_native(joined)
 
     def _convert_predicates(
-        self, other: Self, left_on: Sequence[str], right_on: Sequence[str]
+        self,
+        other: Self,
+        left_on: Sequence[str],
+        right_on: Sequence[str],
+        *,
+        nulls_equal: bool = False,
     ) -> JoinPredicates:
-        if left_on == right_on:
+        if left_on == right_on and not nulls_equal:
             return left_on
+        if nulls_equal:
+            # `identical_to` is a null-safe equality (null matches null).
+            return [
+                cast(
+                    "ir.BooleanColumn",
+                    self.native[left].identical_to(other.native[right]),
+                )
+                for left, right in zip(left_on, right_on, strict=True)
+            ]
         return [
             cast("ir.BooleanColumn", (self.native[left] == other.native[right]))
             for left, right in zip(left_on, right_on, strict=True)
