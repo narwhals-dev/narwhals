@@ -504,7 +504,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def round(self, decimals: int) -> Self:
         return self._with_native(
-            pc.round(self.native, decimals, round_mode="half_towards_infinity")
+            pc.round(self.native, decimals, round_mode="half_to_even")
         )
 
     def floor(self) -> Self:

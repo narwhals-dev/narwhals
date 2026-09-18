@@ -58,6 +58,11 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
 
         return self._with_binary(_rmod, other).alias("literal")
 
+    def _cast_like(self, expr: Expression, other: Expression) -> Expression:
+        if self._backend_version < (1, 3):  # pragma: no cover
+            return expr
+        return F("cast_to_type", expr, other)
+
     def __init__(
         self,
         call: EvalSeries[DuckDBLazyFrame, Expression],

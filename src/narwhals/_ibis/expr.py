@@ -56,6 +56,10 @@ if TYPE_CHECKING:
 class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
 
+    def _cast_like(self, expr: ir.Value, other: ir.Value) -> ir.Value:
+        # ibis `cast` overloads do not include DataType, only literals
+        return expr.cast(other.type())  # pyright: ignore[reportCallIssue, reportArgumentType]
+
     def __mod__(self, other: Self) -> Self:
         def _mod(expr: ir.Value, other: ir.Value) -> ir.Value:
             return floor_mod(

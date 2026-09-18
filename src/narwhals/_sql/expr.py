@@ -14,7 +14,6 @@ from narwhals._utils import (
     Implementation,
     Version,
     extend_bool,
-    is_pyspark_pre_4,
     length_changing_hint,
     not_implemented,
 )
@@ -598,14 +597,41 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
 
+    def _cast_like(self, expr: NativeExprT, other: NativeExprT) -> NativeExprT:
+        """Cast `expr` to the type of `other`, if the backend can express that."""
+        return expr
+
     def round(self, decimals: int) -> Self:
-        # PySpark < 4.0's `round` expects a raw Python int for `scale`,
-        # not a Column literal.
-        _is_pre4 = is_pyspark_pre_4(self._implementation)
-        round_decimals = decimals if _is_pre4 else self._lit(decimals)
-        return self._with_elementwise(
-            lambda expr: self._function("round", expr, round_decimals)
-        )
+        # SQL `round` rounds half away from zero, but pandas, Polars and PyArrow round
+        # half to even. `round_even` isn't portable and casts integers and decimals to
+        # `DOUBLE` in DuckDB, so ties are corrected here and the result always comes
+        # from `round`, which keeps the input dtype.
+        def frac_is_half(expr: NativeExprT) -> NativeExprT:
+            frac = self._function("subtract", expr, self._function("floor", expr))
+            return frac == self._lit(0.5)
+
+        def _round(expr: NativeExprT) -> NativeExprT:
+            scale = self._lit(10.0**decimals)
+            rounded = self._function("round", expr, self._lit(decimals))
+            is_tie = frac_is_half(
+                self._function("multiply", self._function("abs", expr), scale)
+            )
+            units = self._function(
+                "round", self._function("multiply", self._function("abs", rounded), scale)
+            )
+            is_odd = frac_is_half(self._function("multiply", units, self._lit(0.5)))
+            # On a tie, reflecting `rounded` across `expr` gives the other neighbor.
+            reflected = self._function(
+                "subtract", expr, self._function("subtract", rounded, expr)
+            )
+            neighbor = self._function("round", reflected, self._lit(decimals))
+            return self._when(
+                self._function("and", is_tie, is_odd),
+                self._cast_like(neighbor, rounded),
+                rounded,
+            )
+
+        return self._with_elementwise(_round)
 
     def floor(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("floor", expr))

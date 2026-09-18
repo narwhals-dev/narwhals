@@ -240,6 +240,11 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_binary(_rmod, other).alias("literal")
 
+    def round(self, decimals: int) -> Self:
+        if self._implementation.is_pyspark() or self._implementation.is_pyspark_connect():
+            return self._with_elementwise(lambda expr: self._F.bround(expr, decimals))
+        return super().round(decimals)
+
     def __rfloordiv__(self, other: Self) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
             F = self._F
