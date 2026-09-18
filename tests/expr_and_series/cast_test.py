@@ -459,10 +459,7 @@ def test_cast_float_to_int_truncates(
 ) -> None:
     # Float-to-int casts truncate toward zero (matching pandas and polars);
     # pyarrow's default safe cast used to raise on any fractional part.
-    if any(
-        backend in str(constructor)
-        for backend in ("duckdb", "sqlframe", "ibis", "pyspark")
-    ):
+    if any(backend in str(constructor) for backend in ("duckdb", "sqlframe", "ibis")):
         request.applymarker(
             pytest.mark.xfail(
                 reason="DuckDB, Spark and Ibis round float->int casts natively instead of truncating"
