@@ -22,6 +22,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import (
     Implementation,
     check_column_names_are_unique,
+    ensure_path_source,
     validate_separators,
 )
 
@@ -33,7 +34,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -60,14 +61,18 @@ class IbisNamespace(
         return IbisLazyFrame
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> IbisLazyFrame:
         validate_separators(separator, ("sep",), kwds)
-        native = ibis.read_csv(source, sep=separator, **kwds)
+        native = ibis.read_csv(
+            ensure_path_source(source, self._implementation), sep=separator, **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> IbisLazyFrame:
-        native = ibis.read_parquet(source, **kwds)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> IbisLazyFrame:
+        native = ibis.read_parquet(
+            ensure_path_source(source, self._implementation), **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
     def _function(self, name: str, *args: ir.Value | PythonLiteral) -> ir.Value:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from io import BytesIO, TextIOBase
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -54,7 +55,7 @@ class ArrowNamespace(
         self._version = version
 
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> ArrowDataFrame:
         from pyarrow import csv
 
@@ -67,9 +68,14 @@ class ArrowNamespace(
                 raise TypeError(msg)
         else:
             kwds["parse_options"] = csv.ParseOptions(delimiter=separator)
+        # `pyarrow.csv` reads binary streams, but not text ones. Re-encode with the
+        # declared encoding, otherwise pyarrow decodes our bytes with the wrong codec.
+        if isinstance(source, TextIOBase):
+            encoding = getattr(kwds.get("read_options"), "encoding", "utf8")
+            source = BytesIO(source.read().encode(encoding))  # pyright: ignore[reportAttributeAccessIssue]
         return self._dataframe.from_native(csv.read_csv(source, **kwds), context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> ArrowDataFrame:
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> ArrowDataFrame:
         from pyarrow import parquet as pq
 
         return self._dataframe.from_native(pq.read_table(source, **kwds), context=self)
