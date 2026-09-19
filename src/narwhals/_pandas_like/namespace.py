@@ -389,9 +389,6 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
-                # NOTE: Trying to help `mypy` later
-                # error: Cannot determine type of "values"  [has-type]
-                values: list[PandasLikeSeries]
                 init_value, *values = series
                 # Literals stay scalars: `cast` and `fill_null` keep the flag and the
                 # binary ops extract them. Only the boolean masks are aligned to full
