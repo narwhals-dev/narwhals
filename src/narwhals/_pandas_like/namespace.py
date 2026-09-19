@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -81,14 +81,14 @@ class PandasLikeNamespace(
         self._version = version
 
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PandasLikeDataFrame:
         validate_separators(separator, ("sep",), kwds)
         ns = self._implementation.to_native_namespace()
         native = ns.read_csv(source, sep=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PandasLikeDataFrame:
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> PandasLikeDataFrame:
         ns = self._implementation.to_native_namespace()
         return self._dataframe.from_native(ns.read_parquet(source, **kwds), context=self)
 
@@ -377,8 +377,11 @@ class PandasLikeNamespace(
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = [s.cast(string) for s in expr_results]
             null_mask = [s.is_null() for s in expr_results]
+            # NOTE: The masks below decide what a null row becomes, so blank the nulls
+            # out first: before pandas 3 a string column is `object`, where adding
+            # `None` raises instead of propagating.
+            series = [s.cast(string).fill_null("", None, None) for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -386,15 +389,13 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
-                # Literals stay scalars: blanking keeps the flag, the binary ops
-                # extract them. Only the boolean masks are aligned to full length,
-                # which is cheap and is what `zip_with` needs for the separators.
-                init_value, *values = (
-                    s._with_native(
-                        s.native.where(~nm.native, ""), preserve_broadcast=True
-                    )
-                    for s, nm in zip(series, null_mask, strict=True)
-                )
+                # NOTE: Trying to help `mypy` later
+                # error: Cannot determine type of "values"  [has-type]
+                values: list[PandasLikeSeries]
+                init_value, *values = series
+                # Literals stay scalars: `cast` and `fill_null` keep the flag and the
+                # binary ops extract them. Only the boolean masks are aligned to full
+                # length, which is cheap and is what `zip_with` needs for the separators.
                 null_mask = self._series._align_full_broadcast(*null_mask)
                 sep_array = null_mask[0]._with_native(
                     init_value.__native_namespace__().Series(

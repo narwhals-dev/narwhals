@@ -17,6 +17,7 @@ from enum import Enum, auto
 from functools import cache, lru_cache, wraps
 from importlib.util import find_spec
 from inspect import getattr_static, getdoc
+from io import IOBase
 from operator import attrgetter
 from pathlib import Path
 from secrets import token_hex
@@ -66,7 +67,7 @@ from narwhals.exceptions import (
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import Concatenate, TypeAlias
+    from typing import IO, Concatenate, TypeAlias
 
     import pandas as pd
     import polars as pl
@@ -130,6 +131,7 @@ if TYPE_CHECKING:
         MultiIndexSelector,
         NestedLiteral,
         NormalizedPath,
+        NormalizedSource,
         SingleIndexSelector,
         SizedMultiBoolSelector,
         SizedMultiIndexSelector,
@@ -2201,19 +2203,24 @@ def to_pyarrow_table(tbl: pa.Table | pa.RecordBatchReader) -> pa.Table:
     return tbl
 
 
-def validate_pad_arguments(name: str, length: int, fill_char: str, /) -> None:
-    """Reject `str.pad_start`/`str.pad_end` arguments that backends disagree on.
+def validate_str_non_negative(name: str, arg_name: str, value: int, /) -> None:
+    """Reject a negative width/length for a `str` method that backends disagree on.
 
     Natively these either raise something inscrutable, or quietly return the input
     unchanged, so the public `Expr`/`Series` accessors validate up-front and every
     backend gets the same error.
     """
+    if value < 0:
+        msg = f"`str.{name}` only supports a non-negative `{arg_name}`, got {value}."
+        raise ValueError(msg)
+
+
+def validate_pad_arguments(name: str, length: int, fill_char: str, /) -> None:
+    """Reject `str.pad_start`/`str.pad_end` arguments that backends disagree on."""
     if len(fill_char) != 1:
         msg = f"`str.{name}` only supports a single-character `fill_char`, got {fill_char!r}."
         raise ValueError(msg)
-    if length < 0:
-        msg = f"`str.{name}` only supports a non-negative `length`, got {length}."
-        raise ValueError(msg)
+    validate_str_non_negative(name, "length", length)
 
 
 def validate_separators(
@@ -2229,9 +2236,26 @@ def validate_separators(
             raise TypeError(msg)
 
 
+def is_file_like(obj: object, /) -> TypeIs[IO[bytes] | IO[str]]:
+    return isinstance(obj, IOBase)
+
+
+def ensure_path_source(
+    source: NormalizedSource, backend: Implementation | PluginName, /
+) -> NormalizedPath:
+    """Reject file-like objects for backends whose native reader requires a path."""
+    if is_file_like(source):
+        msg = (
+            f"Reading from a file-like object is not supported for the {backend} backend.\n\n"
+            "Hint: use 'pandas', 'polars' or 'pyarrow', or write the buffer to a file first."
+        )
+        raise TypeError(msg)
+    return source
+
+
 if sys.platform != "win32":
 
-    def normalize_path(source: FileSource, /) -> NormalizedPath:
+    def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(source if isinstance(source, str) else str(Path(source)))
@@ -2242,10 +2266,14 @@ else:  # pragma: no cover
     # If we stringify that, we get:
     #     `'\\narwhals\\narwhals\\_utils.py'`
     # Which contains 2x `"\n"` characters
-    def normalize_path(source: FileSource, /) -> NormalizedPath:
+    def _normalize_path(source: str | os.PathLike[str], /) -> NormalizedPath:
         from narwhals.typing import NormalizedPath
 
         return NormalizedPath(Path(source).as_posix())
+
+
+def normalize_source(source: FileSource, /) -> NormalizedSource:
+    return source if is_file_like(source) else _normalize_path(source)
 
 
 def extend_bool(

@@ -12,7 +12,13 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import Implementation, Version, isinstance_or_issubclass, requires
+from narwhals._utils import (
+    Implementation,
+    Version,
+    is_file_like,
+    isinstance_or_issubclass,
+    requires,
+)
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
@@ -26,7 +32,13 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, NormalizedPath, TimeUnit, _2DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        NormalizedSource,
+        TimeUnit,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -115,23 +127,37 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
+    def _read_eagerly(self, source: NormalizedSource, /) -> bool:
+        """`pl.scan_*` only accepts a file-like object from `1.7.0` onwards."""
+        return is_file_like(source) and self._backend_version < (1, 7)
+
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PolarsDataFrame:
         native = pl.read_csv(source, separator=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PolarsLazyFrame:
-        native = pl.scan_csv(source, separator=separator, **kwds)
+        native = (
+            pl.read_csv(source, separator=separator, **kwds).lazy()
+            if self._read_eagerly(source)
+            else pl.scan_csv(source, separator=separator, **kwds)
+        )
         return self._lazyframe.from_native(native, context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PolarsDataFrame:
-        return self._dataframe.from_native(pl.read_parquet(source, **kwds), context=self)
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsDataFrame:
+        native = pl.read_parquet(cast("Any", source), **kwds)
+        return self._dataframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> PolarsLazyFrame:
-        return self._lazyframe.from_native(pl.scan_parquet(source, **kwds), context=self)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsLazyFrame:
+        native = (
+            pl.read_parquet(cast("Any", source), **kwds).lazy()
+            if self._read_eagerly(source)
+            else pl.scan_parquet(cast("Any", source), **kwds)
+        )
+        return self._lazyframe.from_native(native, context=self)
 
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."

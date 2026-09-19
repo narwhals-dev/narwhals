@@ -12,6 +12,7 @@ from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import (
+    BACKEND_VERSION,
     DeferredTimeZone,
     F,
     concat_str,
@@ -32,6 +33,7 @@ from narwhals._sql.namespace import SQLNamespace
 from narwhals._utils import (
     Implementation,
     check_column_names_are_unique,
+    is_file_like,
     requires,
     validate_separators,
 )
@@ -47,7 +49,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -75,13 +77,19 @@ class DuckDBNamespace(
         return DuckDBLazyFrame
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DuckDBLazyFrame:
         validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
         native = duckdb.read_csv(source, delimiter=separator, **kwds)
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DuckDBLazyFrame:
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
+        if is_file_like(source) and BACKEND_VERSION < (1, 5, 4):  # pragma: no cover
+            msg = (
+                "`scan_parquet` from a file-like object is only available in "
+                f"'duckdb>=1.5.4', found version {requires._unparse_version(BACKEND_VERSION)!r}."
+            )
+            raise NotImplementedError(msg)
         native = duckdb.read_parquet(source, **kwds)
         return self._lazyframe.from_native(native, context=self)
 

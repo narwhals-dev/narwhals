@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING
+from datetime import date, datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -200,6 +200,36 @@ def test_cast_string() -> None:
     s = s.cast(nw.String)
     result = nw.to_native(s)
     assert str(result.dtype) in {"string", "object", "dtype('O')"}
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        pytest.param(["x", None], id="string"),
+        pytest.param([1, None], id="int"),
+        pytest.param([1.5, None], id="float"),
+        pytest.param([True, None], id="bool"),
+        pytest.param([datetime(2020, 1, 1), None], id="datetime"),
+        pytest.param([date(2020, 1, 1), None], id="date"),
+    ],
+)
+def test_cast_string_keeps_nulls(constructor: Constructor, values: list[Any]) -> None:
+    # Asserting on nullness rather than on the rendering: backends disagree on how
+    # they format a bool or a float, but not on whether the result is null.
+    df = nw.from_native(constructor({"a": values}))
+    result = df.select(nw.col("a").cast(nw.String()).is_null().alias("n"))
+    assert_equal_data(result, {"n": [False, True]})
+
+
+def test_cast_string_null_literal(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2]}))
+    result = df.with_columns(b=nw.lit(None, dtype=nw.String()))
+    assert_equal_data(result, {"a": [1, 2], "b": [None, None]})
+
+
+def test_cast_string_keeps_nulls_series(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"a": ["x", None]}), eager_only=True)["a"]
+    assert s.cast(nw.String()).is_null().to_list() == [False, True]
 
 
 def test_cast_raises_for_unknown_dtype(
@@ -451,4 +481,7 @@ def test_cast_object_pandas() -> None:
 
     s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
     assert s[0] == 2
-    assert s.cast(nw.String)[0] == "2"
+    result = s.cast(nw.String)
+    assert result[0] == "2"
+    # Before pandas 3, `astype(str)` rendered this as the string `"None"`.
+    assert result.is_null().to_list() == [False, False, True]
