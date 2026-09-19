@@ -511,7 +511,7 @@ class PandasLikeSeries(EagerSeries[Any]):
     # Unary
 
     def __invert__(self) -> Self:
-        return self._with_native(~self.native)
+        return self._with_native(~self.native, preserve_broadcast=True)
 
     def __neg__(self) -> Self:
         return self._with_native(-self.native)
@@ -841,12 +841,37 @@ class PandasLikeSeries(EagerSeries[Any]):
     ) -> float:
         return self.native.quantile(q=quantile, interpolation=interpolation)
 
-    def zip_with(self, mask: Any, other: Any) -> Self:
+    def zip_with(self, mask: Self, other: Self | NonNestedLiteral) -> Self:
+        native_series_cls = self.__native_namespace__().Series
         ser = self.native
-        _, mask = align_and_extract_native(self, mask)
-        _, other = align_and_extract_native(self, other)
-        res = ser.where(mask, other)
-        return self._with_native(res)
+        if self._broadcast:
+            # `ser` is a length-1 "scalar" series: if either operand forces
+            # the result to be full-length, broadcast `ser` to match it first,
+            # instead of leaving it at length 1 for `where` to misinterpret.
+            target = (
+                mask
+                if not mask._broadcast
+                else other
+                if isinstance(other, PandasLikeSeries) and not other._broadcast
+                else None
+            )
+            if target is not None:
+                ser = broadcast_series_to_index(
+                    ser,
+                    target.native.index,
+                    is_nested=self.dtype.is_nested(),
+                    series_class=native_series_cls,
+                )
+        _, mask_native = align_and_extract_native(self, mask)
+        _, other_native = align_and_extract_native(self, other)
+        if not isinstance(mask_native, native_series_cls):
+            mask_native = native_series_cls(bool(mask_native), index=ser.index)
+        res = ser.where(mask_native, other_native)
+        other_broadcast = (
+            other._broadcast if isinstance(other, PandasLikeSeries) else True
+        )
+        preserve_broadcast = self._broadcast and mask._broadcast and other_broadcast
+        return self._with_native(res, preserve_broadcast=preserve_broadcast)
 
     def head(self, n: int) -> Self:
         return self._with_native(self.native.head(n))

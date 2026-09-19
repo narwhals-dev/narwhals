@@ -25,6 +25,16 @@ def test_maxh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_maxh_lit(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3951
+    df = nw.from_native(constructor({"a": [1, None, 3]}))
+    expected = {"horizontal_max": [2, 2, 3]}
+    result = df.select(horizontal_max=nw.max_horizontal(nw.lit(2), nw.col("a")))
+    assert_equal_data(result, expected)
+    result = df.select(horizontal_max=nw.max_horizontal(nw.col("a"), nw.lit(2)))
+    assert_equal_data(result, expected)
+
+
 def test_maxh_duplicate_output_names(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3934
     df = nw.from_native(constructor(data))
