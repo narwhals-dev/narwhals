@@ -13,7 +13,11 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
+from narwhals._arrow.utils import (
+    build_list_array,
+    cast_to_comparable_string_types,
+    chunked_array,
+)
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -171,12 +175,12 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.min_element_wise, [s.native for s in series], init_series.native
-            )
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            native = reduce(pc.min_element_wise, self.extract_native(*series))
             return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
+                ArrowSeries(
+                    chunked_array(native), name=series[0].name, version=self._version
+                )
             ]
 
         return self._expr._from_callable(
@@ -188,12 +192,12 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.max_element_wise, [s.native for s in series], init_series.native
-            )
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            native = reduce(pc.max_element_wise, self.extract_native(*series))
             return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
+                ArrowSeries(
+                    chunked_array(native), name=series[0].name, version=self._version
+                )
             ]
 
         return self._expr._from_callable(
