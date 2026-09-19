@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -81,14 +81,14 @@ class PandasLikeNamespace(
         self._version = version
 
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PandasLikeDataFrame:
         validate_separators(separator, ("sep",), kwds)
         ns = self._implementation.to_native_namespace()
         native = ns.read_csv(source, sep=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PandasLikeDataFrame:
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> PandasLikeDataFrame:
         ns = self._implementation.to_native_namespace()
         return self._dataframe.from_native(ns.read_parquet(source, **kwds), context=self)
 
