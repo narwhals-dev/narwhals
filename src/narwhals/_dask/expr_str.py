@@ -21,8 +21,6 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int
     ) -> DaskExpr:
-        if n == 0:
-            return self.compliant
         if not value._metadata.is_literal:
             msg = "dask backed `Expr.str.replace` only supports str replacement values"
             raise TypeError(msg)
@@ -89,11 +87,17 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
-        return self.compliant._with_callable(
-            lambda expr: expr.str.slice(
-                start=offset, stop=offset + length if length is not None else None
+        def _slice(expr: dx.Series) -> dx.Series:
+            # Two-step, matching the pandas backend: a negative offset combined
+            # with an explicit length would otherwise compute a nonsense stop.
+            result = expr.str.slice(  # pyright: ignore[reportAttributeAccessIssue]
+                start=offset
             )
-        )
+            if length is not None:
+                result = result.str[:length]
+            return result
+
+        return self.compliant._with_callable(_slice)
 
     def split(self, by: str) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.split(pat=by))

@@ -9,6 +9,8 @@ from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": ["fdas", "edfas"]}
 
+short_data = {"a": ["fdas", "ab", ""]}
+
 
 @pytest.mark.parametrize(
     ("offset", "length", "expected"),
@@ -43,3 +45,31 @@ def test_str_slice_series(
 
     result_series = df["a"].str.slice(offset, length)
     assert_equal_data({"a": result_series}, expected)
+
+
+@pytest.mark.parametrize(
+    ("offset", "length", "expected"),
+    [
+        # Negative offset: slice starts |offset| from the end and runs forward.
+        (-3, 3, {"a": ["das", "ab", ""]}),
+        # Length overhanging the end of the string.
+        (-3, 10, {"a": ["das", "ab", ""]}),
+        # Negative offset with no length: to the end, also for strings shorter
+        # than |offset| (DuckDB used to return one character too few).
+        (-3, None, {"a": ["das", "ab", ""]}),
+    ],
+)
+def test_str_slice_negative_offset_short_strings(
+    constructor: Constructor, offset: int, length: int | None, expected: Any
+) -> None:
+    df = nw.from_native(constructor(short_data))
+    result_frame = df.select(nw.col("a").str.slice(offset, length))
+    assert_equal_data(result_frame, expected)
+
+
+def test_str_slice_negative_length_raises(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with pytest.raises(ValueError, match="non-negative"):
+        df.select(nw.col("a").str.slice(1, -1))
+    with pytest.raises(ValueError, match="non-negative"):
+        df["a"].str.slice(1, -1)

@@ -58,14 +58,24 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         if not isinstance(prefix_native, pa.StringScalar):
             msg = "`.str.starts_with` only supports str prefix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(pc.starts_with(self.native, prefix_native.as_py()))
+        return self.with_native(
+            pc.equal(
+                self.slice(0, len(prefix_native.as_py())).native,
+                lit(prefix_native.as_py()),
+            )
+        )
 
     def ends_with(self, suffix: ArrowSeries) -> ArrowSeries:
         _, suffix_native = extract_native(self.compliant, suffix)
         if not isinstance(suffix_native, pa.StringScalar):
             msg = "`.str.ends_with` only supports str suffix values for pyarrow backend"
             raise TypeError(msg)
-        return self.with_native(pc.ends_with(self.native, suffix_native.as_py()))
+        return self.with_native(
+            pc.equal(
+                self.slice(-len(suffix_native.as_py()), None).native,
+                lit(suffix_native.as_py()),
+            )
+        )
 
     def contains(self, pattern: ArrowSeries, *, literal: bool) -> ArrowSeries:
         _, pattern_native = extract_native(self.compliant, pattern)
@@ -76,10 +86,13 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(fn(self.native, pattern_native.as_py()))
 
     def slice(self, offset: int, length: int | None) -> ArrowSeries:
-        stop = offset + length if length is not None else None
-        return self.with_native(
-            pc.utf8_slice_codeunits(self.native, start=offset, stop=stop)
-        )
+        # Same two-step as the pandas backend: `utf8_slice_codeunits` handles a
+        # negative start natively, but start + length can compute a stop index
+        # that lands before the (end-relative) start.
+        result = pc.utf8_slice_codeunits(self.native, start=offset)
+        if length is not None:
+            result = pc.utf8_slice_codeunits(result, start=0, stop=length)
+        return self.with_native(result)
 
     def split(self, by: str) -> ArrowSeries:
         split_series = pc.split_pattern(self.native, by)  # type: ignore[call-overload]
@@ -110,8 +123,6 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(pc.utf8_title(self.native))
 
     def zfill(self, width: int) -> ArrowSeries:
-        if width == 0:
-            return self.compliant
         binary_join: Incomplete = pc.binary_join_element_wise
         native = self.native
         hyphen, plus = lit("-"), lit("+")
