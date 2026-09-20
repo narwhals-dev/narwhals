@@ -178,16 +178,10 @@ def test_concat_str_with_lit_and_nulls(
     )
 
 
-def test_concat_str_ignore_nulls_trailing_null(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_concat_str_ignore_nulls_trailing_null(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3962
     if not any(name in str(constructor) for name in ("pandas", "modin", "cudf", "dask")):
-        request.applymarker(
-            pytest.mark.skip(
-                reason="regression is specific to pandas-like and Dask backends"
-            )
-        )
+        pytest.skip("regression is specific to pandas-like and Dask backends")
     data = {
         "a": ["x", None, "z", None, "p"],
         "b": ["1", "2", None, None, "q"],
