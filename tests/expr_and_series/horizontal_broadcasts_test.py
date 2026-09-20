@@ -54,15 +54,10 @@ SCALAR_OPERAND_CASES: dict[str, tuple[nw.Expr, list[object]]] = {
 
 
 @pytest.mark.parametrize("name", SCALAR_OPERAND_CASES)
-def test_scalar_operand_broadcasting(
-    request: pytest.FixtureRequest, constructor: Constructor, name: str
-) -> None:
+def test_scalar_operand_broadcasting(constructor: Constructor, name: str) -> None:
     aggregates = name in {"sum_agg_first", "sum_all_scalar", "coalesce_agg_fallback"}
     if aggregates and "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
-    if "dask" in str(constructor) and name == "mean_lit_first":
-        reason = "dask cannot compute `1 - lit.is_null()` on a scalar-like operand."
-        request.applymarker(pytest.mark.xfail(reason=reason, raises=AttributeError))
     expr, expected = SCALAR_OPERAND_CASES[name]
     data = {"a": [1, None, 3], "b": [4, 5, None], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data))
