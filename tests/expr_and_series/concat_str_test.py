@@ -178,16 +178,33 @@ def test_concat_str_with_lit_and_nulls(
     )
 
 
-def test_concat_str_ignore_nulls_trailing_null(constructor: Constructor) -> None:
-    # https://github.com/narwhals-dev/narwhals/issues/3962
-    if not any(name in str(constructor) for name in ("pandas", "modin", "cudf", "dask")):
-        pytest.skip("regression is specific to pandas-like and Dask backends")
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (True, ["x-1-A", "2-B", "z-C", "", "p-q"]),
+        (False, ["x-1-A", None, None, None, None]),
+    ],
+)
+def test_concat_str_nulls_in_every_position(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    ignore_nulls: bool,
+    expected: list[str | None],
+) -> None:
+    if ignore_nulls and "pyarrow_table" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(reason="pyarrow all-null concat_str row pending #3965")
+        )
+    # A trailing null must not leave a dangling separator behind (#3962), and an
+    # all-null row must stay in the output as an empty string (#3965).
     data = {
+        "i": [0, 1, 2, 3, 4],
         "a": ["x", None, "z", None, "p"],
         "b": ["1", "2", None, None, "q"],
         "c": ["A", "B", "C", None, None],
     }
     df = nw.from_native(constructor(data))
-    result = df.select(x=nw.concat_str("a", "b", "c", separator="-", ignore_nulls=True))
-    expected = {"x": ["x-1-A", "2-B", "z-C", "", "p-q"]}
-    assert_equal_data(result, expected)
+    expr = nw.concat_str("a", "b", "c", separator="-", ignore_nulls=ignore_nulls)
+    result = df.with_columns(r=expr).sort("i").select("r")
+    assert_equal_data(result, {"r": expected})
