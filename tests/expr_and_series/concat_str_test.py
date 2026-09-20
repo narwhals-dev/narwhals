@@ -176,3 +176,16 @@ def test_concat_str_with_lit_and_nulls(
     assert_equal_data(
         result.select("r"), {"r": expected if ignore_nulls else expected_nulls}
     )
+
+
+def test_concat_str_ignore_nulls_trailing_null(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3962
+    data = {
+        "a": ["x", None, "z", None, "p"],
+        "b": ["1", "2", None, None, "q"],
+        "c": ["A", "B", "C", None, None],
+    }
+    df = nw.from_native(constructor(data))
+    result = df.select(x=nw.concat_str("a", "b", "c", separator="-", ignore_nulls=True))
+    expected = {"x": ["x-1-A", "2-B", "z-C", "", "p-q"]}
+    assert_equal_data(result, expected)

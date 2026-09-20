@@ -402,7 +402,11 @@ class PandasLikeNamespace(
                         dtype=init_value.native.dtype,
                     )
                 )
-                separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
+                has_prev = ~null_mask[0]
+                separators = []
+                for nm in null_mask[1:]:
+                    separators.append(sep_array.zip_with(has_prev & (~nm), ""))
+                    has_prev = has_prev | (~nm)
                 result = reduce(
                     operator.add,
                     (s + v for s, v in zip(separators, values, strict=True)),
