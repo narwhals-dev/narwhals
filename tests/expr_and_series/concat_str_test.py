@@ -196,7 +196,9 @@ def test_concat_str_nulls_in_every_position(
         request.applymarker(
             pytest.mark.xfail(reason="pyarrow all-null concat_str row pending #3965")
         )
-    if ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
+    if (
+        ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5)
+    ):  # pragma: no cover
         request.applymarker(
             pytest.mark.xfail(reason="polars < 0.20.5 trailing separator bug")
         )
