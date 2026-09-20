@@ -265,15 +265,17 @@ class DaskNamespace(
                     s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 ]
 
-                separators = (
-                    nm.map({True: "", False: separator}, meta=str)
-                    for nm in null_mask[:-1]
-                )
-                result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values, strict=True)),
-                    init_value,
-                )
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    separators = (seen & not_null).map(
+                        {True: separator, False: ""}, meta=str
+                    )
+                    result = result + separators + value
+                    seen = seen | not_null
 
             return [result]
 
