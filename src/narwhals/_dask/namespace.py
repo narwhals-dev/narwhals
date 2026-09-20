@@ -201,8 +201,8 @@ class DaskNamespace(
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
             aligned = align_series_full_broadcast(df, *expr_results)
-            series = [s.fillna(0) for s in aligned]
-            non_na = [1 - s.isna() for s in aligned]
+            series = (s.fillna(0) for s in aligned)
+            non_na = (1 - s.isna() for s in aligned)
             num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
             den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
             return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
