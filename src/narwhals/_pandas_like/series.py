@@ -326,6 +326,17 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
+        if (
+            get_dtype_backend(self.native.dtype, self._implementation) == "pyarrow"
+            and self.dtype.is_float()
+            and dtype.is_integer()
+        ):
+            # pandas' astype routes arrow-backed float -> int through pyarrow's
+            # safe cast, which raises on any fractional part. truncate toward
+            # zero first, matching the numpy/pandas and polars behavior.
+            intermediate = "uint64" if dtype.is_unsigned_integer() else "int64"
+            native = self.native.astype("float64").astype(intermediate)
+            return self._with_native(native.astype(pd_dtype), preserve_broadcast=True)
         result = self.native.astype(pd_dtype)
         if (
             pd_dtype is str
