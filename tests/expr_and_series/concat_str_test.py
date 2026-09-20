@@ -196,6 +196,10 @@ def test_concat_str_nulls_in_every_position(
         request.applymarker(
             pytest.mark.xfail(reason="pyarrow all-null concat_str row pending #3965")
         )
+    if ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+        request.applymarker(
+            pytest.mark.xfail(reason="polars < 1.0 trailing separator bug")
+        )
     # A trailing null must not leave a dangling separator behind (#3962), and an
     # all-null row must stay in the output as an empty string (#3965).
     data = {
