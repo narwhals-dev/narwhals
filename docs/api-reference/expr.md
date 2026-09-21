@@ -34,8 +34,11 @@
         - is_finite
         - is_first_distinct
         - is_in
+        - is_infinite
         - is_last_distinct
         - is_nan
+        - is_not_nan
+        - is_not_null
         - is_null
         - is_unique
         - kurtosis
