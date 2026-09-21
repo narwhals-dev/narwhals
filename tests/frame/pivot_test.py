@@ -2,13 +2,16 @@ from __future__ import annotations
 
 from contextlib import nullcontext as does_not_raise
 from datetime import timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
 from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+
+if TYPE_CHECKING:
+    from narwhals.typing import PivotAgg
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -135,7 +138,7 @@ def _xfail_unsupported(
 @pytest.mark.parametrize(("on", "index"), [("col", "ix"), (["col"], ["ix"])])
 def test_pivot(
     constructor_eager: ConstructorEager,
-    agg_func: str,
+    agg_func: PivotAgg | None,
     expected: dict[str, list[Any]],
     on: str | list[str],
     index: str | list[str],
@@ -148,7 +151,7 @@ def test_pivot(
         on=on,
         index=index,
         values=["foo", "bar"],
-        aggregate_function=agg_func,  # type: ignore[arg-type]
+        aggregate_function=agg_func,
         sort_columns=True,
     )
 
@@ -343,7 +346,7 @@ def test_pivot_on_columns_names_out(
 def test_pivot_on_columns_agg(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
-    agg_func: str,
+    agg_func: PivotAgg | None,
     expected: dict[str, list[Any]],
 ) -> None:
     _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
@@ -353,7 +356,7 @@ def test_pivot_on_columns_agg(
         on_columns=["b", "a", "z"],
         index="ix",
         values="foo",
-        aggregate_function=agg_func,  # type: ignore[arg-type]
+        aggregate_function=agg_func,
     )
     assert_equal_data(result, expected)
 
@@ -424,7 +427,7 @@ def test_pivot_on_columns_keeps_index_rows(
 def test_pivot_empty_group(
     constructor_eager: ConstructorEager,
     request: pytest.FixtureRequest,
-    agg_func: str,
+    agg_func: PivotAgg | None,
     expected: dict[str, list[Any]],
     polars_min: tuple[int, ...],
 ) -> None:
@@ -432,11 +435,7 @@ def test_pivot_empty_group(
     data_ = {"ix": [1, 2, 1], "col": ["a", "b", "a"], "foo": [1, 2, 3]}
     df = nw.from_native(constructor_eager(data_), eager_only=True)
     result = df.pivot(
-        "col",
-        index="ix",
-        values="foo",
-        aggregate_function=agg_func,  # type: ignore[arg-type]
-        sort_columns=True,
+        "col", index="ix", values="foo", aggregate_function=agg_func, sort_columns=True
     )
     assert_equal_data(result, expected)
 
@@ -525,7 +524,9 @@ def test_pivot_empty_group_non_numeric(
 
 @pytest.mark.parametrize("agg_func", ["len", "min"])
 def test_pivot_on_columns_empty_frame(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, agg_func: str
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    agg_func: PivotAgg | None,
 ) -> None:
     # With no rows there is no pivoted column to take the dtype from, and `on_columns`
     # promises a schema that does not depend on the data.
@@ -545,7 +546,7 @@ def test_pivot_on_columns_empty_frame(
                 on_columns=["a"],
                 index="ix",
                 values="bar",
-                aggregate_function=agg_func,  # type: ignore[arg-type]
+                aggregate_function=agg_func,
             ).schema
         )
     assert schemas[0] == schemas[1]
