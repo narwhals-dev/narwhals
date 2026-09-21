@@ -72,29 +72,6 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("dtype", [pa.string(), pa.large_string()])
-@pytest.mark.parametrize("separator", ["", "-", "::"])
-@pytest.mark.parametrize("ignore_nulls", [True, False])
-def test_pyarrow_concat_str_all_null_rows(
-    dtype: pa.DataType, separator: str, *, ignore_nulls: bool
-) -> None:
-    from narwhals._arrow.utils import chunked_array
-
-    a = chunked_array([[None, "x"], [None, "", "z", None]], dtype)
-    b = chunked_array([[None], ["y", None, None, None, None]], dtype)
-    df = nw.from_native(pa.Table.from_arrays([a, b], names=["a", "b"]))
-    result = df.with_columns(
-        joined=nw.concat_str("a", "b", separator=separator, ignore_nulls=ignore_nulls)
-    )
-    expected = (
-        ["", f"x{separator}y", "", "", "z", ""]
-        if ignore_nulls
-        else [None, f"x{separator}y", None, None, None, None]
-    )
-    assert_equal_data(result.select("joined"), {"joined": expected})
-    assert result.to_native().schema.field("joined").type == dtype
-
-
 @pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [
@@ -215,10 +192,6 @@ def test_concat_str_nulls_in_every_position(
     ignore_nulls: bool,
     expected: list[str | None],
 ) -> None:
-    if ignore_nulls and "pyarrow_table" in str(constructor):  # pragma: no cover
-        request.applymarker(
-            pytest.mark.xfail(reason="pyarrow all-null concat_str row pending #3965")
-        )
     if (
         ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5)
     ):  # pragma: no cover
