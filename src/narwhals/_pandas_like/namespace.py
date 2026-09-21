@@ -402,12 +402,14 @@ class PandasLikeNamespace(
                         dtype=init_value.native.dtype,
                     )
                 )
-                separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
-                result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values, strict=True)),
-                    init_value,
-                )
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    result = result + sep_array.zip_with(seen & not_null, "") + value
+                    seen = seen | not_null
 
             return [result]
 

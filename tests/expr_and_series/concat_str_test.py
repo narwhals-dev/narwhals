@@ -199,3 +199,41 @@ def test_concat_str_with_lit_and_nulls(
     assert_equal_data(
         result.select("r"), {"r": expected if ignore_nulls else expected_nulls}
     )
+
+
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (True, ["x-1-A", "2-B", "z-C", "", "p-q"]),
+        (False, ["x-1-A", None, None, None, None]),
+    ],
+)
+def test_concat_str_nulls_in_every_position(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    ignore_nulls: bool,
+    expected: list[str | None],
+) -> None:
+    if ignore_nulls and "pyarrow_table" in str(constructor):  # pragma: no cover
+        request.applymarker(
+            pytest.mark.xfail(reason="pyarrow all-null concat_str row pending #3965")
+        )
+    if (
+        ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5)
+    ):  # pragma: no cover
+        request.applymarker(
+            pytest.mark.xfail(reason="polars < 0.20.5 trailing separator bug")
+        )
+    # A trailing null must not leave a dangling separator behind (#3962), and an
+    # all-null row must stay in the output as an empty string (#3965).
+    data = {
+        "i": [0, 1, 2, 3, 4],
+        "a": ["x", None, "z", None, "p"],
+        "b": ["1", "2", None, None, "q"],
+        "c": ["A", "B", "C", None, None],
+    }
+    df = nw.from_native(constructor(data))
+    expr = nw.concat_str("a", "b", "c", separator="-", ignore_nulls=ignore_nulls)
+    result = df.with_columns(r=expr).sort("i").select("r")
+    assert_equal_data(result, {"r": expected})

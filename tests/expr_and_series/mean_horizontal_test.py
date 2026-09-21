@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
@@ -14,11 +12,7 @@ def test_meanh(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_meanh_with_literal(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    if "dask" in str(constructor):
-        request.applymarker(pytest.mark.xfail)
+def test_meanh_with_literal(constructor: Constructor) -> None:
     data = {"a": [1, 3, None, None], "b": [4, None, 6, None]}
     df = nw.from_native(constructor(data))
     result = df.select(horizontal_mean=nw.mean_horizontal(nw.lit(1), "a", nw.col("b")))
