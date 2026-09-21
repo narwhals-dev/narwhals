@@ -406,7 +406,7 @@ class DaskExpr(
     ) -> Self:
         if value is not None:
 
-            def func(df: DaskLazyFrame) -> list[dx.Series]:
+            def func_val(df: DaskLazyFrame) -> list[dx.Series]:
                 val = df._evaluate_single_output_expr(value)
                 results: list[dx.Series] = []
                 for s in self(df):
@@ -415,7 +415,7 @@ class DaskExpr(
                 return results
 
             return self.__class__(
-                func,
+                func_val,
                 evaluate_output_names=self._evaluate_output_names,
                 alias_output_names=self._alias_output_names,
                 version=self._version,
