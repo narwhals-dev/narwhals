@@ -404,39 +404,81 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        def func(expr: dx.Series, value: Self | None = None) -> dx.Series:
-            if value is not None:
-                res_ser = expr.fillna(value)
-            else:
-                res_ser = (
-                    expr.ffill(limit=limit)
-                    if strategy == "forward"
-                    else expr.bfill(limit=limit)
-                )
-            return res_ser
-
         if value is not None:
-            return self._with_callable(func, expression_args={"value": value})
+
+            def func(df: DaskLazyFrame) -> list[dx.Series]:
+                val = df._evaluate_single_output_expr(value)
+                results: list[dx.Series] = []
+                for s in self(df):
+                    s_aligned, val_aligned = align_series_full_broadcast(df, s, val)
+                    results.append(s_aligned.fillna(val_aligned))
+                return results
+
+            return self.__class__(
+                func,
+                evaluate_output_names=self._evaluate_output_names,
+                alias_output_names=self._alias_output_names,
+                version=self._version,
+            )
+
+        def func(expr: dx.Series) -> dx.Series:
+            return (
+                expr.ffill(limit=limit)
+                if strategy == "forward"
+                else expr.bfill(limit=limit)
+            )
+
         return self._with_callable(func)
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
-        return self._with_callable(
-            lambda expr, lower_bound, upper_bound: expr.clip(
-                lower=lower_bound, upper=upper_bound
-            ),
-            expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            lower = df._evaluate_single_output_expr(lower_bound)
+            upper = df._evaluate_single_output_expr(upper_bound)
+            results: list[dx.Series] = []
+            for s in self(df):
+                s_aligned, low_aligned, up_aligned = align_series_full_broadcast(
+                    df, s, lower, upper
+                )
+                results.append(s_aligned.clip(lower=low_aligned, upper=up_aligned))
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
-        return self._with_callable(
-            lambda expr, lower_bound: expr.clip(lower=lower_bound),
-            expression_args={"lower_bound": lower_bound},
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            lower = df._evaluate_single_output_expr(lower_bound)
+            results: list[dx.Series] = []
+            for s in self(df):
+                s_aligned, low_aligned = align_series_full_broadcast(df, s, lower)
+                results.append(s_aligned.clip(lower=low_aligned))
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
         )
 
     def clip_upper(self, upper_bound: Self) -> Self:
-        return self._with_callable(
-            lambda expr, upper_bound: expr.clip(upper=upper_bound),
-            expression_args={"upper_bound": upper_bound},
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            upper = df._evaluate_single_output_expr(upper_bound)
+            results: list[dx.Series] = []
+            for s in self(df):
+                s_aligned, up_aligned = align_series_full_broadcast(df, s, upper)
+                results.append(s_aligned.clip(upper=up_aligned))
+            return results
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
         )
 
     def n_unique(self) -> Self:
