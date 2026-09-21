@@ -1100,6 +1100,28 @@ class PandasLikeDataFrame(
             for col in column_names:
                 yield self._pivot_multi_on_name(col[-n_on:])
 
+    def _pivot_missing_dtypes(
+        self, result: pd.DataFrame, missing: Iterable[Any], existing: Iterable[Any], /
+    ) -> dict[Any, Any]:
+        """Dtypes for the pivoted columns that `reindex` created as all-null float64.
+
+        A column absent from the data gets the dtype that the same aggregation takes
+        when it has to hold a missing value: that of an already pivoted column for the
+        same `values` entry, falling back to the source column when there is none.
+        """
+        siblings: dict[str, Any] = {}
+        for col in existing:
+            siblings.setdefault(col[0], col)
+
+        def null_dtype(name: Any, /) -> Any:
+            sibling = siblings.get(name)
+            source = self.native[name] if sibling is None else result[sibling]
+            # `reindex` promotes to whatever dtype can hold a missing value, so `int64`
+            # widens to `float64` while nullable and pyarrow-backed dtypes are kept.
+            return source.iloc[:0].reindex([0]).dtype
+
+        return {col: null_dtype(col[0]) for col in missing}
+
     def _pivot_remap_column_names(
         self, column_names: Iterable[Any], *, n_on: int, n_values: int, separator: str
     ) -> list[str]:
@@ -1156,6 +1178,7 @@ class PandasLikeDataFrame(
         self,
         on: Sequence[str],
         *,
+        on_columns: Sequence[Any] | None,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
         aggregate_function: PivotAgg | None,
@@ -1170,20 +1193,32 @@ class PandasLikeDataFrame(
         index, values = self._pivot_into_index_values(on, index, values)
         result = self._pivot(on, index, values, aggregate_function)
 
-        # Select the columns in the right order
-        uniques = (
-            (
-                self.get_column(col)
-                .unique()
-                .sort(descending=False, nulls_last=False)
-                .to_list()
-                for col in on
+        if on_columns is not None:
+            ordered_cols = list(product(values, on_columns))
+        else:
+            uniques = (
+                (
+                    self.get_column(col)
+                    .unique()
+                    .sort(descending=False, nulls_last=False)
+                    .to_list()
+                    for col in on
+                )
+                if sort_columns
+                else (self.get_column(col).unique().to_list() for col in on)
             )
-            if sort_columns
-            else (self.get_column(col).unique().to_list() for col in on)
-        )
-        ordered_cols = list(product(values, *chain(uniques)))
-        result = result.loc[:, ordered_cols]
+            ordered_cols = list(product(values, *chain(uniques)))
+        existing: set[Any] = set(result.columns)
+        if missing := [col for col in ordered_cols if col not in existing]:
+            # `on_columns` may name values absent from the data, which must still
+            # produce (empty) columns.
+            dtypes = self._pivot_missing_dtypes(result, missing, existing)
+            result = result.reindex(columns=ordered_cols).astype(dtypes)
+        else:
+            result = result.loc[:, ordered_cols]
+        if aggregate_function in {"sum", "len"}:
+            # polars aggregates an empty group to 0, pandas leaves it null.
+            result = result.fillna(0)
         columns = result.columns
         remapped = self._pivot_remap_column_names(
             columns, n_on=len(on), n_values=len(values), separator=separator

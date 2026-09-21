@@ -249,6 +249,7 @@ class CompliantDataFrame(
         self,
         on: Sequence[str],
         *,
+        on_columns: Sequence[Any] | None,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
         aggregate_function: PivotAgg | None,

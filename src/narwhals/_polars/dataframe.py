@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     import pandas as pd
     import pyarrow as pa
-    from typing_extensions import Self, TypeIs
+    from typing_extensions import Self, TypedDict, TypeIs
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._polars.expr import PolarsExpr
@@ -64,6 +64,10 @@ if TYPE_CHECKING:
 
     T = TypeVar("T")
     R = TypeVar("R")
+
+    class _PivotKwargs(TypedDict, total=False):
+        on_columns: Sequence[Any]
+
 
 MYPY: Final = False
 
@@ -632,12 +636,20 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         self,
         on: Sequence[str],
         *,
+        on_columns: Sequence[Any] | None,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
         aggregate_function: PivotAgg | None,
         sort_columns: bool,
         separator: str,
     ) -> Self:
+        if on_columns is not None and self._backend_version < (1, 36):
+            msg = (
+                "`pivot(on_columns=...)` is only available in 'polars>=1.36.0', "
+                f"found version {'.'.join(map(str, self._backend_version))!r}."
+            )
+            raise NotImplementedError(msg)
+        kwds: _PivotKwargs = {} if on_columns is None else {"on_columns": on_columns}
         try:
             result = self.native.pivot(
                 on,
@@ -646,6 +658,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
                 aggregate_function=aggregate_function,
                 sort_columns=sort_columns,
                 separator=separator,
+                **kwds,
             )
         except Exception as e:  # noqa: BLE001
             raise catch_polars_exception(e) from None

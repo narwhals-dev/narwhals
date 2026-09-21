@@ -26,6 +26,28 @@ data_no_dups = {
 }
 
 
+def _xfail_unsupported(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    *,
+    polars_min: tuple[int, ...] = (1, 0),
+) -> None:
+    """Mark as xfail the backends which cannot run the pivot under test.
+
+    `polars_min` is the first polars version behaving as the test expects: pivot
+    itself landed in 1.0, empty groups started aggregating to 0 in 1.32, and
+    `on_columns` was introduced in 1.36.
+    """
+    _id = str(constructor_eager)
+    if any(x in _id for x in ("pyarrow_table", "modin")):
+        reason = f"pivot is not implemented for {_id}"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    if "polars" in _id and polars_min > POLARS_VERSION:
+        version = ".".join(map(str, polars_min))
+        reason = f"this pivot behaviour requires polars>={version}"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+
 @pytest.mark.parametrize(
     ("agg_func", "expected"),
     [
@@ -120,11 +142,7 @@ def test_pivot(
     index: str | list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
+    _xfail_unsupported(constructor_eager, request)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.pivot(
@@ -146,13 +164,12 @@ def test_pivot(
     ],
 )
 def test_pivot_no_agg(
-    request: Any, constructor_eager: ConstructorEager, data_: Any, context: Any
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    data_: Any,
+    context: Any,
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
+    _xfail_unsupported(constructor_eager, request)
 
     df = nw.from_native(constructor_eager(data_), eager_only=True)
     with context:
@@ -167,16 +184,12 @@ def test_pivot_no_agg(
     ],
 )
 def test_pivot_sort_columns(
-    request: Any,
+    request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     sort_columns: Any,
     expected: list[str],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
+    _xfail_unsupported(constructor_eager, request)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.pivot(
@@ -218,13 +231,12 @@ def test_pivot_sort_columns(
     ],
 )
 def test_pivot_names_out(
-    request: Any, constructor_eager: ConstructorEager, kwargs: Any, expected: list[str]
+    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager,
+    kwargs: Any,
+    expected: list[str],
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
+    _xfail_unsupported(constructor_eager, request)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -243,11 +255,7 @@ def test_pivot_no_index_no_values(constructor_eager: ConstructorEager) -> None:
 def test_pivot_no_index(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
+    _xfail_unsupported(constructor_eager, request)
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
     with pytest.warns(UserWarning, match="has no effect"):
         result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")
@@ -258,3 +266,200 @@ def test_pivot_no_index(
         "b": [None, 2.0, 4.0, None],
     }
     assert_equal_data(result, expected)
+
+
+def test_pivot_on_columns_str_raises(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+    with pytest.raises(TypeError, match="on_columns"):
+        df.pivot("col", on_columns="a", index="ix", values="foo")
+
+
+def test_pivot_on_columns_multiple_on_raises(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with pytest.raises(NotImplementedError, match="single column"):
+        df.pivot(["col", "col_b"], on_columns=["a"], index="ix", values="foo")
+
+
+@pytest.mark.skipif(
+    POLARS_VERSION >= (1, 36), reason="`on_columns` is supported natively"
+)
+def test_pivot_on_columns_polars_too_old() -> None:  # pragma: no cover
+    pytest.importorskip("polars")
+    import polars as pl
+
+    df = nw.from_native(pl.DataFrame(data_no_dups), eager_only=True)
+    with pytest.raises(NotImplementedError, match=r"polars>=1\.36\.0"):
+        df.pivot("col", on_columns=["a"], index="ix", values="foo")
+
+
+@pytest.mark.parametrize(
+    ("on_columns", "values", "expected"),
+    [
+        # Order follows `on_columns`, not discovery nor sorting.
+        (["b", "a"], ["foo"], ["ix", "b", "a"]),
+        (["a", "b"], ["foo"], ["ix", "a", "b"]),
+        (["b", "a"], ["foo", "bar"], ["ix", "foo_b", "foo_a", "bar_b", "bar_a"]),
+        # Subset: values present in the data but not listed are dropped.
+        (["a"], ["foo", "bar"], ["ix", "foo_a", "bar_a"]),
+        # Superset: unknown values still produce a column.
+        (["a", "z", "b"], ["foo"], ["ix", "a", "z", "b"]),
+        ([], ["foo"], ["ix"]),
+    ],
+)
+def test_pivot_on_columns_names_out(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    on_columns: list[str],
+    values: list[str],
+    expected: list[str],
+) -> None:
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.pivot(
+        "col",
+        on_columns=on_columns,
+        index="ix",
+        values=values,
+        aggregate_function="min",
+        sort_columns=True,
+    )
+    assert result.collect_schema().names() == expected
+
+
+@pytest.mark.parametrize(
+    ("agg_func", "expected"),
+    [
+        ("min", {"ix": [1, 2], "b": [7, 1], "a": [0, 2], "z": [None, None]}),
+        ("max", {"ix": [1, 2], "b": [7, 1], "a": [1, 2], "z": [None, None]}),
+        ("first", {"ix": [1, 2], "b": [7, 1], "a": [0, 2], "z": [None, None]}),
+        ("last", {"ix": [1, 2], "b": [7, 1], "a": [1, 2], "z": [None, None]}),
+        ("mean", {"ix": [1, 2], "b": [7.0, 1.0], "a": [0.5, 2.0], "z": [None, None]}),
+        ("median", {"ix": [1, 2], "b": [7.0, 1.0], "a": [0.5, 2.0], "z": [None, None]}),
+        # `sum` and `len` of an empty group are 0, not null.
+        ("sum", {"ix": [1, 2], "b": [7, 1], "a": [1, 4], "z": [0, 0]}),
+        ("len", {"ix": [1, 2], "b": [1, 1], "a": [2, 2], "z": [0, 0]}),
+    ],
+)
+def test_pivot_on_columns_agg(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    agg_func: str,
+    expected: dict[str, list[Any]],
+) -> None:
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.pivot(
+        "col",
+        on_columns=["b", "a", "z"],
+        index="ix",
+        values="foo",
+        aggregate_function=agg_func,  # type: ignore[arg-type]
+    )
+    assert_equal_data(result, expected)
+
+
+def test_pivot_on_columns_no_agg(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+    result = df.pivot("col", on_columns=["b", "z"], index="ix", values="foo")
+    expected = {"ix": [1, 2], "b": [2, 4], "z": [None, None]}
+    assert_equal_data(result, expected)
+    # Duplicates in the selected `on` values still raise without an aggregation.
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    with pytest.raises((ValueError, NarwhalsError)):
+        df.pivot("col", on_columns=["a"], index="ix", values="foo")
+
+
+def test_pivot_on_columns_no_index(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
+    result = df.pivot("col", on_columns=["a"], values="foo").sort("ix", "bar")
+    expected = {
+        "ix": [1, 1, 2, 2],
+        "bar": ["x", "y", "w", "z"],
+        "a": [1.0, None, None, 3.0],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_pivot_on_columns_series(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    on_columns = nw.from_native(constructor_eager({"c": ["b", "z"]}), eager_only=True)[
+        "c"
+    ]
+    result = df.pivot(
+        "col", on_columns=on_columns, index="ix", values="foo", aggregate_function="max"
+    )
+    expected = {"ix": [1, 2], "b": [7, 1], "z": [None, None]}
+    assert_equal_data(result, expected)
+
+
+def test_pivot_on_columns_keeps_index_rows(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    # An index value whose `on` values are all excluded still yields a (null) row.
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    data_ = {"ix": [3, 1, 1, 2], "col": ["c", "a", "b", "b"], "foo": [9, 1, 2, 4]}
+    df = nw.from_native(constructor_eager(data_), eager_only=True)
+    result = df.pivot("col", on_columns=["a", "z"], index="ix", values="foo").sort("ix")
+    expected = {"ix": [1, 2, 3], "a": [1, None, None], "z": [None, None, None]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("agg_func", "expected", "polars_min"),
+    [
+        ("sum", {"ix": [1, 2], "a": [4, 0], "b": [0, 2]}, (1, 32)),
+        ("len", {"ix": [1, 2], "a": [2, 0], "b": [0, 1]}, (1, 32)),
+        ("min", {"ix": [1, 2], "a": [1, None], "b": [None, 2]}, (1, 0)),
+    ],
+)
+def test_pivot_empty_group(
+    constructor_eager: ConstructorEager,
+    request: pytest.FixtureRequest,
+    agg_func: str,
+    expected: dict[str, list[Any]],
+    polars_min: tuple[int, ...],
+) -> None:
+    # A combination of `index` and `on` absent from the data aggregates to 0 for
+    # `sum` and `len`, and to null otherwise.
+    _xfail_unsupported(constructor_eager, request, polars_min=polars_min)
+    data_ = {"ix": [1, 2, 1], "col": ["a", "b", "a"], "foo": [1, 2, 3]}
+    df = nw.from_native(constructor_eager(data_), eager_only=True)
+    result = df.pivot(
+        "col",
+        index="ix",
+        values="foo",
+        aggregate_function=agg_func,  # type: ignore[arg-type]
+        sort_columns=True,
+    )
+    assert_equal_data(result, expected)
+
+
+def test_pivot_on_columns_null_dtype(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    # A column absent from the data holds nulls in the dtype its aggregation would
+    # take anyway, rather than defaulting to float.
+    _xfail_unsupported(constructor_eager, request, polars_min=(1, 36))
+    data_ = {"ix": [1, 2], "col": ["a", "b"], "foo": [1, 2], "bar": ["x", "y"]}
+    df = nw.from_native(constructor_eager(data_), eager_only=True)
+    schema = df.pivot(
+        "col",
+        on_columns=["a", "z"],
+        index="ix",
+        values=["foo", "bar"],
+        aggregate_function="min",
+    ).schema
+    # `foo_a` and `bar_a` are present but hold a null themselves, so the absent
+    # columns must have exactly their dtypes on every backend.
+    assert schema["foo_z"] == schema["foo_a"]
+    assert schema["bar_z"] == schema["bar_a"]
+    assert schema["bar_z"] == nw.String

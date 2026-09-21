@@ -2182,6 +2182,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self,
         on: str | list[str],
         *,
+        on_columns: Sequence[Any] | Series[Any] | None = None,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
         aggregate_function: PivotAgg | None = None,
@@ -2194,6 +2195,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             on: Name of the column(s) whose values will be used as the header of the
                 output DataFrame.
+            on_columns: What value combinations will be considered for the output table.
             index: One or multiple keys to group by. If None, all remaining columns not
                 specified on `on` and `values` will be used. At least one of `index` and
                 `values` must be specified.
@@ -2232,10 +2234,34 @@ class DataFrame(BaseFrame[DataFrameT]):
             |0   1      1      7      2      9|
             |1   2      4      1      0      4|
             └─────────────────────────────────┘
+
+            If you already know the values of `on` ahead of time, or only want a
+            subset of them, pass them with `on_columns`. This fixes the output
+            schema regardless of the data:
+
+            >>> nw.from_native(df_native).pivot(
+            ...     "col",
+            ...     on_columns=["b", "a", "c"],
+            ...     index="ix",
+            ...     values="foo",
+            ...     aggregate_function="max",
+            ... )
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |    ix  b  a   c  |
+            | 0   1  7  1 NaN  |
+            | 1   2  1  2 NaN  |
+            └──────────────────┘
         """
         if values is None and index is None:
             msg = "At least one of `values` and `index` must be passed"
             raise ValueError(msg)
+        if isinstance(on_columns, Series):
+            on_columns = on_columns.to_list()
+        elif isinstance(on_columns, str):
+            msg = f"`on_columns` must be a sequence of values, got str: {on_columns!r}."
+            raise TypeError(msg)
         if maintain_order is not None:
             msg = (
                 "`maintain_order` has no effect and is only kept around for backwards-compatibility. "
@@ -2245,10 +2271,14 @@ class DataFrame(BaseFrame[DataFrameT]):
         on = [on] if isinstance(on, str) else on
         values = [values] if isinstance(values, str) else values
         index = [index] if isinstance(index, str) else index
+        if on_columns is not None and len(on) > 1:
+            msg = "`on_columns` is only supported when `on` is a single column."
+            raise NotImplementedError(msg)
 
         return self._with_compliant(
             self._compliant_frame.pivot(
                 on=on,
+                on_columns=on_columns,
                 index=index,
                 values=values,
                 aggregate_function=aggregate_function,
