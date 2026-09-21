@@ -281,14 +281,41 @@ class SparkLikeNamespace(
             msg = "Only 'pearson' correlation is supported for Spark."
             raise NotImplementedError(msg)
 
+        F = self._F
+
+        def _corr(
+            a_: Column, b_: Column, wrap: Callable[[Column], Column]
+        ) -> list[Column]:
+            # NOTE: `F.corr` only guards against an empty (or single-row) input,
+            # and it raises `DIVIDE_BY_ZERO` when either column is constant.
+            # Compute it from guarded aggregates instead.
+            is_valid = a_.isNotNull() & b_.isNotNull()
+            a_valid, b_valid = F.when(is_valid, a_), F.when(is_valid, b_)
+            denominator = wrap(F.stddev_pop(a_valid)) * wrap(F.stddev_pop(b_valid))
+            numerator = wrap(F.covar_pop(a_valid, b_valid))
+            return [
+                F.when(denominator == F.lit(0.0), F.lit(None)).otherwise(
+                    numerator / denominator
+                )
+            ]
+
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            F = self._F
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
-            return [F.corr(a_, b_)]
+            return _corr(a_, b_, lambda e: e)
+
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: WindowInputs[Column]
+        ) -> list[Column]:
+            assert not inputs.order_by  # noqa: S101
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            window = df._Window.partitionBy(*(inputs.partition_by or [F.lit(1)]))
+            return _corr(a_, b_, lambda e: e.over(window))
 
         return self._expr(
             call=func,
+            window_function=window_f,
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
