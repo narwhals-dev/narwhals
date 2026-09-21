@@ -56,6 +56,7 @@ if TYPE_CHECKING:
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
+        NonNestedLiteral,
         PivotAgg,
         SingleIndexSelector,
         UniqueKeepStrategy,
@@ -66,7 +67,9 @@ if TYPE_CHECKING:
     R = TypeVar("R")
 
     class _PivotKwargs(TypedDict, total=False):
-        on_columns: Sequence[Any]
+        """Arguments only forwarded to `pl.DataFrame.pivot` on versions that accept them."""
+
+        on_columns: Sequence[NonNestedLiteral]
 
 
 MYPY: Final = False
@@ -636,7 +639,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         self,
         on: Sequence[str],
         *,
-        on_columns: Sequence[Any] | None,
+        on_columns: Sequence[NonNestedLiteral] | None,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
         aggregate_function: PivotAgg | None,

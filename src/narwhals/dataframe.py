@@ -94,6 +94,7 @@ if TYPE_CHECKING:
         JoinStrategy,
         MultiColSelector as _MultiColSelector,
         MultiIndexSelector as _MultiIndexSelector,
+        NonNestedLiteral,
         PivotAgg,
         SingleColSelector,
         SingleIndexSelector,
@@ -2182,7 +2183,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         self,
         on: str | list[str],
         *,
-        on_columns: Sequence[Any] | Series[Any] | None = None,
+        on_columns: Sequence[NonNestedLiteral] | Series[Any] | None = None,
         index: str | list[str] | None = None,
         values: str | list[str] | None = None,
         aggregate_function: PivotAgg | None = None,
@@ -2195,7 +2196,10 @@ class DataFrame(BaseFrame[DataFrameT]):
         Arguments:
             on: Name of the column(s) whose values will be used as the header of the
                 output DataFrame.
-            on_columns: What value combinations will be considered for the output table.
+            on_columns: Values of `on` to use as the output columns, in the given order.
+                A value absent from the data still produces a column, and a value present
+                but not listed is dropped, so the output schema no longer depends on
+                the data. Only supported when `on` names a single column.
             index: One or multiple keys to group by. If None, all remaining columns not
                 specified on `on` and `values` will be used. At least one of `index` and
                 `values` must be specified.
