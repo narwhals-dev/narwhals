@@ -78,6 +78,18 @@ def test_round_keeps_integer_dtype(
     assert_equal_data(result, {"a": [1, -2, 3]})
 
 
+def test_round_keeps_large_integers_exact() -> None:
+    # Correcting ties via a `DOUBLE` banker's-rounding function (DuckDB's
+    # `round_even`) would return 9007199254740992 for the first value.
+    duckdb = pytest.importorskip("duckdb")
+    rel = duckdb.sql(
+        "SELECT * FROM (VALUES (9007199254740993), (123456789012345678)) t(a)"
+    )
+    result = nw.from_native(rel).select(nw.col("a").round(0))
+    assert result.collect_schema()["a"] == nw.Int64
+    assert_equal_data(result, {"a": [9007199254740993, 123456789012345678]})
+
+
 def test_round_half_to_even_duckdb_decimal() -> None:
     duckdb = pytest.importorskip("duckdb")
     if DUCKDB_VERSION < (1, 3):

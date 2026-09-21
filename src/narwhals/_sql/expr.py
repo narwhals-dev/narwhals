@@ -603,9 +603,20 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
 
     def round(self, decimals: int) -> Self:
         # SQL `round` rounds half away from zero, but pandas, Polars and PyArrow round
-        # half to even. `round_even` isn't portable and casts integers and decimals to
-        # `DOUBLE` in DuckDB, so ties are corrected here and the result always comes
-        # from `round`, which keeps the input dtype.
+        # half to even. Ties are corrected here rather than by calling a native
+        # banker's-rounding function, because the native ones return `DOUBLE`:
+        #
+        # - DuckDB's `round_even` returns `DOUBLE` for every input, so `BIGINT` and
+        #   `DECIMAL` columns come back as floats. That both changes the dtype and
+        #   silently corrupts integers above 2**53:
+        #   `round_even(9007199254740993::BIGINT, 0)` is `9007199254740992.0`.
+        # - SQLFrame only exposes `bround` for its BigQuery, Snowflake, Spark and
+        #   Redshift backends, not for DuckDB or Postgres.
+        #
+        # This implementation only replaces the value on an actual tie and otherwise
+        # returns `round`'s own output untouched, so non-tie values never make a
+        # round trip through `DOUBLE` and the input dtype is preserved. PySpark
+        # overrides this with native `bround`; see `_spark_like/expr.py`.
         def frac_is_half(expr: NativeExprT) -> NativeExprT:
             frac = self._function("subtract", expr, self._function("floor", expr))
             return frac == self._lit(0.5)
@@ -619,6 +630,8 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
             units = self._function(
                 "round", self._function("multiply", self._function("abs", rounded), scale)
             )
+            # `units % 2 == 1` would say the same thing, but `%` disagrees on sign
+            # between these backends (see `__mod__`), while halving does not.
             is_odd = frac_is_half(self._function("multiply", units, self._lit(0.5)))
             # On a tie, reflecting `rounded` across `expr` gives the other neighbor.
             reflected = self._function(
