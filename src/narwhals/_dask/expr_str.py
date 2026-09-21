@@ -21,6 +21,8 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int
     ) -> DaskExpr:
+        if n == 0:
+            return self.compliant
         if not value._metadata.is_literal:
             msg = "dask backed `Expr.str.replace` only supports str replacement values"
             raise TypeError(msg)
