@@ -19,6 +19,10 @@ typing: ## Run type checkers
 	uv run --group typing mypy
 	uv run --group typing pyrefly check
 
+.PHONY: typing-docstrings
+typing-docstrings: ## Run type checkers on the examples in public docstrings
+	uv run --group typing utils/check_docstring_types.py
+
 .PHONY: typing-coverage
 typing-coverage: ## Run type checkers
 	uv run --group typing pyrefly coverage check src/narwhals --public-only

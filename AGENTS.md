@@ -86,7 +86,8 @@ Run these from the repo root. If you have not activated `.venv`, prefix the non-
 
 1. `prek run --all-files` — lint, format, docstring/import checks
 2. `make typing` — static type checking (mypy, pyright, and pyrefly)
-   (Optional: `make typing-coverage` for type-completeness)
+   (Optional: `make typing-coverage` for type-completeness, `make typing-docstrings` to run
+   the same three checkers over the examples in public docstrings)
 3. `make test-full-coverage` — full test suite with 100% coverage. Very slow, see [Faster testing](#faster-testing) for alternatives.
 4. `make doctest` — tests docstring examples
 5. `make docs-build` — run only if you touched `docs/` or a docstring. The build *executes* `exec="yes"`

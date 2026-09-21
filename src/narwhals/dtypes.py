@@ -738,11 +738,8 @@ class Field:
         dtype: The `DType` of the field's values.
 
     Examples:
-       >>> import pyarrow as pa
        >>> import narwhals as nw
-       >>> data = [{"a": 1, "b": ["narwhal", "beluga"]}, {"a": 2, "b": ["orca"]}]
-       >>> ser_pa = pa.chunked_array([data])
-       >>> nw.from_native(ser_pa, series_only=True).dtype.fields
+       >>> nw.Struct({"a": nw.Int64, "b": nw.List(nw.String)}).fields
        [Field('a', Int64), Field('b', List(String))]
     """
 

@@ -221,6 +221,22 @@ Note that:
 - In `_spark_like`, we type all native objects as if they are SQLFrame ones, though
   in reality this package is shared between SQLFrame and PySpark.
 
+The examples inside docstrings are type-checked too, by the same three checkers:
+
+```console
+make typing-docstrings
+```
+
+Each docstring is extracted into a throwaway module whose statements keep their original
+line numbers, so diagnostics point at the real source file. This covers the docstrings
+documenting an attribute or a type alias, which `make doctest` cannot reach at all.
+
+Only public modules are checked. `doctest` runs examples with the defining module's
+globals, and we cannot reproduce those, so examples in private modules lean on names
+they never import. Pass a path explicitly to check one anyway
+(`uv run utils/check_docstring_types.py src/narwhals/_utils.py`) and expect
+undefined-name reports for whatever the examples do not import themselves.
+
 ## 4. Writing the doc(strings)
 
 If you are adding a new feature or changing an existing one, you should also update the documentation and the docstrings

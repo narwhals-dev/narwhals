@@ -2005,7 +2005,7 @@ class Series(Generic[IntoSeriesT]):
             quantile=quantile, interpolation=interpolation
         )
 
-    def zip_with(self, mask: Self, other: Self) -> Self:
+    def zip_with(self, mask: Series[Any], other: Self) -> Self:
         """Take values from self or other based on the given mask.
 
         Where mask evaluates true, take values from self. Where mask evaluates false,

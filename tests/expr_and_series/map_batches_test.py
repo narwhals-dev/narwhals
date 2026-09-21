@@ -16,6 +16,7 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType
 
 data = {"a": [1, 2, 3], "b": [4, 5, 6], "z": [7.0, 8.0, 9.0]}
 
@@ -48,11 +49,14 @@ def test_map_batches_expr_scalar(
     assert_equal_data(expected, {"a": [value], "b": [value]})
 
 
-def test_map_batches_expr_numpy_array(constructor_eager: ConstructorEager) -> None:
+@pytest.mark.parametrize("return_dtype", [nw.Float64, nw.Float64()])
+def test_map_batches_expr_numpy_array(
+    constructor_eager: ConstructorEager, return_dtype: IntoDType
+) -> None:
     df = nw.from_native(constructor_eager(data))
     expected = df.select(
         nw.col("a")
-        .map_batches(lambda s: s.to_numpy() + 1, return_dtype=nw.Float64())
+        .map_batches(lambda s: s.to_numpy() + 1, return_dtype=return_dtype)
         .sum()
     )
     assert_equal_data(expected, {"a": [9.0]})

@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 
     from narwhals._compliant import CompliantExpr, CompliantNamespace
     from narwhals._typing import NoDefault
-    from narwhals.dtypes import DType
     from narwhals.series import Series
     from narwhals.typing import (
         ClosedInterval,
@@ -364,41 +363,18 @@ class Expr:
 
         Examples:
             >>> import pandas as pd
-            >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
-            >>>
-            >>> data = {"a": [1, 2, 3]}
-            >>> df_pd = pd.DataFrame(data)
-            >>> df_pl = pl.DataFrame(data)
-
-            We define a library agnostic function:
-
-            >>> def agnostic_ewm_mean(df_native: IntoFrameT) -> IntoFrameT:
-            ...     df = nw.from_native(df_native)
-            ...     return df.select(
-            ...         nw.col("a").ewm_mean(com=1, ignore_nulls=False)
-            ...     ).to_native()
-
-            We can then pass either pandas or Polars to `agnostic_ewm_mean`:
-
-            >>> agnostic_ewm_mean(df_pd)
-                      a
-            0  1.000000
-            1  1.666667
-            2  2.428571
-
-            >>> agnostic_ewm_mean(df_pl)  # doctest: +NORMALIZE_WHITESPACE
-            shape: (3, 1)
-            ┌──────────┐
-            │ a        │
-            │ ---      │
-            │ f64      │
-            ╞══════════╡
-            │ 1.0      │
-            │ 1.666667 │
-            │ 2.428571 │
-            └──────────┘
+            >>> df_native = pd.DataFrame({"a": [1, 2, 3]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(a_ewm=nw.col("a").ewm_mean(com=1, ignore_nulls=False))
+            ┌──────────────────┐
+            |Narwhals DataFrame|
+            |------------------|
+            |     a     a_ewm  |
+            |  0  1  1.000000  |
+            |  1  2  1.666667  |
+            |  2  3  2.428571  |
+            └──────────────────┘
         """
         return self._append_node(
             ExprNode(
@@ -500,7 +476,7 @@ class Expr:
     def map_batches(
         self,
         function: Callable[[Any], CompliantExpr[Any, Any]],
-        return_dtype: DType | None = None,
+        return_dtype: IntoDType | None = None,
         *,
         returns_scalar: bool = False,
     ) -> Self:

@@ -48,6 +48,8 @@ jobs:
         run: uv pip freeze
       - name: Run mypy and pyright
         run: make typing
+      - name: Type-check docstring examples
+        run: make typing-docstrings
       - name: Check type-completeness
         run: |
           uv run pyrefly coverage check src/narwhals --public-only

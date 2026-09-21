@@ -179,7 +179,9 @@ class Schema(OrderedDict[str, "DType"]):
             >>> import narwhals as nw
             >>>
             >>> data = {"a": [1], "b": ["a"], "c": [False], "d": [9.2]}
-            >>> native = pd.DataFrame(data).convert_dtypes().dtypes.to_dict()
+            >>> df = pd.DataFrame(data).convert_dtypes()
+            >>> dtypes = df.dtypes
+            >>> native = {name: dtypes[name] for name in data}
             >>>
             >>> nw.Schema.from_pandas_like(native)
             Schema({'a': Int64, 'b': String, 'c': Boolean, 'd': Float64})
