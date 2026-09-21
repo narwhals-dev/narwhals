@@ -245,11 +245,18 @@ class ArrowNamespace(
             it, separator_scalar = cast_to_comparable_string_types(
                 *self.extract_native(*series), separator=separator
             )
+            first, *rest = it
+            if ignore_nulls:
+                # `null_handling="skip"` emits no element for an all-null row.
+                # Blanking the first value keeps the row and yields "" like Polars.
+                and_: Incomplete = pc.and_
+                all_null = reduce(and_, (pc.is_null(c) for c in (first, *rest)))
+                first = pc.if_else(all_null, "", first)
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
             concat_str: Incomplete = pc.binary_join_element_wise
             compliant = self._series(
-                concat_str(*it, separator_scalar, null_handling=null_handling),
+                concat_str(first, *rest, separator_scalar, null_handling=null_handling),
                 name=name,
                 version=self._version,
             )
