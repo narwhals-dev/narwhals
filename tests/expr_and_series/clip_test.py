@@ -33,6 +33,22 @@ def test_clip_expr_expressified(constructor: Constructor) -> None:
     assert_equal_data(result, expected_dict)
 
 
+def test_clip_expr_with_aggregations(constructor: Constructor) -> None:
+    data = {"a": [1, 2, 3, -4, 5], "b": [2, 3, 1, 0, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        clipped=nw.col("a").clip(nw.col("b").min(), nw.col("b").max()),
+        clipped_lower=nw.col("a").clip(lower_bound=nw.col("b").min()),
+        clipped_upper=nw.col("a").clip(upper_bound=nw.col("b").max()),
+    )
+    expected = {
+        "clipped": [1, 2, 3, 0, 4],
+        "clipped_lower": [1, 2, 3, 0, 5],
+        "clipped_upper": [1, 2, 3, -4, 4],
+    }
+    assert_equal_data(result, expected)
+
+
 @pytest.mark.parametrize(
     ("lower", "upper", "expected"),
     [

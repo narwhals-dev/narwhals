@@ -44,9 +44,17 @@ SCALAR_OPERAND_CASES: dict[str, tuple[nw.Expr, list[object]]] = {
         nw.all_horizontal(nw.lit(True), nw.col("i") > 0, ignore_nulls=True),
         [False, True, True],
     ),
+    "all_agg_first": (
+        nw.all_horizontal((nw.col("i") >= 0).all(), nw.col("i") > 0, ignore_nulls=True),
+        [False, True, True],
+    ),
     "any_lit_first": (
         nw.any_horizontal(nw.lit(False), nw.col("i") > 0, ignore_nulls=True),
         [False, True, True],
+    ),
+    "any_agg_first": (
+        nw.any_horizontal((nw.col("i") == 0).any(), nw.col("i") > 1, ignore_nulls=True),
+        [True, True, True],
     ),
     "coalesce_agg_fallback": (nw.coalesce("a", nw.col("b").max()), [1, 5, 3]),
     "coalesce_lit_first": (nw.coalesce(nw.lit(7), "a"), [7, 7, 7]),
@@ -69,6 +77,8 @@ def test_scalar_operand_broadcasting(constructor: Constructor, name: str) -> Non
         "coalesce_agg_fallback",
         "concat_str_all_scalar",
         "concat_str_all_scalar_ignore_nulls",
+        "all_agg_first",
+        "any_agg_first",
     }
     if aggregates and "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
