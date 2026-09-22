@@ -279,10 +279,23 @@ def test_concat_str_with_lit_and_nulls(
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 @pytest.mark.parametrize("scalar_first", [True, False])
 def test_concat_str_with_aggregation(
-    constructor: Constructor, *, ignore_nulls: bool, scalar_first: bool
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    ignore_nulls: bool,
+    scalar_first: bool,
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
+    if (
+        scalar_first
+        and ignore_nulls
+        and "polars" in str(constructor)
+        and POLARS_VERSION < (0, 20, 6)
+    ):  # pragma: no cover
+        request.applymarker(
+            pytest.mark.xfail(reason="polars < 0.20.6 scalar trailing separator bug")
+        )
     df = nw.from_native(constructor({"i": [0, 1], "s": ["x", None]}))
     exprs = [nw.col("i").max(), nw.col("s")]
     expected = ["1-x", "1" if ignore_nulls else None]
