@@ -248,11 +248,18 @@ class DaskNamespace(
         self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
     ) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = (
-                s.astype(str) for s in align_series_full_broadcast(df, *expr_results)
+            expr_results = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
             )
-            null_mask = [s.isna() for s in align_series_full_broadcast(df, *expr_results)]
+            # pandas 2.0 cannot concatenate empty Arrow-string metadata. Cast to str
+            # instead; the pre-cast masks below restore or skip nulls.
+            series = (
+                s.astype(str).str.lower()
+                if pd.api.types.is_bool_dtype(s.dtype)
+                else s.astype(str)
+                for s in expr_results
+            )
+            null_mask = [s.isna() for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)

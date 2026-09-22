@@ -6,6 +6,7 @@ import pytest
 
 import narwhals as nw
 from tests.utils import (
+    DUCKDB_VERSION,
     PANDAS_VERSION,
     POLARS_VERSION,
     Constructor,
@@ -112,34 +113,61 @@ def test_concat_str_edge(
         or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
     ):
         request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
-    # Old pandas renders a null literal as the string `"None"`, as does modin.
-    if "null_literal" in request.node.callspec.id and (
-        ("pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,))
-        or "modin" in str(constructor)
-    ):
-        request.applymarker(pytest.mark.xfail(reason="null literal as string"))
     df = nw.from_native(constructor(data))
     result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
     assert_equal_data(result, expected)
 
 
-def test_concat_str_all_null_ignore_nulls(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
-    # A row of only nulls concatenates to `""` with `ignore_nulls=True`.
-    # The pyarrow kernel returns no rows at all for all-null `skip` inputs.
+def test_concat_str_all_null_ignore_nulls(constructor: Constructor) -> None:
     if "ibis" in str(constructor):
         pytest.skip(reason="ibis cannot create all-null column")
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail(reason="pyarrow drops all-null rows"))
-    if "pandas_constructor" in str(constructor) and PANDAS_VERSION < (3,):
-        request.applymarker(pytest.mark.xfail(reason="old pandas all-null concat"))
     df = nw.from_native(constructor({"b": [None, None], "c": [None, None]}))
     df = df.with_columns(nw.col("b").cast(nw.String()), nw.col("c").cast(nw.String()))
     result = df.select(
         nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
     )
     assert_equal_data(result, {"out": ["", ""]})
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_boolean(constructor: Constructor, *, ignore_nulls: bool) -> None:
+    df = nw.from_native(
+        constructor({"i": [0, 1], "bo": [True, False], "s": ["True", "False"]})
+    )
+    result = df.with_columns(
+        out=nw.concat_str("bo", "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": ["true-True", "false-False"]})
+
+
+@pytest.mark.parametrize("dtype", ["boolean", "bool[pyarrow]"])
+@pytest.mark.parametrize("npartitions", [1, 2])
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (True, ["true-True", "false-False", "None", ""]),
+        (False, ["true-True", "false-False", None, None]),
+    ],
+)
+def test_concat_str_dask_nullable_boolean(
+    dtype: str, npartitions: int, *, ignore_nulls: bool, expected: list[str | None]
+) -> None:
+    dd = pytest.importorskip("dask.dataframe")
+    import pandas as pd
+
+    native = pd.DataFrame(
+        {
+            "i": [0, 1, 2, 3],
+            "bo": pd.Series([True, False, None, None], dtype=dtype, index=[4, 1, 8, 2]),
+            "s": ["True", "False", "None", None],
+        },
+        index=[4, 1, 8, 2],
+    )
+    df = nw.from_native(dd.from_pandas(native, npartitions=npartitions).clear_divisions())
+    result = df.with_columns(
+        out=nw.concat_str("bo", "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": expected})
 
 
 @pytest.mark.parametrize(
@@ -246,6 +274,43 @@ def test_concat_str_with_lit_and_nulls(
     assert_equal_data(
         result.select("r"), {"r": expected if ignore_nulls else expected_nulls}
     )
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+@pytest.mark.parametrize("scalar_first", [True, False])
+def test_concat_str_with_aggregation(
+    constructor: Constructor, *, ignore_nulls: bool, scalar_first: bool
+) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
+    df = nw.from_native(constructor({"i": [0, 1], "s": ["x", None]}))
+    exprs = [nw.col("i").max(), nw.col("s")]
+    expected = ["1-x", "1" if ignore_nulls else None]
+    if not scalar_first:
+        exprs.reverse()
+        expected[0] = "x-1"
+    result = df.with_columns(
+        r=nw.concat_str(exprs, separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("r"), {"r": expected})
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_scalar_only(
+    constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
+) -> None:
+    df = nw.from_native(constructor({"i": [0, 1]}))
+    expr = nw.concat_str(
+        nw.col("i").max(), nw.lit("!"), separator="-", ignore_nulls=ignore_nulls
+    ).alias("r")
+    assert_equal_data(df.select(expr), {"r": ["1-!"]})
+    if "duckdb" in str(constructor):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="DuckDB windows concat_str instead of its aggregation"
+            )
+        )
+    assert_equal_data(df.with_columns(expr).select("r"), {"r": ["1-!", "1-!"]})
 
 
 @pytest.mark.parametrize(
