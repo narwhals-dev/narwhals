@@ -225,11 +225,11 @@ def test_concat_str_scalar_only(
         nw.col("i").max(), nw.lit("!"), separator="-", ignore_nulls=ignore_nulls
     ).alias("r")
     assert_equal_data(df.select(expr), {"r": ["1-!"]})
-    if "duckdb" in str(constructor):
+    if "duckdb" in str(constructor) or (
+        "pyspark" in str(constructor) and "sqlframe" not in str(constructor)
+    ):
         request.applymarker(
-            pytest.mark.xfail(
-                reason="DuckDB windows concat_str instead of its aggregation"
-            )
+            pytest.mark.xfail(reason="windows concat_str instead of its aggregation")
         )
     assert_equal_data(df.with_columns(expr).select("r"), {"r": ["1-!", "1-!"]})
 
