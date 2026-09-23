@@ -193,10 +193,10 @@ def test_concat_str_nulls_in_every_position(
     expected: list[str | None],
 ) -> None:
     if (
-        ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5)
+        ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6)
     ):  # pragma: no cover
         request.applymarker(
-            pytest.mark.xfail(reason="polars < 0.20.5 trailing separator bug")
+            pytest.mark.xfail(reason="polars < 0.20.6 trailing separator bug")
         )
     # A trailing null must not leave a dangling separator behind (#3962), and an
     # all-null row must stay in the output as an empty string (#3965).
