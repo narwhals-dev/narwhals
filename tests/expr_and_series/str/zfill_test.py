@@ -5,7 +5,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -74,13 +73,6 @@ def test_str_zfill(
         reason = "different zfill behavior"
         pytest.skip(reason=reason)
 
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        reason = (
-            "`TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`"
-            "in `expr.str.slice(1, length)`"
-        )
-        pytest.skip(reason=reason)
-
     if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor):
         request.applymarker(
             pytest.mark.xfail(reason="non-polars backends count characters")
@@ -113,13 +105,6 @@ def test_str_zfill_series(
 
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5):
         reason = "different zfill behavior"
-        pytest.skip(reason=reason)
-
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
-        reason = (
-            "`TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`"
-            "in `expr.str.slice(1, length)`"
-        )
         pytest.skip(reason=reason)
 
     if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor_eager):
