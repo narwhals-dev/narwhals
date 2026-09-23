@@ -50,12 +50,26 @@ SCALAR_OPERAND_CASES: dict[str, tuple[nw.Expr, list[object]]] = {
     ),
     "coalesce_agg_fallback": (nw.coalesce("a", nw.col("b").max()), [1, 5, 3]),
     "coalesce_lit_first": (nw.coalesce(nw.lit(7), "a"), [7, 7, 7]),
+    "concat_str_all_scalar": (
+        nw.concat_str(nw.col("i").max(), nw.lit("!"), separator="-"),
+        ["2-!", "2-!", "2-!"],
+    ),
+    "concat_str_all_scalar_ignore_nulls": (
+        nw.concat_str(nw.col("i").max(), nw.lit("!"), separator="-", ignore_nulls=True),
+        ["2-!", "2-!", "2-!"],
+    ),
 }
 
 
 @pytest.mark.parametrize("name", SCALAR_OPERAND_CASES)
 def test_scalar_operand_broadcasting(constructor: Constructor, name: str) -> None:
-    aggregates = name in {"sum_agg_first", "sum_all_scalar", "coalesce_agg_fallback"}
+    aggregates = name in {
+        "sum_agg_first",
+        "sum_all_scalar",
+        "coalesce_agg_fallback",
+        "concat_str_all_scalar",
+        "concat_str_all_scalar_ignore_nulls",
+    }
     if aggregates and "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
     expr, expected = SCALAR_OPERAND_CASES[name]
