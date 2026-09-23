@@ -49,6 +49,11 @@ if TYPE_CHECKING:
 class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
 
+    def _fraction(self, expr: Expression) -> Expression:
+        # NOTE: DuckDB's `floor` keeps DOUBLE and tolerates NaN/infinity, so it can
+        # replace the base class' `mod`, which is `fmod` and several times slower.
+        return F("subtract", expr, F("floor", expr))
+
     def __mod__(self, other: Self) -> Self:
         return self._with_binary(floor_mod, other)
 
