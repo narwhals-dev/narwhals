@@ -73,6 +73,34 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        pytest.param(["b"], ["a", None], id="single"),
+        pytest.param(
+            ["b", nw.lit(None, dtype=nw.String())], [None, None], id="null_literal"
+        ),
+    ],
+)
+def test_concat_str_edge(
+    constructor: Constructor, columns: list[str | nw.Expr], expected: list[str | None]
+) -> None:
+    df = nw.from_native(constructor({"b": ["a", None]}))
+    result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
+    assert_equal_data(result, {"out": expected})
+
+
+def test_concat_str_all_null_ignore_nulls(constructor: Constructor) -> None:
+    if "ibis" in str(constructor):
+        pytest.skip(reason="ibis cannot create all-null column")
+    df = nw.from_native(constructor({"b": [None, None], "c": [None, None]}))
+    df = df.with_columns(nw.col("b").cast(nw.String()), nw.col("c").cast(nw.String()))
+    result = df.select(
+        nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
+    )
+    assert_equal_data(result, {"out": ["", ""]})
+
+
+@pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [
         (
