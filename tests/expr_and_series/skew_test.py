@@ -41,10 +41,11 @@ def test_skew_expr(
     expected: float | None,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "ibis" in str(constructor):
-        # https://github.com/ibis-project/ibis/issues/11176
-        request.applymarker(pytest.mark.xfail)
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+
+    if "ibis" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
+        # Can not infer schema from empty dataset.
         pytest.skip()
 
     if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:
@@ -55,3 +56,24 @@ def test_skew_expr(
     assert_equal_data(result, {"a": [expected]})
     result = nw.from_native(constructor({"a": data})).with_columns(nw.col("a").skew())
     assert_equal_data(result, {"a": [expected] * len(data)})
+
+
+def test_skew_large_offset(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    unstable_backends = ("duckdb", "sqlframe")
+    if any(backend in str(constructor) for backend in unstable_backends):
+        request.applymarker(
+            pytest.mark.xfail(reason="Native skew is numerically unstable")
+        )
+
+    offset = 1e9
+    df = nw.from_native(
+        constructor(
+            {"value": [offset + 1, offset + 2, offset + 3, offset + 2, offset + 1]}
+        )
+    )
+    result = df.select(nw.col("value").skew())
+    assert_equal_data(result, {"value": [0.343622]})
