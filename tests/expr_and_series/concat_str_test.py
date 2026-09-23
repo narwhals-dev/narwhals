@@ -90,10 +90,10 @@ def test_concat_str_edge(
 
 
 def test_concat_str_all_null_ignore_nulls(constructor: Constructor) -> None:
-    if "ibis" in str(constructor):
-        pytest.skip(reason="ibis cannot create all-null column")
-    df = nw.from_native(constructor({"b": [None, None], "c": [None, None]}))
-    df = df.with_columns(nw.col("b").cast(nw.String()), nw.col("c").cast(nw.String()))
+    # Null the columns out with `lit` rather than passing all-null data to the
+    # constructor: some backends cannot infer a dtype from that.
+    df = nw.from_native(constructor({"b": ["x", "y"], "c": ["x", "y"]}))
+    df = df.with_columns(b=nw.lit(None, nw.String()), c=nw.lit(None, nw.String()))
     result = df.select(
         nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
     )
