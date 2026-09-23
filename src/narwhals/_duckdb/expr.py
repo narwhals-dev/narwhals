@@ -49,6 +49,18 @@ if TYPE_CHECKING:
 class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
     _implementation = Implementation.DUCKDB
 
+    # TODO(FBruzzesi): DuckDB 2.0 makes `round_even` a native, type-preserving function
+    # that matches Polars (https://github.com/duckdb/duckdb/pull/25197). Once released,
+    # override `round` to return `super().round(decimals)` when
+    # `self._backend_version < (2,)`, and otherwise
+    # `self._with_elementwise(lambda expr: F("round_even", expr, lit(decimals)))`.
+    # Plain `round` still breaks ties away from zero, so it has to be `round_even`.
+    # Also gate the DuckDB xfail in `test_round_keeps_integers` on version.
+    def _fraction(self, expr: Expression) -> Expression:
+        # NOTE: DuckDB's `floor` keeps DOUBLE and tolerates NaN/infinity, so it can
+        # replace the base class' `mod`, which is `fmod` and several times slower.
+        return F("subtract", expr, F("floor", expr))
+
     def __mod__(self, other: Self) -> Self:
         return self._with_binary(floor_mod, other)
 

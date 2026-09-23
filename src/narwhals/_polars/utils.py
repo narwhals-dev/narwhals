@@ -8,6 +8,7 @@ import polars as pl
 
 from narwhals._duration import Interval
 from narwhals._utils import (
+    MAX_ROUND_DECIMALS,
     Implementation,
     Version,
     _DeferredIterable,
@@ -84,6 +85,26 @@ BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 
 https://github.com/pola-rs/polars/pull/24594
 """
+
+ROUNDS_HALF_TO_EVEN: Final[bool] = BACKEND_VERSION >= (1, 29)
+"""Polars >= 1.29 breaks `round` ties to even; before that it broke them away from zero.
+
+https://github.com/pola-rs/polars/pull/22248
+"""
+
+
+def round_half_to_even(  # pragma: no cover
+    native: pl.Expr | pl.Series, decimals: int
+) -> pl.Expr:
+    """Emulate `ROUNDS_HALF_TO_EVEN` on older Polars.
+
+    Halving a tie turns it into a non-tie whose nearest neighbour is the even
+    candidate. Only the `extremes` CI jobs, which pin an old Polars, reach this.
+    """
+    scaled = native * 10.0 ** min(decimals, MAX_ROUND_DECIMALS)
+    halved = (native * 0.5).round(decimals) * 2
+    is_tie = scaled - scaled.floor() == 0.5
+    return pl.when(is_tie).then(halved).otherwise(native.round(decimals))
 
 
 @overload
