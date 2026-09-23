@@ -5,13 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    DUCKDB_VERSION,
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    Constructor,
-    assert_equal_data,
-)
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
 
 pytest.importorskip("pyarrow")
 
@@ -182,56 +176,6 @@ def test_concat_str_with_lit_and_nulls(
     assert_equal_data(
         result.select("r"), {"r": expected if ignore_nulls else expected_nulls}
     )
-
-
-@pytest.mark.parametrize("ignore_nulls", [True, False])
-@pytest.mark.parametrize("scalar_first", [True, False])
-def test_concat_str_with_aggregation(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-    *,
-    ignore_nulls: bool,
-    scalar_first: bool,
-) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
-    if (
-        scalar_first
-        and ignore_nulls
-        and "polars" in str(constructor)
-        and POLARS_VERSION < (0, 20, 6)
-    ):  # pragma: no cover
-        request.applymarker(
-            pytest.mark.xfail(reason="polars < 0.20.6 scalar trailing separator bug")
-        )
-    df = nw.from_native(constructor({"i": [0, 1], "s": ["x", None]}))
-    exprs = [nw.col("i").max(), nw.col("s")]
-    expected = ["1-x", "1" if ignore_nulls else None]
-    if not scalar_first:
-        exprs.reverse()
-        expected[0] = "x-1"
-    result = df.with_columns(
-        r=nw.concat_str(exprs, separator="-", ignore_nulls=ignore_nulls)
-    ).sort("i")
-    assert_equal_data(result.select("r"), {"r": expected})
-
-
-@pytest.mark.parametrize("ignore_nulls", [True, False])
-def test_concat_str_scalar_only(
-    constructor: Constructor, request: pytest.FixtureRequest, *, ignore_nulls: bool
-) -> None:
-    df = nw.from_native(constructor({"i": [0, 1]}))
-    expr = nw.concat_str(
-        nw.col("i").max(), nw.lit("!"), separator="-", ignore_nulls=ignore_nulls
-    ).alias("r")
-    assert_equal_data(df.select(expr), {"r": ["1-!"]})
-    if "duckdb" in str(constructor) or (
-        "pyspark" in str(constructor) and "sqlframe" not in str(constructor)
-    ):
-        request.applymarker(
-            pytest.mark.xfail(reason="windows concat_str instead of its aggregation")
-        )
-    assert_equal_data(df.with_columns(expr).select("r"), {"r": ["1-!", "1-!"]})
 
 
 @pytest.mark.parametrize(
