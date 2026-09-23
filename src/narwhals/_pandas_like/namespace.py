@@ -374,6 +374,7 @@ class PandasLikeNamespace(
         self, *exprs: PandasLikeExpr, separator: str, ignore_nulls: bool
     ) -> PandasLikeExpr:
         string = self._version.dtypes.String()
+        boolean = self._version.dtypes.Boolean()
 
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
@@ -381,7 +382,14 @@ class PandasLikeNamespace(
             # NOTE: The masks below decide what a null row becomes, so blank the nulls
             # out first: before pandas 3 a string column is `object`, where adding
             # `None` raises instead of propagating.
-            series = [s.cast(string).fill_null("", None, None) for s in expr_results]
+            series = [
+                (
+                    s.cast(string).str.to_lowercase()
+                    if s.dtype == boolean
+                    else s.cast(string)
+                ).fill_null("", None, None)
+                for s in expr_results
+            ]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)

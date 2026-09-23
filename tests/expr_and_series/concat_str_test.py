@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    assert_equal_data,
+    uses_pyarrow_backend,
+)
 
 pytest.importorskip("pyarrow")
 
@@ -70,6 +76,64 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
     expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}
     assert_equal_data(result, expected)
+
+
+def test_concat_str_nullable_boolean(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Plain pandas (and dask, and non-pyarrow modin) infer `object` dtype for
+    # mixed bool/null columns, where bools are indistinguishable from `"True"`
+    # strings. Pyarrow-backed frames keep a boolean dtype and render lowercase.
+    if (
+        "pandas_constructor" in str(constructor)
+        or "dask" in str(constructor)
+        or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
+    df = nw.from_native(constructor({"bo": [True, None], "b": ["x", "y"]}))
+    result = df.select(nw.concat_str(["bo", "b"], separator=" ").alias("out"))
+    assert_equal_data(result, {"out": ["true x", None]})
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_boolean(constructor: Constructor, *, ignore_nulls: bool) -> None:
+    df = nw.from_native(
+        constructor({"i": [0, 1], "bo": [True, False], "s": ["True", "False"]})
+    )
+    result = df.with_columns(
+        out=nw.concat_str("bo", "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": ["true-True", "false-False"]})
+
+
+@pytest.mark.parametrize("dtype", ["boolean", "bool[pyarrow]"])
+@pytest.mark.parametrize("npartitions", [1, 2])
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (True, ["true-True", "false-False", "None", ""]),
+        (False, ["true-True", "false-False", None, None]),
+    ],
+)
+def test_concat_str_dask_nullable_boolean(
+    dtype: str, npartitions: int, *, ignore_nulls: bool, expected: list[str | None]
+) -> None:
+    dd = pytest.importorskip("dask.dataframe")
+    import pandas as pd
+
+    native = pd.DataFrame(
+        {
+            "i": [0, 1, 2, 3],
+            "bo": pd.Series([True, False, None, None], dtype=dtype, index=[4, 1, 8, 2]),
+            "s": ["True", "False", "None", None],
+        },
+        index=[4, 1, 8, 2],
+    )
+    df = nw.from_native(dd.from_pandas(native, npartitions=npartitions).clear_divisions())
+    result = df.with_columns(
+        out=nw.concat_str("bo", "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": expected})
 
 
 @pytest.mark.parametrize(
