@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    PYARROW_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 # Ties for 0, 1 and 2 decimals, all exactly representable as floats so that Python's
 # `round` (which rounds half to even) is a valid reference for every backend.
@@ -51,6 +57,11 @@ def test_round_large_decimals(
     if any(s in str(constructor) for s in ("pandas", "modin", "pyarrow", "dask")):
         reason = "NumPy and Arrow overflow on a scale this large, independently of tie correction."
         request.applymarker(pytest.mark.xfail(reason=reason))
+    if POLARS_VERSION < (1, 27) and "polars" in str(constructor):
+        reason = "Polars' own `round` overflowed to NaN past 308 decimals before 1.27."
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    # `10.0**decimals` overflows past 308, which used to raise before the scale was
+    # clamped. Rounding a float that far out is the identity.
     data = {"a": [1.5, 2.5]}
     result = nw.from_native(constructor(data)).select(nw.col("a").round(400))
     assert_equal_data(result, data)
@@ -70,6 +81,9 @@ def test_round_keeps_integers(
             "Correcting a native `round` that breaks ties away from zero takes float "
             "arithmetic, which widens the result and loses integers above 2**53."
         )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    if PYARROW_VERSION < (14,) and "pyarrow" in str(constructor):
+        reason = "`pc.round` returned a float for integer input, and raised above 2**53."
         request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [1, -2, 9007199254740993]}
     result = nw.from_native(constructor(data)).select(nw.col("a").round(decimals))
