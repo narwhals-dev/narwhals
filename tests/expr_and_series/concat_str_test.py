@@ -214,18 +214,8 @@ def test_concat_str_with_lit_and_nulls(
     ],
 )
 def test_concat_str_nulls_in_every_position(
-    constructor: Constructor,
-    request: pytest.FixtureRequest,
-    *,
-    ignore_nulls: bool,
-    expected: list[str | None],
+    constructor: Constructor, *, ignore_nulls: bool, expected: list[str | None]
 ) -> None:
-    if (
-        ignore_nulls and "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5)
-    ):  # pragma: no cover
-        request.applymarker(
-            pytest.mark.xfail(reason="polars < 0.20.5 trailing separator bug")
-        )
     # A trailing null must not leave a dangling separator behind (#3962), and an
     # all-null row must stay in the output as an empty string (#3965).
     data = {
@@ -236,5 +226,5 @@ def test_concat_str_nulls_in_every_position(
     }
     df = nw.from_native(constructor(data))
     expr = nw.concat_str("a", "b", "c", separator="-", ignore_nulls=ignore_nulls)
-    result = df.with_columns(r=expr).sort("i").select("r")
-    assert_equal_data(result, {"r": expected})
+    result = df.with_columns(expr).sort("i").select("a")
+    assert_equal_data(result, {"a": expected})
