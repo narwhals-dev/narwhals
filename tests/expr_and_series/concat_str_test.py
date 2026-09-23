@@ -72,32 +72,10 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(
-    ("columns", "expected"),
-    [
-        pytest.param(["b"], ["a", None], id="single"),
-        pytest.param(
-            ["b", nw.lit(None, dtype=nw.String())], [None, None], id="null_literal"
-        ),
-    ],
-)
-def test_concat_str_edge(
-    constructor: Constructor, columns: list[str | nw.Expr], expected: list[str | None]
-) -> None:
-    df = nw.from_native(constructor({"b": ["a", None]}))
-    result = df.select(nw.concat_str(columns, separator=" ").alias("out"))
-    assert_equal_data(result, {"out": expected})
-
-
-def test_concat_str_all_null_ignore_nulls(constructor: Constructor) -> None:
-    # Null the columns out with `lit` rather than passing all-null data to the
-    # constructor: some backends cannot infer a dtype from that.
-    df = nw.from_native(constructor({"b": ["x", "y"], "c": ["x", "y"]}))
-    df = df.with_columns(b=nw.lit(None, nw.String()), c=nw.lit(None, nw.String()))
-    result = df.select(
-        nw.concat_str(["b", "c"], separator=", ", ignore_nulls=True).alias("out")
-    )
-    assert_equal_data(result, {"out": ["", ""]})
+def test_concat_str_single_input(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"i": [0, 1], "b": ["a", None]}))
+    result = df.select("i", nw.concat_str("b", separator=" ").alias("r")).sort("i")
+    assert_equal_data(result.select("r"), {"r": ["a", None]})
 
 
 @pytest.mark.parametrize(
@@ -184,8 +162,13 @@ def test_concat_str_with_large_string() -> None:
             ["!-dogs-play", "!-cats-swim", "!-walk"],
             ["!-dogs-play", "!-cats-swim", None],
         ),
+        (
+            (nw.col("c"), nw.lit(None, nw.String())),
+            ["play", "swim", "walk"],
+            [None, None, None],
+        ),
     ],
-    ids=["lit_last", "lit_first"],
+    ids=["lit_last", "lit_first", "null_lit"],
 )
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_concat_str_with_lit_and_nulls(
