@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from io import BytesIO, TextIOBase
 from itertools import chain
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -12,7 +13,11 @@ from narwhals._arrow.dataframe import ArrowDataFrame
 from narwhals._arrow.expr import ArrowExpr
 from narwhals._arrow.selectors import ArrowSelectorNamespace
 from narwhals._arrow.series import ArrowSeries
-from narwhals._arrow.utils import build_list_array, cast_to_comparable_string_types
+from narwhals._arrow.utils import (
+    build_list_array,
+    cast_to_comparable_string_types,
+    chunked_array,
+)
 from narwhals._compliant import EagerNamespace
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -28,7 +33,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -54,7 +59,7 @@ class ArrowNamespace(
         self._version = version
 
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> ArrowDataFrame:
         from pyarrow import csv
 
@@ -67,9 +72,14 @@ class ArrowNamespace(
                 raise TypeError(msg)
         else:
             kwds["parse_options"] = csv.ParseOptions(delimiter=separator)
+        # `pyarrow.csv` reads binary streams, but not text ones. Re-encode with the
+        # declared encoding, otherwise pyarrow decodes our bytes with the wrong codec.
+        if isinstance(source, TextIOBase):
+            encoding = getattr(kwds.get("read_options"), "encoding", "utf8")
+            source = BytesIO(source.read().encode(encoding))  # pyright: ignore[reportAttributeAccessIssue]
         return self._dataframe.from_native(csv.read_csv(source, **kwds), context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> ArrowDataFrame:
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> ArrowDataFrame:
         from pyarrow import parquet as pq
 
         return self._dataframe.from_native(pq.read_table(source, **kwds), context=self)
@@ -165,12 +175,12 @@ class ArrowNamespace(
 
     def min_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.min_element_wise, [s.native for s in series], init_series.native
-            )
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            native = reduce(pc.min_element_wise, self.extract_native(*series))
             return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
+                ArrowSeries(
+                    chunked_array(native), name=series[0].name, version=self._version
+                )
             ]
 
         return self._expr._from_callable(
@@ -182,12 +192,12 @@ class ArrowNamespace(
 
     def max_horizontal(self, *exprs: ArrowExpr) -> ArrowExpr:
         def func(df: ArrowDataFrame) -> list[ArrowSeries]:
-            init_series, *series = tuple(chain.from_iterable(expr(df) for expr in exprs))
-            native_series = reduce(
-                pc.max_element_wise, [s.native for s in series], init_series.native
-            )
+            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            native = reduce(pc.max_element_wise, self.extract_native(*series))
             return [
-                ArrowSeries(native_series, name=init_series.name, version=self._version)
+                ArrowSeries(
+                    chunked_array(native), name=series[0].name, version=self._version
+                )
             ]
 
         return self._expr._from_callable(
@@ -235,11 +245,18 @@ class ArrowNamespace(
             it, separator_scalar = cast_to_comparable_string_types(
                 *self.extract_native(*series), separator=separator
             )
+            first, *rest = it
+            if ignore_nulls:
+                # `null_handling="skip"` emits no element for an all-null row.
+                # Blanking the first value keeps the row and yields "" like Polars.
+                and_: Incomplete = pc.and_
+                all_null = reduce(and_, (pc.is_null(c) for c in (first, *rest)))
+                first = pc.if_else(all_null, "", first)
             # NOTE: stubs indicate `separator` must also be a `ChunkedArray`
             # Reality: `str` is fine
             concat_str: Incomplete = pc.binary_join_element_wise
             compliant = self._series(
-                concat_str(*it, separator_scalar, null_handling=null_handling),
+                concat_str(first, *rest, separator_scalar, null_handling=null_handling),
                 name=name,
                 version=self._version,
             )

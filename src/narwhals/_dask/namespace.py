@@ -24,6 +24,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._utils import (
     Implementation,
+    ensure_path_source,
     is_nested_literal,
     not_implemented,
     validate_separators,
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
-        NormalizedPath,
+        NormalizedSource,
     )
 
 
@@ -66,14 +67,19 @@ class DaskNamespace(
         self._version = version
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DaskLazyFrame:
         validate_separators(separator, ("sep",), kwds)
-        native = dd.read_csv(source, sep=separator, **kwds)
+        native = dd.read_csv(
+            ensure_path_source(source, self._implementation), sep=separator, **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DaskLazyFrame:
-        return self._lazyframe.from_native(dd.read_parquet(source, **kwds), context=self)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(
+            dd.read_parquet(ensure_path_source(source, self._implementation), **kwds),
+            context=self,
+        )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):
@@ -194,10 +200,9 @@ class DaskNamespace(
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
-            non_na = align_series_full_broadcast(
-                df, *(1 - s.isna() for s in expr_results)
-            )
+            aligned = align_series_full_broadcast(df, *expr_results)
+            series = (s.fillna(0) for s in aligned)
+            non_na = (1 - s.isna() for s in aligned)
             num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
             den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
             return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
@@ -259,15 +264,17 @@ class DaskNamespace(
                     s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 ]
 
-                separators = (
-                    nm.map({True: "", False: separator}, meta=str)
-                    for nm in null_mask[:-1]
-                )
-                result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values, strict=True)),
-                    init_value,
-                )
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    separators = (seen & not_null).map(
+                        {True: separator, False: ""}, meta=str
+                    )
+                    result = result + separators + value
+                    seen = seen | not_null
 
             return [result]
 
