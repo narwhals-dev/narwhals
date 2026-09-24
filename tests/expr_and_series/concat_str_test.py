@@ -72,6 +72,12 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_concat_str_single_input(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"i": [0, 1], "b": ["a", None]}))
+    result = df.select("i", nw.concat_str("b", separator=" ").alias("r")).sort("i")
+    assert_equal_data(result.select("r"), {"r": ["a", None]})
+
+
 @pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [
@@ -156,8 +162,13 @@ def test_concat_str_with_large_string() -> None:
             ["!-dogs-play", "!-cats-swim", "!-walk"],
             ["!-dogs-play", "!-cats-swim", None],
         ),
+        (
+            (nw.col("c"), nw.lit(None, nw.String())),
+            ["play", "swim", "walk"],
+            [None, None, None],
+        ),
     ],
-    ids=["lit_last", "lit_first"],
+    ids=["lit_last", "lit_first", "null_lit"],
 )
 @pytest.mark.parametrize("ignore_nulls", [True, False])
 def test_concat_str_with_lit_and_nulls(
