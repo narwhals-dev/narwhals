@@ -57,6 +57,23 @@ Narwhals supports exporting a DataFrame via the Arrow PyCapsule Interface. See
 [Universal dataframe support with the Arrow PyCapsule Interface + Narwhals](https://labs.quansight.org/blog/narwhals-pycapsule)
 for how you can use them together.
 
+#### chDB
+
+[chDB](https://github.com/chdb-io/chdb) is an in-process SQL OLAP engine powered by ClickHouse.
+Its query results implement the PyCapsule Interface, so they can be passed to `nw.from_arrow`
+directly, without converting through pandas:
+
+```python
+import chdb
+import narwhals as nw
+
+result = chdb.query("SELECT * FROM my_table", "DataStore")
+df = nw.from_arrow(result, backend="pyarrow")
+```
+
+Note that `chdb.query` executes the query and materializes the result: subsequent Narwhals
+operations run on the backend passed to `backend`, and are not pushed down to chDB.
+
 ### Ibis
 
 Pitched as "The portable Dataframe library", Ibis provides a Pythonic frontend
