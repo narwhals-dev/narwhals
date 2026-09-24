@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 import narwhals as nw
@@ -22,7 +20,10 @@ short_data = {"a": ["fdas", "ab", ""]}
     ],
 )
 def test_str_slice(
-    constructor: Constructor, offset: int, length: int | None, expected: Any
+    constructor: Constructor,
+    offset: int,
+    length: int | None,
+    expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor(data))
     result_frame = df.select(nw.col("a").str.slice(offset, length))
@@ -39,7 +40,10 @@ def test_str_slice(
     ],
 )
 def test_str_slice_series(
-    constructor_eager: ConstructorEager, offset: int, length: int | None, expected: Any
+    constructor_eager: ConstructorEager,
+    offset: int,
+    length: int | None,
+    expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -50,17 +54,21 @@ def test_str_slice_series(
 @pytest.mark.parametrize(
     ("offset", "length", "expected"),
     [
-        # Negative offset: slice starts |offset| from the end and runs forward.
-        (-3, 3, {"a": ["das", "ab", ""]}),
-        # Length overhanging the end of the string.
-        (-3, 10, {"a": ["das", "ab", ""]}),
-        # Negative offset with no length: to the end, also for strings shorter
-        # than |offset| (DuckDB used to return one character too few).
         (-3, None, {"a": ["das", "ab", ""]}),
+        (-3, 3, {"a": ["das", "ab", ""]}),
+        (-3, 10, {"a": ["das", "ab", ""]}),
+        # When `offset` reaches before the start, Polars shortens `length` by the overhang.
+        (-3, 2, {"a": ["da", "a", ""]}),
+        (-3, 1, {"a": ["d", "", ""]}),
+        (-5, 2, {"a": ["f", "", ""]}),
+        (-10, 3, {"a": ["", "", ""]}),
     ],
 )
-def test_str_slice_negative_offset_short_strings(
-    constructor: Constructor, offset: int, length: int | None, expected: Any
+def test_str_slice_negative_offset(
+    constructor: Constructor,
+    offset: int,
+    length: int | None,
+    expected: dict[str, list[str]],
 ) -> None:
     df = nw.from_native(constructor(short_data))
     result_frame = df.select(nw.col("a").str.slice(offset, length))

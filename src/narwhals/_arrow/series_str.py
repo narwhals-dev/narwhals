@@ -13,7 +13,7 @@ from narwhals._arrow.utils import (
     parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._utils import parse_str_strip_chars
+from narwhals._utils import parse_str_strip_chars, str_slice_stop
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -76,13 +76,10 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(fn(self.native, pattern_native.as_py()))
 
     def slice(self, offset: int, length: int | None) -> ArrowSeries:
-        # Same two-step as the pandas backend: `utf8_slice_codeunits` handles a
-        # negative start natively, but start + length can compute a stop index
-        # that lands before the (end-relative) start.
-        result = pc.utf8_slice_codeunits(self.native, start=offset)
-        if length is not None:
-            result = pc.utf8_slice_codeunits(result, start=0, stop=length)
-        return self.with_native(result)
+        stop = str_slice_stop(offset, length)
+        return self.with_native(
+            pc.utf8_slice_codeunits(self.native, start=offset, stop=stop)
+        )
 
     def split(self, by: str) -> ArrowSeries:
         split_series = pc.split_pattern(self.native, by)  # type: ignore[call-overload]

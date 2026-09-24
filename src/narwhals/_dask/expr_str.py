@@ -6,7 +6,7 @@ import dask.dataframe as dd
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._utils import not_implemented
+from narwhals._utils import not_implemented, str_slice_stop
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -89,17 +89,10 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
-        def _slice(expr: dx.Series) -> dx.Series:
-            # Two-step, matching the pandas backend: a negative offset combined
-            # with an explicit length would otherwise compute a nonsense stop.
-            result = expr.str.slice(  # pyright: ignore[reportAttributeAccessIssue]
-                start=offset
-            )
-            if length is not None:
-                result = result.str[:length]
-            return result
-
-        return self.compliant._with_callable(_slice)
+        stop = str_slice_stop(offset, length)
+        return self.compliant._with_callable(
+            lambda expr: expr.str.slice(start=offset, stop=stop)
+        )
 
     def split(self, by: str) -> DaskExpr:
         return self.compliant._with_callable(lambda expr: expr.str.split(pat=by))

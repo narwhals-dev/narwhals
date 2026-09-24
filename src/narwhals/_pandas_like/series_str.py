@@ -9,6 +9,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     is_dtype_pyarrow,
 )
+from narwhals._utils import str_slice_stop
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -89,13 +90,8 @@ class PandasLikeSeriesStringNamespace(
         )
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
-        # Slice from `offset` (which pandas handles natively, including negatives),
-        # then head-slice the result so that a negative offset combined with an
-        # explicit length doesn't compute a nonsense stop index.
-        result = self.native.str.slice(start=offset)
-        if length is not None:
-            result = result.str[:length]
-        return self.with_native(result)
+        stop = str_slice_stop(offset, length)
+        return self.with_native(self.native.str.slice(start=offset, stop=stop))
 
     def split(self, by: str) -> PandasLikeSeries:
         implementation = self.implementation
