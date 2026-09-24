@@ -74,6 +74,8 @@ from narwhals.stable.v1.typing import (
 )
 from narwhals.translate import _from_native_impl, get_native_namespace, to_py_scalar
 
+__version__: str
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, Sequence
     from types import ModuleType
@@ -126,6 +128,15 @@ if TYPE_CHECKING:
     T = TypeVar("T", default=Any)
     P = ParamSpec("P")
     R = TypeVar("R")
+
+
+def __getattr__(name: str) -> Any:
+    if name == "__version__":
+        global __version__  # noqa: PLW0603
+        __version__ = nw.__version__
+        return __version__
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 # NOTE legit
