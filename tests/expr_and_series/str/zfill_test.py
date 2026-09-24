@@ -5,7 +5,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -33,6 +32,20 @@ zfill_cases = [
         id="width_0",
     ),
     pytest.param({"a": ["日本", None]}, 3, {"a": ["日本", None]}, id="non_ascii"),
+    # A `+` in front of a multibyte character: Polars pads to a byte count, every other
+    # backend to a character count.
+    pytest.param({"a": ["+é", "+12"]}, 3, {"a": ["+é", "+12"]}, id="non_ascii_plus_w3"),
+    pytest.param({"a": ["+é", "+12"]}, 4, {"a": ["+0é", "+012"]}, id="non_ascii_plus_w4"),
+    pytest.param(
+        {"a": ["+é", "+12"]}, 5, {"a": ["+00é", "+0012"]}, id="non_ascii_plus_w5"
+    ),
+    # Only the first character is a sign; the second one is padded like any other.
+    pytest.param(
+        {"a": ["+-1", "-+1", "+-", "-+"]},
+        4,
+        {"a": ["+0-1", "-0+1", "+00-", "-00+"]},
+        id="nested_sign",
+    ),
 ]
 
 
@@ -58,13 +71,6 @@ def test_str_zfill(
 
     if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
         reason = "different zfill behavior"
-        pytest.skip(reason=reason)
-
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        reason = (
-            "`TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`"
-            "in `expr.str.slice(1, length)`"
-        )
         pytest.skip(reason=reason)
 
     if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor):
@@ -99,13 +105,6 @@ def test_str_zfill_series(
 
     if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5):
         reason = "different zfill behavior"
-        pytest.skip(reason=reason)
-
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
-        reason = (
-            "`TypeError: argument 'length': 'Expr' object cannot be interpreted as an integer`"
-            "in `expr.str.slice(1, length)`"
-        )
         pytest.skip(reason=reason)
 
     if "non_ascii" in request.node.callspec.id and "polars" not in str(constructor_eager):

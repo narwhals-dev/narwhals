@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
@@ -238,18 +237,17 @@ class PolarsNamespace:
                 result = pl.when(~null_mask_result).then(output_expr)
             else:
                 init_value, *values = [
-                    pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
+                    pl.when(~nm).then(expr.cast(pl.String())).otherwise(pl.lit(""))
                     for expr, nm in zip(pl_exprs, null_mask, strict=True)
                 ]
-                separators = [
-                    pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
-                ]
-
-                result = pl.fold(
-                    acc=init_value,
-                    function=operator.add,
-                    exprs=[s + v for s, v in zip(separators, values, strict=True)],
-                )
+                result, seen = init_value, ~null_mask[0]
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    sep_or_empty = (
+                        pl.when(seen & not_null).then(sep).otherwise(pl.lit(""))
+                    )
+                    result = result + sep_or_empty + value
+                    seen = seen | not_null
 
             return self._expr(result, version=self._version)
 
