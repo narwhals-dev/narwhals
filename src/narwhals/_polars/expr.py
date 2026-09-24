@@ -484,6 +484,18 @@ class PolarsExprStringNamespace(
 
         return self.compliant._with_native(native_result)
 
+    def slice(self, offset: int, length: int | None) -> PolarsExpr:
+        if BACKEND_VERSION < (0, 20, 17) and offset < 0:
+            # Older Polars miscounts negative offsets on multi-byte strings and doesn't shorten
+            # `length` on overhang, but slicing the reversed string from the front is correct.
+            skip = 0 if length is None else max(0, -(offset + length))
+            native_result = (
+                self.native.str.reverse().str.slice(skip, -offset - skip).str.reverse()
+            )
+        else:
+            native_result = self.native.str.slice(offset, length)
+        return self.compliant._with_native(native_result)
+
     def replace(
         self, value: PolarsExpr, pattern: str, *, literal: bool, n: int
     ) -> PolarsExpr:
