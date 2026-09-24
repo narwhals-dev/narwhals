@@ -254,32 +254,29 @@ class DaskNamespace(
             implementation=self._implementation,
         )
 
-        def to_string(s: dx.Series) -> dx.Series:
-            result = s.astype(str)
-            if to_nw_dtype(s.dtype).is_boolean():
-                # NOTE: Polars renders booleans lowercase, pandas `astype(str)` does not.
-                return result.str.lower()
-            return result
-
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = align_series_full_broadcast(
                 df, *(s for _expr in exprs for s in _expr(df))
             )
             # pandas 2.0 cannot concatenate empty Arrow-string metadata. Cast to str
-            # instead; the pre-cast masks below restore or skip nulls.
-            series = (to_string(s) for s in expr_results)
+            # instead; the pre-cast masks below restore or skip nulls. Polars renders
+            # booleans lowercase, `astype(str)` does not.
+            series = (
+                s.astype(str).str.lower()
+                if to_nw_dtype(s.dtype).is_boolean()
+                else s.astype(str)
+                for s in expr_results
+            )
             null_mask = [s.isna() for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
-                result = reduce(
-                    lambda x, y: x + separator + y,  # pyright: ignore[reportOperatorIssue]
-                    series,
-                ).where(~null_mask_result, None)  # pyright: ignore[reportArgumentType]
+                result = reduce(lambda x, y: x + separator + y, series).where(
+                    ~null_mask_result, None
+                )
             else:
                 init_value, *values = [
-                    s.where(~nm, "")  # pyright: ignore[reportArgumentType]
-                    for s, nm in zip(series, null_mask, strict=True)
+                    s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 ]
 
                 # A separator goes before a value only if that value and some
