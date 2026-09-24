@@ -4,7 +4,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 
 @pytest.mark.parametrize(
@@ -31,6 +31,24 @@ def test_clip_expr_expressified(constructor: Constructor) -> None:
     result = df.select(nw.col("a").clip("lb", nw.col("ub") + 1))
     expected_dict = {"a": [3, 2, 3, 1, 3]}
     assert_equal_data(result, expected_dict)
+
+
+def test_clip_expr_with_aggregations(constructor: Constructor) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
+    data = {"a": [1, 2, 3, -4, 5], "b": [2, 3, 1, 0, 4]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        clipped=nw.col("a").clip(nw.col("b").min(), nw.col("b").max()),
+        clipped_lower=nw.col("a").clip(lower_bound=nw.col("b").min()),
+        clipped_upper=nw.col("a").clip(upper_bound=nw.col("b").max()),
+    )
+    expected = {
+        "clipped": [1, 2, 3, 0, 4],
+        "clipped_lower": [1, 2, 3, 0, 5],
+        "clipped_upper": [1, 2, 3, -4, 4],
+    }
+    assert_equal_data(result, expected)
 
 
 @pytest.mark.parametrize(
