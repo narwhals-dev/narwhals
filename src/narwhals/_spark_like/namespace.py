@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._expression_parsing import (
@@ -27,7 +26,7 @@ from narwhals._utils import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Sequence
 
     from sqlframe.base.column import Column
 
@@ -255,24 +254,17 @@ class SparkLikeNamespace(
     def concat_str(
         self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool
     ) -> SparkLikeExpr:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
+        def func(cols: Sequence[Column]) -> Column:
             F = self._F
-            cols = tuple(chain.from_iterable(e(df) for e in exprs))
             result = F.concat_ws(separator, *cols)
 
             if not ignore_nulls:
                 null_mask = reduce(operator.or_, (F.isnull(s) for s in cols))
                 result = F.when(~null_mask, result).otherwise(F.lit(None))
 
-            return [result]
+            return result
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def corr(
         self, a: SparkLikeExpr, b: SparkLikeExpr, *, method: CorrelationMethod

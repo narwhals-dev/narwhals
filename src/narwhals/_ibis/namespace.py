@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
 import ibis
@@ -110,27 +109,18 @@ class IbisNamespace(
     def concat_str(
         self, *exprs: IbisExpr, separator: str, ignore_nulls: bool
     ) -> IbisExpr:
-        def func(df: IbisLazyFrame) -> list[ir.Value]:
-            cols = chain.from_iterable(expr(df) for expr in exprs)
+        def func(cols: Sequence[ir.Value]) -> ir.Value:
             cols_casted = [s.cast("string") for s in cols]
 
             if ignore_nulls:
-                result = lit(separator).join(cols_casted)
-            else:
-                result = reduce(
-                    lambda acc, col: acc.concat(separator, col),
-                    cols_casted[1:],
-                    cols_casted[0],
-                )
+                return lit(separator).join(cols_casted)
+            return reduce(
+                lambda acc, col: acc.concat(separator, col),
+                cols_casted[1:],
+                cols_casted[0],
+            )
 
-            return [result]
-
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: IbisExpr) -> IbisExpr:
         def func(cols: Iterable[ir.Value]) -> ir.Value:
