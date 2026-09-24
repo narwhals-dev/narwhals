@@ -142,6 +142,16 @@ def test_concat_str_dask_nullable_boolean(
     assert_equal_data(result.select("out"), {"out": expected})
 
 
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_boolean_lit(constructor: Constructor, *, ignore_nulls: bool) -> None:
+    # Lowercasing a boolean literal must not drop `PandasLikeSeries._broadcast`.
+    df = nw.from_native(constructor({"i": [0, 1], "s": ["x", "y"]}))
+    result = df.with_columns(
+        out=nw.concat_str(nw.lit(True), "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": ["true-x", "true-y"]})
+
+
 @pytest.mark.parametrize(
     ("input_schema", "input_values", "expected_function"),
     [
