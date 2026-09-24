@@ -272,12 +272,14 @@ class DaskNamespace(
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
-                result = reduce(lambda x, y: x + separator + y, series).where(
-                    ~null_mask_result, None
-                )
+                result = reduce(
+                    lambda x, y: x + separator + y,  # pyright: ignore[reportOperatorIssue]
+                    series,
+                ).where(~null_mask_result, None)  # pyright: ignore[reportArgumentType]
             else:
                 init_value, *values = [
-                    s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
+                    s.where(~nm, "")  # pyright: ignore[reportArgumentType]
+                    for s, nm in zip(series, null_mask, strict=True)
                 ]
 
                 # A separator goes before a value only if that value and some
