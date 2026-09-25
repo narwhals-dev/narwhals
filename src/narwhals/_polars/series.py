@@ -73,8 +73,10 @@ INHERITED_METHODS = frozenset(
         "__ror__",
         "__rsub__",
         "__rtruediv__",
+        "__rxor__",
         "__sub__",
         "__truediv__",
+        "__xor__",
         "abs",
         "all",
         "any",
@@ -718,8 +720,10 @@ class PolarsSeries:
     __ror__: Method[Self]
     __rsub__: Method[Self]
     __rtruediv__: Method[Self]
+    __rxor__: Method[Self]
     __sub__: Method[Self]
     __truediv__: Method[Self]
+    __xor__: Method[Self]
     abs: Method[Self]
     all: Method[bool]
     any: Method[bool]
