@@ -236,8 +236,10 @@ class PolarsNamespace:
                 )
                 result = pl.when(~null_mask_result).then(output_expr)
             else:
+                # NOTE: Cast after `when` so a boolean literal is broadcast first:
+                # casting a scalar boolean literal renders `"1"` on old Polars.
                 init_value, *values = [
-                    pl.when(~nm).then(expr.cast(pl.String())).otherwise(pl.lit(""))
+                    pl.when(~nm).then(expr).cast(pl.String()).fill_null(pl.lit(""))
                     for expr, nm in zip(pl_exprs, null_mask, strict=True)
                 ]
                 result, seen = init_value, ~null_mask[0]

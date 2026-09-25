@@ -375,13 +375,23 @@ class PandasLikeNamespace(
     ) -> PandasLikeExpr:
         string = self._version.dtypes.String()
 
+        def to_string(s: PandasLikeSeries) -> PandasLikeSeries:
+            result = s.cast(string)
+            if s.dtype.is_boolean():
+                # NOTE: Polars renders booleans lowercase, pandas `astype(str)` does not.
+                # `.str.to_lowercase()` would drop the broadcast flag of a literal.
+                return result._with_native(
+                    result.native.str.lower(), preserve_broadcast=True
+                )
+            return result
+
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
             null_mask = [s.is_null() for s in expr_results]
             # NOTE: The masks below decide what a null row becomes, so blank the nulls
             # out first: before pandas 3 a string column is `object`, where adding
             # `None` raises instead of propagating.
-            series = [s.cast(string).fill_null("", None, None) for s in expr_results]
+            series = [to_string(s).fill_null("", None, None) for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
