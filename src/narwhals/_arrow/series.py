@@ -559,7 +559,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
-        return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
+        # Float-to-int casts truncate toward zero in pandas and polars; pyarrow's
+        # default safe cast raises on any fractional part instead.
+        safe = not (
+            pa.types.is_floating(self.native.type) and pa.types.is_integer(data_type)
+        )
+        return self._with_native(
+            pc.cast(self.native, data_type, safe=safe), preserve_broadcast=True
+        )
 
     def null_count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)
