@@ -13,7 +13,7 @@ from narwhals._utils import check_columns_exist, generate_temporary_column_name
 from narwhals.exceptions import MultiOutputExpressionError
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Mapping, Sequence
     from typing import TypeAlias
 
     from typing_extensions import Self
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.window import WindowInputs
     from narwhals._sql.expr import SQLExpr
     from narwhals.exceptions import ColumnNotFoundError
+    from narwhals.typing import IntoDType
 
     Incomplete: TypeAlias = Any
 
@@ -64,3 +65,9 @@ class SQLLazyFrame(
             filtered = lf_with_tmp._filter(ns.col(tmp_col))
             return filtered.drop([tmp_col], strict=False)
         return self._filter(predicate)
+
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        ns = self.__narwhals_namespace__()
+        return self.with_columns(
+            *(ns.col(name).cast(dtype) for name, dtype in dtypes.items())
+        )
