@@ -378,8 +378,16 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Transform string to uppercase variant.
 
         Notes:
-            The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
+            Backends differ in how they case-map non-ascii characters:
+            Polars applies full case mappings ('ß' becomes 'SS'), whereas PyArrow
+            and DuckDB apply simple ones ('ß' becomes 'ẞ'). pandas uses full case
+            mappings on pandas 2, and on pandas 3 it matches PyArrow if PyArrow
+            is installed, else Python's full mappings.
+            Full mappings can change the string length ('straße' uppercases to
+            'STRASSE' but 'STRAẞE'), so results of downstream operations like
+            `str.len_chars` or `str.slice` may differ across backends after casing.
             For more info see: https://github.com/apache/arrow/issues/34599
+            and https://github.com/narwhals-dev/narwhals/issues/3982
             There may be other unicode-edge-case-related variations across implementations.
 
         Examples:
@@ -398,6 +406,17 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def to_lowercase(self) -> SeriesT:
         r"""Transform string to lowercase variant.
+
+        Notes:
+            Backends differ in how they case-map non-ascii characters:
+            Polars applies full case mappings ('İ' becomes 'i̇', two code points),
+            whereas PyArrow and DuckDB apply simple ones ('İ' becomes 'i').
+            pandas uses full case mappings on pandas 2, and on pandas 3 it matches
+            PyArrow if PyArrow is installed, else Python's full mappings.
+            Full mappings can change the string length, so results of downstream
+            operations like `str.len_chars` may differ across backends after casing.
+            For more info see: https://github.com/narwhals-dev/narwhals/issues/3982
+            There may be other unicode-edge-case-related variations across implementations.
 
         Examples:
             >>> import pandas as pd
