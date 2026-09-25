@@ -9,6 +9,7 @@ from narwhals._pandas_like.utils import (
     get_dtype_backend,
     is_dtype_pyarrow,
 )
+from narwhals._utils import str_slice_stop
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -89,7 +90,7 @@ class PandasLikeSeriesStringNamespace(
         )
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
-        stop = offset + length if length is not None else None
+        stop = str_slice_stop(offset, length)
         return self.with_native(self.native.str.slice(start=offset, stop=stop))
 
     def split(self, by: str) -> PandasLikeSeries:

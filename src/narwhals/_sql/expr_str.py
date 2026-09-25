@@ -66,15 +66,23 @@ class SQLExprStringNamespace(
 
     def slice(self, offset: int, length: int | None) -> SQLExprT:
         def func(expr: NativeExpr) -> NativeExpr:
-            col_length = self._function("length", expr)
+            str_length = self._function("length", expr)
+            count = self._lit(length) if length is not None else str_length
+            if offset >= 0:
+                return self._function("substr", expr, self._lit(offset + 1), count)
 
-            _offset = (
-                self._function("add", col_length, self._lit(offset + 1))
-                if offset < 0
-                else self._lit(offset + 1)
+            # SQL engines disagree on a non-positive `substr` start, so clamp it to 1
+            # and, like Polars, shorten `length` by however far `offset` overhangs.
+            start_index = self._function("add", str_length, self._lit(offset))
+            start = self._function(
+                "greatest", self._lit(1), self._function("add", start_index, self._lit(1))
             )
-            _length = self._lit(length) if length is not None else col_length
-            return self._function("substr", expr, _offset, _length)
+            if length is not None:
+                overhang = self._function("least", self._lit(0), start_index)
+                count = self._function(
+                    "greatest", self._lit(0), self._function("add", count, overhang)
+                )
+            return self._function("substr", expr, start, count)
 
         return self.compliant._with_elementwise(func)
 

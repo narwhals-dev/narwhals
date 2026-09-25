@@ -2215,6 +2215,13 @@ def validate_str_non_negative(name: str, arg_name: str, value: int, /) -> None:
         raise ValueError(msg)
 
 
+def str_slice_stop(offset: int, length: int | None) -> int | None:
+    """Translate Polars' `str.slice(offset, length)` into a Python-slice `stop`."""
+    if length is None or offset < 0 <= offset + length:
+        return None
+    return offset + length
+
+
 def validate_pad_arguments(name: str, length: int, fill_char: str, /) -> None:
     """Reject `str.pad_start`/`str.pad_end` arguments that backends disagree on."""
     if len(fill_char) != 1:
