@@ -29,7 +29,20 @@ class SparkLikeExprListNamespace(
     def contains(self, item: NonNestedLiteral) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            return F.array_contains(expr, F.lit(item))
+            if item is None:
+                if self.compliant._implementation.is_sqlframe():
+                    return F.array_size(expr) > F.array_size(F.array_compact(expr))
+                # Higher-order functions like `exists` are much slower than sorting on
+                # PySpark; `sort_array` places nulls first.
+                return F.when(  # pragma: no cover
+                    F.array_size(expr) > 0, F.sort_array(expr)[0].isNull()
+                ).otherwise(F.when(expr.isNotNull(), F.lit(False)))
+            # Spark returns null instead of false when there is no match and the list
+            # holds a null element.
+            return F.coalesce(
+                F.array_contains(expr, F.lit(item)),
+                F.when(expr.isNotNull(), F.lit(False)),
+            )
 
         return self.compliant._with_elementwise(func)
 

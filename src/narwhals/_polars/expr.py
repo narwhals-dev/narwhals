@@ -558,9 +558,13 @@ class PolarsExprListNamespace(
 
     def contains(self, item: Any) -> PolarsExpr:
         if self.compliant._backend_version < (1, 28):
-            result: pl.Expr = pl.when(self.native.is_not_null()).then(
-                self.native.list.contains(item)
-            )
+            native = self.native
+            if item is None and self.compliant._backend_version < (1, 24):
+                # `list.contains(None)` returns a single null before 1.24.
+                contains = native.list.len() > native.list.drop_nulls().list.len()
+            else:
+                contains = native.list.contains(item)
+            result: pl.Expr = pl.when(native.is_not_null()).then(contains)
         else:
             result = self.native.list.contains(item)
         return self.compliant._with_native(result)
