@@ -11,11 +11,11 @@ from narwhals.testing import assert_series_equal
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from typing import TypeAlias
 
     from narwhals.testing.typing import Data
-    from narwhals.typing import IntoSchema, IntoSeriesT
+    from narwhals.typing import IntoDType, IntoSeriesT
     from tests.utils import ConstructorEager
 
     SetupFn: TypeAlias = Callable[[nw.Series[Any]], tuple[nw.Series[Any], nw.Series[Any]]]
@@ -35,7 +35,7 @@ def test_self_equal(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     testing_data: Data,
-    testing_schema: IntoSchema,
+    testing_schema: Mapping[str, IntoDType],
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
     if "cudf" in str(constructor_eager):

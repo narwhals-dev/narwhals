@@ -6,8 +6,10 @@ from narwhals._compliant.any_namespace import StringNamespace
 from narwhals._pandas_like.utils import (
     PandasLikeSeriesNamespace,
     align_and_extract_native,
+    get_dtype_backend,
     is_dtype_pyarrow,
 )
+from narwhals._utils import str_slice_stop
 
 if TYPE_CHECKING:
     from narwhals._pandas_like.series import PandasLikeSeries
@@ -16,12 +18,31 @@ if TYPE_CHECKING:
 class PandasLikeSeriesStringNamespace(
     PandasLikeSeriesNamespace, StringNamespace["PandasLikeSeries"]
 ):
+    def _with_native_bool(self, result: Any) -> PandasLikeSeries:
+        # See https://narwhals-dev.github.io/narwhals/concepts/boolean/.
+        if (
+            result.dtype == object
+            and get_dtype_backend(self.native.dtype, self.implementation) is None
+        ):
+            not_na = result.notna()
+            all_valid = not_na.all()
+            if not all_valid and self.implementation._backend_version() < (3,):
+                result.where(not_na, False, inplace=True)
+                result = result.astype(bool, copy=False)
+            elif not all_valid:
+                result = result.where(not_na, False).astype(bool)
+            else:  # pragma: no cover
+                pass
+        return self.with_native(result)
+
     def len_chars(self) -> PandasLikeSeries:
         return self.with_native(self.native.str.len())
 
     def replace(
         self, value: PandasLikeSeries, pattern: str, *, literal: bool, n: int
     ) -> PandasLikeSeries:
+        if n == 0:
+            return self.compliant
         _, value_native = align_and_extract_native(self.compliant, value)
         if not isinstance(value_native, str):
             msg = f"{self.compliant._implementation} backed `.str.replace` only supports str replacement values"
@@ -39,31 +60,37 @@ class PandasLikeSeriesStringNamespace(
     def strip_chars(self, characters: str | None) -> PandasLikeSeries:
         return self.with_native(self.native.str.strip(characters))
 
+    def strip_chars_start(self, characters: str) -> PandasLikeSeries:
+        return self.with_native(self.native.str.lstrip(characters))
+
+    def strip_chars_end(self, characters: str) -> PandasLikeSeries:
+        return self.with_native(self.native.str.rstrip(characters))
+
     def starts_with(self, prefix: PandasLikeSeries) -> PandasLikeSeries:
         _, prefix_native = align_and_extract_native(self.compliant, prefix)
         if not isinstance(prefix_native, str):
             msg = f"`.str.starts_with` only supports prefix values for {self.compliant._implementation} backend"
             raise TypeError(msg)
-        return self.with_native(self.native.str.startswith(prefix_native))
+        return self._with_native_bool(self.native.str.startswith(prefix_native))
 
     def ends_with(self, suffix: PandasLikeSeries) -> PandasLikeSeries:
         _, suffix_native = align_and_extract_native(self.compliant, suffix)
         if not isinstance(suffix_native, str):
             msg = f"`.str.ends_with` only supports suffix values for {self.compliant._implementation} backend"
             raise TypeError(msg)
-        return self.with_native(self.native.str.endswith(suffix_native))
+        return self._with_native_bool(self.native.str.endswith(suffix_native))
 
     def contains(self, pattern: PandasLikeSeries, *, literal: bool) -> PandasLikeSeries:
         _, pattern_native = align_and_extract_native(self.compliant, pattern)
         if not isinstance(pattern_native, str):
             msg = f"`.str.contains` only supports str pattern values for {self.compliant._implementation} backend"
             raise TypeError(msg)
-        return self.with_native(
+        return self._with_native_bool(
             self.native.str.contains(pat=pattern_native, regex=not literal)
         )
 
     def slice(self, offset: int, length: int | None) -> PandasLikeSeries:
-        stop = offset + length if length else None
+        stop = str_slice_stop(offset, length)
         return self.with_native(self.native.str.slice(start=offset, stop=stop))
 
     def split(self, by: str) -> PandasLikeSeries:
@@ -114,6 +141,8 @@ class PandasLikeSeriesStringNamespace(
         return self.with_native(self.native.str.title())
 
     def zfill(self, width: int) -> PandasLikeSeries:
+        if width == 0:
+            return self.compliant
         return self.with_native(self.native.str.zfill(width))
 
     def pad_start(self, length: int, fill_char: str) -> PandasLikeSeries:

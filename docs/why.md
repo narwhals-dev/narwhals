@@ -32,7 +32,7 @@ print(pd_left_merge.columns)
 print(pl_left_merge.columns)
 ```
 
-There are several such subtle difference between the libraries. **Writing dataframe-agnostic code is hard!**
+There are several such subtle differences between the libraries. **Writing dataframe-agnostic code is hard!**
 
 But by having a unified, simple, and predictable API, you can focus on behaviour rather than on subtle
 implementation differences.

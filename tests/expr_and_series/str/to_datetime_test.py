@@ -87,7 +87,7 @@ def test_to_datetime_infer_fmt(
     expected_pyspark: str,
 ) -> None:
     if (
-        ("polars" in str(constructor) and str(data["a"][0]).isdigit())
+        ("polars" in str(constructor) and data["a"][0].isdigit())
         or "duckdb" in str(constructor)
         or ("pyspark" in str(constructor) and data["a"][0] == "20240101123456")
         or "ibis" in str(constructor)
@@ -136,7 +136,7 @@ def test_to_datetime_series_infer_fmt(
     expected: str,
     expected_cudf: str,
 ) -> None:
-    if "polars" in str(constructor_eager) and str(data["a"][0]).isdigit():
+    if "polars" in str(constructor_eager) and data["a"][0].isdigit():
         request.applymarker(pytest.mark.xfail)
     if "cudf" in str(constructor_eager):
         expected = expected_cudf

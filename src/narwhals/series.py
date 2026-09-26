@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault
+    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -121,7 +121,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 
@@ -186,7 +186,7 @@ class Series(Generic[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         """Construct a Series from an iterable.
 
@@ -956,6 +956,10 @@ class Series(Generic[IntoSeriesT]):
         Returns:
             A scalar value or `None` if the Series is empty.
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -974,6 +978,15 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             other: Sequence of primitive type.
+
+        Warning:
+            Backends disagree on how to compare values against a Series of a
+            different dtype: `polars>=2.0` raises an `InvalidOperationError` unless
+            the operands can be coerced losslessly (so looking for floats in an
+            integer Series raises), whereas every other backend coerces silently.
+            Cast one of the operands if you need this to behave the same everywhere.
+            See [Polars' upgrade guide](https://docs.pola.rs/releases/upgrade/2/#make-coercion-casts-for-is_in-strict-instead-of-lossy)
+            for details.
 
         Examples:
             >>> import pyarrow as pa
@@ -1020,7 +1033,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1406,7 +1419,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1432,7 +1445,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1462,7 +1475,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             - pandas handles null values differently from other libraries.
-              See [null_handling](../concepts/null_handling.md/)
+              See [null_handling](../concepts/null_handling.md)
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
@@ -1513,7 +1526,7 @@ class Series(Generic[IntoSeriesT]):
         Notes:
             This function only fills `'NaN'` values, not null ones, except for pandas
             which doesn't distinguish between them.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1849,7 +1862,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -2622,6 +2635,36 @@ class Series(Generic[IntoSeriesT]):
         yield from self._compliant_series.__iter__()
 
     def __contains__(self, other: Any) -> bool:
+        """Check whether `other` is present in the Series.
+
+        Arguments:
+            other: Value to look for. `None` matches null values.
+
+        Returns:
+            Whether the value was found.
+
+        Warning:
+            Backends disagree on how to compare values against a Series of a
+            different dtype: `polars>=2.0` raises an `InvalidOperationError` unless
+            the operands can be coerced losslessly (so looking for floats in an
+            integer Series raises), whereas every other backend coerces silently.
+            Cast one of the operands if you need this to behave the same everywhere.
+            See [Polars' upgrade guide](https://docs.pola.rs/releases/upgrade/2/#make-coercion-casts-for-is_in-strict-instead-of-lossy)
+            for details.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> 2 in s
+            True
+            >>> None in s
+            True
+            >>> 3 in s
+            False
+        """
         return self._compliant_series.__contains__(other)
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:

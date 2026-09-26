@@ -15,7 +15,7 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.expr import SQLExpr
-from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool
+from narwhals._utils import NO_DEFAULT, Implementation, Version, extend_bool, floor_mod
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
@@ -231,6 +231,15 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
         return self._with_binary(_floordiv, other)
 
+    def __mod__(self, other: Self) -> Self:
+        return self._with_binary(floor_mod, other)
+
+    def __rmod__(self, other: Self) -> Self:
+        def _rmod(expr: Column, other: Column) -> Column:
+            return floor_mod(other, expr)
+
+        return self._with_binary(_rmod, other).alias("literal")
+
     def __rfloordiv__(self, other: Self) -> Self:
         def _rfloordiv(expr: Column, other: Column) -> Column:
             F = self._F
@@ -307,8 +316,11 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
         return self._with_elementwise(_is_finite)
 
     def is_in(self, other: Sequence[Any]) -> Self:
+        values = [v for v in other if v is not None]
+
         def _is_in(expr: Column) -> Column:
-            return expr.isin(other) if other else self._F.lit(False)
+            matches = expr.isin(values) if values else self._F.lit(False)
+            return self._F.when(self._F.isnull(expr), None).otherwise(matches)
 
         return self._with_elementwise(_is_in)
 
@@ -361,7 +373,7 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
             return self._F.ifnull(expr, value)
 
         assert value is not None  # noqa: S101
-        return self._with_elementwise(_fill_constant, value=value)
+        return self._with_elementwise(_fill_constant, expression_args={"value": value})
 
     def replace_strict(
         self,

@@ -119,7 +119,6 @@ class LazyGroupBy(Generic[LazyFrameT]):
 
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
             >>> lf_native = pl.LazyFrame(
             ...     {
             ...         "a": ["a", "b", "a", "b", "c"],

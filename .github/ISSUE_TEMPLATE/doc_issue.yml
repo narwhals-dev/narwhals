@@ -5,17 +5,17 @@ title: "[Doc]: "
 body:
 - type: markdown
   attributes:
-    value: > 
+    value: >
          ## Thanks for taking the time to fill out this form
 - type: dropdown
   id: TYPE
   attributes:
     label: What type of report is this?
-    options: 
+    options:
       - 'Correction'
       - 'Improvement'
   validations:
-      required: true  
+      required: true
 - type: textarea
   attributes:
     label: Please describe the issue.
@@ -30,6 +30,5 @@ body:
       How can we improve it
 - type: markdown
   attributes:
-    value: > 
+    value: >
         ### If you'd be interested in opening a pull request to fix this, please let us know!
-      

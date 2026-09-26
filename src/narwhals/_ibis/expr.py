@@ -25,6 +25,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     extend_bool,
+    floor_mod,
     not_implemented,
 )
 
@@ -54,6 +55,22 @@ if TYPE_CHECKING:
 
 class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
     _implementation = Implementation.IBIS
+
+    def __mod__(self, other: Self) -> Self:
+        def _mod(expr: ir.Value, other: ir.Value) -> ir.Value:
+            return floor_mod(
+                cast("ir.NumericValue", expr), cast("ir.NumericValue", other)
+            )
+
+        return self._with_binary(_mod, other)
+
+    def __rmod__(self, other: Self) -> Self:
+        def _rmod(expr: ir.Value, other: ir.Value) -> ir.Value:
+            return floor_mod(
+                cast("ir.NumericValue", other), cast("ir.NumericValue", expr)
+            )
+
+        return self._with_binary(_rmod, other).alias("literal")
 
     def __init__(
         self,
@@ -190,16 +207,19 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         )
 
     def _with_binary(self, op: Callable[..., ir.Value], other: Self) -> Self:
-        return self._with_callable(op, other=other)
+        return self._with_callable(op, expression_args={"other": other})
 
     def _with_elementwise(
-        self, op: Callable[..., ir.Value], /, **expressifiable_args: Self
+        self,
+        op: Callable[..., ir.Value],
+        /,
+        expression_args: dict[str, Self] | None = None,
     ) -> Self:
-        return self._with_callable(op, **expressifiable_args)
+        return self._with_callable(op, expression_args=expression_args)
 
     @classmethod
     def _alias_native(cls, expr: ExprT, name: str, /) -> ExprT:
-        return cast("ExprT", expr.name(name))
+        return expr.name(name)
 
     def __invert__(self) -> Self:
         invert = cast("Callable[..., ir.Value]", operator.invert)
@@ -264,7 +284,12 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
         return self._with_callable(func)
 
     def is_in(self, other: Sequence[Any]) -> Self:
-        return self._with_callable(lambda expr: expr.isin(other))
+        values = [v for v in other if v is not None]
+
+        def func(expr: ir.Value) -> ir.Value:
+            return ibis.ifelse(expr.isnull(), None, expr.isin(values))
+
+        return self._with_callable(func)
 
     def fill_null(self, value: Self | None, strategy: Any, limit: int | None) -> Self:
         # Ibis doesn't yet allow ignoring nulls in first/last with window functions, which makes forward/backward
@@ -280,7 +305,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             return expr.fill_null(value)
 
         assert value is not None  # noqa: S101
-        return self._with_callable(_fill_null, value=value)
+        return self._with_callable(_fill_null, expression_args={"value": value})
 
     def cast(self, dtype: IntoDType) -> Self:
         def _func(expr: ir.Column) -> ir.Value:
@@ -319,7 +344,7 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             elif method == "average":
                 partition = ibis.window(group_by=[expr])
                 cnt = expr.count().over(partition)
-                avg = cast("ir.NumericValue", (cnt - lit(1)) / lit(2.0))
+                avg = (cnt - lit(1)) / lit(2.0)
                 rank_ = rank_ + avg
 
             return ibis.cases((expr.notnull(), rank_))

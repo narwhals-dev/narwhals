@@ -1,3 +1,16 @@
+"""Runtime discovery of, and dispatch to, Narwhals plugin backends.
+
+A plugin backend registers an [entry point](https://packaging.python.org/en/latest/specifications/entry-points/)
+in the `narwhals.plugins` group. Plugins are discovered at runtime, so their names
+cannot be enumerated in the `Literal` unions that describe built-in backends.
+
+`PluginName` bridges that gap: a plugin's entry point name, wrapped as
+`PluginName("my-plugin")`, is accepted wherever a `backend` is expected.
+
+The contract for plugin authors is that the wrapped string **must** name an
+installed plugin's entry point in the `narwhals.plugins` group.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -5,6 +18,7 @@ from functools import cache
 from typing import TYPE_CHECKING, Any, Protocol
 
 from narwhals._compliant import CompliantNamespace
+from narwhals._typing import PluginName
 from narwhals._typing_compat import TypeVar
 
 if TYPE_CHECKING:
@@ -23,7 +37,7 @@ if TYPE_CHECKING:
     from narwhals.utils import Version
 
 
-__all__ = ["Plugin", "from_native"]
+__all__ = ["Plugin", "PluginName", "from_native"]
 
 CompliantAny: TypeAlias = (
     "CompliantDataFrameAny | CompliantLazyFrameAny | CompliantSeriesAny"
@@ -110,10 +124,36 @@ def from_native(native_object: Any, version: Version) -> CompliantAny | None:
     return next(_iter_from_native(native_object, version), None)
 
 
+def is_native_dataframe(native_object: Any) -> bool:
+    """Check whether an installed plugin converts `native_object` to an eager DataFrame."""
+    from narwhals._utils import Version, is_compliant_dataframe
+
+    return is_compliant_dataframe(from_native(native_object, Version.MAIN))
+
+
+def is_native_lazyframe(native_object: Any) -> bool:
+    """Check whether an installed plugin converts `native_object` to a LazyFrame."""
+    from narwhals._utils import Version, is_compliant_lazyframe
+
+    return is_compliant_lazyframe(from_native(native_object, Version.MAIN))
+
+
+def is_native_series(native_object: Any) -> bool:
+    """Check whether an installed plugin converts `native_object` to a Series."""
+    from narwhals._utils import Version, is_compliant_series
+
+    return is_compliant_series(from_native(native_object, Version.MAIN))
+
+
 def _show_suggestions(native_object_type: type) -> str | None:
     if _might_be(native_object_type, "daft"):  # pragma: no cover
         return (
             "Hint: it looks like you passed a `daft.DataFrame` but don't have `narwhals-daft` installed.\n"
             "Please refer to https://github.com/narwhals-dev/narwhals-daft for installation instructions."
+        )
+    if _might_be(native_object_type, "datafusion"):  # pragma: no cover
+        return (
+            "Hint: it looks like you passed a `datafusion.DataFrame` but don't have `narwhals-datafusion` installed.\n"
+            "Please refer to https://github.com/s5dsn-eqee/narwhals-datafusion for installation instructions."
         )
     return None

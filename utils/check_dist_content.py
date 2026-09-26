@@ -65,9 +65,17 @@ with TarFile.open(sdist_path, mode="r:gz") as sdist_file:
         "LICENSE.md",
         "README.md",
     }
+    # Recent `uv_build` versions rewrite `pyproject.toml` into a TOML 1.0-compatible
+    # form for the sdist and ship the original alongside as `pyproject.toml.orig`.
+    # It's optional (older `uv` won't produce it) so it's allowed, not required.
+    optional_sdist_top_level = {"pyproject.toml.orig"}
 
     sdist_top_level = {name.split("/")[0] for name in sdist_names}
-    if unexpected := sdist_top_level - required_sdist_top_level:
+    if (
+        unexpected := sdist_top_level
+        - required_sdist_top_level
+        - optional_sdist_top_level
+    ):
         errors.append(f"Unexpected top-level entries in sdist: {unexpected}")
     if missing := required_sdist_top_level - sdist_top_level:
         errors.append(f"Missing required top-level entries in sdist: {missing}")

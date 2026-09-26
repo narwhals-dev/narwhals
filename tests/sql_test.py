@@ -30,3 +30,13 @@ def test_sql() -> None:
         "FROM main.assets"
     )
     assert result.to_sql(pretty=True) == expected
+
+
+def test_sql_table_schema_pairs() -> None:
+    pytest.importorskip("duckdb")
+    if DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    from narwhals.sql import table
+
+    result = table("assets_pairs", [("date", nw.Date), ("price", nw.Int64())])
+    assert result.collect_schema() == {"date": nw.Date(), "price": nw.Int64()}

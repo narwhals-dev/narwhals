@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from itertools import chain
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._expression_parsing import (
     combine_alias_output_names,
@@ -20,16 +19,28 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
+from narwhals._utils import (
+    check_column_names_are_unique,
+    ensure_path_source,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Iterable, Sequence
 
     from sqlframe.base.column import Column
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._spark_like.dataframe import SQLFrameDataFrame  # noqa: F401
+    from narwhals._spark_like.utils import SparkReader, SparkSession
     from narwhals._utils import Implementation, Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedSource,
+        PythonLiteral,
+    )
 
 # Adjust slight SQL vs PySpark differences
 FUNCTION_REMAPPINGS = {
@@ -67,6 +78,36 @@ class SparkLikeNamespace(
     @property
     def _lazyframe(self) -> type[SparkLikeLazyFrame]:
         return SparkLikeLazyFrame
+
+    def _session_reader(self, fmt: str, kwds: dict[str, Any]) -> SparkReader:
+        if (session := kwds.pop("session", None)) is None:
+            msg = "Spark like backends require a session object to be passed in `kwargs`."
+            raise ValueError(msg)
+
+        return cast("SparkSession", session).read.format(fmt)
+
+    def scan_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> SparkLikeLazyFrame:
+        validate_separators(separator, ("sep", "delimiter"), kwds)
+        path = ensure_path_source(source, self._implementation)
+        reader = self._session_reader("csv", kwds)
+        native = (
+            reader.load(path, sep=separator)
+            if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
+            else reader.options(sep=separator, **kwds).load(path)
+        )
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> SparkLikeLazyFrame:
+        path = ensure_path_source(source, self._implementation)
+        reader = self._session_reader("parquet", kwds)
+        native = (
+            reader.load(path)
+            if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
+            else reader.options(**kwds).load(path)
+        )
+        return self._lazyframe.from_native(native, context=self)
 
     @property
     def _F(self):  # type: ignore[no-untyped-def] # noqa: ANN202
@@ -213,24 +254,17 @@ class SparkLikeNamespace(
     def concat_str(
         self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool
     ) -> SparkLikeExpr:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
+        def func(cols: Sequence[Column]) -> Column:
             F = self._F
-            cols = tuple(chain.from_iterable(e(df) for e in exprs))
             result = F.concat_ws(separator, *cols)
 
             if not ignore_nulls:
                 null_mask = reduce(operator.or_, (F.isnull(s) for s in cols))
                 result = F.when(~null_mask, result).otherwise(F.lit(None))
 
-            return [result]
+            return result
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def corr(
         self, a: SparkLikeExpr, b: SparkLikeExpr, *, method: CorrelationMethod
@@ -239,14 +273,41 @@ class SparkLikeNamespace(
             msg = "Only 'pearson' correlation is supported for Spark."
             raise NotImplementedError(msg)
 
+        F = self._F
+
+        def _corr(
+            a_: Column, b_: Column, wrap: Callable[[Column], Column]
+        ) -> list[Column]:
+            # NOTE: `F.corr` only guards against an empty (or single-row) input,
+            # and it raises `DIVIDE_BY_ZERO` when either column is constant.
+            # Compute it from guarded aggregates instead.
+            is_valid = a_.isNotNull() & b_.isNotNull()
+            a_valid, b_valid = F.when(is_valid, a_), F.when(is_valid, b_)
+            denominator = wrap(F.stddev_pop(a_valid)) * wrap(F.stddev_pop(b_valid))
+            numerator = wrap(F.covar_pop(a_valid, b_valid))
+            return [
+                F.when(denominator == F.lit(0.0), F.lit(None)).otherwise(
+                    numerator / denominator
+                )
+            ]
+
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            F = self._F
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
-            return [F.corr(a_, b_)]
+            return _corr(a_, b_, lambda e: e)
+
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: WindowInputs[Column]
+        ) -> list[Column]:
+            assert not inputs.order_by  # noqa: S101
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            window = df._Window.partitionBy(*(inputs.partition_by or [F.lit(1)]))
+            return _corr(a_, b_, lambda e: e.over(window))
 
         return self._expr(
             call=func,
+            window_function=window_f,
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,
@@ -300,17 +361,32 @@ class SparkLikeNamespace(
 
         def func(df: SparkLikeLazyFrame) -> list[Column]:
             F = self._F
-            names_to_cols: Mapping[str, Column] = {
-                alias: native_expr
+            fields = [
+                (alias, native_expr)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
                     *evaluate_output_names_and_aliases(expr, df, []),
                     strict=True,
                 )
-            }
-            aliased = (col.alias(name) for name, col in names_to_cols.items())
-            return [F.struct(*aliased)]
+            ]
+            check_column_names_are_unique([name for name, _ in fields])
+            return [F.struct(*(col.alias(name) for name, col in fields))]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+            implementation=self._implementation,
+        )
+
+    def list(self, *exprs: SparkLikeExpr) -> SparkLikeExpr:
+        version = self._version
+
+        def func(df: SparkLikeLazyFrame) -> list[Column]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [self._F.array(*cols)]
 
         return self._expr(
             call=func,

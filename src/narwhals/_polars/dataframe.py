@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.dtypes import DType
     from narwhals.typing import (
-        IntoSchema,
+        IntoDType,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -289,6 +289,9 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         if order_by is None:
             result = frame.with_row_index(name)
         else:
+            if self._backend_version < (1, 10):
+                msg = "Cannot pass `order_by` to `with_row_index` for Polars<1.10"
+                raise NotImplementedError(msg)
             result = frame.select(
                 pl.int_range(pl.len()).over(order_by=order_by).alias(name), pl.all()
             )
@@ -328,7 +331,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         pl_schema = (
             {
@@ -349,7 +352,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         pl_schema = (
             {
@@ -384,7 +387,7 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         /,
         *,
         context: _LimitedContext,  # NOTE: Maybe only `Implementation`?
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
