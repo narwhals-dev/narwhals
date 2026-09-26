@@ -97,6 +97,13 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
     _registry: ClassVar[dict[str, frame_constructor[IntoFrame]]] = {}
 
     func: Callable[Concatenate[Data, ...], T_co]
+    name: str
+    implementation: Implementation
+    requirements: tuple[str, ...]
+    is_eager: bool
+    nan_is_null: bool
+    needs_gpu: bool
+    default_include: bool
 
     def __init__(
         self,
