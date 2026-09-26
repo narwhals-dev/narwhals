@@ -53,6 +53,7 @@
         - top_k
         - unique
         - unpivot
+        - with_backend
         - with_columns
         - with_row_index
         - write_csv
