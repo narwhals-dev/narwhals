@@ -3,6 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode
+from narwhals._utils import (
+    parse_str_strip_chars,
+    validate_pad_arguments,
+    validate_str_non_negative,
+)
 
 if TYPE_CHECKING:
     from narwhals.expr import Expr
@@ -136,11 +141,73 @@ class ExprStringNamespace(Generic[ExprT]):
             ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars", characters=characters)
         )
 
+    def strip_chars_start(self, characters: str | None = None) -> ExprT:
+        r"""Remove leading characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start of the string. If set
+                to None (default), all leading whitespace is removed instead.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> df_native = duckdb.sql(
+            ...     r"SELECT * FROM VALUES (' apple '), (E'mango\n') df(fruits)"
+            ... )
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(stripped=nw.col("fruits").str.strip_chars_start())
+            ┌──────────────────────┐
+            |  Narwhals LazyFrame  |
+            |----------------------|
+            |┌─────────┬──────────┐|
+            |│ fruits  │ stripped │|
+            |│ varchar │ varchar  │|
+            |├─────────┼──────────┤|
+            |│  apple  │ apple    │|
+            |│ mango\n │ mango\n  │|
+            |└─────────┴──────────┘|
+            └──────────────────────┘
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._expr
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_start", characters=characters)
+        )
+
+    def strip_chars_end(self, characters: str | None = None) -> ExprT:
+        r"""Remove trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the end of the string. If set
+                to None (default), all trailing whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> df_native = pl.DataFrame({"fruits": [" apple ", "mango\n"]})
+            >>> df = nw.from_native(df_native)
+            >>> df.with_columns(stripped=nw.col("fruits").str.strip_chars_end()).to_dict(
+            ...     as_series=False
+            ... )
+            {'fruits': [' apple ', 'mango\n'], 'stripped': [' apple', 'mango']}
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._expr
+        return self._expr._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "str.strip_chars_end", characters=characters)
+        )
+
     def starts_with(self, prefix: str | IntoExpr) -> ExprT:
         r"""Check if string values start with a substring.
 
         Arguments:
             prefix: prefix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -168,6 +235,10 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             suffix: suffix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -204,6 +275,10 @@ class ExprStringNamespace(Generic[ExprT]):
             PySpark and SQLFrame. Other backends, such as pandas and PyArrow, will raise
             a `TypeError`.
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -237,8 +312,11 @@ class ExprStringNamespace(Generic[ExprT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice. If set to `None` (default), the slice is taken to the
-                end of the string.
+            length: Length of the slice. Must be non-negative. If set to `None` (default),
+                the slice is taken to the end of the string.
+
+        Raises:
+            ValueError: If `length` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -255,6 +333,8 @@ class ExprStringNamespace(Generic[ExprT]):
             |2  papaya       ya|
             └──────────────────┘
         """
+        if length is not None:
+            validate_str_non_negative("slice", "length", length)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.slice", offset=offset, length=length)
         )
@@ -535,7 +615,10 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             width: The desired length of the string after padding. If the length of the
                 string is greater than `width`, no padding is applied.
-                If `width` is less than 0, no padding is applied.
+                Must be non-negative.
+
+        Raises:
+            ValueError: If `width` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -553,6 +636,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3    NaN       NaN|
             └──────────────────┘
         """
+        validate_str_non_negative("zfill", "width", width)
         return self._expr._append_node(
             ExprNode(ExprKind.ELEMENTWISE, "str.zfill", width=width)
         )
@@ -563,7 +647,13 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
             >>> import pandas as pd
@@ -581,6 +671,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        validate_pad_arguments("pad_start", length, fill_char)
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_start", length=length, fill_char=fill_char
@@ -593,7 +684,13 @@ class ExprStringNamespace(Generic[ExprT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
             >>> import pandas as pd
@@ -611,6 +708,7 @@ class ExprStringNamespace(Generic[ExprT]):
             |3           NaN           NaN|
             └─────────────────────────────┘
         """
+        validate_pad_arguments("pad_end", length, fill_char)
         return self._expr._append_node(
             ExprNode(
                 ExprKind.ELEMENTWISE, "str.pad_end", length=length, fill_char=fill_char

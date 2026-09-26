@@ -39,6 +39,13 @@ def is_expr(obj: Any) -> TypeIs[Expr]:
     return isinstance(obj, Expr)
 
 
+def is_bare_selector(obj: Any) -> bool:
+    """Check whether `obj` is a selector with nothing chained onto it."""
+    return (
+        is_expr(obj) and len(obj._nodes) == 1 and obj._nodes[0].kind is ExprKind.SELECTOR
+    )
+
+
 def is_series(obj: Any) -> TypeIs[Series[Any]]:
     """Check whether `obj` is a Narwhals Expr."""
     from narwhals.series import Series
@@ -79,11 +86,12 @@ def evaluate_output_names_and_aliases(
         else output_names
     )
     if exclude and expr._metadata.expansion_kind.is_multi_unnamed():
+        exclude_set = frozenset(exclude)
         output_names, aliases = zip(
             *[
                 (x, alias)
                 for x, alias in zip(output_names, aliases, strict=True)
-                if x not in exclude
+                if x not in exclude_set
             ],
             strict=True,
         )
@@ -192,10 +200,10 @@ class ExpansionKind(Enum):
     """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
 
     MULTI_NAMED = auto()
-    """e.g. `nw.col('a', 'b')`"""
+    """e.g. `nw.col('a', 'b')`, `nw.nth(0, 1)`"""
 
     MULTI_UNNAMED = auto()
-    """e.g. `nw.all()`, nw.nth(0, 1)"""
+    """e.g. `nw.all()`, `nw.selectors.numeric()`"""
 
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED

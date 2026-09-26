@@ -13,6 +13,7 @@ from tests.utils import (
     Constructor,
     ConstructorEager,
     assert_equal_data,
+    skip_if_no_categorical_ordering,
 )
 
 data = {
@@ -428,6 +429,20 @@ def test_over_without_partition_by(
         .select("a", "b", "i")
     )
     expected = {"a": [1, 2, -1], "b": [1, 3, 4], "i": [0, 1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_over_without_partition_by_categorical(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    skip_if_no_categorical_ordering(constructor)
+    df = nw.from_native(constructor({"a": [1, 2, 3], "i": ["dog", "cat", "bird"]}))
+    result = (
+        df.with_columns(nw.col("i").cast(nw.Categorical()))
+        .with_columns(b=nw.col("a").cum_sum().over(order_by="i"))
+        .sort("a")
+        .select("a", "b")
+    )
+    expected = {"a": [1, 2, 3], "b": [6, 5, 3]}
     assert_equal_data(result, expected)
 
 

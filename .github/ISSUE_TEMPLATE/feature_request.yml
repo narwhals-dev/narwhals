@@ -3,19 +3,19 @@ description: Form to request a new feature
 title: "[Enh]: "
 
 body:
-- type: markdown 
+- type: markdown
   attributes:
     value: >
         ## Thanks for helping us improve Narwhals!
-- type: markdown 
+- type: markdown
   attributes:
     value: >
-       ### Before submitting a request, please check if it has already been discussed in the  
+       ### Before submitting a request, please check if it has already been discussed in the
        [list of issues](https://github.com/narwhals-dev/narwhals/issues?q=is%3Aissue+is%3Aclosed%2Bopen+).
 - type: textarea
   attributes:
     label: >
-       We would like to learn about your use case. For example, if this feature is needed 
+       We would like to learn about your use case. For example, if this feature is needed
        to adopt Narwhals in an open source project, could you please enter the link to it below?
     description: >
        Link to the project where this will be used if possible.
@@ -32,7 +32,7 @@ body:
     description: >
        Please suggest a solution if you can.
   validations:
-       required: false 
+       required: false
 - type: textarea
   attributes:
     label: If you have tried alternatives, please describe them below.
@@ -45,5 +45,5 @@ body:
        Context or useful information
 - type: markdown
   attributes:
-    value: > 
+    value: >
         ### If you'd be interested in opening a pull request to fix this, please let us know!

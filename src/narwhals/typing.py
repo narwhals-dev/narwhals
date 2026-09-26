@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Literal, NewType, Protocol, TypeVar, Union
 
 from narwhals._compliant import CompliantDataFrame, CompliantLazyFrame, CompliantSeries
 from narwhals._native import (
@@ -19,10 +19,10 @@ from narwhals._typing import Backend, EagerAllowed, IntoBackend, LazyAllowed
 if TYPE_CHECKING:
     import datetime as dt
     import os
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
     from decimal import Decimal
     from types import ModuleType
-    from typing import TypeAlias
+    from typing import IO, TypeAlias
 
     import numpy as np
     import pandas as pd
@@ -309,12 +309,16 @@ Examples:
 """
 
 
-# TODO @dangotbanned: fix this?
-# Constructor allows tuples, but we don't support that *everywhere* yet
-IntoSchema: TypeAlias = "Mapping[str, dtypes.DType] | Schema"
-"""Anything that can be converted into a Narwhals Schema.
+IntoSchema: TypeAlias = (
+    "Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Schema"
+)
+"""Anything that can be converted into a [`narwhals.Schema`][].
 
-Defined by column names and their associated *instantiated* Narwhals DType.
+Defined by column names and their associated [`DType`][narwhals.dtypes.DType],
+either as a mapping or as an iterable of `(name, dtype)` tuples.
+
+See Also:
+    [`IntoDType`][narwhals.typing.IntoDType]
 
 Examples:
     >>> import narwhals as nw
@@ -322,7 +326,25 @@ Examples:
     >>> data = {"a": [1, 2, 3], "b": [None, "hi", "howdy"], "c": [2.1, 2.0, None]}
     >>> nw.DataFrame.from_dict(
     ...     data,
-    ...     schema={"a": nw.UInt8(), "b": nw.String(), "c": nw.Float32()},
+    ...     schema={"a": nw.UInt8, "b": nw.String(), "c": nw.Float32},
+    ...     backend="pyarrow",
+    ... )
+    ┌────────────────────────┐
+    |   Narwhals DataFrame   |
+    |------------------------|
+    |pyarrow.Table           |
+    |a: uint8                |
+    |b: string               |
+    |c: float                |
+    |----                    |
+    |a: [[1,2,3]]            |
+    |b: [[null,"hi","howdy"]]|
+    |c: [[2.1,2,null]]       |
+    └────────────────────────┘
+
+    >>> nw.DataFrame.from_dict(
+    ...     data,
+    ...     schema=[("a", nw.UInt8), ("b", nw.String()), ("c", nw.Float32)],
     ...     backend="pyarrow",
     ... )
     ┌────────────────────────┐
@@ -343,13 +365,29 @@ IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
 IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 
-FileSource: TypeAlias = "str | os.PathLike[str]"
-"""Path to a file.
+FileSource: TypeAlias = "str | os.PathLike[str] | IO[bytes] | IO[str]"
+"""Path to a file, or a file-like object.
 
-Either a string or an object that implements [`__fspath__`], such as [`pathlib.Path`].
+Either a string, an object that implements [`os.PathLike`][os.PathLike]
+(such as [`pathlib.Path`][pathlib.Path]), or a file-like object such as
+[`io.BytesIO`][io.BytesIO] / [`io.StringIO`][io.StringIO].
 
-[`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
-[`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
+pandas (and pandas-like), Polars and PyArrow accept a file-like object. DuckDB
+does too, but only with `fsspec` installed, and `scan_parquet` additionally needs
+`duckdb>=1.5.4`. Dask, Ibis and Spark-like require a path and raise `TypeError`
+for anything else.
+"""
+
+NormalizedPath = NewType("NormalizedPath", str)
+"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_source`."""
+
+NormalizedSource: TypeAlias = "NormalizedPath | IO[bytes] | IO[str]"
+"""A [`FileSource`][narwhals.typing.FileSource] after `narwhals._utils.normalize_source`.
+
+The compliant-namespace IO methods (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
+take an already-normalized source and forward `kwds` to the native reader. Path-like
+inputs are converted to [`NormalizedPath`][narwhals.typing.NormalizedPath]; file-like
+objects are passed through unchanged.
 """
 
 

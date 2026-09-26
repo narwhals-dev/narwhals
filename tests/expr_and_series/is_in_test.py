@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -49,4 +50,78 @@ def test_filter_is_in_with_series(constructor_eager: ConstructorEager) -> None:
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.filter(nw.col("a").is_in(df["b"]))
     expected = {"a": [1, 2], "b": [1, 2]}
+    assert_equal_data(result, expected)
+
+
+def test_expr_is_in_with_null(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3851
+    data_with_null = {"a": [1, 2, None, 4]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.select(nw.col("a").is_in([1, 2]))
+
+    expected: dict[str, list[Any]]
+    if constructor.nan_is_null:
+        # Null values are coerced to NaN for non-nullable datatypes, and
+        # `is_in` treats them like a regular (non-matching) value.
+        expected = {"a": [True, True, False, False]}
+    else:
+        expected = {"a": [True, True, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+def test_filter_is_in_with_null(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3851
+    data_with_null = {"a": [1, 2, None, 4]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.filter(~nw.col("a").is_in([1, 2]))
+
+    expected = {"a": [None, 4]} if constructor.nan_is_null else {"a": [4]}
+
+    assert_equal_data(result, expected)
+
+
+def test_expr_is_in_with_null_in_other(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3851
+    # A `None` in `other` shouldn't match anything (not even a null `a`), and
+    # shouldn't turn non-null, non-matching values into "unknown" either.
+    data_with_null = {"a": [1, 2, None, 4]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.select(nw.col("a").is_in([1, None]))
+
+    expected: dict[str, list[Any]]
+    if constructor.nan_is_null:
+        expected = {"a": [True, False, False, False]}
+    else:
+        expected = {"a": [True, False, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3851
+    data_with_null = {"a": [1, 2, None, 4]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.select(nw.col("a").is_in([None]))
+
+    expected: dict[str, list[Any]]
+    if constructor.nan_is_null:
+        expected = {"a": [False, False, False, False]}
+    else:
+        expected = {"a": [False, False, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+def test_is_in_incompatible_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION >= (2,):
+        reason = "Polars>=2.0 rejects operands which can't be coerced losslessly"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").is_in([1.0, 2.5]))
+    expected = {"a": [True, False, False, False]}
+
     assert_equal_data(result, expected)

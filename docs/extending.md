@@ -5,7 +5,7 @@
     The extension mechanism in Narwhals is experimental and under development.
     If anything is not clear, or doesn't work, please do raise an issue or
     contact us on Discord (see the link on the README).
-  
+
 If you would like to make a new library Narwhals-compatible, then there are
 three ways to go about it:
 
@@ -45,21 +45,65 @@ handle plugins. For this integration to work, any plugin architecture must conta
     own library name, for example `narwhals-grizzlies = 'narwhals_grizzlies'`
 
   2. a top-level `__init__.py` file containing the following:
-  
+
     - `is_native` and `__narwhals_namespace__` functions.
     - a string constant `NATIVE_PACKAGE` which holds the name of the library for which the plugin is made.
 
-    `is_native` accepts a native object and returns a boolean indicating whether the native object is 
+    `is_native` accepts a native object and returns a boolean indicating whether the native object is
     a dataframe of the library the plugin was written for.
 
     `__narwhals_namespace__` takes the Narwhals version and returns a compliant namespace for the library,
-    i.e. one that complies with the CompliantNamespace protocol. This protocol specifies a `from_native` 
+    i.e. one that complies with the CompliantNamespace protocol. This protocol specifies a `from_native`
     function, whose input parameter is the Narwhals version and which returns a compliant Narwhals LazyFrame
-    which wraps the native dataframe. 
-  
-    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
-    signatures.
-  
+    which wraps the native dataframe.
+
+    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the signatures.
+
+## IO functions: the namespace contract
+
+The Narwhals IO functions (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
+dispatch to same-named methods on the compliant namespace. This is a single mechanism,
+shared by built-in backends and extensions alike: to support these functions, a
+compliant namespace implements (a subset of):
+
+```py
+from narwhals.typing import NormalizedSource
+
+
+def read_csv(
+    self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+) -> CompliantDataFrame: ...
+
+
+def scan_csv(
+    self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+) -> CompliantFrame: ...
+
+
+def read_parquet(self, source: NormalizedSource, **kwds: Any) -> CompliantDataFrame: ...
+
+
+def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> CompliantFrame: ...
+```
+
+In all cases:
+
+- `source` is a `NormalizedSource`: either a `NormalizedPath` (a `str`
+  [`NewType`](https://docs.python.org/3/library/typing.html#newtype) tagging that
+  Narwhals has already normalized `Path` and path-like inputs), or a file-like object
+  such as `io.BytesIO` / `io.StringIO`, passed through untouched.
+- A namespace whose native reader cannot take a file-like object should reject it with
+  `TypeError`, via `narwhals._utils.ensure_path_source`.
+- `kwds` are forwarded to the native reader, and it is the namespace's responsibility
+  to translate `separator` into whatever its native CSV reader expects (and to raise if
+  the two conflict).
+- `read_*` methods are eager-only, so they are only ever called on namespaces of eager
+  backends. `scan_*` methods are called for any backend: lazy namespaces return a
+  compliant LazyFrame, while eager ones may simply read eagerly. Namespaces complying
+  with the `EagerNamespace` protocol only need to implement `read_csv` and
+  `read_parquet`, as they inherit `scan_*` default implementations which fall back to
+  the corresponding `read_*` method.
+
 ## Can I see an example?
 
 Yes! For a reference plugin, please check out [narwhals-daft](https://github.com/narwhals-dev/narwhals-daft).

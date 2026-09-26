@@ -8,16 +8,13 @@ import narwhals.stable.v1 as nw_v1
 
 data: dict[str, list[Any]] = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.1], "z": ["x", "y", "z"]}
 
-pytest.importorskip("polars")
 pytest.importorskip("pyarrow")
 
 
 def test_interchange_to_arrow() -> None:
-    import polars as pl
     import pyarrow as pa
 
-    df_pl = pl.DataFrame(data)
-    df = nw_v1.from_native(df_pl.__dataframe__(), eager_or_interchange_only=True)
+    df = nw_v1.from_native(pa.table(data).__dataframe__(), eager_or_interchange_only=True)
     result = df.to_arrow()
 
     assert isinstance(result, pa.Table)
@@ -27,6 +24,7 @@ def test_interchange_ibis_to_arrow(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
     pytest.importorskip("ibis")
+    pytest.importorskip("polars")
 
     import ibis
     import polars as pl
@@ -50,6 +48,7 @@ def test_interchange_ibis_to_arrow(
 
 def test_interchange_duckdb_to_arrow() -> None:
     pytest.importorskip("duckdb")
+    pytest.importorskip("polars")
 
     import duckdb
     import polars as pl

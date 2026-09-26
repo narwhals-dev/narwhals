@@ -5,7 +5,7 @@ exclude-labels:
 name-template: 'Narwhals unreleased'
 version-template: unreleased
 
-change-template: '- $TITLE (#$NUMBER)' 
+change-template: '- $TITLE (#$NUMBER)'
 
 categories:
   - title: 🏆 Highlights

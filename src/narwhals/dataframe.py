@@ -15,10 +15,12 @@ from typing import (
     overload,
 )
 
+from narwhals._compliant.selectors import is_compliant_selector
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import (
     _parse_into_expr,
     check_expressions_preserve_length,
+    is_bare_selector,
     is_scalar_like,
 )
 from narwhals._typing import Arrow, Pandas, _LazyAllowedImpl, _LazyFrameCollectImpl
@@ -28,6 +30,7 @@ from narwhals._utils import (
     _Implementation,
     _resolve_sample_size,
     can_lazyframe_collect,
+    check_column_names_are_unique,
     check_columns_exist,
     flatten,
     generate_repr,
@@ -39,6 +42,7 @@ from narwhals._utils import (
     is_lazy_allowed,
     is_list_of,
     is_sequence_like,
+    is_sequence_of,
     is_slice_none,
     predicates_contains_list_of_bool,
     qualified_type_name,
@@ -71,12 +75,18 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import CompliantExprAny
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import EagerAllowed, IntoBackend, LazyAllowed, Polars
-    from narwhals.dtypes import DType
+    from narwhals._typing import (
+        EagerAllowed,
+        IntoBackend,
+        LazyAllowed,
+        PluginName,
+        Polars,
+    )
     from narwhals.group_by import GroupBy, LazyGroupBy
     from narwhals.typing import (
         AsofJoinStrategy,
         IntoDataFrame,
+        IntoDType,
         IntoExpr,
         IntoFrame,
         IntoLazyFrame,
@@ -181,9 +191,7 @@ class BaseFrame(Generic[_FrameT]):
         return Schema(self._compliant_frame.schema.items())
 
     def collect_schema(self) -> Schema:
-        native_schema = dict(self._compliant_frame.collect_schema())
-
-        return Schema(native_schema)
+        return Schema(self._compliant_frame.collect_schema())
 
     def pipe(
         self,
@@ -229,6 +237,24 @@ class BaseFrame(Generic[_FrameT]):
                     raise error from e
                 raise
         compliant_exprs = self._flatten_and_extract(*flat_exprs, **named_exprs)
+        if (
+            (not named_exprs)
+            and flat_exprs
+            and all(is_bare_selector(x) for x in flat_exprs)
+            and all(is_compliant_selector(x) for x in compliant_exprs)
+        ):
+            # fast path: bare selectors resolve to a subset of the frame's existing
+            # columns, in frame order, which is what `simple_select` does natively.
+            frame = self._compliant_frame
+            names = [
+                name
+                for expr in compliant_exprs
+                for name in expr._evaluate_output_names(frame)
+            ]
+            if not names:
+                return self._with_compliant(frame.select())
+            check_column_names_are_unique(names)
+            return self._with_compliant(frame.simple_select(*names))
         if compliant_exprs and all(is_scalar_like(x) for x in compliant_exprs):
             return self._with_compliant(self._compliant_frame.aggregate(*compliant_exprs))
         compliant_exprs = [
@@ -501,7 +527,10 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
+        cls,
+        native_frame: IntoArrowTable,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -556,14 +585,14 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackend[EagerAllowed] | None = None,
+        backend: IntoBackend[EagerAllowed | PluginName] | None = None,
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from dictionary.
 
         Indexes (if present, for pandas-like backends) are aligned following
-        the [left-hand-rule](../concepts/pandas_index.md/).
+        the [left-hand-rule](../concepts/pandas_index.md).
 
         Notes:
             For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -571,10 +600,11 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Dictionary to create DataFrame from.
-            schema: The DataFrame schema as Schema or dict of {name: type}. If not
-                specified, the schema will be inferred by the native library. If
-                any `dtype` is `None`, the data type for that column will be inferred
-                by the native library.
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a
+                iterable of (name, type) tuples.
+                If not specified, the schema will be inferred by the native library.
+                If any `dtype` is `None`, the data type for that column will be
+                inferred by the native library.
             backend: specifies which eager backend instantiate to. Only
                 necessary if inputs are not Narwhals Series.
 
@@ -600,6 +630,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         if backend is None:
             data, backend = _from_dict_no_backend(data)
+        schema = dict(schema) if schema is not None else None
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -617,22 +648,27 @@ class DataFrame(BaseFrame[DataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         """Instantiate DataFrame from a sequence of dictionaries representing rows.
 
         Notes:
+            Keys missing from some (or all) rows are filled with null.
+
             For pandas-like dataframes, conversion to schema is applied after dataframe
-            creation.
+            creation. A `schema` requesting a dtype which cannot hold null values (e.g.
+            `Int64` or `Boolean` with the default numpy dtypes) will therefore coerce or
+            raise on those missing values.
 
         Arguments:
             data: Sequence with dictionaries mapping column name to value.
-            schema: The DataFrame schema as Schema or dict of {name: type}. If not
-                specified, the schema will be inferred by the native library. If
-                any `dtype` is `None`, the data type for that column will be inferred
-                by the native library.
+            schema: The DataFrame schema as Schema, dict of {name: type}, or a
+                iterable of (name, type) tuples.
+                If not specified, the schema will be inferred by the native library.
+                If any `dtype` is `None`, the data type for that column will be
+                inferred by the native library.
             backend: Specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
@@ -672,6 +708,7 @@ class DataFrame(BaseFrame[DataFrameT]):
             |└───────┴────────┴───────┘|
             └──────────────────────────┘
         """
+        schema = dict(schema) if schema is not None else None
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -691,7 +728,7 @@ class DataFrame(BaseFrame[DataFrameT]):
         data: _2DArray,
         schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         """Construct a DataFrame from a NumPy ndarray.
 
@@ -703,7 +740,8 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             data: Two-dimensional data represented as a NumPy ndarray.
-            schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+            schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
+                of (name, type) tuples, or a sequence of str.
             backend: specifies which eager backend instantiate to.
 
                 `backend` can be specified in various ways
@@ -741,10 +779,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         if not _is_into_schema(schema):
             msg = (
                 "`schema` is expected to be one of the following types: "
-                "Mapping[str, DType] | Schema | Sequence[str]. "
+                "Schema | Mapping[str, IntoDType] | Iterable[tuple[str, IntoDType]] | Sequence[str].\n"
                 f"Got {type(schema)}."
             )
             raise TypeError(msg)
+        if not (schema is None or is_sequence_of(schema, str)):
+            schema = Schema(schema)
         implementation = Implementation.from_backend(backend)
         if is_eager_allowed(implementation):
             ns = cls._version.namespace.from_backend(implementation).compliant
@@ -1303,7 +1343,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pyarrow as pa
@@ -1637,7 +1677,7 @@ class DataFrame(BaseFrame[DataFrameT]):
                 * 'last': Keep last unique row.
             maintain_order: Keep the same order as the original DataFrame. This may be more
                 expensive to compute.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import pandas as pd
@@ -2069,7 +2109,7 @@ class DataFrame(BaseFrame[DataFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -2548,7 +2588,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import duckdb
@@ -2575,7 +2615,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
 
         Arguments:
             name: The name of the column as a string. The default is "index".
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb
@@ -2840,7 +2880,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
                 * 'none': Don't keep duplicate rows.
                 * 'first': Keep the first row. Requires `order_by` to be specified.
                 * 'last': Keep the last row. Requires `order_by` to be specified.
-            order_by: Column(s) to order by when computing the row index.
+            order_by: Column(s) to order by when computing the row index. Nulls are placed first.
 
         Examples:
             >>> import duckdb

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 import narwhals as nw
@@ -113,3 +115,50 @@ def test_starts_with_series_multi(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.select(df["a"].str.starts_with(prefix_series))
     assert_equal_data(result, {"a": expected})
+
+
+def _is_non_nullable(constructor: Constructor) -> bool:
+    # dask converts object columns to `string[pyarrow]`, which keeps nulls.
+    return constructor.nan_is_null and "dask" not in str(constructor)
+
+
+def test_starts_with_null(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3850
+    data_with_null = {"a": ["x", "y", None, "z"]}
+    df = nw.from_native(constructor(data_with_null))
+    result = df.select(nw.col("a").str.starts_with("x"))
+
+    expected: dict[str, list[Any]]
+    if _is_non_nullable(constructor):
+        expected = {"a": [True, False, False, False]}
+    else:
+        expected = {"a": [True, False, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("method", ["contains", "starts_with", "ends_with"])
+def test_empty_pattern(constructor: Constructor, method: str) -> None:
+    # An empty pattern matches every non-null row (null stays null, except on
+    # plain pandas, which has no nullable boolean).
+    df = nw.from_native(constructor({"a": ["x", None, ""]}))
+    result = df.select(getattr(nw.col("a").str, method)("").alias("match"))
+    expected: dict[str, list[Any]]
+    if _is_non_nullable(constructor):
+        expected = {"match": [True, False, True]}
+    else:
+        expected = {"match": [True, None, True]}
+    assert_equal_data(result, expected)
+
+
+def test_pandas_object_dtype_starts_with_null() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3850
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df_native = pd.DataFrame({"a": ["x", "y", None, "z"]}).astype(object)
+    df = nw.from_native(df_native, eager_only=True)
+
+    mask = df["a"].str.starts_with("x")
+    assert mask.dtype == nw.Boolean
+    assert mask.to_list() == [True, False, False, False]

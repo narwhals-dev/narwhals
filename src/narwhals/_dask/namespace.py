@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import operator
 from datetime import date, datetime
-from functools import reduce
+from functools import partial, reduce
 from itertools import chain
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
 import pandas as pd
@@ -22,7 +22,14 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
-from narwhals._utils import Implementation, is_nested_literal, not_implemented
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
+from narwhals._utils import (
+    Implementation,
+    ensure_path_source,
+    is_nested_literal,
+    not_implemented,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -35,6 +42,7 @@ if TYPE_CHECKING:
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
+        NormalizedSource,
     )
 
 
@@ -58,6 +66,21 @@ class DaskNamespace(
 
     def __init__(self, *, version: Version) -> None:
         self._version = version
+
+    def scan_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DaskLazyFrame:
+        validate_separators(separator, ("sep",), kwds)
+        native = dd.read_csv(
+            ensure_path_source(source, self._implementation), sep=separator, **kwds
+        )
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(
+            dd.read_parquet(ensure_path_source(source, self._implementation), **kwds),
+            context=self,
+        )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):
@@ -178,10 +201,9 @@ class DaskNamespace(
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
-            non_na = align_series_full_broadcast(
-                df, *(1 - s.isna() for s in expr_results)
-            )
+            aligned = align_series_full_broadcast(df, *expr_results)
+            series = (s.fillna(0) for s in aligned)
+            non_na = (1 - s.isna() for s in aligned)
             num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
             den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
             return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
@@ -226,12 +248,26 @@ class DaskNamespace(
     def concat_str(
         self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
     ) -> DaskExpr:
+        to_nw_dtype = partial(
+            native_to_narwhals_dtype,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = (
-                s.astype(str) for s in align_series_full_broadcast(df, *expr_results)
+            expr_results = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
             )
-            null_mask = [s.isna() for s in align_series_full_broadcast(df, *expr_results)]
+            # pandas 2.0 cannot concatenate empty Arrow-string metadata. Cast to str
+            # instead; the pre-cast masks below restore or skip nulls. Polars renders
+            # booleans lowercase, `astype(str)` does not.
+            series = (
+                s.astype(str).str.lower()
+                if to_nw_dtype(s.dtype).is_boolean()
+                else s.astype(str)
+                for s in expr_results
+            )
+            null_mask = [s.isna() for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -243,15 +279,17 @@ class DaskNamespace(
                     s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 ]
 
-                separators = (
-                    nm.map({True: "", False: separator}, meta=str)
-                    for nm in null_mask[:-1]
-                )
-                result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values, strict=True)),
-                    init_value,
-                )
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    separators = (seen & not_null).map(
+                        {True: separator, False: ""}, meta=str
+                    )
+                    result = result + separators + value
+                    seen = seen | not_null
 
             return [result]
 
@@ -305,12 +343,12 @@ class DaskNamespace(
                 df = new_df
 
             if otherwise is None:
-                (condition, then_series) = align_series_full_broadcast(
+                condition, then_series = align_series_full_broadcast(
                     df, condition, then_value
                 )
                 validate_comparand(condition, then_series)
                 return [then_series.where(condition)]  # pyright: ignore[reportArgumentType]
-            (condition, then_series, otherwise_series) = align_series_full_broadcast(
+            condition, then_series, otherwise_series = align_series_full_broadcast(
                 df, condition, then_value, otherwise_value
             )
             validate_comparand(condition, then_series)
@@ -364,3 +402,4 @@ class DaskNamespace(
         )
 
     struct = not_implemented()
+    list = not_implemented()

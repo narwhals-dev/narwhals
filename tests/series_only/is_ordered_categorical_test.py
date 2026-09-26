@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals._utils import Implementation, Version
-from tests.utils import POLARS_VERSION
+from tests.utils import POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -64,8 +64,10 @@ def test_is_ordered_categorical_pyarrow_string() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
+    from narwhals._arrow.utils import chunked_array
+
     tp = pa.dictionary(pa.int32(), pa.string())
-    s = pa.chunked_array([pa.array(["a", "b"], type=tp)], type=tp)
+    s = chunked_array([pa.array(["a", "b"], type=tp)], tp)
     assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 
@@ -77,17 +79,20 @@ def test_is_definitely_not_ordered_categorical(
     )
 
 
-@pytest.mark.xfail(reason="https://github.com/apache/arrow/issues/41017")
+# The `ordered` flag on dictionary types was not preserved before pyarrow 25.0.0.
+@pytest.mark.xfail(
+    PYARROW_VERSION < (25,), reason="https://github.com/apache/arrow/issues/41017"
+)
 def test_is_ordered_categorical_pyarrow() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa
 
+    from narwhals._arrow.utils import chunked_array
+
     tp = pa.dictionary(pa.int32(), pa.string(), ordered=True)
     arr = pa.array(["a", "b"], type=tp)
-    s = pa.chunked_array([arr], type=tp)
-    assert nw.is_ordered_categorical(
-        nw.from_native(s, series_only=True)
-    )  # pragma: no cover
+    s = chunked_array([arr], tp)
+    assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
 
 def test_is_ordered_categorical_unknown_series() -> None:

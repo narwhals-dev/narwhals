@@ -46,6 +46,7 @@ if TYPE_CHECKING:
     import polars as pl
     import pyarrow as pa
     from ibis.backends.duckdb import Backend as IbisDuckDBBackend
+    from pandas.api.typing.aliases import DtypeBackend
     from pyspark.sql import SparkSession
     from sqlframe.duckdb import DuckDBSession
 
@@ -305,6 +306,23 @@ class frame_constructor(Generic[T_co]):  # noqa: N801
 # Eager constructors
 
 
+def _convert_dtypes_keep_int_like_floats(
+    values: Any, dtype_backend: DtypeBackend
+) -> pd.Series[Any]:
+    import pandas as pd
+
+    # `convert_integer` (and friends) are deprecated as of pandas 3.1, and
+    # there's no direct replacement, so we emulate `convert_integer=False`
+    # by converting and then casting back to a nullable float dtype.
+    series = pd.Series(values)
+    if any(isinstance(v, float) and v.is_integer() for v in values):
+        float_dtype: Literal["Float64", "double[pyarrow]"] = (
+            "Float64" if dtype_backend == "numpy_nullable" else "double[pyarrow]"
+        )
+        return series.astype(float_dtype)
+    return series.convert_dtypes(dtype_backend=dtype_backend)
+
+
 @frame_constructor.register(
     name="pandas",
     implementation=Implementation.PANDAS,
@@ -327,7 +345,13 @@ def pandas_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
 def pandas_nullable_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
     import pandas as pd
 
-    return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="numpy_nullable")
+    return pd.DataFrame(
+        {
+            k: _convert_dtypes_keep_int_like_floats(v, "numpy_nullable")
+            for k, v in obj.items()
+        },
+        **kwds,
+    )
 
 
 @frame_constructor.register(
@@ -339,7 +363,10 @@ def pandas_nullable_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
 def pandas_pyarrow_constructor(obj: Data, /, **kwds: Any) -> pd.DataFrame:
     import pandas as pd
 
-    return pd.DataFrame(obj, **kwds).convert_dtypes(dtype_backend="pyarrow")
+    return pd.DataFrame(
+        {k: _convert_dtypes_keep_int_like_floats(v, "pyarrow") for k, v in obj.items()},
+        **kwds,
+    )
 
 
 @frame_constructor.register(
@@ -380,9 +407,11 @@ def modin_pyarrow_constructor(
     obj: Data, /, **kwds: Any
 ) -> IntoDataFrame:  # pragma: no cover
     import modin.pandas as mpd
-    import pandas as pd
 
-    df = mpd.DataFrame(pd.DataFrame(obj, **kwds)).convert_dtypes(dtype_backend="pyarrow")
+    df = mpd.DataFrame(
+        {k: _convert_dtypes_keep_int_like_floats(v, "pyarrow") for k, v in obj.items()},
+        **kwds,
+    )
     return cast("IntoDataFrame", df)
 
 
@@ -683,21 +712,22 @@ def sqlframe_session() -> DuckDBSession:
 def pyspark_session() -> SparkSession:  # pragma: no cover
     """Return a singleton local `pyspark` (or pyspark[connect]) session."""
     if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
+        from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        from pyspark.sql import SparkSession as _SparkSession
+    builder = _SparkSession.builder.appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect
         else builder.master("local[1]").config("spark.ui.enabled", "false")
     )
-    return (
+    ret = (
         builder.config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    return cast("SparkSession", ret)
 
 
 @lru_cache(maxsize=1)

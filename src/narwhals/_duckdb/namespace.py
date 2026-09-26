@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import duckdb
@@ -12,6 +11,7 @@ from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
 from narwhals._duckdb.selectors import DuckDBSelectorNamespace
 from narwhals._duckdb.utils import (
+    BACKEND_VERSION,
     DeferredTimeZone,
     F,
     concat_str,
@@ -29,16 +29,28 @@ from narwhals._expression_parsing import (
     evaluate_output_names_and_aliases,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import Implementation, requires
+from narwhals._utils import (
+    Implementation,
+    check_column_names_are_unique,
+    is_file_like,
+    requires,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping
+    from collections.abc import Callable, Iterable, Sequence
 
     from duckdb import DuckDBPyRelation  # noqa: F401
 
     from narwhals._compliant.window import WindowInputs
     from narwhals._utils import Version
-    from narwhals.typing import ConcatMethod, CorrelationMethod, IntoDType, PythonLiteral
+    from narwhals.typing import (
+        ConcatMethod,
+        CorrelationMethod,
+        IntoDType,
+        NormalizedSource,
+        PythonLiteral,
+    )
 
 VARCHAR = duckdb_dtypes.VARCHAR
 
@@ -63,6 +75,23 @@ class DuckDBNamespace(
     def _lazyframe(self) -> type[DuckDBLazyFrame]:
         return DuckDBLazyFrame
 
+    def scan_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> DuckDBLazyFrame:
+        validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
+        native = duckdb.read_csv(source, delimiter=separator, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
+        if is_file_like(source) and BACKEND_VERSION < (1, 5, 4):  # pragma: no cover
+            msg = (
+                "`scan_parquet` from a file-like object is only available in "
+                f"'duckdb>=1.5.4', found version {requires._unparse_version(BACKEND_VERSION)!r}."
+            )
+            raise NotImplementedError(msg)
+        native = duckdb.read_parquet(source, **kwds)
+        return self._lazyframe.from_native(native, context=self)
+
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
         return function(name, *args)
 
@@ -85,8 +114,8 @@ class DuckDBNamespace(
     def concat(
         self, items: Iterable[DuckDBLazyFrame], *, how: ConcatMethod
     ) -> DuckDBLazyFrame:
-        native_items = [item._native_frame for item in items]
         items = list(items)
+        native_items = [item._native_frame for item in items]
         first = items[0]
         schema = first.schema
         if how == "vertical" and not all(x.schema == schema for x in items[1:]):
@@ -106,21 +135,14 @@ class DuckDBNamespace(
     def concat_str(
         self, *exprs: DuckDBExpr, separator: str, ignore_nulls: bool
     ) -> DuckDBExpr:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
-            cols: Iterable[Expression] = chain.from_iterable(e(df) for e in exprs)
+        def func(cols: Sequence[Expression]) -> Expression:
             if ignore_nulls:
-                return [concat_str(*cols, separator=separator)]
-            cols = tuple(cols)
+                return concat_str(*cols, separator=separator)
             null_mask = reduce(operator.or_, (s.isnull() for s in cols))
             cols_str = (c.cast(VARCHAR) for c in cols)
-            return [when(~null_mask, concat_str(*cols_str, separator=separator))]
+            return when(~null_mask, concat_str(*cols_str, separator=separator))
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def mean_horizontal(self, *exprs: DuckDBExpr) -> DuckDBExpr:
         def func(cols: Iterable[Expression]) -> Expression:
@@ -232,19 +254,32 @@ class DuckDBNamespace(
         version = self._version
 
         def func(df: DuckDBLazyFrame) -> list[Expression]:
-            names_to_cols: Mapping[str, Expression] = {
-                alias: native_expr
+            fields = [
+                (alias, native_expr)
                 for expr in exprs
                 for native_expr, _, alias in zip(
                     expr(df),
                     *evaluate_output_names_and_aliases(expr, df, []),
                     strict=True,
                 )
-            }
-            field_args = ", ".join(
-                f'"{name}" := {col}' for name, col in names_to_cols.items()
-            )
+            ]
+            check_column_names_are_unique([name for name, _ in fields])
+            field_args = ", ".join(f'"{name}" := {col}' for name, col in fields)
             return [sql_expression(f"struct_pack({field_args})")]
+
+        return self._expr(
+            call=func,
+            evaluate_output_names=combine_evaluate_output_names(*exprs),
+            alias_output_names=combine_alias_output_names(*exprs),
+            version=version,
+        )
+
+    def list(self, *exprs: DuckDBExpr) -> DuckDBExpr:
+        version = self._version
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            cols = [native_expr for expr in exprs for native_expr in expr(df)]
+            return [F("list_pack", *cols)]
 
         return self._expr(
             call=func,
