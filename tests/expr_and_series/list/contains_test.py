@@ -161,8 +161,8 @@ def test_contains_invalid_item_raises(
 def test_contains_all_null_inner_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if "ibis" in str(constructor):
-        pytest.skip(reason="ibis cannot create all-null column")
+    if any(backend in str(constructor) for backend in ("ibis", "pyspark")):
+        pytest.skip(reason="cannot infer the type of an all-null column")
     xfail_unsupported(request, constructor)
     result = nw.from_native(constructor({"a": [[None, None]]})).select(
         nw.col("a").cast(nw.List(nw.Int64())).list.contains(1)
