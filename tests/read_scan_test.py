@@ -358,13 +358,16 @@ def test_scan_parquet_file_like_unsupported(backend: _LazyOnly) -> None:
 def test_scan_csv_file_like_duckdb(into: type[StringIO | BytesIO]) -> None:
     duckdb = pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
-    result = nw.scan_csv(_csv_buffer(into), backend="duckdb", connection=duckdb.connect())
+    # Keep a reference: on older duckdb a relation does not keep its connection alive.
+    connection = duckdb.connect()
+    result = nw.scan_csv(_csv_buffer(into), backend="duckdb", connection=connection)
     assert_equal_lazy(result)
 
 
 def test_scan_parquet_file_like_duckdb() -> None:
     duckdb = pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
+    connection = duckdb.connect()
     context = (
         pytest.raises(NotImplementedError, match=r"duckdb>=1\.5\.4")
         if DUCKDB_VERSION < (1, 5, 4)
@@ -372,6 +375,6 @@ def test_scan_parquet_file_like_duckdb() -> None:
     )
     with context:
         result = nw.scan_parquet(
-            _parquet_buffer(), backend="duckdb", connection=duckdb.connect()
+            _parquet_buffer(), backend="duckdb", connection=connection
         )
         assert_equal_lazy(result)
