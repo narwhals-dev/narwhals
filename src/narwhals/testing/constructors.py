@@ -103,6 +103,13 @@ class frame_constructor(  # noqa: N801
     _registry: ClassVar[dict[str, frame_constructor[IntoFrame]]] = {}
 
     func: Callable[Concatenate[Data, ...], T_co]
+    name: str
+    implementation: Implementation
+    requirements: tuple[str, ...]
+    is_eager: bool
+    nan_is_null: bool
+    needs_gpu: bool
+    default_include: bool
 
     def __init__(
         self,
@@ -142,7 +149,7 @@ class frame_constructor(  # noqa: N801
 
         Arguments:
             name: The string identifier of the constructor (e.g. `"pandas[pyarrow]"`).
-            implementation: The [`Implementation`][] this constructor belongs to.
+            implementation: The [`Implementation`][narwhals.Implementation] this constructor belongs to.
             requirements: Package names that must be importable for this constructor
                 to be available (checked via `importlib.util.find_spec`).
             is_eager: Whether the backend returns an eager dataframe.

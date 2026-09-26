@@ -75,6 +75,16 @@ pytest --nw-backends="pandas,polars[lazy]"
 pytest --all-nw-backends
 ```
 
+## Constructors
+
+::: narwhals.testing
+    handler: python
+    options:
+      show_root_heading: false
+      heading_level: 3
+      members:
+        - frame_constructor
+
 ## Typing
 
 ::: narwhals.testing.typing
