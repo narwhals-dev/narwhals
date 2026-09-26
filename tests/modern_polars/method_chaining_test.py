@@ -38,10 +38,7 @@ def test_split_list_get(request: pytest.FixtureRequest, constructor: Constructor
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
-    if (
-        constructor.__name__.startswith("pandas")
-        and "pyarrow" not in constructor.__name__
-    ):
+    if str(constructor).startswith("pandas") and "pyarrow" not in str(constructor):
         df = nw.from_native(constructor(data))
         msg = re.escape("This operation requires a pyarrow-backed series. ")
         with pytest.raises(TypeError, match=msg):

@@ -42,7 +42,7 @@ def sort_members_in_markdown(file_path: Path) -> int:
 
 
 PATH = Path("docs") / "api-reference"
-FILES_TO_SKIP = {"dtypes", "typing"}
+FILES_TO_SKIP = {"dtypes", "typing", "testing"}
 
 ret = max(
     sort_members_in_markdown(file_path=file_path)

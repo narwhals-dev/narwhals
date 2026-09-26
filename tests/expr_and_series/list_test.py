@@ -27,7 +27,7 @@ def maybe_skip(constructor: Constructor | ConstructorEager) -> None:
     ):
         reason = "pandas is too old or pyarrow not installed"
         pytest.skip(reason=reason)
-    if constructor.__name__ == "pandas_constructor":
+    if constructor.identifier == "pandas":
         pytest.skip(reason="numpy-backed pandas cannot represent nullable integers")
 
 

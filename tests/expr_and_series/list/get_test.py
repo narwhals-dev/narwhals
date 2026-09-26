@@ -45,9 +45,8 @@ def test_get_series(
             pytest.skip()
         pytest.importorskip("pyarrow")
 
-    if (
-        constructor_eager.__name__.startswith("pandas")
-        and "pyarrow" not in constructor_eager.__name__
+    if str(constructor_eager).startswith("pandas") and "pyarrow" not in str(
+        constructor_eager
     ):
         df = nw.from_native(constructor_eager(data), eager_only=True)
         msg = re.escape("Series must be of PyArrow List type to support list namespace.")

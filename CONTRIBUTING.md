@@ -186,16 +186,16 @@ If you add code that should be tested, please add tests.
 
 ## 3. Running tests
 
-- To run tests: `uv run pytest`. To check coverage: `uv run pytest --cov=src`
+- To run tests: `uv run pytest`. To check coverage: `uv run coverage run -m pytest && uv run coverage combine && uv run coverage report`
 - To run tests on the doctests, use `uv run pytest src --doctest-modules`
-- To run unit tests and doctests at the same time, run `uv run pytest src tests --cov=src --doctest-modules`
+- To run unit tests and doctests at the same time, run `uv run pytest src tests --doctest-modules`
 - To run tests multiprocessed, you may also want to use [pytest-xdist](https://github.com/pytest-dev/pytest-xdist) (optional)
-- To choose which backends to run tests with, you can use the `--constructors` flag:
-  - To only run tests for pandas, Polars, and PyArrow, use `uv run pytest --constructors="pandas,pyarrow,polars[eager]"`
-  - To run tests for all CPU constructors, use `uv run --extra modin --extra pyspark pytest --all-cpu-constructors`
-  - By default, tests run for `pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis`. You can override this with the `NARWHALS_DEFAULT_CONSTRUCTORS` environment variable.
-  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_CONSTRUCTORS=pandas uv run --extra cudf --module cudf.pandas --module pytest`
-  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --constructors="polars[lazy]"`
+- To choose which backends to run tests with, you can use the `--nw-backends` flag:
+  - To only run tests for pandas, Polars, and PyArrow, use `uv run pytest --nw-backends="pandas,pyarrow,polars[eager]"`
+  - To run tests for all CPU constructors, use `uv run --extra modin --extra pyspark pytest --all-nw-backends`
+  - By default, tests run for the installed subset of `pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis`. You can override this with the `NARWHALS_DEFAULT_BACKENDS` environment variable.
+  - To run tests using `cudf.pandas`, run `NARWHALS_DEFAULT_BACKENDS=pandas uv run --extra cudf --module cudf.pandas --module pytest`
+  - To run tests using `polars[gpu]`, run `NARWHALS_POLARS_GPU=1 uv run pytest --nw-backends="polars[lazy]"`
 - To run all test with coverage, use `make test-full-coverage`
 
 Tip: passing extras (`--extra <name>`) or groups (`--group <name>`) to `uv run` will transparently sync the environment to include those dependencies before running the command.

@@ -21,7 +21,7 @@ def requires_time_support(
     Skip or mark tests as expected failures depending on backend capabilities,
     version, and pyarrow availability when testing Time dtype support.
     """
-    if constructor.__name__.startswith(("pandas", "modin")):
+    if str(constructor).startswith(("pandas", "modin")):
         if PANDAS_VERSION < (2, 2, 0):
             pytest.skip(
                 "pandas < 2.2.0 has no pyarrow dtype support (and therefore does not support the Time dtype)"

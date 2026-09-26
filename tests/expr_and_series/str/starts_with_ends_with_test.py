@@ -5,13 +5,10 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.conftest import modin_constructor, pandas_constructor
 from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 EXPR_UNSUPPORTED = ("dask", "pyarrow", "pandas", "modin", "cudf")
 data = {"a": ["fdas", "edfas"], "prefix_suffix": ["fda", "fas"]}
-
-NON_NULLABLE_CONSTRUCTORS = [pandas_constructor, modin_constructor]
 
 
 @pytest.mark.parametrize(
@@ -120,6 +117,11 @@ def test_starts_with_series_multi(
     assert_equal_data(result, {"a": expected})
 
 
+def _is_non_nullable(constructor: Constructor) -> bool:
+    # dask converts object columns to `string[pyarrow]`, which keeps nulls.
+    return constructor.nan_is_null and "dask" not in str(constructor)
+
+
 def test_starts_with_null(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3850
     data_with_null = {"a": ["x", "y", None, "z"]}
@@ -127,7 +129,7 @@ def test_starts_with_null(constructor: Constructor) -> None:
     result = df.select(nw.col("a").str.starts_with("x"))
 
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if _is_non_nullable(constructor):
         expected = {"a": [True, False, False, False]}
     else:
         expected = {"a": [True, False, None, False]}
@@ -142,7 +144,7 @@ def test_empty_pattern(constructor: Constructor, method: str) -> None:
     df = nw.from_native(constructor({"a": ["x", None, ""]}))
     result = df.select(getattr(nw.col("a").str, method)("").alias("match"))
     expected: dict[str, list[Any]]
-    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+    if _is_non_nullable(constructor):
         expected = {"match": [True, False, True]}
     else:
         expected = {"match": [True, None, True]}

@@ -387,11 +387,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/96/1a/d6d16babd0a5fe4c3fae40702158c570351694e74516d8d81b86c5637448/coverage-7.16.1-py3-none-any.whl", hash = "sha256:3d8bd4e58b6a5c2018d808f297905393c6c61da466a48c3f0596a76a4900ebe4", size = 215264, upload-time = "2026-09-13T19:12:18.895Z" },
 ]
 
-[package.optional-dependencies]
-toml = [
-    { name = "tomli", marker = "python_full_version <= '3.11' or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing')" },
-]
-
 [[package]]
 name = "cuda-bindings"
 version = "12.9.9"
@@ -2090,7 +2085,6 @@ core-tests = [
     { name = "pandas", version = "3.0.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-8-narwhals-cudf') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing')" },
     { name = "pandas", version = "3.0.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra != 'group-8-narwhals-extreme-not-so-old-versions') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra != 'group-8-narwhals-extreme-minimum-versions' and extra != 'group-8-narwhals-extreme-not-so-old-versions' and extra != 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing')" },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2100,7 +2094,6 @@ dev = [
     { name = "hypothesis" },
     { name = "prek" },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2116,7 +2109,6 @@ dev-core = [
     { name = "pandas", version = "3.0.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra != 'group-8-narwhals-extreme-not-so-old-versions') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra != 'group-8-narwhals-extreme-minimum-versions' and extra != 'group-8-narwhals-extreme-not-so-old-versions' and extra != 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing')" },
     { name = "prek" },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2147,7 +2139,6 @@ extreme-minimum-versions = [
     { name = "pyarrow", version = "13.0.0", source = { registry = "https://pypi.org/simple" } },
     { name = "pyarrow-stubs", version = "10.0.1.9", source = { registry = "https://pypi.org/simple" } },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2167,7 +2158,6 @@ extreme-not-so-old-versions = [
     { name = "pyarrow", version = "15.0.0", source = { registry = "https://pypi.org/simple" } },
     { name = "pyarrow-stubs", version = "10.0.1.9", source = { registry = "https://pypi.org/simple" } },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2186,7 +2176,6 @@ extreme-pretty-old-versions = [
     { name = "pyarrow", version = "14.0.0", source = { registry = "https://pypi.org/simple" } },
     { name = "pyarrow-stubs", version = "10.0.1.9", source = { registry = "https://pypi.org/simple" } },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2209,7 +2198,6 @@ local-dev = [
     { name = "pandas", version = "3.0.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra != 'group-8-narwhals-extreme-not-so-old-versions') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra != 'group-8-narwhals-extreme-minimum-versions' and extra != 'group-8-narwhals-extreme-not-so-old-versions' and extra != 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing')" },
     { name = "prek" },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2227,7 +2215,6 @@ min-pyspark-version = [
     { name = "pandas", version = "3.0.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra == 'extra-8-narwhals-dask' and extra != 'group-8-narwhals-extreme-not-so-old-versions') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-core-tests') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-dev-core') or (python_full_version >= '3.11' and extra != 'extra-8-narwhals-cudf' and extra != 'extra-8-narwhals-modin' and extra != 'group-8-narwhals-extreme-minimum-versions' and extra != 'group-8-narwhals-extreme-not-so-old-versions' and extra != 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-dask') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-cudf' and extra == 'extra-8-narwhals-pandas') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-cudf' and extra == 'group-8-narwhals-typing') or (extra == 'extra-8-narwhals-dask' and extra == 'extra-8-narwhals-modin') or (extra == 'extra-8-narwhals-dask' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'extra-8-narwhals-pandas') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-core-tests' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-dev-core' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-minimum-versions') or (extra == 'extra-8-narwhals-modin' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-not-so-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-minimum-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-extreme-pretty-old-versions') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-not-so-old-versions' and extra == 'group-8-narwhals-typing') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-local-dev') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-min-pyspark-version') or (extra == 'group-8-narwhals-extreme-pretty-old-versions' and extra == 'group-8-narwhals-typing')" },
     { name = "pyspark" },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2245,7 +2232,6 @@ tests = [
     { name = "covdefaults" },
     { name = "hypothesis" },
     { name = "pytest" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2300,7 +2286,6 @@ core-tests = [
     { name = "narwhals", extras = ["duckdb", "polars", "pyarrow", "sqlframe", "sql"] },
     { name = "pandas", specifier = ">=1.3.4" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2310,7 +2295,6 @@ dev = [
     { name = "hypothesis", specifier = ">=6.0.0" },
     { name = "prek" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2324,7 +2308,6 @@ dev-core = [
     { name = "pandas", specifier = ">=1.3.4" },
     { name = "prek" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2350,7 +2333,6 @@ extreme-minimum-versions = [
     { name = "pyarrow", specifier = "==13.0.0" },
     { name = "pyarrow-stubs", specifier = "<17" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2370,7 +2352,6 @@ extreme-not-so-old-versions = [
     { name = "pyarrow", specifier = "==15.0.0" },
     { name = "pyarrow-stubs", specifier = "<17" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2389,7 +2370,6 @@ extreme-pretty-old-versions = [
     { name = "pyarrow", specifier = "==14.0.0" },
     { name = "pyarrow-stubs", specifier = "<17" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2411,7 +2391,6 @@ local-dev = [
     { name = "pandas", specifier = ">=1.3.4" },
     { name = "prek" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2427,7 +2406,6 @@ min-pyspark-version = [
     { name = "pandas", specifier = ">=1.3.4" },
     { name = "pyspark", specifier = "==3.5.0" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -2438,7 +2416,6 @@ tests = [
     { name = "covdefaults" },
     { name = "hypothesis", specifier = ">=6.0.0" },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov" },
     { name = "pytest-env" },
     { name = "pytest-randomly" },
     { name = "pytest-xdist" },
@@ -4374,20 +4351,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
-]
-
-[[package]]
-name = "pytest-cov"
-version = "7.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "coverage", extra = ["toml"] },
-    { name = "pluggy" },
-    { name = "pytest" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/51/a849f96e117386044471c8ec2bd6cfebacda285da9525c9106aeb28da671/pytest_cov-7.1.0.tar.gz", hash = "sha256:30674f2b5f6351aa09702a9c8c364f6a01c27aae0c1366ae8016160d1efc56b2", size = 55592, upload-time = "2026-03-21T20:11:16.284Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/7a/d968e294073affff457b041c2be9868a40c1c71f4a35fcc1e45e5493067b/pytest_cov-7.1.0-py3-none-any.whl", hash = "sha256:a0461110b7865f9a271aa1b51e516c9a95de9d696734a2f71e3e78f46e1d4678", size = 22876, upload-time = "2026-03-21T20:11:14.438Z" },
 ]
 
 [[package]]

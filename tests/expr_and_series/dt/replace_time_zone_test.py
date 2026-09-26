@@ -7,13 +7,8 @@ from zoneinfo import ZoneInfo
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    Constructor,
-    assert_equal_data,
-    is_windows,
-    pyspark_session,
-)
+from narwhals.testing.constructors import pyspark_session
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager

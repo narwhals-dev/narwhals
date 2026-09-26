@@ -99,12 +99,12 @@ Full coverage runs are slow. While iterating:
 
 ```bash
 uv run pytest tests/path/to/test_file.py            # one file
-uv run pytest tests --constructors=pandas,polars[eager],pyarrow
-uv run pytest tests --all-cpu-constructors          # needs --extra modin --extra pyspark
+uv run pytest tests --nw-backends=pandas,polars[eager],pyarrow
+uv run pytest tests --all-nw-backends               # needs --extra modin --extra pyspark
 ```
 
-* Default constructors are `pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis`
-  (overridable via the `NARWHALS_DEFAULT_CONSTRUCTORS` env var).
+* Default backends are `pandas,pandas[pyarrow],polars[eager],pyarrow,duckdb,sqlframe,ibis`
+  (overridable via the `NARWHALS_DEFAULT_BACKENDS` env var).
 * Hypothesis tests are skipped unless you pass `--runslow`.
 * Dask and Modin are not in `local-dev`; add `--extra dask --extra modin` to test them locally.
 

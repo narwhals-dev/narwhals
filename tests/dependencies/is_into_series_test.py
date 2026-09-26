@@ -38,7 +38,7 @@ class ListBackedSeries:  # pragma: no cover
 
 
 def test_is_into_series(constructor_eager: ConstructorEager) -> None:
-    native_frame = constructor_eager(data)
+    native_frame = constructor_eager(data).to_native()
     nw_series = nw.from_native(native_frame)["a"]
     nw_v1_series = nw_v1.from_native(native_frame)["a"]
     nw_v2_series = nw_v2.from_native(native_frame)["a"]

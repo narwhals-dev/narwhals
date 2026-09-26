@@ -14,8 +14,8 @@ from tests.utils import PANDAS_VERSION
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals.typing import IntoDType
-    from tests.conftest import Data
+    from narwhals.testing.typing import Data
+    from narwhals.typing import IntoDType, IntoFrame
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -26,7 +26,7 @@ def _assertion_error(detail: str) -> pytest.RaisesExc:
 
 def test_check_narwhals_objects(constructor: Constructor) -> None:
     """Test that a type error is raised if the input is not a Narwhals object."""
-    frame = constructor({"a": [1, 2, 3]})
+    frame: IntoFrame = constructor({"a": [1, 2, 3]}).to_native()
     msg = re.escape(
         "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found"
     )
@@ -42,11 +42,11 @@ def test_implementation_mismatch() -> None:
     import pandas as pd
     import pyarrow as pa
 
+    left = nw.from_native(pd.DataFrame({"a": [1]}))
+    right = nw.from_native(pa.table({"a": [1]}))
+
     with _assertion_error("implementation mismatch"):
-        assert_frame_equal(
-            nw.from_native(pd.DataFrame({"a": [1]})),
-            nw.from_native(pa.table({"a": [1]})),  # type: ignore[type-var] # pyright: ignore[reportArgumentType]
-        )
+        assert_frame_equal(left, right)  # type: ignore[type-var] # pyright: ignore[reportArgumentType]
 
 
 def test_check_same_input_type(constructor_eager: ConstructorEager) -> None:

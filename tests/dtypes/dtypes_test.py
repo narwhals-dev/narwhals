@@ -9,13 +9,8 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, PerformanceWarning
-from tests.utils import (
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    assert_equal_hash,
-    pyspark_session,
-)
+from narwhals.testing.constructors import pyspark_session
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION, assert_equal_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

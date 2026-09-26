@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from narwhals.dtypes import DType
-    from tests.conftest import Data
+    from narwhals.testing.typing import Data
 
 
 @pytest.fixture(scope="module")

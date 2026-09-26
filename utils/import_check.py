@@ -27,6 +27,20 @@ ALLOWED_IMPORTS = {
     "_polars": {"polars"},
     "_duckdb": {"duckdb"},
     "_ibis": {"ibis", "ibis._", "ibis.expr.types"},
+    # narwhals.testing constructors deliberately lazy-import every supported
+    # backend inside `__call__` so test fixtures can build native frames.
+    "testing": {
+        "cudf",
+        "dask",
+        "dask.dataframe",
+        "duckdb",
+        "ibis",
+        "modin",
+        "pandas",
+        "polars",
+        "pyarrow",
+        "pyspark",
+    },
 }
 
 
