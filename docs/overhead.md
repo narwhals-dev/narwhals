@@ -6,15 +6,17 @@ So, what's the overhead of running "pandas" vs "pandas via Narwhals"?
 
 Based on experiments we've done, the answer is: it's negligible.
 Sometimes it's even negative, because of how careful we are in Narwhals
-to avoid unnecessary copies and index resets. Here are timings from the
-TPC-H queries, comparing running pandas directly vs running pandas via Narwhals:
+to avoid unnecessary copies and index resets.
 
-[Complete code to reproduce](https://www.kaggle.com/code/marcogorelli/narwhals-vs-pandas-overhead-tpc-h-s2).
+We measure this on the TPC-H queries, timing pandas written by hand against the same
+queries written with Narwhals. The
+[complete code to reproduce](https://www.kaggle.com/code/marcogorelli/narwhals-vs-pandas-overhead-tpc-h-s2)
+is published as a notebook.
 
-This comparison is also run as a regression test in CI, see
-[`tpch/tests/overhead_test.py`](https://github.com/narwhals-dev/narwhals/blob/main/tpch/tests/overhead_test.py):
-it fails if pandas via Narwhals ever becomes meaningfully slower than native pandas
-for the same TPC-H queries.
+The comparison also runs as a regression test in CI, in
+[`tpch/tests/overhead_test.py`](https://github.com/narwhals-dev/narwhals/blob/main/tpch/tests/overhead_test.py).
+It takes the best of five runs for each of the first four TPC-H queries, and fails if
+pandas via Narwhals is more than 1.5x slower than pandas on its own.
 
 ## Plotly's story
 
