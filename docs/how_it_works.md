@@ -71,10 +71,7 @@ import narwhals as nw
 from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals.utils import Implementation, Version
 
-pn = PandasLikeNamespace(
-    implementation=Implementation.PANDAS,
-    version=Version.MAIN,
-)
+pn = PandasLikeNamespace(implementation=Implementation.PANDAS, version=Version.MAIN)
 print(nw.col("a")._to_compliant_expr(pn))
 ```
 
@@ -98,10 +95,7 @@ from narwhals._pandas_like.dataframe import PandasLikeDataFrame
 from narwhals.utils import Implementation, Version
 import pandas as pd
 
-pn = PandasLikeNamespace(
-    implementation=Implementation.PANDAS,
-    version=Version.MAIN,
-)
+pn = PandasLikeNamespace(implementation=Implementation.PANDAS, version=Version.MAIN)
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 df = PandasLikeDataFrame(
@@ -203,10 +197,7 @@ from narwhals._pandas_like.namespace import PandasLikeNamespace
 from narwhals.utils import Implementation, Version
 import pandas as pd
 
-pn = PandasLikeNamespace(
-    implementation=Implementation.PANDAS,
-    version=Version.MAIN,
-)
+pn = PandasLikeNamespace(implementation=Implementation.PANDAS, version=Version.MAIN)
 
 df_pd = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
 df = nw.from_native(df_pd)
@@ -217,10 +208,7 @@ The first thing `narwhals.DataFrame.select` does is to parse each input expressi
 backend, and it does so by passing a Narwhals-compliant namespace to `nw.Expr._to_compliant_expr`:
 
 ```python exec="yes" result="python" session="pandas_api_mapping" source="above"
-pn = PandasLikeNamespace(
-    implementation=Implementation.PANDAS,
-    version=Version.MAIN,
-)
+pn = PandasLikeNamespace(implementation=Implementation.PANDAS, version=Version.MAIN)
 expr = (nw.col("a") + 1)._to_compliant_expr(pn)
 print(expr)
 ```

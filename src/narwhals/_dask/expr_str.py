@@ -6,7 +6,7 @@ import dask.dataframe as dd
 
 from narwhals._compliant import LazyExprNamespace
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._utils import not_implemented
+from narwhals._utils import not_implemented, str_slice_stop
 
 if TYPE_CHECKING:
     import dask.dataframe.dask_expr as dx
@@ -21,6 +21,8 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int
     ) -> DaskExpr:
+        if n == 0:
+            return self.compliant
         if not value._metadata.is_literal:
             msg = "dask backed `Expr.str.replace` only supports str replacement values"
             raise TypeError(msg)
@@ -87,10 +89,9 @@ class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["Da
         )
 
     def slice(self, offset: int, length: int | None) -> DaskExpr:
+        stop = str_slice_stop(offset, length)
         return self.compliant._with_callable(
-            lambda expr: expr.str.slice(
-                start=offset, stop=offset + length if length else None
-            )
+            lambda expr: expr.str.slice(start=offset, stop=stop)
         )
 
     def split(self, by: str) -> DaskExpr:

@@ -10,10 +10,12 @@ Say this is the function under test:
 
 ```python exec="yes" source="above" session="how-to-testing"
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-def with_total(df_native: IntoFrameT) -> IntoFrameT:
+def with_total(
+    df_native: IntoDataFrameT | IntoLazyFrameT,
+) -> IntoDataFrameT | IntoLazyFrameT:
     return (
         nw.from_native(df_native)
         .with_columns(total=nw.col("price") * nw.col("quantity"))

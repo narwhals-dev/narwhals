@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    assert_equal_data,
+    uses_pyarrow_backend,
+)
 
 pytest.importorskip("pyarrow")
 
@@ -70,6 +76,80 @@ def test_concat_str_with_lit(constructor: Constructor) -> None:
     result = df.with_columns(b=nw.concat_str("a", nw.lit("ab")))
     expected = {"a": ["cat", "dog", "pig"], "b": ["catab", "dogab", "pigab"]}
     assert_equal_data(result, expected)
+
+
+def test_concat_str_single_input(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"i": [0, 1], "b": ["a", None]}))
+    result = df.select("i", nw.concat_str("b", separator=" ").alias("r")).sort("i")
+    assert_equal_data(result.select("r"), {"r": ["a", None]})
+
+
+def test_concat_str_nullable_boolean(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    # Plain pandas (and dask, and non-pyarrow modin) infer `object` dtype for
+    # mixed bool/null columns, where bools are indistinguishable from `"True"`
+    # strings. Pyarrow-backed frames keep a boolean dtype and render lowercase.
+    if (
+        "pandas_constructor" in str(constructor)
+        or "dask" in str(constructor)
+        or ("modin" in str(constructor) and not uses_pyarrow_backend(constructor))
+    ):
+        request.applymarker(pytest.mark.xfail(reason="object-dtype bools"))
+    df = nw.from_native(constructor({"bo": [True, None], "b": ["x", "y"]}))
+    result = df.select(nw.concat_str(["bo", "b"], separator=" ").alias("out"))
+    assert_equal_data(result, {"out": ["true x", None]})
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_boolean(constructor: Constructor, *, ignore_nulls: bool) -> None:
+    df = nw.from_native(
+        constructor({"i": [0, 1], "bo": [True, False], "s": ["True", "False"]})
+    )
+    result = df.with_columns(
+        out=nw.concat_str("bo", "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": ["true-True", "false-False"]})
+
+
+@pytest.mark.parametrize("dtype", ["boolean", "bool[pyarrow]"])
+@pytest.mark.parametrize("npartitions", [1, 2])
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (True, ["true-True", "false-False", "None", ""]),
+        (False, ["true-True", "false-False", None, None]),
+    ],
+)
+def test_concat_str_dask_nullable_boolean(
+    dtype: str, npartitions: int, *, ignore_nulls: bool, expected: list[str | None]
+) -> None:
+    dd = pytest.importorskip("dask.dataframe")
+    import pandas as pd
+
+    native = pd.DataFrame(
+        {
+            "i": [0, 1, 2, 3],
+            "bo": pd.Series([True, False, None, None], dtype=dtype, index=[4, 1, 8, 2]),
+            "s": ["True", "False", "None", None],
+        },
+        index=[4, 1, 8, 2],
+    )
+    df = nw.from_native(dd.from_pandas(native, npartitions=npartitions).clear_divisions())
+    result = df.with_columns(
+        out=nw.concat_str("bo", "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": expected})
+
+
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_boolean_lit(constructor: Constructor, *, ignore_nulls: bool) -> None:
+    # Lowercasing a boolean literal must not drop `PandasLikeSeries._broadcast`.
+    df = nw.from_native(constructor({"i": [0, 1], "s": ["x", "y"]}))
+    result = df.with_columns(
+        out=nw.concat_str(nw.lit(True), "s", separator="-", ignore_nulls=ignore_nulls)
+    ).sort("i")
+    assert_equal_data(result.select("out"), {"out": ["true-x", "true-y"]})
 
 
 @pytest.mark.parametrize(
@@ -141,3 +221,67 @@ def test_concat_str_with_large_string() -> None:
     assert_equal_data(result, expected)
     result = nw.from_native(native_pd).with_columns(expr)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("exprs", "expected", "expected_nulls"),
+    [
+        (
+            (nw.col("b"), nw.lit("!")),
+            ["dogs-!", "cats-!", "!"],
+            ["dogs-!", "cats-!", None],
+        ),
+        (
+            (nw.lit("!"), nw.col("b"), nw.col("c")),
+            ["!-dogs-play", "!-cats-swim", "!-walk"],
+            ["!-dogs-play", "!-cats-swim", None],
+        ),
+        (
+            (nw.col("c"), nw.lit(None, nw.String())),
+            ["play", "swim", "walk"],
+            [None, None, None],
+        ),
+    ],
+    ids=["lit_last", "lit_first", "null_lit"],
+)
+@pytest.mark.parametrize("ignore_nulls", [True, False])
+def test_concat_str_with_lit_and_nulls(
+    constructor: Constructor,
+    exprs: tuple[nw.Expr, ...],
+    expected: list[str],
+    expected_nulls: list[str | None],
+    *,
+    ignore_nulls: bool,
+) -> None:
+    # `concat_str` zips series by hand, so a literal among the inputs only works
+    # if the elementwise ops it routes through carry the `_broadcast` flag.
+    df = nw.from_native(constructor(data))
+    expr = nw.concat_str(*exprs, separator="-", ignore_nulls=ignore_nulls).alias("r")
+    result = df.select("a", expr).sort("a")
+    assert_equal_data(
+        result.select("r"), {"r": expected if ignore_nulls else expected_nulls}
+    )
+
+
+@pytest.mark.parametrize(
+    ("ignore_nulls", "expected"),
+    [
+        (True, ["x-1-A", "2-B", "z-C", "", "p-q"]),
+        (False, ["x-1-A", None, None, None, None]),
+    ],
+)
+def test_concat_str_nulls_in_every_position(
+    constructor: Constructor, *, ignore_nulls: bool, expected: list[str | None]
+) -> None:
+    # A trailing null must not leave a dangling separator behind (#3962), and an
+    # all-null row must stay in the output as an empty string (#3965).
+    data = {
+        "i": [0, 1, 2, 3, 4],
+        "a": ["x", None, "z", None, "p"],
+        "b": ["1", "2", None, None, "q"],
+        "c": ["A", "B", "C", None, None],
+    }
+    df = nw.from_native(constructor(data))
+    expr = nw.concat_str("a", "b", "c", separator="-", ignore_nulls=ignore_nulls)
+    result = df.with_columns(expr).sort("i").select("a")
+    assert_equal_data(result, {"a": expected})

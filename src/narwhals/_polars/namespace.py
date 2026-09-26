@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import operator
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
@@ -12,7 +11,13 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     narwhals_to_native_dtype,
 )
-from narwhals._utils import Implementation, Version, isinstance_or_issubclass, requires
+from narwhals._utils import (
+    Implementation,
+    Version,
+    is_file_like,
+    isinstance_or_issubclass,
+    requires,
+)
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
@@ -26,7 +31,13 @@ if TYPE_CHECKING:
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
     from narwhals._utils import _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, NormalizedPath, TimeUnit, _2DArray
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        NormalizedSource,
+        TimeUnit,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -115,23 +126,37 @@ class PolarsNamespace:
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
 
+    def _read_eagerly(self, source: NormalizedSource, /) -> bool:
+        """`pl.scan_*` only accepts a file-like object from `1.7.0` onwards."""
+        return is_file_like(source) and self._backend_version < (1, 7)
+
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PolarsDataFrame:
         native = pl.read_csv(source, separator=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PolarsLazyFrame:
-        native = pl.scan_csv(source, separator=separator, **kwds)
+        native = (
+            pl.read_csv(source, separator=separator, **kwds).lazy()
+            if self._read_eagerly(source)
+            else pl.scan_csv(source, separator=separator, **kwds)
+        )
         return self._lazyframe.from_native(native, context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PolarsDataFrame:
-        return self._dataframe.from_native(pl.read_parquet(source, **kwds), context=self)
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsDataFrame:
+        native = pl.read_parquet(cast("Any", source), **kwds)
+        return self._dataframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> PolarsLazyFrame:
-        return self._lazyframe.from_native(pl.scan_parquet(source, **kwds), context=self)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsLazyFrame:
+        native = (
+            pl.read_parquet(cast("Any", source), **kwds).lazy()
+            if self._read_eagerly(source)
+            else pl.scan_parquet(cast("Any", source), **kwds)
+        )
+        return self._lazyframe.from_native(native, context=self)
 
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."
@@ -211,19 +236,20 @@ class PolarsNamespace:
                 )
                 result = pl.when(~null_mask_result).then(output_expr)
             else:
+                # NOTE: Cast after `when` so a boolean literal is broadcast first:
+                # casting a scalar boolean literal renders `"1"` on old Polars.
                 init_value, *values = [
-                    pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
+                    pl.when(~nm).then(expr).cast(pl.String()).fill_null(pl.lit(""))
                     for expr, nm in zip(pl_exprs, null_mask, strict=True)
                 ]
-                separators = [
-                    pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
-                ]
-
-                result = pl.fold(
-                    acc=init_value,
-                    function=operator.add,
-                    exprs=[s + v for s, v in zip(separators, values, strict=True)],
-                )
+                result, seen = init_value, ~null_mask[0]
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    sep_or_empty = (
+                        pl.when(seen & not_null).then(sep).otherwise(pl.lit(""))
+                    )
+                    result = result + sep_or_empty + value
+                    seen = seen | not_null
 
             return self._expr(result, version=self._version)
 

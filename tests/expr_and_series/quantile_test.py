@@ -7,7 +7,13 @@ from typing import Literal
 import pytest
 
 import narwhals as nw
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    maybe_collect,
+)
 
 
 @pytest.mark.parametrize(
@@ -49,6 +55,55 @@ def test_quantile_expr(
     with context:
         result = df.select(nw.all().quantile(quantile=q, interpolation=interpolation))
         assert_equal_data(result, expected)
+
+
+def test_quantile_boundaries_expr(constructor: Constructor) -> None:
+    msg = re.escape(
+        "`Expr.quantile` is not supported for Dask backend with multiple partitions."
+    )
+    context = (
+        pytest.raises(NotImplementedError, match=msg)
+        if "dask_lazy_p2" in str(constructor)
+        else does_not_raise()
+    )
+    with context:
+        df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
+        result = df.select(
+            nw.col("a").quantile(0.0, "linear").alias("min"),
+            nw.col("a").quantile(1.0, "linear").alias("max"),
+        )
+        assert_equal_data(result, {"min": [1.0], "max": [4.0]})
+
+
+def test_quantile_out_of_bounds_raises(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2, 3]}))
+    expr = nw.col("a").quantile(1.5, "linear")
+    # Broad `Exception`: error types differ per backend.
+    with pytest.raises(Exception):  # noqa: B017, PT011
+        maybe_collect(df.select(expr))
+
+
+def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
+        request.applymarker(pytest.mark.xfail(reason="NaN handling"))
+    if (
+        "duckdb" in str(constructor) or "sqlframe" in str(constructor)
+    ) and DUCKDB_VERSION < (1, 3, 1):
+        request.applymarker(pytest.mark.xfail(reason="old duckdb NaN handling"))
+    df = nw.from_native(constructor({"a": [1.0, float("nan"), 2.0]}))
+    result = df.select(nw.col("a").quantile(0.5, "linear").alias("q"))
+    assert_equal_data(result, {"q": [2.0]})
+
+
+def test_quantile_inf(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if any(
+        x in str(constructor)
+        for x in ("pandas_constructor", "pandas_nullable_constructor", "dask", "cudf")
+    ):
+        request.applymarker(pytest.mark.xfail(reason="inf handling"))
+    df = nw.from_native(constructor({"a": [1.0, float("inf"), 2.0]}))
+    result = df.select(nw.col("a").quantile(0.5, "linear").alias("q"))
+    assert_equal_data(result, {"q": [2.0]})
 
 
 def test_quantile_expr_group_by(

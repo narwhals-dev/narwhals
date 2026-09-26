@@ -12,11 +12,13 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     NUMPY_VERSION,
+    PANDAS_VERSION,
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    is_pandas_or_modin,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -324,7 +326,20 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
-        return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
+        result = self.native.astype(pd_dtype)
+        if (
+            pd_dtype is str
+            and is_pandas_or_modin(self._implementation)
+            and PANDAS_VERSION < (3,)
+            and (null_mask := self.native.isna()).any()
+        ):
+            # NOTE: pandas<3.0.0, `astype(str)` renders nulls as `'None'` / `'nan'`
+            # instead of keeping them null. Newer versions cast to a string dtype which
+            # preserves them, and cuDF's string conversions keep the null mask,
+            # so in neither case is there anything to restore.
+            # NOTE: `astype` already returned a new object, so mask it in place.
+            result.mask(null_mask, None, inplace=True)  # noqa: PD002
+        return self._with_native(result, preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
@@ -1325,7 +1340,12 @@ class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
         count = categories.value_counts(dropna=True, sort=False).reindex(
             categories.cat.categories, fill_value=0
         )
-        count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        impl = self._series._implementation
+        if impl.is_pandas() and impl._backend_version() < (3, 0):  # pragma: no cover
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        else:
+            count = count.reset_index(drop=True)
         if self._breakpoint:
             return {"breakpoint": bins[1:], "count": count}
         return {"count": count}

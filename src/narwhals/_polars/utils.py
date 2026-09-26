@@ -343,6 +343,9 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     @abc.abstractmethod
     def zfill(self, width: int) -> CompliantT: ...
 
+    @abc.abstractmethod
+    def slice(self, offset: int, length: int | None) -> CompliantT: ...
+
     len_chars: Method[CompliantT]
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
@@ -352,7 +355,6 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]
-    slice: Method[CompliantT]
     split: Method[CompliantT]
     to_date: Method[CompliantT]
     to_datetime: Method[CompliantT]
@@ -363,9 +365,24 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     pad_end: Method[CompliantT]
 
 
+def native_get_categories(native: pl.Series) -> pl.Series:
+    # NOTE: Polars deprecated `cat.get_categories` in v1.44 and removed it
+    # in v2.0, so we use the workaround they suggest.
+    # See https://github.com/narwhals-dev/narwhals/issues/3895.
+    #
+    # For `Enum`, the declared categories are already unique, ordered, and
+    # null-free, so we can return `dtype.categories` directly.
+    dtype = native.dtype
+    if isinstance(dtype, pl.Enum):
+        return dtype.categories
+    return native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+
+
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "cat"
-    get_categories: Method[CompliantT]
+
+    @abc.abstractmethod
+    def get_categories(self) -> CompliantT: ...
 
 
 class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

@@ -32,19 +32,18 @@ Check how different tools distinguish them (or don't) in the following example:
 ```python exec="yes" source="above" session="null_handling"
 import narwhals as nw
 import numpy as np
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 data = {"a": [1.0, 0.0, None]}
 
 
-def check_null_behavior(df: IntoFrameT) -> IntoFrameT:
+def check_null_behavior(
+    df: IntoDataFrameT | IntoLazyFrameT,
+) -> IntoDataFrameT | IntoLazyFrameT:
     return (
         nw.from_native(df)
         .with_columns(a=nw.col("a") / nw.col("a"))
-        .with_columns(
-            a_is_null=nw.col("a").is_null(),
-            a_is_nan=nw.col("a").is_nan(),
-        )
+        .with_columns(a_is_null=nw.col("a").is_null(), a_is_nan=nw.col("a").is_nan())
     ).to_native()
 ```
 
@@ -94,12 +93,14 @@ For example, if you do `nw.col('a')*2`, then:
 
 ```python exec="yes" source="above" session="null-preservation"
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 data = {"a": [1.4, None, 4.2]}
 
 
-def multiplication(df: IntoFrameT) -> IntoFrameT:
+def multiplication(
+    df: IntoDataFrameT | IntoLazyFrameT,
+) -> IntoDataFrameT | IntoLazyFrameT:
     return nw.from_native(df).with_columns((nw.col("a") * 2).alias("a*2")).to_native()
 ```
 

@@ -22,12 +22,12 @@ away anyway.
 
 ```python exec="yes" source="above" session="boolean"
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 data = {"a": [1.4, None, 4.2]}
 
 
-def comparison(df: IntoFrameT) -> IntoFrameT:
+def comparison(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
     return nw.from_native(df).with_columns((nw.col("a") > 2).alias("a>2")).to_native()
 ```
 

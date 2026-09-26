@@ -65,13 +65,15 @@ We're going to take in a dataframe, and return a dataframe of the same type:
     ```py
     from typing import Self
     import narwhals as nw
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
     class StandardScaler:
         ...
 
-        def transform(self, df: IntoFrameT) -> IntoFrameT:
+        def transform(
+            self, df: IntoDataFrameT | IntoLazyFrameT
+        ) -> IntoDataFrameT | IntoLazyFrameT:
             df_nw = nw.from_native(df)
             return df_nw.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
@@ -110,7 +112,7 @@ Here is our dataframe-agnostic standard scaler:
     from typing import Self
     import narwhals as nw
     from narwhals.typing import IntoDataFrameT
-    from narwhals.typing import IntoFrameT
+    from narwhals.typing import IntoLazyFrameT
 
 
     class StandardScaler:
@@ -121,7 +123,9 @@ Here is our dataframe-agnostic standard scaler:
             self._columns = df_nw.columns
             return self
 
-        def transform(self, df: IntoFrameT) -> IntoFrameT:
+        def transform(
+            self, df: IntoDataFrameT | IntoLazyFrameT
+        ) -> IntoDataFrameT | IntoLazyFrameT:
             df_nw = nw.from_native(df)
             return df_nw.with_columns(
                 (nw.col(col) - self._means[col]) / self._std_devs[col]
