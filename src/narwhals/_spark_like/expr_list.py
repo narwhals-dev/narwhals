@@ -29,7 +29,9 @@ class SparkLikeExprListNamespace(
     def contains(self, item: NonNestedLiteral) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            return F.array_contains(expr, F.lit(item))
+            # Spark returns null instead of false when there is no match and the list
+            # holds a null element.
+            return F.array_contains(F.array_compact(expr), F.lit(item))
 
         return self.compliant._with_elementwise(func)
 

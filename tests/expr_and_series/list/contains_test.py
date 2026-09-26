@@ -26,6 +26,19 @@ def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor)
     assert_equal_data(result, expected)
 
 
+def test_contains_no_match_with_null_elements_expr(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [[1, None], [None], [2, None], None]}))
+    result = df.select(nw.col("a").cast(nw.List(nw.Int32())).list.contains(2))
+    assert_equal_data(result, {"a": [False, False, True, None]})
+
+
 def test_contains_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
