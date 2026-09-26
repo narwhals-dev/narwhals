@@ -20,7 +20,7 @@ from narwhals._utils import (
     is_eager_allowed,
     is_nested_literal,
     is_sequence_of,
-    normalize_path,
+    normalize_source,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -636,7 +636,9 @@ def read_csv(
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -663,7 +665,7 @@ def read_csv(
     impl = Implementation.from_backend(backend)
     if is_eager_allowed(impl):
         ns = Version.MAIN.namespace.from_backend(impl).compliant
-        frame = ns.read_csv(normalize_path(source), separator=separator, **kwargs)
+        frame = ns.read_csv(normalize_source(source), separator=separator, **kwargs)
         return frame.to_narwhals()
     if impl is Implementation.UNKNOWN:  # pragma: no cover
         native_namespace = impl.to_native_namespace()
@@ -715,7 +717,9 @@ def scan_csv(
         is what makes concurrent reads safe, see [thread safety](../concepts/thread_safety.md).
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -756,7 +760,7 @@ def scan_csv(
             raise AttributeError(msg) from e
         return from_native(native_frame).lazy()
     ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_csv(normalize_path(source), separator=separator, **kwargs)
+    frame = ns.scan_csv(normalize_source(source), separator=separator, **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
@@ -767,7 +771,9 @@ def read_parquet(
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -798,7 +804,7 @@ def read_parquet(
     impl = Implementation.from_backend(backend)
     if is_eager_allowed(impl):
         ns = Version.MAIN.namespace.from_backend(impl).compliant
-        frame = ns.read_parquet(normalize_path(source), **kwargs)
+        frame = ns.read_parquet(normalize_source(source), **kwargs)
         return frame.to_narwhals()
     if impl is Implementation.UNKNOWN:  # pragma: no cover
         native_namespace = impl.to_native_namespace()
@@ -846,7 +852,9 @@ def scan_parquet(
         is what makes concurrent reads safe, see [thread safety](../concepts/thread_safety.md).
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -901,7 +909,7 @@ def scan_parquet(
             raise AttributeError(msg) from e
         return from_native(native_frame).lazy()
     ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_parquet(normalize_path(source), **kwargs)
+    frame = ns.scan_parquet(normalize_source(source), **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 

@@ -340,13 +340,21 @@ Examples:
 IntoFrameT = TypeVar("IntoFrameT", bound=IntoFrame)
 """TypeVar bound to object convertible to Narwhals DataFrame or Narwhals LazyFrame.
 
+Warning:
+    Prefer `IntoDataFrameT | IntoLazyFrameT` over `IntoFrameT`. As `IntoFrameT` is
+    bound to a union of eager and lazy native objects, it can lead to overlapping
+    `@overload`s and cause type checkers to report ambiguous or inconsistent
+    overloads on functions which use it.
+
 Use this if your function accepts an object which is convertible to `nw.DataFrame`
 or `nw.LazyFrame` and returns an object of the same type.
 
 Examples:
     >>> import narwhals as nw
-    >>> from narwhals.typing import IntoFrameT
-    >>> def agnostic_func(df_native: IntoFrameT) -> IntoFrameT:
+    >>> from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
+    >>> def agnostic_func(
+    ...     df_native: IntoDataFrameT | IntoLazyFrameT,
+    ... ) -> IntoDataFrameT | IntoLazyFrameT:
     ...     df = nw.from_native(df_native)
     ...     return df.with_columns(c=nw.col("a") + 1).to_native()
 """

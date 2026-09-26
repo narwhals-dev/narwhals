@@ -131,9 +131,7 @@ class PandasLikeDataFrame(
             if implementation._backend_version() >= (0, 26, 0):
                 from modin.pandas.io import from_arrow as mpd_from_arrow
             else:  # pragma: no cover
-                from modin.pandas.utils import (
-                    from_arrow as mpd_from_arrow,  # pyright: ignore[reportAttributeAccessIssue]
-                )
+                from modin.pandas.utils import from_arrow as mpd_from_arrow  # pyright: ignore[reportAttributeAccessIssue]
             native = mpd_from_arrow(tbl)
         elif implementation.is_cudf():  # pragma: no cover
             native = implementation.to_native_namespace().DataFrame.from_arrow(tbl)

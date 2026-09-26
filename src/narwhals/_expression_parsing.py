@@ -200,10 +200,10 @@ class ExpansionKind(Enum):
     """e.g. `nw.col('a'), nw.sum_horizontal(nw.all())`"""
 
     MULTI_NAMED = auto()
-    """e.g. `nw.col('a', 'b')`"""
+    """e.g. `nw.col('a', 'b')`, `nw.nth(0, 1)`"""
 
     MULTI_UNNAMED = auto()
-    """e.g. `nw.all()`, nw.nth(0, 1)"""
+    """e.g. `nw.all()`, `nw.selectors.numeric()`"""
 
     def is_multi_unnamed(self) -> bool:
         return self is ExpansionKind.MULTI_UNNAMED
