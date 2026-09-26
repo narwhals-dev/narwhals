@@ -35,6 +35,28 @@ def test_cum_count_series(constructor_eager: ConstructorEager) -> None:
 
 
 @pytest.mark.parametrize(
+    ("values", "expected_values"),
+    [
+        (["x", "y", "z"], [3, 2, 1]),
+        (["x", None, None, "y"], [2, 1, 1, 1]),
+        (["x", None, None], [1, 0, 0]),
+        ([None, None], [0, 0]),
+        (["x"], [1]),
+    ],
+)
+def test_cum_count_reverse_null_counts(
+    constructor_eager: ConstructorEager,
+    values: list[str | None],
+    expected_values: list[int],
+) -> None:
+    df = nw.from_native(constructor_eager({"a": values}), eager_only=True)
+    result = df.select(nw.col("a").cum_count(reverse=True))
+    assert_equal_data(result, {"a": expected_values})
+    result = df.select(df["a"].cum_count(reverse=True))
+    assert_equal_data(result, {"a": expected_values})
+
+
+@pytest.mark.parametrize(
     ("reverse", "expected_a"), [(False, [1, 1, 2]), (True, [1, 2, 1])]
 )
 def test_lazy_cum_count_grouped(
@@ -79,4 +101,34 @@ def test_lazy_cum_count_grouped(
         "i ran": [0, 1, 2],
         "g": [1, 1, 1],
     }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("reverse", "expected_a"), [(False, [3, 0, 1, 0, 2]), (True, [1, 3, 3, 3, 2])]
+)
+def test_lazy_cum_count_ungrouped(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    *,
+    reverse: bool,
+    expected_a: list[int],
+) -> None:
+    if "dask" in str(constructor) and reverse:
+        # https://github.com/dask/dask/issues/11802
+        request.applymarker(pytest.mark.xfail)
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    ):
+        pytest.skip(reason="too old version")
+
+    df = nw.from_native(
+        constructor(
+            {"a": [1, None, 3, None, 5], "b": [4, 0, 2, 1, 3], "i": [0, 1, 2, 3, 4]}
+        )
+    ).sort("i")
+    result = df.with_columns(
+        nw.col("a").cum_count(reverse=reverse).over(order_by="b")
+    ).sort("i")
+    expected = {"a": expected_a, "b": [4, 0, 2, 1, 3], "i": [0, 1, 2, 3, 4]}
     assert_equal_data(result, expected)
