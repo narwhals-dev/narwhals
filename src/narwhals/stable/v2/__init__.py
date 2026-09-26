@@ -55,12 +55,14 @@ from narwhals.dtypes import (
 )
 from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, show_versions
+from narwhals.functions import _new_series_impl, show_versions
 from narwhals.schema import Schema as NwSchema
+from narwhals.selectors import Selector as NwSelector
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.stable.v2.typing import (
     DataFrameT,
+    FrameT,
     IntoDataFrameT,
     IntoFrame,
     IntoLazyFrameT,
@@ -97,6 +99,8 @@ if TYPE_CHECKING:
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
     from narwhals.typing import (
+        ConcatMethod,
+        FileSource,
         IntoDType,
         IntoExpr,
         IntoSchema,
@@ -333,6 +337,8 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
+    _version = Version.V2
+
     def any_value(self, *, ignore_nulls: bool = False) -> Self:
         msg = (
             "`Expr.any_value` is being called from the stable API although considered "
@@ -350,6 +356,11 @@ class Expr(NwExpr):
     def last(self) -> Self:  # type: ignore[override]
         """Get the last value."""
         return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
+
+
+class Selector(NwSelector, Expr):
+    def _to_expr(self) -> Expr:
+        return Expr(*self._nodes)
 
 
 class Schema(NwSchema):
@@ -926,6 +937,30 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When.from_when(nw_f.when(*predicates))
 
 
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
+
+    Arguments:
+        items: DataFrames, LazyFrames to concatenate.
+        how: concatenating strategy
+
+            - vertical: Concatenate vertically. Column names must match.
+            - horizontal: Concatenate horizontally. If lengths don't match, then
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
+
+    Raises:
+        TypeError: The items to concatenate should either all be eager, or all lazy
+    """
+    # `pyrefly` rejects the union `_stableify` returns while `FrameT` is still
+    # unsolved; `mypy` solves per-constraint and calls the cast redundant, hence
+    # the ignore. CI cannot catch removal of either, because `pyrefly check` only
+    # covers `tests`. Verify with: `pyrefly check src/narwhals/stable/v2/__init__.py`
+    return cast("FrameT", _stableify(nw_f.concat(items, how=how)))  # type: ignore[redundant-cast]
+
+
 def new_series(
     name: str,
     values: Any,
@@ -1040,7 +1075,7 @@ def from_numpy(
 
 
 def read_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[EagerAllowed | PluginName],
     separator: str = ",",
@@ -1049,7 +1084,9 @@ def read_csv(
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1068,7 +1105,7 @@ def read_csv(
 
 
 def scan_csv(
-    source: str,
+    source: FileSource,
     *,
     backend: IntoBackend[Backend | PluginName],
     separator: str = ",",
@@ -1080,7 +1117,9 @@ def scan_csv(
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1099,12 +1138,14 @@ def scan_csv(
 
 
 def read_parquet(
-    source: str, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1120,7 +1161,7 @@ def read_parquet(
 
 
 def scan_parquet(
-    source: str, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -1140,7 +1181,9 @@ def scan_parquet(
         ```
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 

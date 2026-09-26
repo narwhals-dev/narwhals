@@ -5,7 +5,7 @@ build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.25.0"
+version = "2.26.0"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
@@ -90,8 +90,8 @@ sklearn = [
 ]
 typing = [
   # Type checkers
-  "mypy>=2.1.0",
-  "pyrefly>=1.2.0",
+  "mypy",
+  "pyrefly",
   "pyright",
   # Dependencies
   "hypothesis>=6.0.0",

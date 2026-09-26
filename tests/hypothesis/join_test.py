@@ -66,12 +66,12 @@ def test_join(  # pragma: no cover
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
     dframe_pd1 = dframe_pd1.sort_values(
-        by=dframe_pd1.columns.to_list(), ignore_index=True, inplace=False
+        by=dframe_pd1.columns.to_list(), ignore_index=True
     )
 
     dframe_pd2 = nw.to_native(dframe_pd)
     dframe_pd2 = dframe_pd2.sort_values(
-        by=dframe_pd2.columns.to_list(), ignore_index=True, inplace=False
+        by=dframe_pd2.columns.to_list(), ignore_index=True
     )
 
     assert_frame_equal(dframe_pd1, dframe_pd2)
@@ -110,12 +110,12 @@ def test_cross_join(  # pragma: no cover
 
     dframe_pd1 = nw.to_native(dframe_pl).to_pandas()
     dframe_pd1 = dframe_pd1.sort_values(
-        by=dframe_pd1.columns.to_list(), ignore_index=True, inplace=False
+        by=dframe_pd1.columns.to_list(), ignore_index=True
     )
 
     dframe_pd2 = nw.to_native(dframe_pd)
     dframe_pd2 = dframe_pd2.sort_values(
-        by=dframe_pd2.columns.to_list(), ignore_index=True, inplace=False
+        by=dframe_pd2.columns.to_list(), ignore_index=True
     )
 
     assert_frame_equal(dframe_pd1, dframe_pd2)
