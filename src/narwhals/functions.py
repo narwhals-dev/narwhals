@@ -22,7 +22,7 @@ from narwhals._utils import (
     is_into_plugin,
     is_nested_literal,
     is_sequence_of,
-    normalize_path,
+    normalize_source,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -60,7 +60,7 @@ if TYPE_CHECKING:
         IntoSchema,
         IOMethodName,
         NonNestedLiteral,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
         _2DArray,
     )
@@ -563,7 +563,7 @@ def _io_method(
     /,
     *,
     version: Version,
-) -> Callable[Concatenate[NormalizedPath, ...], CompliantDataFrameAny]: ...
+) -> Callable[Concatenate[NormalizedSource, ...], CompliantDataFrameAny]: ...
 
 
 @overload
@@ -573,7 +573,7 @@ def _io_method(
     /,
     *,
     version: Version,
-) -> Callable[Concatenate[NormalizedPath, ...], CompliantFrameAny]: ...
+) -> Callable[Concatenate[NormalizedSource, ...], CompliantFrameAny]: ...
 
 
 def _io_method(
@@ -582,7 +582,7 @@ def _io_method(
     /,
     *,
     version: Version,
-) -> Callable[Concatenate[NormalizedPath, ...], CompliantFrameAny]:
+) -> Callable[Concatenate[NormalizedSource, ...], CompliantFrameAny]:
     """Bind the `method_name` method of `backend`'s compliant namespace.
 
     Built-in backends and plugins share one resolution path (`Namespace.from_backend`)
@@ -607,7 +607,9 @@ def read_csv(
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -639,7 +641,7 @@ def read_csv(
         )
         raise ValueError(msg)
     read = _io_method(backend, "read_csv", version=Version.MAIN)
-    frame = read(normalize_path(source), separator=separator, **kwargs)
+    frame = read(normalize_source(source), separator=separator, **kwargs)
     result: DataFrame[Any] = frame.to_narwhals()
     return result
 
@@ -657,7 +659,9 @@ def scan_csv(
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -685,7 +689,7 @@ def scan_csv(
         └─────────┴───────┘
     """
     scan = _io_method(backend, "scan_csv", version=Version.MAIN)
-    frame = scan(normalize_path(source), separator=separator, **kwargs)
+    frame = scan(normalize_source(source), separator=separator, **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
@@ -696,7 +700,9 @@ def read_parquet(
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -732,7 +738,7 @@ def read_parquet(
         )
         raise ValueError(msg)
     read = _io_method(backend, "read_parquet", version=Version.MAIN)
-    frame = read(normalize_path(source), **kwargs)
+    frame = read(normalize_source(source), **kwargs)
     result: DataFrame[Any] = frame.to_narwhals()
     return result
 
@@ -758,7 +764,9 @@ def scan_parquet(
         ```
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -800,7 +808,7 @@ def scan_parquet(
         └──────────────────┘
     """
     scan = _io_method(backend, "scan_parquet", version=Version.MAIN)
-    frame = scan(normalize_path(source), **kwargs)
+    frame = scan(normalize_source(source), **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 

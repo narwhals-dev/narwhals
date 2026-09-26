@@ -12,7 +12,7 @@ from tests.conftest import (
     modin_constructor,
     pandas_constructor,
 )
-from tests.utils import Constructor, ConstructorEager, assert_equal_data
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 4, 2, 5]}
 
@@ -126,5 +126,19 @@ def test_expr_is_in_with_only_null_in_other(constructor: Constructor) -> None:
         expected = {"a": [False, False, False, False]}
     else:
         expected = {"a": [False, False, None, False]}
+
+    assert_equal_data(result, expected)
+
+
+def test_is_in_incompatible_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION >= (2,):
+        reason = "Polars>=2.0 rejects operands which can't be coerced losslessly"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a").is_in([1.0, 2.5]))
+    expected = {"a": [True, False, False, False]}
 
     assert_equal_data(result, expected)

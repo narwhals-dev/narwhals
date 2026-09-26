@@ -24,7 +24,7 @@ from narwhals._pandas_like.utils import (
     is_non_nullable_boolean,
     set_index,
 )
-from narwhals._utils import validate_separators
+from narwhals._utils import check_column_names_are_unique, validate_separators
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from narwhals.typing import (
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -81,14 +81,14 @@ class PandasLikeNamespace(
         self._version = version
 
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> PandasLikeDataFrame:
         validate_separators(separator, ("sep",), kwds)
         ns = self._implementation.to_native_namespace()
         native = ns.read_csv(source, sep=separator, **kwds)
         return self._dataframe.from_native(native, context=self)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> PandasLikeDataFrame:
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> PandasLikeDataFrame:
         ns = self._implementation.to_native_namespace()
         return self._dataframe.from_native(ns.read_parquet(source, **kwds), context=self)
 
@@ -258,11 +258,13 @@ class PandasLikeNamespace(
 
     def min_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
+                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
+                        how="horizontal",
                     )._native_frame.min(axis=1),
                     implementation=self._implementation,
                     version=self._version,
@@ -278,11 +280,13 @@ class PandasLikeNamespace(
 
     def max_horizontal(self, *exprs: PandasLikeExpr) -> PandasLikeExpr:
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
-            series = list(chain.from_iterable(expr(df) for expr in exprs))
+            align = self._series._align_full_broadcast
+            series = align(*chain.from_iterable(expr(df) for expr in exprs))
             return [
                 PandasLikeSeries(
                     self.concat(
-                        (s.to_frame() for s in series), how="horizontal"
+                        (s.alias(str(i)).to_frame() for i, s in enumerate(series)),
+                        how="horizontal",
                     ).native.max(axis=1),
                     implementation=self._implementation,
                     version=self._version,
@@ -371,10 +375,23 @@ class PandasLikeNamespace(
     ) -> PandasLikeExpr:
         string = self._version.dtypes.String()
 
+        def to_string(s: PandasLikeSeries) -> PandasLikeSeries:
+            result = s.cast(string)
+            if s.dtype.is_boolean():
+                # NOTE: Polars renders booleans lowercase, pandas `astype(str)` does not.
+                # `.str.to_lowercase()` would drop the broadcast flag of a literal.
+                return result._with_native(
+                    result.native.str.lower(), preserve_broadcast=True
+                )
+            return result
+
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = [s.cast(string) for s in expr_results]
             null_mask = [s.is_null() for s in expr_results]
+            # NOTE: The masks below decide what a null row becomes, so blank the nulls
+            # out first: before pandas 3 a string column is `object`, where adding
+            # `None` raises instead of propagating.
+            series = [to_string(s).fill_null("", None, None) for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -382,26 +399,27 @@ class PandasLikeNamespace(
                     ~null_mask_result, None
                 )
             else:
-                # NOTE: Trying to help `mypy` later
-                # error: Cannot determine type of "values"  [has-type]
-                values: list[PandasLikeSeries]
-                init_value, *values = (
-                    s.zip_with(~nm, "") for s, nm in zip(series, null_mask, strict=True)
-                )
-                sep_array = init_value._with_native(
+                init_value, *values = series
+                # Literals stay scalars: `cast` and `fill_null` keep the flag and the
+                # binary ops extract them. Only the boolean masks are aligned to full
+                # length, which is cheap and is what `zip_with` needs for the separators.
+                null_mask = self._series._align_full_broadcast(*null_mask)
+                sep_array = null_mask[0]._with_native(
                     init_value.__native_namespace__().Series(
                         separator,
                         name="sep",
-                        index=init_value.native.index,
+                        index=null_mask[0].native.index,
                         dtype=init_value.native.dtype,
                     )
                 )
-                separators = (sep_array.zip_with(~nm, "") for nm in null_mask[:-1])
-                result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values, strict=True)),
-                    init_value,
-                )
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    result = result + sep_array.zip_with(seen & not_null, "") + value
+                    seen = seen | not_null
 
             return [result]
 
@@ -427,6 +445,7 @@ class PandasLikeNamespace(
 
             align = self._series._align_full_broadcast
             series = align(*chain.from_iterable(expr(df) for expr in exprs))
+            check_column_names_are_unique([s.name for s in series])
             name = series[0].name
             struct_array = pc.make_struct(
                 *(pa.array(s.native, from_pandas=True) for s in series),

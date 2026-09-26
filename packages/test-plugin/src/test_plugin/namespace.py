@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from narwhals._utils import Implementation, not_implemented
+from narwhals._typing import PluginName
+from narwhals._utils import Implementation, ensure_path_source, not_implemented
 from narwhals.compliant import CompliantNamespace
 from test_plugin.dataframe import DictDataFrame, DictFrame, DictLazyFrame
 
 if TYPE_CHECKING:
-    from narwhals.typing import NormalizedPath
+    from narwhals.typing import NormalizedSource
     from narwhals.utils import Version
     from test_plugin.series import DictSeries
 
@@ -34,29 +35,30 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     # `scan_*` delegate to `read_*`, mirroring the defaults `EagerNamespace` provides.
 
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DictDataFrame:
         import csv
         from pathlib import Path
 
-        with Path(source).open(newline="", encoding="utf-8") as file:
+        path = ensure_path_source(source, PluginName("test-plugin"))
+        with Path(path).open(newline="", encoding="utf-8") as file:
             header, *rows = list(csv.reader(file, delimiter=separator))
         data = {name: [row[index] for row in rows] for index, name in enumerate(header)}
         return DictDataFrame(data, version=self._version)
 
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> DictDataFrame:
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> DictDataFrame:
         import pyarrow.parquet as pq
 
         data: DictFrame = pq.read_table(source, **kwds).to_pydict()
         return DictDataFrame(data, version=self._version)
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DictLazyFrame:
         data = self.read_csv(source, separator=separator, **kwds).native
         return DictLazyFrame(data, version=self._version)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DictLazyFrame:
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DictLazyFrame:
         data = self.read_parquet(source, **kwds).native
         return DictLazyFrame(data, version=self._version)
 

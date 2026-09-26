@@ -61,8 +61,7 @@ handle plugins. For this integration to work, any plugin architecture must conta
     it returns, exactly as it reuses the namespaces of its own backends. The namespace must
     therefore be safe to reuse.
 
-    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the
-    signatures.
+    Take a look at the `Plugin` protocol in `narwhals/plugins.py` for the signatures.
 
   3. an `_implementation` attribute set to `narwhals.Implementation.UNKNOWN`, on every
     compliant class the plugin exposes (namespace, dataframe, lazyframe, series):
@@ -137,35 +136,33 @@ shared by built-in backends and plugins alike: to support these functions, a
 compliant namespace implements (a subset of):
 
 ```py
-from narwhals.typing import NormalizedPath
+from narwhals.typing import NormalizedSource
 
 
 def read_csv(
-    self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-) -> CompliantDataFrame:
-    ...
+    self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+) -> CompliantDataFrame: ...
 
 
 def scan_csv(
-    self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
-) -> CompliantFrame:
-    ...
+    self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+) -> CompliantFrame: ...
 
 
-def read_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantDataFrame:
-    ...
+def read_parquet(self, source: NormalizedSource, **kwds: Any) -> CompliantDataFrame: ...
 
 
-def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrame:
-    ...
+def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> CompliantFrame: ...
 ```
 
 In all cases:
 
-- `source` is a plain string at runtime: `NormalizedPath` is a `str`
+- `source` is a `NormalizedSource`: either a `NormalizedPath` (a `str`
   [`NewType`](https://docs.python.org/3/library/typing.html#newtype) tagging that
-  Narwhals has already normalized `Path` and path-like inputs before dispatching to the
-  namespace.
+  Narwhals has already normalized `Path` and path-like inputs), or a file-like object
+  such as `io.BytesIO` / `io.StringIO`, passed through untouched.
+- A namespace whose native reader cannot take a file-like object should reject it with
+  `TypeError`, via `narwhals._utils.ensure_path_source`.
 - `kwds` are forwarded to the native reader, and it is the namespace's responsibility
   to translate `separator` into whatever its native CSV reader expects (and to raise if
   the two conflict).

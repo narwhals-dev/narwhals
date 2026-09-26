@@ -45,11 +45,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        ChunkedArrayAny,
-        NullPlacement,
-        Order,
-    )
+    from narwhals._arrow.typing import ChunkedArrayAny, NullPlacement, Order  # type: ignore[attr-defined]
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
@@ -643,8 +639,6 @@ class ArrowDataFrame(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
-            from narwhals._arrow.dataframe import ArrowDataFrame
-
             return ArrowDataFrame(
                 self.native, version=self._version, validate_column_names=False
             )
