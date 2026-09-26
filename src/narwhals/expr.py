@@ -3,11 +3,12 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from narwhals._expression_parsing import ExprKind, ExprNode, evaluate_nodes
 from narwhals._utils import (
     NO_DEFAULT,
+    Version,
     _validate_rolling_arguments,
     ensure_type,
     flatten,
@@ -50,6 +51,8 @@ if TYPE_CHECKING:
 
 
 class Expr:
+    _version: ClassVar[Version] = Version.MAIN
+
     def __init__(self, *nodes: ExprNode) -> None:
         self._nodes = nodes
 
@@ -363,7 +366,7 @@ class Expr:
             >>> import pandas as pd
             >>> import polars as pl
             >>> import narwhals as nw
-            >>> from narwhals.typing import IntoFrameT
+            >>> from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
             >>>
             >>> data = {"a": [1, 2, 3]}
             >>> df_pd = pd.DataFrame(data)
@@ -371,7 +374,9 @@ class Expr:
 
             We define a library agnostic function:
 
-            >>> def agnostic_ewm_mean(df_native: IntoFrameT) -> IntoFrameT:
+            >>> def agnostic_ewm_mean(
+            ...     df_native: IntoDataFrameT | IntoLazyFrameT,
+            ... ) -> IntoDataFrameT | IntoLazyFrameT:
             ...     df = nw.from_native(df_native)
             ...     return df.select(
             ...         nw.col("a").ewm_mean(com=1, ignore_nulls=False)
@@ -986,6 +991,15 @@ class Expr:
         Notes:
             Null values are preserved, unless `self` is backed by a non-nullable pandas Series
             (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
+        Warning:
+            Backends disagree on how to compare values against a column of a
+            different dtype: `polars>=2.0` raises an `InvalidOperationError` unless
+            the operands can be coerced losslessly (so looking for floats in an
+            integer column raises), whereas every other backend coerces silently.
+            Cast one of the operands if you need this to behave the same everywhere.
+            See [Polars' upgrade guide](https://docs.pola.rs/releases/upgrade/2/#make-coercion-casts-for-is_in-strict-instead-of-lossy)
+            for details.
 
         Examples:
             >>> import pandas as pd

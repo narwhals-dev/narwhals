@@ -374,12 +374,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.drop_null())
 
     def shift(self, n: int) -> Self:
-        if n > 0:
-            arrays = [nulls_like(n, self), *self.native[:-n].chunks]
-        elif n < 0:
-            arrays = [*self.native[-n:].chunks, nulls_like(-n, self)]
-        else:
+        if n == 0:
             return self._with_native(self.native)
+        length = len(self.native)
+        # Cap the number of null padding values at the length of the series:
+        # shifting by at least the length must still return a series of the
+        # same length (all null), and must not desync the array lengths that
+        # rolling windows rely on.
+        null_array = nulls_like(min(abs(n), length), self)
+        if abs(n) >= length:
+            # Every value is shifted out, so the result is all null; return it
+            # directly and skip the slice and concat.
+            return self._with_native(null_array)
+        if n > 0:
+            arrays = [null_array, *self.native[:-n].chunks]
+        else:
+            arrays = [*self.native[-n:].chunks, null_array]
         return self._with_native(pa.concat_arrays(arrays))
 
     def std(self, *, ddof: int, _return_py_scalar: bool = True) -> float:
@@ -838,16 +848,24 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         _, lower = extract_native(self, lower_bound)
         _, upper = extract_native(self, upper_bound)
         return self._with_native(
-            pc.max_element_wise(pc.min_element_wise(self.native, upper), lower)
+            pc.max_element_wise(
+                pc.min_element_wise(self.native, upper, skip_nulls=False),
+                lower,
+                skip_nulls=False,
+            )
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
         _, lower = extract_native(self, lower_bound)
-        return self._with_native(pc.max_element_wise(self.native, lower))
+        return self._with_native(
+            pc.max_element_wise(self.native, lower, skip_nulls=False)
+        )
 
     def clip_upper(self, upper_bound: Self) -> Self:
         _, upper = extract_native(self, upper_bound)
-        return self._with_native(pc.min_element_wise(self.native, upper))
+        return self._with_native(
+            pc.min_element_wise(self.native, upper, skip_nulls=False)
+        )
 
     def to_arrow(self) -> ArrayAny:
         return self.native.combine_chunks()

@@ -16,8 +16,9 @@ from narwhals._polars.utils import (
     extract_args_kwargs,
     extract_native,
     narwhals_to_native_dtype,
+    native_get_categories,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, requires
+from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -310,7 +311,20 @@ class PolarsExpr:
         return self._with_native(result)
 
     def __mod__(self, other: Any) -> Self:
-        return self._with_native(self.native.__mod__(extract_native(other)))
+        native = (
+            floor_mod(self.native, extract_native(other))
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__mod__(extract_native(other))
+        )
+        return self._with_native(native)
+
+    def __rmod__(self, other: Any) -> Self:
+        native = (
+            floor_mod(extract_native(other), self.native)
+            if BACKEND_VERSION < (0, 20, 8)
+            else self.native.__rmod__(extract_native(other))
+        )
+        return self._with_native(native)
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
@@ -406,7 +420,6 @@ class PolarsExpr:
     unique: Method[Self]
     var: Method[Self]
     __rsub__: Method[Self]
-    __rmod__: Method[Self]
     __rpow__: Method[Self]
     __rtruediv__: Method[Self]
 
@@ -447,26 +460,32 @@ class PolarsExprStringNamespace(
 
         return self.compliant._with_native(native_result)
 
-    @requires.backend_version((0, 20, 5))
     def zfill(self, width: int) -> PolarsExpr:
-        backend_version = self.compliant._backend_version
+        if width == 0:
+            return self.compliant._with_native(self.native)
         native_result = self.native.str.zfill(width)
 
-        if backend_version <= (1, 30, 0):
-            length = self.native.str.len_chars()
-            less_than_width = length < width
-            plus = "+"
-            starts_with_plus = self.native.str.starts_with(plus)
+        if self.compliant._backend_version <= (1, 30, 0):
+            plus, minus = "+", "-"
+            sign, rest = self.native.str.slice(0, 1), self.native.str.slice(1)
             native_result = (
-                pl.when(starts_with_plus & less_than_width)
-                .then(
-                    self.native.str.slice(1, length)
-                    .str.zfill(width - 1)
-                    .str.pad_start(width, plus)
-                )
+                pl.when(self.native.str.starts_with(plus))
+                .then(sign + (minus + rest).str.zfill(width).str.slice(1))
                 .otherwise(native_result)
             )
 
+        return self.compliant._with_native(native_result)
+
+    def slice(self, offset: int, length: int | None) -> PolarsExpr:
+        if BACKEND_VERSION < (0, 20, 17) and offset < 0:
+            # Older Polars miscounts negative offsets on multi-byte strings and doesn't shorten
+            # `length` on overhang, but slicing the reversed string from the front is correct.
+            skip = 0 if length is None else max(0, -(offset + length))
+            native_result = (
+                self.native.str.reverse().str.slice(skip, -offset - skip).str.reverse()
+            )
+        else:
+            native_result = self.native.str.slice(offset, length)
         return self.compliant._with_native(native_result)
 
     def replace(
@@ -504,7 +523,11 @@ class PolarsExprStringNamespace(
 
 class PolarsExprCatNamespace(
     PolarsExprNamespace, PolarsCatNamespace[PolarsExpr, pl.Expr]
-): ...
+):
+    def get_categories(self) -> PolarsExpr:
+        return self.compliant._with_native(
+            self.native.map_batches(native_get_categories, return_dtype=pl.String)
+        )
 
 
 class PolarsExprNameNamespace(PolarsExprNamespace):

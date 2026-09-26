@@ -24,6 +24,8 @@
 - [narwhals.dtypes](dtypes.md)
 - [narwhals.exceptions](exceptions.md)
 - [narwhals.selectors](selectors.md)
+- [narwhals.sql](sql.md)
+- [narwhals.testing](testing.md)
 - [narwhals.typing](typing.md)
 - [narwhals.utils](utils.md)
 - [narwhals.plugins](plugins.md)
