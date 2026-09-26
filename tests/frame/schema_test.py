@@ -23,7 +23,7 @@ if TYPE_CHECKING:
         IntoPandasSchema,
         IntoPolarsSchema,
     )
-    from tests.utils import Constructor, ConstructorEager, ConstructorPandasLike
+    from tests.utils import Constructor, ConstructorEager, PandasConstructor
 
     TimeUnit: TypeAlias = Literal["ns", "us"]
 
@@ -571,9 +571,7 @@ def origin_arrow(
 
 
 @pytest.fixture
-def origin_pandas_like(
-    constructor_pandas_like: ConstructorPandasLike,
-) -> IntoPandasSchema:
+def origin_pandas_like(constructor_pandas_like: PandasConstructor) -> IntoPandasSchema:
     data: dict[str, Any] = {
         "a": [2, 1],
         "b": ["hello", "hi"],
@@ -588,7 +586,7 @@ def origin_pandas_like(
 
 @pytest.fixture
 def origin_pandas_like_pyarrow(
-    constructor_pandas_like: ConstructorPandasLike,
+    constructor_pandas_like: PandasConstructor,
 ) -> IntoPandasSchema:
     if PANDAS_VERSION < (1, 5):
         pytest.skip(reason="pandas too old for `pyarrow`")

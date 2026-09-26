@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from narwhals.testing.typing import Data
-    from narwhals.typing import IntoDType, IntoFrame
+    from narwhals.typing import IntoDType
     from tests.utils import Constructor, ConstructorEager
 
 
@@ -26,7 +26,7 @@ def _assertion_error(detail: str) -> pytest.RaisesExc:
 
 def test_check_narwhals_objects(constructor: Constructor) -> None:
     """Test that a type error is raised if the input is not a Narwhals object."""
-    frame: IntoFrame = constructor({"a": [1, 2, 3]}).to_native()
+    frame = constructor({"a": [1, 2, 3]}).to_native()
     msg = re.escape(
         "Expected `narwhals.DataFrame` or `narwhals.LazyFrame` instance, found"
     )
