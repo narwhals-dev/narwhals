@@ -86,8 +86,8 @@ def test_contains_none_inner_dtypes_expr(
         and POLARS_VERSION >= (1, 28)
         and dtype.inner == nw.List
     ):
-        # Polars raises for nested inner dtypes.
-        request.applymarker(pytest.mark.xfail)
+        # Raises in Polars 1.28-1.x; 2.0 works lazily but panics eagerly.
+        pytest.skip(reason="Polars' support for nested inner dtypes varies by version")
     x, y = values
     data = {"a": [[x, None], [None], [x, y], [], None]}
     df = nw.from_native(constructor(data))
