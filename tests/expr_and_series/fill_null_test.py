@@ -37,6 +37,17 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_fill_null_scalar_receiver(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow_table")):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [0.5, None, 2.0]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.lit(None, nw.Float64).fill_null(nw.col("a")).alias("a"))
+    assert_equal_data(result, data)
+
+
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:
     if "dask" in str(constructor) and DASK_VERSION < (2024, 12):
         # Bug in old version of Dask.

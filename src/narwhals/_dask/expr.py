@@ -431,54 +431,23 @@ class DaskExpr(
         return self._with_callable(func)
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            lower = df._evaluate_single_output_expr(lower_bound)
-            upper = df._evaluate_single_output_expr(upper_bound)
-            results: list[dx.Series] = []
-            for s in self(df):
-                s_aligned, low_aligned, up_aligned = align_series_full_broadcast(
-                    df, s, lower, upper
-                )
-                results.append(s_aligned.clip(lower=low_aligned, upper=up_aligned))
-            return results
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
+        return self._with_callable(
+            lambda expr, lower_bound, upper_bound: expr.clip(
+                lower=lower_bound, upper=upper_bound
+            ),
+            expression_args={"lower_bound": lower_bound, "upper_bound": upper_bound},
         )
 
     def clip_lower(self, lower_bound: Self) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            lower = df._evaluate_single_output_expr(lower_bound)
-            results: list[dx.Series] = []
-            for s in self(df):
-                s_aligned, low_aligned = align_series_full_broadcast(df, s, lower)
-                results.append(s_aligned.clip(lower=low_aligned))
-            return results
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
+        return self._with_callable(
+            lambda expr, lower_bound: expr.clip(lower=lower_bound),
+            expression_args={"lower_bound": lower_bound},
         )
 
     def clip_upper(self, upper_bound: Self) -> Self:
-        def func(df: DaskLazyFrame) -> list[dx.Series]:
-            upper = df._evaluate_single_output_expr(upper_bound)
-            results: list[dx.Series] = []
-            for s in self(df):
-                s_aligned, up_aligned = align_series_full_broadcast(df, s, upper)
-                results.append(s_aligned.clip(upper=up_aligned))
-            return results
-
-        return self.__class__(
-            func,
-            evaluate_output_names=self._evaluate_output_names,
-            alias_output_names=self._alias_output_names,
-            version=self._version,
+        return self._with_callable(
+            lambda expr, upper_bound: expr.clip(upper=upper_bound),
+            expression_args={"upper_bound": upper_bound},
         )
 
     def n_unique(self) -> Self:

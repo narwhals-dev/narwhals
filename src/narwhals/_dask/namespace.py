@@ -124,16 +124,12 @@ class DaskNamespace(
 
     def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            aligned = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
             # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             if ignore_nulls:
                 # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                series: Iterable[dx.Series] = (
-                    s if s.dtype == "bool" else s.fillna(True) for s in aligned
-                )
-            else:
-                series = aligned
+                series = [s if s.dtype == "bool" else s.fillna(True) for s in series]
             return [reduce(operator.and_, series)]
 
         return self._expr(
@@ -145,13 +141,9 @@ class DaskNamespace(
 
     def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            aligned = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
             if ignore_nulls:
-                series: Iterable[dx.Series] = (
-                    s if s.dtype == "bool" else s.fillna(False) for s in aligned
-                )
-            else:
-                series = aligned
+                series = [s if s.dtype == "bool" else s.fillna(False) for s in series]
             return [reduce(operator.or_, series)]
 
         return self._expr(
