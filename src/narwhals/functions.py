@@ -19,8 +19,8 @@ from narwhals._utils import (
     eager_namespace,
     flatten,
     is_eager_allowed,
-    is_into_plugin,
     is_nested_literal,
+    is_plugin_backend,
     is_sequence_of,
     normalize_source,
     supports_arrow_c_stream,
@@ -34,7 +34,7 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
-from narwhals.plugins import _backend_name, _ensure_io_method
+from narwhals.plugins import _ensure_io_method, _plugin_display_name
 from narwhals.schema import Schema
 from narwhals.translate import to_native
 
@@ -47,7 +47,13 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantFrameAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import Backend, EagerAllowed, IntoBackend, PluginName
+    from narwhals._typing import (
+        Backend,
+        EagerAllowed,
+        IntoBackend,
+        IOMethodName,
+        PluginName,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -58,7 +64,6 @@ if TYPE_CHECKING:
         IntoDType,
         IntoExpr,
         IntoSchema,
-        IOMethodName,
         NonNestedLiteral,
         NormalizedSource,
         PythonLiteral,
@@ -583,16 +588,11 @@ def _io_method(
     *,
     version: Version,
 ) -> Callable[Concatenate[NormalizedSource, ...], CompliantFrameAny]:
-    """Bind the `method_name` method of `backend`'s compliant namespace.
-
-    Built-in backends and plugins share one resolution path (`Namespace.from_backend`)
-    and one dispatch mechanism (a same-named method on the compliant namespace), but only
-    a plugin may be missing the method, so only a plugin is checked for it.
-    """
+    """Bind `method_name` on `backend`'s compliant namespace; only a plugin may lack it."""
     impl = Implementation.from_backend(backend)
     namespace = version.namespace.from_backend(backend).compliant
-    if is_into_plugin(backend, impl):
-        _ensure_io_method(namespace, method_name, source=_backend_name(backend))
+    if is_plugin_backend(backend, impl):
+        _ensure_io_method(namespace, method_name, source=_plugin_display_name(backend))
     method: Callable[..., CompliantFrameAny] = getattr(namespace, method_name)
     return method
 

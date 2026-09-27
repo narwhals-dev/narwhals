@@ -382,7 +382,7 @@ class Implementation(NoAutoEnum):
     @classmethod
     def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
-    ) -> Implementation:  # pragma: no cover
+    ) -> Implementation:
         """Instantiate Implementation object from a native namespace module.
 
         Arguments:
@@ -641,14 +641,14 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
 _BACKEND_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
     impl.value: impl for impl in Implementation
 }
-"""Inverse of `Implementation.value`, so `from_string` is a lookup instead of a `try/except`."""
+"""Inverse of `Implementation.value`."""
 
 _MODULE_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
     _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value): impl
     for impl in Implementation
     if impl is not Implementation.UNKNOWN
 }
-"""Inverse of `_IMPLEMENTATION_TO_MODULE_NAME`, derived so the two cannot drift apart."""
+"""Inverse of `_IMPLEMENTATION_TO_MODULE_NAME`, including the default `impl.value` names."""
 
 
 @lru_cache(maxsize=16)
@@ -1654,13 +1654,14 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
     }
 
 
-# NOTE: Keep `TypeGuard`, not `TypeIs`, as the two narrow by different rules.
-def is_into_plugin(
+# NOTE: `TypeGuard`, not `TypeIs`: `TypeIs` also narrows the `False` branch, where it would
+# wrongly strip `ModuleType`, since a built-in backend can be passed as a module too.
+def is_plugin_backend(
     backend: IntoBackend[Backend | PluginName],  # noqa: ARG001
     impl: Implementation,
     /,
 ) -> TypeGuard[IntoBackend[PluginName]]:
-    """Return True if `backend` names a plugin, rather than a built-in backend.
+    """Return True if `backend` is a plugin, given `impl = Implementation.from_backend(backend)`.
 
     `Implementation.UNKNOWN` means exactly "not one of Narwhals' own backends", so a
     `backend` which resolves to it can only be a plugin's name or a plugin module.
@@ -1743,22 +1744,20 @@ def eager_namespace(
 ) -> EagerNamespaceAny | EagerNamespaceKnown:
     """Resolve `backend` to an eager-allowed compliant namespace.
 
-    Built-in eager backends and plugins resolve through the same
-    `Namespace.from_backend`; for a plugin, the namespace returned by
-    `__narwhals_namespace__` must implement the `EagerNamespace` protocol (in
-    particular, the `_series` and `_dataframe` properties).
+    For a plugin, the namespace returned by `__narwhals_namespace__` must implement the
+    `EagerNamespace` protocol (in particular, the `_series` and `_dataframe` properties).
     Built-in lazy-only backends raise an informative `ValueError`, suggesting the
     `EAGER_HINT_EXAMPLES` entry for `function_name` followed by a `.lazy(...)` call.
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
         return version.namespace.from_backend(implementation).compliant
-    if is_into_plugin(backend, implementation):
-        from narwhals.plugins import _backend_name
+    if is_plugin_backend(backend, implementation):
+        from narwhals.plugins import _plugin_display_name
 
         namespace = version.namespace.from_backend(backend).compliant
         return _ensure_eager_allowed(
-            namespace, source=_backend_name(backend), function_name=function_name
+            namespace, source=_plugin_display_name(backend), function_name=function_name
         )
     msg = (
         f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"

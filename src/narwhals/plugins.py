@@ -37,7 +37,7 @@ if TYPE_CHECKING:
         CompliantNamespaceAny,
         CompliantSeriesAny,
     )
-    from narwhals.typing import IntoBackend, IOMethodName
+    from narwhals._typing import IntoBackend, IOMethodName
     from narwhals.utils import Version
 
 
@@ -92,8 +92,7 @@ def _find_plugin(backend_name: str, /) -> Plugin | None:
     return None
 
 
-def _backend_name(backend: IntoBackend[PluginName], /) -> str:
-    """Spelling of a plugin `backend`, used to identify it in error messages."""
+def _plugin_display_name(backend: IntoBackend[PluginName], /) -> str:
     return backend.__name__ if isinstance(backend, ModuleType) else backend
 
 
@@ -119,13 +118,20 @@ def _resolve_plugin(backend: IntoBackend[PluginName], /) -> Plugin:
     raise ValueError(msg)
 
 
+# NOTE: A `dict`, not `functools.cache`: mypy never treats a `Protocol` (`Plugin`) as `Hashable`.
+_PLUGIN_NAMESPACES: dict[tuple[Plugin, Version], PluginNamespace] = {}
+
+
 def _plugin_namespace(plugin: Plugin, /, *, version: Version) -> PluginNamespace:
     """Get `plugin`'s compliant namespace, raising if `__narwhals_namespace__` is missing."""
-    name = "__narwhals_namespace__"
-    if (hook := getattr(plugin, name, None)) is None:
-        msg = f"Plugin backend {plugin.__name__!r} is expected to implement `{name}` function."
-        raise PluginError(msg)
-    namespace: PluginNamespace = hook(version=version)
+    key = (plugin, version)
+    if (namespace := _PLUGIN_NAMESPACES.get(key)) is None:
+        name = "__narwhals_namespace__"
+        if (hook := getattr(plugin, name, None)) is None:
+            msg = f"Plugin backend {plugin.__name__!r} is expected to implement `{name}` function."
+            raise PluginError(msg)
+        # NOTE: `setdefault` so that concurrent first calls still share one namespace.
+        namespace = _PLUGIN_NAMESPACES.setdefault(key, hook(version=version))
     return namespace
 
 
@@ -134,11 +140,7 @@ def _ensure_io_method(
 ) -> None:
     """Raise unless a plugin's compliant namespace implements `method_name`.
 
-    IO functions share a single dispatch mechanism with built-in backends: they call
-    same-named methods on the compliant namespace (see the "IO functions" section of
-    the [extension docs](../extending.md/#io-functions-the-namespace-contract)).
-    Built-in namespaces always implement the methods for their kind, so only plugins
-    need checking.
+    See the [IO functions](../extending.md/#io-functions-the-namespace-contract) contract.
 
     Note:
         `PluginNamespace` deliberately does not declare the IO methods: they are an
@@ -215,9 +217,9 @@ class Plugin(Protocol[FrameT, FromNativeR_co]):
         of the extension docs).
 
         Important:
-            Narwhals calls this **once per version** and reuses the result, exactly as it
-            reuses the namespaces of its own backends. The returned namespace must
-            therefore be safe to reuse: like a built-in compliant namespace.
+            Narwhals caches the returned namespace per version and shares it across calls,
+            so it must be safe to reuse. The hook itself may still run more than once,
+            e.g. on concurrent first use.
         """
         ...
 
@@ -247,8 +249,7 @@ def _iter_from_native(native_object: Any, version: Version) -> Iterator[Complian
     for entry_point in _discover_entrypoints():
         plugin: Plugin = entry_point.load()
         if _is_native_plugin(native_object, plugin):
-            compliant_namespace = plugin.__narwhals_namespace__(version=version)
-            yield compliant_namespace.from_native(native_object)
+            yield _plugin_namespace(plugin, version=version).from_native(native_object)
 
 
 def from_native(native_object: Any, version: Version) -> CompliantAny | None:

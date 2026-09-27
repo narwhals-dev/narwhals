@@ -414,8 +414,6 @@ MultiColSelector: TypeAlias = (
     "MultiIndexSelector[_T] | MultiNameSelector[_T] | SizedMultiBoolSelector[_T]"
 )
 
-IOMethodName: TypeAlias = Literal["read_csv", "read_parquet", "scan_csv", "scan_parquet"]
-"""Name of a Narwhals IO function, dispatched to a same-named namespace method."""
 
 __all__ = [
     "Backend",

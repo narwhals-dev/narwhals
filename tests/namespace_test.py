@@ -5,6 +5,7 @@ from collections import deque
 from collections.abc import Callable, Iterable, Sequence
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, TypeVar, cast
+from unittest.mock import Mock
 
 import pytest
 
@@ -37,12 +38,6 @@ _EAGER_ALLOWED = "polars", "pandas", "pyarrow", "modin", "cudf"
 _LAZY_ONLY = "dask", "duckdb", "pyspark", "sqlframe"
 _LAZY_ALLOWED = ("polars", *_LAZY_ONLY)
 _BACKENDS = (*_EAGER_ALLOWED, *_LAZY_ONLY)
-_BACKEND_MODULE_NAME = {
-    "dask": "dask.dataframe",
-    "modin": "modin.pandas",
-    "pyspark": "pyspark.sql",
-}
-"""Backends whose native namespace module is not named after the backend itself."""
 
 eager_allowed = pytest.mark.parametrize("backend", _EAGER_ALLOWED)
 lazy_allowed = pytest.mark.parametrize("backend", _LAZY_ALLOWED)
@@ -99,12 +94,15 @@ def test_namespace_from_backend_plugin(backend: PluginName) -> None:
 @backends
 def test_namespace_from_backend_cached(backend: BackendName) -> None:
     pytest.importorskip(backend)
-    module = pytest.importorskip(_BACKEND_MODULE_NAME.get(backend, backend))
+    implementation = nw.Implementation.from_string(backend)
     # `from_string` widens to `Implementation`, which no single overload accepts.
-    impl = cast("IntoBackend[Backend]", nw.Implementation.from_string(backend))
+    impl = cast("IntoBackend[Backend]", implementation)
     compliant = Namespace.from_backend(backend).compliant
     assert Namespace.from_backend(impl).compliant is compliant
-    assert Namespace.from_backend(module).compliant is compliant
+    assert (
+        Namespace.from_backend(implementation.to_native_namespace()).compliant
+        is compliant
+    )
     # The `Namespace` wrapper itself stays cheap and unshared.
     assert Namespace.from_backend(backend) is not Namespace.from_backend(backend)
 
@@ -133,22 +131,18 @@ def test_namespace_from_backend_plugin_cached() -> None:
     )
 
 
-def test_namespace_from_backend_plugin_hook_called_once() -> None:
-    """`__narwhals_namespace__` is called once per version, not once per resolution."""
+def test_namespace_plugin_hook_called_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`backend=...` and `nw.from_native` share one cached namespace per version."""
     plugin = pytest.importorskip("test_plugin")
-    calls = 0
-    original = plugin.__narwhals_namespace__
+    from narwhals import plugins
 
-    def counting(*args: Any, **kwds: Any) -> Any:
-        nonlocal calls
-        calls += 1
-        return original(*args, **kwds)
-
-    fresh = ModuleType("test_plugin_counting")
-    fresh.__narwhals_namespace__ = counting  # type: ignore[attr-defined]
-    for _ in range(3):
-        Namespace.from_backend(fresh)
-    assert calls == 1
+    hook = Mock(wraps=plugin.__narwhals_namespace__)
+    monkeypatch.setattr(plugins, "_PLUGIN_NAMESPACES", {})
+    monkeypatch.setattr(plugin, "__narwhals_namespace__", hook)
+    for _ in range(2):
+        Namespace.from_backend(PluginName("test-plugin"))
+        nw.from_native({"a": [1]})  # type: ignore[call-overload]
+    hook.assert_called_once_with(version=Version.MAIN)
 
 
 def test_namespace_from_backend_plugin_not_installed() -> None:
