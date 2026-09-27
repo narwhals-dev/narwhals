@@ -201,6 +201,36 @@ def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("dtype", "values", "forward", "expected_reverse"),
+    [
+        ("int8", [100, 120, -5], [100, 220, 215], [215, 115, -5]),
+        ("int16", [20_000, 20_000], [20_000, 40_000], [40_000, 20_000]),
+        ("uint8", [200, 200], [200, 400], [400, 200]),
+        ("uint16", [60_000, 60_000], [60_000, 120_000], [120_000, 60_000]),
+    ],
+)
+@pytest.mark.parametrize("reverse", [False, True])
+def test_pyarrow_cum_sum_widens_small_integers(
+    dtype: str,
+    values: list[int],
+    forward: list[int],
+    expected_reverse: list[int],
+    *,
+    reverse: bool,
+) -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    native = pa.table({"a": pa.array(values, type=getattr(pa, dtype)())})
+    result = nw.from_native(native, eager_only=True).select(
+        nw.col("a").cum_sum(reverse=reverse)
+    )
+
+    assert result["a"].to_list() == (expected_reverse if reverse else forward)
+    assert result.to_native()["a"].type == pa.int64()
+
+
 def test_shift_cum_sum(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
         pytest.skip()
