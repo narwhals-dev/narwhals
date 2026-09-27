@@ -5,7 +5,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import CoalesceOperator, Expression
+from duckdb import CoalesceOperator, ColumnExpression, Expression
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
@@ -122,13 +122,29 @@ class DuckDBNamespace(
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
         if how == "diagonal":
-            res = first.native
-            for _item in native_items[1:]:
-                # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
-                res = duckdb.sql("""
-                    from res select * union all by name from _item select *
-                """)
-            return first._with_native(res)
+            # Project every relation onto the same columns (padding missing
+            # ones with NULL) and use positional `union` via the relational
+            # API, so everything stays on the relations' own connection.
+            # TODO(unassigned): use the native operator once available,
+            # https://github.com/duckdb/duckdb/discussions/16996
+            names, seen = [], set()
+            for rel in native_items:
+                for name in rel.columns:
+                    if name not in seen:
+                        seen.add(name)
+                        names.append(name)
+            aligned = [
+                rel.select(
+                    *(
+                        ColumnExpression(name)
+                        if name in rel.columns
+                        else lit(None).alias(name)
+                        for name in names
+                    )
+                )
+                for rel in native_items
+            ]
+            return first._with_native(reduce(lambda x, y: x.union(y), aligned))
         res = reduce(lambda x, y: x.union(y), native_items)
         return first._with_native(res)
 
