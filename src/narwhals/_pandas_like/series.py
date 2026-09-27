@@ -992,7 +992,9 @@ class PandasLikeSeries(EagerSeries[Any]):
     def cum_count(self, *, reverse: bool) -> Self:
         not_na_series = ~self.native.isna()
         result = (
-            not_na_series.cumsum() if not reverse else not_na_series[::-1].cumsum()[::-1]
+            not_na_series.cumsum()
+            if not reverse
+            else not_na_series.sum() - not_na_series.cumsum() + not_na_series
         )
         return self._with_native(result)
 

@@ -115,8 +115,8 @@ def test_lazy_cum_count_ungrouped(
     expected_a: list[int],
 ) -> None:
     if "dask" in str(constructor) and reverse:
-        # https://github.com/dask/dask/issues/11802
-        request.applymarker(pytest.mark.xfail)
+        # the Dask backend raises NotImplementedError for cum_count(reverse=True)
+        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
