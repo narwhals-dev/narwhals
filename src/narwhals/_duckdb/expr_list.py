@@ -36,6 +36,18 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(func)
 
     def contains(self, item: NonNestedLiteral) -> DuckDBExpr:
+        if item is None:
+
+            def has_null(expr: Expression) -> Expression:
+                if self.compliant._backend_version < (1, 4):  # pragma: no cover
+                    # `array_position` matches NULL from DuckDB 1.3, but only
+                    # non-nested elements until 1.4.
+                    return F("len", expr) > F("list_count", expr)
+                return when(
+                    expr.isnotnull(), F("array_position", expr, lit(None)).isnotnull()
+                )
+
+            return self.compliant._with_elementwise(has_null)
         return self.compliant._with_elementwise(
             lambda expr: F("list_contains", expr, lit(item))
         )
