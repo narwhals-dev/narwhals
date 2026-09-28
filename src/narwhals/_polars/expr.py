@@ -557,17 +557,16 @@ class PolarsExprListNamespace(
         return self.compliant._with_native(native_result)
 
     def contains(self, item: Any) -> PolarsExpr:
-        if self.compliant._backend_version < (1, 28):
-            native = self.native
-            if item is None and self.compliant._backend_version < (1, 24):
-                # `list.contains(None)` returns a single null before 1.24.
-                contains = native.list.len() > native.list.drop_nulls().list.len()
-            else:
-                contains = native.list.contains(item)
-            result: pl.Expr = pl.when(native.is_not_null()).then(contains)
+        native = self.native
+        if item is None and self.compliant._backend_version < (1, 30):
+            # `list.contains(None)` returns a single null before 1.24, and `True` for
+            # empty lists before 1.30.
+            contains = native.list.len() > native.list.drop_nulls().list.len()
         else:
-            result = self.native.list.contains(item)
-        return self.compliant._with_native(result)
+            contains = native.list.contains(item)
+        if self.compliant._backend_version < (1, 28):
+            contains = pl.when(native.is_not_null()).then(contains)
+        return self.compliant._with_native(contains)
 
 
 class PolarsExprStructNamespace(

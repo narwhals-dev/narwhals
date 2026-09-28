@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, assert_equal_data
+from tests.utils import POLARS_VERSION, assert_equal_data, pyspark_session
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -83,13 +83,37 @@ def test_contains_none_inner_dtypes_expr(
         request.applymarker(pytest.mark.xfail)
     if (
         "polars" in str(constructor)
-        and POLARS_VERSION >= (1, 28)
+        and POLARS_VERSION >= (1, 30)
         and dtype.inner == nw.List
     ):
-        # Raises in Polars 1.28-1.x; 2.0 works lazily but panics eagerly.
+        # Raises in Polars 1.30-1.x; 2.0 works lazily but panics eagerly.
         pytest.skip(reason="Polars' support for nested inner dtypes varies by version")
     x, y = values
     data = {"a": [[x, None], [None], [x, y], [], None]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").cast(dtype).list.contains(None))
     assert_equal_data(result, {"a": [True, True, False, False, None]})
+
+
+def test_contains_none_single_empty_list_expr(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(
+        backend in str(constructor)
+        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
+    ):
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor({"a": [[1], []]})).filter(nw.col("a").list.len() == 0)
+    result = df.select(nw.col("a").cast(nw.List(nw.Int32())).list.contains(None))
+    assert_equal_data(result, {"a": [False]})
+
+
+@pytest.mark.slow
+def test_contains_none_non_orderable_inner_type_pyspark() -> None:  # pragma: no cover
+    pytest.importorskip("pyspark")
+    session = pyspark_session()
+    native = session.sql(
+        "SELECT array(map('k', 1), NULL) AS a UNION ALL SELECT array(map('k', 1))"
+    )
+    result = nw.from_native(native).select(nw.col("a").list.contains(None))
+    assert_equal_data(result, {"a": [True, False]})

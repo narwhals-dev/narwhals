@@ -12,8 +12,6 @@ if TYPE_CHECKING:
     from narwhals._spark_like.expr import SparkLikeExpr
     from narwhals.typing import NonNestedLiteral
 
-INTEGER_ARRAY_TYPES = ("array<tinyint>", "array<smallint>", "array<int>", "array<bigint>")
-
 
 class SparkLikeExprListNamespace(
     LazyExprNamespace["SparkLikeExpr"], ListNamespace["SparkLikeExpr"]
@@ -32,15 +30,13 @@ class SparkLikeExprListNamespace(
         def func(expr: Column) -> Column:
             F = self.compliant._F
             if item is None:
-                if not self.compliant._implementation.is_sqlframe():  # pragma: no cover
-                    # `array_intersect` is fastest for integer lists, `exists` (stops at
-                    # the first null) for all others. Spark folds `typeof` when planning.
-                    nulls = F.array_intersect(expr, F.array(F.lit(None)))
-                    return F.when(
-                        F.typeof(expr).isin(*INTEGER_ARRAY_TYPES), F.array_size(nulls) > 0
-                    ).otherwise(F.exists(expr, lambda x: x.isNull()))
-                # SQLFrame has no `exists`.
-                return F.array_size(expr) > F.array_size(F.array_compact(expr))
+                if self.compliant._implementation.is_sqlframe():
+                    # SQLFrame has no `exists`.
+                    return F.array_size(expr) > F.array_size(F.array_compact(expr))
+                # `array_intersect(expr, array(NULL))` is faster on integer lists, but
+                # Spark type-checks it even in a dead `typeof` branch, and it rejects
+                # non-orderable inner types (map, variant).
+                return F.exists(expr, lambda x: x.isNull())  # pragma: no cover
             # Spark returns null instead of false when there is no match and the list
             # holds a null element.
             return F.coalesce(
