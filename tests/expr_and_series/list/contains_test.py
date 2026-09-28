@@ -103,6 +103,8 @@ def test_contains_none_single_empty_list_expr(
         for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
     ):
         request.applymarker(pytest.mark.xfail)
+    # Polars 1.28-1.29 return `True` for `[]` only when it is the sole row, which
+    # the multi-row data of `test_contains_none_expr` does not catch.
     df = nw.from_native(constructor({"a": [[1], []]})).filter(nw.col("a").list.len() == 0)
     result = df.select(nw.col("a").cast(nw.List(nw.Int32())).list.contains(None))
     assert_equal_data(result, {"a": [False]})
@@ -113,7 +115,8 @@ def test_contains_none_non_orderable_inner_type_pyspark() -> None:  # pragma: no
     pytest.importorskip("pyspark")
     session = pyspark_session()
     native = session.sql(
-        "SELECT array(map('k', 1), NULL) AS a UNION ALL SELECT array(map('k', 1))"
+        "SELECT 0 AS i, array(map('k', 1), NULL) AS a"
+        " UNION ALL SELECT 1, array(map('k', 1))"
     )
-    result = nw.from_native(native).select(nw.col("a").list.contains(None))
-    assert_equal_data(result, {"a": [True, False]})
+    result = nw.from_native(native).select("i", nw.col("a").list.contains(None)).sort("i")
+    assert_equal_data(result, {"i": [0, 1], "a": [True, False]})
