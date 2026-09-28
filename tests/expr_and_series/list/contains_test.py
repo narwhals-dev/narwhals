@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, assert_equal_data, pyspark_session
+from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, pyspark_session
 
 if TYPE_CHECKING:
     from tests.utils import Constructor, ConstructorEager
@@ -14,12 +14,19 @@ data = {"a": [[2, 2, 3, None, None], None, []]}
 expected = {"a": [True, None, False]}
 
 
+def xfail_unsupported(
+    request: pytest.FixtureRequest, constructor: Constructor | ConstructorEager
+) -> None:
+    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+        request.applymarker(pytest.mark.xfail(reason="`list.contains` unsupported"))
+    if "pandas" in str(constructor):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip(reason="casting to `List` needs pandas>=2.2")
+        pytest.importorskip("pyarrow")
+
+
 def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
+    xfail_unsupported(request, constructor)
     result = nw.from_native(constructor(data)).select(
         nw.col("a").cast(nw.List(nw.Int32())).list.contains(2)
     )
@@ -29,11 +36,7 @@ def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor)
 def test_contains_no_match_with_null_elements_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
+    xfail_unsupported(request, constructor)
     df = nw.from_native(constructor({"a": [[1, None], [None], [2, None], None]}))
     result = df.select(nw.col("a").cast(nw.List(nw.Int32())).list.contains(2))
     assert_equal_data(result, {"a": [False, False, True, None]})
@@ -42,11 +45,7 @@ def test_contains_no_match_with_null_elements_expr(
 def test_contains_none_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
+    xfail_unsupported(request, constructor)
     data = {"a": [[1, None], [None], [1, 2], [1, 1], [2, 1, None, 1], [], None]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").cast(nw.List(nw.Int32())).list.contains(None))
@@ -56,11 +55,7 @@ def test_contains_none_expr(
 def test_contains_series(
     request: pytest.FixtureRequest, constructor_eager: ConstructorEager
 ) -> None:
-    if any(
-        backend in str(constructor_eager)
-        for backend in ("modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
+    xfail_unsupported(request, constructor_eager)
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].cast(nw.List(nw.Int32())).list.contains(2)
     assert_equal_data({"a": result}, expected)
@@ -76,11 +71,7 @@ def test_contains_none_inner_dtypes_expr(
     values: list[Any],
     dtype: nw.List,
 ) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
+    xfail_unsupported(request, constructor)
     if (
         "polars" in str(constructor)
         and POLARS_VERSION >= (1, 30)
@@ -98,11 +89,7 @@ def test_contains_none_inner_dtypes_expr(
 def test_contains_none_single_empty_list_expr(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    if any(
-        backend in str(constructor)
-        for backend in ("dask", "modin", "cudf", "pyarrow", "pandas")
-    ):
-        request.applymarker(pytest.mark.xfail)
+    xfail_unsupported(request, constructor)
     # Polars 1.28-1.29 return `True` for `[]` only when it is the sole row, which
     # the multi-row data of `test_contains_none_expr` does not catch.
     df = nw.from_native(constructor({"a": [[1], []]})).filter(nw.col("a").list.len() == 0)

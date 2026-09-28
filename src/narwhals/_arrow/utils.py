@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
@@ -561,6 +561,29 @@ def list_agg(
             )
         ]
     )
+
+
+def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArrayAny:
+    """Whether each list holds `item`, or a null element if `item` is None.
+
+    A running count of matches over the flattened values grows within a list iff the
+    list holds a match. That keeps this linear, where a group-by per list would sort.
+    """
+    arr = array.combine_chunks()
+
+    # Each list's bounds in the flattened values. Null lists get null bounds, which
+    # `take` below turns into a null result.
+    lengths = pc.list_value_length(arr)
+    ends = pc.cumulative_sum(lengths, skip_nulls=True)
+    starts = pc.subtract(ends, lengths)
+
+    values = pc.list_flatten(arr)
+    hits = pc.is_null(values) if item is None else pc.equal(values, lit(item))
+    # `running[i]` counts the matches before flattened position `i`.
+    matches = pc.cumulative_sum(hits.fill_null(False).cast(pa.int64()))
+    running = pa.concat_arrays([pa.array([0], pa.int64()), matches])
+
+    return pa.chunked_array([pc.greater(running.take(ends), running.take(starts))])
 
 
 def sortable(array: ChunkedArrayAny, /) -> ChunkedArrayAny:
