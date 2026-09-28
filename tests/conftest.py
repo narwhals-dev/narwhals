@@ -192,16 +192,28 @@ def duckdb_lazy_constructor(obj: dict[str, Any]) -> NativeDuckDB:
     return duckdb.sql("select * from _df")
 
 
-def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
+def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no cover
     import dask.dataframe as dd
 
-    return cast("NativeDask", dd.from_dict(obj, npartitions=1))
+    list_columns = [k for k, v in obj.items() if any(isinstance(x, list) for x in v)]
+    if not list_columns or PANDAS_VERSION < (2, 2) or find_spec("pyarrow") is None:
+        return cast("NativeDask", dd.from_dict(obj, npartitions=npartitions))
+    import pandas as pd
+    import pyarrow as pa
+
+    # `from_dict` would turn list columns into strings (Dask's `convert-string`).
+    frame = pd.DataFrame(obj)
+    for name in list_columns:
+        frame[name] = pd.Series(obj[name], dtype=pd.ArrowDtype(pa.array(obj[name]).type))
+    return cast("NativeDask", dd.from_pandas(frame, npartitions=npartitions))
+
+
+def dask_lazy_p1_constructor(obj: Data) -> NativeDask:  # pragma: no cover
+    return _dask_constructor(obj, npartitions=1)
 
 
 def dask_lazy_p2_constructor(obj: Data) -> NativeDask:  # pragma: no cover
-    import dask.dataframe as dd
-
-    return cast("NativeDask", dd.from_dict(obj, npartitions=2))
+    return _dask_constructor(obj, npartitions=2)
 
 
 def pyarrow_table_constructor(obj: dict[str, Any]) -> pa.Table:

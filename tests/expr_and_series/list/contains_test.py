@@ -17,9 +17,9 @@ expected = {"a": [True, None, False]}
 def xfail_unsupported(
     request: pytest.FixtureRequest, constructor: Constructor | ConstructorEager
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="`list.contains` unsupported"))
-    if "pandas" in str(constructor):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip(reason="casting to `List` needs pandas>=2.2")
         pytest.importorskip("pyarrow")
@@ -92,7 +92,9 @@ def test_contains_none_single_empty_list_expr(
     xfail_unsupported(request, constructor)
     # Polars 1.28-1.29 return `True` for `[]` only when it is the sole row, which
     # the multi-row data of `test_contains_none_expr` does not catch.
-    df = nw.from_native(constructor({"a": [[1], []]})).filter(nw.col("a").list.len() == 0)
+    df = nw.from_native(constructor({"i": [0, 1], "a": [[1], []]})).filter(
+        nw.col("i") == 1
+    )
     result = df.select(nw.col("a").cast(nw.List(nw.Int32())).list.contains(None))
     assert_equal_data(result, {"a": [False]})
 
