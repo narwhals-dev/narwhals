@@ -103,6 +103,12 @@ def test_contains_inner_dtypes_expr(
     request: pytest.FixtureRequest, constructor: Constructor, x: Any, y: Any, dtype: DType
 ) -> None:
     xfail_unsupported(request, constructor)
+    if (
+        "polars" in str(constructor)
+        and POLARS_VERSION < (1, 28)
+        and isinstance(dtype, (nw.Decimal, nw.Float64))
+    ):
+        pytest.skip(reason="Polars<1.28 doesn't support decimals, nor match NaN")
     if dtype == nw.Float64:
         if "duckdb" in str(constructor):
             # DuckDB turns a NaN literal into NULL.
