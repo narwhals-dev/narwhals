@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -569,21 +570,34 @@ def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArra
     A running count of matches over the flattened values grows within a list iff the
     list holds a match. That keeps this linear, where a group-by per list would sort.
     """
-    arr = array.combine_chunks()
+    # Per chunk, as combining them can overflow 32-bit list offsets.
+    chunks = [_list_contains(arr, item) for arr in array.chunks]
+    return pa.chunked_array(chunks, pa.bool_())
 
+
+def _list_contains(arr: ArrayAny, item: NonNestedLiteral) -> ArrayAny:
     # Each list's bounds in the flattened values. Null lists get null bounds, which
     # `take` below turns into a null result.
     lengths = pc.list_value_length(arr)
     ends = pc.cumulative_sum(lengths, skip_nulls=True)
     starts = pc.subtract(ends, lengths)
 
+    # Like Polars, and unlike `pc.equal`, NaN matches NaN.
     values = pc.list_flatten(arr)
-    hits = pc.is_null(values) if item is None else pc.equal(values, lit(item))
-    # `running[i]` counts the matches before flattened position `i`.
-    matches = pc.cumulative_sum(hits.fill_null(False).cast(pa.int64()))
-    running = pa.concat_arrays([pa.array([0], pa.int64()), matches])
+    if item is None:
+        hits = pc.is_null(values)
+    elif isinstance(item, float) and math.isnan(item):
+        hits = pc.is_nan(values)
+    else:
+        hits = pc.equal(values, lit(item))
 
-    return pa.chunked_array([pc.greater(running.take(ends), running.take(starts))])
+    # `running[i]` counts the matches before flattened position `i`. Prepending the
+    # leading 0 to the bit-packed `hits`, and counting in the width of the offsets,
+    # keeps the large intermediates to a single one.
+    hits = pa.concat_arrays([pa.array([False]), hits.fill_null(False)])
+    running = pc.cumulative_sum(hits.cast(lengths.type))
+
+    return pc.greater(running.take(ends), running.take(starts))
 
 
 def sortable(array: ChunkedArrayAny, /) -> ChunkedArrayAny:

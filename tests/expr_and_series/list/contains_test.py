@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -8,6 +10,7 @@ import narwhals as nw
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, pyspark_session
 
 if TYPE_CHECKING:
+    from narwhals.dtypes import DType
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[2, 2, 3, None, None], None, []]}
@@ -84,6 +87,52 @@ def test_contains_none_inner_dtypes_expr(
     df = nw.from_native(constructor(data))
     result = df.select(nw.col("a").cast(dtype).list.contains(None))
     assert_equal_data(result, {"a": [True, True, False, False, None]})
+
+
+@pytest.mark.parametrize(
+    ("x", "y", "dtype"),
+    [
+        ("x", "y", nw.String()),
+        (True, False, nw.Boolean()),
+        (date(2020, 1, 1), date(2021, 1, 1), nw.Date()),
+        (Decimal("1.50"), Decimal("2.50"), nw.Decimal(38, 2)),
+        (1.5, float("nan"), nw.Float64()),
+    ],
+)
+def test_contains_inner_dtypes_expr(
+    request: pytest.FixtureRequest, constructor: Constructor, x: Any, y: Any, dtype: DType
+) -> None:
+    xfail_unsupported(request, constructor)
+    if dtype == nw.Float64:
+        if "duckdb" in str(constructor):
+            # DuckDB turns a NaN literal into NULL.
+            request.applymarker(pytest.mark.xfail)
+        if PANDAS_VERSION < (3,) and any(
+            backend in str(constructor) for backend in ("pandas", "modin", "dask")
+        ):
+            pytest.skip(reason="pandas<3 turns NaN into null when casting to `List`")
+    data = {"a": [[x, None], [y], [x, y], [], None]}
+    list_ = nw.col("a").cast(nw.List(dtype))
+    result = nw.from_native(constructor(data)).select(
+        x=list_.list.contains(x), y=list_.list.contains(y)
+    )
+    expected = {
+        "x": [True, False, True, False, None],
+        "y": [False, True, True, False, None],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_contains_chunked_pyarrow() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    array = pa.array([[1, 2], [3], None, [], [2, None]])
+    chunks = pa.chunked_array([array.slice(3), array.slice(0, 0), array.slice(1, 2)])
+    result = nw.from_native(pa.table([chunks], names=["a"])).select(
+        nw.col("a").list.contains(2)
+    )
+    assert_equal_data(result, {"a": [False, True, False, None]})
 
 
 def test_contains_none_single_empty_list_expr(
