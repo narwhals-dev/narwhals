@@ -41,7 +41,11 @@ def test_fill_null_scalar_receiver(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow_table")):
-        request.applymarker(pytest.mark.xfail)
+        reason = (
+            "Eager pandas-like and pyarrow don't broadcast a scalar receiver against "
+            "a column `value`: they raise or silently keep the length-1 result."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [0.5, None, 2.0]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.lit(None, nw.Float64).fill_null(nw.col("a")).alias("a"))

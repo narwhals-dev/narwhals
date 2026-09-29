@@ -404,31 +404,26 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        if value is not None:
-
-            def func_val(df: DaskLazyFrame) -> list[dx.Series]:
-                val = df._evaluate_single_output_expr(value)
-                results: list[dx.Series] = []
-                for s in self(df):
-                    s_aligned, val_aligned = align_series_full_broadcast(df, s, val)
-                    results.append(s_aligned.fillna(val_aligned))
-                return results
-
-            return self.__class__(
-                func_val,
-                evaluate_output_names=self._evaluate_output_names,
-                alias_output_names=self._alias_output_names,
-                version=self._version,
+        if value is None:
+            return self._with_callable(
+                lambda expr: (
+                    expr.ffill(limit=limit)
+                    if strategy == "forward"
+                    else expr.bfill(limit=limit)
+                )
             )
 
-        def func(expr: dx.Series) -> dx.Series:
-            return (
-                expr.ffill(limit=limit)
-                if strategy == "forward"
-                else expr.bfill(limit=limit)
-            )
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            fill_value = df._evaluate_single_output_expr(value)
+            aligned = (align_series_full_broadcast(df, s, fill_value) for s in self(df))
+            return [series.fillna(fill) for series, fill in aligned]
 
-        return self._with_callable(func)
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         return self._with_callable(
