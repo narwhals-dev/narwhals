@@ -364,13 +364,12 @@ class PandasLikeGroupBy(
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
             result = apply(func, include_groups=False)  # type: ignore[call-overload]
         else:  # pragma: no cover
-            result = apply(func)  # type: ignore[return-value]
+            result = apply(func)
         # Returning a 1-row DataFrame from apply preserves per-column dtypes, but
         # pandas adds an extra index level for the row. Drop it so reset_index()
-        # only materializes the group keys.
-        if getattr(result.index, "nlevels", 1) > 1:
-            result = result.droplevel(-1)
-        return result
+        # only materializes the group keys. Use reset_index rather than
+        # DataFrame.droplevel: Modin's droplevel mishandles a numeric level.
+        return result.reset_index(level=-1, drop=True)
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
