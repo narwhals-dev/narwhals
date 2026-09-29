@@ -48,6 +48,32 @@ def test_group_by_complex() -> None:
         )
 
 
+def test_group_by_complex_preserves_cast_dtype() -> None:
+    """Casts inside complex pandas group-by aggregations must keep their dtype.
+
+    Packing mixed int/float Python scalars into one Series upcasts everything to
+    float64; returning a 1-row DataFrame per group preserves each column dtype.
+    """
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame({"k": ["a", "a", "b"], "v": [1, 2, 2], "x": [1.0, 2.0, 3.0]})
+    )
+    with pytest.warns(UserWarning, match="complex group-by"):
+        result = df.group_by("k").agg(
+            n=nw.len().cast(nw.Int64),
+            u=nw.col("v").n_unique().cast(nw.Int64),
+            m=nw.col("x").mean(),
+        )
+    assert result.schema["n"].is_integer()
+    assert result.schema["u"].is_integer()
+    assert result.schema["m"].is_float()
+    assert_equal_data(
+        result.sort("k"), {"k": ["a", "b"], "n": [2, 1], "u": [2, 1], "m": [1.5, 3.0]}
+    )
+
+
 def test_group_by_complex_polars() -> None:
     pytest.importorskip("polars")
     import polars as pl

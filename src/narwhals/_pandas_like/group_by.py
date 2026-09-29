@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
 
-NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
+NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.DataFrame]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
 NativeAggregation: TypeAlias = Literal[
     "any",
@@ -362,22 +362,33 @@ class PandasLikeGroupBy(
         func = self._apply_exprs_function(exprs)
         apply = grouped.apply
         if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)  # type: ignore[call-overload]
-        return apply(func)  # type: ignore[return-value]  # pragma: no cover
+            result = apply(func, include_groups=False)  # type: ignore[call-overload]
+        else:  # pragma: no cover
+            result = apply(func)  # type: ignore[return-value]
+        # Returning a 1-row DataFrame from apply preserves per-column dtypes, but
+        # pandas adds an extra index level for the row. Drop it so reset_index()
+        # only materializes the group keys.
+        if getattr(result.index, "nlevels", 1) > 1:
+            result = result.droplevel(-1)
+        return result
 
     def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
         ns = self.compliant.__narwhals_namespace__()
-        into_series = ns._series.from_iterable
 
-        def fn(df: pd.DataFrame) -> pd.Series[Any]:
+        def fn(df: pd.DataFrame) -> pd.DataFrame:
             compliant = self.compliant._with_native(df)
-            results = [
-                (keys.native.iloc[0], keys.name)
-                for expr in exprs
-                for keys in expr(compliant)
-            ]
-            out_group, out_names = zip(*results, strict=True) if results else ([], [])
-            return into_series(out_group, index=out_names, context=ns).native
+            pieces: list[pd.Series[Any]] = []
+            for expr in exprs:
+                for keys in expr(compliant):
+                    # Keep the evaluated dtype (e.g. int64 after `.cast(nw.Int64)`)
+                    # instead of packing Python scalars into one Series, which
+                    # upcasts ints to float when any sibling aggregation is float.
+                    piece = keys.native.iloc[0:1].reset_index(drop=True)
+                    piece.name = keys.name
+                    pieces.append(piece)
+            if not pieces:  # pragma: no cover
+                return self.compliant.__native_namespace__().DataFrame()
+            return ns._concat_by_index(pieces)
 
         return fn
 
