@@ -614,7 +614,15 @@ class PandasLikeSeries(EagerSeries[Any]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        ser = self.native
+        if (
+            self._broadcast
+            and isinstance(value, PandasLikeSeries)
+            and not value._broadcast
+        ):
+            compliant, value = self._align_full_broadcast(self, value)
+        else:
+            compliant = self
+        native = compliant.native
         kwargs = (
             {"downcast": False}
             if self._implementation is Implementation.PANDAS
@@ -626,18 +634,15 @@ class PandasLikeSeries(EagerSeries[Any]):
                 "ignore", "The 'downcast' keyword .*is deprecated", category=FutureWarning
             )
             if value is not None:
-                _, native_value = align_and_extract_native(self, value)
-                res_ser = self._with_native(
-                    ser.fillna(value=native_value, **kwargs), preserve_broadcast=True
-                )
+                _, native_value = align_and_extract_native(compliant, value)
+                result = native.fillna(value=native_value, **kwargs)
             else:
-                res_ser = self._with_native(
-                    ser.ffill(limit=limit, **kwargs)
+                result = (
+                    native.ffill(limit=limit, **kwargs)
                     if strategy == "forward"
-                    else ser.bfill(limit=limit, **kwargs),
-                    preserve_broadcast=True,
+                    else native.bfill(limit=limit, **kwargs)
                 )
-        return res_ser
+        return compliant._with_native(result, preserve_broadcast=True)
 
     def fill_nan(self, value: float | None) -> Self:
         impl = self._implementation

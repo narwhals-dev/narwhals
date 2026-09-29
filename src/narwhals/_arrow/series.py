@@ -664,9 +664,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 pc.or_(is_not_null, beyond_limit), arr, arr.take(index_not_null)
             )
 
-        native = self.native
+        if self._broadcast and isinstance(value, ArrowSeries) and not value._broadcast:
+            compliant, value = self._align_full_broadcast(self, value)
+        else:
+            compliant = self
+        native = compliant.native
         if value is not None:
-            _, native_value = extract_native(self, value)
+            _, native_value = extract_native(compliant, value)
             series: ArrayOrScalar = pc.fill_null(native, native_value)
         elif limit is None:
             series = (
@@ -680,7 +684,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 if strategy == "forward"
                 else fill_null_forward_limit(native[::-1], limit)[::-1]
             )
-        return self._with_native(series, preserve_broadcast=True)
+        return compliant._with_native(series, preserve_broadcast=True)
 
     def to_frame(self) -> ArrowDataFrame:
         from narwhals._arrow.dataframe import ArrowDataFrame
