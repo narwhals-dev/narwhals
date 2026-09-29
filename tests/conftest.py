@@ -204,7 +204,7 @@ def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no 
     # `from_dict` would turn list columns into strings (Dask's `convert-string`).
     frame = pd.DataFrame(obj)
     for name in list_columns:
-        frame[name] = pd.Series(obj[name], dtype=pd.ArrowDtype(pa.array(obj[name]).type))
+        frame[name] = pd.arrays.ArrowExtensionArray(pa.array(obj[name]))
     return cast("NativeDask", dd.from_pandas(frame, npartitions=npartitions))
 
 

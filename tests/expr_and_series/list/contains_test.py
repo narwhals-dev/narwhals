@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
@@ -97,26 +98,32 @@ def test_contains_none_inner_dtypes_expr(
         (date(2020, 1, 1), date(2021, 1, 1), nw.Date()),
         (Decimal("1.50"), Decimal("2.50"), nw.Decimal(38, 2)),
         (1.5, float("nan"), nw.Float64()),
+        (float("inf"), float("-inf"), nw.Float64()),
     ],
 )
 def test_contains_inner_dtypes_expr(
     request: pytest.FixtureRequest, constructor: Constructor, x: Any, y: Any, dtype: DType
 ) -> None:
     xfail_unsupported(request, constructor)
+    is_nan = isinstance(y, float) and math.isnan(y)
     if (
         "polars" in str(constructor)
         and POLARS_VERSION < (1, 28)
-        and isinstance(dtype, (nw.Decimal, nw.Float64))
+        and (isinstance(dtype, nw.Decimal) or is_nan)
     ):
         pytest.skip(reason="Polars<1.28 doesn't support decimals, nor match NaN")
-    if dtype == nw.Float64:
+    if is_nan:
         if "duckdb" in str(constructor):
-            # DuckDB turns a NaN literal into NULL.
-            request.applymarker(pytest.mark.xfail)
+            reason = "DuckDB turns a NaN literal into NULL."
+            request.applymarker(pytest.mark.xfail(reason=reason))
         if PANDAS_VERSION < (3,) and any(
             backend in str(constructor) for backend in ("pandas", "modin", "dask")
         ):
             pytest.skip(reason="pandas<3 turns NaN into null when casting to `List`")
+    if "sqlframe" in str(constructor) and isinstance(x, float) and math.isinf(x):
+        # https://github.com/eakmanrq/sqlframe/issues/648
+        reason = "SQLFrame writes `inf` into SQL unquoted, which DuckDB can't parse."
+        request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [[x, None], [y], [x, y], [], None]}
     list_ = nw.col("a").cast(nw.List(dtype))
     result = nw.from_native(constructor(data)).select(
