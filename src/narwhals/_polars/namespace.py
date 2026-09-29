@@ -176,12 +176,12 @@ class PolarsNamespace:
         return self._expr(result, self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
-        return self._expr(pl.all_horizontal(*(expr.native for expr in it)), self._version)
+        natives = (e.native.fill_null(True) if ignore_nulls else e.native for e in exprs)
+        return self._expr(pl.all_horizontal(*natives), self._version)
 
     def any_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
-        it = (expr.fill_null(False) for expr in exprs) if ignore_nulls else iter(exprs)
-        return self._expr(pl.any_horizontal(*(expr.native for expr in it)), self._version)
+        natives = (e.native.fill_null(False) if ignore_nulls else e.native for e in exprs)
+        return self._expr(pl.any_horizontal(*natives), self._version)
 
     def concat(
         self,
