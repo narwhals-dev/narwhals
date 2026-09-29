@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import duckdb
-from duckdb import CoalesceOperator, ColumnExpression, Expression
+from duckdb import CoalesceOperator, Expression
 
 from narwhals._duckdb.dataframe import DuckDBLazyFrame
 from narwhals._duckdb.expr import DuckDBExpr
@@ -14,6 +15,7 @@ from narwhals._duckdb.utils import (
     BACKEND_VERSION,
     DeferredTimeZone,
     F,
+    col,
     concat_str,
     duckdb_dtypes,
     function,
@@ -122,29 +124,13 @@ class DuckDBNamespace(
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
         if how == "diagonal":
-            # Project every relation onto the same columns (padding missing
-            # ones with NULL) and use positional `union` via the relational
-            # API, so everything stays on the relations' own connection.
-            # TODO(unassigned): use the native operator once available,
-            # https://github.com/duckdb/duckdb/discussions/16996
-            names, seen = [], set()
-            for rel in native_items:
-                for name in rel.columns:
-                    if name not in seen:
-                        seen.add(name)
-                        names.append(name)
-            aligned = [
-                rel.select(
-                    *(
-                        ColumnExpression(name)
-                        if name in rel.columns
-                        else lit(None).alias(name)
-                        for name in names
-                    )
-                )
-                for rel in native_items
-            ]
-            return first._with_native(reduce(lambda x, y: x.union(y), aligned))
+            # TODO(unassigned): use relational `union by name` when available https://github.com/duckdb/duckdb/discussions/16996
+            names = dict.fromkeys(chain.from_iterable(item.columns for item in items))
+            native_items = []
+            for item in items:
+                present = set(item.columns)
+                exprs = (col(n) if n in present else lit(None).alias(n) for n in names)
+                native_items.append(item.native.select(*exprs))
         res = reduce(lambda x, y: x.union(y), native_items)
         return first._with_native(res)
 
