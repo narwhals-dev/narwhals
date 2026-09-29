@@ -40,22 +40,29 @@ def test_fill_null(constructor: Constructor) -> None:
 @pytest.mark.parametrize(
     ("receiver", "expected"),
     [
-        (nw.lit(None, nw.Float64), [0.5, None, 2.0]),
-        (nw.lit(5.0), [5.0, 5.0, 5.0]),
-        (nw.col("a").max(), [2.0, 2.0, 2.0]),
+        pytest.param(nw.lit(None, nw.Float64), [0.5, None, 2.0], id="lit_none"),
+        pytest.param(nw.lit(5.0), [5.0, 5.0, 5.0], id="lit"),
+        pytest.param(nw.col("a").max(), [2.0, 2.0, 2.0], id="agg"),
     ],
 )
 @pytest.mark.parametrize("extra", [(), ("a",)], ids=["alone", "next_to_column"])
 def test_fill_null_scalar_receiver(
     constructor: Constructor,
+    request: pytest.FixtureRequest,
     receiver: nw.Expr,
     expected: list[Any],
     extra: tuple[str, ...],
 ) -> None:
+    if (
+        "duckdb" in str(constructor)
+        and DUCKDB_VERSION < (1, 3)
+        and "agg" in request.node.callspec.id
+    ):
+        pytest.skip(reason="Broadcasting an aggregation requires DuckDB>=1.3")
     data = {"a": [0.5, None, 2.0]}
     df = nw.from_native(constructor(data))
-    result = df.select(*extra, x=receiver.fill_null(nw.col("a"))).select("x")
-    assert_equal_data(result, {"x": expected})
+    result = df.select(*extra, x=receiver.fill_null(nw.col("a")))
+    assert_equal_data(result, {**{name: data[name] for name in extra}, "x": expected})
 
 
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:
