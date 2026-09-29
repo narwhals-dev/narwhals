@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import duckdb
@@ -14,6 +15,7 @@ from narwhals._duckdb.utils import (
     BACKEND_VERSION,
     DeferredTimeZone,
     F,
+    col,
     concat_str,
     duckdb_dtypes,
     function,
@@ -122,13 +124,13 @@ class DuckDBNamespace(
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
         if how == "diagonal":
-            res = first.native
-            for _item in native_items[1:]:
-                # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
-                res = duckdb.sql("""
-                    from res select * union all by name from _item select *
-                """)
-            return first._with_native(res)
+            # TODO(unassigned): use relational `union by name` when available https://github.com/duckdb/duckdb/discussions/16996
+            names = dict.fromkeys(chain.from_iterable(item.columns for item in items))
+            native_items = []
+            for item in items:
+                present = set(item.columns)
+                exprs = (col(n) if n in present else lit(None).alias(n) for n in names)
+                native_items.append(item.native.select(*exprs))
         res = reduce(lambda x, y: x.union(y), native_items)
         return first._with_native(res)
 

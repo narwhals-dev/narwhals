@@ -994,7 +994,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = (
             not_na_series.cumsum()
             if not reverse
-            else len(self) - not_na_series.cumsum() + not_na_series - 1
+            else not_na_series.sum() - not_na_series.cumsum() + not_na_series
         )
         return self._with_native(result)
 
