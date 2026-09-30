@@ -40,6 +40,35 @@ def test_expr_is_in_empty_list(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        ([float("inf"), 2.0], [True, False, False, True]),
+        ([float("-inf")], [False, True, False, False]),
+        ([float("inf"), float("-inf"), float("inf")], [True, True, False, False]),
+        ([float("inf")], [True, False, False, False]),
+    ],
+)
+def test_expr_is_in_infinity(
+    constructor: Constructor, values: list[float], expected: list[bool]
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4006
+    data_inf = {"a": [float("inf"), float("-inf"), 1.0, 2.0]}
+    df = nw.from_native(constructor(data_inf))
+    result = df.select(nw.col("a").is_in(values))
+
+    assert_equal_data(result, {"a": expected})
+
+
+def test_expr_is_in_infinity_with_null_in_other(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/4006
+    data_inf = {"a": [float("inf"), 1.0, 2.0]}
+    df = nw.from_native(constructor(data_inf))
+    result = df.select(nw.col("a").is_in([float("inf"), None]))
+
+    assert_equal_data(result, {"a": [True, False, False]})
+
+
 def test_ser_is_in(constructor_eager: ConstructorEager) -> None:
     ser = nw.from_native(constructor_eager(data), eager_only=True)["a"]
     result = {"a": ser.is_in([4, 5])}
