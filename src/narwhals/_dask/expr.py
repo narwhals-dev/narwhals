@@ -404,20 +404,26 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        def func(expr: dx.Series, value: Self | None = None) -> dx.Series:
-            if value is not None:
-                res_ser = expr.fillna(value)
-            else:
-                res_ser = (
+        if value is None:
+            return self._with_callable(
+                lambda expr: (
                     expr.ffill(limit=limit)
                     if strategy == "forward"
                     else expr.bfill(limit=limit)
                 )
-            return res_ser
+            )
 
-        if value is not None:
-            return self._with_callable(func, expression_args={"value": value})
-        return self._with_callable(func)
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            fill_value = df._evaluate_single_output_expr(value)
+            aligned = (align_series_full_broadcast(df, s, fill_value) for s in self(df))
+            return [series.fillna(fill) for series, fill in aligned]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         return self._with_callable(
