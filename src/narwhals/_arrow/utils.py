@@ -571,34 +571,28 @@ def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArra
     A running count of matches over the flattened values changes within a list iff the
     list holds a match. That keeps this linear, where a group-by per list would sort.
     """
-    # Per chunk, as combining them can overflow 32-bit list offsets.
-    chunks = [_list_contains(cast("ListArrayAny", arr), item) for arr in array.chunks]
-    return pa.chunked_array(chunks, pa.bool_())
+    # Per chunk, as combining them can overflow 32-bit list offsets, in zero-copy slices
+    # of whole lists, of about 2M values each, so the intermediates stay in cache.
+    blocks: list[ArrayAny] = []
+    for arr in cast("list[ListArrayAny]", array.chunks):
+        n_values = arr.offsets[-1].as_py() - arr.offsets[0].as_py()
+        step = max(1, len(arr) * _LIST_CONTAINS_BLOCK_VALUES // max(1, n_values))
+        blocks.extend(
+            _list_contains(arr.slice(start, step), item)
+            for start in range(0, len(arr), step)
+        )
+    return pa.chunked_array(blocks, pa.bool_())
 
 
 _LIST_CONTAINS_BLOCK_VALUES = 1 << 21
 
 
 def _list_contains(arr: ListArrayAny, item: NonNestedLiteral) -> ArrayAny:
-    # Zero-copy slices of whole lists, of about 2M values each, keep the intermediates
-    # small enough to stay in cache.
-    n_lists = len(arr)
-    n_values = arr.offsets[-1].as_py() - arr.offsets[0].as_py()
-    step = max(1, n_lists * _LIST_CONTAINS_BLOCK_VALUES // max(1, n_values))
-    blocks = [
-        _list_contains_block(arr.slice(start, step), item)
-        for start in range(0, n_lists, step)
-    ]
-    return pa.concat_arrays(blocks) if blocks else pa.array([], pa.bool_())
-
-
-def _list_contains_block(arr: ListArrayAny, item: NonNestedLiteral) -> ArrayAny:
     offsets = arr.offsets
     first = offsets[0].as_py()
     values = arr.values.slice(first, offsets[-1].as_py() - first)
-    if first:
-        # A plain `int` would widen int32 offsets to int64, which is slower to `take`.
-        offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
+    # A plain `int` would widen int32 offsets to int64, which is slower to `take`.
+    offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
     ends, starts = offsets.slice(1), offsets.slice(0, len(arr))
 
     # Like Polars, and unlike `pc.equal`, NaN matches NaN.
@@ -613,19 +607,14 @@ def _list_contains_block(arr: ListArrayAny, item: NonNestedLiteral) -> ArrayAny:
     # exact within lists shorter than 2^k, so counting in the narrowest type fitting the
     # longest list keeps the only large intermediates small.
     longest = pc.max(pc.subtract(ends, starts)).as_py() or 0
-    count_type = (
-        pa.uint8()
-        if longest < 1 << 8
-        else pa.uint16()
-        if longest < 1 << 16
-        else pa.uint32()
-        if longest < 1 << 32
-        else pa.uint64()
+    count_type = next(
+        t
+        for t in (pa.uint8(), pa.uint16(), pa.uint32(), pa.uint64())
+        if longest < 1 << t.bit_width
     )
     hits = pa.concat_arrays([pa.array([False]), hits.fill_null(False)])
     running = pc.cumulative_sum(hits.cast(count_type))
-    in_list = pc.subtract(running.take(ends), running.take(starts))
-    found = pc.not_equal(in_list, lit(0, count_type))
+    found = pc.not_equal(running.take(ends), running.take(starts))
     return found if arr.null_count == 0 else pc.if_else(arr.is_valid(), found, None)
 
 
