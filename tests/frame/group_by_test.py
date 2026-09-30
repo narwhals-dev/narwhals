@@ -62,7 +62,7 @@ def test_group_by_complex() -> None:
             {
                 "k": ["a", "b"],
                 "n": [2, 1],
-                "u": [2, 1],
+                "v": [3, 2],
                 "m": [1.5, 3.0],
                 "s": ["q", "r"],
                 "b": [False, True],
@@ -70,7 +70,7 @@ def test_group_by_complex() -> None:
         ),
         (
             {"k": ["a"], "v": [1], "x": [1.0], "s": ["p"]},
-            {"k": ["a"], "n": [1], "u": [1], "m": [1.0], "s": ["p"], "b": [False]},
+            {"k": ["a"], "n": [1], "v": [1], "m": [1.0], "s": ["p"], "b": [False]},
         ),
     ],
 )
@@ -88,7 +88,7 @@ def test_group_by_complex_preserves_dtype(
         pytest.skip(reason="complex aggregations are not supported")
     aggs = {
         "n": nw.len().cast(nw.Int32),
-        "u": nw.col("v").n_unique().cast(nw.Int32),
+        "v": nw.col("v").sum().cast(nw.Int32),
         "m": nw.col("x").mean(),
     }
     if not numeric_only:
@@ -96,7 +96,7 @@ def test_group_by_complex_preserves_dtype(
     schema = {
         "k": nw.String,
         "n": nw.Int32,
-        "u": nw.Int32,
+        "v": nw.Int32,
         "m": nw.Float64,
         "s": nw.String,
         "b": nw.Boolean,
