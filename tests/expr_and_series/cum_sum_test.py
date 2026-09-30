@@ -5,6 +5,7 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
+    PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
@@ -231,6 +232,7 @@ def test_pyarrow_cum_sum_widens_small_integers(
     assert result.to_native()["a"].type == pa.int64()
 
 
+@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
 @pytest.mark.parametrize(
     ("dtype", "values", "forward", "expected_reverse"),
     [
