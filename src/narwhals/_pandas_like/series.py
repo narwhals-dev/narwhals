@@ -18,6 +18,7 @@ from narwhals._pandas_like.utils import (
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    is_dtype_pyarrow,
     is_pandas_or_modin,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
@@ -676,10 +677,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.abs())
 
     def cum_sum(self, *, reverse: bool) -> Self:
+        native = self.native
+        dtype = native.dtype
+        # pyarrow-backed accumulation keeps the input width and raises on overflow.
+        if (
+            is_dtype_pyarrow(dtype)
+            and dtype.kind in "iu"
+            and dtype.pyarrow_dtype.bit_width < 64
+        ):
+            native = native.astype("int64[pyarrow]")
         result = (
-            self.native.cumsum(skipna=True)
+            native.cumsum(skipna=True)
             if not reverse
-            else self.native[::-1].cumsum(skipna=True)[::-1]
+            else native[::-1].cumsum(skipna=True)[::-1]
         )
         return self._with_native(result)
 
