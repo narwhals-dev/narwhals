@@ -48,29 +48,90 @@ def test_group_by_complex() -> None:
         )
 
 
-def test_group_by_complex_preserves_cast_dtype() -> None:
-    """Casts inside complex pandas group-by aggregations must keep their dtype.
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        (
+            {
+                "k": ["a", "a", "b"],
+                "v": [1, 2, 2],
+                "x": [1.0, 2.0, 3.0],
+                "s": list("pqr"),
+            },
+            {
+                "k": ["a", "b"],
+                "n": [2, 1],
+                "u": [2, 1],
+                "m": [1.5, 3.0],
+                "s": ["q", "r"],
+                "b": [False, True],
+            },
+        ),
+        (
+            {"k": ["a"], "v": [1], "x": [1.0], "s": ["p"]},
+            {"k": ["a"], "n": [1], "u": [1], "m": [1.0], "s": ["p"], "b": [False]},
+        ),
+    ],
+)
+# All-numeric outputs are the regression case: a non-numeric sibling used to make the
+# packed per-group Series object, which pandas then re-inferred correctly.
+@pytest.mark.parametrize("numeric_only", [True, False])
+def test_group_by_complex_preserves_dtype(
+    constructor: Constructor,
+    data: dict[str, Any],
+    expected: dict[str, Any],
+    *,
+    numeric_only: bool,
+) -> None:
+    if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
+        pytest.skip(reason="complex aggregations are not supported")
+    aggs = {
+        "n": nw.len().cast(nw.Int32),
+        "u": nw.col("v").n_unique().cast(nw.Int32),
+        "m": nw.col("x").mean(),
+    }
+    if not numeric_only:
+        aggs |= {"s": nw.col("s").max(), "b": nw.col("x").max() > 2}
+    schema = {
+        "k": nw.String,
+        "n": nw.Int32,
+        "u": nw.Int32,
+        "m": nw.Float64,
+        "s": nw.String,
+        "b": nw.Boolean,
+    }
+    names = ["k", *aggs]
+    df = nw.from_native(constructor(data))
+    result = df.group_by("k").agg(**aggs).sort("k")
+    assert result.collect_schema() == {name: schema[name] for name in names}
+    assert_equal_data(result, {name: expected[name] for name in names})
 
-    Packing mixed int/float Python scalars into one Series upcasts everything to
-    float64; returning a 1-row DataFrame per group preserves each column dtype.
-    """
-    pytest.importorskip("pandas")
-    import pandas as pd
 
-    df = nw.from_native(
-        pd.DataFrame({"k": ["a", "a", "b"], "v": [1, 2, 2], "x": [1.0, 2.0, 3.0]})
-    )
-    with pytest.warns(UserWarning, match="complex group-by"):
-        result = df.group_by("k").agg(
-            n=nw.len().cast(nw.Int64),
-            u=nw.col("v").n_unique().cast(nw.Int64),
-            m=nw.col("x").mean(),
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_group_by_complex_null_group(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        pytest.skip(reason="complex aggregations are not supported")
+    request.applymarker(
+        pytest.mark.xfail(
+            "modin" in str(constructor_eager),
+            reason="Modin's `infer_objects` raises, so the null group's column stays Object",
         )
-    assert result.schema["n"].is_integer()
-    assert result.schema["u"].is_integer()
-    assert result.schema["m"].is_float()
+    )
+    data = {"k1": ["a", "a", "b"], "k2": [1, 1, 2], "v": [1, 2, 10], "s": ["x", "y", "z"]}
+    df = nw.from_native(constructor_eager(data))
+    is_big = nw.col("v") > 5
+    result = (
+        df.group_by("k1", "k2")
+        .agg(nw.col("v").filter(is_big).first(), nw.col("s").filter(is_big).first())
+        .sort("k1")
+    )
+    assert result.schema["v"].is_numeric()
+    assert result.schema["s"] == nw.String
     assert_equal_data(
-        result.sort("k"), {"k": ["a", "b"], "n": [2, 1], "u": [2, 1], "m": [1.5, 3.0]}
+        result, {"k1": ["a", "b"], "k2": [1, 2], "v": [None, 10], "s": [None, "z"]}
     )
 
 
