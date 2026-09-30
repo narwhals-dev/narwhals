@@ -495,10 +495,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cum_sum(self, *, reverse: bool) -> Self:
         cum_sum = pc.cumulative_sum
+        native = self.native
+        if pa.types.is_integer(native.type) and native.type.bit_width < 64:
+            native = pc.cast(native, pa.int64())
         result = (
-            cum_sum(self.native, skip_nulls=True)
+            cum_sum(native, skip_nulls=True)
             if not reverse
-            else cum_sum(self.native[::-1], skip_nulls=True)[::-1]
+            else cum_sum(native[::-1], skip_nulls=True)[::-1]
         )
         return self._with_native(result)
 
