@@ -29,7 +29,7 @@ def skip_or_xfail_window(
     id_ = str(constructor)
     if ("polars" in id_ and POLARS_VERSION < (1, 9)) or (
         "duckdb" in id_ and DUCKDB_VERSION < (1, 3)
-    ):
+    ):  # pragma: no cover
         reason = "`polars<1.9` and `duckdb<1.3` are too old for `over(order_by=...)`"
         pytest.skip(reason=reason)
     if grouped:
