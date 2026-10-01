@@ -51,7 +51,7 @@ def test_series_floordiv_by_zero(
 
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if df.implementation.is_pandas_like():
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     denominator = get_denominator(df)
@@ -68,7 +68,7 @@ def test_expr_floordiv_by_zero(
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if df.implementation.is_pandas_like():
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     result = df.select(result=nw.col("int") // denominator)
@@ -120,15 +120,7 @@ def test_series_rfloordiv_by_zero(
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if any(
-        x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
-    ) or (
-        any(
-            x in str(constructor_eager)
-            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
-        )
-        and numerator != 0
-    ):
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -143,15 +135,7 @@ def test_expr_rfloordiv_by_zero(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if any(
-        x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
-    ) or (
-        any(
-            x in str(constructor)
-            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
-        )
-        and numerator != 0
-    ):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))

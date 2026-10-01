@@ -709,6 +709,25 @@ def broadcast_series_to_index(
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
 
 
+def floordiv_by_zero_is_null(left: Any, right: Any) -> Any:
+    """Floor-divide, returning null wherever the divisor is zero.
+
+    pandas-like backends disagree with Polars here: numpy-backed data yields
+    `inf`, nullable data yields `0`, and pyarrow-backed data raises. Divisors
+    equal to zero are replaced before dividing and masked out afterwards, so
+    that every backend returns null, as Polars does.
+    """
+    if hasattr(right, "where"):  # Series divisor.
+        is_zero = right == 0
+        if not is_zero.any():
+            return operator.floordiv(left, right)
+        return operator.floordiv(left, right.where(~is_zero, 1)).where(~is_zero)
+    if right != 0:  # Scalar divisor.
+        return operator.floordiv(left, right)
+    result = operator.floordiv(left, 1)
+    return result.where(result.notna() & False)
+
+
 def binary_string_sum_fallback(  # pragma: no cover
     left: pd.Series, right: Any, pdx: Any
 ) -> pd.Series:
