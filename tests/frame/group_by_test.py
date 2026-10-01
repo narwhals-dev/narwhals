@@ -74,8 +74,8 @@ def test_group_by_complex() -> None:
         ),
     ],
 )
-# All-numeric outputs are the regression case: a non-numeric sibling used to make the
-# packed per-group Series object, which pandas then re-inferred correctly.
+# Only all-numeric outputs used to upcast: a non-numeric sibling made the packed
+# per-group Series object, which pandas then re-inferred correctly.
 @pytest.mark.parametrize("numeric_only", [True, False])
 def test_group_by_complex_preserves_dtype(
     constructor: Constructor,
@@ -91,21 +91,68 @@ def test_group_by_complex_preserves_dtype(
         "v": nw.col("v").sum().cast(nw.Int32),
         "m": nw.col("x").mean(),
     }
+    schema = {"k": nw.String, "n": nw.Int32, "v": nw.Int32, "m": nw.Float64}
     if not numeric_only:
         aggs |= {"s": nw.col("s").max(), "b": nw.col("x").max() > 2}
-    schema = {
-        "k": nw.String,
-        "n": nw.Int32,
-        "v": nw.Int32,
-        "m": nw.Float64,
-        "s": nw.String,
-        "b": nw.Boolean,
-    }
-    names = ["k", *aggs]
+        schema |= {"s": nw.String, "b": nw.Boolean}
     df = nw.from_native(constructor(data))
     result = df.group_by("k").agg(**aggs).sort("k")
-    assert result.collect_schema() == {name: schema[name] for name in names}
-    assert_equal_data(result, {name: expected[name] for name in names})
+    assert result.collect_schema() == schema
+    assert_equal_data(result, {name: expected[name] for name in schema})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.parametrize(
+    ("data", "aggs", "expected"),
+    [
+        pytest.param(
+            {"k": ["a", "a", "b"], "v": [1, 2, 10]},
+            {"v": nw.col("v").filter(nw.col("v") > 5).mode(keep="any")},
+            {"k": ["a", "b"], "v": [None, 10]},
+            id="group-with-empty-result",
+        ),
+        pytest.param(
+            {"k": ["a", "a", "b"], "v": [1, 2, 10]},
+            {"level_1": nw.col("v").max() - nw.col("v").min()},
+            {"k": ["a", "b"], "level_1": [1, 0]},
+            id="alias-like-pandas-index-level",
+        ),
+    ],
+)
+def test_group_by_complex_edge_cases(
+    constructor_eager: ConstructorEager,
+    data: dict[str, Any],
+    aggs: dict[str, nw.Expr],
+    expected: dict[str, Any],
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        pytest.skip(reason="complex aggregations are not supported")
+    df = nw.from_native(constructor_eager(data))
+    result = df.group_by("k").agg(**aggs).sort("k")
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_group_by_complex_no_groups(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        pytest.skip(reason="complex aggregations are not supported")
+    if any(
+        x in str(constructor_eager) for x in ("pandas", "modin")
+    ) and PANDAS_VERSION < (2, 2):
+        reason = (
+            "without `include_groups=False`, `apply` also returns the keys as columns"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=ValueError))
+    # The cast avoids `null[pyarrow]` keys, which pandas never drops.
+    df = nw.from_native(constructor_eager({"k": [None, None], "v": [1, 2]}))
+    result = (
+        df.with_columns(nw.col("k").cast(nw.String))
+        .group_by("k", drop_null_keys=True)
+        .agg(nw.col("v").filter(nw.col("v") > 0).max())
+    )
+    assert_equal_data(result, {"k": [], "v": []})
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
