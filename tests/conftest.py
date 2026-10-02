@@ -194,17 +194,16 @@ def duckdb_lazy_constructor(obj: dict[str, Any]) -> NativeDuckDB:
 
 def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no cover
     import dask.dataframe as dd
-
-    list_columns = [k for k, v in obj.items() if any(isinstance(x, list) for x in v)]
-    if not list_columns or PANDAS_VERSION < (2, 2) or find_spec("pyarrow") is None:
-        return cast("NativeDask", dd.from_dict(obj, npartitions=npartitions))
     import pandas as pd
-    import pyarrow as pa
 
-    # `from_dict` would turn list columns into strings (Dask's `convert-string`).
     frame = pd.DataFrame(obj)
-    for name in list_columns:
-        frame[name] = pd.arrays.ArrowExtensionArray(pa.array(obj[name]))
+    if PANDAS_VERSION >= (2, 2) and find_spec("pyarrow"):
+        import pyarrow as pa
+
+        for name, values in obj.items():
+            if any(isinstance(value, list) for value in values):
+                # Dask's `convert-string` would turn object lists into strings.
+                frame[name] = pd.arrays.ArrowExtensionArray(pa.array(values))
     return cast("NativeDask", dd.from_pandas(frame, npartitions=npartitions))
 
 
