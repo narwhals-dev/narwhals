@@ -592,7 +592,9 @@ def _io_method(
     impl = Implementation.from_backend(backend)
     namespace = version.namespace.from_backend(backend).compliant
     if is_plugin_backend(backend, impl):
-        _ensure_io_method(namespace, method_name, source=_plugin_display_name(backend))
+        _ensure_io_method(
+            namespace, method_name, plugin_name=_plugin_display_name(backend)
+        )
     method: Callable[..., CompliantFrameAny] = getattr(namespace, method_name)
     return method
 

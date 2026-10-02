@@ -18,7 +18,7 @@ from functools import cache
 from types import ModuleType
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
-from narwhals._compliant import CompliantNamespace
+from narwhals._compliant import CompliantNamespace, EagerNamespace
 from narwhals._typing import PluginName
 from narwhals._typing_compat import TypeVar
 from narwhals.exceptions import PluginError
@@ -66,24 +66,12 @@ def _discover_entrypoints() -> EntryPoints:
     return eps(group=group)
 
 
-def _plugin_names() -> tuple[str, ...]:
-    """Entry point names of all installed plugins."""
-    return tuple(entry_point.name for entry_point in _discover_entrypoints())
-
-
 @cache
 def _find_plugin(backend_name: str, /) -> Plugin | None:
-    """Return the first installed plugin matching `backend_name`.
+    """Return the first installed plugin whose entry point name or module is `backend_name`.
 
-    `backend_name` is matched against both the entry point name and its module,
-    e.g. both `"my-plugin"` and `"my_plugin"` for a plugin registered as:
-
-        [project.entry-points.'narwhals.plugins']
-        my-plugin = 'my_plugin'
-
-    Note:
-        The parameter is a plain `str`, not a `PluginName`: the module spelling is a
-        valid input and is *not* an entry point name.
+    For an entry point `my-plugin = 'my_plugin'`, both `"my-plugin"` and `"my_plugin"`
+    match, which is why `backend_name` is a plain `str` rather than a `PluginName`.
     """
     for entry_point in _discover_entrypoints():
         if backend_name in {entry_point.name, entry_point.module}:
@@ -97,18 +85,12 @@ def _plugin_display_name(backend: IntoBackend[PluginName], /) -> str:
 
 
 def _resolve_plugin(backend: IntoBackend[PluginName], /) -> Plugin:
-    """Resolve a backend which is not a Narwhals `Implementation` to a plugin.
-
-    The plugin is expected to implement the `Plugin` protocol, in particular the
-    `__narwhals_namespace__` function returning a compliant namespace.
-    """
     if isinstance(backend, ModuleType):
-        # NOTE: A user-provided module is only *claimed* to be a `Plugin`; the runtime
-        # guard is `_plugin_namespace`, which raises `PluginError` if it is not one.
+        # NOTE: Unverified until `_plugin_namespace` looks up `__narwhals_namespace__`.
         return cast("Plugin", backend)
     if (plugin := _find_plugin(backend)) is not None:
         return plugin
-    installed = ", ".join(_plugin_names()) or "<none>"
+    installed = ", ".join(ep.name for ep in _discover_entrypoints()) or "<none>"
     msg = (
         f"Unsupported backend: {backend!r}.\n\n"
         "Expected one of Narwhals' built-in backends (e.g. 'pandas', 'polars', "
@@ -123,20 +105,19 @@ _PLUGIN_NAMESPACES: dict[tuple[Plugin, Version], PluginNamespace] = {}
 
 
 def _plugin_namespace(plugin: Plugin, /, *, version: Version) -> PluginNamespace:
-    """Get `plugin`'s compliant namespace, raising if `__narwhals_namespace__` is missing."""
     key = (plugin, version)
     if (namespace := _PLUGIN_NAMESPACES.get(key)) is None:
         name = "__narwhals_namespace__"
         if (hook := getattr(plugin, name, None)) is None:
             msg = f"Plugin backend {plugin.__name__!r} is expected to implement `{name}` function."
             raise PluginError(msg)
-        # NOTE: `setdefault` so that concurrent first calls still share one namespace.
+        # NOTE: `setdefault`, so that concurrent first calls still share one namespace.
         namespace = _PLUGIN_NAMESPACES.setdefault(key, hook(version=version))
     return namespace
 
 
 def _ensure_io_method(
-    namespace: CompliantNamespaceAny, method_name: IOMethodName, /, *, source: str
+    namespace: CompliantNamespaceAny, method_name: IOMethodName, /, *, plugin_name: str
 ) -> None:
     """Raise unless a plugin's compliant namespace implements `method_name`.
 
@@ -145,15 +126,22 @@ def _ensure_io_method(
     Note:
         `PluginNamespace` deliberately does not declare the IO methods: they are an
         optional subset of a plugin (e.g. a lazy-only plugin implements `scan_*` only).
+        A `not_implemented` placeholder and an inherited protocol stub count as missing.
     """
     from inspect import getattr_static
 
     from narwhals._utils import not_implemented
 
+    # NOTE: `EagerNamespace.scan_*` are real defaults (falling back to `read_*`), not stubs.
+    protocol = CompliantNamespace if method_name.startswith("scan_") else EagerNamespace
     method = getattr_static(namespace, method_name, None)
-    if method is None or isinstance(method, not_implemented):
+    if (
+        method is None
+        or isinstance(method, not_implemented)
+        or method is getattr_static(protocol, method_name)
+    ):
         msg = (
-            f"Plugin backend {source!r} is expected to implement "
+            f"Plugin backend {plugin_name!r} is expected to implement "
             f"`{method_name}` on its compliant namespace to support `narwhals.{method_name}`."
         )
         raise PluginError(msg)
@@ -189,19 +177,15 @@ class Plugin(Protocol[FrameT, FromNativeR_co]):
 
     @property
     def __name__(self) -> str:
-        """Name of the plugin module, used to identify the backend in error messages.
-
-        Automatically provided: a plugin *is* a module, and every module has a `__name__`.
-        """
+        """Name of the plugin module, used in error messages. Every module has one."""
         ...
 
     @property
     def NATIVE_PACKAGE(self) -> LiteralString:  # noqa: N802
         """Name of the package providing the plugin's native objects, e.g. `"grizzlies"`.
 
-        Used as a cheap pre-check when converting native objects: the plugin is only
-        consulted if this package is already imported and the inspected object's class
-        might originate from it.
+        Narwhals only consults the plugin about an object if this package is already
+        imported and the object's class might come from it.
         """
         ...
 
@@ -210,11 +194,10 @@ class Plugin(Protocol[FrameT, FromNativeR_co]):
     ) -> PluginNamespace[FrameT, FromNativeR_co]:
         """Return a compliant namespace for the given Narwhals API version.
 
-        The returned namespace is the plugin's dispatch hub: its `from_native` method
-        wraps native objects, IO functions call its `scan_*`/`read_*` methods, and
-        eager constructors use its `_dataframe`/`_series` classes (see the
-        [`backend=...` section](../extending.md/#supporting-backend-in-narwhals-functions)
-        of the extension docs).
+        Narwhals wraps native objects with its `from_native` method, dispatches IO
+        functions to its `scan_*`/`read_*` methods, and builds eager constructors from
+        its `_dataframe`/`_series` classes (see
+        [`backend=...`](../extending.md/#supporting-backend-in-narwhals-functions)).
 
         Important:
             Narwhals caches the returned namespace per version and shares it across calls,
