@@ -17,21 +17,23 @@ if TYPE_CHECKING:
     from narwhals.typing import NonNestedLiteral
 
 
-def _contains(native: pd.Series, item: NonNestedLiteral) -> pd.Series:
+def _list_contains_partition(partition: pd.Series, item: NonNestedLiteral) -> pd.Series:
     from narwhals._arrow.utils import list_contains
 
-    array: Incomplete = native.array
+    array: Incomplete = partition.array
     result = pd.arrays.ArrowExtensionArray(list_contains(array._pa_array, item))
-    return pd.Series(result, index=native.index, name=native.name)
+    return pd.Series(result, index=partition.index, name=partition.name)
 
 
 class DaskExprListNamespace(LazyExprNamespace["DaskExpr"], ListNamespace["DaskExpr"]):
     def contains(self, item: NonNestedLiteral) -> DaskExpr:
         def func(expr: dx.Series) -> dx.Series:
-            if not is_dtype_pyarrow(expr.dtype):  # pragma: no cover
+            if not is_dtype_pyarrow(expr.dtype):
                 msg = "Only pyarrow-backed lists are supported for Dask."
                 raise NotImplementedError(msg)
-            return expr.map_partitions(_contains, item, meta=(expr.name, "bool[pyarrow]"))
+            return expr.map_partitions(
+                _list_contains_partition, item, meta=(expr.name, "bool[pyarrow]")
+            )
 
         return self.compliant._with_callable(func)
 
