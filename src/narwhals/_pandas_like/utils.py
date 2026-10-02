@@ -27,6 +27,7 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
+from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -709,23 +710,40 @@ def broadcast_series_to_index(
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
 
 
-def floordiv_by_zero_is_null(left: Any, right: Any) -> Any:
-    """Floor-divide, returning null wherever the divisor is zero.
+def _is_native_series(obj: Any) -> TypeIs[pd.Series[Any]]:
+    # Module-local: modin and cuDF series are typed as pandas ones throughout
+    # `_pandas_like`.
+    return is_pandas_like_series(obj)
 
-    pandas-like backends disagree with Polars here: numpy-backed data yields
-    `inf`, nullable data yields `0`, and pyarrow-backed data raises. Divisors
-    equal to zero are replaced before dividing and masked out afterwards, so
-    that every backend returns null, as Polars does.
+
+def floordiv_null_on_zero(
+    dividend: pd.Series[Any] | Any, divisor: pd.Series[Any] | Any
+) -> pd.Series[Any]:
+    """Floor-divide, with null wherever `divisor` is zero, as Polars does.
+
+    Natively, pandas returns `inf` (numpy-backed), `0` (nullable) or raises
+    (pyarrow-backed).
     """
-    if hasattr(right, "where"):  # Series divisor.
-        is_zero = right == 0
-        if not is_zero.any():
-            return operator.floordiv(left, right)
-        return operator.floordiv(left, right.where(~is_zero, 1)).where(~is_zero)
-    if right != 0:  # Scalar divisor.
-        return operator.floordiv(left, right)
-    result = operator.floordiv(left, 1)
-    return result.where(result.notna() & False)
+    if _is_native_series(divisor):
+        is_nonzero = divisor != 0
+        if is_nonzero.all():
+            return dividend // divisor
+        # A literal `1` would upcast a numpy bool divisor to object, and a nullable
+        # boolean one rejects it, so take the `1` from the divisor's own dtype.
+        safe_divisor = divisor.where(is_nonzero, divisor.dtype.type(1))
+        return (dividend // safe_divisor).where(is_nonzero)
+    assert _is_native_series(dividend)  # noqa: S101
+    try:
+        divisor_is_zero = bool(divisor == 0)
+    except TypeError:
+        # `pd.NA == 0` is `pd.NA`, whose truth value is ambiguous. Dividing by a
+        # null divisor is null already, so there is nothing to mask.
+        divisor_is_zero = False
+    if divisor_is_zero:
+        return floordiv_null_on_zero(
+            dividend, type(dividend)(divisor, index=dividend.index)
+        )
+    return dividend // divisor
 
 
 def binary_string_sum_fallback(  # pragma: no cover

@@ -1,23 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 import narwhals as nw
-from tests.utils import (
-    PANDAS_VERSION,
-    POLARS_VERSION,
-    PYARROW_VERSION,
-    Constructor,
-    ConstructorEager,
-    assert_equal_data,
-)
+from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from narwhals.typing import DTypeBackend
+    import pandas as pd
 
 data: dict[str, list[float]] = {
     "int": [-2, 0, 2],
@@ -154,105 +147,49 @@ def test_expr_rfloordiv_by_zero(
     assert_equal_data(result, expected)
 
 
-# Floor division by zero on pandas-like backends must keep the dtype backend of the
-# input: nullable stays nullable, pyarrow-backed stays pyarrow-backed. numpy-backed
-# integers cannot hold missing values, so they become float64 with NaN.
-PYARROW_UNAVAILABLE = PYARROW_VERSION == (0, 0, 0)
-require_pd_2_1 = pytest.mark.skipif(
-    PANDAS_VERSION < (2, 1, 0) or PYARROW_UNAVAILABLE,
-    reason="pyarrow-backed dtypes require pandas>=2.1 and pyarrow",
-)
-require_pd_2_0 = pytest.mark.skipif(
-    PANDAS_VERSION < (2, 0, 0), reason="nullable dtypes require pandas>=2.0"
-)
-DTYPE_BACKENDS = [
-    pytest.param("pyarrow", marks=require_pd_2_1),
-    pytest.param("numpy_nullable", marks=require_pd_2_0),
-    None,
-]
-# (input dtype, expected output dtype) per dtype backend and numeric kind.
-FLOORDIV_DTYPES: dict[DTypeBackend, dict[str, tuple[str, str]]] = {
-    None: {"int": ("int64", "float64"), "float": ("float64", "float64")},
-    "numpy_nullable": {"int": ("Int64", "Int64"), "float": ("Float64", "Float64")},
-    "pyarrow": {
-        "int": ("int64[pyarrow]", "int64[pyarrow]"),
-        "float": ("double[pyarrow]", "double[pyarrow]"),
-    },
-}
-INDEX = [8, 7, 6]
-
-
-@pytest.mark.parametrize("dtype_backend", DTYPE_BACKENDS)
-@pytest.mark.parametrize("kind", ["int", "float"])
-def test_floordiv_by_zero_keeps_dtype_backend_pandas(
-    dtype_backend: DTypeBackend, kind: str
+def test_floordiv_by_mixed_divisor(
+    constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="bug")
+    if "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
 
-    in_dtype, out_dtype = FLOORDIV_DTYPES[dtype_backend][kind]
-    numerator = pd.Series([-3, 0, 5], name="a", index=INDEX).astype(in_dtype)
-    denominator = pd.Series([0, 2, 2], name="b", index=INDEX).astype(in_dtype)
-    series = nw.from_native(numerator, series_only=True)
-
-    result = (series // nw.from_native(denominator, series_only=True)).to_native()
-    expected = pd.Series([None, 0, 2], name="a", index=INDEX, dtype=out_dtype)
-    pd.testing.assert_series_equal(result, expected)
-
-    result = (series // 0).to_native()
-    expected = pd.Series([None] * 3, name="a", index=INDEX, dtype=out_dtype)
-    pd.testing.assert_series_equal(result, expected)
-
-
-@pytest.mark.parametrize("dtype_backend", DTYPE_BACKENDS)
-@pytest.mark.parametrize("kind", ["int", "float"])
-def test_rfloordiv_by_zero_keeps_dtype_backend_pandas(
-    dtype_backend: DTypeBackend, kind: str
-) -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    in_dtype, out_dtype = FLOORDIV_DTYPES[dtype_backend][kind]
-    denominator = pd.Series([0, 2, -3], name="a", index=INDEX).astype(in_dtype)
-    series = nw.from_native(denominator, series_only=True)
-
-    result = (7 // series).to_native()
-    expected = pd.Series([None, 3, -3], name="a", index=INDEX, dtype=out_dtype)
-    pd.testing.assert_series_equal(result, expected)
-
-
-@pytest.mark.parametrize("dtype_backend", DTYPE_BACKENDS)
-def test_expr_floordiv_by_zero_keeps_dtype_backend_pandas(
-    dtype_backend: DTypeBackend,
-) -> None:
-    pytest.importorskip("pandas")
-    import pandas as pd
-
-    dtypes = FLOORDIV_DTYPES[dtype_backend]
-    native = pd.DataFrame(
-        {"int": [-3, 0, 5], "float": [-3.5, 0.0, 5.5], "denominator": [0, 2, 2]},
-        index=INDEX,
-    ).astype(
-        {
-            "int": dtypes["int"][0],
-            "float": dtypes["float"][0],
-            "denominator": dtypes["int"][0],
-        }
-    )
-    df = nw.from_native(native, eager_only=True)
-
+    data = {"i": [0, 1, 2, 3], "a": [7, 8, 7, None], "b": [0, 2, None, 0]}
+    df = nw.from_native(constructor(data))
     result = df.select(
-        int_col=nw.col("int") // nw.col("denominator"),
-        int_lit=nw.col("int") // nw.lit(0),
-        float_col=nw.col("float") // nw.col("denominator"),
-        rfloordiv=7 // nw.col("denominator"),
-    ).to_native()
-    expected = pd.DataFrame(
-        {
-            "int_col": pd.Series([None, 0, 2], dtype=dtypes["int"][1]),
-            "int_lit": pd.Series([None] * 3, dtype=dtypes["int"][1]),
-            "float_col": pd.Series([None, 0.0, 2.0], dtype=dtypes["float"][1]),
-            "rfloordiv": pd.Series([None, 3, 3], dtype=dtypes["int"][1]),
-        }
-    ).set_axis(INDEX)
-    pd.testing.assert_frame_equal(result, expected)
+        "i",
+        floordiv=nw.col("a") // nw.col("b"),
+        rfloordiv=7 // nw.col("b"),
+        broadcast_dividend=nw.col("a").max() // nw.col("b"),
+        scalar_zero=nw.col("a") // 0,
+    ).sort("i")
+    expected = {
+        "i": [0, 1, 2, 3],
+        "floordiv": [None, 4, None, None],
+        "rfloordiv": [None, 3, None, None],
+        "broadcast_dividend": [None, 4, None, None],
+        "scalar_zero": [None, None, None, None],
+    }
+    assert_equal_data(result, expected)
+
+    if df.implementation.is_pandas_like():
+        # Narwhals dtypes can't tell nullable from pyarrow-backed, so compare natives.
+        input_dtype = cast("pd.DataFrame", nw.to_native(df))["a"].dtype
+        native_result = cast("pd.DataFrame", nw.to_native(result))
+        assert all(
+            native_result[name].dtype == input_dtype for name in expected if name != "i"
+        )
+
+
+def test_floordiv_by_null_scalar(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor):
+        # `floordiv_compat` raises on a null scalar divisor.
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [7, 8], "b": [1, 2]}))
+    null_scalar = nw.when(nw.col("b") > 99).then(nw.col("b")).max()
+    result = df.select(nw.col("a") // null_scalar)
+    assert_equal_data(result, {"a": [None, None]})
