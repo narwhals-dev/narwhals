@@ -73,7 +73,7 @@ __all__ = ["Namespace"]
 
 # NOTE: Unbounded is safe, there are at most `len(Implementation) * len(Version)` keys.
 @cache
-def _compliant_namespace(
+def _builtin_namespace(
     impl: Implementation, version: Version, /
 ) -> CompliantNamespaceAny:
     impl._backend_version()  # Raises if the backend is missing or too old.
@@ -106,7 +106,7 @@ def _compliant_namespace(
         from narwhals._ibis.namespace import IbisNamespace
 
         ns = IbisNamespace(version=version)
-    else:  # pragma: no cover
+    else:  # pragma: no cover - `UNKNOWN` is resolved as a plugin before this
         msg = "Not supported Implementation"
         raise AssertionError(msg)
     return ns
@@ -199,7 +199,7 @@ class Namespace(Generic[CompliantNamespaceT_co]):
             from narwhals.plugins import _plugin_namespace, _resolve_plugin
 
             return cls(_plugin_namespace(_resolve_plugin(backend), version=cls._version))
-        return cls(_compliant_namespace(impl, cls._version))
+        return cls(_builtin_namespace(impl, cls._version))
 
     @overload
     @classmethod
