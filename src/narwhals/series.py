@@ -13,7 +13,6 @@ from narwhals._utils import (
     _resolve_sample_size,
     _validate_rolling_arguments,
     eager_namespace,
-    eager_namespace_from_compliant,
     ensure_type,
     generate_repr,
     is_compliant_series,
@@ -419,18 +418,12 @@ class Series(Generic[IntoSeriesT]):
             a: [[999,888,3]]
             b: [[4,5,6]]
         """
-        impl = self.implementation
+        compliant = self._compliant_series
 
         def into_series(values: Any, dtype: IntoDType | None = None) -> Series[Any]:
-            if impl is Implementation.UNKNOWN:  # type: ignore[comparison-overlap]
-                ns = eager_namespace_from_compliant(
-                    self._compliant_series, function_name="Series.scatter"
-                )
-                compliant = ns._series.from_iterable(
-                    values, context=ns, name="", dtype=dtype
-                )
-                return self._with_compliant(compliant)
-            return type(self).from_iterable("", values, dtype, backend=impl)
+            return self._with_compliant(
+                compliant.from_iterable(values, context=compliant, dtype=dtype)
+            )
 
         if not isinstance(indices, Series):
             if not isinstance(indices, Iterable):

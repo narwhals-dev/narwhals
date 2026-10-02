@@ -33,7 +33,6 @@ from narwhals._utils import (
     check_column_names_are_unique,
     check_columns_exist,
     eager_namespace,
-    eager_namespace_from_compliant,
     flatten,
     generate_repr,
     is_compliant_dataframe,
@@ -161,9 +160,7 @@ class BaseFrame(Generic[_FrameT]):
         # NOTE: Strings are interpreted as column names.
         out_exprs = []
         ns = self.__narwhals_namespace__()
-        parse = partial(
-            _parse_into_expr, backend=self._compliant._implementation, allow_literal=False
-        )
+        parse = partial(_parse_into_expr, namespace=ns, allow_literal=False)
         all_exprs = chain(
             (parse(x) for x in flatten(exprs)),
             (parse(expr).alias(alias) for alias, expr in named_exprs.items()),
@@ -1727,17 +1724,12 @@ class DataFrame(BaseFrame[DataFrameT]):
                foo  bar ham
             1    2    7   b
         """
-        impl = self.implementation
 
         def into_series(values: list[bool]) -> Series[Any]:
-            if impl is Implementation.UNKNOWN:  # type: ignore[comparison-overlap]
-                ns = eager_namespace_from_compliant(
-                    self._compliant_frame, function_name="DataFrame.filter(list[bool])"
-                )
-                return self._series(
-                    ns._series.from_iterable(values, context=ns, name=""), level="full"
-                )
-            return self._series.from_iterable("", values, backend=impl)
+            ns = self.__narwhals_namespace__()
+            return self._series(
+                ns._series.from_iterable(values, context=ns), level="full"
+            )
 
         parsed_predicates = (
             into_series(p) if is_list_of(p, bool) else p for p in predicates

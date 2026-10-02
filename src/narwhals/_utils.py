@@ -70,8 +70,6 @@ if TYPE_CHECKING:
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
-        CompliantDataFrameAny,
-        CompliantSeriesAny,
         EagerNamespaceAny,
         EvalNames,
         NativeDataFrameT,
@@ -1663,11 +1661,8 @@ def is_plugin_backend(
 ) -> TypeGuard[IntoBackend[PluginName]]:
     """Return True if `backend` is a plugin, given `impl = Implementation.from_backend(backend)`.
 
-    `Implementation.UNKNOWN` means exactly "not one of Narwhals' own backends", so a
-    `backend` which resolves to it can only be a plugin's name or a plugin module.
-
     Arguments:
-        backend: Backend spelling, as given by the user.
+        backend: Backend as given by the user, narrowed for type checkers only.
         impl: Result of `Implementation.from_backend(backend)`.
     """
     return impl is Implementation.UNKNOWN
@@ -1681,22 +1676,25 @@ def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
     Note:
         `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
         `not_implemented` descriptors, which exist statically but raise on instance
-        access, so the statically-retrieved attribute is checked against `not_implemented`.
+        access, or the protocol's own stubs inherited unchanged, which return `None`.
     """
+    from narwhals._compliant import EagerNamespace
+
     return all(
         (attr := getattr_static(obj, name, None)) is not None
         and not isinstance(attr, not_implemented)
+        and attr is not getattr_static(EagerNamespace, name)
         for name in ("_series", "_dataframe")
     )
 
 
 def _ensure_eager_allowed(
-    namespace: object, /, *, source: str, function_name: str
+    namespace: object, /, *, plugin_name: str, function_name: str
 ) -> EagerNamespaceAny:
     """Raise unless `namespace` implements the `EagerNamespace` protocol."""
     if not _is_eager_namespace(namespace):
         msg = (
-            f"Plugin backend {source!r} does not provide eager support (its "
+            f"Plugin backend {plugin_name!r} does not provide eager support (its "
             "compliant namespace does not implement the `EagerNamespace` protocol), "
             f"but `{function_name}` is an eager-only function."
         )
@@ -1742,12 +1740,12 @@ def eager_namespace(
     version: Version,
     function_name: EagerFunctionName,
 ) -> EagerNamespaceAny | EagerNamespaceKnown:
-    """Resolve `backend` to an eager-allowed compliant namespace.
+    """Resolve `backend` to an eager compliant namespace, or raise an informative error.
 
-    For a plugin, the namespace returned by `__narwhals_namespace__` must implement the
-    `EagerNamespace` protocol (in particular, the `_series` and `_dataframe` properties).
-    Built-in lazy-only backends raise an informative `ValueError`, suggesting the
-    `EAGER_HINT_EXAMPLES` entry for `function_name` followed by a `.lazy(...)` call.
+    Raises:
+        PluginError: If `backend` is a plugin whose namespace is not an `EagerNamespace`.
+        ValueError: If `backend` is a lazy-only built-in, with a `.lazy(...)` hint taken
+            from `EAGER_HINT_EXAMPLES[function_name]`.
     """
     implementation = Implementation.from_backend(backend)
     if is_eager_allowed(implementation):
@@ -1757,7 +1755,9 @@ def eager_namespace(
 
         namespace = version.namespace.from_backend(backend).compliant
         return _ensure_eager_allowed(
-            namespace, source=_plugin_display_name(backend), function_name=function_name
+            namespace,
+            plugin_name=_plugin_display_name(backend),
+            function_name=function_name,
         )
     msg = (
         f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
@@ -1765,20 +1765,6 @@ def eager_namespace(
         f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
     )
     raise ValueError(msg)
-
-
-def eager_namespace_from_compliant(
-    compliant_object: CompliantDataFrameAny | CompliantSeriesAny, /, *, function_name: str
-) -> EagerNamespaceAny:
-    """Resolve the eager namespace of a compliant object originating from a plugin.
-
-    `Implementation.UNKNOWN` cannot be resolved back to a plugin, so methods which
-    internally construct series use the namespace of the compliant object itself.
-    """
-    namespace = compliant_object.__narwhals_namespace__()
-    return _ensure_eager_allowed(
-        namespace, source=type(namespace).__name__, function_name=function_name
-    )
 
 
 def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
