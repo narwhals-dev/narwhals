@@ -88,19 +88,20 @@ dispatch goes through it:
    [`PluginError`](api-reference/exceptions.md) is raised.
 
 2. **Eager constructors** (`from_dict`, `from_dicts`, `from_numpy`, `from_arrow`,
-   `new_series`, as well as the `DataFrame.from_*` and `Series.from_*` classmethods):
-   these are eager-only. If the plugin's compliant namespace implements the
-   `EagerNamespace` protocol (importable from `narwhals.compliant`, alongside
-   `EagerDataFrame`, `EagerSeries` and `EagerExpr`; in particular the
-   `_dataframe` and `_series` properties,
-   and the `from_dict`, `from_dicts`, `from_numpy`, `from_arrow` and `from_iterable`
-   constructors on the respective compliant classes), these functions work with no
-   extra plugin code. Lazy-only plugins get an informative
+   `new_series`, and the `DataFrame.from_*` and `Series.from_*` classmethods) are
+   eager-only. They work with no extra plugin code when the plugin's compliant
+   namespace implements the `EagerNamespace` protocol from `narwhals.compliant`: the
+   `_dataframe` and `_series` properties, whose classes provide the `from_dict`,
+   `from_dicts`, `from_numpy`, `from_arrow` and `from_iterable` constructors (see
+   `EagerDataFrame` and `EagerSeries`). Lazy-only plugins get an informative
    [`PluginError`](api-reference/exceptions.md) instead.
 
-Methods which internally construct Series (for example `Series.scatter`, or
-`DataFrame.filter` with a list of booleans) use the compliant namespace of the object
-they are called on, so they also work for eager plugins.
+Methods which internally construct Series (`Series.scatter`, `DataFrame.filter` with a
+list of booleans, or a NumPy array passed to `with_columns`) use the compliant namespace
+of the object they are called on, so they also work for eager plugins.
+
+A method counts as missing when the namespace does not define it, marks it with
+`narwhals._utils.not_implemented()`, or inherits the protocol's empty stub.
 
 !!! tip "Type checking"
 
