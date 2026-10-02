@@ -49,6 +49,7 @@ from narwhals._utils import (
     supports_arrow_c_stream,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
+from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidOperationError,
@@ -270,8 +271,10 @@ class BaseFrame(Generic[_FrameT]):
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
         if not dtypes:
-            # NOTE: Some compliant `with_columns` cannot plan a projection over zero columns.
+            # NOTE: PySpark Connect cannot plan a projection over zero columns.
             return self
+        for dtype in dtypes.values():
+            _validate_dtype(dtype)
         if error := self._check_columns_exist(list(dtypes)):
             raise error
         return self._with_compliant(self._compliant_frame.cast(dtypes))
@@ -2475,7 +2478,7 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             raise InvalidOperationError(msg)
 
     def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        # `collect_schema` avoids the warning `self.columns` raises on a LazyFrame.
+        # NOTE: `self.columns` warns on a LazyFrame.
         return check_columns_exist(subset, available=self.collect_schema().names())
 
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
