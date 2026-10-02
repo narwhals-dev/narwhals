@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 
 class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
+    _implementation = Implementation.UNKNOWN
+
     def __init__(self, *, version: Version) -> None:
         self._version = version
 
@@ -29,10 +31,6 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
         from test_plugin.series import DictSeries
 
         return DictSeries
-
-    # IO methods below follow the namespace contract used by `narwhals.functions`
-    # (see "IO functions: the namespace contract" in `docs/extending.md`).
-    # `scan_*` delegate to `read_*`, mirroring the defaults `EagerNamespace` provides.
 
     def read_csv(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
@@ -61,10 +59,6 @@ class DictNamespace(CompliantNamespace[DictLazyFrame, Any]):
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DictLazyFrame:
         data = self.read_parquet(source, **kwds).native
         return DictLazyFrame(data, version=self._version)
-
-    # NOTE: `not_implemented.__get__` reads `instance._implementation` to build its
-    # error message, so `_implementation` itself must be a real value.
-    _implementation = Implementation.UNKNOWN
 
     is_native: Any = not_implemented()
     _expr: Any = not_implemented()

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     from narwhals import DataFrame, LazyFrame
     from narwhals._utils import _LimitedContext
+    from test_plugin.namespace import DictNamespace
 
 DictFrame: TypeAlias = dict[str, list[Any]]
 
@@ -83,7 +84,7 @@ class DictDataFrame:
     def __narwhals_dataframe__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self) -> Any:
+    def __narwhals_namespace__(self) -> DictNamespace:
         from test_plugin.namespace import DictNamespace
 
         return DictNamespace(version=self._version)
@@ -91,6 +92,9 @@ class DictDataFrame:
     @property
     def native(self) -> DictFrame:
         return self._native_frame
+
+    def _with_version(self, version: Version) -> Self:
+        return self.__class__(self._native_frame, version=version)
 
     def to_narwhals(self) -> DataFrame[Any]:
         return self._version.dataframe(self, level="full")

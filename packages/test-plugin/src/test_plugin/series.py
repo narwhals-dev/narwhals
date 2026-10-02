@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from narwhals._utils import _LimitedContext
     from narwhals.series import Series
     from narwhals.utils import Version
+    from test_plugin.namespace import DictNamespace
 
 
 class DictSeries:
@@ -45,7 +46,7 @@ class DictSeries:
     def __narwhals_series__(self) -> Self:
         return self
 
-    def __narwhals_namespace__(self) -> Any:
+    def __narwhals_namespace__(self) -> DictNamespace:
         from test_plugin.namespace import DictNamespace
 
         return DictNamespace(version=self._version)
@@ -60,6 +61,9 @@ class DictSeries:
 
     def alias(self, name: str) -> Self:
         return self.__class__(self._values, name=name, version=self._version)
+
+    def _with_version(self, version: Version) -> Self:
+        return self.__class__(self._values, name=self._name, version=version)
 
     def is_empty(self) -> bool:
         return not self._values
