@@ -81,6 +81,7 @@ nav = [
         "api-reference/testing.md",
         "api-reference/typing.md",
         "api-reference/utils.md",
+        "api-reference/plugins.md",
     ]},
     {"This" = "this.md"}
 ]

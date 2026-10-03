@@ -37,17 +37,8 @@ from narwhals._enum import NoAutoEnum
 from narwhals._exceptions import issue_deprecation_warning
 from narwhals._typing_compat import assert_never, deprecated
 from narwhals.dependencies import (
-    get_cudf,
-    get_dask_dataframe,
-    get_duckdb,
-    get_ibis,
-    get_modin,
     get_pandas,
     get_polars,
-    get_pyarrow,
-    get_pyspark_connect,
-    get_pyspark_sql,
-    get_sqlframe,
     is_narwhals_series,
     is_narwhals_series_bool,
     is_narwhals_series_int,
@@ -61,13 +52,14 @@ from narwhals.exceptions import (
     ColumnNotFoundError,
     DuplicateError,
     InvalidOperationError,
+    PluginError,
     ShapeError,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Set  # noqa: PYI025
     from types import ModuleType
-    from typing import IO, Concatenate, TypeAlias
+    from typing import IO, Concatenate, TypeAlias, TypeGuard
 
     import pandas as pd
     import polars as pl
@@ -78,11 +70,12 @@ if TYPE_CHECKING:
     from narwhals._compliant.any_namespace import NamespaceAccessor
     from narwhals._compliant.typing import (
         Accessor,
+        EagerNamespaceAny,
         EvalNames,
         NativeDataFrameT,
         NativeLazyFrameT,
     )
-    from narwhals._namespace import Namespace
+    from narwhals._namespace import EagerNamespaceKnown, Namespace
     from narwhals._native import (
         NativeArrow,
         NativeCuDF,
@@ -387,38 +380,27 @@ class Implementation(NoAutoEnum):
     @classmethod
     def from_native_namespace(
         cls: type[Self], native_namespace: ModuleType
-    ) -> Implementation:  # pragma: no cover
+    ) -> Implementation:
         """Instantiate Implementation object from a native namespace module.
 
         Arguments:
             native_namespace: Native namespace.
         """
-        mapping = {
-            get_pandas(): Implementation.PANDAS,
-            get_modin(): Implementation.MODIN,
-            get_cudf(): Implementation.CUDF,
-            get_pyarrow(): Implementation.PYARROW,
-            get_pyspark_sql(): Implementation.PYSPARK,
-            get_polars(): Implementation.POLARS,
-            get_dask_dataframe(): Implementation.DASK,
-            get_duckdb(): Implementation.DUCKDB,
-            get_ibis(): Implementation.IBIS,
-            get_sqlframe(): Implementation.SQLFRAME,
-            get_pyspark_connect(): Implementation.PYSPARK_CONNECT,
-        }
-        return mapping.get(native_namespace, Implementation.UNKNOWN)
+        name = getattr(native_namespace, "__name__", "")
+        if (impl := _MODULE_NAME_TO_IMPLEMENTATION.get(name)) is not None and (
+            sys.modules.get(name) is native_namespace
+        ):
+            return impl
+        return Implementation.UNKNOWN
 
     @classmethod
     def from_string(cls: type[Self], backend_name: str) -> Implementation:
-        """Instantiate Implementation object from a native namespace module.
+        """Instantiate Implementation object from a backend name, expressed as string.
 
         Arguments:
             backend_name: Name of backend, expressed as string.
         """
-        try:
-            return cls(backend_name)
-        except ValueError:
-            return Implementation.UNKNOWN
+        return _BACKEND_NAME_TO_IMPLEMENTATION.get(backend_name, Implementation.UNKNOWN)
 
     @classmethod
     def from_backend(
@@ -653,6 +635,18 @@ _IMPLEMENTATION_TO_MODULE_NAME: Mapping[Implementation, str] = {
     Implementation.PYSPARK_CONNECT: "pyspark.sql.connect",
 }
 """Stores non default mapping from Implementation to module name"""
+
+_BACKEND_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    impl.value: impl for impl in Implementation
+}
+"""Inverse of `Implementation.value`."""
+
+_MODULE_NAME_TO_IMPLEMENTATION: Mapping[str, Implementation] = {
+    _IMPLEMENTATION_TO_MODULE_NAME.get(impl, impl.value): impl
+    for impl in Implementation
+    if impl is not Implementation.UNKNOWN
+}
+"""Inverse of `_IMPLEMENTATION_TO_MODULE_NAME`, including the default `impl.value` names."""
 
 
 @lru_cache(maxsize=16)
@@ -1656,6 +1650,121 @@ def is_eager_allowed(impl: Implementation, /) -> TypeIs[_EagerAllowedImpl]:
         Implementation.POLARS,
         Implementation.PYARROW,
     }
+
+
+# NOTE: `TypeGuard`, not `TypeIs`: `TypeIs` also narrows the `False` branch, where it would
+# wrongly strip `ModuleType`, since a built-in backend can be passed as a module too.
+def is_plugin_backend(
+    backend: IntoBackend[Backend | PluginName],  # noqa: ARG001
+    impl: Implementation,
+    /,
+) -> TypeGuard[IntoBackend[PluginName]]:
+    """Return True if `backend` is a plugin, given `impl = Implementation.from_backend(backend)`.
+
+    Arguments:
+        backend: Backend as given by the user, narrowed for type checkers only.
+        impl: Result of `Implementation.from_backend(backend)`.
+    """
+    return impl is Implementation.UNKNOWN
+
+
+# TODO(Unassigned): Generalize _hasattr_static?
+# See https://github.com/narwhals-dev/narwhals/pull/3753#discussion_r3653098839
+def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
+    """Duck-check that `obj` implements the `EagerNamespace` protocol.
+
+    Note:
+        `_hasattr_static` alone is not enough: `_series` and `_dataframe` may be
+        `not_implemented` descriptors, which exist statically but raise on instance
+        access, or the protocol's own stubs inherited unchanged, which return `None`.
+    """
+    from narwhals._compliant import EagerNamespace
+
+    return all(
+        (attr := getattr_static(obj, name, None)) is not None
+        and not isinstance(attr, not_implemented)
+        and attr is not getattr_static(EagerNamespace, name)
+        for name in ("_series", "_dataframe")
+    )
+
+
+def _ensure_eager_allowed(
+    namespace: object, /, *, plugin_name: str, function_name: str
+) -> EagerNamespaceAny:
+    """Raise unless `namespace` implements the `EagerNamespace` protocol."""
+    if not _is_eager_namespace(namespace):
+        msg = (
+            f"Plugin backend {plugin_name!r} does not provide eager support (its "
+            "compliant namespace does not implement the `EagerNamespace` protocol), "
+            f"but `{function_name}` is an eager-only function."
+        )
+        raise PluginError(msg)
+    return namespace
+
+
+EagerFunctionName: TypeAlias = Literal[
+    "new_series",
+    "from_dict",
+    "from_dicts",
+    "from_numpy",
+    "from_arrow",
+    "DataFrame.from_arrow",
+    "DataFrame.from_dict",
+    "DataFrame.from_dicts",
+    "DataFrame.from_numpy",
+    "Series.from_iterable",
+    "Series.from_numpy",
+]
+"""Name of an eager-only Narwhals function or constructor which accepts `backend`."""
+
+EAGER_HINT_EXAMPLES: Mapping[EagerFunctionName, str] = {
+    "new_series": "nw.new_series('a', [1,2,3], backend='pyarrow').to_frame()",
+    "from_dict": "nw.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "from_dicts": "nw.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "from_numpy": "nw.from_numpy(arr, backend='pyarrow')",
+    "from_arrow": "nw.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_arrow": "nw.DataFrame.from_arrow(df, backend='pyarrow')",
+    "DataFrame.from_dict": "nw.DataFrame.from_dict({'a': [1, 2]}, backend='pyarrow')",
+    "DataFrame.from_dicts": "nw.DataFrame.from_dicts([{'a': 1}, {'a': 2}], backend='pyarrow')",
+    "DataFrame.from_numpy": "nw.DataFrame.from_numpy(arr, backend='pyarrow')",
+    "Series.from_iterable": "nw.Series.from_iterable('a', [1,2,3], backend='pyarrow').to_frame()",
+    "Series.from_numpy": "nw.Series.from_numpy(arr, backend='pyarrow').to_frame()",
+}
+"""Per-function `.lazy(...)` hint, shown when an eager-only function is given a lazy backend."""
+
+
+def eager_namespace(
+    backend: IntoBackend[Backend | PluginName],
+    /,
+    *,
+    version: Version,
+    function_name: EagerFunctionName,
+) -> EagerNamespaceAny | EagerNamespaceKnown:
+    """Resolve `backend` to an eager compliant namespace, or raise an informative error.
+
+    Raises:
+        PluginError: If `backend` is a plugin whose namespace is not an `EagerNamespace`.
+        ValueError: If `backend` is a lazy-only built-in, with a `.lazy(...)` hint taken
+            from `EAGER_HINT_EXAMPLES[function_name]`.
+    """
+    implementation = Implementation.from_backend(backend)
+    if is_eager_allowed(implementation):
+        return version.namespace.from_backend(implementation).compliant
+    if is_plugin_backend(backend, implementation):
+        from narwhals.plugins import _plugin_display_name
+
+        namespace = version.namespace.from_backend(backend).compliant
+        return _ensure_eager_allowed(
+            namespace,
+            plugin_name=_plugin_display_name(backend),
+            function_name=function_name,
+        )
+    msg = (
+        f"{implementation} support in Narwhals is lazy-only, but `{function_name}` is an eager-only function.\n\n"
+        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
+        f"    {EAGER_HINT_EXAMPLES[function_name]}.lazy('{implementation}')"
+    )
+    raise ValueError(msg)
 
 
 def can_lazyframe_collect(impl: Implementation, /) -> TypeIs[_LazyFrameCollectImpl]:
