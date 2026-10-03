@@ -2115,25 +2115,27 @@ class Series(Generic[IntoSeriesT]):
             decimals: Number of decimals to round by.
 
         Notes:
-            For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
+            A value exactly halfway between two candidates rounds to the even one:
+            -0.5 and 0.5 give 0.0, 1.5 and 2.5 give 2.0, 3.5 and 4.5 give 4.0.
 
-            pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
-            4.5 to 4.0, etc..).
-
-            Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+            DuckDB, PySpark, SQLFrame, Ibis and `polars<1.29` round such values away
+            from zero natively, so Narwhals corrects them arithmetically. On those
+            backends the input dtype is not preserved (the result type varies by
+            backend) and integers above 2**53 lose exactness; `cast` the result if
+            you need a specific dtype.
 
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
             >>>
-            >>> s_native = pl.Series([1.12345, 2.56789, 3.901234])
+            >>> s_native = pl.Series([1.25, 1.75, 3.901234])
             >>> s = nw.from_native(s_native, series_only=True)
             >>> s.round(1).to_native()  # doctest: +NORMALIZE_WHITESPACE
             shape: (3,)
             Series: '' [f64]
             [
-               1.1
-               2.6
+               1.2
+               1.8
                3.9
             ]
         """
