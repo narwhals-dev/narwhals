@@ -75,7 +75,7 @@ def test_categorical(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
     expected = {"b": ["a", "b", "c"]}
 
-    df = nw.from_native(constructor(data)).with_columns(nw.col("b").cast(nw.Categorical))
+    df = nw.from_native(constructor(data)).cast({"b": nw.Categorical})
     result = df.select(ncs.categorical())
     assert_equal_data(result, expected)
 
@@ -100,7 +100,7 @@ def test_enum(
     categories = ["a", "b", "c"]
     result = (
         nw.from_native(constructor(data))
-        .with_columns(nw.col("b").cast(nw.Enum(categories)))
+        .cast({"b": nw.Enum(categories)})
         .select(selector)
         .collect_schema()
         .names()

@@ -68,9 +68,7 @@ def test_top_k_categorical(constructor: Constructor) -> None:
     skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}
-    df = nw.from_native(constructor(data)).with_columns(
-        nw.col("c").cast(nw.Categorical())
-    )
+    df = nw.from_native(constructor(data)).cast({"c": nw.Categorical()})
     result = df.top_k(2, by="c").sort("n")
     assert_equal_data(result, {"c": ["dog", "cat"], "n": [1, 2]})
     result = df.top_k(2, by="c", reverse=True).sort("n")
