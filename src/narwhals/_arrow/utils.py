@@ -565,57 +565,80 @@ def list_agg(
     )
 
 
+_LIST_BLOCK_VALUES = 1 << 21
+_LIST_MIN_BLOCK_VALUES = _LIST_BLOCK_VALUES >> 4
+
+
 def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArrayAny:
     """Whether each list holds `item`, or a null element if `item` is None.
 
     A running count of matches over the flattened values changes within a list iff the
     list holds a match. That keeps this linear, where a group-by per list would sort.
     """
-    # Per chunk, as combining them can overflow 32-bit list offsets, in zero-copy slices
-    # of whole lists, of about 2M values each, so the intermediates stay in cache.
-    blocks: list[ArrayAny] = []
-    for arr in cast("list[ListArrayAny]", array.chunks):
-        n_values = arr.offsets[-1].as_py() - arr.offsets[0].as_py()
-        step = max(1, len(arr) * _LIST_CONTAINS_BLOCK_VALUES // max(1, n_values))
-        blocks.extend(
-            _list_contains(arr.slice(start, step), item)
-            for start in range(0, len(arr), step)
-        )
+    blocks = [_list_block_contains(block, item) for block in _list_blocks(array)]
     return pa.chunked_array(blocks, pa.bool_())
 
 
-_LIST_CONTAINS_BLOCK_VALUES = 1 << 21
+def _list_blocks(array: ChunkedArrayAny) -> Iterator[ListArrayAny]:
+    """Split `array` into runs of whole lists, of up to about `_LIST_BLOCK_VALUES` values.
+
+    That keeps the intermediates in cache. Large chunks are sliced without copying, and
+    chunks under `_LIST_MIN_BLOCK_VALUES` values are combined until a run reaches it, to
+    amortise the ~35us of pyarrow calls per block. Combining every chunk could overflow
+    32-bit list offsets.
+    """
+    run: list[ListArrayAny] = []
+    run_values = 0
+    for chunk in cast("list[ListArrayAny]", array.chunks):
+        if not len(chunk):
+            continue
+        n_values = chunk.offsets[-1].as_py() - chunk.offsets[0].as_py()
+        is_small = n_values < _LIST_MIN_BLOCK_VALUES
+        if run and (not is_small or run_values >= _LIST_MIN_BLOCK_VALUES):
+            yield pa.concat_arrays(run) if len(run) > 1 else run[0]
+            run, run_values = [], 0
+        if is_small:
+            run.append(chunk)
+            run_values += n_values
+        else:
+            step = max(1, len(chunk) * _LIST_BLOCK_VALUES // n_values)
+            yield from (chunk.slice(start, step) for start in range(0, len(chunk), step))
+    if run:
+        yield pa.concat_arrays(run) if len(run) > 1 else run[0]
 
 
-def _list_contains(arr: ListArrayAny, item: NonNestedLiteral) -> ArrayAny:
-    offsets = arr.offsets
+def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    offsets = block.offsets
     first = offsets[0].as_py()
-    values = arr.values.slice(first, offsets[-1].as_py() - first)
+    values = block.values.slice(first, offsets[-1].as_py() - first)
     # A plain `int` would widen int32 offsets to int64, which is slower to `take`.
     offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
-    ends, starts = offsets.slice(1), offsets.slice(0, len(arr))
+    ends, starts = offsets.slice(1), offsets.slice(0, len(block))
 
-    # Like Polars, and unlike `pc.equal`, NaN matches NaN.
     if item is None:
-        hits = pc.is_null(values)
+        matches = pc.is_null(values)
     elif isinstance(item, float) and math.isnan(item):
-        hits = pc.is_nan(values)
+        matches = pc.is_nan(values)  # NaN matches NaN, as in Polars.
     else:
-        hits = pc.equal(values, lit(item))
+        matches = pc.equal(values, lit(item))
 
-    # `running[i]` counts the matches before flattened position `i`, modulo 2^k. That is
-    # exact within lists shorter than 2^k, so counting in the narrowest type fitting the
-    # longest list keeps the only large intermediates small.
-    longest = pc.max(pc.subtract(ends, starts)).as_py() or 0
+    # Counting modulo 2^k stays exact within lists shorter than 2^k, so the narrowest
+    # type that fits the longest list is enough.
+    longest = pc.max(pc.subtract(ends, starts)).as_py()
     count_type = next(
         t
         for t in (pa.uint8(), pa.uint16(), pa.uint32(), pa.uint64())
         if longest < 1 << t.bit_width
     )
-    hits = pa.concat_arrays([pa.array([False]), hits.fill_null(False)])
-    running = pc.cumulative_sum(hits.cast(count_type))
-    found = pc.not_equal(running.take(ends), running.take(starts))
-    return found if arr.null_count == 0 else pc.if_else(arr.is_valid(), found, None)
+    # `matches_before[i]` counts the matches before flattened position `i`.
+    matches = pa.concat_arrays([pa.array([False]), matches.fill_null(False)])
+    matches_before = pc.cumulative_sum(matches.cast(count_type))
+    contains = pc.not_equal(matches_before.take(ends), matches_before.take(starts))
+    return (
+        contains
+        if block.null_count == 0
+        else pc.if_else(block.is_valid(), contains, None)
+    )
 
 
 def sortable(array: ChunkedArrayAny, /) -> ChunkedArrayAny:

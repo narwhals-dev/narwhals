@@ -27,6 +27,7 @@ from narwhals._utils import (
     Implementation,
     ensure_path_source,
     is_nested_literal,
+    isinstance_or_issubclass,
     not_implemented,
     validate_separators,
 )
@@ -85,6 +86,11 @@ class DaskNamespace(
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):
             msg = f"Nested structures are not supported for Dask backend, found {type(value).__name__}"
+            raise NotImplementedError(msg)
+        if isinstance_or_issubclass(dtype, self._version.dtypes.List):
+            # Dask scalars drop the dtype, so this would be a String column:
+            # https://github.com/dask/dask/issues/11637
+            msg = "`List` literals are not supported for Dask backend."
             raise NotImplementedError(msg)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
