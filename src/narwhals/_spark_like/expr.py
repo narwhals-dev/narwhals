@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 import operator
+from functools import reduce
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from narwhals._spark_like.expr_dt import SparkLikeExprDateTimeNamespace
@@ -317,9 +319,19 @@ class SparkLikeExpr(SQLExpr["SparkLikeLazyFrame", "Column"]):
 
     def is_in(self, other: Sequence[Any]) -> Self:
         values = [v for v in other if v is not None]
+        # SQLFrame renders `isin(float("inf"))` as a bare `inf` identifier, so infinities
+        # are compared through `F.lit` instead: https://github.com/eakmanrq/sqlframe/issues/648
+        infinities = list(
+            dict.fromkeys(v for v in values if isinstance(v, float) and math.isinf(v))
+        )
+        others = [v for v in values if not (isinstance(v, float) and math.isinf(v))]
 
         def _is_in(expr: Column) -> Column:
-            matches = expr.isin(values) if values else self._F.lit(False)
+            conditions = [expr.isin(others)] if others else []
+            conditions.extend(expr == self._F.lit(v) for v in infinities)
+            matches = (
+                reduce(operator.or_, conditions) if conditions else self._F.lit(False)
+            )
             return self._F.when(self._F.isnull(expr), None).otherwise(matches)
 
         return self._with_elementwise(_is_in)
