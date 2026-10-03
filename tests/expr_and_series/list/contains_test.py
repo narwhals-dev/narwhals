@@ -19,7 +19,7 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, NonNestedLiteral
+    from narwhals.typing import NonNestedLiteral
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[2, 2, 3, None, None], None, []]}
@@ -30,8 +30,8 @@ INT_LIST_DATA = {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]}
 SQL_BACKENDS = ("duckdb", "ibis", "pyspark", "sqlframe")
 """Backends which coerce the item to the inner dtype instead of matching polars."""
 
-ARROW_BACKED_BACKENDS = ("dask", "modin", "pandas", "pyarrow")
-"""Backends which compare via pyarrow, which casts a datetime item to the list's unit."""
+PYARROW_COMPUTE_BACKENDS = ("dask", "modin", "pandas", "pyarrow")
+"""Backends whose `list.contains` runs on pyarrow, which casts a datetime item to the list's unit."""
 
 
 def skip_or_xfail_unsupported(
@@ -90,20 +90,16 @@ def test_contains_numeric_coercion_expr(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     data: dict[str, Any],
-    inner: IntoDType,
+    inner: DType,
     item: float,
     expected: list[bool | None],
 ) -> None:
     # Mixing numeric kinds is deliberately unspecified, see
     # https://github.com/narwhals-dev/narwhals/issues/3900. This pins what each backend
     # does today so a future change is visible, it is not a guarantee.
-    # Polars 2.0 requires an explicit cast rather than lossily coercing to `Float64`;
-    # `overflow` compares two integer types, so it still resolves.
-    if (
-        "polars" in str(constructor)
-        and POLARS_VERSION >= (2,)
-        and "overflow" not in request.node.callspec.id
-    ):
+    # Polars 2.0 requires an explicit cast rather than lossily coercing to `Float64`.
+    mixes_kinds = isinstance(item, float) != inner.is_float()
+    if "polars" in str(constructor) and POLARS_VERSION >= (2,) and mixes_kinds:
         request.applymarker(pytest.mark.xfail(reason="polars 2.0 needs a cast"))
     skip_or_xfail_unsupported(request, constructor)
     result = nw.from_native(constructor(data)).select(
@@ -117,6 +113,7 @@ def test_contains_numeric_coercion_expr(
     [
         pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), True, id="bool_item"),
         pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), "2", id="str_item"),
+        pytest.param({"a": [["x"], [], None]}, nw.String(), float("nan"), id="nan_item"),
         pytest.param(
             {"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]},
             nw.Datetime("ns"),
@@ -129,24 +126,31 @@ def test_contains_invalid_item_raises(
     request: pytest.FixtureRequest,
     constructor: Constructor,
     data: dict[str, Any],
-    inner: IntoDType,
+    inner: DType,
     item: NonNestedLiteral,
 ) -> None:
-    if (
-        "datetime_precision" in request.node.callspec.id
-        and "polars" in str(constructor)
-        and POLARS_VERSION < (1, 28, 0)
-    ):
-        request.applymarker(pytest.mark.xfail(reason="old polars coerces precision"))
     coercing_backends = SQL_BACKENDS
-    if "datetime_precision" in request.node.callspec.id:
-        coercing_backends += ARROW_BACKED_BACKENDS
+    if isinstance(item, (float, datetime)) and POLARS_VERSION < (1, 28, 0):
+        coercing_backends += ("polars",)
+    if isinstance(item, datetime):
+        coercing_backends += PYARROW_COMPUTE_BACKENDS
     if any(backend in str(constructor) for backend in coercing_backends):
         request.applymarker(pytest.mark.xfail(reason="mismatched item coerced"))
     skip_or_xfail_unsupported(request, constructor)
     df = nw.from_native(constructor(data))
     with pytest.raises(InvalidOperationError):
         maybe_collect(df.select(nw.col("a").cast(nw.List(inner)).list.contains(item)))
+
+
+def test_contains_invalid_item_raises_without_rows(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(backend in str(constructor) for backend in SQL_BACKENDS):
+        request.applymarker(pytest.mark.xfail(reason="mismatched item coerced"))
+    skip_or_xfail_unsupported(request, constructor)
+    df = nw.from_native(constructor({"a": [[2, 3]]})).filter(nw.col("a").is_null())
+    with pytest.raises(InvalidOperationError):
+        maybe_collect(df.select(nw.col("a").cast(nw.List(nw.Int64())).list.contains("2")))
 
 
 def test_contains_all_null_inner_expr(
