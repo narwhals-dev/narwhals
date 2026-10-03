@@ -25,6 +25,9 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - IntoSchema
         - SizeUnit
         - TimeUnit
+        - FileSource
+        - NormalizedPath
+        - NormalizedSource
         - AsofJoinStrategy
         - ClosedInterval
         - ConcatMethod

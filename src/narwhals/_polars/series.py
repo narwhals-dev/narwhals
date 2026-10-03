@@ -825,6 +825,15 @@ class PolarsSeriesStringNamespace(
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
 
+    def slice(self, offset: int, length: int | None) -> PolarsSeries:
+        name = self.name
+        ns = self.__narwhals_namespace__()
+        return (
+            self.to_frame()
+            .select(ns.col(name).str.slice(offset, length))
+            .get_column(name)
+        )
+
     def replace(
         self, value: PolarsSeries, pattern: str, *, literal: bool, n: int
     ) -> PolarsSeries:

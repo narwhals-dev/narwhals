@@ -266,8 +266,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice. If set to `None` (default), the slice is taken to the
-                end of the string.
+            length: Length of the slice. Must be non-negative. If set to `None` (default),
+                the slice is taken to the end of the string.
+
+        Raises:
+            ValueError: If `length` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -280,6 +283,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             2     ya
             dtype: str
         """
+        if length is not None:
+            validate_str_non_negative("slice", "length", length)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(
                 offset=offset, length=length

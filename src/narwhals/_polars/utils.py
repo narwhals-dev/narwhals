@@ -343,6 +343,9 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     @abc.abstractmethod
     def zfill(self, width: int) -> CompliantT: ...
 
+    @abc.abstractmethod
+    def slice(self, offset: int, length: int | None) -> CompliantT: ...
+
     len_chars: Method[CompliantT]
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
@@ -352,7 +355,6 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]
-    slice: Method[CompliantT]
     split: Method[CompliantT]
     to_date: Method[CompliantT]
     to_datetime: Method[CompliantT]

@@ -100,10 +100,12 @@ Narwhals allows you to define dataframe-agnostic functions. For example:
 
 ```python
 import narwhals as nw
-from narwhals.typing import IntoFrameT
+from narwhals.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-def agnostic_function(df_native: IntoFrameT) -> IntoFrameT:
+def agnostic_function(
+    df_native: IntoDataFrameT | IntoLazyFrameT,
+) -> IntoDataFrameT | IntoLazyFrameT:
     return (
         nw.from_native(df_native)
         .with_columns(
@@ -211,6 +213,7 @@ Join the party!
 - [plotly](https://plotly.com)
 - [pointblank](https://github.com/posit-dev/pointblank)
 - [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+- [pyreadr](https://github.com/ofajardo/pyreadr)
 - [pyreadstat](https://github.com/Roche/pyreadstat)
 - [py-shiny](https://github.com/posit-dev/py-shiny)
 - [pysummaries](https://github.com/Genentech/pysummaries)

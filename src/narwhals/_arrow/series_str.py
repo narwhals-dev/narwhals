@@ -13,7 +13,7 @@ from narwhals._arrow.utils import (
     parse_time_format,
 )
 from narwhals._compliant.any_namespace import StringNamespace
-from narwhals._utils import parse_str_strip_chars
+from narwhals._utils import parse_str_strip_chars, str_slice_stop
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
@@ -76,7 +76,7 @@ class ArrowSeriesStringNamespace(ArrowSeriesNamespace, StringNamespace["ArrowSer
         return self.with_native(fn(self.native, pattern_native.as_py()))
 
     def slice(self, offset: int, length: int | None) -> ArrowSeries:
-        stop = offset + length if length is not None else None
+        stop = str_slice_stop(offset, length)
         return self.with_native(
             pc.utf8_slice_codeunits(self.native, start=offset, stop=stop)
         )

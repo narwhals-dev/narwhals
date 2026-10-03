@@ -128,6 +128,21 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
         assert result == {"a": nw.Int64, "literal": nw.Date}
 
 
+def test_null_list_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "dask" in str(constructor):
+        # https://github.com/dask/dask/issues/11637
+        reason = "Dask scalars drop the dtype"
+        request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
+    elif any(x in str(constructor) for x in ("pandas", "modin")):
+        if PANDAS_VERSION < (2, 2):
+            pytest.skip(reason="casting to `List` needs pandas>=2.2")
+        pytest.importorskip("pyarrow")
+    dtype = nw.List(nw.Int64())
+    result = nw.from_native(constructor({"a": [1]})).select(nw.lit(None, dtype))
+    assert result.collect_schema() == {"literal": dtype}
+    assert_equal_data(result, {"literal": [None]})
+
+
 def test_pyarrow_lit_string() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa

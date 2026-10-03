@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import operator
 from functools import reduce
-from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
 
 from narwhals._expression_parsing import (
@@ -20,10 +19,14 @@ from narwhals._spark_like.utils import (
     true_divide,
 )
 from narwhals._sql.namespace import SQLNamespace
-from narwhals._utils import check_column_names_are_unique, validate_separators
+from narwhals._utils import (
+    check_column_names_are_unique,
+    ensure_path_source,
+    validate_separators,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Sequence
 
     from sqlframe.base.column import Column
 
@@ -35,7 +38,7 @@ if TYPE_CHECKING:
         ConcatMethod,
         CorrelationMethod,
         IntoDType,
-        NormalizedPath,
+        NormalizedSource,
         PythonLiteral,
     )
 
@@ -84,23 +87,25 @@ class SparkLikeNamespace(
         return cast("SparkSession", session).read.format(fmt)
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> SparkLikeLazyFrame:
         validate_separators(separator, ("sep", "delimiter"), kwds)
+        path = ensure_path_source(source, self._implementation)
         reader = self._session_reader("csv", kwds)
         native = (
-            reader.load(source, sep=separator)
+            reader.load(path, sep=separator)
             if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
-            else reader.options(sep=separator, **kwds).load(source)
+            else reader.options(sep=separator, **kwds).load(path)
         )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> SparkLikeLazyFrame:
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> SparkLikeLazyFrame:
+        path = ensure_path_source(source, self._implementation)
         reader = self._session_reader("parquet", kwds)
         native = (
-            reader.load(source)
+            reader.load(path)
             if self._implementation.is_sqlframe() and self._backend_version < (3, 27)
-            else reader.options(**kwds).load(source)
+            else reader.options(**kwds).load(path)
         )
         return self._lazyframe.from_native(native, context=self)
 
@@ -249,24 +254,17 @@ class SparkLikeNamespace(
     def concat_str(
         self, *exprs: SparkLikeExpr, separator: str, ignore_nulls: bool
     ) -> SparkLikeExpr:
-        def func(df: SparkLikeLazyFrame) -> list[Column]:
+        def func(cols: Sequence[Column]) -> Column:
             F = self._F
-            cols = tuple(chain.from_iterable(e(df) for e in exprs))
             result = F.concat_ws(separator, *cols)
 
             if not ignore_nulls:
                 null_mask = reduce(operator.or_, (F.isnull(s) for s in cols))
                 result = F.when(~null_mask, result).otherwise(F.lit(None))
 
-            return [result]
+            return result
 
-        return self._expr(
-            call=func,
-            evaluate_output_names=combine_evaluate_output_names(*exprs),
-            alias_output_names=combine_alias_output_names(*exprs),
-            version=self._version,
-            implementation=self._implementation,
-        )
+        return self._expr._from_elementwise_horizontal_op(func, *exprs)
 
     def corr(
         self, a: SparkLikeExpr, b: SparkLikeExpr, *, method: CorrelationMethod
@@ -275,14 +273,41 @@ class SparkLikeNamespace(
             msg = "Only 'pearson' correlation is supported for Spark."
             raise NotImplementedError(msg)
 
+        F = self._F
+
+        def _corr(
+            a_: Column, b_: Column, wrap: Callable[[Column], Column]
+        ) -> list[Column]:
+            # NOTE: `F.corr` only guards against an empty (or single-row) input,
+            # and it raises `DIVIDE_BY_ZERO` when either column is constant.
+            # Compute it from guarded aggregates instead.
+            is_valid = a_.isNotNull() & b_.isNotNull()
+            a_valid, b_valid = F.when(is_valid, a_), F.when(is_valid, b_)
+            denominator = wrap(F.stddev_pop(a_valid)) * wrap(F.stddev_pop(b_valid))
+            numerator = wrap(F.covar_pop(a_valid, b_valid))
+            return [
+                F.when(denominator == F.lit(0.0), F.lit(None)).otherwise(
+                    numerator / denominator
+                )
+            ]
+
         def func(df: SparkLikeLazyFrame) -> list[Column]:
-            F = self._F
             a_ = df._evaluate_single_output_expr(a)
             b_ = df._evaluate_single_output_expr(b)
-            return [F.corr(a_, b_)]
+            return _corr(a_, b_, lambda e: e)
+
+        def window_f(
+            df: SparkLikeLazyFrame, inputs: WindowInputs[Column]
+        ) -> list[Column]:
+            assert not inputs.order_by  # noqa: S101
+            a_ = df._evaluate_single_output_expr(a)
+            b_ = df._evaluate_single_output_expr(b)
+            window = df._Window.partitionBy(*(inputs.partition_by or [F.lit(1)]))
+            return _corr(a_, b_, lambda e: e.over(window))
 
         return self._expr(
             call=func,
+            window_function=window_f,
             evaluate_output_names=combine_evaluate_output_names(a, b),
             alias_output_names=combine_alias_output_names(a, b),
             version=self._version,

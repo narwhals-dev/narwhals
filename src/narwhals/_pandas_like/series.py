@@ -12,11 +12,14 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     NUMPY_VERSION,
+    PANDAS_VERSION,
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
     get_dtype_backend,
     import_array_module,
+    is_dtype_pyarrow,
+    is_pandas_or_modin,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -324,7 +327,20 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
-        return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
+        result = self.native.astype(pd_dtype)
+        if (
+            pd_dtype is str
+            and is_pandas_or_modin(self._implementation)
+            and PANDAS_VERSION < (3,)
+            and (null_mask := self.native.isna()).any()
+        ):
+            # NOTE: pandas<3.0.0, `astype(str)` renders nulls as `'None'` / `'nan'`
+            # instead of keeping them null. Newer versions cast to a string dtype which
+            # preserves them, and cuDF's string conversions keep the null mask,
+            # so in neither case is there anything to restore.
+            # NOTE: `astype` already returned a new object, so mask it in place.
+            result.mask(null_mask, None, inplace=True)  # noqa: PD002
+        return self._with_native(result, preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
@@ -661,10 +677,19 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(self.native.abs())
 
     def cum_sum(self, *, reverse: bool) -> Self:
+        native = self.native
+        dtype = native.dtype
+        # pyarrow-backed accumulation keeps the input width and raises on overflow.
+        if (
+            is_dtype_pyarrow(dtype)
+            and dtype.kind in "iu"
+            and dtype.pyarrow_dtype.bit_width < 64
+        ):
+            native = native.astype("int64[pyarrow]")
         result = (
-            self.native.cumsum(skipna=True)
+            native.cumsum(skipna=True)
             if not reverse
-            else self.native[::-1].cumsum(skipna=True)[::-1]
+            else native[::-1].cumsum(skipna=True)[::-1]
         )
         return self._with_native(result)
 
@@ -979,7 +1004,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = (
             not_na_series.cumsum()
             if not reverse
-            else len(self) - not_na_series.cumsum() + not_na_series - 1
+            else not_na_series.sum() - not_na_series.cumsum() + not_na_series
         )
         return self._with_native(result)
 

@@ -27,16 +27,11 @@ data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 )
 def test_corr_expr(
     constructor: Constructor,
-    request: pytest.FixtureRequest,
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
     expected_corr: float,
 ) -> None:
-    if "pyspark" in str(constructor) and expected_corr is None:
-        request.applymarker(
-            pytest.skip(reason="Pyspark corr function does not allow None values")
-        )
     df = nw.from_native(constructor(data))
     result = df.select(nw.corr(a, b).round(2))
     expected = {output_name: [expected_corr]}
@@ -178,16 +173,10 @@ def test_corr_constant_column(constructor: Constructor) -> None:
     assert_equal_data(result, {"c": [None]})
 
 
-def test_corr_pairwise_nulls(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_corr_pairwise_nulls(constructor: Constructor) -> None:
     # Correlation is pairwise: a null in one column must drop that row entirely,
     # otherwise the other column's mean/stddev are computed over the wrong rows.
     # Regression test for the pyarrow path, which previously skipped this filtering.
-    if "pyspark" in str(constructor):
-        request.applymarker(
-            pytest.skip(reason="PySpark corr function does not allow None values")
-        )
     df = nw.from_native(
         constructor({"a": [1.0, 2.0, 3.0, 100.0], "b": [1.0, 2.0, 3.0, None]})
     )
