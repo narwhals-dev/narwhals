@@ -5,17 +5,21 @@ from typing import TYPE_CHECKING
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from narwhals._arrow.utils import ArrowSeriesNamespace, list_agg, list_sort
+from narwhals._arrow.utils import ArrowSeriesNamespace, list_agg, list_contains, list_sort
 from narwhals._compliant.any_namespace import ListNamespace
 from narwhals._utils import not_implemented
 
 if TYPE_CHECKING:
     from narwhals._arrow.series import ArrowSeries
+    from narwhals.typing import NonNestedLiteral
 
 
 class ArrowSeriesListNamespace(ArrowSeriesNamespace, ListNamespace["ArrowSeries"]):
     def len(self) -> ArrowSeries:
         return self.with_native(pc.list_value_length(self.native).cast(pa.uint32()))
+
+    def contains(self, item: NonNestedLiteral) -> ArrowSeries:
+        return self.with_native(list_contains(self.native, item))
 
     def get(self, index: int) -> ArrowSeries:
         return self.with_native(pc.list_element(self.native, index))
@@ -41,4 +45,3 @@ class ArrowSeriesListNamespace(ArrowSeriesNamespace, ListNamespace["ArrowSeries"
         )
 
     unique = not_implemented()
-    contains = not_implemented()

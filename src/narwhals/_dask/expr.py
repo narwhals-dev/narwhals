@@ -7,6 +7,7 @@ import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
+from narwhals._dask.expr_list import DaskExprListNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
@@ -716,6 +717,10 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
+    @property
+    def list(self) -> DaskExprListNamespace:
+        return DaskExprListNamespace(self)
+
     any_value = not_implemented()
     filter = not_implemented(
         hint=length_changing_hint(
@@ -728,5 +733,4 @@ class DaskExpr(
     last = not_implemented()
 
     # namespaces
-    list: Any = not_implemented()
     struct: Any = not_implemented()
