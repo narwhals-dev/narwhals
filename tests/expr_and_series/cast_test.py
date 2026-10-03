@@ -485,3 +485,20 @@ def test_cast_object_pandas() -> None:
     assert result[0] == "2"
     # Before pandas 3, `astype(str)` rendered this as the string `"None"`.
     assert result.is_null().to_list() == [False, False, True]
+
+
+def test_cast_float_to_int_truncates(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Float-to-int casts truncate toward zero (matching pandas and polars);
+    # pyarrow's default safe cast used to raise on any fractional part.
+    if any(backend in str(constructor) for backend in ("duckdb", "sqlframe", "ibis")):
+        request.applymarker(
+            pytest.mark.xfail(
+                reason="DuckDB, Spark and Ibis round float->int casts natively instead of truncating"
+            )
+        )
+    data = {"a": [1.7, -2.5, 0.5]}
+    df = nw.from_native(constructor(data)).lazy()
+    result = df.select(nw.col("a").cast(nw.Int64)).collect()
+    assert_equal_data(result, {"a": [1, -2, 0]})
