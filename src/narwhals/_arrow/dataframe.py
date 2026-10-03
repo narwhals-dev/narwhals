@@ -699,10 +699,10 @@ class ArrowDataFrame(
         return self._with_native(self.native.rename_columns(names))
 
     def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
-        # NOTE: `pa.Table.cast` re-validates every field, raising on unrelated
-        # non-nullable ones that hold nulls. Field metadata is dropped on cast columns
-        # as it can be type-specific (e.g. polars' Enum categories).
-        # See tests/frame/cast_test.py::test_cast_preserves_arrow_schema
+        # NOTE: Not `pa.Table.cast`, which re-validates every field and raises on
+        # unrelated non-nullable ones holding nulls, nor `set_column` per column, which
+        # is O(n_cast * n_columns). Field metadata is dropped on cast columns as it can
+        # be type-specific (e.g. polars' Enum categories).
         native = self.native
         schema = native.schema
         fields, columns = list(schema), list(native.columns)

@@ -29,16 +29,16 @@ def test_cast(constructor: Constructor) -> None:
 
 
 def test_cast_matches_expr_cast(constructor: Constructor) -> None:
-    df = nw.from_native(constructor({"t": [datetime(2020, 1, 1)], "a": [1]}))
+    df = nw.from_native(constructor({"t": [datetime(2020, 1, 1)], "a": [1], "s": [2]}))
     if not any(x in str(constructor) for x in ("pyspark", "sqlframe")):
         # NOTE: Spark-like backends only support microsecond precision.
         df = df.with_columns(nw.col("t").cast(nw.Datetime("ns")))
-    dtypes: Mapping[str, IntoDType] = {"t": nw.Datetime, "a": nw.Int64}
+    dtypes: Mapping[str, IntoDType] = {"t": nw.Datetime, "a": nw.Int64, "s": nw.String}
 
     result = df.cast(dtypes)
     expected = df.with_columns(nw.col(k).cast(v) for k, v in dtypes.items())
     assert result.collect_schema() == expected.collect_schema()
-    assert_equal_data(result, {"t": [datetime(2020, 1, 1)], "a": [1]})
+    assert_equal_data(result, {"t": [datetime(2020, 1, 1)], "a": [1], "s": ["2"]})
 
 
 def test_cast_invalid_dtype(constructor: Constructor) -> None:
