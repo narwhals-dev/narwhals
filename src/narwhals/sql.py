@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Literal
 
 from narwhals._duckdb.utils import DeferredTimeZone, narwhals_to_native_dtype
@@ -22,9 +23,22 @@ except ImportError as _exc:  # pragma: no cover
     raise ModuleNotFoundError(msg) from _exc
 
 CONN = duckdb.connect()
-TZ = DeferredTimeZone(
-    CONN.sql("select value from duckdb_settings() where name = 'TimeZone'")
-)
+_LOCAL = threading.local()
+
+
+def _cursor() -> duckdb.DuckDBPyConnection:
+    """Return current thread's cursor on `CONN`, creating it on first use.
+
+    DuckDB connections must not be used concurrently from multiple threads.
+    Citing from [Multiple Python Threads](https://duckdb.org/docs/stable/guides/python/multiple_threads):
+
+    > Each thread must use the `.cursor()` method to create a thread-local
+    > connection to the same DuckDB file based on the original connection
+    """
+    # duckdb 1.4 and older don't keep cursors alive
+    if (cursor := getattr(_LOCAL, "cursor", None)) is None:
+        cursor = _LOCAL.cursor = CONN.cursor()
+    return cursor
 
 
 class SQLTable(LazyFrame[duckdb.DuckDBPyRelation]):
@@ -71,6 +85,13 @@ def table(name: str, schema: IntoSchema) -> SQLTable:
 
     Note that this requires DuckDB to be installed.
 
+    Note:
+        Tables are created in a module-level DuckDB catalog, shared by the whole process,
+        so `name` must be unique across threads. Each thread gets its own cursor on that
+        catalog, and DuckDB rejects combining relations from different connections, so
+        tables created in *different* threads cannot be joined or concatenated - see
+        [thread safety](../concepts/thread_safety.md).
+
     Parameters:
         name: Table name.
         schema: Table schema.
@@ -90,16 +111,20 @@ def table(name: str, schema: IntoSchema) -> SQLTable:
         |           0 rows           |
         └────────────────────────────┘
     """
+    cursor = _cursor()
+    tz = DeferredTimeZone(
+        cursor.sql("select value from duckdb_settings() where name = 'TimeZone'")
+    )
     column_mapping = {
-        col: narwhals_to_native_dtype(dtype, Version.MAIN, TZ)
+        col: narwhals_to_native_dtype(dtype, Version.MAIN, tz)
         for col, dtype in Schema(schema).items()
     }
     dtypes = ", ".join(f'"{col}" {dtype}' for col, dtype in column_mapping.items())
-    CONN.sql(f"""
+    cursor.sql(f"""
         CREATE TABLE "{name}"
         ({dtypes});
         """)
-    lf = from_native(CONN.table(name))
+    lf = from_native(cursor.table(name))
     return SQLTable(lf._compliant_frame, level=lf._level)
 
 

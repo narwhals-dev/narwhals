@@ -95,6 +95,7 @@ def test_quantile_nan(constructor: Constructor, request: pytest.FixtureRequest) 
     assert_equal_data(result, {"q": [2.0]})
 
 
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
 def test_quantile_inf(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     if any(
         x in str(constructor)

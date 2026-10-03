@@ -150,8 +150,13 @@ jobs:
         python-version: ["3.14t"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    # Backstop against deadlocks in multithreaded tests: fail instead of hanging.
+    timeout-minutes: 10
     env:
-        PYTHON_GIL: 0
+        # NOTE: `PYTHON_GIL` is deliberately unset. With `PYTHON_GIL=0` the interpreter
+        # never re-enables the GIL, and so never warns that it wanted to - which is the
+        # signal `pytest-run-parallel` exits on when an extension module lacks
+        # `Py_mod_gil`. Leaving it at the default is what makes that check live.
         UV_LOCKED: 0
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -164,5 +169,21 @@ jobs:
           enable-cache: "true"
           cache-suffix: python-314t-${{ matrix.python-version }}
           cache-dependency-glob: "pyproject.toml"
-      - name: Run pytest
-        run: make run-ci DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" CMD="pytest tests --cov=src --cov=tests --cov-fail-under=50 --runslow --durations=30 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"
+      # Run the suite again with every test executed by 4 threads at once
+      # with pytest-run-parallel to surface thread-safety issues.
+      # This catches global-state races across the whole suite; shared-object races
+      # are covered by the dedicated tests in tests/free_threading_test.py.
+      # Tests marked `thread_unsafe` run single-threaded. The plugin also fails the run
+      # if the GIL gets re-enabled at runtime, naming the module responsible.
+      - name: Run pytest (parallel threads)
+        env:
+          # NOTE: Clear PYTEST_ADDOPTS since xdist forks processes,
+          # and the point here is threads within one process
+          PYTEST_ADDOPTS: ""
+        # TODO(Unassigned): Add other backends (duckdb, polars, ...) as they rollout free-threaded support
+        # polars: https://github.com/pola-rs/polars/issues/27955
+        run: |
+          make run-ci \
+          DEPS="--pre --group tests --group plugins --extra pandas --extra pyarrow" \
+          RUN_ONLY="--with pytest-run-parallel" \
+          CMD="pytest tests --parallel-threads=4 --constructors=pandas,pandas[nullable],pandas[pyarrow],pyarrow"

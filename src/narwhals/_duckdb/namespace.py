@@ -81,8 +81,12 @@ class DuckDBNamespace(
         self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DuckDBLazyFrame:
         validate_separators(separator, ("delimiter", "delim", "sep"), kwds)
-        native = duckdb.read_csv(source, delimiter=separator, **kwds)
-        return self._lazyframe.from_native(native, context=self)
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        connection = kwds.pop("connection", None)
+        reader = duckdb if connection is None else connection
+        native_frame = reader.read_csv(source, delimiter=separator, **kwds)
+        return self._lazyframe.from_native(native_frame, context=self)
 
     def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DuckDBLazyFrame:
         if is_file_like(source) and BACKEND_VERSION < (1, 5, 4):  # pragma: no cover
@@ -91,8 +95,12 @@ class DuckDBNamespace(
                 f"'duckdb>=1.5.4', found version {requires._unparse_version(BACKEND_VERSION)!r}."
             )
             raise NotImplementedError(msg)
-        native = duckdb.read_parquet(source, **kwds)
-        return self._lazyframe.from_native(native, context=self)
+        # Without an explicit `connection`, DuckDB reads through the
+        # process-global default connection.
+        connection = kwds.pop("connection", None)
+        reader = duckdb if connection is None else connection
+        native_frame = reader.read_parquet(source, **kwds)
+        return self._lazyframe.from_native(native_frame, context=self)
 
     def _function(self, name: str, *args: Expression) -> Expression:  # type: ignore[override]
         return function(name, *args)
@@ -124,7 +132,7 @@ class DuckDBNamespace(
             msg = "inputs should all have the same schema"
             raise TypeError(msg)
         if how == "diagonal":
-            # TODO(unassigned): use relational `union by name` when available https://github.com/duckdb/duckdb/discussions/16996
+            # TODO(unassigned): use relational API when available https://github.com/duckdb/duckdb/discussions/16996
             names = dict.fromkeys(chain.from_iterable(item.columns for item in items))
             native_items = []
             for item in items:
