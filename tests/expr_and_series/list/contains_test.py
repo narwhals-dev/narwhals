@@ -129,9 +129,13 @@ def test_contains_invalid_item_raises(
     inner: DType,
     item: NonNestedLiteral,
 ) -> None:
+    if (
+        isinstance(item, (float, datetime))
+        and "polars" in str(constructor)
+        and POLARS_VERSION < (1, 28, 0)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old polars coerces the item"))
     coercing_backends = SQL_BACKENDS
-    if isinstance(item, (float, datetime)) and POLARS_VERSION < (1, 28, 0):
-        coercing_backends += ("polars",)
     if isinstance(item, datetime):
         coercing_backends += PYARROW_COMPUTE_BACKENDS
     if any(backend in str(constructor) for backend in coercing_backends):
