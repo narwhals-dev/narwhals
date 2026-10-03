@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from itertools import chain, product
+from datetime import timedelta
+from itertools import product
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import numpy as np
@@ -59,6 +60,7 @@ if TYPE_CHECKING:
         DTypeBackend,
         IntoDType,
         JoinStrategy,
+        NonNestedLiteral,
         PivotAgg,
         SizedMultiIndexSelector,
         SizedMultiNameSelector,
@@ -70,6 +72,8 @@ if TYPE_CHECKING:
     )
 
     Constructor: TypeAlias = Callable[..., pd.DataFrame]
+    PivotColumn: TypeAlias = "tuple[Any, ...]"
+    """A column of a native pivot result, keyed `(values_name, *on_values)`."""
 
 
 CLASSICAL_NUMPY_DTYPES: frozenset[np.dtype[Any]] = frozenset(
@@ -1100,6 +1104,100 @@ class PandasLikeDataFrame(
             for col in column_names:
                 yield self._pivot_multi_on_name(col[-n_on:])
 
+    @staticmethod
+    def _null_promoted_dtypes(frame: pd.DataFrame, /) -> dict[Any, Any]:
+        """Dtype each of `frame`'s columns takes once it has to hold a null.
+
+        `int64` widens to `float64`; nullable and pyarrow-backed dtypes keep theirs.
+        The index goes first: `reindex` rejects a `MultiIndex`, and refilling from a
+        frame's own index would promote nothing when it has no rows.
+        """
+        return frame.iloc[:0].set_axis(range(0)).reindex([0]).dtypes.to_dict()
+
+    def _pivot_missing_dtypes(
+        self,
+        result: pd.DataFrame,
+        missing: Sequence[PivotColumn],
+        aggregate_function: PivotAgg | None,
+        /,
+    ) -> dict[PivotColumn, Any]:
+        """Dtypes for the pivoted columns absent from the data, which `reindex` floats.
+
+        Read off the pivoted columns sharing their `values` name, falling back to the
+        source column: a `values` entry that is empty or all-null pivots to no column
+        at all, leaving nothing to read. `len` counts rows regardless of what they hold.
+        """
+        source = self.native.loc[:, list(dict.fromkeys(col[0] for col in missing))]
+        source = (
+            source.iloc[:0].astype("int64") if aggregate_function == "len" else source
+        )
+        by_values_name = self._null_promoted_dtypes(source) | {
+            col[0]: dtype for col, dtype in self._null_promoted_dtypes(result).items()
+        }
+        return {col: by_values_name[col[0]] for col in missing}
+
+    @staticmethod
+    def _pivot_empty_group_fill(result: pd.DataFrame, /) -> dict[Any, Any]:
+        """Zero per column, for the columns that have one.
+
+        polars aggregates an empty group to 0 where pandas leaves it null. A plain
+        `0` is not that zero for every dtype, and is not a value at all for a String
+        column, which would land back as `object` holding a bare int.
+        """
+        zeros: dict[str, Any] = {"i": 0, "u": 0, "f": 0, "m": timedelta(0)}
+        return {
+            col: zero
+            for col, dtype in result.dtypes.items()
+            if (zero := zeros.get(dtype.kind)) is not None
+        }
+
+    def _pivot_index(
+        self, index: Sequence[str], aggregate_function: PivotAgg | None, /
+    ) -> pd.Index[Any]:
+        """Index that pivoting the whole frame would produce, in the same order."""
+        keys = list(index)
+        frame = self.native.loc[:, keys]
+        if aggregate_function is not None:
+            # `pivot_table` drops a null key, plain `pivot` keeps it and sorts it first.
+            frame = frame.dropna()
+        return (
+            frame.drop_duplicates()
+            .sort_values(keys, na_position="first")
+            .set_index(keys)
+            .index
+        )
+
+    def _pivot_on_columns(
+        self,
+        on: str,
+        on_columns: Sequence[NonNestedLiteral],
+        index: Sequence[str],
+        values: Sequence[str],
+        aggregate_function: PivotAgg | None,
+        /,
+    ) -> pd.DataFrame:
+        """Pivot to exactly `product(values, on_columns)`, whatever the data holds.
+
+        Only the rows holding a requested `on` value take part: aggregating the others
+        is wasted work proportional to the cardinality of `on`, and without an
+        `aggregate_function` their duplicates would raise even though they are not
+        asked for. Dropping them loses the index rows they were the only evidence of,
+        so those are put back empty.
+        """
+        native = self.native
+        frame = self._with_native(
+            native[native[on].isin(on_columns)], validate_column_names=False
+        )
+        result = frame._pivot([on], index, values, aggregate_function).reindex(
+            index=self._pivot_index(index, aggregate_function)
+        )
+        output: list[PivotColumn] = list(product(values, on_columns))
+        # `result.columns` is a `pd.MultiIndex`, but not in the stubs.
+        if absent := [col for col in output if col not in result.columns]:
+            dtypes = self._pivot_missing_dtypes(result, absent, aggregate_function)
+            return result.reindex(columns=output).astype(dtypes)
+        return result.loc[:, output]
+
     def _pivot_remap_column_names(
         self, column_names: Iterable[Any], *, n_on: int, n_values: int, separator: str
     ) -> list[str]:
@@ -1121,7 +1219,7 @@ class PandasLikeDataFrame(
             "min", "max", "first", "last", "sum", "mean", "median"
         ],
         /,
-    ) -> Any:
+    ) -> pd.DataFrame:
         kwds: dict[Any, Any] = (
             {} if self._implementation is Implementation.CUDF else {"observed": True}
         )
@@ -1156,6 +1254,7 @@ class PandasLikeDataFrame(
         self,
         on: Sequence[str],
         *,
+        on_columns: Sequence[NonNestedLiteral] | None,
         index: Sequence[str] | None,
         values: Sequence[str] | None,
         aggregate_function: PivotAgg | None,
@@ -1168,27 +1267,24 @@ class PandasLikeDataFrame(
             raise NotImplementedError(msg)
 
         index, values = self._pivot_into_index_values(on, index, values)
-        result = self._pivot(on, index, values, aggregate_function)
 
-        # Select the columns in the right order
-        uniques = (
-            (
-                self.get_column(col)
-                .unique()
-                .sort(descending=False, nulls_last=False)
-                .to_list()
-                for col in on
+        if on_columns is None:
+            result = self._pivot(on, index, values, aggregate_function)
+            uniques = (self.get_column(col).unique() for col in on)
+            if sort_columns:
+                uniques = (s.sort(descending=False, nulls_last=False) for s in uniques)
+            result = result.loc[:, list(product(values, *uniques))]
+
+        else:
+            result = self._pivot_on_columns(
+                on[0], on_columns, index, values, aggregate_function
             )
-            if sort_columns
-            else (self.get_column(col).unique().to_list() for col in on)
+
+        if aggregate_function in {"sum", "len"}:
+            result = result.fillna(self._pivot_empty_group_fill(result))
+        result.columns = self._pivot_remap_column_names(
+            result.columns, n_on=len(on), n_values=len(values), separator=separator
         )
-        ordered_cols = list(product(values, *chain(uniques)))
-        result = result.loc[:, ordered_cols]
-        columns = result.columns
-        remapped = self._pivot_remap_column_names(
-            columns, n_on=len(on), n_values=len(values), separator=separator
-        )
-        result.columns = remapped
         result.columns.names = [""]
         return self._with_native(result.reset_index())
 
