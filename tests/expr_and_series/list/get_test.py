@@ -15,10 +15,10 @@ data = {"a": [[1, 2], [None, 3], [None], None]}
 def test_get_expr(
     request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: Any
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
