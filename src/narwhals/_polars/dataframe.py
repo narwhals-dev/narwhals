@@ -736,6 +736,16 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
 
         return func
 
+    @property
+    def columns(self) -> list[str]:
+        # NOTE: `pl.LazyFrame.columns` emits a `PerformanceWarning` since Polars 1.0.
+        native = self.native
+        return (
+            native.columns
+            if self._backend_version < (1,)
+            else native.collect_schema().names()
+        )
+
     def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
         yield from self.collect(Implementation.POLARS).iter_columns()
 

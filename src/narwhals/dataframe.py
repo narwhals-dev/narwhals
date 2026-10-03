@@ -2477,10 +2477,6 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             )
             raise InvalidOperationError(msg)
 
-    def _check_columns_exist(self, subset: Sequence[str]) -> ColumnNotFoundError | None:
-        # NOTE: Polars warns on `LazyFrame.columns`, not on `collect_schema`.
-        return check_columns_exist(subset, available=self.collect_schema().names())
-
     def __init__(self, df: Any, *, level: Literal["full", "lazy", "interchange"]) -> None:
         self._level = level
         self._compliant_frame: CompliantLazyFrame[Any, LazyFrameT, Self]
