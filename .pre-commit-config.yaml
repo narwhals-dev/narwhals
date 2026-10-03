@@ -81,6 +81,12 @@ repos:
       pass_filenames: false
       entry: uv run utils/check_slotted_classes.py
       language: system
+    - id: check-docs-sessions
+      name: markdown_exec session names must be unique per page
+      pass_filenames: false
+      entry: uv run utils/check_docs_sessions.py
+      language: system
+      files: ^docs/.*\.md$
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
       entry: uv run utils/import_check.py
