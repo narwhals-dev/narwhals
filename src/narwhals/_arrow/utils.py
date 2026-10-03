@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -620,7 +620,11 @@ def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.Bool
     elif isinstance(item, float) and math.isnan(item):
         matches = pc.is_nan(values)  # NaN matches NaN, as in Polars.
     else:
-        matches = pc.equal(values, lit(item))
+        try:
+            matches = pc.equal(values, lit(item))
+        except pa.ArrowNotImplementedError as exc:
+            msg = f"Unable to compare item of type {type(item)} with list of type {block.type}."
+            raise InvalidOperationError(msg) from exc
 
     # Counting modulo 2^k stays exact within lists shorter than 2^k, so the narrowest
     # type that fits the longest list is enough.
