@@ -463,16 +463,16 @@ class PolarsExprStringNamespace(
     def zfill(self, width: int) -> PolarsExpr:
         if width == 0:
             return self.compliant._with_native(self.native)
-        native_result = self.native.str.zfill(width)
-
-        if self.compliant._backend_version <= (1, 30, 0):
-            plus, minus = "+", "-"
-            sign, rest = self.native.str.slice(0, 1), self.native.str.slice(1)
-            native_result = (
-                pl.when(self.native.str.starts_with(plus))
-                .then(sign + (minus + rest).str.zfill(width).str.slice(1))
-                .otherwise(native_result)
-            )
+        native_expr = self.native
+        # Polars pads to UTF-8 byte length; pad to character length instead,
+        # keeping a leading `+`/`-` sign in front like the other backends do.
+        sign, rest = native_expr.str.slice(0, 1), native_expr.str.slice(1)
+        is_signed = native_expr.str.starts_with("+") | native_expr.str.starts_with("-")
+        native_result = (
+            pl.when(is_signed)
+            .then(sign + rest.str.pad_start(width - 1, "0"))
+            .otherwise(native_expr.str.pad_start(width, "0"))
+        )
 
         return self.compliant._with_native(native_result)
 
