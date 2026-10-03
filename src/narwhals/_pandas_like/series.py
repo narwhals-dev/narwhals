@@ -615,7 +615,17 @@ class PandasLikeSeries(EagerSeries[Any]):
         strategy: FillNullStrategy | None,
         limit: int | None,
     ) -> Self:
-        ser = self.native
+        if (
+            self._broadcast
+            and isinstance(value, PandasLikeSeries)
+            and not value._broadcast
+        ):
+            receiver, value = self._align_full_broadcast(self, value)
+            # `where` rather than `fillna`: pandas 3.1 deprecates filling a NumPy-backed
+            # literal from a nullable or pyarrow-backed `value`.
+            native = receiver.native
+            return receiver._with_native(native.where(native.notna(), value.native))
+        native = self.native
         kwargs = (
             {"downcast": False}
             if self._implementation is Implementation.PANDAS
@@ -628,17 +638,14 @@ class PandasLikeSeries(EagerSeries[Any]):
             )
             if value is not None:
                 _, native_value = align_and_extract_native(self, value)
-                res_ser = self._with_native(
-                    ser.fillna(value=native_value, **kwargs), preserve_broadcast=True
-                )
+                result = native.fillna(value=native_value, **kwargs)
             else:
-                res_ser = self._with_native(
-                    ser.ffill(limit=limit, **kwargs)
+                result = (
+                    native.ffill(limit=limit, **kwargs)
                     if strategy == "forward"
-                    else ser.bfill(limit=limit, **kwargs),
-                    preserve_broadcast=True,
+                    else native.bfill(limit=limit, **kwargs)
                 )
-        return res_ser
+        return self._with_native(result, preserve_broadcast=True)
 
     def fill_nan(self, value: float | None) -> Self:
         impl = self._implementation
