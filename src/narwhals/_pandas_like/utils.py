@@ -710,14 +710,14 @@ def broadcast_series_to_index(
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
 
 
-def _is_native_series(obj: Any) -> TypeIs[pd.Series[Any]]:
+def _is_native_series(obj: object) -> TypeIs[pd.Series[Any]]:
     # Module-local: modin and cuDF series are typed as pandas ones throughout
     # `_pandas_like`.
     return is_pandas_like_series(obj)
 
 
 def floordiv_null_on_zero(
-    dividend: pd.Series[Any] | Any, divisor: pd.Series[Any] | Any
+    dividend: pd.Series[Any] | float, divisor: pd.Series[Any] | float
 ) -> pd.Series[Any]:
     """Floor-divide, with null wherever `divisor` is zero, as Polars does.
 
@@ -735,14 +735,14 @@ def floordiv_null_on_zero(
     assert _is_native_series(dividend)  # noqa: S101
     try:
         divisor_is_zero = bool(divisor == 0)
-    except TypeError:
-        # `pd.NA == 0` is `pd.NA`, whose truth value is ambiguous. Dividing by a
-        # null divisor is null already, so there is nothing to mask.
+    except (TypeError, ValueError):
+        # `pd.NA == 0` and `array == 0` have no single truth value, so fall back
+        # to plain floor division.
         divisor_is_zero = False
     if divisor_is_zero:
-        return floordiv_null_on_zero(
-            dividend, type(dividend)(divisor, index=dividend.index)
-        )
+        # A one of the divisor's own type keeps the dtype that `// 2` would give.
+        all_null = type(dividend)(False, index=dividend.index)
+        return (dividend // type(divisor)(1)).where(all_null)
     return dividend // divisor
 
 

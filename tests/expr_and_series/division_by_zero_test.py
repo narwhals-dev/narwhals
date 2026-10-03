@@ -5,7 +5,13 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -152,6 +158,8 @@ def test_floordiv_by_mixed_divisor(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
     if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
@@ -185,6 +193,8 @@ def test_floordiv_by_mixed_divisor(
 def test_floordiv_by_null_scalar(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
     if "pyarrow_table" in str(constructor):
         # `floordiv_compat` raises on a null scalar divisor.
         request.applymarker(pytest.mark.xfail)
@@ -193,3 +203,17 @@ def test_floordiv_by_null_scalar(
     null_scalar = nw.when(nw.col("b") > 99).then(nw.col("b")).max()
     result = df.select(nw.col("a") // null_scalar)
     assert_equal_data(result, {"a": [None, None]})
+
+
+def test_floordiv_by_zero_keeps_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="bug")
+    if "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [6.0, 7.0]}))
+    a = nw.col("a").cast(nw.Float32)
+    schema = df.select(by_zero=a // 0, by_two=a // 2).collect_schema()
+    assert schema["by_zero"] == schema["by_two"]
