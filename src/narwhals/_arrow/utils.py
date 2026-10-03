@@ -9,7 +9,7 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -575,8 +575,26 @@ def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArra
     A running count of matches over the flattened values changes within a list iff the
     list holds a match. That keeps this linear, where a group-by per list would sort.
     """
+    list_type = cast("pa.ListType[Any] | pa.LargeListType[Any]", array.type)
+    try:
+        # Probe a single null, so that a mismatched `item` raises even without rows.
+        # Not an empty array: pyarrow skips its timezone check on those.
+        _item_matches(pa.nulls(1, list_type.value_type), item)
+    except (pa.ArrowInvalid, pa.ArrowNotImplementedError, pa.ArrowTypeError) as exc:
+        msg = (
+            f"Unable to compare item of type {type(item)} with list of type {list_type}."
+        )
+        raise InvalidOperationError(msg) from exc
     blocks = [_list_block_contains(block, item) for block in _list_blocks(array)]
     return pa.chunked_array(blocks, pa.bool_())
+
+
+def _item_matches(values: ArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    if item is None:
+        return pc.is_null(values)
+    if isinstance(item, float) and math.isnan(item):
+        return pc.is_nan(values)  # NaN matches NaN, as in Polars.
+    return pc.equal(values, lit(item))
 
 
 def _list_blocks(array: ChunkedArrayAny) -> Iterator[ListArrayAny]:
@@ -615,12 +633,7 @@ def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.Bool
     offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
     ends, starts = offsets.slice(1), offsets.slice(0, len(block))
 
-    if item is None:
-        matches = pc.is_null(values)
-    elif isinstance(item, float) and math.isnan(item):
-        matches = pc.is_nan(values)  # NaN matches NaN, as in Polars.
-    else:
-        matches = pc.equal(values, lit(item))
+    matches = _item_matches(values, item)
 
     # Counting modulo 2^k stays exact within lists shorter than 2^k, so the narrowest
     # type that fits the longest list is enough.
