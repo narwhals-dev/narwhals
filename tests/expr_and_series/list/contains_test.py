@@ -155,8 +155,8 @@ def test_contains_chunked(
     data = {"a": [[1, 2], [3], None, [], [2, None, 2], [4, 4, 4, 2], [5]]}
     contains_2 = [True, False, None, False, True, True, False]
     slices = [(4, 6), (0, 0), (0, 1), (1, 3), (3, 4), (6, 7), (0, 2), (1, 2)]
-    df = nw.from_native(constructor_eager(data), eager_only=True).with_columns(
-        nw.col("a").cast(nw.List(nw.Int64()))
+    df = nw.from_native(constructor_eager(data), eager_only=True).cast(
+        {"a": nw.List(nw.Int64())}
     )
     chunked = nw.concat([df[start:stop] for start, stop in slices])
     result = chunked.select(nw.col("a").list.contains(2))

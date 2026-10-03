@@ -56,9 +56,7 @@ def test_sort_categorical(
     skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", None, "cat", "bird", None], "n": [1, 2, 3, 4, 5]}
-    df = nw.from_native(constructor(data)).with_columns(
-        nw.col("c").cast(nw.Categorical())
-    )
+    df = nw.from_native(constructor(data)).cast({"c": nw.Categorical()})
     result = df.sort("c", "n", descending=[descending, False], nulls_last=nulls_last)
     assert_equal_data(result, expected)
 
@@ -67,9 +65,7 @@ def test_sort_categorical_empty(constructor: Constructor) -> None:
     skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat"], "n": [1, 2]}
-    df = nw.from_native(constructor(data)).with_columns(
-        nw.col("c").cast(nw.Categorical())
-    )
+    df = nw.from_native(constructor(data)).cast({"c": nw.Categorical()})
     result = df.filter(nw.col("n") > 2).sort("c")
     assert_equal_data(result, {"c": [], "n": []})
 
