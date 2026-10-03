@@ -1,21 +1,37 @@
 from __future__ import annotations
 
 import math
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data, pyspark_session
+from narwhals.exceptions import InvalidOperationError
+from tests.utils import (
+    PANDAS_VERSION,
+    POLARS_VERSION,
+    assert_equal_data,
+    maybe_collect,
+    pyspark_session,
+)
 
 if TYPE_CHECKING:
     from narwhals.dtypes import DType
+    from narwhals.typing import IntoDType, NonNestedLiteral
     from tests.utils import Constructor, ConstructorEager
 
 data = {"a": [[2, 2, 3, None, None], None, []]}
 expected = {"a": [True, None, False]}
+
+INT_LIST_DATA = {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]}
+
+SQL_BACKENDS = ("duckdb", "ibis", "pyspark", "sqlframe")
+"""Backends which coerce the item to the inner dtype instead of matching polars."""
+
+ARROW_BACKED_BACKENDS = ("dask", "modin", "pandas", "pyarrow")
+"""Backends which compare via pyarrow, which casts a datetime item to the list's unit."""
 
 
 def skip_or_xfail_unsupported(
@@ -35,6 +51,114 @@ def test_contains_expr(request: pytest.FixtureRequest, constructor: Constructor)
         nw.col("a").cast(nw.List(nw.Int32())).list.contains(2)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("data", "inner", "item", "expected"),
+    [
+        pytest.param(
+            INT_LIST_DATA,
+            nw.Int64(),
+            2.0,
+            [True, None, False, False, False, False],
+            id="float_matches_int",
+        ),
+        pytest.param(
+            INT_LIST_DATA,
+            nw.Int64(),
+            1.5,
+            [False, None, False, False, False, False],
+            id="non_integer",
+        ),
+        pytest.param(
+            INT_LIST_DATA,
+            nw.Int8(),
+            300,
+            [False, None, False, False, False, False],
+            id="overflow",
+        ),
+        pytest.param(
+            {"a": [[1.0, 2.0], [3.0], None, []]},
+            nw.Float64(),
+            1,
+            [True, False, None, False],
+            id="int_matches_float",
+        ),
+    ],
+)
+def test_contains_numeric_coercion_expr(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, Any],
+    inner: IntoDType,
+    item: float,
+    expected: list[bool | None],
+) -> None:
+    # Mixing numeric kinds is deliberately unspecified, see
+    # https://github.com/narwhals-dev/narwhals/issues/3900. This pins what each backend
+    # does today so a future change is visible, it is not a guarantee.
+    # Polars 2.0 requires an explicit cast rather than lossily coercing to `Float64`;
+    # `overflow` compares two integer types, so it still resolves.
+    if (
+        "polars" in str(constructor)
+        and POLARS_VERSION >= (2,)
+        and "overflow" not in request.node.callspec.id
+    ):
+        request.applymarker(pytest.mark.xfail(reason="polars 2.0 needs a cast"))
+    skip_or_xfail_unsupported(request, constructor)
+    result = nw.from_native(constructor(data)).select(
+        nw.col("a").cast(nw.List(inner)).list.contains(item)
+    )
+    assert_equal_data(result, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("data", "inner", "item"),
+    [
+        pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), True, id="bool_item"),
+        pytest.param({"a": [[2, 3], [1], None]}, nw.Int64(), "2", id="str_item"),
+        pytest.param(
+            {"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]},
+            nw.Datetime("ns"),
+            datetime(2020, 1, 1, 1, 2, 3),
+            id="datetime_precision",
+        ),
+    ],
+)
+def test_contains_invalid_item_raises(
+    request: pytest.FixtureRequest,
+    constructor: Constructor,
+    data: dict[str, Any],
+    inner: IntoDType,
+    item: NonNestedLiteral,
+) -> None:
+    if (
+        "datetime_precision" in request.node.callspec.id
+        and "polars" in str(constructor)
+        and POLARS_VERSION < (1, 28, 0)
+    ):
+        request.applymarker(pytest.mark.xfail(reason="old polars coerces precision"))
+    coercing_backends = SQL_BACKENDS
+    if "datetime_precision" in request.node.callspec.id:
+        coercing_backends += ARROW_BACKED_BACKENDS
+    if any(backend in str(constructor) for backend in coercing_backends):
+        request.applymarker(pytest.mark.xfail(reason="mismatched item coerced"))
+    skip_or_xfail_unsupported(request, constructor)
+    df = nw.from_native(constructor(data))
+    with pytest.raises(InvalidOperationError):
+        maybe_collect(df.select(nw.col("a").cast(nw.List(inner)).list.contains(item)))
+
+
+def test_contains_all_null_inner_expr(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    if any(backend in str(constructor) for backend in ("ibis", "pyspark")):
+        pytest.skip(reason="cannot infer the type of an all-null column")
+    skip_or_xfail_unsupported(request, constructor)
+    result = nw.from_native(constructor({"a": [[None, None]]})).select(
+        nw.col("a").cast(nw.List(nw.Int64())).list.contains(1)
+    )
+    assert_equal_data(result, {"a": [False]})
 
 
 def test_contains_no_match_with_null_elements_expr(
