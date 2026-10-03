@@ -26,7 +26,6 @@ if TYPE_CHECKING:
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
 
-NativeApply: TypeAlias = "Callable[[pd.DataFrame], pd.Series[Any]]"
 InefficientNativeAggregation: TypeAlias = Literal["cov", "skew"]
 NativeAggregation: TypeAlias = Literal[
     "any",
@@ -269,7 +268,11 @@ class PandasLikeGroupBy(
             df, keys
         )
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
-        self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
+        # cuDF defaults to `group_keys=False`, but `_apply_aggs` needs the keys in the index.
+        self._group_by_kwargs = {
+            **make_group_by_kwargs(drop_null_keys=drop_null_keys),
+            "group_keys": True,
+        }
 
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
@@ -344,7 +347,7 @@ class PandasLikeGroupBy(
         return [e._getitem_aggs(self) for e in exprs]
 
     def _apply_aggs(
-        self, grouped: NativeGroupBy, exprs: Iterable[PandasLikeExpr]
+        self, grouped: NativeGroupBy, exprs: Sequence[PandasLikeExpr]
     ) -> pd.DataFrame:
         """Stub issue for `include_groups` [pandas-dev/pandas-stubs#1270].
 
@@ -359,27 +362,41 @@ class PandasLikeGroupBy(
         """
         warn_complex_group_by()
         impl = self.compliant._implementation
-        func = self._apply_exprs_function(exprs)
-        apply = grouped.apply
-        if impl.is_pandas() and impl._backend_version() >= (2, 2):
-            return apply(func, include_groups=False)  # type: ignore[call-overload]
-        return apply(func)  # type: ignore[return-value]  # pragma: no cover
+        backend_version = impl._backend_version()
+        DataFrame = self.compliant.__native_namespace__().DataFrame
 
-    def _apply_exprs_function(self, exprs: Iterable[PandasLikeExpr]) -> NativeApply:
-        ns = self.compliant.__narwhals_namespace__()
-        into_series = ns._series.from_iterable
+        def aggregate_group(native_group: pd.DataFrame) -> pd.DataFrame:
+            group = self.compliant._with_native(native_group)
+            # A Series of scalars would upcast an int result to float next to a float one.
+            # The explicit index turns an empty result (e.g. `mode`) into a null row.
+            return DataFrame(
+                {
+                    series.name: series.native.iloc[0:1].reset_index(drop=True)
+                    for expr in exprs
+                    for series in expr(group)
+                },
+                index=range(1),
+            )
 
-        def fn(df: pd.DataFrame) -> pd.Series[Any]:
-            compliant = self.compliant._with_native(df)
-            results = [
-                (keys.native.iloc[0], keys.name)
-                for expr in exprs
-                for keys in expr(compliant)
-            ]
-            out_group, out_names = zip(*results, strict=True) if results else ([], [])
-            return into_series(out_group, index=out_names, context=ns).native
-
-        return fn
+        if impl.is_pandas() and backend_version < (1, 5):  # pragma: no cover
+            # pandas<1.5 drops the keys when a single-row group labelled 0 has the same
+            # index as the 1-row result, treating `apply` as a transform.
+            grouped.mutated = True  # type: ignore[attr-defined]
+        if (
+            (impl.is_pandas() and backend_version >= (2, 2))
+            or (impl.is_modin() and backend_version >= (0, 27))
+            or impl.is_cudf()
+        ):
+            result = grouped.apply(aggregate_group, include_groups=False)  # type: ignore[call-overload]
+        else:  # pragma: no cover
+            result = grouped.apply(aggregate_group)
+        # With no groups `apply` never runs, so there is no extra level to drop.
+        # Not `droplevel(-1)`: it raises on Modin.
+        if result.index.nlevels > len(self._keys):
+            result = result.reset_index(level=-1, drop=True)
+        # A null aggregation makes its group's column object. `infer_objects` is
+        # missing on cuDF and raises on Modin.
+        return result.infer_objects() if impl.is_pandas() else result
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
