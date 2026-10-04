@@ -81,7 +81,7 @@ def test_std_ddof_over(
     constructor: Constructor, ddof: int, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor) and ddof > 1:
-        # The rescaled expression is wrapped as a single window function, see #4020.
+        # The rescaled expression is wrapped as a single window function, see #4023.
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data_ddof))
     result = df.with_columns(nw.col("a").std(ddof=ddof).over("g")).sort("i").select("a")
