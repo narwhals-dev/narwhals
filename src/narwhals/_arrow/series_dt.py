@@ -57,9 +57,6 @@ class ArrowSeriesDateTimeNamespace(
         ("s", "ns"): (pc.multiply, NS_PER_SECOND),
         ("s", "us"): (pc.multiply, US_PER_SECOND),
         ("s", "ms"): (pc.multiply, MS_PER_SECOND),
-        ("ns", "s"): (floordiv_compat, NS_PER_SECOND),
-        ("us", "s"): (floordiv_compat, US_PER_SECOND),
-        ("ms", "s"): (floordiv_compat, MS_PER_SECOND),
     }
 
     @property
@@ -75,18 +72,6 @@ class ArrowSeriesDateTimeNamespace(
         # the fractional part of the second...:'(
         # https://arrow.apache.org/docs/python/generated/pyarrow.compute.strftime.html
         format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
-        from narwhals._pandas_like.series_dt import _split_unescaped_percent_s
-
-        if parts := _split_unescaped_percent_s(format):
-            # `%s` (seconds since the epoch) isn't supported by `pc.strftime`,
-            # which passes it through as literal text - splice the epoch values
-            # in explicitly so the output matches the other backends.
-            strftimed = [pc.strftime(self.native, part) for part in parts]
-            epoch = pc.cast(self.timestamp("s").native, pa.string())
-            result = strftimed[0]
-            for part in strftimed[1:]:
-                result = pc.binary_join_element_wise(result, epoch, part, "")
-            return self.with_native(result)
         return self.with_native(pc.strftime(self.native, format))
 
     def replace_time_zone(self, time_zone: str | None) -> ArrowSeries:
