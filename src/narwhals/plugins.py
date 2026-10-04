@@ -66,6 +66,7 @@ def _discover_entrypoints() -> EntryPoints:
     return eps(group=group)
 
 
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/4026
 @cache
 def _find_plugin(backend_name: str, /) -> Plugin | None:
     """Return the first installed plugin whose entry point name or module is `backend_name`.
@@ -116,6 +117,7 @@ def _plugin_namespace(plugin: Plugin, /, *, version: Version) -> PluginNamespace
     return namespace
 
 
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/4025
 def _ensure_io_method(
     namespace: CompliantNamespaceAny, method_name: IOMethodName, /, *, plugin_name: str
 ) -> None:

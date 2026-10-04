@@ -367,6 +367,7 @@ def test_plugin_missing_io_method(
 ) -> None:
     if make_namespace is EagerStubNamespace and io_function.__name__.startswith("scan_"):
         # The inherited `EagerNamespace.scan_*` default is real, but calls the `read_*` stub.
+        # TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/4025
         request.applymarker(pytest.mark.xfail(raises=AttributeError))
     minimal_plugin = PluginModule("minimal_plugin", make_namespace)
     with pytest.raises(

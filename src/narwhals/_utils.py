@@ -1668,8 +1668,7 @@ def is_plugin_backend(
     return impl is Implementation.UNKNOWN
 
 
-# TODO(Unassigned): Generalize _hasattr_static?
-# See https://github.com/narwhals-dev/narwhals/pull/3753#discussion_r3653098839
+# TODO(Unassigned): https://github.com/narwhals-dev/narwhals/issues/4025
 def _is_eager_namespace(obj: object, /) -> TypeIs[EagerNamespaceAny]:
     """Duck-check that `obj` implements the `EagerNamespace` protocol.
 
