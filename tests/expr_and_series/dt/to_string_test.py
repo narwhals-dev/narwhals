@@ -158,13 +158,25 @@ def test_dt_to_string_iso_local_date_expr(
 )
 @pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
 def test_dt_to_string_epoch_seconds_series(
-    constructor_eager: ConstructorEager, fmt: str, expected: list[str | None]
+    constructor_eager: ConstructorEager,
+    fmt: str,
+    expected: list[str | None],
+    request: pytest.FixtureRequest,
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3983
     # `%s` (seconds since the epoch) isn't supported by `pc.strftime`, which
     # passes it through as literal text - narwhals splices it in explicitly,
     # including for pandas-like libraries with a PyArrow-backed dtype, which
     # delegate to `pc.strftime`.
+    from narwhals._pandas_like.series_dt import _split_unescaped_percent_s
+
+    if _split_unescaped_percent_s(fmt) and any(
+        x in str(constructor_eager)
+        for x in ["duckdb", "sqlframe", "ibis", "pyarrow_table_constructor"]
+    ):
+        # These backends don't support `%s` in `strftime` at all
+        # (pure-PyArrow is handled separately in #4000).
+        request.applymarker(pytest.mark.xfail(reason="backend doesn't support %s"))
     data = {"a": [datetime(2026, 3, 14, 1, 2, 3), None]}
     result = nw.from_native(constructor_eager(data), eager_only=True)["a"].dt.to_string(
         fmt
@@ -193,9 +205,11 @@ def test_dt_to_string_epoch_seconds_expr(
     from narwhals._pandas_like.series_dt import _split_unescaped_percent_s
 
     if _split_unescaped_percent_s(fmt) and any(
-        x in str(constructor) for x in ["duckdb", "sqlframe", "ibis"]
+        x in str(constructor)
+        for x in ["duckdb", "sqlframe", "ibis", "pyarrow_table_constructor"]
     ):
-        # These backends don't support `%s` in `strftime` at all.
+        # These backends don't support `%s` in `strftime` at all
+        # (pure-PyArrow is handled separately in #4000).
         request.applymarker(pytest.mark.xfail(reason="backend doesn't support %s"))
     data = {"a": [datetime(2026, 3, 14, 1, 2, 3), None]}
     result = nw.from_native(constructor(data)).select(b=nw.col("a").dt.to_string(fmt))
