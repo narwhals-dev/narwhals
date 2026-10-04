@@ -144,3 +144,59 @@ def test_dt_to_string_iso_local_date_expr(
     df = constructor({"a": [data]})
     result = nw.from_native(df).select(b=nw.col("a").dt.to_string("%Y-%m-%d"))
     assert_equal_data(result, {"b": [expected]})
+
+
+@pytest.mark.parametrize(
+    ("fmt", "expected"),
+    [
+        ("%s", ["1773450123", None]),
+        ("%s|%s", ["1773450123|1773450123", None]),
+        ("epoch=%s", ["epoch=1773450123", None]),
+        ("%Y-%m-%d %s", ["2026-03-14 1773450123", None]),
+        ("%%s", ["%s", None]),
+    ],
+)
+@pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+def test_dt_to_string_epoch_seconds_series(
+    constructor_eager: ConstructorEager, fmt: str, expected: list[str | None]
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3983
+    # `%s` (seconds since the epoch) isn't supported by `pc.strftime`, which
+    # passes it through as literal text - narwhals splices it in explicitly,
+    # including for pandas-like libraries with a PyArrow-backed dtype, which
+    # delegate to `pc.strftime`.
+    data = {"a": [datetime(2026, 3, 14, 1, 2, 3), None]}
+    result = nw.from_native(constructor_eager(data), eager_only=True)["a"].dt.to_string(
+        fmt
+    )
+    assert_equal_data({"a": result}, {"a": expected})
+
+
+@pytest.mark.parametrize(
+    ("fmt", "expected"),
+    [
+        ("%s", ["1773450123", None]),
+        ("%s|%s", ["1773450123|1773450123", None]),
+        ("epoch=%s", ["epoch=1773450123", None]),
+        ("%Y-%m-%d %s", ["2026-03-14 1773450123", None]),
+        ("%%s", ["%s", None]),
+    ],
+)
+@pytest.mark.skipif(is_windows(), reason="pyarrow breaking on windows")
+def test_dt_to_string_epoch_seconds_expr(
+    constructor: Constructor,
+    fmt: str,
+    expected: list[str | None],
+    request: pytest.FixtureRequest,
+) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3983
+    from narwhals._pandas_like.series_dt import _split_unescaped_percent_s
+
+    if _split_unescaped_percent_s(fmt) and any(
+        x in str(constructor) for x in ["duckdb", "sqlframe", "ibis"]
+    ):
+        # These backends don't support `%s` in `strftime` at all.
+        request.applymarker(pytest.mark.xfail(reason="backend doesn't support %s"))
+    data = {"a": [datetime(2026, 3, 14, 1, 2, 3), None]}
+    result = nw.from_native(constructor(data)).select(b=nw.col("a").dt.to_string(fmt))
+    assert_equal_data(result, {"b": expected})

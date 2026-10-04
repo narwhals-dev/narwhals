@@ -501,6 +501,9 @@ class ExprDateTimeNamespace(Generic[ExprT]):
             Therefore, we make the following adjustments.
 
             - for pandas-like libraries, we replace `"%S.%f"` with `"%S%.f"`.
+            - for pandas-like libraries with a PyArrow-backed dtype, we compute
+              `"%s"` (seconds since the epoch) explicitly, as `pc.strftime`
+              doesn't support it and passes it through as literal text.
             - for PyArrow, we replace `"%S.%f"` with `"%S"`.
             ---
             Workarounds like these don't make us happy, and we try to avoid them as

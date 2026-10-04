@@ -582,6 +582,9 @@ _TIMESTAMP_DATETIME_OP_FACTOR: Mapping[
     ("s", "ns"): (operator.mul, NS_PER_SECOND),
     ("s", "us"): (operator.mul, US_PER_SECOND),
     ("s", "ms"): (operator.mul, MS_PER_SECOND),
+    ("ns", "s"): (operator.floordiv, NS_PER_SECOND),
+    ("us", "s"): (operator.floordiv, US_PER_SECOND),
+    ("ms", "s"): (operator.floordiv, MS_PER_SECOND),
 }
 
 

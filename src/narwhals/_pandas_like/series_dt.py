@@ -30,6 +30,32 @@ if TYPE_CHECKING:
     from narwhals.typing import TimeUnit
 
 
+def _split_unescaped_percent_s(format: str) -> list[str] | None:
+    """Split `format` on `%s` directives, ignoring escaped `%%`.
+
+    Returns `None` when there is no unescaped `%s` directive.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    i, n = 0, len(format)
+    while i < n:
+        char, nxt = format[i], format[i + 1] if i + 1 < n else ""
+        if char == "%" and nxt in {"%", "s"}:
+            if nxt == "s":
+                parts.append("".join(current))
+                current = []
+            else:
+                current.append("%%")
+            i += 2
+        else:
+            current.append(char)
+            i += 1
+    if not parts:
+        return None
+    parts.append("".join(current))
+    return parts
+
+
 class PandasLikeSeriesDateTimeNamespace(
     PandasLikeSeriesNamespace, DateTimeNamespace["PandasLikeSeries"]
 ):
@@ -167,6 +193,16 @@ class PandasLikeSeriesDateTimeNamespace(
             format = format.replace("%S%.f", "%S.%f")
         else:
             format = format.replace("%S.%f", "%S").replace("%S%.f", "%S")
+        if self._is_pyarrow() and (parts := _split_unescaped_percent_s(format)):
+            # `%s` (seconds since the epoch) isn't supported by `pc.strftime`,
+            # which passes it through as literal text - splice the epoch values
+            # in explicitly so the output matches the other backends.
+            strftimed = [self.native.dt.strftime(part) for part in parts]
+            epoch = self.timestamp("s").native.astype(strftimed[0].dtype)
+            result: Any = strftimed[0]
+            for part in strftimed[1:]:
+                result = result + epoch + part
+            return self.with_native(result)
         return self.with_native(self.native.dt.strftime(format))
 
     def replace_time_zone(self, time_zone: str | None) -> PandasLikeSeries:
