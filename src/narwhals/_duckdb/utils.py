@@ -400,7 +400,11 @@ def catch_duckdb_exception(
     return exception
 
 
-_BINARY_OPS = {"floordiv": operator.floordiv, "and": operator.and_}
+_BINARY_OPS = {
+    "divide": operator.truediv,
+    "floordiv": operator.floordiv,
+    "and": operator.and_,
+}
 
 
 def function(name: str, *args: Expression) -> Expression:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
 import narwhals as nw
@@ -48,3 +49,48 @@ def test_var_series(
         "z_ddof_0": [df["z"].var(ddof=0)],
     }
     assert_equal_data(result, expected_results)
+
+
+data_ddof: dict[str, list[float]] = {
+    "i": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "g": [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
+    "a": [1.0, 2.0, 2.0, 5.0, -7.0, 4.0, 3.0, 0.5, 8.0, -1.0, 6.0],
+}
+
+
+@pytest.mark.parametrize("ddof", [0, 1, 2, 4])
+def test_var_ddof(constructor: Constructor, ddof: int) -> None:
+    df = nw.from_native(constructor(data_ddof))
+    result = df.select(nw.col("a").var(ddof=ddof))
+    expected = {"a": [float(np.var(data_ddof["a"], ddof=ddof))]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("ddof", [0, 1, 2, 4])
+def test_var_ddof_group_by(constructor: Constructor, ddof: int) -> None:
+    df = nw.from_native(constructor(data_ddof))
+    result = df.group_by("g").agg(nw.col("a").var(ddof=ddof)).sort("g")
+    expected = {
+        "g": [1, 2],
+        "a": [
+            float(np.var(data_ddof["a"][:6], ddof=ddof)),
+            float(np.var(data_ddof["a"][6:], ddof=ddof)),
+        ],
+    }
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("ddof", [0, 1, 2, 4])
+def test_var_ddof_over(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor) and ddof > 1:
+        # The rescaled expression is wrapped as a single window function, see #4020.
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor(data_ddof))
+    result = df.with_columns(nw.col("a").var(ddof=ddof).over("g")).sort("i").select("a")
+    expected = {
+        "a": [float(np.var(data_ddof["a"][:6], ddof=ddof))] * 6
+        + [float(np.var(data_ddof["a"][6:], ddof=ddof))] * 5
+    }
+    assert_equal_data(result, expected)
