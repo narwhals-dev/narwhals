@@ -173,9 +173,7 @@ def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> N
         )
 
     data = {"a": [[[1, 2], [3, 4], [5, 6]]]}
-    df = nw.from_native(constructor(data)).with_columns(
-        a=nw.col("a").cast(nw.Array(nw.Int64(), (3, 2)))
-    )
+    df = nw.from_native(constructor(data)).cast({"a": nw.Array(nw.Int64(), (3, 2))})
     assert df.collect_schema()["a"] == nw.Array(nw.Int64(), (3, 2))
     assert df.collect_schema()["a"] == nw.Array(nw.Array(nw.Int64(), 2), 3)
 
@@ -509,8 +507,8 @@ def test_cast_decimal_to_native(
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
-    native_result = df.with_columns(
-        a=nw.col("a").cast(nw.Decimal(precision=precision, scale=scale))
+    native_result = df.cast(
+        {"a": nw.Decimal(precision=precision, scale=scale)}
     ).to_native()
 
     schema = nw.from_native(native_result).collect_schema()

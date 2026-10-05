@@ -274,7 +274,7 @@ def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
-    frame = frame.with_columns(nw.col("a").cast(nw.Decimal()))
+    frame = frame.cast({"a": nw.Decimal()})
     assert frame["a"].is_close(frame["a"]).all()
 
 
@@ -299,5 +299,5 @@ def test_issue_3474_expr_decimal(
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
-    frame = frame.lazy().with_columns(nw.col("a").cast(nw.Decimal()))
+    frame = frame.lazy().cast({"a": nw.Decimal()})
     assert frame.select((nw.col("a").is_close(nw.col("a"))).all()).collect().item()
