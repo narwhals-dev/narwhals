@@ -23,12 +23,13 @@ def test_str_len_chars_series(constructor_eager: ConstructorEager) -> None:
 def test_str_len_chars_all_null(constructor: Constructor) -> None:
     # Null the column out with `lit` rather than passing all-null data to the
     # constructor: some backends cannot infer a dtype from that.
-    df = nw.from_native(constructor({"a": ["foo", "bar"]})).with_columns(
-        a=nw.lit(None, dtype=nw.String())
-    )
+    df = nw.from_native(constructor({"a": ["foo", "bar"]})).with_columns(a=nw.lit(None))
     # pandas-like backends store this as a String (`object`) column, which
     # `cast(nw.String)` would turn into `str` on pandas>=3 and hide the bug.
     # See https://github.com/narwhals-dev/narwhals/pull/4017#issuecomment-5996736096
-    result = df.select(nw.col("a").str.len_chars())
-    assert result.collect_schema()["a"].is_numeric()
+    expr = nw.col("a")
+    if df.collect_schema()["a"] != nw.String:
+        expr = expr.cast(nw.String)
+    result = df.select(expr.str.len_chars()).lazy().collect()
+    assert result.schema["a"].is_numeric()
     assert_equal_data(result, {"a": [None, None]})
