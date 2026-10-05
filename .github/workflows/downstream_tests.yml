@@ -482,7 +482,9 @@ jobs:
           cd pointblank
           uv venv -p ${{ matrix.python-version }}
           . .venv/bin/activate
-          uv pip install . --group dev
+          # Editable, as `make test` runs `--doctest-modules pointblank` on the source tree,
+          # which otherwise clashes with the copy in site-packages ("import file mismatch").
+          uv pip install -e . --group dev
           uv pip install pytest pytest-cov pytest-snapshot pandas polars "ibis-framework[duckdb,mysql,postgres,sqlite]>=9.5.0" chatlas shiny
           # Temporary pin to get CI green: sqlglot 30.18.0 refactored `DROP TABLE`
           # to use a `tables` argument instead of `this` (tobymao/sqlglot#8229),
