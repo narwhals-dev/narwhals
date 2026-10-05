@@ -264,9 +264,6 @@ class IbisExpr(SQLExpr["IbisLazyFrame", "ir.Value"]):
             version=self._version,
         )
 
-    def null_count(self) -> Self:
-        return self._with_callable(lambda expr: expr.isnull().sum())
-
     def is_nan(self) -> Self:
         def func(expr: ir.FloatingValue) -> ir.Value:
             otherwise = expr.isnan() if is_floating(expr.type()) else False
