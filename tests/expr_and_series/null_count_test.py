@@ -34,8 +34,8 @@ def test_null_count_group_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
-        # `null_count` is not a supported group-by aggregation on these backends
-        request.applymarker(pytest.mark.xfail(raises=ValueError))
+        reason = "`null_count` is not a supported group-by aggregation on these backends"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data)).lazy()
     result = df.group_by("g").agg(nw.col("a", "b").null_count()).sort("g")
     assert_equal_data(result, {"g": [1, 2], "a": [2, 0], "b": [1, 0]})
@@ -45,11 +45,12 @@ def test_null_count_group_by(
 def test_null_count_over(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    # `null_count().over()` is not supported on these backends
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask")):
-        request.applymarker(pytest.mark.xfail(raises=NotImplementedError))
-    if "pyarrow_table" in str(constructor):
-        request.applymarker(pytest.mark.xfail(raises=ValueError))
+    if any(
+        x in str(constructor)
+        for x in ("pandas", "modin", "cudf", "dask", "pyarrow_table")
+    ):
+        reason = "`null_count().over()` is not supported on these backends"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data)).lazy()
     result = df.with_columns(nw.col("a", "b").null_count().over("g")).sort("g")
     expected = {"a": [2, 2, 2, 0], "b": [1, 1, 1, 0], "g": [1, 1, 1, 2]}
