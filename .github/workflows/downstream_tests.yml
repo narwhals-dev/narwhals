@@ -22,8 +22,6 @@ permissions:
 jobs:
   altair:
     if: github.head_ref != 'bump-version'
-    env:
-      UV_SYSTEM_PYTHON: 1
     strategy:
       matrix:
         python-version: ["3.12"]
@@ -48,19 +46,19 @@ jobs:
           git clone https://github.com/vega/altair.git
           cd altair
           git log
-      - name: install-basics
-        run: uv pip install --upgrade tox virtualenv setuptools
       - name: install-altair-dev
         run: |
           cd altair
           uv sync --all-extras
-          uv pip install -e .
       - name: install-narwhals-dev
         run: |
+          cd altair
           uv pip uninstall narwhals
-          uv pip install -e .
+          uv pip install -e ./..
       - name: show-deps
-        run: uv pip freeze
+        run: |
+          cd altair
+          uv pip freeze
       - name: Run pytest
         run: |
           cd altair
@@ -497,7 +495,7 @@ jobs:
           cd pointblank
           . .venv/bin/activate
           uv pip uninstall narwhals
-          uv pip install -e .
+          uv pip install -e ./..
       - name: show-deps
         run: |
           cd pointblank
