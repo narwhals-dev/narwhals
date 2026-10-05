@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["DaskExpr"]):
     def len_chars(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.len())
+        return self.compliant._with_callable(lambda expr: dd.to_numeric(expr.str.len()))
 
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int
