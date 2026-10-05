@@ -48,6 +48,10 @@ class PandasLikeSeriesListNamespace(
 
     def get(self, index: int) -> PandasLikeSeries:
         result = self.native.list[index]
+        implementation, backend_version = self.implementation, self.backend_version
+        if implementation.is_pandas() and backend_version < (3, 0):  # pragma: no cover
+            # `result` is a new object so it's safe to do this inplace.
+            result.index = self.native.index
         result.name = self.native.name
         return self.with_native(result)
 
