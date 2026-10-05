@@ -279,20 +279,14 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                rhs_set = frozenset(rhs_names)
-                return [
-                    *(
-                        x
-                        for x, name in zip(self(df), lhs_names, strict=True)
-                        if name not in rhs_set
-                    ),
-                    *other(df),
-                ]
+                by_name = dict(zip(lhs_names, self(df), strict=True))
+                by_name.update(zip(rhs_names, other(df), strict=True))
+                return [by_name[name] for name in df.columns if name in by_name]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                rhs_set = frozenset(rhs_names)
-                return [*(x for x in lhs_names if x not in rhs_set), *rhs_names]
+                selected = {*lhs_names, *rhs_names}
+                return [name for name in df.columns if name in selected]
 
             return self.selectors._selector.from_callables(series, names, context=self)
         return self._to_expr() | other
