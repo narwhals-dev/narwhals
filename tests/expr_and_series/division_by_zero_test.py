@@ -182,7 +182,7 @@ def test_floordiv_by_mixed_divisor(
     assert_equal_data(result, expected)
 
     if df.implementation.is_pandas_like():
-        # Narwhals dtypes can't tell nullable from pyarrow-backed, so compare natives.
+        # `Int64` and `int64[pyarrow]` are both `nw.Int64`, so compare native dtypes.
         input_dtype = cast("pd.DataFrame", nw.to_native(df))["a"].dtype
         native_result = cast("pd.DataFrame", nw.to_native(result))
         assert all(
