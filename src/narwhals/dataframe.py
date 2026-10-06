@@ -310,6 +310,9 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
+        if not isinstance(descending, bool) and len(descending) != len(by):
+            msg = "`by` and `descending` must have the same length."
+            raise ValueError(msg)
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
@@ -318,6 +321,9 @@ class BaseFrame(Generic[_FrameT]):
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
     ) -> Self:
         flatten_by = flatten([by])
+        if not isinstance(reverse, bool) and len(reverse) != len(flatten_by):
+            msg = "`by` and `reverse` must have the same length."
+            raise ValueError(msg)
         return self._with_compliant(
             self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )

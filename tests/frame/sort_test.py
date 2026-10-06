@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -33,6 +34,18 @@ def test_sort_nulls(
     df = nw.from_native(constructor(data))
     result = df.sort("b", descending=True, nulls_last=nulls_last)
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("descending", [[True], [True, False, True]])
+def test_sort_descending_length_mismatch(
+    constructor: Constructor, descending: list[bool]
+) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        ValueError, match=re.escape("`by` and `descending` must have the same length.")
+    ):
+        df.sort("a", "b", descending=descending)
 
 
 @pytest.mark.parametrize(

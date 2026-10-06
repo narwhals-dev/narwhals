@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import pytest
 
 import narwhals as nw
@@ -61,6 +63,18 @@ def test_top_k_by_multiple(constructor: Constructor) -> None:
         "sf_c": ["a", "d", "k", "s"],
     }
     assert_equal_data(result.sort("sf_c"), expected)
+
+
+@pytest.mark.parametrize("reverse", [[True], [True, False, True]])
+def test_top_k_reverse_length_mismatch(
+    constructor: Constructor, reverse: list[bool]
+) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(
+        ValueError, match=re.escape("`by` and `reverse` must have the same length.")
+    ):
+        df.top_k(2, by=["a", "b"], reverse=reverse)
 
 
 def test_top_k_categorical(constructor: Constructor) -> None:
