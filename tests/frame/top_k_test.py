@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import pytest
 
@@ -71,10 +72,37 @@ def test_top_k_reverse_length_mismatch(
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
     df = nw.from_native(constructor(data))
-    with pytest.raises(
-        ValueError, match=re.escape("`by` and `reverse` must have the same length.")
-    ):
+    msg = (
+        f"the length of `reverse` ({len(reverse)}) does not match the length of `by` (2)"
+    )
+    with pytest.raises(ValueError, match=re.escape(msg)):
         df.top_k(2, by=["a", "b"], reverse=reverse)
+
+
+@pytest.mark.parametrize("reverse", [["abc", "xcd"], [1, 0], [None, True]])
+def test_top_k_reverse_not_bool(constructor: Constructor, reverse: list[Any]) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(TypeError, match="is not an instance of 'bool'"):
+        df.top_k(2, by=["a", "b"], reverse=reverse)
+
+
+def test_top_k_reverse_iterable(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 22):
+        # bug in old version
+        pytest.skip()
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip()
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    data = {"a": [1, 1, 2, 2], "b": [4, 5, 6, 7]}
+    df = nw.from_native(constructor(data))
+    expected = {"a": [2], "b": [6]}
+    from_generator: Any = (flag for flag in (False, True))
+    assert_equal_data(df.top_k(1, by=["a", "b"], reverse=from_generator), expected)
+    from_numpy: Any = np.array([False, True])
+    assert_equal_data(df.top_k(1, by=["a", "b"], reverse=from_numpy), expected)
 
 
 def test_top_k_categorical(constructor: Constructor) -> None:

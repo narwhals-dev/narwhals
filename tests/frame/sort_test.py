@@ -42,10 +42,35 @@ def test_sort_descending_length_mismatch(
 ) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
     df = nw.from_native(constructor(data))
-    with pytest.raises(
-        ValueError, match=re.escape("`by` and `descending` must have the same length.")
-    ):
+    msg = (
+        f"the length of `descending` ({len(descending)}) "
+        "does not match the length of `by` (2)"
+    )
+    with pytest.raises(ValueError, match=re.escape(msg)):
         df.sort("a", "b", descending=descending)
+
+
+@pytest.mark.parametrize("descending", [["abc", "xcd"], [1, 0], [None, True]])
+def test_sort_descending_not_bool(
+    constructor: Constructor, descending: list[Any]
+) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(TypeError, match="is not an instance of 'bool'"):
+        df.sort("a", "b", descending=descending)
+
+
+def test_sort_descending_iterable(constructor: Constructor) -> None:
+    pytest.importorskip("numpy")
+    import numpy as np
+
+    data = {"a": [1, 1, 2], "b": [4, 5, 6]}
+    df = nw.from_native(constructor(data))
+    expected = {"a": [2, 1, 1], "b": [6, 4, 5]}
+    from_generator: Any = (flag for flag in (True, False))
+    assert_equal_data(df.sort("a", "b", descending=from_generator), expected)
+    from_numpy: Any = np.array([True, False])
+    assert_equal_data(df.sort("a", "b", descending=from_numpy), expected)
 
 
 @pytest.mark.parametrize(
