@@ -461,19 +461,21 @@ class PolarsExprStringNamespace(
         return self.compliant._with_native(native_result)
 
     def zfill(self, width: int) -> PolarsExpr:
+        native = self.native
         if width == 0:
-            return self.compliant._with_native(self.native)
-        native_result = self.native.str.zfill(width)
-
-        if self.compliant._backend_version <= (1, 30, 0):
-            plus, minus = "+", "-"
-            sign, rest = self.native.str.slice(0, 1), self.native.str.slice(1)
+            return self.compliant._with_native(native)
+        if self.compliant._backend_version < (2,):
+            # Native `zfill` pads to a byte count (and ignores a `+` sign up to 1.30),
+            # `pad_start` counts characters.
+            has_sign = native.str.starts_with("+") | native.str.starts_with("-")
+            padded_rest = native.str.slice(1).str.pad_start(width - 1, "0")
             native_result = (
-                pl.when(self.native.str.starts_with(plus))
-                .then(sign + (minus + rest).str.zfill(width).str.slice(1))
-                .otherwise(native_result)
+                pl.when(has_sign)
+                .then(native.str.slice(0, 1) + padded_rest)
+                .otherwise(native.str.pad_start(width, "0"))
             )
-
+        else:
+            native_result = native.str.zfill(width)
         return self.compliant._with_native(native_result)
 
     def slice(self, offset: int, length: int | None) -> PolarsExpr:
