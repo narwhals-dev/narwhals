@@ -464,7 +464,7 @@ class PolarsExprStringNamespace(
         native = self.native
         if width == 0:
             return self.compliant._with_native(native)
-        if self.compliant._backend_version < (2,):
+        if BACKEND_VERSION < (2,):
             # Native `zfill` pads to a byte count (and ignores a `+` sign up to 1.30),
             # `pad_start` counts characters.
             has_sign = native.str.starts_with("+") | native.str.starts_with("-")
@@ -474,7 +474,7 @@ class PolarsExprStringNamespace(
                 .then(native.str.slice(0, 1) + padded_rest)
                 .otherwise(native.str.pad_start(width, "0"))
             )
-        else:
+        else:  # pragma: no cover
             native_result = native.str.zfill(width)
         return self.compliant._with_native(native_result)
 
