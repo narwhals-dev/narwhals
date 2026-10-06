@@ -279,15 +279,32 @@ class DuckDBExpr(SQLExpr["DuckDBLazyFrame", "Expression"]):
         return self._with_elementwise(_fill_constant, expression_args={"value": value})
 
     def cast(self, dtype: IntoDType) -> Self:
-        def func(df: DuckDBLazyFrame) -> list[Expression]:
+        def cast_exprs(
+            df: DuckDBLazyFrame, exprs: Sequence[Expression], *, aggregated: bool
+        ) -> list[Expression]:
             tz = DeferredTimeZone(df.native)
             native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(native_dtype) for expr in self(df)]
+            if self._version is Version.MAIN and dtype.is_signed_integer():
+                relation = (
+                    df.native.aggregate(exprs) if aggregated else df.native.select(*exprs)
+                )
+                source_types = relation.types
+                return [
+                    (
+                        F("trunc", expr)
+                        if source_type.id in {"float", "double"}
+                        else expr
+                    ).cast(native_dtype)
+                    for expr, source_type in zip(exprs, source_types, strict=True)
+                ]
+            return [expr.cast(native_dtype) for expr in exprs]
+
+        def func(df: DuckDBLazyFrame) -> list[Expression]:
+            aggregated = self._opt_metadata is not None and self._metadata.is_scalar_like
+            return cast_exprs(df, self(df), aggregated=aggregated)
 
         def window_f(df: DuckDBLazyFrame, inputs: DuckDBWindowInputs) -> list[Expression]:
-            tz = DeferredTimeZone(df.native)
-            native_dtype = narwhals_to_native_dtype(dtype, self._version, tz)
-            return [expr.cast(native_dtype) for expr in self.window_function(df, inputs)]
+            return cast_exprs(df, self.window_function(df, inputs), aggregated=False)
 
         return self.__class__(
             func,

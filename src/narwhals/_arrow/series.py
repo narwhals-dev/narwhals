@@ -23,6 +23,7 @@ from narwhals._arrow.utils import (
     nulls_like,
     pad_series,
     sortable,
+    truncate_float,
     zeros,
 )
 from narwhals._compliant import EagerSeries, EagerSeriesHist
@@ -30,6 +31,7 @@ from narwhals._typing_compat import assert_never
 from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
+    Version,
     generate_temporary_column_name,
     is_list_of,
     not_implemented,
@@ -63,7 +65,7 @@ if TYPE_CHECKING:
     )
     from narwhals._compliant.series import HistData
     from narwhals._typing import NoDefault
-    from narwhals._utils import Version, _LimitedContext
+    from narwhals._utils import _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
         ClosedInterval,
@@ -562,7 +564,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cast(self, dtype: IntoDType) -> Self:
         data_type = narwhals_to_native_dtype(dtype, self._version)
-        return self._with_native(pc.cast(self.native, data_type), preserve_broadcast=True)
+        native = self.native
+        if (
+            self._version is Version.MAIN
+            and self.dtype.is_float()
+            and dtype.is_signed_integer()
+        ):
+            native = truncate_float(native)
+        return self._with_native(pc.cast(native, data_type), preserve_broadcast=True)
 
     def null_count(self, *, _return_py_scalar: bool = True) -> int:
         return maybe_extract_py_scalar(self.native.null_count, _return_py_scalar)
