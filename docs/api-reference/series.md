@@ -29,6 +29,7 @@
         - diff
         - drop_nulls
         - dtype
+        - equals
         - ewm_mean
         - exp
         - fill_nan
