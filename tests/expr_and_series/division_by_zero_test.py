@@ -190,14 +190,9 @@ def test_floordiv_by_mixed_divisor(
         )
 
 
-def test_floordiv_by_null_scalar(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_floordiv_by_null_scalar(constructor: Constructor) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
-    if "pyarrow_table" in str(constructor):
-        # `floordiv_compat` raises on a null scalar divisor.
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor({"a": [7, 8], "b": [1, 2]}))
     null_scalar = nw.when(nw.col("b") > 99).then(nw.col("b")).max()
