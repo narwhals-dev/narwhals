@@ -1792,16 +1792,25 @@ class DataFrame(BaseFrame[DataFrameT]):
 
     @overload
     def group_by(
-        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: Literal[False] = ...
+        self,
+        *keys: IntoExpr | Iterable[IntoExpr],
+        drop_null_keys: Literal[False] = ...,
+        maintain_order: bool = ...,
     ) -> GroupBy[Self]: ...
 
     @overload
     def group_by(
-        self, *keys: str | Iterable[str], drop_null_keys: Literal[True]
+        self,
+        *keys: str | Iterable[str],
+        drop_null_keys: Literal[True],
+        maintain_order: bool = ...,
     ) -> GroupBy[Self]: ...
 
     def group_by(
-        self, *keys: IntoExpr | Iterable[IntoExpr], drop_null_keys: bool = False
+        self,
+        *keys: IntoExpr | Iterable[IntoExpr],
+        drop_null_keys: bool = False,
+        maintain_order: bool = False,
     ) -> GroupBy[Self]:
         r"""Start a group by operation.
 
@@ -1810,6 +1819,9 @@ class DataFrame(BaseFrame[DataFrameT]):
                 column names.
             drop_null_keys: if True, then groups where any key is null won't be included
                 in the result.
+            maintain_order: if True, groups are returned in the order in which they
+                first appear in the data, both by `agg` and when iterating over the
+                groups. If False (default), no order is guaranteed.
 
         Examples:
             >>> import pandas as pd
@@ -1856,13 +1868,28 @@ class DataFrame(BaseFrame[DataFrameT]):
             0  a  0  4.0
             1  b  1  3.0
             2  c  1  1.0
+
+            Use `maintain_order=True` to get the groups in order of first appearance.
+
+            >>> nw.from_native(df_native, eager_only=True).group_by(
+            ...     "a", maintain_order=True
+            ... ).agg(nw.col("c").sum()).to_native()
+               a  c
+            0  a  8
+            1  b  6
+            2  c  1
         """
         from narwhals.group_by import GroupBy
 
         flat_keys = flatten(keys)
 
         if all(isinstance(key, str) for key in flat_keys):
-            return GroupBy(self, flat_keys, drop_null_keys=drop_null_keys)
+            return GroupBy(
+                self,
+                flat_keys,
+                drop_null_keys=drop_null_keys,
+                maintain_order=maintain_order,
+            )
 
         from narwhals import col
         from narwhals.expr import Expr
@@ -1882,7 +1909,12 @@ class DataFrame(BaseFrame[DataFrameT]):
         check_expressions_preserve_length(
             *expr_flat_keys, function_name="DataFrame.group_by"
         )
-        return GroupBy(self, expr_flat_keys, drop_null_keys=drop_null_keys)
+        return GroupBy(
+            self,
+            expr_flat_keys,
+            drop_null_keys=drop_null_keys,
+            maintain_order=maintain_order,
+        )
 
     def sort(
         self,

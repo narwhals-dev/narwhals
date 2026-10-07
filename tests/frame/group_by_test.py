@@ -806,3 +806,67 @@ def test_multi_column_expansion(constructor: Constructor) -> None:
         .sort("a", descending=True)
     )
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    "agg",
+    [
+        nw.col("b").sum(),
+        nw.len(),
+        nw.all().mean(),
+        nw.col("b").first(order_by="c"),
+        nw.all().last(order_by="c"),
+    ],
+    ids=["sum", "len", "multi-output", "first-order-by", "last-order-by"],
+)
+def test_group_by_maintain_order(
+    constructor_eager: ConstructorEager, agg: nw.Expr, request: pytest.FixtureRequest
+) -> None:
+    request.applymarker(
+        pytest.mark.xfail(
+            "pyarrow_table" in str(constructor_eager) and (PYARROW_VERSION < (14, 0)),
+            reason="https://github.com/apache/arrow/issues/36709",
+            raises=NotImplementedError,
+        )
+    )
+    # Enough rows and groups for multi-threaded backends to shuffle the groups
+    # when the order isn't maintained.
+    n_rows, n_groups = 20_000, 500
+    keys = [(i * 7919) % n_groups for i in range(n_rows)]
+    data = {"a": keys, "b": list(range(n_rows)), "c": list(range(n_rows, 0, -1))}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.group_by("a", maintain_order=True).agg(agg)
+    assert result["a"].to_list() == list(dict.fromkeys(keys))
+
+
+def test_group_by_maintain_order_null_keys(constructor_eager: ConstructorEager) -> None:
+    data = {"a": ["y", None, "x", "y", None, "z"], "b": [1, 2, 3, 4, 5, 6]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.group_by("a", maintain_order=True).agg(nw.col("b").sum())
+    expected = {"a": ["y", None, "x", "z"], "b": [5, 7, 3, 6]}
+    assert_equal_data(result, expected)
+    result = df.group_by("a", drop_null_keys=True, maintain_order=True).agg(
+        nw.col("b").sum()
+    )
+    expected = {"a": ["y", "x", "z"], "b": [5, 3, 6]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_maintain_order_multiple_and_expr_keys(
+    constructor_eager: ConstructorEager,
+) -> None:
+    data = {"a": [3, 1, 3, 2, 1], "b": ["q", "p", "q", "p", "r"], "c": [1, 2, 3, 4, 5]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.group_by("a", "b", maintain_order=True).agg(nw.col("c").sum())
+    expected = {"a": [3, 1, 2, 1], "b": ["q", "p", "p", "r"], "c": [4, 2, 4, 5]}
+    assert_equal_data(result, expected)
+    result = df.group_by(nw.col("a") * 10, maintain_order=True).agg(nw.col("c").max())
+    expected = {"a": [30, 10, 20], "c": [3, 5, 4]}
+    assert_equal_data(result, expected)
+
+
+def test_group_by_maintain_order_iter(constructor_eager: ConstructorEager) -> None:
+    keys = [(i * 7919) % 500 for i in range(20_000)]
+    df = nw.from_native(constructor_eager({"a": keys}), eager_only=True)
+    result = [key for key, _ in df.group_by("a", maintain_order=True)]
+    assert result == [(key,) for key in dict.fromkeys(keys)]

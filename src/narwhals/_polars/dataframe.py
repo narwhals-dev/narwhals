@@ -630,11 +630,17 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
         return self.native.to_dict(as_series=False)
 
     def group_by(
-        self, keys: Sequence[str] | Sequence[PolarsExpr], *, drop_null_keys: bool
+        self,
+        keys: Sequence[str] | Sequence[PolarsExpr],
+        *,
+        drop_null_keys: bool,
+        maintain_order: bool = False,
     ) -> PolarsGroupBy:
         from narwhals._polars.group_by import PolarsGroupBy
 
-        return PolarsGroupBy(self, keys, drop_null_keys=drop_null_keys)
+        return PolarsGroupBy(
+            self, keys, drop_null_keys=drop_null_keys, maintain_order=maintain_order
+        )
 
     def drop(self, columns: Sequence[str], *, strict: bool) -> Self:
         to_drop = parse_columns_to_drop(self, columns, strict=strict)
