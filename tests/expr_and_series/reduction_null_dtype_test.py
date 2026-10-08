@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 NUMERIC_REDUCTIONS = ["mean", "min", "max", "std", "var", "median", "sum"]
 
 
+# On pandas 2.x, `median` over an all-null float column reaches `np.nanmedian`,
+# which warns. pandas 3 does not.
+@pytest.mark.filterwarnings("ignore:Mean of empty slice:RuntimeWarning")
 @pytest.mark.parametrize("reduction", NUMERIC_REDUCTIONS)
 def test_numeric_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest, reduction: str
