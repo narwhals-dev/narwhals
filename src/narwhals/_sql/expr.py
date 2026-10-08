@@ -11,6 +11,7 @@ from narwhals._expression_parsing import (
 )
 from narwhals._sql.typing import SQLLazyFrameT
 from narwhals._utils import (
+    MAX_ROUND_DECIMALS,
     Implementation,
     Version,
     extend_bool,
@@ -598,14 +599,35 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
     def is_null(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("isnull", expr))
 
+    def _fraction(self, expr: NativeExprT) -> NativeExprT:
+        """Fractional part of a non-negative expression, staying in floating point.
+
+        `floor` would be several times cheaper, but Ibis' `floor` casts to int64 and
+        so raises on NaN and infinity. Backends where it is safe override this.
+        """
+        return self._function("mod", expr, self._lit(1.0))
+
     def round(self, decimals: int) -> Self:
         # PySpark < 4.0's `round` expects a raw Python int for `scale`,
         # not a Column literal.
-        _is_pre4 = is_pyspark_pre_4(self._implementation)
-        round_decimals = decimals if _is_pre4 else self._lit(decimals)
-        return self._with_elementwise(
-            lambda expr: self._function("round", expr, round_decimals)
+        ndigits = (
+            decimals if is_pyspark_pre_4(self._implementation) else self._lit(decimals)
         )
+
+        def round_half_to_even(expr: NativeExprT) -> NativeExprT:
+            F = self._function
+            # Halving a tie turns it into a non-tie whose nearest neighbour is the even
+            # candidate: https://github.com/duckdb/duckdb/issues/2348#issuecomment-930413410
+            scale = self._lit(10.0 ** min(decimals, MAX_ROUND_DECIMALS))
+            fraction = self._fraction(F("multiply", F("abs", expr), scale))
+            halved = F("round", F("multiply", expr, self._lit(0.5)), ndigits)
+            return self._when(
+                fraction == self._lit(0.5),
+                F("multiply", halved, self._lit(2)),
+                F("round", expr, ndigits),
+            )
+
+        return self._with_elementwise(round_half_to_even)
 
     def floor(self) -> Self:
         return self._with_elementwise(lambda expr: self._function("floor", expr))

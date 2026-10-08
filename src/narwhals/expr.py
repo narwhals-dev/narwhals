@@ -1531,27 +1531,28 @@ class Expr:
         Arguments:
             decimals: Number of decimals to round by.
 
-
         Notes:
-            For values exactly halfway between rounded decimal values pandas behaves differently than Polars and Arrow.
+            A value exactly halfway between two candidates rounds to the even one:
+            -0.5 and 0.5 give 0.0, 1.5 and 2.5 give 2.0, 3.5 and 4.5 give 4.0.
 
-            pandas rounds to the nearest even value (e.g. -0.5 and 0.5 round to 0.0, 1.5 and 2.5 round to 2.0, 3.5 and
-            4.5 to 4.0, etc..).
-
-            Polars and Arrow round away from 0 (e.g. -0.5 to -1.0, 0.5 to 1.0, 1.5 to 2.0, 2.5 to 3.0, etc..).
+            DuckDB, PySpark, SQLFrame, Ibis and `polars<1.29` round such values away
+            from zero natively, so Narwhals corrects them arithmetically. On those
+            backends the input dtype is not preserved (the result type varies by
+            backend) and integers above 2**53 lose exactness; `cast` the result if
+            you need a specific dtype.
 
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
-            >>> df_native = pd.DataFrame({"a": [1.12345, 2.56789, 3.901234]})
+            >>> df_native = pd.DataFrame({"a": [1.25, 1.75, 3.901234]})
             >>> df = nw.from_native(df_native)
             >>> df.with_columns(a_rounded=nw.col("a").round(1))
             ┌──────────────────────┐
             |  Narwhals DataFrame  |
             |----------------------|
             |          a  a_rounded|
-            |0  1.123450        1.1|
-            |1  2.567890        2.6|
+            |0  1.250000        1.2|
+            |1  1.750000        1.8|
             |2  3.901234        3.9|
             └──────────────────────┘
         """
