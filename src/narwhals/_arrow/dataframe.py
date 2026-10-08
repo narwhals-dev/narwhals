@@ -366,16 +366,18 @@ class ArrowDataFrame(
         )
 
     def select(self, *exprs: ArrowExpr) -> Self:
-        new_series = self._evaluate_exprs(*exprs)
+        return self._select_from_series(self._evaluate_exprs(*exprs))
+
+    def _select_from_series(self, new_series: Sequence[ArrowSeries]) -> Self:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(
                 self.native.__class__.from_arrays([]), validate_column_names=False
             )
         names = [s.name for s in new_series]
-        align = new_series[0]._align_full_broadcast
-        reshaped = align(*new_series)
-        df = pa.Table.from_arrays([s.native for s in reshaped], names=names)
+        if not all(s._broadcast for s in new_series):
+            new_series = new_series[0]._align_full_broadcast(*new_series)
+        df = pa.Table.from_arrays([s.native for s in new_series], names=names)
         return self._with_native(df, validate_column_names=True)
 
     def _extract_comparand(self, other: ArrowSeries) -> ChunkedArrayAny:
@@ -394,6 +396,8 @@ class ArrowDataFrame(
         # All `pyarrow` data is immutable, so this is fine
         native_frame = self.native
         new_columns = self._evaluate_exprs(*exprs)
+        if self.native.shape == (0, 0):
+            return self._select_from_series(new_columns)
         columns = self.columns
 
         for col_value in new_columns:

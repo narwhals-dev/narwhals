@@ -447,11 +447,14 @@ class PandasLikeDataFrame(
         )
 
     def select(self, *exprs: PandasLikeExpr) -> Self:
-        new_series = self._evaluate_exprs(*exprs)
+        return self._select_from_series(self._evaluate_exprs(*exprs))
+
+    def _select_from_series(self, new_series: Sequence[PandasLikeSeries]) -> Self:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(type(self.native)(), validate_column_names=False)
-        new_series = new_series[0]._align_full_broadcast(*new_series)
+        if not all(s._broadcast for s in new_series):
+            new_series = new_series[0]._align_full_broadcast(*new_series)
         namespace = self.__narwhals_namespace__()
         df = namespace._concat_by_index([s.native for s in new_series])
         # `concat` creates a new object, so fine to modify `.columns.name` inplace.
@@ -503,6 +506,8 @@ class PandasLikeDataFrame(
 
     def with_columns(self, *exprs: PandasLikeExpr) -> Self:
         columns = self._evaluate_exprs(*exprs)
+        if self.native.shape == (0, 0):
+            return self._select_from_series(columns)
         if not columns and len(self) == 0:
             return self
         name_columns: dict[str, PandasLikeSeries] = {s.name: s for s in columns}

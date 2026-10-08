@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
@@ -11,6 +13,9 @@ from tests.utils import (
     assert_equal_data,
     maybe_collect,
 )
+
+if TYPE_CHECKING:
+    from narwhals._typing import EagerAllowed
 
 
 def test_with_columns_int_col_name_pandas() -> None:
@@ -112,3 +117,87 @@ def test_with_columns_missing_column(
 
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.with_columns(d=nw.col("c") + 1))
+
+
+def test_with_columns_series_on_zero_column_frame(
+    constructor_eager: ConstructorEager,
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2, 3, 4]}), eager_only=True)
+    result = source.select().with_columns(additional_column=source["a"])
+    assert_equal_data(result, {"additional_column": [0, 1, 2, 3, 4]})
+
+
+@pytest.mark.parametrize("from_numpy", [False, True])
+def test_with_columns_series_on_empty_input(
+    eager_backend: EagerAllowed, *, from_numpy: bool
+) -> None:
+    import numpy as np
+
+    source = nw.from_dict({"a": [0, 1, 2, 3, 4]}, backend=eager_backend)
+    empty = (
+        nw.from_numpy(np.empty((0, 0)), backend=eager_backend)
+        if from_numpy
+        else nw.from_dict({}, backend=eager_backend)
+    )
+    result = empty.with_columns(additional_column=source["a"])
+    assert_equal_data(result, {"additional_column": [0, 1, 2, 3, 4]})
+    assert empty.shape == (0, 0)
+
+
+def test_with_columns_literals_on_zero_column_frame(
+    constructor_eager: ConstructorEager,
+) -> None:
+    empty = nw.from_native(constructor_eager({"a": [0]}), eager_only=True).select()
+    assert_equal_data(empty.with_columns(nw.lit(1)), {"literal": [1]})
+    result = empty.with_columns(nw.lit(1), additional_column=nw.lit(2))
+    assert_equal_data(result, {"literal": [1], "additional_column": [2]})
+    assert empty.shape == (0, 0)
+
+
+@pytest.mark.parametrize("literal_first", [False, True])
+def test_with_columns_literal_and_series_on_zero_column_frame(
+    constructor_eager: ConstructorEager, *, literal_first: bool
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    empty = source.select()
+    literal = nw.lit(1).alias("literal")
+    result = (
+        empty.with_columns(literal, source["a"])
+        if literal_first
+        else empty.with_columns(source["a"], literal)
+    )
+    expected = {"literal": [1, 1, 1], "a": [0, 1, 2]}
+    assert_equal_data(
+        result, expected if literal_first else dict(reversed(expected.items()))
+    )
+
+
+def test_with_columns_mismatched_series_on_zero_column_frame(
+    constructor_eager: ConstructorEager,
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    shorter = source.head(2)["a"]
+    with pytest.raises(ShapeError):
+        source.select().with_columns(source["a"], shorter=shorter)
+
+
+def test_with_columns_on_zero_row_frame_with_columns(
+    constructor_eager: ConstructorEager,
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2, 3, 4]}), eager_only=True)
+    empty = source.head(0)
+    assert_equal_data(empty.with_columns(), {"a": []})
+    with pytest.raises(ShapeError):
+        empty.with_columns(additional_column=source["a"])
+    assert_equal_data(empty.with_columns(nw.lit(1)), {"a": [], "literal": []})
+
+
+def test_with_columns_on_zero_column_frame_with_index() -> None:
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame(index=[4, 5, 6])
+    empty = nw.from_native(native, eager_only=True)
+    series = nw.from_native(pd.Series([0, 1, 2]), series_only=True)
+    result = empty.with_columns(additional_column=series, literal=nw.lit(1))
+    assert_equal_data(result, {"additional_column": [0, 1, 2], "literal": [1, 1, 1]})
+    assert result.to_native().index.tolist() == [4, 5, 6]
+    assert native.shape == (3, 0)
