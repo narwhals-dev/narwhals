@@ -138,6 +138,7 @@ class CompliantFrame(
         left_on: Sequence[str] | None,
         right_on: Sequence[str] | None,
         suffix: str,
+        nulls_equal: bool,
     ) -> Self: ...
     def join_asof(
         self,
