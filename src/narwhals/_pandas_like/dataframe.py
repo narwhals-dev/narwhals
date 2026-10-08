@@ -506,7 +506,7 @@ class PandasLikeDataFrame(
 
     def with_columns(self, *exprs: PandasLikeExpr) -> Self:
         columns = self._evaluate_exprs(*exprs)
-        if self.native.shape == (0, 0):
+        if columns and self.native.shape == (0, 0):
             return self._select_from_series(columns)
         if not columns and len(self) == 0:
             return self

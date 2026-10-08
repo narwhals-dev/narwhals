@@ -392,14 +392,14 @@ class ArrowDataFrame(
         return pa.chunked_array([pa.repeat(value, length)])
 
     def with_columns(self, *exprs: ArrowExpr) -> Self:
-        # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
-        # All `pyarrow` data is immutable, so this is fine
-        native_frame = self.native
         new_columns = self._evaluate_exprs(*exprs)
-        if self.native.shape == (0, 0):
+        if new_columns and self.native.shape == (0, 0):
             return self._select_from_series(new_columns)
         columns = self.columns
 
+        # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)
+        # All `pyarrow` data is immutable, so this is fine
+        native_frame = self.native
         for col_value in new_columns:
             col_name = col_value.name
             column = self._extract_comparand(col_value)

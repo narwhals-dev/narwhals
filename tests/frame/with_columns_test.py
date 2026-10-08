@@ -201,3 +201,22 @@ def test_with_columns_on_zero_column_frame_with_index() -> None:
     assert_equal_data(result, {"additional_column": [0, 1, 2], "literal": [1, 1, 1]})
     assert result.to_native().index.tolist() == [4, 5, 6]
     assert native.shape == (3, 0)
+
+
+def test_with_columns_no_exprs_on_empty_frame_keeps_metadata_pandas() -> None:
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame()
+    native.columns.name = "n"
+    result = nw.from_native(native, eager_only=True).with_columns()
+    assert_equal_data(result, {})
+    assert result.shape == (0, 0)
+    assert result.to_native().columns.name == "n"
+
+
+def test_with_columns_no_exprs_on_empty_frame_keeps_metadata_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
+    native = pa.table({}).replace_schema_metadata({b"k": b"v"})
+    result = nw.from_native(native, eager_only=True).with_columns()
+    assert_equal_data(result, {})
+    assert result.shape == (0, 0)
+    assert result.to_native().schema.metadata == native.schema.metadata
