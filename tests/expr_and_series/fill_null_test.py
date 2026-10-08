@@ -37,19 +37,32 @@ def test_fill_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("receiver", "expected"),
+    [
+        pytest.param(nw.lit(None, nw.Float64), [0.5, None, 2.0], id="lit_none"),
+        pytest.param(nw.lit(5.0), [5.0, 5.0, 5.0], id="lit"),
+        pytest.param(nw.col("a").max(), [2.0, 2.0, 2.0], id="agg"),
+    ],
+)
+@pytest.mark.parametrize("extra", [(), ("a",)], ids=["alone", "next_to_column"])
 def test_fill_null_scalar_receiver(
-    constructor: Constructor, request: pytest.FixtureRequest
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    receiver: nw.Expr,
+    expected: list[Any],
+    extra: tuple[str, ...],
 ) -> None:
-    if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow_table")):
-        reason = (
-            "Eager pandas-like and pyarrow don't broadcast a scalar receiver against "
-            "a column `value`: they raise or silently keep the length-1 result."
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason))
+    if (
+        "duckdb" in str(constructor)
+        and DUCKDB_VERSION < (1, 3)
+        and "agg" in request.node.callspec.id
+    ):
+        pytest.skip(reason="Broadcasting an aggregation requires DuckDB>=1.3")
     data = {"a": [0.5, None, 2.0]}
     df = nw.from_native(constructor(data))
-    result = df.select(nw.lit(None, nw.Float64).fill_null(nw.col("a")).alias("a"))
-    assert_equal_data(result, data)
+    result = df.select(*extra, x=receiver.fill_null(nw.col("a")))
+    assert_equal_data(result, {**{name: data[name] for name in extra}, "x": expected})
 
 
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:

@@ -667,6 +667,9 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
                 pc.or_(is_not_null, beyond_limit), arr, arr.take(index_not_null)
             )
 
+        if self._broadcast and isinstance(value, ArrowSeries) and not value._broadcast:
+            receiver, value = self._align_full_broadcast(self, value)
+            return receiver._with_native(pc.fill_null(receiver.native, value.native))
         native = self.native
         if value is not None:
             _, native_value = extract_native(self, value)
