@@ -10,17 +10,21 @@ nav = [
     { "Home" = "index.md" },
     { "Why" = "why.md" },
     { "Installation and quick start" = "installation.md"},
-    { "Intro tutorial" = [
+    { "Tutorial" = [
         "basics/dataframe.md",
         "basics/series.md",
         "basics/complete_example.md",
-        "basics/dataframe_conversion.md",
         ]},
-    {"Narwhals and SQL" = "generating_sql.md"},
+    { "How-to guides" = [
+        "how-to/dataframe_conversion.md",
+        "how-to/testing.md",
+        "how-to/improve_group_by_operation.md",
+        "how-to/generating_sql.md",
+        "how-to/upgrading_to_stable_v2.md",
+    ]},
     { "Concepts" = [
         "concepts/order_dependence.md",
         "concepts/pandas_index.md",
-        "concepts/improve_group_by_operation.md",
         "concepts/column_names.md",
         "concepts/boolean.md",
         "concepts/null_handling.md",
