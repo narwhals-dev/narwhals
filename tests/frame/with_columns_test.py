@@ -228,6 +228,7 @@ def test_with_columns_no_exprs_on_empty_frame_keeps_metadata_pyarrow() -> None:
 def test_with_columns_on_empty_frame_keeps_schema_metadata_pyarrow(
     *, use_series: bool
 ) -> None:
+    # Requires PyArrow's native schema to verify metadata preservation.
     pa = pytest.importorskip("pyarrow")
     native = pa.table({}).replace_schema_metadata({b"owner": b"test"})
     frame = nw.from_native(native, eager_only=True)
@@ -245,6 +246,7 @@ def test_with_columns_on_empty_frame_keeps_schema_metadata_pyarrow(
 def test_with_columns_duplicate_names_keep_backend_semantics(
     backend: Literal["pandas", "pyarrow"], data: dict[str, list[int]]
 ) -> None:
+    # Requires the selected backend to check its native duplicate-name behavior.
     pytest.importorskip(backend)
     frame = nw.from_dict(data, backend=backend)
     result = frame.with_columns(
