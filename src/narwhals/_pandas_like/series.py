@@ -1302,7 +1302,8 @@ class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
 
     def _zeros(self, arg: int | list[float], /) -> _1DArray:
         zeros = self._series._array_funcs.zeros
-        return zeros(arg) if isinstance(arg, int) else zeros(len(arg) - 1)
+        n = arg if isinstance(arg, int) else len(arg) - 1
+        return zeros(n, dtype="int64")
 
     # NOTE: Based on `pl.Expr.cut`
     def _cut(
