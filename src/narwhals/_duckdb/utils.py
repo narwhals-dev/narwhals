@@ -400,7 +400,17 @@ def catch_duckdb_exception(
     return exception
 
 
-_BINARY_OPS = {"floordiv": operator.floordiv, "and": operator.and_}
+def _floordiv(x: Expression, y: Expression) -> Expression:
+    # DuckDB's `//` truncates integers and is true division on floats.
+    q = x // y
+    t = F("trunc", q)
+    is_int = F("typeof", q).isnotin(lit("FLOAT"), lit("DOUBLE"))
+    int_fix = is_int & (x % y != lit(0)) & ((x < lit(0)) != (y < lit(0)))
+    # Truncation rounds negative inexact quotients up, so step those down by one.
+    return when(int_fix | (q < t), t - lit(1)).otherwise(t)
+
+
+_BINARY_OPS = {"floordiv": _floordiv, "and": operator.and_}
 
 
 def function(name: str, *args: Expression) -> Expression:
