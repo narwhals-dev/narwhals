@@ -368,7 +368,13 @@ class ArrowDataFrame(
     def select(self, *exprs: ArrowExpr) -> Self:
         return self._select_from_series(self._evaluate_exprs(*exprs))
 
-    def _select_from_series(self, new_series: Sequence[ArrowSeries]) -> Self:
+    def _select_from_series(
+        self,
+        new_series: Sequence[ArrowSeries],
+        *,
+        metadata: dict[bytes, bytes] | None = None,
+        validate_column_names: bool = True,
+    ) -> Self:
         if not new_series:
             # return empty dataframe, like Polars does
             return self._with_native(
@@ -377,8 +383,10 @@ class ArrowDataFrame(
         names = [s.name for s in new_series]
         if not all(s._broadcast for s in new_series):
             new_series = new_series[0]._align_full_broadcast(*new_series)
-        df = pa.Table.from_arrays([s.native for s in new_series], names=names)
-        return self._with_native(df, validate_column_names=True)
+        df = pa.Table.from_arrays(
+            [s.native for s in new_series], names=names, metadata=metadata
+        )
+        return self._with_native(df, validate_column_names=validate_column_names)
 
     def _extract_comparand(self, other: ArrowSeries) -> ChunkedArrayAny:
         length = len(self)
@@ -394,7 +402,11 @@ class ArrowDataFrame(
     def with_columns(self, *exprs: ArrowExpr) -> Self:
         new_columns = self._evaluate_exprs(*exprs)
         if new_columns and self.native.shape == (0, 0):
-            return self._select_from_series(new_columns)
+            return self._select_from_series(
+                new_columns,
+                metadata=self.native.schema.metadata,
+                validate_column_names=False,
+            )
         columns = self.columns
 
         # NOTE: We use a faux-mutable variable and repeatedly "overwrite" (native_frame)

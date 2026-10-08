@@ -15,6 +15,8 @@ from tests.utils import (
 )
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from narwhals._typing import EagerAllowed
 
 
@@ -220,3 +222,50 @@ def test_with_columns_no_exprs_on_empty_frame_keeps_metadata_pyarrow() -> None:
     assert_equal_data(result, {})
     assert result.shape == (0, 0)
     assert result.to_native().schema.metadata == native.schema.metadata
+
+
+@pytest.mark.parametrize("use_series", [False, True])
+def test_with_columns_on_empty_frame_keeps_schema_metadata_pyarrow(
+    *, use_series: bool
+) -> None:
+    pa = pytest.importorskip("pyarrow")
+    native = pa.table({}).replace_schema_metadata({b"owner": b"test"})
+    frame = nw.from_native(native, eager_only=True)
+    source = nw.from_native(pa.table({"x": [1, 2]}), eager_only=True)
+    expression = source["x"] if use_series else nw.lit(1).alias("x")
+    result = frame.with_columns(expression).to_native()
+    assert result.schema.metadata == native.schema.metadata
+    assert result.column("x").to_pylist() == ([1, 2] if use_series else [1])
+    assert native.shape == (0, 0)
+    assert native.schema.metadata == {b"owner": b"test"}
+
+
+@pytest.mark.parametrize("backend", ["pandas", "pyarrow"])
+@pytest.mark.parametrize("data", [{}, {"a": []}, {"a": [9]}])
+def test_with_columns_duplicate_names_keep_backend_semantics(
+    backend: Literal["pandas", "pyarrow"], data: dict[str, list[int]]
+) -> None:
+    pytest.importorskip(backend)
+    frame = nw.from_dict(data, backend=backend)
+    result = frame.with_columns(
+        nw.lit(1).alias("b"), nw.lit(2).alias("a"), nw.lit(3).alias("b")
+    )
+    if not data:
+        expected_columns = ["b", "a"] if backend == "pandas" else ["b", "a", "b"]
+        expected_rows = [(3, 2)] if backend == "pandas" else [(1, 2, 3)]
+    else:
+        expected_columns = ["a", "b"] if backend == "pandas" else ["a", "b", "b"]
+        expected_rows = (
+            ([(2, 3)] if backend == "pandas" else [(2, 1, 3)]) if data["a"] else []
+        )
+    assert result.columns == expected_columns
+    if backend == "pyarrow":
+        native_result = result.to_native()
+        rows = list(
+            zip(*(column.to_pylist() for column in native_result.columns), strict=True)
+        )
+    else:
+        rows = result.rows()
+    assert rows == expected_rows
+    assert frame.columns == list(data)
+    assert frame.rows() == ([(9,)] if data.get("a") else [])
