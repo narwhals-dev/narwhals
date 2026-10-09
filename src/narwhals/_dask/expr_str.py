@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import dask.dataframe as dd
 
@@ -16,7 +16,9 @@ if TYPE_CHECKING:
 
 class DaskExprStringNamespace(LazyExprNamespace["DaskExpr"], StringNamespace["DaskExpr"]):
     def len_chars(self) -> DaskExpr:
-        return self.compliant._with_callable(lambda expr: expr.str.len())
+        return self.compliant._with_callable(
+            lambda expr: cast("dx.Series", dd.to_numeric(expr.str.len()))
+        )
 
     def replace(
         self, value: DaskExpr, pattern: str, *, literal: bool, n: int

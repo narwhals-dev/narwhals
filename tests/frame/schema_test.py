@@ -603,9 +603,7 @@ def origin_pandas_like_pyarrow(
         "g": [time(10, 1, 1), time(14, 1, 1)],
     }
     df_pd = constructor_pandas_like(data)
-    df_nw = nw.from_native(df_pd).with_columns(
-        nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
-    )
+    df_nw = nw.from_native(df_pd).cast({"f": nw.Date(), "g": nw.Time()})
     return cast("IntoPandasSchema", df_nw.to_native().dtypes.to_dict())
 
 

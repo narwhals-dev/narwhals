@@ -437,7 +437,7 @@ def test_over_without_partition_by_categorical(constructor: Constructor) -> None
     skip_if_no_categorical_ordering(constructor)
     df = nw.from_native(constructor({"a": [1, 2, 3], "i": ["dog", "cat", "bird"]}))
     result = (
-        df.with_columns(nw.col("i").cast(nw.Categorical()))
+        df.cast({"i": nw.Categorical()})
         .with_columns(b=nw.col("a").cum_sum().over(order_by="i"))
         .sort("a")
         .select("a", "b")
