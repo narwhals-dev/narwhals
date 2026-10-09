@@ -172,6 +172,10 @@ class Expr:
     def cast(self, dtype: IntoDType) -> Self:
         """Redefine an object's data type.
 
+        In the main `narwhals` namespace, floating-point values are truncated towards
+        zero when casting to signed integers. Stable namespaces retain backend-native
+        casting behavior.
+
         Arguments:
             dtype: Data type that the object will be cast into.
 
