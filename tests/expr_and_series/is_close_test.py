@@ -290,9 +290,6 @@ def test_issue_3474_expr_decimal(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     frame = nw.from_native(constructor({"a": [0, 1, 2]}))
-    if frame.implementation.is_polars() and POLARS_VERSION >= (2,):  # pragma: no cover
-        reason = "Polars >=2.0 rejects is_finite on Decimal"
-        request.applymarker(pytest.mark.xfail(reason=reason))
 
     if frame.implementation.is_pandas_like() and (
         PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
