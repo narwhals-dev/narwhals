@@ -63,9 +63,10 @@ def test_duckdb() -> None:
     import duckdb
     import polars as pl
 
-    df_pl = pl.DataFrame(data)  # noqa: F841
+    _df = pl.DataFrame(data)
 
-    rel = duckdb.sql("select * from df_pl")
+    con = duckdb.connect()
+    rel = con.sql("select * from _df")
     df = nw_v1.from_native(rel, eager_or_interchange_only=True)
     series = df["a"]
 

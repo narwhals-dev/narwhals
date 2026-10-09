@@ -149,9 +149,13 @@ def test_read_csv_raise_with_lazy(backend: _LazyOnly) -> None:
 def test_scan_csv(
     csv_path: FileSource, csv_path_sep: FileSource, constructor: Constructor
 ) -> None:
-    kwargs = _session_kwargs(str(constructor))
-    if kwargs:
+    kwargs: dict[str, Any]
+    if kwargs := _session_kwargs(str(constructor)):
         kwargs.update(inferSchema=True, header=True)
+    elif "duckdb" in str(constructor):
+        import duckdb
+
+        kwargs = {"connection": duckdb.connect()}
     backend = native_namespace(constructor)
     assert_equal_lazy(nw.scan_csv(csv_path, backend=backend, **kwargs))
     assert_equal_lazy(nw.scan_csv(csv_path_sep, backend=backend, separator="|", **kwargs))
@@ -189,11 +193,26 @@ def test_read_parquet_raise_with_lazy(backend: _LazyOnly) -> None:
 
 @skipif_pandas_lt_1_5
 def test_scan_parquet(parquet_path: FileSource, constructor: Constructor) -> None:
-    kwargs = _session_kwargs(str(constructor))
-    if kwargs:
+    if kwargs := _session_kwargs(str(constructor)):
         kwargs["inferSchema"] = True
+    elif "duckdb" in str(constructor):
+        import duckdb
+
+        kwargs = {"connection": duckdb.connect()}
     backend = native_namespace(constructor)
     assert_equal_lazy(nw.scan_parquet(parquet_path, backend=backend, **kwargs))
+
+
+# NOTE: Marked thread_unsafe on purpose
+@pytest.mark.thread_unsafe(
+    reason="reads through the process-global duckdb default connection"
+)
+def test_scan_duckdb_default_connection(
+    csv_path: FileSource, parquet_path: FileSource
+) -> None:
+    pytest.importorskip("duckdb")
+    assert_equal_lazy(nw.scan_csv(csv_path, backend="duckdb"))
+    assert_equal_lazy(nw.scan_parquet(parquet_path, backend="duckdb"))
 
 
 @skipif_pandas_lt_1_5
@@ -337,18 +356,25 @@ def test_scan_parquet_file_like_unsupported(backend: _LazyOnly) -> None:
 
 @pytest.mark.parametrize("into", [StringIO, BytesIO])
 def test_scan_csv_file_like_duckdb(into: type[StringIO | BytesIO]) -> None:
-    pytest.importorskip("duckdb")
+    duckdb = pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
-    assert_equal_lazy(nw.scan_csv(_csv_buffer(into), backend="duckdb"))
+    # Keep a reference: on older duckdb a relation does not keep its connection alive.
+    connection = duckdb.connect()
+    result = nw.scan_csv(_csv_buffer(into), backend="duckdb", connection=connection)
+    assert_equal_lazy(result)
 
 
 def test_scan_parquet_file_like_duckdb() -> None:
-    pytest.importorskip("duckdb")
+    duckdb = pytest.importorskip("duckdb")
     pytest.importorskip("fsspec")
+    connection = duckdb.connect()
     context = (
         pytest.raises(NotImplementedError, match=r"duckdb>=1\.5\.4")
         if DUCKDB_VERSION < (1, 5, 4)
         else does_not_raise()
     )
     with context:
-        assert_equal_lazy(nw.scan_parquet(_parquet_buffer(), backend="duckdb"))
+        result = nw.scan_parquet(
+            _parquet_buffer(), backend="duckdb", connection=connection
+        )
+        assert_equal_lazy(result)
