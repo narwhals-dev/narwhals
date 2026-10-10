@@ -259,10 +259,10 @@ In Narwhals, here's what we do:
     Each aggregation is evaluated this way and the results are concatenated horizontally.
     See `AggExpr._getitem_aggs` in `narwhals/_pandas_like/group_by.py`.
 
-- if somebody passes a complex group-by aggregation, then we use `apply` and raise a `UserWarning`, warning
-  users of the performance penalty and advising them to refactor their code so that the aggregation they perform
-  ends up being a simple one. See
-  [Avoiding the `UserWarning` when using pandas `group_by`](concepts/improve_group_by_operation.md).
+- if somebody passes a complex group-by aggregation, then we evaluate it group by group (with `apply` where pandas
+  allows it) and raise a `UserWarning`, warning users of the performance penalty and advising them to refactor their
+  code so that the aggregation they perform ends up being a simple one.
+  See [Avoiding the `UserWarning` when using pandas `group_by`](concepts/improve_group_by_operation.md).
 
 ## Nodes
 
