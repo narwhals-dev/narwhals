@@ -259,7 +259,8 @@ class ExprListNamespace(Generic[ExprT]):
     def sum(self) -> ExprT:
         """Compute the sum value of the lists in the array.
 
-        Null values within each list are ignored.
+        Null values within each list are ignored. If a list has no non-null elements,
+        the result is zero.
 
         Examples:
             >>> import polars as pl
