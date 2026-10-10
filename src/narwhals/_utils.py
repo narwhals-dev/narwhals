@@ -54,7 +54,6 @@ from narwhals.dependencies import (
     is_numpy_array_1d,
     is_numpy_array_1d_bool,
     is_numpy_array_1d_int,
-    is_numpy_scalar,
     is_pandas_like_dataframe,
     is_pandas_like_series,
 )
@@ -2296,32 +2295,24 @@ def extend_bool(
 
 
 def validate_bool_flags(
-    value: bool | Iterable[bool],  # noqa: FBT001
-    n_match: int,
-    *,
-    value_name: str,
-    match_name: str,
-) -> bool | tuple[bool, ...]:
-    """Check a bool, or one bool per element of `match_name`, as Polars does."""
-    if isinstance(value, bool):
-        return value
-    values = tuple(value)
-    if len(values) != n_match:
+    *, flags: bool | Sequence[bool], by: Sequence[str], param_name: str
+) -> None:
+    """Reject a `descending`/`reverse` that is not a bool or one bool per `by` column."""
+    if isinstance(flags, bool):
+        return
+    if len(flags) != len(by):
         msg = (
-            f"the length of `{value_name}` ({len(values)}) "
-            f"does not match the length of `{match_name}` ({n_match})"
+            f"the length of `{param_name}` ({len(flags)}) "
+            f"does not match the length of `by` ({len(by)})"
         )
         raise ValueError(msg)
-    for item in values:
-        if not (
-            isinstance(item, bool) or (is_numpy_scalar(item) and item.dtype.kind == "b")
-        ):
+    for flag in flags:
+        if not isinstance(flag, bool):
             msg = (
-                f"'{qualified_type_name(item)}' object is not an instance of 'bool'\n"
-                f"while processing '{value_name}'"
+                f"'{qualified_type_name(flag)}' object is not an instance of 'bool'\n"
+                f"while processing '{param_name}'"
             )
             raise TypeError(msg)
-    return tuple(bool(item) for item in values)
 
 
 class _NoDefault(Enum):

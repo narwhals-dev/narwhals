@@ -311,9 +311,7 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
-        descending = validate_bool_flags(
-            descending, len(by), value_name="descending", match_name="by"
-        )
+        validate_bool_flags(flags=descending, by=by, param_name="descending")
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
@@ -322,9 +320,7 @@ class BaseFrame(Generic[_FrameT]):
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
     ) -> Self:
         flatten_by = flatten([by])
-        reverse = validate_bool_flags(
-            reverse, len(flatten_by), value_name="reverse", match_name="by"
-        )
+        validate_bool_flags(flags=reverse, by=flatten_by, param_name="reverse")
         return self._with_compliant(
             self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )

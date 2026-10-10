@@ -87,24 +87,6 @@ def test_top_k_reverse_not_bool(constructor: Constructor, reverse: list[Any]) ->
         df.top_k(2, by=["a", "b"], reverse=reverse)
 
 
-def test_top_k_reverse_iterable(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 22):
-        # bug in old version
-        pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip()
-    pytest.importorskip("numpy")
-    import numpy as np
-
-    data = {"a": [1, 1, 2, 2], "b": [4, 5, 6, 7]}
-    df = nw.from_native(constructor(data))
-    expected = {"a": [2], "b": [6]}
-    from_generator: Any = (flag for flag in (False, True))
-    assert_equal_data(df.top_k(1, by=["a", "b"], reverse=from_generator), expected)
-    from_numpy: Any = np.array([False, True])
-    assert_equal_data(df.top_k(1, by=["a", "b"], reverse=from_numpy), expected)
-
-
 def test_top_k_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
     skip_if_no_categorical_ordering(constructor)
