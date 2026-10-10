@@ -378,17 +378,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Transform string to uppercase variant.
 
         Notes:
-            Backends differ in how they case-map non-ascii characters:
-            Polars applies full case mappings ('ß' becomes 'SS'), whereas PyArrow
-            and DuckDB apply simple ones ('ß' becomes 'ẞ'). pandas uses full case
-            mappings on pandas 2, and on pandas 3 it matches PyArrow if PyArrow
-            is installed, else Python's full mappings.
-            Full mappings can change the string length ('straße' uppercases to
-            'STRASSE' but 'STRAẞE'), so results of downstream operations like
-            `str.len_chars` or `str.slice` may differ across backends after casing.
-            For more info see: https://github.com/apache/arrow/issues/34599
-            and https://github.com/narwhals-dev/narwhals/issues/3982
-            There may be other unicode-edge-case-related variations across implementations.
+            Polars, and pandas with Python-backed strings, use full Unicode case
+            mapping ('ß' becomes 'SS'). PyArrow, DuckDB, and pandas with
+            PyArrow-backed strings (the pandas 3 default when PyArrow is installed)
+            use simple mapping ('ß' becomes 'ẞ').
+            Full mapping can change string length, so `str.len_chars` or `str.slice` can
+            disagree across backends after casing.
+            See [narwhals#3982](https://github.com/narwhals-dev/narwhals/issues/3982).
 
         Examples:
             >>> import pandas as pd
@@ -408,15 +404,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Transform string to lowercase variant.
 
         Notes:
-            Backends differ in how they case-map non-ascii characters:
-            Polars applies full case mappings ('İ' becomes 'i̇', two code points),
-            whereas PyArrow and DuckDB apply simple ones ('İ' becomes 'i').
-            pandas uses full case mappings on pandas 2, and on pandas 3 it matches
-            PyArrow if PyArrow is installed, else Python's full mappings.
-            Full mappings can change the string length, so results of downstream
-            operations like `str.len_chars` may differ across backends after casing.
-            For more info see: https://github.com/narwhals-dev/narwhals/issues/3982
-            There may be other unicode-edge-case-related variations across implementations.
+            Polars, and pandas with Python-backed strings, use full Unicode case
+            mapping ('İ' becomes 'i̇', two code points). PyArrow, DuckDB, and pandas
+            with PyArrow-backed strings (the pandas 3 default when PyArrow is
+            installed) use simple mapping ('İ' becomes 'i').
+            Full mapping can change string length, so `str.len_chars` or `str.slice` can
+            disagree across backends after casing.
+            See [narwhals#3982](https://github.com/narwhals-dev/narwhals/issues/3982).
 
         Examples:
             >>> import pandas as pd
