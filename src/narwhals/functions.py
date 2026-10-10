@@ -1284,7 +1284,7 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the minimum value horizontally across columns.
 
-    Null values are ignored. If a row has no non-null elements, the result is zero.
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `min_horizontal` over numeric columns only.
