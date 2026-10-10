@@ -241,7 +241,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self._with_native(
             self.native.join(
                 other=other_native,
-                how=how_native,
+                how=how_native,  # type: ignore[arg-type]
                 left_on=left_on,
                 right_on=right_on,
                 suffix=suffix,
@@ -276,7 +276,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     ) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._with_native(
-                self.native.melt(
+                self.native.melt(  # type: ignore[attr-defined]
                     id_vars=index,
                     value_vars=on,
                     variable_name=variable_name,

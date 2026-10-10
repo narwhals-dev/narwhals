@@ -142,10 +142,10 @@ def test_contains_chunked(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     skip_or_xfail_unsupported(request, constructor_eager)
-    if "polars" in str(constructor_eager) and POLARS_VERSION >= (1, 44):
-        # TODO(Unassigned): Drop once https://github.com/pola-rs/polars/pull/29635 is
-        # released. Not strict, as only some CPUs hit the bug: arm64 does, while the
-        # x86_64 CI runners don't.
+    if "polars" in str(constructor_eager) and (1, 44) <= POLARS_VERSION < (2,):
+        # Fixed in Polars 2.0 (https://github.com/pola-rs/polars/pull/29635). Not
+        # strict, as only some CPUs hit the bug: arm64 does, while the x86_64 CI
+        # runners don't.
         reason = "Polars 1.44 mixes up chunks that are slices of the same list array."
         request.applymarker(pytest.mark.xfail(reason=reason, strict=False))
     pytest.importorskip("pyarrow")
