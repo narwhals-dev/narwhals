@@ -1248,6 +1248,8 @@ def cov(a: IntoExpr, b: IntoExpr, *, ddof: int = 1) -> Expr:
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is zero.
+
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
 
@@ -1282,6 +1284,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the minimum value horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is zero.
+
     Notes:
         We support `min_horizontal` over numeric columns only.
 
@@ -1313,6 +1317,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the maximum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `max_horizontal` over numeric columns only.
@@ -1630,6 +1636,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
+
+    Null values are ignored.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
