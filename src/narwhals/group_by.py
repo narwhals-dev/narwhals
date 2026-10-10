@@ -25,11 +25,12 @@ class GroupBy(Generic[DataFrameT]):
         /,
         *,
         drop_null_keys: bool,
+        maintain_order: bool = False,
     ) -> None:
         self._df: DataFrameT = df
         self._keys = keys
         self._grouped = self._df._compliant_frame.group_by(
-            self._keys, drop_null_keys=drop_null_keys
+            self._keys, drop_null_keys=drop_null_keys, maintain_order=maintain_order
         )
 
     def agg(self, *aggs: Expr | Iterable[Expr], **named_aggs: Expr) -> DataFrameT:
