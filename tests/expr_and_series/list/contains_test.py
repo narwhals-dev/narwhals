@@ -142,8 +142,8 @@ def test_contains_invalid_item_raises(
 def test_contains_datetime_precision_coerced(
     request: pytest.FixtureRequest, constructor: Constructor
 ) -> None:
-    # Polars 1.28 up to 2.0 raises instead, and before 1.28 it compares the raw
-    # integers without converting the unit, so it never finds a match.
+    # Before 2.0, Polars doesn't convert the item to the list's time unit, so it never
+    # finds the match (1.28-1.x raises instead when the list's unit is finer).
     if "polars" in str(constructor) and POLARS_VERSION < (2,):
         request.applymarker(pytest.mark.xfail(reason="old polars mismatches units"))
     if any(backend in str(constructor) for backend in ("pyspark", "sqlframe")):
