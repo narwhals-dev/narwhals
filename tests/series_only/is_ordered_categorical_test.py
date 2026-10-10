@@ -40,7 +40,7 @@ def test_is_ordered_categorical_polars() -> None:
         assert not nw.is_ordered_categorical(nw.from_native(s, series_only=True))
 
     cat_dtype = (
-        pl.Categorical(ordering="lexical")
+        pl.Categorical(ordering="lexical")  # type: ignore[call-arg]
         if POLARS_VERSION < (1, 32)
         else pl.Categorical()
     )

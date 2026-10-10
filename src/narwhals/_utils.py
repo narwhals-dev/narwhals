@@ -1200,7 +1200,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
             # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
             # Since version 1.32.0, ordering parameter is ignored and
             # it always behaves as if 'lexical' was passed.
-            result = cast("pl.Categorical", native.dtype).ordering == "physical"
+            result = cast("pl.Categorical", native.dtype).ordering == "physical"  # type: ignore[attr-defined]
         elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
         elif impl.is_pyarrow():
