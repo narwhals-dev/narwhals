@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 import narwhals as nw
@@ -11,6 +13,11 @@ from tests.utils import (
     assert_equal_data,
     maybe_collect,
 )
+
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from narwhals._typing import EagerAllowed
 
 
 def test_with_columns_int_col_name_pandas() -> None:
@@ -112,3 +119,155 @@ def test_with_columns_missing_column(
 
     with pytest.raises(ColumnNotFoundError, match=msg):
         maybe_collect(df.with_columns(d=nw.col("c") + 1))
+
+
+def test_with_columns_series_on_zero_column_frame(
+    constructor_eager: ConstructorEager,
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2, 3, 4]}), eager_only=True)
+    result = source.select().with_columns(additional_column=source["a"])
+    assert_equal_data(result, {"additional_column": [0, 1, 2, 3, 4]})
+
+
+@pytest.mark.parametrize("from_numpy", [False, True])
+def test_with_columns_series_on_empty_input(
+    eager_backend: EagerAllowed, *, from_numpy: bool
+) -> None:
+    import numpy as np
+
+    source = nw.from_dict({"a": [0, 1, 2, 3, 4]}, backend=eager_backend)
+    empty = (
+        nw.from_numpy(np.empty((0, 0)), backend=eager_backend)
+        if from_numpy
+        else nw.from_dict({}, backend=eager_backend)
+    )
+    result = empty.with_columns(additional_column=source["a"])
+    assert_equal_data(result, {"additional_column": [0, 1, 2, 3, 4]})
+    assert empty.shape == (0, 0)
+
+
+def test_with_columns_literals_on_zero_column_frame(
+    constructor_eager: ConstructorEager,
+) -> None:
+    empty = nw.from_native(constructor_eager({"a": [0]}), eager_only=True).select()
+    assert_equal_data(empty.with_columns(nw.lit(1)), {"literal": [1]})
+    result = empty.with_columns(nw.lit(1), additional_column=nw.lit(2))
+    assert_equal_data(result, {"literal": [1], "additional_column": [2]})
+    assert empty.shape == (0, 0)
+
+
+@pytest.mark.parametrize("literal_first", [False, True])
+def test_with_columns_literal_and_series_on_zero_column_frame(
+    constructor_eager: ConstructorEager, *, literal_first: bool
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    empty = source.select()
+    literal = nw.lit(1).alias("literal")
+    result = (
+        empty.with_columns(literal, source["a"])
+        if literal_first
+        else empty.with_columns(source["a"], literal)
+    )
+    expected = {"literal": [1, 1, 1], "a": [0, 1, 2]}
+    assert_equal_data(
+        result, expected if literal_first else dict(reversed(expected.items()))
+    )
+
+
+def test_with_columns_mismatched_series_on_zero_column_frame(
+    constructor_eager: ConstructorEager,
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2]}), eager_only=True)
+    shorter = source.head(2)["a"]
+    with pytest.raises(ShapeError):
+        source.select().with_columns(source["a"], shorter=shorter)
+
+
+def test_with_columns_on_zero_row_frame_with_columns(
+    constructor_eager: ConstructorEager,
+) -> None:
+    source = nw.from_native(constructor_eager({"a": [0, 1, 2, 3, 4]}), eager_only=True)
+    empty = source.head(0)
+    assert_equal_data(empty.with_columns(), {"a": []})
+    with pytest.raises(ShapeError):
+        empty.with_columns(additional_column=source["a"])
+    assert_equal_data(empty.with_columns(nw.lit(1)), {"a": [], "literal": []})
+
+
+def test_with_columns_on_zero_column_frame_with_index() -> None:
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame(index=[4, 5, 6])
+    empty = nw.from_native(native, eager_only=True)
+    series = nw.from_native(pd.Series([0, 1, 2]), series_only=True)
+    result = empty.with_columns(additional_column=series, literal=nw.lit(1))
+    assert_equal_data(result, {"additional_column": [0, 1, 2], "literal": [1, 1, 1]})
+    assert result.to_native().index.tolist() == [4, 5, 6]
+    assert native.shape == (3, 0)
+
+
+def test_with_columns_no_exprs_on_empty_frame_keeps_metadata_pandas() -> None:
+    pd = pytest.importorskip("pandas")
+    native = pd.DataFrame()
+    native.columns.name = "n"
+    result = nw.from_native(native, eager_only=True).with_columns()
+    assert_equal_data(result, {})
+    assert result.shape == (0, 0)
+    assert result.to_native().columns.name == "n"
+
+
+def test_with_columns_no_exprs_on_empty_frame_keeps_metadata_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
+    native = pa.table({}).replace_schema_metadata({b"k": b"v"})
+    result = nw.from_native(native, eager_only=True).with_columns()
+    assert_equal_data(result, {})
+    assert result.shape == (0, 0)
+    assert result.to_native().schema.metadata == native.schema.metadata
+
+
+@pytest.mark.parametrize("use_series", [False, True])
+def test_with_columns_on_empty_frame_keeps_schema_metadata_pyarrow(
+    *, use_series: bool
+) -> None:
+    # Requires PyArrow's native schema to verify metadata preservation.
+    pa = pytest.importorskip("pyarrow")
+    native = pa.table({}).replace_schema_metadata({b"owner": b"test"})
+    frame = nw.from_native(native, eager_only=True)
+    source = nw.from_native(pa.table({"x": [1, 2]}), eager_only=True)
+    expression = source["x"] if use_series else nw.lit(1).alias("x")
+    result = frame.with_columns(expression).to_native()
+    assert result.schema.metadata == native.schema.metadata
+    assert result.column("x").to_pylist() == ([1, 2] if use_series else [1])
+    assert native.shape == (0, 0)
+    assert native.schema.metadata == {b"owner": b"test"}
+
+
+@pytest.mark.parametrize("backend", ["pandas", "pyarrow"])
+@pytest.mark.parametrize("data", [{}, {"a": []}, {"a": [9]}])
+def test_with_columns_duplicate_names_keep_backend_semantics(
+    backend: Literal["pandas", "pyarrow"], data: dict[str, list[int]]
+) -> None:
+    # Requires the selected backend to check its native duplicate-name behavior.
+    pytest.importorskip(backend)
+    frame = nw.from_dict(data, backend=backend)
+    result = frame.with_columns(
+        nw.lit(1).alias("b"), nw.lit(2).alias("a"), nw.lit(3).alias("b")
+    )
+    if not data:
+        expected_columns = ["b", "a"] if backend == "pandas" else ["b", "a", "b"]
+        expected_rows = [(3, 2)] if backend == "pandas" else [(1, 2, 3)]
+    else:
+        expected_columns = ["a", "b"] if backend == "pandas" else ["a", "b", "b"]
+        expected_rows = (
+            ([(2, 3)] if backend == "pandas" else [(2, 1, 3)]) if data["a"] else []
+        )
+    assert result.columns == expected_columns
+    if backend == "pyarrow":
+        native_result = result.to_native()
+        rows = list(
+            zip(*(column.to_pylist() for column in native_result.columns), strict=True)
+        )
+    else:
+        rows = result.rows()
+    assert rows == expected_rows
+    assert frame.columns == list(data)
+    assert frame.rows() == ([(9,)] if data.get("a") else [])
