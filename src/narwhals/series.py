@@ -876,7 +876,7 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                    where N represents the number of non-null elements.
 
         Examples:
             >>> import polars as pl
@@ -895,7 +895,7 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                    where N represents the number of non-null elements.
 
         Examples:
             >>> import pyarrow as pa
@@ -1612,6 +1612,8 @@ class Series(Generic[IntoSeriesT]):
 
     def n_unique(self) -> int:
         """Count the number of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import polars as pl
