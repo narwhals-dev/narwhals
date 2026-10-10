@@ -466,7 +466,7 @@ class Expr:
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                where N represents the number of elements. By default ddof is 1.
+                where N represents the number of non-null elements. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -490,7 +490,7 @@ class Expr:
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of elements. By default ddof is 1.
+                     where N represents the number of non-null elements. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -691,6 +691,8 @@ class Expr:
 
     def n_unique(self) -> Self:
         """Returns count of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import pandas as pd
