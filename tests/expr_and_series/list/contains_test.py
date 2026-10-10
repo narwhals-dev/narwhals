@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -29,9 +29,6 @@ INT_LIST_DATA = {"a": [[2, 2, 3, None, None], None, [], [None], [1], [0, -1]]}
 
 SQL_BACKENDS = ("duckdb", "ibis", "pyspark", "sqlframe")
 """Backends which coerce the item to the inner dtype instead of matching polars."""
-
-PYARROW_COMPUTE_BACKENDS = ("dask", "modin", "pandas", "pyarrow")
-"""Backends whose `list.contains` runs on pyarrow, which casts a datetime item to the list's unit."""
 
 
 def skip_or_xfail_unsupported(
@@ -116,9 +113,9 @@ def test_contains_numeric_coercion_expr(
         pytest.param({"a": [["x"], [], None]}, nw.String(), float("nan"), id="nan_item"),
         pytest.param(
             {"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]},
-            nw.Datetime("ns"),
-            datetime(2020, 1, 1, 1, 2, 3),
-            id="datetime_precision",
+            nw.Datetime("us"),
+            datetime(2020, 1, 1, 1, 2, 3, tzinfo=timezone.utc),
+            id="datetime_time_zone",
         ),
     ],
 )
@@ -129,21 +126,35 @@ def test_contains_invalid_item_raises(
     inner: DType,
     item: NonNestedLiteral,
 ) -> None:
-    if (
-        isinstance(item, (float, datetime))
-        and "polars" in str(constructor)
-        and POLARS_VERSION < (1, 28, 0)
+    if "polars" in str(constructor) and (
+        (isinstance(item, float) and POLARS_VERSION < (1, 28, 0))
+        or (isinstance(item, datetime) and POLARS_VERSION < (2,))
     ):
         request.applymarker(pytest.mark.xfail(reason="old polars coerces the item"))
-    coercing_backends = SQL_BACKENDS
-    if isinstance(item, datetime):
-        coercing_backends += PYARROW_COMPUTE_BACKENDS
-    if any(backend in str(constructor) for backend in coercing_backends):
+    if any(backend in str(constructor) for backend in SQL_BACKENDS):
         request.applymarker(pytest.mark.xfail(reason="mismatched item coerced"))
     skip_or_xfail_unsupported(request, constructor)
     df = nw.from_native(constructor(data))
     with pytest.raises(InvalidOperationError):
         maybe_collect(df.select(nw.col("a").cast(nw.List(inner)).list.contains(item)))
+
+
+def test_contains_datetime_precision_coerced(
+    request: pytest.FixtureRequest, constructor: Constructor
+) -> None:
+    # Polars 1.28 up to 2.0 raises instead, and before 1.28 it ignores the unit.
+    if "polars" in str(constructor) and POLARS_VERSION < (2,):
+        request.applymarker(pytest.mark.xfail(reason="old polars mismatches units"))
+    if any(backend in str(constructor) for backend in ("pyspark", "sqlframe")):
+        pytest.skip(reason="only microsecond precision is supported")
+    skip_or_xfail_unsupported(request, constructor)
+    df = nw.from_native(constructor({"a": [[datetime(2020, 1, 1, 1, 2, 3)], [], None]}))
+    result = df.select(
+        nw.col("a")
+        .cast(nw.List(nw.Datetime("ms")))
+        .list.contains(datetime(2020, 1, 1, 1, 2, 3))
+    )
+    assert_equal_data(result, {"a": [True, False, None]})
 
 
 def test_contains_invalid_item_raises_without_rows(
