@@ -2294,6 +2294,27 @@ def extend_bool(
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
 
 
+def validate_bool_flags(
+    *, flags: bool | Sequence[bool], by: Sequence[str], param_name: str
+) -> None:
+    """Reject a `descending`/`reverse` that is not a bool or one bool per `by` column."""
+    if isinstance(flags, bool):
+        return
+    if len(flags) != len(by):
+        msg = (
+            f"the length of `{param_name}` ({len(flags)}) "
+            f"does not match the length of `by` ({len(by)})"
+        )
+        raise ValueError(msg)
+    for flag in flags:
+        if not isinstance(flag, bool):
+            msg = (
+                f"'{qualified_type_name(flag)}' object is not an instance of 'bool'\n"
+                f"while processing '{param_name}'"
+            )
+            raise TypeError(msg)
+
+
 class _NoDefault(Enum):
     # "borrowed" from
     # https://github.com/pandas-dev/pandas/blob/e7859983a814b1823cf26e3b491ae2fa3be47c53/pandas/_libs/lib.pyx#L2736-L2748

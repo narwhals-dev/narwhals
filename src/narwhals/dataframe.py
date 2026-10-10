@@ -47,6 +47,7 @@ from narwhals._utils import (
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
+    validate_bool_flags,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
 from narwhals.dtypes import _validate_dtype
@@ -310,6 +311,7 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
+        validate_bool_flags(flags=descending, by=by, param_name="descending")
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
@@ -318,6 +320,7 @@ class BaseFrame(Generic[_FrameT]):
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
     ) -> Self:
         flatten_by = flatten([by])
+        validate_bool_flags(flags=reverse, by=flatten_by, param_name="reverse")
         return self._with_compliant(
             self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )
