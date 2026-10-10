@@ -74,8 +74,7 @@ def test_group_by_complex() -> None:
         ),
     ],
 )
-# Only all-numeric outputs used to upcast: a non-numeric sibling made the packed
-# per-group Series object, which pandas then re-inferred correctly.
+# With only numeric outputs, a per-group Series would upcast the ints to float.
 @pytest.mark.parametrize("numeric_only", [True, False])
 def test_group_by_complex_preserves_dtype(
     constructor: Constructor,
@@ -133,18 +132,9 @@ def test_group_by_complex_edge_cases(
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
-def test_group_by_complex_no_groups(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
+def test_group_by_complex_no_groups(constructor_eager: ConstructorEager) -> None:
     if "pyarrow_table" in str(constructor_eager):
         pytest.skip(reason="complex aggregations are not supported")
-    if any(
-        x in str(constructor_eager) for x in ("pandas", "modin")
-    ) and PANDAS_VERSION < (2, 2):
-        reason = (
-            "without `include_groups=False`, `apply` also returns the keys as columns"
-        )
-        request.applymarker(pytest.mark.xfail(reason=reason, raises=ValueError))
     # The cast avoids `null[pyarrow]` keys, which pandas never drops.
     df = nw.from_native(constructor_eager({"k": [None, None], "v": [1, 2]}))
     result = (
@@ -153,6 +143,40 @@ def test_group_by_complex_no_groups(
         .agg(nw.col("v").filter(nw.col("v") > 0).max())
     )
     assert_equal_data(result, {"k": [], "v": []})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_group_by_complex_reads_keys(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        pytest.skip(reason="complex aggregations are not supported")
+    data = {"k": ["a", "a", "b"], "n": [1, 1, 2], "v": [1, 2, 3]}
+    df = nw.from_native(constructor_eager(data))
+    result = (
+        df.group_by("k", "n")
+        .agg((nw.col("v") + nw.col("n")).sum().alias("w"), (nw.all() * 2).sum())
+        .sort("k")
+    )
+    assert_equal_data(result, {"k": ["a", "b"], "n": [1, 2], "w": [5, 5], "v": [6, 6]})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+@pytest.mark.parametrize("is_complex", [False, True])
+def test_group_by_output_named_like_key(
+    constructor_eager: ConstructorEager, *, is_complex: bool
+) -> None:
+    if is_complex and "pyarrow_table" in str(constructor_eager):
+        pytest.skip(reason="complex aggregations are not supported")
+    exception: type[Exception]
+    if "polars" in str(constructor_eager):
+        import polars as pl
+
+        exception = pl.exceptions.DuplicateError
+    else:
+        exception = DuplicateError
+    df = nw.from_native(constructor_eager({"k": [1, 1, 2], "v": [1, 2, 3]}))
+    agg = (nw.col("v") * 2).sum() if is_complex else nw.col("v").sum()
+    with pytest.raises(exception):
+        df.group_by("k").agg(agg.alias("k"))
 
 
 @pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")

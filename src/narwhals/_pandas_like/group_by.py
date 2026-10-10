@@ -10,6 +10,7 @@ from narwhals._compliant import EagerGroupBy
 from narwhals._exceptions import issue_warning
 from narwhals._expression_parsing import evaluate_output_names_and_aliases
 from narwhals._pandas_like.utils import make_group_by_kwargs
+from narwhals._utils import check_column_names_are_unique
 from narwhals.dependencies import is_pandas_like_dataframe
 
 if TYPE_CHECKING:
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from narwhals._compliant.typing import NarwhalsAggregation, ScalarKwargs
     from narwhals._pandas_like.dataframe import PandasLikeDataFrame
     from narwhals._pandas_like.expr import PandasLikeExpr
+    from narwhals._pandas_like.series import PandasLikeSeries
 
     NativeGroupBy: TypeAlias = "_NativeGroupBy[tuple[str, ...], Literal[True]]"
 
@@ -110,6 +112,12 @@ class AggExpr:
             self.expr, df, exclude
         )
         return self
+
+    def evaluate(self, group: PandasLikeDataFrame, /) -> Sequence[PandasLikeSeries]:
+        """Evaluate on a single group, keeping selectors (e.g. `nw.all()`) off its keys."""
+        if self.expr._metadata.expansion_kind.is_multi_unnamed():
+            group = group.simple_select(*self.output_names)
+        return self.expr(group)
 
     def _getitem_aggs(self, group_by: PandasLikeGroupBy) -> pd.DataFrame | pd.Series[Any]:
         """Evaluate the wrapped expression as a group_by operation."""
@@ -268,11 +276,7 @@ class PandasLikeGroupBy(
             df, keys
         )
         self._exclude: tuple[str, ...] = (*self._keys, *self._output_key_names)
-        # cuDF defaults to `group_keys=False`, but `_apply_aggs` needs the keys in the index.
-        self._group_by_kwargs = {
-            **make_group_by_kwargs(drop_null_keys=drop_null_keys),
-            "group_keys": True,
-        }
+        self._group_by_kwargs = make_group_by_kwargs(drop_null_keys=drop_null_keys)
 
         # Drop index to avoid potential collisions:
         # https://github.com/narwhals-dev/narwhals/issues/1907.
@@ -280,7 +284,7 @@ class PandasLikeGroupBy(
         if set(self._native.index.names).intersection(self.compliant.columns):
             self._native = self._native.reset_index(drop=True)
 
-    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:  # noqa: PLR0912
+    def agg(self, *exprs: PandasLikeExpr) -> PandasLikeDataFrame:
         all_aggs_are_simple = True
         agg_exprs: list[AggExpr] = []
         order_by = ()
@@ -294,13 +298,15 @@ class PandasLikeGroupBy(
                     msg = f"Only one `order_by` can be specified in `group_by`. Found both {order_by} and {_current_order_by}."
                     raise NotImplementedError(msg)
                 order_by = _current_order_by
+        aliases = chain.from_iterable(e.aliases for e in agg_exprs)
+        check_column_names_are_unique([*self._output_key_names, *aliases])
 
+        native = self._native
         if order_by:
-            grouped: NativeGroupBy = self._native.sort_values(
-                list(order_by), na_position="first"
-            ).groupby(self._keys.copy(), **self._group_by_kwargs)
-        else:
-            grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
+            native = native.sort_values(list(order_by), na_position="first")
+        grouped: NativeGroupBy = native.groupby(
+            self._keys.copy(), **self._group_by_kwargs
+        )
         self._grouped = grouped
 
         if all_aggs_are_simple:
@@ -315,7 +321,7 @@ class PandasLikeGroupBy(
         elif self.compliant.native.empty:
             raise empty_results_error()
         else:
-            result = self._apply_aggs(grouped, exprs)
+            result = self._per_group_aggs(native, grouped, agg_exprs)
 
         impl = self.compliant._implementation
         backend_version = impl._backend_version()
@@ -346,69 +352,69 @@ class PandasLikeGroupBy(
     ) -> list[pd.DataFrame | pd.Series[Any]]:
         return [e._getitem_aggs(self) for e in exprs]
 
-    def _apply_aggs(
-        self, grouped: NativeGroupBy, exprs: Sequence[PandasLikeExpr]
+    def _per_group_aggs(
+        self, native: Any, grouped: NativeGroupBy, agg_exprs: Sequence[AggExpr]
     ) -> pd.DataFrame:
-        """Stub issue for `include_groups` [pandas-dev/pandas-stubs#1270].
-
-        - [User guide] mentions `include_groups` 4 times without deprecation.
-        - [`DataFrameGroupBy.apply`] doc says the default value of `True` is deprecated since `2.2.0`.
-        - `False` is explicitly the only *non-deprecated* option, but entirely omitted since [pandas-dev/pandas-stubs#1268].
-
-        [pandas-dev/pandas-stubs#1270]: https://github.com/pandas-dev/pandas-stubs/issues/1270
-        [User guide]: https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html
-        [`DataFrameGroupBy.apply`]: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.core.groupby.DataFrameGroupBy.apply.html
-        [pandas-dev/pandas-stubs#1268]: https://github.com/pandas-dev/pandas-stubs/pull/1268
-        """
         warn_complex_group_by()
+        native_ns = self.compliant.__native_namespace__()
+        DataFrame = native_ns.DataFrame
+        one_row_index = native_ns.RangeIndex(1)
         impl = self.compliant._implementation
-        backend_version = impl._backend_version()
-        DataFrame = self.compliant.__native_namespace__().DataFrame
+        if not impl.is_pandas() or impl._backend_version() < (2, 0):
+            keys_in_index = False
+        else:
+            # NOTE: Unnamed key copies aren't columns, so `apply` keeps the key columns in
+            # each group and puts the keys in the index. With no groups it returns the
+            # input frame instead, so that case falls back to iterating.
+            unnamed_keys = [native[key].rename(None) for key in self._keys]
+            grouped = native.groupby(unnamed_keys, **self._group_by_kwargs)
+            keys_in_index = grouped.ngroups > 0
 
         def aggregate_group(native_group: pd.DataFrame) -> pd.DataFrame:
             group = self.compliant._with_native(native_group)
-            # A Series of scalars would upcast an int result to float next to a float one.
-            # The explicit index turns an empty result (e.g. `mode`) into a null row.
-            return DataFrame(
-                {
-                    series.name: series.native.iloc[0:1].reset_index(drop=True)
-                    for expr in exprs
-                    for series in expr(group)
-                },
-                index=range(1),
-            )
+            columns = [] if keys_in_index else [native_group[key] for key in self._keys]
+            for agg_expr in agg_exprs:
+                columns.extend(series.native for series in agg_expr.evaluate(group))
+            # NOTE: A 1-row frame keeps each column's dtype (a Series would upcast ints),
+            # and an empty result can't take the index, so it becomes a null row.
+            first_rows = {}
+            for column in columns:
+                first_row = column.iloc[0:1]
+                if len(first_row):
+                    first_row.index = one_row_index
+                first_rows[column.name] = first_row
+            return DataFrame(first_rows, index=one_row_index)
 
-        if impl.is_pandas() and backend_version < (1, 5):  # pragma: no cover
-            # pandas<1.5 drops the keys when a single-row group labelled 0 has the same
-            # index as the 1-row result, treating `apply` as a transform.
-            grouped.mutated = True  # type: ignore[attr-defined]
-        if (
-            (impl.is_pandas() and backend_version >= (2, 2))
-            or (impl.is_modin() and backend_version >= (0, 27))
-            or impl.is_cudf()
-        ):
-            result = grouped.apply(aggregate_group, include_groups=False)  # type: ignore[call-overload]
-        else:  # pragma: no cover
-            result = grouped.apply(aggregate_group)
-        # With no groups `apply` never runs, so there is no extra level to drop.
-        # Not `droplevel(-1)`: it raises on Modin.
-        if result.index.nlevels > len(self._keys):
-            result = result.reset_index(level=-1, drop=True)
-        # A null aggregation makes its group's column object. `infer_objects` is
+        if keys_in_index:
+            result = grouped.apply(aggregate_group).droplevel(-1).rename_axis(self._keys)
+        elif impl.is_modin():  # pragma: no cover
+            # NOTE: Iterating over Modin's distributed groups is slower and can fail.
+            result = grouped.apply(aggregate_group).set_index(self._keys)
+        else:
+            # NOTE: pandas<2 and cuDF don't reliably put the keys in `apply`'s index.
+            # With no groups, an empty frame still gives the output columns.
+            frames = [aggregate_group(group) for _, group in iter_native_groups(grouped)]
+            frames = frames or [aggregate_group(native.iloc[:0]).iloc[:0]]
+            result = native_ns.concat(frames).set_index(self._keys)
+        # NOTE: A null aggregation makes its column object dtype. `infer_objects` is
         # missing on cuDF and raises on Modin.
         return result.infer_objects() if impl.is_pandas() else result
 
     def __iter__(self) -> Iterator[tuple[Any, PandasLikeDataFrame]]:
         grouped = self._native.groupby(self._keys.copy(), **self._group_by_kwargs)
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message=".*a length 1 tuple will be returned",
-                category=FutureWarning,
-            )
-            with_native = self.compliant._with_native
-            for key, group in grouped:
-                yield (key, with_native(group).simple_select(*self._original_columns))
+        with_native = self.compliant._with_native
+        for key, group in iter_native_groups(grouped):
+            yield (key, with_native(group).simple_select(*self._original_columns))
+
+
+def iter_native_groups(grouped: NativeGroupBy) -> Iterator[tuple[Any, pd.DataFrame]]:
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=".*a length 1 tuple will be returned",
+            category=FutureWarning,
+        )
+        yield from grouped
 
 
 def empty_results_error() -> ValueError:
