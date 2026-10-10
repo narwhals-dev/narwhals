@@ -181,8 +181,10 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return cls.from_native(native, context=context, name=name)
 
     def _from_scalar(self, value: Any) -> Self:
-        if hasattr(value, "as_py"):
-            value = value.as_py()
+        if isinstance(value, pa.Scalar):
+            # `as_py` discards the type, so a null scalar would come back as
+            # `pa.null()` and a narrow one would be widened by inference.
+            return self._with_native(pa.array([value]))
         return super()._from_scalar(value)
 
     @staticmethod
