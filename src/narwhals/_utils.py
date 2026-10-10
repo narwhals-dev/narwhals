@@ -1200,7 +1200,7 @@ def is_ordered_categorical(series: Series[Any]) -> bool:
             # NOTE: Deprecated https://github.com/pola-rs/polars/pull/23779
             # Since version 1.32.0, ordering parameter is ignored and
             # it always behaves as if 'lexical' was passed.
-            result = cast("pl.Categorical", native.dtype).ordering == "physical"
+            result = cast("pl.Categorical", native.dtype).ordering == "physical"  # type: ignore[attr-defined]
         elif impl.is_pandas_like():
             result = bool(native.cat.ordered)
         elif impl.is_pyarrow():
@@ -2292,6 +2292,27 @@ def extend_bool(
     Stolen from https://github.com/pola-rs/polars/blob/b8bfb07a4a37a8d449d6d1841e345817431142df/py-polars/polars/_utils/various.py#L580-L594
     """
     return (value,) * n_match if isinstance(value, bool) else tuple(value)
+
+
+def validate_bool_flags(
+    *, flags: bool | Sequence[bool], by: Sequence[str], param_name: str
+) -> None:
+    """Reject a `descending`/`reverse` that is not a bool or one bool per `by` column."""
+    if isinstance(flags, bool):
+        return
+    if len(flags) != len(by):
+        msg = (
+            f"the length of `{param_name}` ({len(flags)}) "
+            f"does not match the length of `by` ({len(by)})"
+        )
+        raise ValueError(msg)
+    for flag in flags:
+        if not isinstance(flag, bool):
+            msg = (
+                f"'{qualified_type_name(flag)}' object is not an instance of 'bool'\n"
+                f"while processing '{param_name}'"
+            )
+            raise TypeError(msg)
 
 
 class _NoDefault(Enum):

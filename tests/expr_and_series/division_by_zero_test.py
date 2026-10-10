@@ -1,14 +1,22 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    import pandas as pd
 
 data: dict[str, list[float]] = {
     "int": [-2, 0, 2],
@@ -51,7 +59,7 @@ def test_series_floordiv_by_zero(
 
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if df.implementation.is_pandas_like():
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     denominator = get_denominator(df)
@@ -68,7 +76,7 @@ def test_expr_floordiv_by_zero(
 
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if df.implementation.is_pandas_like():
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     result = df.select(result=nw.col("int") // denominator)
@@ -120,15 +128,7 @@ def test_series_rfloordiv_by_zero(
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if any(
-        x in str(constructor_eager) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
-    ) or (
-        any(
-            x in str(constructor_eager)
-            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
-        )
-        and numerator != 0
-    ):
+    if "cudf" in str(constructor_eager):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -143,15 +143,7 @@ def test_expr_rfloordiv_by_zero(
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
         pytest.skip(reason="bug")
-    if any(
-        x in str(constructor) for x in ("pandas_pyarrow", "modin_pyarrow", "cudf")
-    ) or (
-        any(
-            x in str(constructor)
-            for x in ("pandas_nullable", "pandas_constructor", "modin_constructor")
-        )
-        and numerator != 0
-    ):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor(data))
@@ -159,3 +151,69 @@ def test_expr_rfloordiv_by_zero(
     result = df.select(result=numerator // nw.col("denominator"))
     expected = {"result": expected_floordiv}
     assert_equal_data(result, expected)
+
+
+def test_floordiv_by_mixed_divisor(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="bug")
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
+    if "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"i": [0, 1, 2, 3], "a": [7, 8, 7, None], "b": [0, 2, None, 0]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        "i",
+        floordiv=nw.col("a") // nw.col("b"),
+        rfloordiv=7 // nw.col("b"),
+        broadcast_dividend=nw.col("a").max() // nw.col("b"),
+        scalar_zero=nw.col("a") // 0,
+    ).sort("i")
+    expected = {
+        "i": [0, 1, 2, 3],
+        "floordiv": [None, 4, None, None],
+        "rfloordiv": [None, 3, None, None],
+        "broadcast_dividend": [None, 4, None, None],
+        "scalar_zero": [None, None, None, None],
+    }
+    assert_equal_data(result, expected)
+
+    if df.implementation.is_pandas_like():
+        # `Int64` and `int64[pyarrow]` are both `nw.Int64`, so compare native dtypes.
+        input_dtype = cast("pd.DataFrame", nw.to_native(df))["a"].dtype
+        native_result = cast("pd.DataFrame", nw.to_native(result))
+        assert all(
+            native_result[name].dtype == input_dtype for name in expected if name != "i"
+        )
+
+
+def test_floordiv_by_null_scalar(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="broadcast requires `over`, which requires DuckDB 1.3.0")
+    if "pyarrow_table" in str(constructor):
+        # `floordiv_compat` raises on a null scalar divisor.
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [7, 8], "b": [1, 2]}))
+    null_scalar = nw.when(nw.col("b") > 99).then(nw.col("b")).max()
+    result = df.select(nw.col("a") // null_scalar)
+    assert_equal_data(result, {"a": [None, None]})
+
+
+def test_floordiv_by_zero_keeps_dtype(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="bug")
+    if "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+
+    df = nw.from_native(constructor({"a": [6.0, 7.0]}))
+    a = nw.col("a").cast(nw.Float32)
+    schema = df.select(by_zero=a // 0, by_two=a // 2).collect_schema()
+    assert schema["by_zero"] == schema["by_two"]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
@@ -35,6 +36,30 @@ def test_sort_nulls(
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("descending", [[True], [True, False, True]])
+def test_sort_descending_length_mismatch(
+    constructor: Constructor, descending: list[bool]
+) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    msg = (
+        f"the length of `descending` ({len(descending)}) "
+        "does not match the length of `by` (2)"
+    )
+    with pytest.raises(ValueError, match=re.escape(msg)):
+        df.sort("a", "b", descending=descending)
+
+
+@pytest.mark.parametrize("descending", [["abc", "xcd"], [1, 0], [None, True]])
+def test_sort_descending_not_bool(
+    constructor: Constructor, descending: list[Any]
+) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(TypeError, match="is not an instance of 'bool'"):
+        df.sort("a", "b", descending=descending)
+
+
 @pytest.mark.parametrize(
     ("descending", "nulls_last", "expected"),
     [
@@ -56,9 +81,7 @@ def test_sort_categorical(
     skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", None, "cat", "bird", None], "n": [1, 2, 3, 4, 5]}
-    df = nw.from_native(constructor(data)).with_columns(
-        nw.col("c").cast(nw.Categorical())
-    )
+    df = nw.from_native(constructor(data)).cast({"c": nw.Categorical()})
     result = df.sort("c", "n", descending=[descending, False], nulls_last=nulls_last)
     assert_equal_data(result, expected)
 
@@ -67,9 +90,7 @@ def test_sort_categorical_empty(constructor: Constructor) -> None:
     skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat"], "n": [1, 2]}
-    df = nw.from_native(constructor(data)).with_columns(
-        nw.col("c").cast(nw.Categorical())
-    )
+    df = nw.from_native(constructor(data)).cast({"c": nw.Categorical()})
     result = df.filter(nw.col("n") > 2).sort("c")
     assert_equal_data(result, {"c": [], "n": []})
 
