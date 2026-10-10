@@ -271,6 +271,7 @@ def test_datetime_no_tz(constructor: Constructor) -> None:
     ("selector", "expected"),
     [
         (ncs.numeric() | ncs.boolean(), ["a", "c", "d"]),
+        (ncs.boolean() | ncs.numeric(), ["a", "c", "d"]),
         (ncs.numeric() & ncs.boolean(), []),
         (ncs.numeric() & ncs.by_dtype(nw.Int64), ["a"]),
         (ncs.numeric() | ncs.by_dtype(nw.Int64), ["a", "c"]),
@@ -295,7 +296,7 @@ def test_set_ops(
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = df.select(selector).collect_schema().names()
-    assert sorted(result) == expected
+    assert result == expected
 
 
 def test_subtract_expr(constructor: Constructor) -> None:
