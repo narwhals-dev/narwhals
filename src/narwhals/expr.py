@@ -419,7 +419,7 @@ class Expr:
     def mean(self) -> Self:
         """Get mean value.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -439,7 +439,7 @@ class Expr:
     def median(self) -> Self:
         """Get median value.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -462,7 +462,7 @@ class Expr:
     def std(self, *, ddof: int = 1) -> Self:
         """Get standard deviation.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
@@ -486,7 +486,7 @@ class Expr:
     def var(self, *, ddof: int = 1) -> Self:
         """Get variance.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
@@ -567,7 +567,7 @@ class Expr:
     def skew(self) -> Self:
         """Calculate the sample skewness of a column.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -587,7 +587,7 @@ class Expr:
     def kurtosis(self) -> Self:
         """Compute the kurtosis (Fisher's definition) without bias correction.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
@@ -634,7 +634,7 @@ class Expr:
     def min(self) -> Self:
         """Returns the minimum value(s) from a column(s).
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -654,7 +654,7 @@ class Expr:
     def max(self) -> Self:
         """Returns the maximum value(s) from a column(s).
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -1508,7 +1508,7 @@ class Expr:
     ) -> Self:
         r"""Get quantile value.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Arguments:
             quantile: Quantile between 0.0 and 1.0.
