@@ -200,6 +200,9 @@ def test_to_time_invalid_raises(
             pytest.skip("pandas < 2.2.0 has no Time dtype")
         if PYARROW_VERSION == (0, 0, 0):
             pytest.skip("pandas requires pyarrow for the Time dtype")
+    # These raise for any input, so the test would pass without parsing anything.
+    if "pyspark" in str(constructor) or "dask" in str(constructor):
+        pytest.skip("backend does not support Time dtype")
     df = nw.from_native(constructor(data))
     expr = nw.col("a").str.to_time(format)
     # Broad `Exception`: error types differ per backend.
