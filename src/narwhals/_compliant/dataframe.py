@@ -151,6 +151,12 @@ class CompliantFrame(
         suffix: str,
     ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        ns = self.__narwhals_namespace__()
+        return self.with_columns(
+            *(ns.col(name).cast(dtype) for name, dtype in dtypes.items())
+        )
+
     def select(self, *exprs: CompliantExprT_contra) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""

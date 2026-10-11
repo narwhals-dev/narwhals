@@ -8,17 +8,17 @@ import pytest
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
-data = {"a": [[1, 2], [None, 3], [None], None]}
+data = {"a": [[1, 2], [None, 3], [None], None, [4]]}
 
 
-@pytest.mark.parametrize(("index", "expected"), [(0, {"a": [1, None, None, None]})])
+@pytest.mark.parametrize(("index", "expected"), [(0, {"a": [1, None, None, None, 4]})])
 def test_get_expr(
     request: pytest.FixtureRequest, constructor: Constructor, index: int, expected: Any
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
@@ -30,7 +30,7 @@ def test_get_expr(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize(("index", "expected"), [(0, {"a": [1, None, None, None]})])
+@pytest.mark.parametrize(("index", "expected"), [(0, {"a": [1, None, None, None, 4]})])
 def test_get_series(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,

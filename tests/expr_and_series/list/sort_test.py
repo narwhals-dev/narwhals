@@ -60,14 +60,14 @@ def test_sort_expr_args(
     nulls_last: bool,  # noqa: FBT001
     expected: list[Any],
 ) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
     if "ibis" in str(constructor) and descending:
         # https://github.com/ibis-project/ibis/issues/11735
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
         pytest.skip()
-    if "pandas" in str(constructor):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")

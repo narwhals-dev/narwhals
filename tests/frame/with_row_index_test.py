@@ -93,7 +93,7 @@ def test_with_row_index_order_by_categorical(constructor: Constructor) -> None:
 
     df = nw.from_native(constructor({"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}))
     result = (
-        df.with_columns(nw.col("c").cast(nw.Categorical()))
+        df.cast({"c": nw.Categorical()})
         .with_row_index("i", order_by="c")
         .sort("n")
         .select("i", "n")
