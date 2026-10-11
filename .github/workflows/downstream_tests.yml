@@ -296,6 +296,11 @@ jobs:
         run: |
           cd tubular
           uv pip install -e ".[dev]"
+          # Temporary pin to get CI green: beartype 0.23.0 rejects the `DType` that
+          # tubular imports to resolve `nw.Schema`'s forward ref, because
+          # `repr(DType)` is `DType` but `repr(DType | int)` is `narwhals.dtypes.DType | int`.
+          # See https://github.com/azukds/tubular/issues/772
+          uv pip install "beartype<0.23"
       - name: install-narwhals-dev
         run: |
           uv pip uninstall narwhals
