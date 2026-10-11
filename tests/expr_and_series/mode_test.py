@@ -185,3 +185,37 @@ def test_mode_group_by_multiple_cols(
             "vals_multimodal_num": [2, 3],
         }
         assert_equal_data(result, expected)
+
+
+def test_mode_single_expr_nulls(constructor_eager: ConstructorEager) -> None:
+    data_nulls = {"a": [None, None, 2.0]}
+    df = nw.from_native(constructor_eager(data_nulls))
+    result = df.select(nw.col("a").mode(keep="all"))
+    expected = {"a": [None]}
+    assert_equal_data(result, expected)
+
+    result_any = df.select(nw.col("a").mode(keep="any"))
+    assert_equal_data(result_any, expected)
+
+
+def test_mode_series_nulls(constructor_eager: ConstructorEager) -> None:
+    data_nulls = {"a": [None, None, 2.0]}
+    series = nw.from_native(constructor_eager(data_nulls), eager_only=True)["a"]
+    result = series.mode(keep="all")
+    expected = {"a": [None]}
+    assert_equal_data({"a": result}, expected)
+
+    result_any = series.mode(keep="any")
+    assert_equal_data({"a": [result_any]}, expected)
+
+
+def test_mode_dask_expr_nulls() -> None:
+    pytest.importorskip("dask")
+    import dask.dataframe as dd
+    import pandas as pd
+
+    df = nw.from_native(
+        dd.from_pandas(pd.DataFrame({"a": [None, None, 2.0]}), npartitions=1)
+    )
+    result = df.select(nw.col("a").mode(keep="any")).lazy().collect()
+    assert_equal_data(result, {"a": [None]})
