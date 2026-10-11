@@ -153,7 +153,7 @@ class DuckDBNamespace(
             count = reduce(
                 operator.add, (col.isnotnull().cast(duckdb_dtypes.BIGINT) for col in cols)
             )
-            return total / count
+            return when(count > 0, total / count).otherwise(lit(None))
 
         return self._expr._from_elementwise_horizontal_op(func, *exprs)
 

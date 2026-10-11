@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 import narwhals as nw
 from tests.utils import Constructor, assert_equal_data
 
@@ -28,4 +30,26 @@ def test_meanh_all(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
     result = df.select(c=nw.mean_horizontal(nw.all()))
     expected = {"c": [6, 12, 18]}
+    assert_equal_data(result, expected)
+
+
+def test_meanh_all_null(constructor: Constructor) -> None:
+    data = {"a": [None, 1.0, None], "b": [None, 3.0, 5.0]}
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        mean=nw.mean_horizontal("a", "b"), is_null=nw.mean_horizontal("a", "b").is_null()
+    )
+    expected = {"mean": [None, 2.0, 5.0], "is_null": [True, False, False]}
+    assert_equal_data(result, expected)
+
+
+def test_meanh_all_null_duckdb() -> None:
+    pytest.importorskip("duckdb")
+    data = {"a": [None, 1.0, None], "b": [None, 3.0, 5.0]}
+    schema = {"a": nw.Float64(), "b": nw.Float64()}
+    lf = nw.from_dict(data, schema=schema, backend="pyarrow").lazy("duckdb")
+    result = lf.select(
+        mean=nw.mean_horizontal("a", "b"), is_null=nw.mean_horizontal("a", "b").is_null()
+    ).collect()
+    expected = {"mean": [None, 2.0, 5.0], "is_null": [True, False, False]}
     assert_equal_data(result, expected)

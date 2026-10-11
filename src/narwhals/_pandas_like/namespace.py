@@ -246,8 +246,10 @@ class PandasLikeNamespace(
         def func(df: PandasLikeDataFrame) -> list[PandasLikeSeries]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
             series = (s.fill_null(0, strategy=None, limit=None) for s in expr_results)
-            non_na = (1 - s.is_null() for s in expr_results)
-            return [reduce(operator.add, series) / reduce(operator.add, non_na)]
+            non_na = [1 - s.is_null() for s in expr_results]
+            count = reduce(operator.add, non_na)
+            total = reduce(operator.add, series)
+            return [(total / count).zip_with(count > 0, None)]
 
         return self._expr._from_callable(
             func=func,
