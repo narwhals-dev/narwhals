@@ -298,3 +298,12 @@ def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # n
     )
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)
+
+
+def test_rolling_sum_window_longer_than_series(
+    constructor_eager: ConstructorEager,
+) -> None:
+    # A window larger than the series must yield nulls, not crash.
+    df = nw.from_native(constructor_eager({"a": [1]}), eager_only=True)
+    result = {"a": df["a"].rolling_sum(window_size=2)}
+    assert_equal_data(result, {"a": [None]})

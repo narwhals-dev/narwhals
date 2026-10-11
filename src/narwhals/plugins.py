@@ -151,4 +151,9 @@ def _show_suggestions(native_object_type: type) -> str | None:
             "Hint: it looks like you passed a `daft.DataFrame` but don't have `narwhals-daft` installed.\n"
             "Please refer to https://github.com/narwhals-dev/narwhals-daft for installation instructions."
         )
+    if _might_be(native_object_type, "datafusion"):  # pragma: no cover
+        return (
+            "Hint: it looks like you passed a `datafusion.DataFrame` but don't have `narwhals-datafusion` installed.\n"
+            "Please refer to https://github.com/s5dsn-eqee/narwhals-datafusion for installation instructions."
+        )
     return None

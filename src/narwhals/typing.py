@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from decimal import Decimal
     from types import ModuleType
-    from typing import TypeAlias
+    from typing import IO, TypeAlias
 
     import numpy as np
     import pandas as pd
@@ -365,20 +365,29 @@ IntoArrowSchema: TypeAlias = "pa.Schema | Mapping[str, pa.DataType]"
 IntoPolarsSchema: TypeAlias = "pl.Schema | Mapping[str, pl.DataType]"
 IntoPandasSchema: TypeAlias = Mapping[str, PandasLikeDType]
 
-FileSource: TypeAlias = "str | os.PathLike[str]"
-"""Path to a file.
+FileSource: TypeAlias = "str | os.PathLike[str] | IO[bytes] | IO[str]"
+"""Path to a file, or a file-like object.
 
-Either a string or an object that implements [`__fspath__`], such as [`pathlib.Path`].
+Either a string, an object that implements [`os.PathLike`][os.PathLike]
+(such as [`pathlib.Path`][pathlib.Path]), or a file-like object such as
+[`io.BytesIO`][io.BytesIO] / [`io.StringIO`][io.StringIO].
 
-[`__fspath__`]: https://docs.python.org/3/library/os.html#os.PathLike
-[`pathlib.Path`]: https://docs.python.org/3/library/pathlib.html#pathlib.Path
+pandas (and pandas-like), Polars and PyArrow accept a file-like object. DuckDB
+does too, but only with `fsspec` installed, and `scan_parquet` additionally needs
+`duckdb>=1.5.4`. Dask, Ibis and Spark-like require a path and raise `TypeError`
+for anything else.
 """
 
 NormalizedPath = NewType("NormalizedPath", str)
-"""A [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_path`.
+"""A path-like [`FileSource`][narwhals.typing.FileSource] normalized via `narwhals._utils.normalize_source`."""
+
+NormalizedSource: TypeAlias = "NormalizedPath | IO[bytes] | IO[str]"
+"""A [`FileSource`][narwhals.typing.FileSource] after `narwhals._utils.normalize_source`.
 
 The compliant-namespace IO methods (`read_csv`, `scan_csv`, `read_parquet`, `scan_parquet`)
-take an already-normalized path and forward `kwds` to the native reader.
+take an already-normalized source and forward `kwds` to the native reader. Path-like
+inputs are converted to [`NormalizedPath`][narwhals.typing.NormalizedPath]; file-like
+objects are passed through unchanged.
 """
 
 

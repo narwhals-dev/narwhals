@@ -47,8 +47,10 @@ from narwhals._utils import (
     predicates_contains_list_of_bool,
     qualified_type_name,
     supports_arrow_c_stream,
+    validate_bool_flags,
 )
 from narwhals.dependencies import is_numpy_array_2d, is_pyarrow_table
+from narwhals.dtypes import _validate_dtype
 from narwhals.exceptions import (
     ColumnNotFoundError,
     InvalidOperationError,
@@ -268,6 +270,16 @@ class BaseFrame(Generic[_FrameT]):
     def rename(self, mapping: dict[str, str]) -> Self:
         return self._with_compliant(self._compliant_frame.rename(mapping))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        if not dtypes:
+            # NOTE: PySpark Connect cannot plan a projection over zero columns.
+            return self
+        for dtype in dtypes.values():
+            _validate_dtype(dtype)
+        if error := self._check_columns_exist(list(dtypes)):
+            raise error
+        return self._with_compliant(self._compliant_frame.cast(dtypes))
+
     def head(self, n: int) -> Self:
         return self._with_compliant(self._compliant_frame.head(n))
 
@@ -299,6 +311,7 @@ class BaseFrame(Generic[_FrameT]):
         nulls_last: bool = False,
     ) -> Self:
         by = flatten([*flatten([by]), *more_by])
+        validate_bool_flags(flags=descending, by=by, param_name="descending")
         return self._with_compliant(
             self._compliant_frame.sort(*by, descending=descending, nulls_last=nulls_last)
         )
@@ -307,6 +320,7 @@ class BaseFrame(Generic[_FrameT]):
         self, k: int, *, by: str | Iterable[str], reverse: bool | Sequence[bool] = False
     ) -> Self:
         flatten_by = flatten([by])
+        validate_bool_flags(flags=reverse, by=flatten_by, param_name="reverse")
         return self._with_compliant(
             self._compliant_frame.top_k(k, by=flatten_by, reverse=reverse)
         )
@@ -1596,6 +1610,27 @@ class DataFrame(BaseFrame[DataFrameT]):
         """
         return super().rename(mapping)
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        """Cast columns to the given dtypes.
+
+        Arguments:
+            dtypes: Mapping from column name to target dtype. Columns not in the
+                mapping are left unchanged.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>> df_native = pa.table({"foo": [1, 2], "bar": [6.0, 7.0]})
+            >>> nw.from_native(df_native).cast({"bar": nw.Int32}).to_native()
+            pyarrow.Table
+            foo: int64
+            bar: int32
+            ----
+            foo: [[1,2]]
+            bar: [[6,7]]
+        """
+        return super().cast(dtypes)
+
     def head(self, n: int = 5) -> Self:
         """Get the first `n` rows.
 
@@ -2810,6 +2845,32 @@ class LazyFrame(BaseFrame[LazyFrameT]):
             └────────────────────────┘
         """
         return super().rename(mapping)
+
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        r"""Cast columns to the given dtypes.
+
+        Arguments:
+            dtypes: Mapping from column name to target dtype. Columns not in the
+                mapping are left unchanged.
+
+        Examples:
+            >>> import duckdb
+            >>> import narwhals as nw
+            >>> lf_native = duckdb.sql("SELECT * FROM VALUES (1, 4.5), (3, 2.) df(a, b)")
+            >>> nw.from_native(lf_native).cast({"a": nw.Int64, "b": nw.Float64})
+            ┌──────────────────┐
+            |Narwhals LazyFrame|
+            |------------------|
+            |┌───────┬────────┐|
+            |│   a   │   b    │|
+            |│ int64 │ double │|
+            |├───────┼────────┤|
+            |│     1 │    4.5 │|
+            |│     3 │    2.0 │|
+            |└───────┴────────┘|
+            └──────────────────┘
+        """
+        return super().cast(dtypes)
 
     def head(self, n: int = 5) -> Self:
         r"""Get `n` rows.

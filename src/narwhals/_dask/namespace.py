@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import operator
 from datetime import date, datetime
-from functools import reduce
-from itertools import chain
+from functools import partial, reduce
 from typing import TYPE_CHECKING, Any, cast
 
 import dask.dataframe as dd
@@ -22,15 +21,18 @@ from narwhals._expression_parsing import (
     combine_alias_output_names,
     combine_evaluate_output_names,
 )
+from narwhals._pandas_like.utils import native_to_narwhals_dtype
 from narwhals._utils import (
     Implementation,
+    ensure_path_source,
     is_nested_literal,
+    isinstance_or_issubclass,
     not_implemented,
     validate_separators,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator
+    from collections.abc import Iterable
 
     import dask.dataframe.dask_expr as dx
 
@@ -40,7 +42,7 @@ if TYPE_CHECKING:
         CorrelationMethod,
         IntoDType,
         NonNestedLiteral,
-        NormalizedPath,
+        NormalizedSource,
     )
 
 
@@ -66,18 +68,28 @@ class DaskNamespace(
         self._version = version
 
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> DaskLazyFrame:
         validate_separators(separator, ("sep",), kwds)
-        native = dd.read_csv(source, sep=separator, **kwds)
+        native = dd.read_csv(
+            ensure_path_source(source, self._implementation), sep=separator, **kwds
+        )
         return self._lazyframe.from_native(native, context=self)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> DaskLazyFrame:
-        return self._lazyframe.from_native(dd.read_parquet(source, **kwds), context=self)
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> DaskLazyFrame:
+        return self._lazyframe.from_native(
+            dd.read_parquet(ensure_path_source(source, self._implementation), **kwds),
+            context=self,
+        )
 
     def lit(self, value: NonNestedLiteral, dtype: IntoDType | None) -> DaskExpr:
         if is_nested_literal(value):
             msg = f"Nested structures are not supported for Dask backend, found {type(value).__name__}"
+            raise NotImplementedError(msg)
+        if isinstance_or_issubclass(dtype, self._version.dtypes.List):
+            # Dask scalars drop the dtype, so this would be a String column:
+            # https://github.com/dask/dask/issues/11637
+            msg = "`List` literals are not supported for Dask backend."
             raise NotImplementedError(msg)
 
         def func(df: DaskLazyFrame) -> list[dx.Series]:
@@ -118,13 +130,13 @@ class DaskNamespace(
 
     def all_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series: Iterator[dx.Series] = chain.from_iterable(e(df) for e in exprs)
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
             # Note on `ignore_nulls`: Dask doesn't support storing arbitrary Python
             # objects in `object` dtype, so we don't need the same check we have for pandas-like.
             if ignore_nulls:
                 # NumPy-backed 'bool' dtype can't contain nulls so doesn't need filling.
-                series = (s if s.dtype == "bool" else s.fillna(True) for s in series)
-            return [reduce(operator.and_, align_series_full_broadcast(df, *series))]
+                series = [s if s.dtype == "bool" else s.fillna(True) for s in series]
+            return [reduce(operator.and_, series)]
 
         return self._expr(
             call=func,
@@ -135,10 +147,10 @@ class DaskNamespace(
 
     def any_horizontal(self, *exprs: DaskExpr, ignore_nulls: bool) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            series: Iterator[dx.Series] = chain.from_iterable(e(df) for e in exprs)
+            series = align_series_full_broadcast(df, *(s for e in exprs for s in e(df)))
             if ignore_nulls:
-                series = (s if s.dtype == "bool" else s.fillna(False) for s in series)
-            return [reduce(operator.or_, align_series_full_broadcast(df, *series))]
+                series = [s if s.dtype == "bool" else s.fillna(False) for s in series]
+            return [reduce(operator.or_, series)]
 
         return self._expr(
             call=func,
@@ -194,10 +206,9 @@ class DaskNamespace(
     def mean_horizontal(self, *exprs: DaskExpr) -> DaskExpr:
         def func(df: DaskLazyFrame) -> list[dx.Series]:
             expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = align_series_full_broadcast(df, *(s.fillna(0) for s in expr_results))
-            non_na = align_series_full_broadcast(
-                df, *(1 - s.isna() for s in expr_results)
-            )
+            aligned = align_series_full_broadcast(df, *expr_results)
+            series = (s.fillna(0) for s in aligned)
+            non_na = (1 - s.isna() for s in aligned)
             num = reduce(lambda x, y: x + y, series)  # pyright: ignore[reportOperatorIssue]
             den = reduce(lambda x, y: x + y, non_na)  # pyright: ignore[reportOperatorIssue]
             return [cast("dx.Series", num / den)]  # pyright: ignore[reportOperatorIssue]
@@ -242,12 +253,26 @@ class DaskNamespace(
     def concat_str(
         self, *exprs: DaskExpr, separator: str, ignore_nulls: bool
     ) -> DaskExpr:
+        to_nw_dtype = partial(
+            native_to_narwhals_dtype,
+            version=self._version,
+            implementation=self._implementation,
+        )
+
         def func(df: DaskLazyFrame) -> list[dx.Series]:
-            expr_results = [s for _expr in exprs for s in _expr(df)]
-            series = (
-                s.astype(str) for s in align_series_full_broadcast(df, *expr_results)
+            expr_results = align_series_full_broadcast(
+                df, *(s for _expr in exprs for s in _expr(df))
             )
-            null_mask = [s.isna() for s in align_series_full_broadcast(df, *expr_results)]
+            # pandas 2.0 cannot concatenate empty Arrow-string metadata. Cast to str
+            # instead; the pre-cast masks below restore or skip nulls. Polars renders
+            # booleans lowercase, `astype(str)` does not.
+            series = (
+                s.astype(str).str.lower()
+                if to_nw_dtype(s.dtype).is_boolean()
+                else s.astype(str)
+                for s in expr_results
+            )
+            null_mask = [s.isna() for s in expr_results]
 
             if not ignore_nulls:
                 null_mask_result = reduce(operator.or_, null_mask)
@@ -259,15 +284,17 @@ class DaskNamespace(
                     s.where(~nm, "") for s, nm in zip(series, null_mask, strict=True)
                 ]
 
-                separators = (
-                    nm.map({True: "", False: separator}, meta=str)
-                    for nm in null_mask[:-1]
-                )
-                result = reduce(
-                    operator.add,
-                    (s + v for s, v in zip(separators, values, strict=True)),
-                    init_value,
-                )
+                # A separator goes before a value only if that value and some
+                # earlier one are both non-null, so `seen` accumulates the latter.
+                seen = ~null_mask[0]
+                result = init_value
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    separators = (seen & not_null).map(
+                        {True: separator, False: ""}, meta=str
+                    )
+                    result = result + separators + value
+                    seen = seen | not_null
 
             return [result]
 

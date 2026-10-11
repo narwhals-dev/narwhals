@@ -170,7 +170,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, pl.List):
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
     if isinstance(dtype, pl.Array):
-        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
+        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
         return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
     if isinstance(dtype, pl.Decimal):
         return dtypes.Decimal(dtype.precision, dtype.scale)
@@ -343,6 +343,9 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     @abc.abstractmethod
     def zfill(self, width: int) -> CompliantT: ...
 
+    @abc.abstractmethod
+    def slice(self, offset: int, length: int | None) -> CompliantT: ...
+
     len_chars: Method[CompliantT]
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
@@ -352,7 +355,6 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]
-    slice: Method[CompliantT]
     split: Method[CompliantT]
     to_date: Method[CompliantT]
     to_datetime: Method[CompliantT]
@@ -361,6 +363,19 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     to_uppercase: Method[CompliantT]
     pad_start: Method[CompliantT]
     pad_end: Method[CompliantT]
+
+
+def native_get_categories(native: pl.Series) -> pl.Series:
+    # NOTE: Polars deprecated `cat.get_categories` in v1.44 and removed it
+    # in v2.0, so we use the workaround they suggest.
+    # See https://github.com/narwhals-dev/narwhals/issues/3895.
+    #
+    # For `Enum`, the declared categories are already unique, ordered, and
+    # null-free, so we can return `dtype.categories` directly.
+    dtype = native.dtype
+    if isinstance(dtype, pl.Enum):
+        return dtype.categories
+    return native.unique(maintain_order=True).drop_nulls().cast(pl.String)
 
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
