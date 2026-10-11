@@ -278,25 +278,28 @@ def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
 
 
 @pytest.mark.parametrize(
-    ("format", "time_unit", "value", "expected"),
+    ("format", "time_unit", "value", "expected", "nanosecond"),
     [
         (
             "%Y-%m-%dT%H:%M:%S%.3f",
             "ms",
             "2020-01-01T12:34:56.123",
             datetime(2020, 1, 1, 12, 34, 56, 123000),
+            123_000_000,
         ),
         (
             "%Y-%m-%dT%H:%M:%S%.f",
             None,
             "2020-01-01T12:34:56.123",
             datetime(2020, 1, 1, 12, 34, 56, 123000),
+            123_000_000,
         ),
         (
             "%Y-%m-%dT%H:%M:%S%.9f",
             "ns",
             "2020-01-01T12:34:56.123456789",
             datetime(2020, 1, 1, 12, 34, 56, 123456),
+            123_456_789,
         ),
     ],
 )
@@ -307,6 +310,7 @@ def test_to_datetime_fractional_seconds(
     time_unit: TimeUnit | None,
     value: str,
     expected: datetime,
+    nanosecond: int,
 ) -> None:
     # Fractional-second formats determine the resulting `Datetime` precision,
     # matching polars. No other backend parses them. `%.f` parses on every
@@ -321,7 +325,9 @@ def test_to_datetime_fractional_seconds(
         assert isinstance(result.collect_schema()["b"], nw.Datetime)
     else:
         assert result.collect_schema()["b"] == nw.Datetime(time_unit)
-    assert_equal_data(result, {"b": [expected]})
+    # Python `datetime`s stop at microseconds, so check the sub-microsecond digits too.
+    result = result.with_columns(ns=nw.col("b").dt.nanosecond())
+    assert_equal_data(result, {"b": [expected], "ns": [nanosecond]})
 
 
 @pytest.mark.parametrize(
