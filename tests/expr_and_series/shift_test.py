@@ -131,3 +131,13 @@ def test_shift_series_invalid_params(
     df = nw.from_native(constructor_eager(data), eager_only=True)
     with context:
         df["a"].shift(n)
+
+
+def test_shift_longer_than_series(constructor_eager: ConstructorEager) -> None:
+    # Shifting by more than the length must return an all-null series of the
+    # same length, not grow or shrink it.
+    df = nw.from_native(constructor_eager({"a": [1, 2]}), eager_only=True)
+    assert_equal_data(df.select(nw.col("a").shift(3)), {"a": [None, None]})
+    assert_equal_data(df.select(nw.col("a").shift(-3)), {"a": [None, None]})
+    assert_equal_data({"a": df["a"].shift(3)}, {"a": [None, None]})
+    assert_equal_data({"a": df["a"].shift(-3)}, {"a": [None, None]})

@@ -51,10 +51,10 @@ it. That is to say, if you write your code like this:
 === "from/to_native"
     ```py
     import narwhals.stable.v2 as nw
-    from narwhals.stable.v2.typing import IntoFrameT
+    from narwhals.stable.v2.typing import IntoDataFrameT, IntoLazyFrameT
 
 
-    def func(df: IntoFrameT) -> IntoFrameT:
+    def func(df: IntoDataFrameT | IntoLazyFrameT) -> IntoDataFrameT | IntoLazyFrameT:
         return nw.from_native(df).with_columns(nw.col("a").cum_sum()).to_native()
     ```
 

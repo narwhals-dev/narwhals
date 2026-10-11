@@ -155,6 +155,22 @@ def test_concat_diagonal_bigger(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_concat_diagonal_duckdb_own_connection() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3997
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    con.execute("create table t as select * from (values (1, 'a'), (2, 'b')) v(a, b)")
+    df_1 = nw.from_native(con.table("t").select("a, b"))
+    df_2 = nw.from_native(con.table("t").select("a"))
+    result = nw.concat([df_1, df_1], how="vertical").sort("a", "b")
+    assert_equal_data(result, {"a": [1, 1, 2, 2], "b": ["a", "a", "b", "b"]})
+
+    result = nw.concat([df_1, df_2], how="diagonal").sort("a", "b", nulls_last=True)
+    assert_equal_data(result, {"a": [1, 1, 2, 2], "b": ["a", None, "b", None]})
+
+
 def test_concat_diagonal_invalid(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:

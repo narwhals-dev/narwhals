@@ -5,7 +5,13 @@ from contextlib import nullcontext as does_not_raise
 import pytest
 
 import narwhals as nw
-from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import (
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    skip_if_no_windowed_corr_cov,
+)
 
 data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 
@@ -21,16 +27,11 @@ data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
 )
 def test_corr_expr(
     constructor: Constructor,
-    request: pytest.FixtureRequest,
     output_name: str,
     a: str | nw.Expr,
     b: str | nw.Expr,
     expected_corr: float,
 ) -> None:
-    if "pyspark" in str(constructor) and expected_corr is None:
-        request.applymarker(
-            pytest.skip(reason="Pyspark corr function does not allow None values")
-        )
     df = nw.from_native(constructor(data))
     result = df.select(nw.corr(a, b).round(2))
     expected = {output_name: [expected_corr]}
@@ -121,10 +122,7 @@ def test_corr_series_spearman(
 def test_corr_over(constructor: Constructor) -> None:
     # Regression test for the window-broadcast path: `corr` must compose with
     # `over`/`with_columns` on SQL backends (mirrors `test_cov_over`).
-    if not any(x in str(constructor) for x in ("duckdb", "pyspark", "sqlframe")):
-        pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
-        pytest.skip()
+    skip_if_no_windowed_corr_cov(constructor)
 
     df = nw.from_native(
         constructor(
@@ -140,6 +138,15 @@ def test_corr_over(constructor: Constructor) -> None:
     # g=1: corr([1,3,3], [1,2,3]) = sqrt(3)/2; g=2: two points are perfectly correlated.
     expected = {"corr": [3**0.5 / 2, 3**0.5 / 2, 3**0.5 / 2, 1.0, 1.0]}
     assert_equal_data(result, expected)
+
+
+def test_corr_over_single_row_group(constructor: Constructor) -> None:
+    skip_if_no_windowed_corr_cov(constructor)
+    df = nw.from_native(
+        constructor({"i": [0, 1, 2], "g": [1, 1, 2], "a": [1, 3, 2], "b": [1, 2, 1]})
+    )
+    result = df.with_columns(corr=nw.corr("a", "b").over("g")).sort("i").select("corr")
+    assert_equal_data(result, {"corr": [1.0, 1.0, None]})
 
 
 def test_corr_series_foreign_index() -> None:
@@ -160,16 +167,16 @@ def test_corr_series_foreign_index() -> None:
     assert_equal_data(result, expected)
 
 
-def test_corr_pairwise_nulls(
-    constructor: Constructor, request: pytest.FixtureRequest
-) -> None:
+def test_corr_constant_column(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1.0, 1.0, 1.0], "b": [1.0, 2.0, 3.0]}))
+    result = df.select(nw.corr("a", "b").alias("c"))
+    assert_equal_data(result, {"c": [None]})
+
+
+def test_corr_pairwise_nulls(constructor: Constructor) -> None:
     # Correlation is pairwise: a null in one column must drop that row entirely,
     # otherwise the other column's mean/stddev are computed over the wrong rows.
     # Regression test for the pyarrow path, which previously skipped this filtering.
-    if "pyspark" in str(constructor):
-        request.applymarker(
-            pytest.skip(reason="PySpark corr function does not allow None values")
-        )
     df = nw.from_native(
         constructor({"a": [1.0, 2.0, 3.0, 100.0], "b": [1.0, 2.0, 3.0, None]})
     )
@@ -177,3 +184,28 @@ def test_corr_pairwise_nulls(
     # Pairwise-valid rows are a=[1, 2, 3], b=[1, 2, 3]: perfectly correlated.
     expected = {"c": [1.0]}
     assert_equal_data(result, expected)
+
+
+def test_corr_numerical_stability(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 11, 0):
+        request.applymarker(pytest.mark.xfail(reason="single-pass variance"))
+    df = nw.from_native(
+        constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})
+    )
+    result = df.select(nw.corr("a", "b").round(2))
+    assert_equal_data(result, {"a": [0.99]})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_corr_group_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    df = nw.from_native(
+        constructor(
+            {"g": [1, 1, 2, 2], "a": [1.0, 2.0, 1.0, 2.0], "b": [1.0, 2.0, 2.0, 1.0]}
+        )
+    )
+    result = df.group_by("g").agg(nw.corr("a", "b").alias("corr")).sort("g")
+    assert_equal_data(result, {"g": [1, 2], "corr": [1.0, -1.0]})

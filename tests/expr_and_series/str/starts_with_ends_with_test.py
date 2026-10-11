@@ -135,6 +135,20 @@ def test_starts_with_null(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize("method", ["contains", "starts_with", "ends_with"])
+def test_empty_pattern(constructor: Constructor, method: str) -> None:
+    # An empty pattern matches every non-null row (null stays null, except on
+    # plain pandas, which has no nullable boolean).
+    df = nw.from_native(constructor({"a": ["x", None, ""]}))
+    result = df.select(getattr(nw.col("a").str, method)("").alias("match"))
+    expected: dict[str, list[Any]]
+    if any(constructor is c for c in NON_NULLABLE_CONSTRUCTORS):
+        expected = {"match": [True, False, True]}
+    else:
+        expected = {"match": [True, None, True]}
+    assert_equal_data(result, expected)
+
+
 def test_pandas_object_dtype_starts_with_null() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3850
     pytest.importorskip("pandas")

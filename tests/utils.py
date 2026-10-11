@@ -102,6 +102,15 @@ def skip_if_no_categorical_ordering(
         pytest.skip(reason="cannot cast `string` to `dictionary`")
 
 
+def skip_if_no_windowed_corr_cov(constructor: Constructor, /) -> None:
+    """Skip unless the backend supports `corr`/`cov` with `over`."""
+    id_ = str(constructor)
+    if not any(x in id_ for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip(reason="no windowed `corr`/`cov`")
+    if "duckdb" in id_ and DUCKDB_VERSION < (1, 3):
+        pytest.skip(reason="`over` requires DuckDB 1.3.0")
+
+
 def is_pd_na(value: Any) -> bool:
     return (pd := get_pandas()) is not None and pd.isna(value)
 
@@ -128,8 +137,8 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
         if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"engine": "gpu"})
-        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
-            kwargs[Implementation.POLARS].update({"engine": "streaming"})
+        if engine := os.environ.get("NARWHALS_POLARS_ENGINE"):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"engine": engine})
 
         result = result.collect(**kwargs.get(result.implementation, {}))
 

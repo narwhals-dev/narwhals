@@ -21,6 +21,7 @@ for their dataframe interoperability needs:
 * [plotly](https://github.com/plotly/plotly.py)
 * [pointblank](https://github.com/posit-dev/pointblank)
 * [pymarginaleffects](https://github.com/vincentarelbundock/pymarginaleffects)
+* [pyreadr](https://github.com/ofajardo/pyreadr)
 * [pyreadstat](https://github.com/Roche/pyreadstat)
 * [py-shiny](https://github.com/posit-dev/py-shiny)
 * [pysummaries](https://github.com/Genentech/pysummaries)

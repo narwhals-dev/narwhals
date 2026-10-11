@@ -7,6 +7,7 @@ import pandas as pd
 
 from narwhals._compliant import DepthTrackingExpr, LazyExpr
 from narwhals._dask.expr_dt import DaskExprDateTimeNamespace
+from narwhals._dask.expr_list import DaskExprListNamespace
 from narwhals._dask.expr_str import DaskExprStringNamespace
 from narwhals._dask.utils import (
     add_row_index,
@@ -21,6 +22,7 @@ from narwhals._utils import (
     NO_DEFAULT,
     Implementation,
     generate_temporary_column_name,
+    length_changing_hint,
     not_implemented,
 )
 from narwhals.exceptions import InvalidOperationError
@@ -403,20 +405,26 @@ class DaskExpr(
     def fill_null(
         self, value: Self | None, strategy: FillNullStrategy | None, limit: int | None
     ) -> Self:
-        def func(expr: dx.Series, value: Self | None = None) -> dx.Series:
-            if value is not None:
-                res_ser = expr.fillna(value)
-            else:
-                res_ser = (
+        if value is None:
+            return self._with_callable(
+                lambda expr: (
                     expr.ffill(limit=limit)
                     if strategy == "forward"
                     else expr.bfill(limit=limit)
                 )
-            return res_ser
+            )
 
-        if value is not None:
-            return self._with_callable(func, expression_args={"value": value})
-        return self._with_callable(func)
+        def func(df: DaskLazyFrame) -> list[dx.Series]:
+            fill_value = df._evaluate_single_output_expr(value)
+            aligned = (align_series_full_broadcast(df, s, fill_value) for s in self(df))
+            return [series.fillna(fill) for series, fill in aligned]
+
+        return self.__class__(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            version=self._version,
+        )
 
     def clip(self, lower_bound: Self, upper_bound: Self) -> Self:
         return self._with_callable(
@@ -709,12 +717,20 @@ class DaskExpr(
     def dt(self) -> DaskExprDateTimeNamespace:
         return DaskExprDateTimeNamespace(self)
 
+    @property
+    def list(self) -> DaskExprListNamespace:
+        return DaskExprListNamespace(self)
+
     any_value = not_implemented()
-    filter = not_implemented()
+    filter = not_implemented(
+        hint=length_changing_hint(
+            instead_of="lf.select(nw.col('a').filter(nw.col('b') > 0))",
+            use="lf.filter(nw.col('b') > 0).select('a')",
+        )
+    )
     first = not_implemented()
     rank = not_implemented()
     last = not_implemented()
 
     # namespaces
-    list: Any = not_implemented()
     struct: Any = not_implemented()

@@ -17,11 +17,11 @@ expected_pyarrow = [2.5, -1, None, None, None, 3]
 
 
 def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")) or (
+    if "cudf" in str(constructor) or (
         "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7)
     ):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
@@ -37,7 +37,7 @@ def test_median_expr(request: pytest.FixtureRequest, constructor: Constructor) -
     )
     if any(
         backend in str(constructor)
-        for backend in ("pandas", "pyarrow", "pandas[pyarrow]")
+        for backend in ("pandas", "pyarrow", "pandas[pyarrow]", "dask")
     ):
         # there is a mismatch as pyarrow uses an approximate median
         assert_equal_data(result, {"a": expected_pyarrow})

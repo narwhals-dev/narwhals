@@ -20,7 +20,7 @@ from narwhals._utils import (
     is_eager_allowed,
     is_nested_literal,
     is_sequence_of,
-    normalize_path,
+    normalize_source,
     supports_arrow_c_stream,
     validate_laziness,
 )
@@ -636,7 +636,9 @@ def read_csv(
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -663,7 +665,7 @@ def read_csv(
     impl = Implementation.from_backend(backend)
     if is_eager_allowed(impl):
         ns = Version.MAIN.namespace.from_backend(impl).compliant
-        frame = ns.read_csv(normalize_path(source), separator=separator, **kwargs)
+        frame = ns.read_csv(normalize_source(source), separator=separator, **kwargs)
         return frame.to_narwhals()
     if impl is Implementation.UNKNOWN:  # pragma: no cover
         native_namespace = impl.to_native_namespace()
@@ -697,7 +699,9 @@ def scan_csv(
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -738,7 +742,7 @@ def scan_csv(
             raise AttributeError(msg) from e
         return from_native(native_frame).lazy()
     ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_csv(normalize_path(source), separator=separator, **kwargs)
+    frame = ns.scan_csv(normalize_source(source), separator=separator, **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
@@ -749,7 +753,9 @@ def read_parquet(
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -780,7 +786,7 @@ def read_parquet(
     impl = Implementation.from_backend(backend)
     if is_eager_allowed(impl):
         ns = Version.MAIN.namespace.from_backend(impl).compliant
-        frame = ns.read_parquet(normalize_path(source), **kwargs)
+        frame = ns.read_parquet(normalize_source(source), **kwargs)
         return frame.to_narwhals()
     if impl is Implementation.UNKNOWN:  # pragma: no cover
         native_namespace = impl.to_native_namespace()
@@ -822,7 +828,9 @@ def scan_parquet(
         ```
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -877,7 +885,7 @@ def scan_parquet(
             raise AttributeError(msg) from e
         return from_native(native_frame).lazy()
     ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_parquet(normalize_path(source), **kwargs)
+    frame = ns.scan_parquet(normalize_source(source), **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
@@ -1240,6 +1248,8 @@ def cov(a: IntoExpr, b: IntoExpr, *, ddof: int = 1) -> Expr:
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is zero.
+
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
 
@@ -1274,6 +1284,8 @@ def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the minimum value horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is null.
+
     Notes:
         We support `min_horizontal` over numeric columns only.
 
@@ -1305,6 +1317,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the maximum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `max_horizontal` over numeric columns only.
@@ -1622,6 +1636,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
+
+    Null values are ignored.
 
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts

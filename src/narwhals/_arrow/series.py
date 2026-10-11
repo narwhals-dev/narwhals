@@ -374,12 +374,22 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.drop_null())
 
     def shift(self, n: int) -> Self:
-        if n > 0:
-            arrays = [nulls_like(n, self), *self.native[:-n].chunks]
-        elif n < 0:
-            arrays = [*self.native[-n:].chunks, nulls_like(-n, self)]
-        else:
+        if n == 0:
             return self._with_native(self.native)
+        length = len(self.native)
+        # Cap the number of null padding values at the length of the series:
+        # shifting by at least the length must still return a series of the
+        # same length (all null), and must not desync the array lengths that
+        # rolling windows rely on.
+        null_array = nulls_like(min(abs(n), length), self)
+        if abs(n) >= length:
+            # Every value is shifted out, so the result is all null; return it
+            # directly and skip the slice and concat.
+            return self._with_native(null_array)
+        if n > 0:
+            arrays = [null_array, *self.native[:-n].chunks]
+        else:
+            arrays = [*self.native[-n:].chunks, null_array]
         return self._with_native(pa.concat_arrays(arrays))
 
     def std(self, *, ddof: int, _return_py_scalar: bool = True) -> float:
@@ -485,10 +495,13 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
 
     def cum_sum(self, *, reverse: bool) -> Self:
         cum_sum = pc.cumulative_sum
+        native = self.native
+        if pa.types.is_integer(native.type) and native.type.bit_width < 64:
+            native = pc.cast(native, pa.int64())
         result = (
-            cum_sum(self.native, skip_nulls=True)
+            cum_sum(native, skip_nulls=True)
             if not reverse
-            else cum_sum(self.native[::-1], skip_nulls=True)[::-1]
+            else cum_sum(native[::-1], skip_nulls=True)[::-1]
         )
         return self._with_native(result)
 

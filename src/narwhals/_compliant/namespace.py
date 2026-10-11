@@ -45,7 +45,7 @@ if TYPE_CHECKING:
         Into1DArray,
         IntoDType,
         NonNestedLiteral,
-        NormalizedPath,
+        NormalizedSource,
         _2DArray,
     )
 
@@ -111,9 +111,9 @@ class CompliantNamespace(Protocol[CompliantFrameT, CompliantExprT]):
     def struct(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def coalesce(self, *exprs: CompliantExprT) -> CompliantExprT: ...
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> CompliantFrameT: ...
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> CompliantFrameT: ...
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> CompliantFrameT: ...
     # NOTE: typing this accurately requires 2x more `TypeVar`s
     def from_native(self, data: Any, /) -> Any: ...
     def is_native(self, obj: Any, /) -> TypeIs[Any]:
@@ -225,15 +225,15 @@ class EagerNamespace(
     @property
     def _series(self) -> type[EagerSeriesT_co]: ...
     def read_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> EagerDataFrameT: ...
-    def read_parquet(self, source: NormalizedPath, **kwds: Any) -> EagerDataFrameT: ...
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> EagerDataFrameT: ...
     def scan_csv(
-        self, source: NormalizedPath, *, separator: str = ",", **kwds: Any
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
     ) -> EagerDataFrameT:
         return self.read_csv(source, separator=separator, **kwds)
 
-    def scan_parquet(self, source: NormalizedPath, **kwds: Any) -> EagerDataFrameT:
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> EagerDataFrameT:
         return self.read_parquet(source, **kwds)
 
     def _if_then_else(
