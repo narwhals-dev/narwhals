@@ -72,10 +72,11 @@ jobs:
         os: [ubuntu-latest]
         include:
           - python-version: "3.11"
-            polars_streaming: true
+            # Polars>=2 collects with the streaming engine by default
+            polars_engine: in-memory
     runs-on: ${{ matrix.os }}
     env:
-      NARWHALS_POLARS_NEW_STREAMING: ${{ matrix.polars_streaming == true }}
+      NARWHALS_POLARS_ENGINE: ${{ matrix.polars_engine }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -121,6 +122,8 @@ jobs:
         run: make run-ci DEPS="-U --group tests --extra pandas --extra pyarrow" RUN_ONLY="--isolated" CMD="pytest tests --runslow --constructors=pandas[pyarrow],pyarrow"
       - name: Run pytest (polars)
         run: make run-ci DEPS="-U --group tests --extra polars" RUN_ONLY="--isolated" CMD="pytest tests --runslow --constructors=polars[eager],polars[lazy]"
+      - name: Run pytest (polars<2)
+        run: make run-ci DEPS="-U --group tests --extra polars" RUN_ONLY="--isolated --with 'polars>=1.44,<2'" CMD="pytest tests --runslow --constructors=polars[eager],polars[lazy]"
 
   python-314:
     if: github.head_ref != 'bump-version'

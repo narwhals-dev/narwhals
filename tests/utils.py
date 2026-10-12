@@ -137,8 +137,8 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
         if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"engine": "gpu"})
-        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
-            kwargs[Implementation.POLARS].update({"engine": "streaming"})
+        if engine := os.environ.get("NARWHALS_POLARS_ENGINE"):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"engine": engine})
 
         result = result.collect(**kwargs.get(result.implementation, {}))
 

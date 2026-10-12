@@ -16,6 +16,7 @@ from narwhals._pandas_like.utils import (
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
+    floordiv_null_on_zero,
     get_dtype_backend,
     import_array_module,
     is_dtype_pyarrow,
@@ -507,10 +508,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_binary_right(operator.truediv, other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._with_binary(operator.floordiv, other)
+        return self._with_binary(floordiv_null_on_zero, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.floordiv, other)
+        return self._with_binary_right(floordiv_null_on_zero, other)
 
     def __pow__(self, other: Any) -> Self:
         return self._with_binary(operator.pow, other)

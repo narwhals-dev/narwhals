@@ -45,7 +45,7 @@ def test_explode_single_col(
 
     result = (
         nw.from_native(constructor(data))
-        .with_columns(nw.col(column).cast(nw.List(nw.Int32())))
+        .cast({column: nw.List(nw.Int32())})
         .explode(column)
         .select("a", column)
         .sort("a", column, nulls_last=True)

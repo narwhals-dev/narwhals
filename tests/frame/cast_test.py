@@ -60,6 +60,20 @@ def test_cast_nonexistent_column(constructor: Constructor) -> None:
         df.cast({"z": nw.Int64})
 
 
+def test_cast_with_all_null_column(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "ibis" in str(constructor) or (
+        "pyspark" in str(constructor) and "sqlframe" not in str(constructor)
+    ):
+        reason = "Constructor cannot infer a type for an all-null column"
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    # NOTE: An all-null column has a NULL type, whose schema SQLFrame cannot resolve.
+    df = nw.from_native(constructor({"a": [1, 2], "b": [None, None]}))
+    result = df.cast({"a": nw.Float64})
+    assert_equal_data(result, {"a": [1.0, 2.0], "b": [None, None]})
+
+
 def test_cast_preserves_arrow_schema() -> None:
     pytest.importorskip("pyarrow")
     import pyarrow as pa

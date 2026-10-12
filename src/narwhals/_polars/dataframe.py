@@ -241,7 +241,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
         return self._with_native(
             self.native.join(
                 other=other_native,
-                how=how_native,
+                how=how_native,  # type: ignore[arg-type]
                 left_on=left_on,
                 right_on=right_on,
                 suffix=suffix,
@@ -276,7 +276,7 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
     ) -> Self:
         if self._backend_version < (1, 0, 0):
             return self._with_native(
-                self.native.melt(
+                self.native.melt(  # type: ignore[attr-defined]
                     id_vars=index,
                     value_vars=on,
                     variable_name=variable_name,
@@ -735,6 +735,16 @@ class PolarsLazyFrame(PolarsBaseFrame[pl.LazyFrame]):
                 raise ColumnNotFoundError(str(e)) from e
 
         return func
+
+    @property
+    def columns(self) -> list[str]:
+        # NOTE: `pl.LazyFrame.columns` emits a `PerformanceWarning` since Polars 1.0.
+        native = self.native
+        return (
+            native.columns
+            if self._backend_version < (1,)
+            else native.collect_schema().names()
+        )
 
     def _iter_columns(self) -> Iterator[PolarsSeries]:  # pragma: no cover
         yield from self.collect(Implementation.POLARS).iter_columns()

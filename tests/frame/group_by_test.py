@@ -296,7 +296,7 @@ def test_key_with_nulls(constructor: Constructor, request: pytest.FixtureRequest
         .group_by("b")
         .agg(nw.len(), nw.col("a").min())
         .sort("a")
-        .with_columns(nw.col("b").cast(nw.Float64))
+        .cast({"b": nw.Float64})
     )
     expected = {"b": [4.0, 5, None], "len": [1, 1, 1], "a": [1, 2, 3]}
     assert_equal_data(result, expected)
@@ -309,7 +309,7 @@ def test_key_with_nulls_ignored(constructor: Constructor) -> None:
         .group_by("b", drop_null_keys=True)
         .agg(nw.len(), nw.col("a").min())
         .sort("a")
-        .with_columns(nw.col("b").cast(nw.Float64))
+        .cast({"b": nw.Float64})
     )
     expected = {"b": [4.0, 5], "len": [1, 1], "a": [1, 2]}
     assert_equal_data(result, expected)
@@ -362,9 +362,7 @@ def test_group_by_categorical(constructor: Constructor) -> None:
     data = {"g1": ["a", "a", "b", "b"], "g2": ["x", "y", "x", "z"], "x": [1, 2, 3, 4]}
     df = nw.from_native(constructor(data))
     result = (
-        df.with_columns(
-            g1=nw.col("g1").cast(nw.Categorical()), g2=nw.col("g2").cast(nw.Categorical())
-        )
+        df.cast({"g1": nw.Categorical(), "g2": nw.Categorical()})
         .group_by(["g1", "g2"])
         .agg(nw.col("x").sum())
         .sort("x")

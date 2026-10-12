@@ -10,10 +10,10 @@ expected = {"a": [2, 3, None, 0, 1]}
 
 
 def test_len_expr(request: pytest.FixtureRequest, constructor: Constructor) -> None:
-    if any(backend in str(constructor) for backend in ("dask", "cudf")):
+    if "cudf" in str(constructor):
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas" in str(constructor):
+    if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
         pytest.importorskip("pyarrow")
