@@ -353,9 +353,7 @@ def test_to_datetime_invalid_raises(
         and "sqlframe" not in str(constructor)
         and PYSPARK_VERSION < (4,)
     ):
-        request.applymarker(
-            pytest.mark.xfail(reason="ANSI is off before Spark 4: null, no error")
-        )
+        request.applymarker(pytest.mark.xfail(reason="Spark<4 (ANSI off) returns null"))
     df = nw.from_native(constructor(data))
     # Broad `Exception`: error types differ per backend.
     with pytest.raises(Exception):  # noqa: B017, PT011
