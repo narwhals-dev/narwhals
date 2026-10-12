@@ -81,12 +81,7 @@ def test_var_ddof_group_by(constructor: Constructor, ddof: int) -> None:
 
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4])
-def test_var_ddof_over(
-    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
-) -> None:
-    if "duckdb" in str(constructor) and ddof > 1:
-        # The rescaled expression is wrapped as a single window function, see #4023.
-        request.applymarker(pytest.mark.xfail)
+def test_var_ddof_over(constructor: Constructor, ddof: int) -> None:
     df = nw.from_native(constructor(data_ddof))
     result = df.with_columns(nw.col("a").var(ddof=ddof).over("g")).sort("i").select("a")
     expected = {
