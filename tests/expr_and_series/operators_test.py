@@ -48,7 +48,11 @@ def test_comparand_operators_expr(
 
 @pytest.mark.parametrize(
     ("operator", "expected"),
-    [("__and__", [True, False, False, False]), ("__or__", [True, True, True, False])],
+    [
+        ("__and__", [True, False, False, False]),
+        ("__or__", [True, True, True, False]),
+        ("__xor__", [False, True, True, False]),
+    ],
 )
 def test_logic_operators_expr(
     constructor: Constructor, operator: str, expected: list[bool]
@@ -57,6 +61,35 @@ def test_logic_operators_expr(
     df = nw.from_native(constructor(data))
 
     result = df.select(getattr(nw.col("a"), operator)(nw.col("b")))
+    assert_equal_data(result, {"a": expected})
+
+
+def test_xor_operator_expr(constructor: Constructor) -> None:
+    data = {"a": [True, False, True, False], "b": [True, True, False, False]}
+    df = nw.from_native(constructor(data))
+    result = df.select(a=nw.col("a") ^ nw.col("b")).lazy().collect()
+    column = result.get_column("a").to_list()
+    assert len(column) == 4
+    assert column == [False, True, True, False]
+    # Default __and__ still produces the conjunction.
+    and_result = df.select(a=nw.col("a") & nw.col("b")).lazy().collect()
+    assert and_result.get_column("a").to_list() == [True, False, False, False]
+
+
+def test_xor_operator_expr_nulls(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "cudf" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    if "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail)
+    data = {"a": [True, True, False, None], "b": [True, None, None, None]}
+    df = nw.from_native(constructor(data))
+    result = df.select(nw.col("a") ^ nw.col("b"))
+    if any(x in str(constructor) for x in ("pandas_constructor",)):
+        expected: list[bool | None] = [False, True, False, False]
+    else:
+        expected = [False, None, None, None]
     assert_equal_data(result, {"a": expected})
 
 
@@ -92,6 +125,8 @@ def test_logic_operators_expr_kleene(
         ("__rand__", [False, False, False, False]),
         ("__or__", [True, True, False, False]),
         ("__ror__", [True, True, False, False]),
+        ("__xor__", [True, True, False, False]),
+        ("__rxor__", [True, True, False, False]),
     ],
 )
 def test_logic_operators_expr_scalar(
@@ -103,7 +138,7 @@ def test_logic_operators_expr_scalar(
     if (
         "dask" in str(constructor)
         and DASK_VERSION < (2024, 10)
-        and operator in {"__rand__", "__ror__"}
+        and operator in {"__rand__", "__ror__", "__rxor__"}
     ):
         request.applymarker(pytest.mark.xfail)
     data = {"a": [True, True, False, False]}
@@ -161,6 +196,8 @@ def test_comparand_operators_series(
         ("__rand__", [True, False, False, False]),
         ("__or__", [True, True, True, False]),
         ("__ror__", [True, True, True, False]),
+        ("__xor__", [False, True, True, False]),
+        ("__rxor__", [False, True, True, False]),
     ],
 )
 def test_logic_operators_series(
