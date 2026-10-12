@@ -11,7 +11,7 @@ from narwhals._utils import Implementation, Version, extend_bool, isinstance_or_
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
     from typing import TypeAlias
 
     from duckdb import DuckDBPyRelation
@@ -400,7 +400,7 @@ def catch_duckdb_exception(
     return exception
 
 
-_BINARY_OPS = {
+_BINARY_OPS: Mapping[str, Callable[[Expression, Expression], Expression]] = {
     "divide": operator.truediv,
     "floordiv": operator.floordiv,
     "and": operator.and_,
@@ -409,7 +409,7 @@ _BINARY_OPS = {
 
 def function(name: str, *args: Expression) -> Expression:
     if name in _BINARY_OPS:
-        return _BINARY_OPS[name](*args)  # type: ignore[no-any-return]
+        return _BINARY_OPS[name](*args)
     if name in {"isnull", "isnotnull"}:
         return getattr(args[0], name)()  # type: ignore[no-any-return]
     if name == "count_distinct":
