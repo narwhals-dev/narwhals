@@ -11,6 +11,7 @@ from tests.utils import (
     DASK_VERSION,
     DUCKDB_VERSION,
     PANDAS_VERSION,
+    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -148,7 +149,9 @@ def test_rfloordiv_negative_operands(
 def test_floordiv_large_integers(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if any(x in str(constructor) for x in ["ibis", "sqlframe", "pyspark"]):
+    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
+        pytest.skip(reason="floors through float64")
+    if any(x in str(constructor) for x in ("ibis", "sqlframe", "pyspark")):
         request.applymarker(pytest.mark.xfail(reason="floors through float64"))
     # Past 2**53, so flooring a float quotient is off by one.
     big = 2**62 + 1
@@ -182,7 +185,13 @@ def test_floordiv_unsigned_dtype(
 
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
-    [(7.0, 2.0, 3.0), (-7.0, 2.0, -4.0), (1.0, float("inf"), 0.0), (1.0, 0.1, 10.0)],
+    [
+        (7.0, 2.0, 3.0),
+        (-7.0, 2.0, -4.0),
+        (1.0, float("inf"), 0.0),
+        (1.0, 0.1, 10.0),
+        (-1.0, 0.1, -10.0),
+    ],
 )
 def test_floordiv_floats(
     left: float,
@@ -192,9 +201,9 @@ def test_floordiv_floats(
     request: pytest.FixtureRequest,
 ) -> None:
     if (
-        right == 0.1
+        left // right != expected
         and "pyarrow" not in str(constructor)
-        and any(x in str(constructor) for x in ["pandas", "modin", "cudf", "dask"])
+        and any(x in str(constructor) for x in ("pandas", "modin", "cudf", "dask"))
     ):
         request.applymarker(
             pytest.mark.xfail(reason="pandas follows Python, where 1.0 // 0.1 is 9.0")
