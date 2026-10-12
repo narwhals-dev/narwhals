@@ -250,6 +250,7 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
         result = s.hist(bin_count=bin_count, include_breakpoint=include_breakpoint)
         assert len(result) == bin_count
         assert result["count"].sum() == 0
+        assert result["count"].dtype.is_integer()
 
         if include_breakpoint:
             bps = result["breakpoint"].to_list()
@@ -260,6 +261,7 @@ def test_hist_no_data(library: str, *, include_breakpoint: bool) -> None:
     result = s.hist(bins=[1, 5, 10], include_breakpoint=include_breakpoint)
     assert len(result) == 2
     assert result["count"].sum() == 0
+    assert result["count"].dtype.is_integer()
 
 
 @param_library
