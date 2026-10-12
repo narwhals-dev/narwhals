@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 import narwhals as nw
-from narwhals.exceptions import UnsupportedDTypeError
+import narwhals.stable.v1 as nw_v1
+import narwhals.stable.v2 as nw_v2
+from narwhals.exceptions import InvalidOperationError, UnsupportedDTypeError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
@@ -21,7 +23,7 @@ from tests.utils import (
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from narwhals.typing import NonNestedDType
+    from narwhals.typing import IntoDType, NonNestedDType
 
 DATA = {
     "a": [1],
@@ -64,6 +66,147 @@ SPARK_LIKE_INCOMPATIBLE_COLUMNS = {"e", "f", "g", "h", "o", "p"}
 DUCKDB_INCOMPATIBLE_COLUMNS = {"o"}
 IBIS_INCOMPATIBLE_COLUMNS = {"o"}
 MODIN_XFAIL_COLUMNS = {"o", "k"}
+
+
+@pytest.mark.parametrize("dtype", [nw.Int8, nw.Int16(), nw.Int32, nw.Int64()])
+@pytest.mark.parametrize("float_dtype", [nw.Float32, nw.Float64])
+def test_cast_float_to_signed_integer(
+    constructor: Constructor, dtype: IntoDType, float_dtype: type[nw.Float32 | nw.Float64]
+) -> None:
+    values = [1.7, -1.7, 2.5, -2.5, 0.9, -0.9]
+    data = {"idx": list(range(len(values))), "a": values}
+    df = nw.from_native(constructor(data))
+    result = df.select("idx", nw.col("a").cast(float_dtype).cast(dtype)).sort("idx")
+    assert_equal_data(result, {"idx": data["idx"], "a": [1, -1, 2, -2, 0, 0]})
+    assert result.collect_schema()["a"] == dtype
+    assert_equal_data(df, data)
+
+
+@pytest.mark.parametrize("dtype", [nw.Int8, nw.Int16, nw.Int32, nw.Int64])
+def test_cast_float_to_signed_integer_series(
+    constructor_eager: ConstructorEager, dtype: IntoDType
+) -> None:
+    s = nw.from_native(constructor_eager({"a": [1.7, -1.7, 2.5, -2.5, 0.9, -0.9]}))["a"]
+    result = s.cast(dtype)
+    assert result.to_list() == [1, -1, 2, -2, 0, 0]
+    assert result.dtype == dtype
+    assert s.to_list() == [1.7, -1.7, 2.5, -2.5, 0.9, -0.9]
+
+
+def test_cast_float_to_signed_integer_nulls(constructor: Constructor) -> None:
+    if any(
+        x in str(constructor) for x in ("pandas_constructor", "modin_constructor", "dask")
+    ):
+        pytest.skip("NumPy-backed integers cannot represent nulls")
+    df = nw.from_native(constructor({"idx": [0, 1, 2], "a": [1.7, None, -1.7]}))
+    result = df.select("idx", nw.col("a").cast(nw.Int64)).sort("idx")
+    assert_equal_data(result, {"idx": [0, 1, 2], "a": [1, None, -1]})
+
+
+def test_frame_cast_float_to_signed_integer(constructor: Constructor) -> None:
+    if "duckdb" not in str(constructor):
+        pytest.skip("DuckDB frame casts build compliant expressions without metadata")
+    df = nw.from_native(constructor({"idx": [0, 1], "a": [1.7, -1.7]}))
+    result = df.cast({"a": nw.Int64}).sort("idx")
+    assert_equal_data(result, {"idx": [0, 1], "a": [1, -1]})
+
+
+@pytest.mark.parametrize(
+    "values", [[128.0], [-129.0], [float("inf")], [float("-inf")], [1e30]]
+)
+def test_cast_float_to_signed_integer_overflow(
+    constructor: Constructor, values: list[float]
+) -> None:
+    if "pyarrow" in str(constructor):
+        exception = pytest.importorskip("pyarrow").ArrowInvalid
+    elif any(x in str(constructor) for x in ("duckdb", "sqlframe")):
+        exception = pytest.importorskip("duckdb").ConversionException
+    elif "polars" in str(constructor):
+        exception = InvalidOperationError
+    else:
+        pytest.skip("These backends perform checked integer casts")
+    df = nw.from_native(constructor({"a": values}))
+    with pytest.raises(exception, match=r"convert|cast|range|truncate"):
+        df.select(nw.col("a").cast(nw.Int8)).lazy().collect()
+
+
+@pytest.mark.parametrize("nw_stable", [nw_v1, nw_v2])
+def test_cast_float_to_signed_integer_stable(
+    constructor: Constructor, nw_stable: Any
+) -> None:
+    if nw_stable is nw_v1 and "duckdb" in str(constructor):
+        pytest.skip("DuckDB is interchange-only in stable.v1")
+    df = nw_stable.from_native(constructor({"idx": [0, 1], "a": [1.7, -1.7]}))
+    if "pyarrow" in str(constructor):
+        exception = pytest.importorskip("pyarrow").ArrowInvalid
+        with pytest.raises(exception, match="truncated"):
+            df.select(nw_stable.col("a").cast(nw_stable.Int64)).lazy().collect()
+    else:
+        expected = (
+            [2, -2]
+            if any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis"))
+            else [1, -1]
+        )
+        result = df.select("idx", nw_stable.col("a").cast(nw_stable.Int64)).sort("idx")
+        assert_equal_data(result, {"idx": [0, 1], "a": expected})
+
+
+def test_cast_float_to_signed_integer_over(constructor: Constructor) -> None:
+    df = nw.from_native(
+        constructor({"idx": [0, 1, 2], "g": [1, 1, 2], "a": [1.7, 1.7, -1.7]})
+    )
+    result = df.select("idx", nw.col("a").mean().cast(nw.Int64).over("g")).sort("idx")
+    assert_equal_data(result, {"idx": [0, 1, 2], "a": [1, 1, -1]})
+
+
+@pytest.mark.parametrize("value", [1.7, -1.7])
+@pytest.mark.parametrize("grouped", [False, True])
+def test_cast_float_aggregate_to_signed_integer(
+    constructor: Constructor, value: float, *, grouped: bool
+) -> None:
+    if not any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")):
+        pytest.skip("Source-type binding for aggregate casts is SQL-backend specific")
+    df = nw.from_native(constructor({"g": [1, 1, 2, 2], "a": [value] * 4}))
+    expr = nw.col("a").mean().cast(nw.Int64)
+    if grouped:
+        result = df.group_by("g").agg(expr).sort("g")
+        expected = {"g": [1, 2], "a": [int(value)] * 2}
+    else:
+        result = df.select(expr)
+        expected = {"a": [int(value)]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize("values", [["1", "2"], [2**53 + 1, 2**53 + 3]])
+@pytest.mark.parametrize("grouped", [False, True])
+def test_cast_nonfloat_aggregate_to_signed_integer(
+    constructor: Constructor, values: list[str] | list[int], *, grouped: bool
+) -> None:
+    if not any(x in str(constructor) for x in ("duckdb", "sqlframe", "ibis")):
+        pytest.skip("Source-type binding for aggregate casts is SQL-backend specific")
+    df = nw.from_native(constructor({"g": [1, 1], "a": values}))
+    expr = nw.col("a").max().cast(nw.Int64)
+    if grouped:
+        result = df.group_by("g").agg(expr)
+        expected = {"g": [1], "a": [int(values[1])]}
+    else:
+        result = df.select(expr)
+        expected = {"a": [int(values[1])]}
+    assert_equal_data(result, expected)
+
+
+def test_cast_float16_to_signed_integer(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow" not in str(constructor_eager) or PYARROW_VERSION < (16,):
+        pytest.skip("PyArrow added half-float casting in 16.0")
+    s = nw.from_native(constructor_eager({"a": [1.7, None, -1.7]}))["a"].cast(nw.Float16)
+    assert_equal_data(s.cast(nw.Int64).to_frame(), {"a": [1, None, -1]})
+
+
+def test_cast_float_nan_to_signed_integer_pyarrow() -> None:
+    pa = pytest.importorskip("pyarrow")
+    s = nw.from_native(pa.chunked_array([[float("nan")]]), series_only=True)
+    with pytest.raises(pa.ArrowInvalid, match="truncated"):
+        s.cast(nw.Int64)
 
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
