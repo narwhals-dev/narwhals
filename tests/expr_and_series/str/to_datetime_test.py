@@ -12,6 +12,7 @@ from narwhals.exceptions import ComputeError
 from tests.utils import (
     PANDAS_VERSION,
     POLARS_VERSION,
+    PYSPARK_VERSION,
     assert_equal_data,
     is_pyarrow_windows_no_tzdata,
     is_windows,
@@ -250,8 +251,6 @@ def test_to_datetime_tz_aware(
 
 
 def test_to_datetime_date_only_format(constructor: Constructor) -> None:
-    # Explicit date-only format parses to midnight. Previously only datetime
-    # formats were exercised, so backends that cannot parse dates went unnoticed.
     result = (
         nw.from_native(constructor({"a": ["2020-01-01", None]}))
         .lazy()
@@ -262,19 +261,13 @@ def test_to_datetime_date_only_format(constructor: Constructor) -> None:
 
 
 def test_to_datetime_all_null_offset_format(constructor: Constructor) -> None:
-    # Explicit (offset) format on an all-null column yields all nulls instead
-    # of panicking on the missing non-null sample.
-    if "ibis" in str(constructor):
-        pytest.skip(reason="ibis cannot create all-null column")
-    # Pandas < 3 handles this differently per dtype backend: numpy-backed parses
-    # `None`, while the nullable and pyarrow ones raise on the literal "None".
-    if "pandas" in str(constructor) and PANDAS_VERSION < (3,):
-        pytest.skip(reason="old pandas all-null offset parsing")
-    df = nw.from_native(constructor({"a": [None, None]}))
-    df = df.with_columns(nw.col("a").cast(nw.String()))
-    result = df.select(nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z"))
+    # Filter instead of building from `[None, None]`: Ibis and PySpark cannot type that.
+    df = nw.from_native(constructor({"a": ["2020-01-01T00:00:00+0000", None]}))
+    result = df.filter(nw.col("a").is_null()).select(
+        nw.col("a").str.to_datetime(format="%Y-%m-%dT%H:%M:%S%z")
+    )
     assert isinstance(result.collect_schema()["a"], nw.Datetime)
-    assert_equal_data(result, {"a": [None, None]})
+    assert_equal_data(result, {"a": [None]})
 
 
 @pytest.mark.parametrize(
@@ -345,18 +338,28 @@ def test_to_datetime_invalid_raises(
     data: dict[str, list[str]],
     format: str | None,
 ) -> None:
-    # Old numpy-backed pandas ignores trailing input rather than rejecting it.
+    case = request.node.callspec.id
+    if format is None and any(x in str(constructor) for x in ("duckdb", "ibis")):
+        pytest.skip(reason="no format inference: raises for any input")
     if (
-        "trailing" in request.node.callspec.id
+        "trailing" in case
         and "pandas_constructor" in str(constructor)
         and PANDAS_VERSION < (2,)
     ):
         pytest.skip(reason="old pandas ignores trailing input")
+    if (
+        "unparsable" in case
+        and "pyspark" in str(constructor)
+        and "sqlframe" not in str(constructor)
+        and PYSPARK_VERSION < (4,)
+    ):
+        request.applymarker(
+            pytest.mark.xfail(reason="ANSI is off before Spark 4: null, no error")
+        )
     df = nw.from_native(constructor(data))
-    expr = nw.col("a").str.to_datetime(format)
     # Broad `Exception`: error types differ per backend.
     with pytest.raises(Exception):  # noqa: B017, PT011
-        maybe_collect(df.select(expr))
+        maybe_collect(df.select(nw.col("a").str.to_datetime(format)))
 
 
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
