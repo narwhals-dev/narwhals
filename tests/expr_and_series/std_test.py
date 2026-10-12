@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import numpy as np
+import math
+
 import pytest
 
 import narwhals as nw
@@ -47,41 +48,59 @@ def test_std_series(
     assert_equal_data(result, expected_results)
 
 
-data_ddof: dict[str, list[float]] = {
+data_ddof: dict[str, list[float | None]] = {
     "i": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     "g": [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2],
-    "a": [1.0, 2.0, 2.0, 5.0, -7.0, 4.0, 3.0, 0.5, 8.0, -1.0, 6.0],
+    "a": [1.0, 2.0, 2.0, 5.0, -7.0, 4.0, 3.0, 0.5, None, -1.0, 6.0],
 }
+group_1, group_2 = data_ddof["a"][:6], data_ddof["a"][6:]
 
 
-@pytest.mark.parametrize("ddof", [0, 1, 2, 4])
-def test_std_ddof(constructor: Constructor, ddof: int) -> None:
+def expected_std(values: list[float | None], ddof: int) -> float | None:
+    non_null = [v for v in values if v is not None]
+    n = len(non_null)
+    # Polars returns null here, where numpy gives `inf` or a negative value.
+    if n <= ddof:
+        return None
+    mean = sum(non_null) / n
+    return math.sqrt(sum((v - mean) ** 2 for v in non_null) / (n - ddof))
+
+
+@pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
+def test_std_ddof(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if ddof == 10 and any(x in str(constructor) for x in ("pandas_nullable", "dask")):
+        reason = (
+            "pandas (nullable) and Dask return `inf` when N == ddof (10 non-null values)."
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data_ddof))
     result = df.select(nw.col("a").std(ddof=ddof))
-    expected = {"a": [float(np.std(data_ddof["a"], ddof=ddof))]}
-    assert_equal_data(result, expected)
+    assert_equal_data(result, {"a": [expected_std(data_ddof["a"], ddof)]})
 
 
-@pytest.mark.parametrize("ddof", [0, 1, 2, 4])
-def test_std_ddof_group_by(constructor: Constructor, ddof: int) -> None:
+@pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
+def test_std_ddof_group_by(
+    constructor: Constructor, ddof: int, request: pytest.FixtureRequest
+) -> None:
+    if ddof == 10 and "dask" in str(constructor):
+        reason = "Dask's `groupby.var` returns `inf` when ddof > N."
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor(data_ddof))
     result = df.group_by("g").agg(nw.col("a").std(ddof=ddof)).sort("g")
     expected = {
         "g": [1, 2],
-        "a": [
-            float(np.std(data_ddof["a"][:6], ddof=ddof)),
-            float(np.std(data_ddof["a"][6:], ddof=ddof)),
-        ],
+        "a": [expected_std(group_1, ddof), expected_std(group_2, ddof)],
     }
     assert_equal_data(result, expected)
 
 
-@pytest.mark.parametrize("ddof", [0, 1, 2, 4])
+@pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
 def test_std_ddof_over(constructor: Constructor, ddof: int) -> None:
     df = nw.from_native(constructor(data_ddof))
     result = df.with_columns(nw.col("a").std(ddof=ddof).over("g")).sort("i").select("a")
     expected = {
-        "a": [float(np.std(data_ddof["a"][:6], ddof=ddof))] * 6
-        + [float(np.std(data_ddof["a"][6:], ddof=ddof))] * 5
+        "a": [expected_std(group_1, ddof)] * 6 + [expected_std(group_2, ddof)] * 5
     }
     assert_equal_data(result, expected)
