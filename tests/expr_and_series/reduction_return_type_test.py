@@ -35,13 +35,13 @@ def test_numeric_reduction_keeps_dtype_when_all_null(
         x in str(constructor)
         for x in ("pandas_nullable", "pandas_pyarrow", "modin_pyarrow")
     ):
-        # These return an untyped `pd.NA`. `sum` returns a typed zero.
-        request.applymarker(pytest.mark.xfail)
+        reason = "Return an untyped `pd.NA`. `sum` returns a typed zero."
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if reduction in {"skew", "kurtosis"} and any(
         x in str(constructor) for x in ("pandas_constructor", "modin_constructor", "ibis")
     ):
-        # pandas-like returns an untyped `None`. Ibis does not implement them.
-        request.applymarker(pytest.mark.xfail)
+        reason = "pandas-like returns an untyped `None`. Ibis does not implement them."
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     df = nw.from_native(constructor({"a": [1.0, 2.0]}))
     all_null = df.with_columns(a=nw.when(nw.col("a") < 0).then(nw.col("a")))
@@ -53,8 +53,8 @@ def test_string_reduction_keeps_dtype_when_all_null(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "pandas_constructor" in str(constructor):
-        # A reduction over an all-null object column returns a float.
-        request.applymarker(pytest.mark.xfail)
+        reason = "A reduction over an all-null object column returns a float."
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
     df = nw.from_native(constructor({"a": ["x", "y"]}))
     all_null = df.with_columns(a=nw.when(nw.col("a") == "zzz").then(nw.col("a")))
@@ -128,10 +128,11 @@ def test_expr_aggregation_keeps_dtype(
     expr: nw.Expr,
     values: list[Any],
     dtype: DType,
-    empty: bool,  # noqa: FBT001
+    *,
+    empty: bool,
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
-        pytest.skip()
+        pytest.skip(reason="`over(order_by=...)` requires Polars 1.10")
     name = str(constructor_eager)
     if any(x in name for x in ("pandas", "modin", "cudf")) and (
         empty or "pyarrow" in name
