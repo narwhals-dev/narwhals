@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT,
     SERIES_ACCEPTS_PD_INDEX,
     SERIES_RESPECTS_DTYPE,
     PolarsAnyNamespace,
@@ -388,6 +389,15 @@ class PolarsSeries:
             select = pl.when(self.native.is_not_null()).then(native_is_nan)
             return self._with_native(pl.select(select)[self.name])
         return self._with_native(native_is_nan)
+
+    def _is_close_float_promote(self) -> Self:
+        # Same as `PolarsExpr._is_close_float_promote`.
+        native = (
+            self.native + 0.0
+            if BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT
+            else self.native.cast(pl.Float64)
+        )
+        return self._with_native(native)
 
     def is_finite(self) -> Self:
         native_is_finite = self.native.is_finite()

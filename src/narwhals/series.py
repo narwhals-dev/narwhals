@@ -2907,6 +2907,10 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._with_compliant(self._compliant_series.sqrt())
 
+    def _is_close_float_promote(self) -> Self:
+        # See `Expr._is_close_float_promote`.
+        return self._with_compliant(self._compliant_series._is_close_float_promote())
+
     def is_close(
         self,
         other: Self | NumericLiteral,

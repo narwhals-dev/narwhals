@@ -97,6 +97,10 @@ class CompliantSeries(
 
     def _with_native(self, series: Any) -> Self: ...
     def _with_version(self, version: Version) -> Self: ...
+    def _is_close_float_promote(self) -> Self:
+        # Default float promotion for `is_close`, equivalent to `self + 0.0`.
+        # Polars overrides this to align old versions (see `PolarsSeries`).
+        return 0.0 + self
 
     # NOTE: `polars`
     @property

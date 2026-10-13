@@ -2494,11 +2494,7 @@ class Expr:
             other_is_not_inf = not other_is_inf
 
         else:
-            other_f = (
-                other._is_close_float_promote()
-                if isinstance(other, Expr)
-                else other + 0.0
-            )
+            other_f = other._is_close_float_promote()
             other_abs, other_is_nan = other_f.abs(), other_f.is_nan()
             other_is_not_inf = other_f.is_finite() | other_is_nan
             other_is_inf = ~other_is_not_inf
