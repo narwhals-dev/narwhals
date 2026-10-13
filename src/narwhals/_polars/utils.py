@@ -49,24 +49,6 @@ CompliantT = TypeVar("CompliantT", "PolarsSeries", "PolarsExpr")
 BACKEND_VERSION = Implementation.POLARS._backend_version()
 """Static backend version for `polars`."""
 
-SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
-"""`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
-
-RESPECT_JOIN_NULL_SEMI_ANTI: Final[bool] = BACKEND_VERSION >= (0, 20, 22)
-"""Polars < 0.20.22 treats `null == null` as a match in semi/anti joins.
-
-Dropping rows with null keys on the right removes these spurious matches,
-which is always valid since narwhals treats nulls as non-matching.
-
-Fixed in https://github.com/pola-rs/polars/pull/15696
-"""
-
-SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
-"""`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
-
-Includes `SERIES_ACCEPTS_PD_INDEX`.
-"""
-
 HAS_INT_128: Final[bool] = BACKEND_VERSION >= (1, 18, 0)
 """https://github.com/pola-rs/polars/pull/20232"""
 
@@ -170,8 +152,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, pl.List):
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
     if isinstance(dtype, pl.Array):
-        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
-        return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
+        return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), dtype.size)
     if isinstance(dtype, pl.Decimal):
         return dtypes.Decimal(dtype.precision, dtype.scale)
     if dtype == pl.Time:
@@ -242,21 +223,16 @@ def narwhals_to_native_dtype(  # noqa: C901
             for field in dtype.fields
         ]
         return pl.Struct(fields)
-    if isinstance_or_issubclass(dtype, dtypes.Array):  # pragma: no cover
+    if isinstance_or_issubclass(dtype, dtypes.Array):
         size = dtype.size
-        kwargs = {"width": size} if BACKEND_VERSION < (0, 20, 30) else {"shape": size}
-        return pl.Array(narwhals_to_native_dtype(dtype.inner, version), **kwargs)
+        return pl.Array(narwhals_to_native_dtype(dtype.inner, version), shape=size)
     if isinstance_or_issubclass(dtype, dtypes.Decimal):
         return pl.Decimal(dtype.precision, dtype.scale)
     return pl.Unknown()  # pragma: no cover
 
 
 def _is_polars_exception(exception: Exception) -> bool:
-    if BACKEND_VERSION >= (1,):
-        # Old versions of Polars didn't have PolarsError.
-        return isinstance(exception, pl.exceptions.PolarsError)
-    # Last attempt, for old Polars versions.
-    return "polars.exceptions" in str(type(exception))  # pragma: no cover
+    return isinstance(exception, pl.exceptions.PolarsError)
 
 
 def _is_cudf_exception(exception: Exception) -> bool:
@@ -343,12 +319,10 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     @abc.abstractmethod
     def zfill(self, width: int) -> CompliantT: ...
 
-    @abc.abstractmethod
-    def slice(self, offset: int, length: int | None) -> CompliantT: ...
-
     len_chars: Method[CompliantT]
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
+    slice: Method[CompliantT]
     strip_chars: Method[CompliantT]
     strip_chars_start: Method[CompliantT]
     strip_chars_end: Method[CompliantT]

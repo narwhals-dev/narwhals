@@ -639,7 +639,7 @@ MIN_VERSIONS: Mapping[Implementation, tuple[int, ...]] = {
     Implementation.PYARROW: (13,),
     Implementation.PYSPARK: (3, 5),
     Implementation.PYSPARK_CONNECT: (3, 5),
-    Implementation.POLARS: (0, 20, 4),
+    Implementation.POLARS: (1, 0, 0),
     Implementation.DASK: (2024, 8),
     Implementation.DUCKDB: (1, 1),
     Implementation.IBIS: (6,),
@@ -1980,8 +1980,7 @@ class SupportsFloorMod(Protocol):
     """Object supporting `%` and `+` with a same-typed operand.
 
     Native expression types of backends whose `%` follows C sign semantics
-    (duckdb `Expression`, pyspark `Column`, ibis `Value`, polars `Expr` and
-    `Series` before 0.20.8) satisfy this structurally.
+    (duckdb `Expression`, pyspark `Column`, ibis `Value`) satisfy this structurally.
     """
 
     def __mod__(self, other: Self, /) -> Self: ...

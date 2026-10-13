@@ -16,7 +16,6 @@ from narwhals._utils import (
     Version,
     is_file_like,
     isinstance_or_issubclass,
-    requires,
 )
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
@@ -48,7 +47,10 @@ class PolarsNamespace:
     sum_horizontal: Method[PolarsExpr]
     min_horizontal: Method[PolarsExpr]
     max_horizontal: Method[PolarsExpr]
+    mean_horizontal: Method[PolarsExpr]
+    concat_str: Method[PolarsExpr]
     corr: Method[PolarsExpr]
+    len: Method[PolarsExpr]
 
     _implementation: Implementation = Implementation.POLARS
     _version: Version
@@ -158,16 +160,8 @@ class PolarsNamespace:
         )
         return self._lazyframe.from_native(native, context=self)
 
-    @requires.backend_version(
-        (1, 0, 0), "Please use `col` for columns selection instead."
-    )
     def nth(self, indices: Sequence[int]) -> PolarsExpr:
         return self._expr(pl.nth(*indices), version=self._version)
-
-    def len(self) -> PolarsExpr:
-        if self._backend_version < (0, 20, 5):
-            return self._expr(pl.count().alias("len"), self._version)
-        return self._expr(pl.len(), self._version)
 
     def cov(self, a: PolarsExpr, b: PolarsExpr, *, ddof: int) -> PolarsExpr:
         native = pl.cov(a.native, b.native, ddof=ddof)
@@ -207,57 +201,6 @@ class PolarsNamespace:
             )
         return self._expr(pl.lit(value), version=self._version)
 
-    def mean_horizontal(self, *exprs: PolarsExpr) -> PolarsExpr:
-        if self._backend_version < (0, 20, 8):
-            return self._expr(
-                pl.sum_horizontal(e._native_expr for e in exprs)
-                / pl.sum_horizontal(1 - e.is_null()._native_expr for e in exprs),
-                version=self._version,
-            )
-
-        return self._expr(
-            pl.mean_horizontal(e._native_expr for e in exprs), version=self._version
-        )
-
-    def concat_str(
-        self, *exprs: PolarsExpr, separator: str, ignore_nulls: bool
-    ) -> PolarsExpr:
-        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
-
-        if self._backend_version < (0, 20, 6):
-            null_mask = [expr.is_null() for expr in pl_exprs]
-            sep = pl.lit(separator)
-
-            if not ignore_nulls:
-                null_mask_result = pl.any_horizontal(*null_mask)
-                output_expr = pl.reduce(
-                    lambda x, y: x.cast(pl.String()) + sep + y.cast(pl.String()),  # type: ignore[arg-type,return-value]
-                    pl_exprs,
-                )
-                result = pl.when(~null_mask_result).then(output_expr)
-            else:
-                # NOTE: Cast after `when` so a boolean literal is broadcast first:
-                # casting a scalar boolean literal renders `"1"` on old Polars.
-                init_value, *values = [
-                    pl.when(~nm).then(expr).cast(pl.String()).fill_null(pl.lit(""))
-                    for expr, nm in zip(pl_exprs, null_mask, strict=True)
-                ]
-                result, seen = init_value, ~null_mask[0]
-                for nm, value in zip(null_mask[1:], values, strict=True):
-                    not_null = ~nm
-                    sep_or_empty = (
-                        pl.when(seen & not_null).then(sep).otherwise(pl.lit(""))
-                    )
-                    result = result + sep_or_empty + value
-                    seen = seen | not_null
-
-            return self._expr(result, version=self._version)
-
-        return self._expr(
-            pl.concat_str(pl_exprs, separator=separator, ignore_nulls=ignore_nulls),
-            version=self._version,
-        )
-
     def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
         return self._expr(pl.struct(pl_exprs), version=self._version)
@@ -266,7 +209,7 @@ class PolarsNamespace:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
 
         if self._backend_version < (1, 43):  # pragma: no cover
-            length = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
+            length = pl.len()
             to_concat = [e.implode().over(pl.int_range(length)) for e in pl_exprs]
             expr = pl.concat_list(to_concat)
         else:
@@ -302,14 +245,6 @@ class PolarsNamespace:
         )
 
 
-# NOTE: Polars accepts the bare `pl.Enum` class (as opposed to an instantiated `pl.Enum([...])`)
-# in `by_dtype` from 0.20.6 onwards, so selecting "any enum" is not expressible on older versions.
-_ENUM_SELECTOR_UNSUPPORTED = (
-    "Selecting `Enum` columns is only supported for 'polars>=0.20.6', "
-    f"found version {BACKEND_VERSION}."
-)
-
-
 class PolarsSelectorNamespace:
     _implementation = Implementation.POLARS
 
@@ -330,8 +265,6 @@ class PolarsSelectorNamespace:
         if isinstance_or_issubclass(dtype, dtypes.Enum):
             if version is not Version.V1 and isinstance(dtype, dtypes.Enum):
                 return narwhals_to_native_dtype(dtype, version)
-            if BACKEND_VERSION < (0, 20, 6):
-                raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
             return pl.Enum
         if isinstance(dtype, type) and issubclass(dtype, DType):
             return narwhals_to_native_dtype(dtype, version).__class__
@@ -353,8 +286,6 @@ class PolarsSelectorNamespace:
         return PolarsExpr(pl.selectors.categorical(), version=self._version)
 
     def enum(self) -> PolarsExpr:
-        if BACKEND_VERSION < (0, 20, 6):
-            raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
         expr = (
             pl.selectors.by_dtype(pl.Enum)
             if BACKEND_VERSION < (1, 32)

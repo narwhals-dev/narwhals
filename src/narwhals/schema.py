@@ -358,15 +358,9 @@ class Schema(OrderedDict[str, "DType"]):
 
         from narwhals._polars.utils import narwhals_to_native_dtype
 
-        pl_version = Implementation.POLARS._backend_version()
-        schema = (
+        return pl.Schema(
             (name, narwhals_to_native_dtype(dtype, self._version))
             for name, dtype in self.items()
-        )
-        return (
-            pl.Schema(schema)
-            if pl_version >= (1, 0, 0)
-            else cast("pl.Schema", dict(schema))
         )
 
     @classmethod

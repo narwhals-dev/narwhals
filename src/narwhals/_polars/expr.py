@@ -18,7 +18,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_get_categories,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
+from narwhals._utils import NO_DEFAULT, Implementation
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -136,8 +136,6 @@ class PolarsExpr:
             ignore_nulls=ignore_nulls,
             **self._renamed_min_periods(min_samples),
         )
-        if self._backend_version < (1,):  # pragma: no cover
-            native = pl.when(~self.native.is_null()).then(native).otherwise(None)
         return self._with_native(native)
 
     def is_nan(self) -> Self:
@@ -177,7 +175,6 @@ class PolarsExpr:
             native = self.native.over(pl_partition_by, order_by=order_by or None)
         return self._with_native(native)
 
-    @requires.backend_version((1,))
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
@@ -187,7 +184,6 @@ class PolarsExpr:
         )
         return self._with_native(native)
 
-    @requires.backend_version((1,))
     def rolling_std(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
@@ -234,11 +230,11 @@ class PolarsExpr:
             if pl_version < (1, 32)
             else pl.self_dtype()
         )
-        kwargs = {} if pl_version < (0, 20, 31) else {"returns_scalar": returns_scalar}
-        native = self.native.map_batches(function, return_dtype_pl, **kwargs)
+        native = self.native.map_batches(
+            function, return_dtype_pl, returns_scalar=returns_scalar
+        )
         return self._with_native(native)
 
-    @requires.backend_version((1,))
     def replace_strict(
         self,
         default: PolarsExpr | NoDefault,
@@ -311,20 +307,10 @@ class PolarsExpr:
         return self._with_native(result)
 
     def __mod__(self, other: Any) -> Self:
-        native = (
-            floor_mod(self.native, extract_native(other))
-            if BACKEND_VERSION < (0, 20, 8)
-            else self.native.__mod__(extract_native(other))
-        )
-        return self._with_native(native)
+        return self._with_native(self.native.__mod__(extract_native(other)))
 
     def __rmod__(self, other: Any) -> Self:
-        native = (
-            floor_mod(extract_native(other), self.native)
-            if BACKEND_VERSION < (0, 20, 8)
-            else self.native.__rmod__(extract_native(other))
-        )
-        return self._with_native(native)
+        return self._with_native(self.native.__rmod__(extract_native(other)))
 
     def __invert__(self) -> Self:
         return self._with_native(self.native.__invert__())
@@ -476,18 +462,6 @@ class PolarsExprStringNamespace(
             )
         else:  # pragma: no cover
             native_result = native.str.zfill(width)
-        return self.compliant._with_native(native_result)
-
-    def slice(self, offset: int, length: int | None) -> PolarsExpr:
-        if BACKEND_VERSION < (0, 20, 17) and offset < 0:
-            # Older Polars miscounts negative offsets on multi-byte strings and doesn't shorten
-            # `length` on overhang, but slicing the reversed string from the front is correct.
-            skip = 0 if length is None else max(0, -(offset + length))
-            native_result = (
-                self.native.str.reverse().str.slice(skip, -offset - skip).str.reverse()
-            )
-        else:
-            native_result = self.native.str.slice(offset, length)
         return self.compliant._with_native(native_result)
 
     def replace(

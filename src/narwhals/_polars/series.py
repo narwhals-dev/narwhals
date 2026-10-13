@@ -6,8 +6,6 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
-    SERIES_ACCEPTS_PD_INDEX,
-    SERIES_RESPECTS_DTYPE,
     PolarsAnyNamespace,
     PolarsCatNamespace,
     PolarsDateTimeNamespace,
@@ -21,8 +19,8 @@ from narwhals._polars.utils import (
     native_get_categories,
     native_to_narwhals_dtype,
 )
-from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
-from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
+from narwhals._utils import NO_DEFAULT, Implementation
+from narwhals.dependencies import is_numpy_array_1d
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -62,6 +60,7 @@ INHERITED_METHODS = frozenset(
         "__floordiv__",
         "__invert__",
         "__iter__",
+        "__mod__",
         "__mul__",
         "__neg__",
         "__or__",
@@ -69,6 +68,7 @@ INHERITED_METHODS = frozenset(
         "__radd__",
         "__rand__",
         "__rfloordiv__",
+        "__rmod__",
         "__rmul__",
         "__ror__",
         "__rsub__",
@@ -126,6 +126,7 @@ INHERITED_METHODS = frozenset(
         "shift",
         "sin",
         "skew",
+        "sort",
         "sqrt",
         "std",
         "sum",
@@ -135,6 +136,7 @@ INHERITED_METHODS = frozenset(
         "to_list",
         "to_pandas",
         "unique",
+        "value_counts",
         "var",
         "zip_with",
     ]
@@ -191,15 +193,7 @@ class PolarsSeries:
     ) -> Self:
         version = context._version
         dtype_pl = narwhals_to_native_dtype(dtype, version) if dtype else None
-        values: Incomplete = data
-        if SERIES_RESPECTS_DTYPE:
-            native = pl.Series(name, values, dtype=dtype_pl)
-        else:  # pragma: no cover
-            if (not SERIES_ACCEPTS_PD_INDEX) and is_pandas_index(values):
-                values = values.to_series()
-            native = pl.Series(name, values)
-            if dtype_pl:
-                native = native.cast(dtype_pl)
+        native = pl.Series(name, data, dtype=dtype_pl)
         return cls.from_native(native, context=context)
 
     @staticmethod
@@ -267,24 +261,6 @@ class PolarsSeries:
             )
         return self._with_native(self.native.__rfloordiv__(extract_native(other)))
 
-    def __mod__(self, other: Any) -> PolarsSeries:
-        rhs = cast("pl.Series", extract_native(other))
-        native = (
-            floor_mod(self.native, rhs)
-            if BACKEND_VERSION < (0, 20, 8)
-            else self.native.__mod__(rhs)
-        )
-        return self._with_native(native)
-
-    def __rmod__(self, other: Any) -> PolarsSeries:
-        lhs = cast("pl.Series", extract_native(other))
-        native = (
-            floor_mod(lhs, self.native)
-            if BACKEND_VERSION < (0, 20, 8)
-            else self.native.__rmod__(lhs)
-        )
-        return self._with_native(native)
-
     @property
     def name(self) -> str:
         return self.native.name
@@ -322,7 +298,6 @@ class PolarsSeries:
             self.native.clip(upper_bound=extract_native(upper_bound))
         )
 
-    @requires.backend_version((1,))
     def replace_strict(
         self,
         default: PolarsSeries | NoDefault,
@@ -349,8 +324,6 @@ class PolarsSeries:
         return self.__array__(dtype, copy=copy)
 
     def __array__(self, dtype: Any, *, copy: bool | None) -> _1DArray:
-        if self._backend_version < (0, 20, 29):
-            return self.native.__array__(dtype=dtype)
         return self.native.__array__(dtype=dtype, copy=copy)
 
     def __eq__(self, other: object) -> Self:  # type: ignore[override]
@@ -408,16 +381,7 @@ class PolarsSeries:
     def to_dummies(self, *, separator: str, drop_first: bool) -> PolarsDataFrame:
         from narwhals._polars.dataframe import PolarsDataFrame
 
-        if self._backend_version < (0, 20, 15):
-            has_nulls = self.native.is_null().any()
-            result = self.native.to_dummies(separator=separator)
-            output_columns = result.columns
-            if drop_first:
-                _ = output_columns.pop(int(has_nulls))
-
-            result = result.select(output_columns)
-        else:
-            result = self.native.to_dummies(separator=separator, drop_first=drop_first)
+        result = self.native.to_dummies(separator=separator, drop_first=drop_first)
         result = result.with_columns(pl.all().cast(pl.Int8))
         return PolarsDataFrame.from_native(result, context=self)
 
@@ -447,16 +411,8 @@ class PolarsSeries:
             ignore_nulls=ignore_nulls,
             **extra_kwargs,
         )
-        if self._backend_version < (1,):  # pragma: no cover
-            return self._with_native(
-                pl.select(
-                    pl.when(~self.native.is_null()).then(native_result).otherwise(None)
-                )[self.native.name]
-            )
-
         return self._with_native(native_result)
 
-    @requires.backend_version((1,))
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
@@ -471,7 +427,6 @@ class PolarsSeries:
             )
         )
 
-    @requires.backend_version((1,))
     def rolling_std(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
     ) -> Self:
@@ -510,43 +465,9 @@ class PolarsSeries:
             )
         )
 
-    def sort(self, *, descending: bool, nulls_last: bool) -> Self:
-        if self._backend_version < (0, 20, 6):
-            result = self.native.sort(descending=descending)
-
-            if nulls_last:
-                is_null = result.is_null()
-                result = pl.concat([result.filter(~is_null), result.filter(is_null)])
-        else:
-            result = self.native.sort(descending=descending, nulls_last=nulls_last)
-
-        return self._with_native(result)
-
     def scatter(self, indices: Self, values: Self) -> Self:
         s = self.native.clone().scatter(indices.native, values.native)
         return self._with_native(s)
-
-    def value_counts(
-        self, *, sort: bool, parallel: bool, name: str | None, normalize: bool
-    ) -> PolarsDataFrame:
-        from narwhals._polars.dataframe import PolarsDataFrame
-
-        if self._backend_version < (1, 0, 0):
-            value_name_ = name or ("proportion" if normalize else "count")
-
-            result = self.native.value_counts(sort=sort, parallel=parallel).select(
-                **{
-                    (self.native.name): pl.col(self.native.name),
-                    value_name_: pl.col("count") / pl.sum("count")
-                    if normalize
-                    else pl.col("count"),
-                }
-            )
-        else:
-            result = self.native.value_counts(
-                sort=sort, parallel=parallel, name=name, normalize=normalize
-            )
-        return PolarsDataFrame.from_native(result, context=self)
 
     def cum_count(self, *, reverse: bool) -> Self:
         return self._with_native(self.native.cum_count(reverse=reverse))
@@ -653,8 +574,6 @@ class PolarsSeries:
         if not include_breakpoint:
             col_name = df.columns[0]
             df = df.select(pl.col(col_name).alias("count"))
-        elif BACKEND_VERSION < (1, 0):  # pragma: no cover
-            df = df.rename({"break_point": "breakpoint"})
 
         if bins is not None:  # pragma: no cover
             # polars<1.6 implicitly adds -inf and inf to either end of bins
@@ -708,12 +627,14 @@ class PolarsSeries:
     __floordiv__: Method[Self]
     __invert__: Method[Self]
     __iter__: Method[Iterator[Any]]
+    __mod__: Method[Self]
     __mul__: Method[Self]
     __neg__: Method[Self]
     __or__: Method[Self]
     __pow__: Method[Self]
     __radd__: Method[Self]
     __rand__: Method[Self]
+    __rmod__: Method[Self]
     __rmul__: Method[Self]
     __ror__: Method[Self]
     __rsub__: Method[Self]
@@ -767,6 +688,7 @@ class PolarsSeries:
     shift: Method[Self]
     sin: Method[Self]
     skew: Method[float | None]
+    sort: Method[Self]
     sqrt: Method[Self]
     std: Method[float]
     sum: Method[float]
@@ -776,6 +698,7 @@ class PolarsSeries:
     to_list: Method[list[Any]]
     to_pandas: Method[pd.Series[Any]]
     unique: Method[Self]
+    value_counts: Method[PolarsDataFrame]
     var: Method[float]
     zip_with: Method[Self]
 
@@ -824,15 +747,6 @@ class PolarsSeriesStringNamespace(
         name = self.name
         ns = self.__narwhals_namespace__()
         return self.to_frame().select(ns.col(name).str.zfill(width)).get_column(name)
-
-    def slice(self, offset: int, length: int | None) -> PolarsSeries:
-        name = self.name
-        ns = self.__narwhals_namespace__()
-        return (
-            self.to_frame()
-            .select(ns.col(name).str.slice(offset, length))
-            .get_column(name)
-        )
 
     def replace(
         self, value: PolarsSeries, pattern: str, *, literal: bool, n: int
