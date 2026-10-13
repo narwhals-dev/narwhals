@@ -459,7 +459,8 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < PkgVersion\('
+  'PANDAS_VERSION < \(',  # src: tuple comparisons
+  'PANDAS_VERSION < PkgVersion\(',  # tests: packaging.version.Version comparisons
 ]
 
 [tool.mypy]
