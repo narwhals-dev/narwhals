@@ -596,7 +596,7 @@ class PolarsSeries:
                 native = pl.select(count=pl.zeros(bin_count, pl.Int64))
         else:
             count: int | None
-            if BACKEND_VERSION < (1, 15):  # pragma: no cover
+            if BACKEND_VERSION < (1, 16):  # pragma: no cover
                 count = None
                 bins = self._bins_from_bin_count(bin_count=bin_count)
             else:
@@ -612,7 +612,7 @@ class PolarsSeries:
     def _bins_from_bin_count(self, bin_count: int) -> pl.Series:  # pragma: no cover
         """Prepare bins based on backend version compatibility.
 
-        polars <1.15 does not adjust the bins when they have equivalent min/max
+        polars <1.16 does not adjust the bins when they have equivalent min/max
         polars <1.5 with bin_count=...
         returns bins that range from -inf to +inf and has bin_count + 1 bins.
           for compat: convert `bin_count=` call to `bins=`
@@ -657,8 +657,8 @@ class PolarsSeries:
             df = df.rename({"break_point": "breakpoint"})
 
         if bins is not None:  # pragma: no cover
-            # polars<1.6 implicitly adds -inf and inf to either end of bins
-            if BACKEND_VERSION < (1, 6):
+            # polars<1.15 implicitly adds -inf and inf to either end of bins
+            if BACKEND_VERSION < (1, 15):
                 r = pl.int_range(0, len(df))
                 df = df.filter((r > 0) & (r < len(df) - 1))
             # polars<1.27 makes the lowest bin a left/right closed interval
