@@ -10,7 +10,6 @@ from hypothesis import given
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -234,7 +233,6 @@ def test_timestamp_invalid_unit_series(constructor_eager: ConstructorEager) -> N
     starting_time_unit=st.sampled_from(["us", "ns"]),
 )
 @pytest.mark.skipif(PANDAS_VERSION < (2, 2), reason="bug in old pandas")
-@pytest.mark.skipif(POLARS_VERSION < (0, 20, 7), reason="bug in old Polars")
 @pytest.mark.slow
 def test_timestamp_hypothesis(
     inputs: datetime,

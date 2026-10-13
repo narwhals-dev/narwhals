@@ -8,7 +8,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     DUCKDB_VERSION,
-    POLARS_VERSION,
     Constructor,
     assert_equal_data,
     skip_if_no_categorical_ordering,
@@ -16,9 +15,6 @@ from tests.utils import (
 
 
 def test_top_k(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
-        # old polars versions do not sort nulls last
-        pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": ["a", "f", "a", "d", "b", "c"], "b c": [None, None, 2, 3, 6, 1]}
@@ -33,9 +29,6 @@ def test_top_k(constructor: Constructor) -> None:
 
 
 def test_top_k_by_multiple(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 22):
-        # bug in old version
-        pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {

@@ -6,7 +6,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, ShapeError
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, Constructor, assert_equal_data
+from tests.utils import PANDAS_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -134,9 +134,6 @@ def test_explode_invalid_operation_error(
 ) -> None:
     if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
         request.applymarker(pytest.mark.xfail)
-
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
-        pytest.skip()
 
     with pytest.raises(
         InvalidOperationError, match="`explode` operation not supported for dtype"

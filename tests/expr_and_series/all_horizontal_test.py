@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 import narwhals as nw
-from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
+from tests.utils import Constructor, ConstructorEager, assert_equal_data
 
 
 def test_allh(constructor: Constructor) -> None:
@@ -95,8 +95,6 @@ def test_allh_all(constructor: Constructor) -> None:
 
 
 def test_allh_nth(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
-        pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))
     result = df.select(nw.all_horizontal(nw.nth(0, 1), ignore_nulls=True))

@@ -93,9 +93,6 @@ def test_enum(
         for backend in ("pyarrow_table", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
-        reason = "Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6."
-        pytest.skip(reason=reason)
 
     categories = ["a", "b", "c"]
     result = (
@@ -132,9 +129,6 @@ def test_enum_distinct_from_categorical(
         for backend in ("pyarrow_table", "duckdb", "sqlframe", "pyspark", "ibis")
     ):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
-        # Polars only accepts the bare `pl.Enum` class in `by_dtype` from 0.20.6.
-        pytest.skip()
 
     result = (
         nw.from_native(constructor(data))
@@ -299,11 +293,6 @@ def test_set_ops(
 
 
 def test_subtract_expr(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 27):
-        # In old Polars versions, cs.numeric() - col('a')
-        # would exclude column 'a' from the result, as opposed to
-        # subtracting it.
-        pytest.skip()
     df = nw.from_native(constructor(data))
     result = df.select(ncs.numeric() - nw.col("a"))
     expected = {"a": [0, 0, 0], "c": [3.1, 4.0, 4.0]}

@@ -7,7 +7,6 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError
-from tests.utils import POLARS_VERSION
 
 if TYPE_CHECKING:
     from tests.utils import Constructor
@@ -26,12 +25,7 @@ def test_drop(constructor: Constructor, to_drop: list[str], expected: list[str])
 
 
 @pytest.mark.parametrize("strict", [True, False])
-def test_drop_strict(
-    request: pytest.FixtureRequest, constructor: Constructor, *, strict: bool
-) -> None:
-    if "polars_lazy" in str(constructor) and POLARS_VERSION < (1, 0, 0) and strict:
-        request.applymarker(pytest.mark.xfail)
-
+def test_drop_strict(constructor: Constructor, *, strict: bool) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
     to_drop = ["a", "z"]
 

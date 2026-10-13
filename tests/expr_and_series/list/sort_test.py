@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
+from tests.utils import PANDAS_VERSION, assert_equal_data
 
 if TYPE_CHECKING:
     from typing import Any
@@ -65,8 +65,6 @@ def test_sort_expr_args(
     if "ibis" in str(constructor) and descending:
         # https://github.com/ibis-project/ibis/issues/11735
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip()
     if any(backend in str(constructor) for backend in ("pandas", "dask")):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()
@@ -97,8 +95,6 @@ def test_sort_series_args(
 ) -> None:
     if any(backend in str(constructor_eager) for backend in ("dask", "cudf")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (0, 20, 5):
-        pytest.skip()
     if "pandas" in str(constructor_eager):
         if PANDAS_VERSION < (2, 2):
             pytest.skip()

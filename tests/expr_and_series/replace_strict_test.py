@@ -7,7 +7,6 @@ import pytest
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
 from tests.utils import (
-    POLARS_VERSION,
     Constructor,
     ConstructorEager,
     assert_equal_data,
@@ -18,10 +17,6 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
     from narwhals.dtypes import DType
-
-polars_lt_v1 = POLARS_VERSION < (1, 0, 0)
-skip_reason = "replace_strict only available after 1.0"
-pl_skip_reason = "replace_strict only available after 1.0"
 
 
 def xfail_if_no_default(constructor: Constructor, request: pytest.FixtureRequest) -> None:
@@ -48,9 +43,6 @@ def test_replace_strict_expr_basic(
 ) -> None:
     xfail_if_no_default(constructor, request)
 
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor({"a": ["one", "two", "three"]}))
     result = df.select(nw.col("a").replace_strict(old, new, return_dtype=return_dtype))
     assert_equal_data(result, {"a": [1, 2, 3]})
@@ -72,9 +64,6 @@ def test_replace_strict_series_basic(
     new: Sequence[Any] | None,
     return_dtype: DType | None,
 ) -> None:
-    if "polars" in str(constructor_eager) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
     result = df["a"].replace_strict(old, new, return_dtype=return_dtype)
     assert_equal_data({"a": result}, {"a": ["one", "two", "three"]})
@@ -83,9 +72,6 @@ def test_replace_strict_series_basic(
 
 
 def test_replace_strict_non_full(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
     expr = nw.col("a").replace_strict([1, 3], [3, 4], return_dtype=nw.Int64)
     if isinstance(df, nw.LazyFrame):
@@ -98,9 +84,6 @@ def test_replace_strict_non_full(constructor: Constructor) -> None:
 
 
 def test_replace_strict_invalid_expr(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
     msg = "`new` argument is required if `old` argument is not a Mapping type"
     with pytest.raises(TypeError, match=msg):
@@ -108,9 +91,6 @@ def test_replace_strict_invalid_expr(constructor_eager: ConstructorEager) -> Non
 
 
 def test_replace_strict_invalid_series(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}))
 
     msg = "`new` argument is required if `old` argument is not a Mapping type"
@@ -137,9 +117,6 @@ def test_replace_strict_expr_with_default(
     )
     xfail_if_pyspark_connect(constructor, request, reason=spark_connect_reason)
 
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
     result = df.select(
         nw.col("a").replace_strict(
@@ -153,9 +130,6 @@ def test_replace_strict_expr_with_default(
 def test_replace_strict_series_with_default(
     constructor_eager: ConstructorEager, return_dtype: DType | None
 ) -> None:
-    if "polars" in str(constructor_eager) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor_eager({"a": [1, 2, 3, 4]}))
     result = df.select(
         df["a"].replace_strict(
@@ -170,9 +144,6 @@ def test_replace_strict_with_default_and_nulls(
 ) -> None:
     xfail_if_pyspark_connect(constructor, request)
 
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     df = nw.from_native(constructor({"a": [1, 2, None, 4]}))
     result = df.select(
         nw.col("a").replace_strict([1, 2], [10, 20], default=99, return_dtype=nw.Int64)
@@ -184,9 +155,6 @@ def test_replace_strict_with_default_mapping(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     xfail_if_pyspark_connect(constructor, request)
-
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
 
     df = nw.from_native(constructor({"a": [1, 2, 3, 4]}))
     result = df.select(
@@ -202,9 +170,6 @@ def test_replace_strict_with_expressified_default(
 ) -> None:
     xfail_if_pyspark_connect(constructor, request)
 
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
     df = nw.from_native(constructor(data))
     result = df.select(
@@ -217,9 +182,6 @@ def test_replace_strict_with_expressified_default(
 
 
 def test_replace_strict_with_series_default(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     data = {"a": [1, 2, 3, 4], "b": ["beluga", "narwhal", "orca", "vaquita"]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     series, default = df["a"], df["b"]
@@ -235,9 +197,6 @@ def test_mapping_key_not_in_expr(
 ) -> None:
     xfail_if_pyspark_connect(constructor, request)
 
-    if "polars" in str(constructor) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     data = {"a": [1, 2]}
     df = nw.from_native(constructor(data))
 
@@ -248,9 +207,6 @@ def test_mapping_key_not_in_expr(
 
 
 def test_mapping_key_not_in_series(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and polars_lt_v1:
-        pytest.skip(reason=pl_skip_reason)
-
     data = {"a": [1, 2]}
     df = nw.from_native(constructor_eager(data))
 

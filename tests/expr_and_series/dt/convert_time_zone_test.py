@@ -9,7 +9,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    POLARS_VERSION,
     Constructor,
     assert_equal_data,
     is_windows,
@@ -90,9 +89,6 @@ def test_convert_time_zone_from_none(
         pytest.skip()
     if any(x in str(constructor) for x in ("cudf", "duckdb", "pyspark", "ibis")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 7):
-        # polars used to disallow this
-        pytest.skip()
     data = {
         "a": [
             datetime(2020, 1, 1, tzinfo=timezone.utc),

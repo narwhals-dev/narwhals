@@ -57,19 +57,11 @@ kwargs_and_expected = (
 
 @pytest.mark.parametrize("kwargs_and_expected", kwargs_and_expected)
 def test_rolling_var_expr(
-    request: pytest.FixtureRequest,
-    constructor_eager: ConstructorEager,
-    kwargs_and_expected: dict[str, Any],
+    constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
-
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        # TODO(FBruzzesi): Dask is raising the following error:
-        # NotImplementedError: Partition size is less than overlapping window size.
-        # Try using ``df.repartition`` to increase the partition size.
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data))
     result = df.select(nw.col("a").rolling_var(**kwargs).alias(name))
@@ -84,9 +76,6 @@ def test_rolling_var_expr(
 def test_rolling_var_series(
     constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        pytest.skip()
-
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
@@ -100,7 +89,6 @@ def test_rolling_var_series(
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @pytest.mark.slow
-@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
@@ -133,7 +121,6 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @pytest.mark.slow
-@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> None:  # noqa: FBT001

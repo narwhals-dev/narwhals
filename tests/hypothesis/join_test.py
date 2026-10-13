@@ -7,7 +7,7 @@ import pytest
 from hypothesis import assume, given, strategies as st
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, POLARS_VERSION, assert_equal_data
+from tests.utils import PANDAS_VERSION, assert_equal_data
 
 pytest.importorskip("pandas")
 pytest.importorskip("polars")
@@ -36,7 +36,6 @@ if TYPE_CHECKING:
     st.lists(st.floats(), min_size=3, max_size=3),
     st.lists(st.sampled_from(["a", "b", "c"]), min_size=1, max_size=3, unique=True),
 )
-@pytest.mark.skipif(POLARS_VERSION < (0, 20, 13), reason="0.0 == -0.0")
 @pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="requires pyarrow")
 @pytest.mark.slow
 def test_join(  # pragma: no cover

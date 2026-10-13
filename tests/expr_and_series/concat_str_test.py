@@ -7,7 +7,6 @@ import pytest
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    POLARS_VERSION,
     Constructor,
     assert_equal_data,
     uses_pyarrow_backend,
@@ -31,15 +30,8 @@ data = {"a": [1, 2, 3], "b": ["dogs", "cats", None], "c": ["play", "swim", "walk
     ],
 )
 def test_concat_str(
-    constructor: Constructor,
-    *,
-    ignore_nulls: bool,
-    expected: list[str],
-    request: pytest.FixtureRequest,
+    constructor: Constructor, *, ignore_nulls: bool, expected: list[str]
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
-        # nth only available after 1.0
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))
     result = (
         df.select(

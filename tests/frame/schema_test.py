@@ -472,8 +472,7 @@ def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
     if find_spec("polars"):
         import polars as pl
 
-        if POLARS_VERSION >= (1,):
-            return (pl.Schema, dict)
+        return (pl.Schema, dict)
     return (dict,)  # pragma: no cover
 
 

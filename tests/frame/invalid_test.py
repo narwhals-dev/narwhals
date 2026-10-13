@@ -6,14 +6,11 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import MultiOutputExpressionError
-from tests.utils import NUMPY_VERSION, POLARS_VERSION, Constructor
+from tests.utils import NUMPY_VERSION, Constructor
 
 T = TypeVar("T")
 
 
-@pytest.mark.skipif(
-    POLARS_VERSION < (1,), reason="Polars would raise unrecoverable panic."
-)
 def test_all_vs_all(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6]}
     df = nw.from_native(constructor(data))

@@ -7,7 +7,7 @@ import pytest
 
 import narwhals as nw
 from narwhals.exceptions import NarwhalsError
-from tests.utils import POLARS_VERSION, ConstructorEager, assert_equal_data
+from tests.utils import ConstructorEager, assert_equal_data
 
 data = {
     "ix": [1, 2, 1, 1, 2, 2],
@@ -122,9 +122,6 @@ def test_pivot(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.pivot(
@@ -150,9 +147,6 @@ def test_pivot_no_agg(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data_), eager_only=True)
     with context:
@@ -173,9 +167,6 @@ def test_pivot_sort_columns(
     expected: list[str],
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
-        request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
         request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -222,9 +213,6 @@ def test_pivot_names_out(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
 
     df = nw.from_native(constructor_eager(data), eager_only=True)
 
@@ -245,9 +233,7 @@ def test_pivot_no_index(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 0):
-        # not implemented
-        request.applymarker(pytest.mark.xfail)
+
     df = nw.from_native(constructor_eager(data_no_dups), eager_only=True)
     with pytest.warns(UserWarning, match="has no effect"):
         result = df.pivot(on="col", values="foo", maintain_order=True).sort("ix", "bar")

@@ -8,7 +8,6 @@ import numpy as np
 import narwhals as nw
 from tests.utils import (
     PANDAS_VERSION,
-    POLARS_VERSION,
     PYARROW_VERSION,
     ConstructorEager,
     assert_equal_data,
@@ -54,13 +53,6 @@ def test_array_dunder_with_copy(
         0,
     ):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (
-        0,
-        20,
-        28,
-    ):  # pragma: no cover
-        request.applymarker(pytest.mark.xfail)
-
     df = nw.from_native(constructor_eager({"a": [1, 2, 3]}), eager_only=True)
     result = df.__array__(copy=True)
     np.testing.assert_array_equal(result, np.array([[1], [2], [3]], dtype="int64"))
