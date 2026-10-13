@@ -170,7 +170,7 @@ class PolarsExpr:
         pl_partition_by = partition_by or pl.repeat(1, pl.len())
         if self._backend_version < (1, 9):
             if order_by:
-                msg = "`order_by` in Polars requires version 1.10 or greater"
+                msg = "`order_by` in Polars requires version 1.9 or greater"
                 raise NotImplementedError(msg)
             native = self.native.over(pl_partition_by)
         else:

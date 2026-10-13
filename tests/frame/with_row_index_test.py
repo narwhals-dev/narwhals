@@ -40,7 +40,7 @@ def test_with_row_index_lazy(
 ) -> None:
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
 
     result = (
@@ -76,7 +76,7 @@ def test_with_row_index_lazy_meaner_examples(
     constructor: Constructor, order_by: list[str], expected_index: list[int]
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3289
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -106,7 +106,7 @@ def test_with_row_index_order_by_w_null(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="not implemented in dask"))
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
