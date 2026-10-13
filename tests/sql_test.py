@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION
@@ -9,7 +10,7 @@ from tests.utils import DUCKDB_VERSION
 def test_sql() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("sqlparse")
-    if DUCKDB_VERSION < (1, 3):
+    if DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     from narwhals.sql import table
 
@@ -34,7 +35,7 @@ def test_sql() -> None:
 
 def test_sql_table_schema_pairs() -> None:
     pytest.importorskip("duckdb")
-    if DUCKDB_VERSION < (1, 3):
+    if DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     from narwhals.sql import table
 

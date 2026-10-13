@@ -8,6 +8,7 @@ from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation, generate_temporary_column_name
@@ -43,7 +44,7 @@ if TYPE_CHECKING:
     Data: TypeAlias = "dict[str, list[Any]]"
 
 
-MIN_PANDAS_NULLABLE_VERSION = (2,)
+MIN_PANDAS_NULLABLE_VERSION = PkgVersion("2")
 
 # When testing cudf.pandas in Kaggle, we get an error if we try to run
 # python -m cudf.pandas -m pytest --constructors=pandas. This gives us
@@ -197,7 +198,7 @@ def _dask_constructor(obj: Data, npartitions: int) -> NativeDask:  # pragma: no 
     import pandas as pd
 
     frame = pd.DataFrame(obj)
-    if PANDAS_VERSION >= (2, 2) and find_spec("pyarrow"):
+    if PANDAS_VERSION >= PkgVersion("2.2") and find_spec("pyarrow"):
         import pyarrow as pa
 
         for name, values in obj.items():

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DASK_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -102,7 +103,7 @@ def test_logic_operators_expr_scalar(
 ) -> None:
     if (
         "dask" in str(constructor)
-        and DASK_VERSION < (2024, 10)
+        and DASK_VERSION < PkgVersion("2024.10")
         and operator in {"__rand__", "__ror__"}
     ):
         request.applymarker(pytest.mark.xfail)

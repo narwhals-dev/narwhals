@@ -322,6 +322,7 @@ extend-ignore-names = [
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
   "PLR0917", # too-many-positional-arguments
+  "SIM300",  # yoda-conditions (flips `PANDAS_VERSION < PkgVersion("2.2")`)
 ]
 
 "tpch/tests/*" = ["S101"]
@@ -458,7 +459,7 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < PkgVersion\('
 ]
 
 [tool.mypy]

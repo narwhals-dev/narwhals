@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import DuplicateError
@@ -21,12 +22,12 @@ UNSUPPORTED_BACKENDS = ("dask",)
 
 def maybe_skip(constructor: Constructor | ConstructorEager) -> None:
     if "pandas" in str(constructor) and (
-        PANDAS_VERSION < (2, 2, 0) or PYARROW_VERSION == (0, 0, 0)
+        PANDAS_VERSION < PkgVersion("2.2.0") or PYARROW_VERSION == PkgVersion("0.0.0")
     ):
         reason = "pandas is too old or pyarrow not installed"
         pytest.skip(reason=reason)
 
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         reason = "duckdb requires v1.3.0"
         pytest.skip(reason=reason)
 

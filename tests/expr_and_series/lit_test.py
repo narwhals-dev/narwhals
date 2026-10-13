@@ -4,6 +4,7 @@ from datetime import date
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -79,7 +80,7 @@ def test_lit_operation_in_select(
     if (
         "dask" in str(constructor)
         and col_name == "right_lit_with_abs"
-        and DASK_VERSION < (2025,)
+        and DASK_VERSION < PkgVersion("2025")
     ):
         pytest.skip()
 
@@ -109,12 +110,12 @@ def test_lit_operation_in_with_columns(
     assert_equal_data(result, expected)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("1.5"), reason="too old for pyarrow")
 def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     # https://github.com/dask/dask/issues/11637
     if "dask" in str(constructor) or (
         # https://github.com/rapidsai/cudf/pull/18832
-        "cudf" in str(constructor) and CUDF_VERSION >= (25, 8, 0)
+        "cudf" in str(constructor) and CUDF_VERSION >= PkgVersion("25.8.0")
     ):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
@@ -134,7 +135,7 @@ def test_null_list_lit(constructor: Constructor, request: pytest.FixtureRequest)
         reason = "Dask scalars drop the dtype"
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
     elif any(x in str(constructor) for x in ("pandas", "modin")):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip(reason="casting to `List` needs pandas>=2.2")
         pytest.importorskip("pyarrow")
     dtype = nw.List(nw.Int64())
@@ -195,7 +196,7 @@ def test_nested_structures(
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
     if any(x in str(constructor) for x in ("pandas", "modin")) and (
-        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 0)
+        PYARROW_VERSION == PkgVersion("0.0.0") or PANDAS_VERSION < PkgVersion("2.0")
     ):  # pragma: no cover
         reason = "Requires pyarrow and pandas 2.0+"
         pytest.skip(reason=reason)
@@ -203,7 +204,7 @@ def test_nested_structures(
     if (
         "polars" in str(constructor)
         and isinstance(value, dict)
-        and POLARS_VERSION < (1, 10, 0)
+        and POLARS_VERSION < PkgVersion("1.10.0")
     ):  # pragma: no cover
         reason = "polars<1.10 does not support dict to struct in lit"
         pytest.skip(reason=reason)

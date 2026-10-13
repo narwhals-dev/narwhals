@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, PerformanceWarning
@@ -153,9 +154,9 @@ def test_struct_hashes() -> None:
 
 def test_2d_array(constructor: Constructor, request: pytest.FixtureRequest) -> None:
     version_conditions = [
-        (PANDAS_VERSION < (2, 2), "Requires pandas 2.2+ for 2D array support"),
+        (PANDAS_VERSION < PkgVersion("2.2"), "Requires pandas 2.2+ for 2D array support"),
         (
-            "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,),
+            "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14"),
             "PyArrow 14+ required for 2D array support",
         ),
     ]
@@ -207,7 +208,7 @@ def test_second_time_unit() -> None:
     s: IntoSeries = pd.Series(np.array([np.datetime64("2020-01-01", "s")]))
     result = nw.from_native(s, series_only=True)
     expected_unit: Literal["ns", "us", "ms", "s"] = (
-        "s" if PANDAS_VERSION >= (2,) else "ns"
+        "s" if PANDAS_VERSION >= PkgVersion("2") else "ns"
     )
     assert result.dtype == nw.Datetime(expected_unit)
 
@@ -227,11 +228,11 @@ def test_second_time_unit() -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION >= (3,),
+    PANDAS_VERSION >= PkgVersion("3"),
     reason="pandas 3.0+ disallows this kind of inplace modification",
 )
 @pytest.mark.skipif(
-    PANDAS_VERSION < (1, 4),
+    PANDAS_VERSION < PkgVersion("1.4"),
     reason="pandas pre 1.4 doesn't change the type on inplace modification",
 )
 @pytest.mark.filterwarnings("ignore:Setting an item of incompatible")
@@ -256,10 +257,12 @@ def test_pandas_fixed_offset_1302() -> None:
         pd.Series(pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])),
         series_only=True,
     ).dtype
-    expected_timezone = "UTC+01:00" if PANDAS_VERSION >= (2,) else "pytz.FixedOffset(60)"
+    expected_timezone = (
+        "UTC+01:00" if PANDAS_VERSION >= PkgVersion("2") else "pytz.FixedOffset(60)"
+    )
     assert result == nw.Datetime("ns", expected_timezone)
 
-    if PANDAS_VERSION >= (2,):
+    if PANDAS_VERSION >= PkgVersion("2"):
         result = nw.from_native(
             pd.Series(
                 pd.to_datetime(["2020-01-01T00:00:00.000000000+01:00"])
@@ -284,14 +287,14 @@ def test_huge_int() -> None:
 
     df = pl.DataFrame({"a": [1, 2, 3]})
 
-    if POLARS_VERSION >= (1, 18):
+    if POLARS_VERSION >= PkgVersion("1.18"):
         result = from_native_collect_schema(df.select(pl.col("a").cast(pl.Int128)))
         assert result["a"] == nw.Int128
         assert result.to_polars()["a"] == pl.Int128
     else:  # pragma: no cover
         # Int128 was not available yet
         pass
-    if POLARS_VERSION >= (1, 34):
+    if POLARS_VERSION >= PkgVersion("1.34"):
         result = from_native_collect_schema(df.select(pl.col("a").cast(pl.UInt128)))
         assert result["a"] == nw.UInt128
         assert result.to_polars()["a"] == pl.UInt128
@@ -328,7 +331,7 @@ def test_float16() -> None:
     ca = pa.chunked_array([pa.array(np.array([1.0, 2.0, 3.0], dtype=np.float16))])
     assert nw.from_native(ca, series_only=True).dtype == nw.Float16
 
-    if POLARS_VERSION >= (1, 36):
+    if POLARS_VERSION >= PkgVersion("1.36"):
         import polars as pl
 
         s = pl.Series([1.0, 2.0, 3.0], dtype=pl.Float16)
@@ -351,9 +354,9 @@ def test_float16_pandas(source_dtype: str, expected_native_dtype: str) -> None:
     pytest.importorskip("pandas")
     if "pyarrow" in source_dtype:
         pytest.importorskip("pyarrow")
-        if PANDAS_VERSION < (1, 5):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("1.5"):  # pragma: no cover
             pytest.skip("too old for pyarrow-backed dtypes")
-        if PYARROW_VERSION < (16,):  # pragma: no cover
+        if PYARROW_VERSION < PkgVersion("16"):  # pragma: no cover
             pytest.skip("PyArrow added casting to/from half-float in 16.0")
 
     import pandas as pd
@@ -368,7 +371,7 @@ def test_float16_pandas(source_dtype: str, expected_native_dtype: str) -> None:
     assert nw.from_native(native, series_only=True).dtype == nw.Float16
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (1, 5), reason="too old for pyarrow")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("1.5"), reason="too old for pyarrow")
 def test_decimal() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -452,7 +455,7 @@ def test_dtype_is_x() -> None:
         assert dtype.is_boolean() == (dtype in is_boolean)
 
 
-@pytest.mark.skipif(POLARS_VERSION < (1, 18), reason="too old for Int128")
+@pytest.mark.skipif(POLARS_VERSION < PkgVersion("1.18"), reason="too old for Int128")
 def test_huge_int_to_native() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -495,7 +498,7 @@ def test_cast_decimal_to_native(
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Unsupported dtype"))
 
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 0, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.0.0"):
         pytest.skip(reason="too old to convert to decimal")
 
     data = {"a": [1.1, 2.2, 3.3]}
@@ -503,7 +506,7 @@ def test_cast_decimal_to_native(
     df = nw.from_native(constructor(data))
 
     if df.implementation.is_pandas_like() and (
-        PYARROW_VERSION == (0, 0, 0) or PANDAS_VERSION < (2, 2)
+        PYARROW_VERSION == PkgVersion("0.0.0") or PANDAS_VERSION < PkgVersion("2.2")
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
@@ -604,7 +607,7 @@ def test_enum_repr_pl() -> None:
 
 
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 32), reason="`pl.Categories` was introduced in 1.32"
+    POLARS_VERSION < PkgVersion("1.32"), reason="`pl.Categories` was introduced in 1.32"
 )
 def test_polars_categorical_with_defined_categories() -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3719
@@ -719,7 +722,7 @@ def test_pandas_datetime_ignored_time_unit_warns(
     data = {"a": [datetime(2001, 1, 1), None, datetime(2001, 1, 3)]}
     expr = nw.col("a").cast(dtype)
     df = nw.from_native(constructor_pandas_like(data))
-    ctx = does_not_warn() if PANDAS_VERSION >= (2,) else context
+    ctx = does_not_warn() if PANDAS_VERSION >= PkgVersion("2") else context
     with ctx:
         df.select(expr)
 

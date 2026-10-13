@@ -5,6 +5,7 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import assume, given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -69,7 +70,7 @@ def test_right_arithmetic_expr(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip()
     if attr == "__rmod__" and any(
         x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]
@@ -112,7 +113,7 @@ def test_rmod_negative_operands(
     constructor: Constructor,
     request: pytest.FixtureRequest,
 ) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 10):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10"):
         pytest.skip(reason="dask<2024.10 does not implement rmod with negative operands")
     if any(x in str(constructor) for x in ["pandas_pyarrow", "modin_pyarrow"]):
         request.applymarker(
@@ -204,7 +205,9 @@ def test_truediv_same_dims(
 
 
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.0"), reason="convert_dtypes not available"
+)
 @pytest.mark.slow
 def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
     if any(x in str(constructor_eager) for x in ["modin", "cudf"]):
@@ -220,7 +223,9 @@ def test_floordiv(constructor_eager: ConstructorEager, *, left: int, right: int)
 
 @pytest.mark.slow
 @given(left=st.integers(-100, 100), right=st.integers(-100, 100))
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0), reason="convert_dtypes not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.0"), reason="convert_dtypes not available"
+)
 def test_mod(constructor_eager: ConstructorEager, *, left: int, right: int) -> None:
     if any(x in str(constructor_eager) for x in ["pandas_pyarrow", "modin", "cudf"]):
         # pandas[pyarrow] does not implement mod
@@ -255,7 +260,7 @@ def test_arithmetic_expr_left_literal(
     request: pytest.FixtureRequest,
 ) -> None:
     if ("duckdb" in str(constructor) and attr == "__floordiv__") or (
-        "dask" in str(constructor) and DASK_VERSION < (2024, 10)
+        "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.10")
     ):
         request.applymarker(pytest.mark.xfail)
     if attr == "__mod__" and any(
@@ -303,7 +308,7 @@ def test_arithmetic_series_left_literal(
 
 
 def test_std_broadcating(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         # `std(ddof=2)` fails for duckdb here
         pytest.skip()
     df = nw.from_native(constructor({"a": [1, 2, 3]}))
