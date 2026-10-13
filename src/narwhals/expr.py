@@ -1779,6 +1779,9 @@ class Expr:
 
         Can return multiple values.
 
+        Note:
+            Null values are not ignored.
+
         Arguments:
             keep: Whether to keep all modes or any mode found. Remark that `keep='any'`
                 is not deterministic for multimodal values.

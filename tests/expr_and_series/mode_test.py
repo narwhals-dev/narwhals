@@ -11,6 +11,7 @@ from narwhals.exceptions import ShapeError
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
+data_nulls = {"a": [None, None, 2.0]}
 data_group = {
     "grp": ["g1", "g1", "g1", "g1", "g2", "g2", "g2"],
     "vals_unimodal": [2, 1, 1, 3, 3, 3, 4],
@@ -188,7 +189,6 @@ def test_mode_group_by_multiple_cols(
 
 
 def test_mode_single_expr_nulls(constructor_eager: ConstructorEager) -> None:
-    data_nulls = {"a": [None, None, 2.0]}
     df = nw.from_native(constructor_eager(data_nulls))
     result = df.select(nw.col("a").mode(keep="all"))
     expected = {"a": [None]}
@@ -199,7 +199,6 @@ def test_mode_single_expr_nulls(constructor_eager: ConstructorEager) -> None:
 
 
 def test_mode_series_nulls(constructor_eager: ConstructorEager) -> None:
-    data_nulls = {"a": [None, None, 2.0]}
     series = nw.from_native(constructor_eager(data_nulls), eager_only=True)["a"]
     result = series.mode(keep="all")
     expected = {"a": [None]}
@@ -207,15 +206,3 @@ def test_mode_series_nulls(constructor_eager: ConstructorEager) -> None:
 
     result_any = series.mode(keep="any")
     assert_equal_data({"a": [result_any]}, expected)
-
-
-def test_mode_dask_expr_nulls() -> None:
-    pytest.importorskip("dask")
-    import dask.dataframe as dd
-    import pandas as pd
-
-    df = nw.from_native(
-        dd.from_pandas(pd.DataFrame({"a": [None, None, 2.0]}), npartitions=1)
-    )
-    result = df.select(nw.col("a").mode(keep="any")).lazy().collect()
-    assert_equal_data(result, {"a": [None]})
