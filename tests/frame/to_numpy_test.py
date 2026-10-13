@@ -9,7 +9,7 @@ pytest.importorskip("numpy")
 import numpy as np
 
 import narwhals as nw
-from tests.utils import PANDAS_VERSION, is_windows
+from tests.utils import NUMPY_VERSION, PANDAS_VERSION, POLARS_VERSION, is_windows
 
 if TYPE_CHECKING:
     from tests.utils import ConstructorEager
@@ -29,6 +29,14 @@ def test_to_numpy_tz_aware(constructor_eager: ConstructorEager) -> None:
         "pyarrow" in str(constructor_eager) and is_windows()
     ):
         pytest.skip()
+    if (
+        "polars" in str(constructor_eager)
+        and POLARS_VERSION < (1, 1)
+        and NUMPY_VERSION >= (2,)
+    ):
+        pytest.skip(
+            reason="segfaults, NumPy 2 support: https://github.com/pola-rs/polars/pull/17384"
+        )
     df = nw.from_native(
         constructor_eager({"a": [datetime(2020, 1, 1), datetime(2020, 1, 2)]}),
         eager_only=True,

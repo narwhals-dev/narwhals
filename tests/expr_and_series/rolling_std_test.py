@@ -201,6 +201,7 @@ def test_rolling_std_expr_lazy_ungrouped(
     expected_a: list[float],
     window_size: int,
     min_samples: int,
+    request: pytest.FixtureRequest,
     *,
     center: bool,
     ddof: int,
@@ -209,6 +210,10 @@ def test_rolling_std_expr_lazy_ungrouped(
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
+    if "polars" in str(constructor) and POLARS_VERSION == (1, 24, 0) and window_size == 2:
+        # Windows following a null return NaN.
+        reason = "https://github.com/pola-rs/polars/issues/21758"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()

@@ -768,8 +768,9 @@ def test_join_duplicate_column_names(
 ) -> None:
     exception: type[Exception]
 
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 26):
-        pytest.skip()
+    if "polars" in str(constructor) and (1, 19) <= POLARS_VERSION < (1, 23):
+        reason = "https://github.com/pola-rs/polars/issues/21048"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     if (
         "cudf" in str(constructor)
         # TODO(unassigned): cudf doesn't raise here for some reason,

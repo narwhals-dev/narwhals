@@ -471,8 +471,12 @@ def test_fill_null_expr_limits(
     expected: list[int | None],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
-        pytest.skip()
+    if (
+        "polars" in str(constructor_eager)
+        and POLARS_VERSION < (1, 3)
+        and all(v is None for v in values)
+    ):
+        pytest.skip(reason="panics, https://github.com/pola-rs/polars/pull/17861")
 
     if "cudf" in str(constructor_eager):
         reason = "The limit keyword is not supported"

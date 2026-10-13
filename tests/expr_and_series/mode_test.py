@@ -129,6 +129,12 @@ def test_mode_group_by_multimodal(
         #   - Dask: https://github.com/narwhals-dev/narwhals/pull/3019#issuecomment-3216649862
         #   - PyArrow: https://github.com/apache/arrow/issues/20359
         request.applymarker(pytest.mark.xfail)
+    if (
+        "polars" in str(constructor)
+        and (1, 18) <= POLARS_VERSION < (1, 19)
+        and mode_col == "vals_multimodal_str"
+    ):
+        pytest.skip(reason="panics, https://github.com/pola-rs/polars/issues/20448")
 
     result = (
         df.group_by("grp")
