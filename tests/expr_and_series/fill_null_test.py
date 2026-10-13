@@ -118,7 +118,7 @@ def test_fill_null_strategies_with_limit_as_none(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+        "polars" in str(constructor) and POLARS_VERSION < (1, 9)
     ):
         pytest.skip()
 
@@ -205,7 +205,7 @@ def test_fill_null_limits(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+        "polars" in str(constructor) and POLARS_VERSION < (1, 9)
     ):
         pytest.skip()
 
@@ -411,7 +411,7 @@ def test_fill_null_strategies_with_partition_by(
         request.applymarker(pytest.mark.xfail)
 
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 10)
+        "polars" in str(constructor) and POLARS_VERSION < (1, 9)
     ):
         pytest.skip()
     if "modin" in str(constructor):

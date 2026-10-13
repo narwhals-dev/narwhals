@@ -336,7 +336,7 @@ def test_rank_with_order_by(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         pytest.skip(reason="bug in old version")
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")
@@ -392,7 +392,7 @@ def test_rank_with_order_by_and_partition_by(
         request.applymarker(pytest.mark.xfail)
     if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
         pytest.skip(reason="bug in old version")
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip(reason="too old")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip(reason="too old version")

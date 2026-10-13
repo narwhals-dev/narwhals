@@ -11,7 +11,7 @@ def test_ew_mean(
 ) -> None:
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 9):
         pytest.skip()
 
     data = {

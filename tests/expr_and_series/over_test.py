@@ -416,7 +416,7 @@ def test_unsupported_over() -> None:
 def test_over_without_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         # windows not yet supported
@@ -449,7 +449,7 @@ def test_over_without_partition_by_categorical(constructor: Constructor) -> None
 def test_aggregation_over_without_partition_by(
     constructor_eager: ConstructorEager,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 9):
         pytest.skip()
 
     df = nw.from_native(constructor_eager({"a": [1, -1, 2], "i": [0, 2, 1]}))

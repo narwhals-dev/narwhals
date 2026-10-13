@@ -25,7 +25,7 @@ def test_is_first_distinct_expr(constructor_eager: ConstructorEager) -> None:
 
 
 def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -44,7 +44,7 @@ def test_is_first_distinct_expr_lazy(constructor: Constructor) -> None:
 
 
 def test_is_first_distinct_expr_lazy_w_nulls(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -65,7 +65,7 @@ def test_is_first_distinct_expr_lazy_w_nulls(constructor: Constructor) -> None:
 def test_is_first_distinct_expr_lazy_grouped(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

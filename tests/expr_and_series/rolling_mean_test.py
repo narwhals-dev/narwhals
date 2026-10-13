@@ -118,7 +118,7 @@ def test_rolling_mean_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
@@ -169,7 +169,7 @@ def test_rolling_mean_expr_lazy_ungrouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
@@ -201,7 +201,7 @@ def test_scrambled_groups_over(
     # https://github.com/narwhals-dev/narwhals/issues/3600
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()

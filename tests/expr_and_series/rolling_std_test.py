@@ -205,7 +205,7 @@ def test_rolling_std_expr_lazy_ungrouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()
@@ -318,7 +318,7 @@ def test_rolling_std_expr_lazy_grouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
+    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
         pytest.skip()

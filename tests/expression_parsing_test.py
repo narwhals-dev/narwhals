@@ -54,7 +54,7 @@ from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equa
 def test_over_pushdown(
     constructor: Constructor, expr: nw.Expr, expected: list[float]
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

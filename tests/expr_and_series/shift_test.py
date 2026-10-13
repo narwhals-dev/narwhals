@@ -36,7 +36,7 @@ def test_shift_lazy(constructor: Constructor) -> None:
         "b": [1, 2, 3, 5, 3],
         "c": [5, 4, 3, 2, 1],
     }
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
@@ -55,7 +55,7 @@ def test_shift_lazy_grouped(
         # https://github.com/dask/dask/issues/11806
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()

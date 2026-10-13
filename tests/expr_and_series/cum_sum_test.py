@@ -239,7 +239,7 @@ def test_cum_sum_does_not_overflow(
 
 
 def test_shift_cum_sum(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 9):
         pytest.skip()
     data = {"arg entina": [1, 2, 3, 4, 5], "i": list(range(5))}
     df = nw.from_native(constructor_eager(data), eager_only=True)
