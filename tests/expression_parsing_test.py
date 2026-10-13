@@ -108,7 +108,7 @@ def test_per_group_broadcasting(
     ],
 )
 def test_invalid_operations(constructor: Constructor, expr: nw.Expr) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < (1,):
         pytest.skip()
     df = nw.from_native(
         constructor({"a": [-1, 2, 3], "b": [1, 1, 1], "c": [2, 2, 2], "i": [0, 1, 2]})

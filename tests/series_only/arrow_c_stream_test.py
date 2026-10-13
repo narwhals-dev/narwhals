@@ -21,7 +21,6 @@ def _poison(*_: Any) -> NoReturn:
     raise RuntimeError(msg)
 
 
-@pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
 @pytest.mark.skipif(
     PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )
@@ -32,7 +31,6 @@ def test_arrow_c_stream_test() -> None:
     assert pc.all(pc.equal(result, expected)).as_py()
 
 
-@pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
 @pytest.mark.skipif(
     PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
 )

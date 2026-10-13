@@ -15,15 +15,15 @@ LENGTH_CHANGING: dict[str, nw.Expr] = {
 }
 
 # Polars only rejects a non-scalar unit-length column on its in-memory engine, its
-# streaming engine broadcasts instead (pola-rs/polars#26023, still open). Which engine
-# runs eager `DataFrame` methods has moved around, so the expectation is banded:
+# streaming engine broadcasts instead (pola-rs/polars#26023, still open). With the
+# default engine (as in CI) the expectation is banded:
 #   <= 1.9        no `ShapeError` (1.7 to 1.9 raise `InvalidOperationError` instead)
-#   1.10 to 1.24  raises
-#   1.25 to 1.43  broadcasts
-#   >= 1.44       raises, eager pinned to the in-memory engine (pola-rs/polars#28800)
-POLARS_EAGER_RAISES = (1, 10) <= POLARS_VERSION < (1, 25) or POLARS_VERSION >= (1, 44)
-# `when/then` reached the in-memory engine's check only in 1.44.
-POLARS_WHEN_RAISES = POLARS_VERSION >= (1, 44)
+#   >= 1.10       raises
+# `POLARS_ENGINE_AFFINITY=streaming` makes 1.25 to 1.43 broadcast, until eager was
+# pinned to the in-memory engine in 1.44 (pola-rs/polars#28800).
+POLARS_EAGER_RAISES = POLARS_VERSION >= (1, 10)
+# `when/then` reached the in-memory engine's check only in 1.29.
+POLARS_WHEN_RAISES = POLARS_VERSION >= (1, 29)
 
 
 @pytest.mark.parametrize(

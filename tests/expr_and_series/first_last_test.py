@@ -309,8 +309,6 @@ def test_first_expr_invalid(
 def test_first_last_different_orders(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
-        pytest.skip()
     if any(x in str(constructor) for x in ("pyspark", "dask")):
         # Currently unsupported.
         request.applymarker(pytest.mark.xfail)
