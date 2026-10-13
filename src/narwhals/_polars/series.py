@@ -466,6 +466,16 @@ class PolarsSeries:
 
         return self._with_native(native_result)
 
+    def _null_if_few_valid(
+        self, result: pl.Series, window_size: int, *, center: bool, ddof: int
+    ) -> pl.Series:
+        if self._backend_version < (1, 17):
+            # See `PolarsExpr._null_if_few_valid`.
+            n_valid = self.native.is_not_null().cast(pl.UInt32)
+            n_valid = n_valid.rolling_sum(window_size, center=center, min_periods=1)  # type: ignore[call-arg]
+            return pl.select(pl.when(n_valid > ddof).then(result)).to_series()
+        return result
+
     @requires.backend_version((1,))
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
@@ -475,11 +485,11 @@ class PolarsSeries:
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-        return self._with_native(
-            self.native.rolling_var(
-                window_size=window_size, center=center, ddof=ddof, **extra_kwargs
-            )
+        native = self.native.rolling_var(
+            window_size=window_size, center=center, ddof=ddof, **extra_kwargs
         )
+        native = self._null_if_few_valid(native, window_size, center=center, ddof=ddof)
+        return self._with_native(native)
 
     @requires.backend_version((1,))
     def rolling_std(
@@ -490,11 +500,11 @@ class PolarsSeries:
             if self._backend_version < (1, 21, 0)
             else {"min_samples": min_samples}
         )
-        return self._with_native(
-            self.native.rolling_std(
-                window_size=window_size, center=center, ddof=ddof, **extra_kwargs
-            )
+        native = self.native.rolling_std(
+            window_size=window_size, center=center, ddof=ddof, **extra_kwargs
         )
+        native = self._null_if_few_valid(native, window_size, center=center, ddof=ddof)
+        return self._with_native(native)
 
     def rolling_sum(self, window_size: int, *, min_samples: int, center: bool) -> Self:
         extra_kwargs: dict[str, Any] = (

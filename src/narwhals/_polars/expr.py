@@ -177,6 +177,18 @@ class PolarsExpr:
             native = self.native.over(pl_partition_by, order_by=order_by or None)
         return self._with_native(native)
 
+    def _null_if_few_valid(
+        self, result: pl.Expr, window_size: int, *, center: bool, ddof: int
+    ) -> pl.Expr:
+        if self._backend_version < (1, 17):
+            # Windows with `ddof` or fewer valid values give 0.0 instead of null when
+            # the input has nulls: https://github.com/pola-rs/polars/pull/20077
+            n_valid = self.native.is_not_null().cast(pl.UInt32)
+            kwds = self._renamed_min_periods(1)
+            n_valid = n_valid.rolling_sum(window_size, center=center, **kwds)
+            return pl.when(n_valid > ddof).then(result)
+        return result
+
     @requires.backend_version((1,))
     def rolling_var(
         self, window_size: int, *, min_samples: int, center: bool, ddof: int
@@ -185,6 +197,7 @@ class PolarsExpr:
         native = self.native.rolling_var(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
+        native = self._null_if_few_valid(native, window_size, center=center, ddof=ddof)
         return self._with_native(native)
 
     @requires.backend_version((1,))
@@ -195,6 +208,7 @@ class PolarsExpr:
         native = self.native.rolling_std(
             window_size=window_size, center=center, ddof=ddof, **kwds
         )
+        native = self._null_if_few_valid(native, window_size, center=center, ddof=ddof)
         return self._with_native(native)
 
     def first(self, order_by: Sequence[str] = ()) -> Self:

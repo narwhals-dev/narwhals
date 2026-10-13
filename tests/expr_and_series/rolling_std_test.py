@@ -104,6 +104,16 @@ def test_rolling_std_series(
     assert_equal_data(result, {name: expected})
 
 
+def test_rolling_std_series_with_nulls(constructor_eager: ConstructorEager) -> None:
+    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+        pytest.skip()
+    data = {"a": [1.0, None, 2.0, None, 4.0]}
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df["a"].rolling_std(3, min_samples=1, center=True)
+    # Windows with a single valid value have no variance for `ddof=1`.
+    assert_equal_data({"a": result}, {"a": [None, sqrt(0.5), None, sqrt(2.0), None]})
+
+
 @pytest.mark.parametrize(
     ("expected_a", "window_size", "min_samples", "center", "ddof"),
     [
