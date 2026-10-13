@@ -698,6 +698,24 @@ class ArrowDataFrame(
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        # NOTE: Not `pa.Table.cast`, which re-validates every field and raises on
+        # unrelated non-nullable ones holding nulls, nor `set_column` per column, which
+        # is O(n_cast * n_columns). Field metadata is dropped on cast columns as it can
+        # be type-specific (e.g. polars' Enum categories).
+        native = self.native
+        schema = native.schema
+        fields, columns = list(schema), list(native.columns)
+        for name, dtype in dtypes.items():
+            index = schema.get_field_index(name)
+            target_dtype = narwhals_to_native_dtype(dtype, self._version)
+            fields[index] = pa.field(name, target_dtype, nullable=fields[index].nullable)
+            columns[index] = pc.cast(columns[index], target_dtype)
+        result = pa.Table.from_arrays(columns, schema=pa.schema(fields))
+        return self._with_native(
+            result.replace_schema_metadata(schema.metadata), validate_column_names=False
+        )
+
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 

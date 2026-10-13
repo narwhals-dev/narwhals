@@ -27,6 +27,7 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
+from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -707,6 +708,39 @@ def broadcast_series_to_index(
         return series_class(pa_array, index=index, name=native.name)
 
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
+
+
+def _is_native_series(obj: object) -> TypeIs[pd.Series[Any]]:
+    # Narrows modin and cuDF to `pd.Series` too, matching how `_pandas_like` types them.
+    return is_pandas_like_series(obj)
+
+
+def floordiv_null_on_zero(
+    dividend: pd.Series[Any] | float, divisor: pd.Series[Any] | float
+) -> pd.Series[Any]:
+    """Floor-divide, with null wherever `divisor` is zero.
+
+    Natively, integer division by zero gives `inf` (numpy-backed), `0` (nullable)
+    or raises (pyarrow-backed).
+    """
+    if _is_native_series(divisor):
+        is_nonzero = divisor != 0
+        if is_nonzero.all():
+            return dividend // divisor
+        # A literal `1` upcasts a numpy bool divisor to object, and a nullable
+        # boolean one rejects it.
+        safe_divisor = divisor.where(is_nonzero, divisor.dtype.type(1))
+        return (dividend // safe_divisor).where(is_nonzero)
+    assert _is_native_series(dividend)  # noqa: S101
+    try:
+        divisor_is_zero = bool(divisor == 0)
+    except (TypeError, ValueError):  # `pd.NA == 0` and `array == 0` are ambiguous
+        divisor_is_zero = False
+    if divisor_is_zero:
+        all_false = type(dividend)(False, index=dividend.index)
+        # Every value gets masked, so this division only sets the result dtype.
+        return (dividend // type(divisor)(1)).where(all_false)
+    return dividend // divisor
 
 
 def binary_string_sum_fallback(  # pragma: no cover

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+from typing import Any
+
 import pytest
 
 import narwhals as nw
@@ -63,14 +66,33 @@ def test_top_k_by_multiple(constructor: Constructor) -> None:
     assert_equal_data(result.sort("sf_c"), expected)
 
 
+@pytest.mark.parametrize("reverse", [[True], [True, False, True]])
+def test_top_k_reverse_length_mismatch(
+    constructor: Constructor, reverse: list[bool]
+) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    msg = (
+        f"the length of `reverse` ({len(reverse)}) does not match the length of `by` (2)"
+    )
+    with pytest.raises(ValueError, match=re.escape(msg)):
+        df.top_k(2, by=["a", "b"], reverse=reverse)
+
+
+@pytest.mark.parametrize("reverse", [["abc", "xcd"], [1, 0], [None, True]])
+def test_top_k_reverse_not_bool(constructor: Constructor, reverse: list[Any]) -> None:
+    data = {"a": [1, 3, 2], "b": [4, 4, 6]}
+    df = nw.from_native(constructor(data))
+    with pytest.raises(TypeError, match="is not an instance of 'bool'"):
+        df.top_k(2, by=["a", "b"], reverse=reverse)
+
+
 def test_top_k_categorical(constructor: Constructor) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3841
     skip_if_no_categorical_ordering(constructor)
 
     data = {"c": ["dog", "cat", "bird"], "n": [1, 2, 3]}
-    df = nw.from_native(constructor(data)).with_columns(
-        nw.col("c").cast(nw.Categorical())
-    )
+    df = nw.from_native(constructor(data)).cast({"c": nw.Categorical()})
     result = df.top_k(2, by="c").sort("n")
     assert_equal_data(result, {"c": ["dog", "cat"], "n": [1, 2]})
     result = df.top_k(2, by="c", reverse=True).sort("n")

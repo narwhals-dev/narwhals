@@ -681,6 +681,8 @@ class Series(Generic[IntoSeriesT]):
     def mean(self) -> float:
         """Reduce this Series to the mean value.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -693,6 +695,8 @@ class Series(Generic[IntoSeriesT]):
 
     def median(self) -> float:
         """Reduce this Series to the median value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -710,6 +714,8 @@ class Series(Generic[IntoSeriesT]):
     def skew(self) -> float | None:
         """Calculate the sample skewness of the Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -726,6 +732,8 @@ class Series(Generic[IntoSeriesT]):
 
     def kurtosis(self) -> float | None:
         """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
@@ -756,7 +764,7 @@ class Series(Generic[IntoSeriesT]):
     def any(self) -> bool:
         """Return whether any of the values in the Series are True.
 
-        If there are no non-null elements, the result is `False`.
+        Null values are ignored. If there are no non-null elements, the result is `False`.
 
         Notes:
             Only works on Series of data type Boolean.
@@ -774,7 +782,7 @@ class Series(Generic[IntoSeriesT]):
     def all(self) -> bool:
         """Return whether all values in the Series are True.
 
-        If there are no non-null elements, the result is `True`.
+        Null values are ignored. If there are no non-null elements, the result is `True`.
 
         Examples:
             >>> import pyarrow as pa
@@ -789,6 +797,8 @@ class Series(Generic[IntoSeriesT]):
     def min(self) -> Any:
         """Get the minimal value in this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -801,6 +811,8 @@ class Series(Generic[IntoSeriesT]):
 
     def max(self) -> Any:
         """Get the maximum value in this Series.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -815,6 +827,8 @@ class Series(Generic[IntoSeriesT]):
     def arg_min(self) -> int:
         """Returns the index of the minimum value.
 
+        Null values are ignored.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -827,6 +841,8 @@ class Series(Generic[IntoSeriesT]):
 
     def arg_max(self) -> int:
         """Returns the index of the maximum value.
+
+        Null values are ignored.
 
         Examples:
             >>> import polars as pl
@@ -841,7 +857,7 @@ class Series(Generic[IntoSeriesT]):
     def sum(self) -> float:
         """Reduce this Series to the sum value.
 
-        If there are no non-null elements, the result is zero.
+        Null values are ignored. If there are no non-null elements, the result is zero.
 
         Examples:
             >>> import pyarrow as pa
@@ -856,9 +872,11 @@ class Series(Generic[IntoSeriesT]):
     def std(self, *, ddof: int = 1) -> float:
         """Get the standard deviation of this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                    where N represents the number of non-null elements.
 
         Examples:
             >>> import polars as pl
@@ -873,9 +891,11 @@ class Series(Generic[IntoSeriesT]):
     def var(self, *, ddof: int = 1) -> float:
         """Get the variance of this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                    where N represents the number of non-null elements.
 
         Examples:
             >>> import pyarrow as pa
@@ -1479,6 +1499,9 @@ class Series(Generic[IntoSeriesT]):
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
+            - `fill_null(strategy='forward')` corresponds to Polars `forward_fill` and pandas
+              `ffill`; likewise, `fill_null(strategy='backward')` corresponds to Polars
+              `backward_fill` and pandas `bfill`.
 
         Examples:
             >>> import pandas as pd
@@ -1592,6 +1615,8 @@ class Series(Generic[IntoSeriesT]):
 
     def n_unique(self) -> int:
         """Count the number of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import polars as pl
@@ -1981,6 +2006,8 @@ class Series(Generic[IntoSeriesT]):
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
         """Get quantile value of the series.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Note:
             pandas and Polars may have implementation differences for a given interpolation method.
