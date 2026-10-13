@@ -120,7 +120,7 @@ def test_fill_null_strategies_with_limit_as_none(
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
         "polars" in str(constructor) and POLARS_VERSION < (1, 9)
     ):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9, `strategy` DuckDB 1.3")
 
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -207,7 +207,7 @@ def test_fill_null_limits(
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
         "polars" in str(constructor) and POLARS_VERSION < (1, 9)
     ):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9, `strategy` DuckDB 1.3")
 
     if "ibis" in str(constructor):
         request.applymarker(pytest.mark.xfail)
@@ -413,7 +413,7 @@ def test_fill_null_strategies_with_partition_by(
     if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
         "polars" in str(constructor) and POLARS_VERSION < (1, 9)
     ):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9, `strategy` DuckDB 1.3")
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()

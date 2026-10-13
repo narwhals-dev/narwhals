@@ -37,7 +37,7 @@ def test_shift_lazy(constructor: Constructor) -> None:
         "c": [5, 4, 3, 2, 1],
     }
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))
@@ -56,7 +56,7 @@ def test_shift_lazy_grouped(
         # https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     df = nw.from_native(constructor(data))

@@ -96,7 +96,7 @@ def test_first_last_expr_over_order_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
@@ -153,7 +153,7 @@ def test_first_expr_over_order_by_partition_by(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14,):
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):

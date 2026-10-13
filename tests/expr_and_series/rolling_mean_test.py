@@ -121,7 +121,7 @@ def test_rolling_mean_expr_lazy_grouped(
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
-        pytest.skip()
+        pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
     if "pandas" in str(constructor):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
@@ -172,7 +172,7 @@ def test_rolling_mean_expr_lazy_ungrouped(
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
-        pytest.skip()
+        pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()
@@ -204,7 +204,7 @@ def test_scrambled_groups_over(
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
-        pytest.skip()
+        pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
     if "modin" in str(constructor):
         # unreliable
         pytest.skip()

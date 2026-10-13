@@ -85,7 +85,7 @@ def test_rolling_var_series(
     constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        pytest.skip()
+        pytest.skip(reason="`rolling_var` requires Polars 1.0")
 
     name = kwargs_and_expected["name"]
     kwargs = kwargs_and_expected["kwargs"]
@@ -99,7 +99,7 @@ def test_rolling_var_series(
 
 def test_rolling_var_series_with_nulls(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
-        pytest.skip()
+        pytest.skip(reason="`rolling_var` requires Polars 1.0")
     data = {"a": [1.0, None, 2.0, None, 4.0]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df["a"].rolling_var(3, min_samples=1, center=True)
@@ -212,7 +212,7 @@ def test_rolling_var_expr_lazy_ungrouped(
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
-        pytest.skip()
+        pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
     if "polars" in str(constructor) and POLARS_VERSION == (1, 24, 0) and window_size == 2:
         # Windows following a null return NaN.
         reason = "https://github.com/pola-rs/polars/issues/21758"
@@ -281,7 +281,7 @@ def test_rolling_var_expr_lazy_grouped(
     if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
         "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
     ):
-        pytest.skip()
+        pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
     if "modin" in str(constructor):

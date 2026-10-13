@@ -41,7 +41,7 @@ def test_is_last_distinct_expr_all(constructor_eager: ConstructorEager) -> None:
 
 def test_is_last_distinct_expr_lazy(constructor: Constructor) -> None:
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
@@ -66,7 +66,7 @@ def test_is_last_distinct_expr_lazy_grouped(
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
 
@@ -88,7 +88,7 @@ def test_is_last_distinct_expr_lazy_grouped_nulls(
         # non-elementary group-by agg
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
         pytest.skip()
     data = {"a": [1, 1, 2, 2, 2], "b": [1, 2, 2, 2, 1], "i": [None, 1, 2, 3, 4]}

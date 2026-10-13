@@ -240,7 +240,7 @@ def test_cum_sum_does_not_overflow(
 
 def test_shift_cum_sum(constructor_eager: ConstructorEager) -> None:
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
     data = {"arg entina": [1, 2, 3, 4, 5], "i": list(range(5))}
     df = nw.from_native(constructor_eager(data), eager_only=True)
     result = df.with_columns(kalimantan=nw.col("arg entina").shift(1).cum_sum())

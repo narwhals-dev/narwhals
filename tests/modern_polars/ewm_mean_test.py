@@ -12,7 +12,7 @@ def test_ew_mean(
     if any(x in str(constructor_eager) for x in ("pyarrow_table_", "modin")):
         request.applymarker(pytest.mark.xfail)
     if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 9):
-        pytest.skip()
+        pytest.skip(reason="`order_by` requires Polars 1.9")
 
     data = {
         "time": [
