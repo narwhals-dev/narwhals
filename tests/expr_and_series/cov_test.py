@@ -53,7 +53,14 @@ def test_cov_single_valid_pair_population(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
-def test_cov_invalid_denominator(constructor: Constructor) -> None:
+def test_cov_invalid_denominator(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and (1, 9) <= POLARS_VERSION < (1, 11):
+        # `pl.cov` inside an elementwise expression is not broadcast by `with_columns`,
+        # and the workaround needs the 1.11 `cov` (null for an all-null input).
+        reason = "https://github.com/pola-rs/polars/pull/20241"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     df = nw.from_native(constructor({"a": [1, 3], "b": [1, 2]}))
     result = df.select(
         cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)

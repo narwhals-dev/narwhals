@@ -170,9 +170,16 @@ class PolarsNamespace:
         return self._expr(pl.len(), self._version)
 
     def cov(self, a: PolarsExpr, b: PolarsExpr, *, ddof: int) -> PolarsExpr:
-        native = pl.cov(a.native, b.native, ddof=ddof)
         n_samples = (a.native.is_not_null() & b.native.is_not_null()).sum()
-        result = pl.when(n_samples > pl.lit(ddof)).then(native)
+        enough_samples = n_samples > pl.lit(ddof)
+        if (1, 11) <= self._backend_version < (1, 18):
+            # `pl.cov` inside an elementwise expression is not broadcast, so null out
+            # its inputs instead: https://github.com/pola-rs/polars/pull/20241
+            a_native = pl.when(enough_samples).then(a.native)
+            b_native = pl.when(enough_samples).then(b.native)
+            result = pl.cov(a_native, b_native, ddof=ddof)
+        else:
+            result = pl.when(enough_samples).then(pl.cov(a.native, b.native, ddof=ddof))
         return self._expr(result, self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
