@@ -211,7 +211,17 @@ class PolarsBaseFrame(Generic[NativePolarsFrame]):
                 .drop(token)
             )
         elif order_by:
-            res = self.native.sort(order_by).unique(subset, keep=keep)
+            res = self.native.sort(order_by)
+            if (1, 18) <= self._backend_version < (1, 29):
+                # A later `sort` lets the optimizer drop this one, unless the order is
+                # observed: https://github.com/pola-rs/polars/issues/22485
+                token = generate_temporary_column_name(
+                    8, self.columns, prefix="row_index_"
+                )
+                res = res.with_row_index(token)
+                res = res.unique(subset or self.columns, keep=keep).drop(token)
+            else:
+                res = res.unique(subset, keep=keep)
         else:
             res = self.native.unique(
                 subset, keep=keep, maintain_order=maintain_order or False
