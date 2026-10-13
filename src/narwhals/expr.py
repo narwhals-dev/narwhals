@@ -2556,10 +2556,10 @@ class Expr:
             |------------------|
             |  pyarrow.Table   |
             |  a: int64        |
-            |  b: null         |
+            |  b: string       |
             |  ----            |
             |  a: [[1]]        |
-            |  b: [1 nulls]    |
+            |  b: [[null]]     |
             └──────────────────┘
 
             >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))
