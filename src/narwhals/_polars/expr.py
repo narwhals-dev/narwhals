@@ -354,7 +354,13 @@ class PolarsExpr:
         return self._with_native(result.first() if keep == "any" else result)
 
     def any_value(self, *, ignore_nulls: bool) -> Self:
-        return self.drop_nulls().first() if ignore_nulls else self.first()
+        if not ignore_nulls:
+            return self.first()
+        if (1, 32) <= self._backend_version < (1, 32, 2):
+            # Filtered groups after an empty one read the wrong rows:
+            # https://github.com/pola-rs/polars/pull/23917
+            return self._with_native(self.native.fill_null(strategy="backward")).first()
+        return self.drop_nulls().first()
 
     @property
     def dt(self) -> PolarsExprDateTimeNamespace:
