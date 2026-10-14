@@ -7,6 +7,7 @@ pytest.importorskip("pyarrow")
 import pyarrow as pa
 
 import narwhals as nw
+from tests.utils import assert_equal_data
 
 
 class CustomInt16(pa.ExtensionType):
@@ -56,3 +57,14 @@ def test_schema_with_ext() -> None:
     assert nw_schema == nw.Schema(
         {"a": nw.Int16(), "non-hash-int16": nw.Unknown(), "hash-int-32": nw.Unknown()}
     )
+
+
+def test_first_last_with_ext() -> None:
+    array = custom_16.wrap_array(pa.array([1, 2], custom_16.storage_type))
+    df = nw.from_native(pa.table({"a": array}), eager_only=True)
+    result = df.select(nw.col("a").first(), last=nw.col("a").last())
+    assert_equal_data(result, {"a": [1], "last": [2]})
+
+    empty = df.head(0)
+    assert_equal_data(empty.select(nw.col("a").first()), {"a": [None]})
+    assert empty["a"].first() is None

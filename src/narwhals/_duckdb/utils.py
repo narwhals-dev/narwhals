@@ -400,9 +400,22 @@ def catch_duckdb_exception(
     return exception
 
 
+def _floordiv(dividend: Expression, divisor: Expression) -> Expression:
+    # DuckDB's `//` truncates integers and is true division on floats.
+    quotient = dividend // divisor
+    # `floor` would turn integers into DOUBLE.
+    truncated = F("trunc", quotient)
+    # `typeof` folds at bind time, so DuckDB only evaluates the arm for this dtype.
+    is_float = F("typeof", quotient).isin(lit("FLOAT"), lit("DOUBLE"))
+    is_negative_inexact = when(is_float, quotient < truncated).otherwise(
+        (dividend % divisor != lit(0)) & ((dividend < lit(0)) != (divisor < lit(0)))
+    )
+    return when(is_negative_inexact, truncated - lit(1)).otherwise(truncated)
+
+
 _BINARY_OPS: Mapping[str, Callable[[Expression, Expression], Expression]] = {
     "divide": operator.truediv,
-    "floordiv": operator.floordiv,
+    "floordiv": _floordiv,
     "and": operator.and_,
 }
 
