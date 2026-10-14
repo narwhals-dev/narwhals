@@ -193,6 +193,7 @@ def test_mode_single_expr_nulls(
 ) -> None:
     df = nw.from_native(constructor_eager(data_nulls))
     if df.implementation.is_modin():
+        # Modin drops nulls upstream in mode(dropna=False)
         request.applymarker(pytest.mark.xfail)
     result = df.select(nw.col("a").mode(keep="all"))
     expected = {"a": [None]}
@@ -207,6 +208,7 @@ def test_mode_series_nulls(
 ) -> None:
     series = nw.from_native(constructor_eager(data_nulls), eager_only=True)["a"]
     if series.implementation.is_modin():
+        # Modin drops nulls upstream in mode(dropna=False)
         request.applymarker(pytest.mark.xfail)
     result = series.mode(keep="all")
     expected = {"a": [None]}
