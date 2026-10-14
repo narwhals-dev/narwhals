@@ -176,6 +176,13 @@ _IntoContextT = TypeVar("_IntoContextT", bound=_IntoContext)
 _Method: TypeAlias = "Callable[Concatenate[_IntoContextT, P], R]"
 _Constructor: TypeAlias = "Callable[Concatenate[_T, P], R2]"
 
+MAX_ROUND_DECIMALS: Final[int] = 308
+"""Largest `decimals` for which `10.0 ** decimals` is finite.
+
+Rounding a `float` to more decimals than this is the identity, so a scale
+factor can be clamped to it rather than overflowing.
+"""
+
 
 class _StoresNative(Protocol[NativeT_co]):
     """Provides access to a native object.

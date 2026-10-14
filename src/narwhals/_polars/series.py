@@ -6,6 +6,7 @@ import polars as pl
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
+    ROUNDS_HALF_TO_EVEN,
     SERIES_ACCEPTS_PD_INDEX,
     SERIES_RESPECTS_DTYPE,
     PolarsAnyNamespace,
@@ -20,6 +21,7 @@ from narwhals._polars.utils import (
     narwhals_to_native_dtype,
     native_get_categories,
     native_to_narwhals_dtype,
+    round_half_to_even,
 )
 from narwhals._utils import NO_DEFAULT, Implementation, floor_mod, requires
 from narwhals.dependencies import is_numpy_array_1d, is_pandas_index
@@ -377,6 +379,14 @@ class PolarsSeries:
         if self._backend_version < (1, 16, 1):
             # Explicitly set alias to work around https://github.com/pola-rs/polars/issues/20071
             result = result.alias(self.name)
+        return self._with_native(result)
+
+    def round(self, decimals: int) -> Self:
+        result = (
+            self.native.round(decimals)
+            if ROUNDS_HALF_TO_EVEN
+            else pl.select(round_half_to_even(self.native, decimals))[self.name]
+        )
         return self._with_native(result)
 
     def is_nan(self) -> Self:
@@ -762,7 +772,6 @@ class PolarsSeries:
     null_count: Method[int]
     quantile: Method[float]
     rank: Method[Self]
-    round: Method[Self]
     sample: Method[Self]
     shift: Method[Self]
     sin: Method[Self]
