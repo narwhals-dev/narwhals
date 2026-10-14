@@ -3,7 +3,7 @@ from __future__ import annotations
 import platform
 import sys
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Concatenate, Literal, overload
 
 from narwhals._expression_parsing import (
     ExprKind,
@@ -16,9 +16,11 @@ from narwhals._utils import (
     Implementation,
     Version,
     deprecate_native_namespace,
+    eager_namespace,
     flatten,
     is_eager_allowed,
     is_nested_literal,
+    is_plugin_backend,
     is_sequence_of,
     normalize_source,
     supports_arrow_c_stream,
@@ -32,18 +34,26 @@ from narwhals.dependencies import (
 )
 from narwhals.exceptions import InvalidOperationError
 from narwhals.expr import Expr
+from narwhals.plugins import _ensure_io_method, _plugin_display_name
 from narwhals.schema import Schema
-from narwhals.translate import from_native, to_native
+from narwhals.translate import to_native
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import ModuleType
     from typing import TypeAlias
 
     from typing_extensions import Self, TypeIs
 
-    from narwhals._native import NativeDataFrame, NativeLazyFrame, NativeSeries
+    from narwhals._compliant.typing import CompliantDataFrameAny, CompliantFrameAny
     from narwhals._translate import IntoArrowTable
-    from narwhals._typing import Backend, EagerAllowed, IntoBackend, PluginName
+    from narwhals._typing import (
+        Backend,
+        EagerAllowed,
+        IntoBackend,
+        IOMethodName,
+        PluginName,
+    )
     from narwhals.dataframe import DataFrame, LazyFrame
     from narwhals.series import Series
     from narwhals.typing import (
@@ -55,6 +65,7 @@ if TYPE_CHECKING:
         IntoExpr,
         IntoSchema,
         NonNestedLiteral,
+        NormalizedSource,
         PythonLiteral,
         _2DArray,
     )
@@ -213,27 +224,9 @@ def _new_series_impl(
     *,
     backend: IntoBackend[EagerAllowed | PluginName],
 ) -> Series[Any]:
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
-        return series.to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            native_series: NativeSeries = _native_namespace.new_series(
-                name, values, dtype
-            )
-            return from_native(native_series, series_only=True).alias(name)
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `new_series` constructor."
-            raise AttributeError(msg) from e
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `new_series` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.new_series('a', [1,2,3], backend='pyarrow').to_frame().lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="new_series")
+    series = ns._series.from_iterable(values, name=name, context=ns, dtype=dtype)
+    return series.to_narwhals()
 
 
 @deprecate_native_namespace(warn_version="1.26.0")
@@ -290,28 +283,8 @@ def from_dict(
     if schema and data and (diff := set(schema.keys()).symmetric_difference(data.keys())):
         msg = f"Keys in `schema` and `data` are expected to match, found unmatched keys: {diff}"
         raise InvalidOperationError(msg)
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `from_dict` function in the top-level namespace.
-            native_frame: NativeDataFrame = _native_namespace.from_dict(
-                data, schema=schema
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_dict` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `from_dict` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_dict({{'a': [1, 2]}}, backend='pyarrow').lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="from_dict")
+    return ns._dataframe.from_dict(data, schema=schema, context=ns).to_narwhals()
 
 
 def _from_dict_no_backend(
@@ -453,28 +426,8 @@ def from_numpy(
         raise TypeError(msg)
     if not (schema is None or is_sequence_of(schema, str)):
         schema = Schema(schema)
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns.from_numpy(data, schema).to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `from_numpy` function in the top-level namespace.
-            native_frame: NativeDataFrame = _native_namespace.from_numpy(
-                data, schema=schema
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `from_numpy` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `from_numpy` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_numpy(arr, backend='pyarrow').lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="from_numpy")
+    return ns._dataframe.from_numpy(data, schema=schema, context=ns).to_narwhals()
 
 
 def _is_into_schema(obj: Any) -> TypeIs[_IntoSchema]:
@@ -525,26 +478,8 @@ def from_arrow(
     if not (supports_arrow_c_stream(native_frame) or is_pyarrow_table(native_frame)):
         msg = f"Given object of type {type(native_frame)} does not support PyCapsule interface"
         raise TypeError(msg)
-    implementation = Implementation.from_backend(backend)
-    if is_eager_allowed(implementation):
-        ns = Version.MAIN.namespace.from_backend(implementation).compliant
-        return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
-    if implementation is Implementation.UNKNOWN:  # pragma: no cover
-        _native_namespace = implementation.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement PyCapsule support
-            native: NativeDataFrame = _native_namespace.DataFrame(native_frame)
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `DataFrame` class which accepts object which supports PyCapsule Interface."
-            raise AttributeError(msg) from e
-        return from_native(native, eager_only=True)
-    msg = (
-        f"{implementation} support in Narwhals is lazy-only, but `from_arrow` is an eager-only function.\n\n"
-        "Hint: you may want to use an eager backend and then call `.lazy`, e.g.:\n\n"
-        f"    nw.from_arrow(df, backend='pyarrow').lazy('{implementation}')"
-    )
-    raise ValueError(msg)
+    ns = eager_namespace(backend, version=Version.MAIN, function_name="from_arrow")
+    return ns._dataframe.from_arrow(native_frame, context=ns).to_narwhals()
 
 
 def _get_sys_info() -> dict[str, str]:
@@ -626,6 +561,44 @@ def show_versions() -> None:
         print(f"{k:>13}: {stat}")  # noqa: T201
 
 
+@overload
+def _io_method(
+    backend: IntoBackend[Backend | PluginName],
+    method_name: Literal["read_csv", "read_parquet"],
+    /,
+    *,
+    version: Version,
+) -> Callable[Concatenate[NormalizedSource, ...], CompliantDataFrameAny]: ...
+
+
+@overload
+def _io_method(
+    backend: IntoBackend[Backend | PluginName],
+    method_name: Literal["scan_csv", "scan_parquet"],
+    /,
+    *,
+    version: Version,
+) -> Callable[Concatenate[NormalizedSource, ...], CompliantFrameAny]: ...
+
+
+def _io_method(
+    backend: IntoBackend[Backend | PluginName],
+    method_name: IOMethodName,
+    /,
+    *,
+    version: Version,
+) -> Callable[Concatenate[NormalizedSource, ...], CompliantFrameAny]:
+    """Bind `method_name` on `backend`'s compliant namespace; only a plugin may lack it."""
+    impl = Implementation.from_backend(backend)
+    namespace = version.namespace.from_backend(backend).compliant
+    if is_plugin_backend(backend, impl):
+        _ensure_io_method(
+            namespace, method_name, plugin_name=_plugin_display_name(backend)
+        )
+    method: Callable[..., CompliantFrameAny] = getattr(namespace, method_name)
+    return method
+
+
 def read_csv(
     source: FileSource,
     *,
@@ -663,27 +636,16 @@ def read_csv(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
-    if is_eager_allowed(impl):
-        ns = Version.MAIN.namespace.from_backend(impl).compliant
-        frame = ns.read_csv(normalize_source(source), separator=separator, **kwargs)
-        return frame.to_narwhals()
-    if impl is Implementation.UNKNOWN:  # pragma: no cover
-        native_namespace = impl.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `read_csv` function in the top-level namespace.
-            native_frame: NativeDataFrame = native_namespace.read_csv(
-                source=source, **kwargs
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `read_csv` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"Expected eager backend, found {impl}.\n\n"
-        f"Hint: use nw.scan_csv(source={source}, backend={backend})"
-    )
-    raise ValueError(msg)
+    if not is_eager_allowed(impl) and impl is not Implementation.UNKNOWN:
+        msg = (
+            f"Expected eager backend, found {impl}.\n\n"
+            f"Hint: use nw.scan_csv(source={source}, backend={backend})"
+        )
+        raise ValueError(msg)
+    read = _io_method(backend, "read_csv", version=Version.MAIN)
+    frame = read(normalize_source(source), separator=separator, **kwargs)
+    result: DataFrame[Any] = frame.to_narwhals()
+    return result
 
 
 def scan_csv(
@@ -728,21 +690,8 @@ def scan_csv(
         │ z       │     3 │
         └─────────┴───────┘
     """
-    impl = Implementation.from_backend(backend)
-    if impl is Implementation.UNKNOWN:  # pragma: no cover
-        native_namespace = impl.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `scan_csv` function in the top-level namespace.
-            native_frame: NativeDataFrame | NativeLazyFrame = native_namespace.scan_csv(
-                source=source, **kwargs
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `scan_csv` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame).lazy()
-    ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_csv(normalize_source(source), separator=separator, **kwargs)
+    scan = _io_method(backend, "scan_csv", version=Version.MAIN)
+    frame = scan(normalize_source(source), separator=separator, **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
@@ -784,27 +733,16 @@ def read_parquet(
         └──────────────────┘
     """
     impl = Implementation.from_backend(backend)
-    if is_eager_allowed(impl):
-        ns = Version.MAIN.namespace.from_backend(impl).compliant
-        frame = ns.read_parquet(normalize_source(source), **kwargs)
-        return frame.to_narwhals()
-    if impl is Implementation.UNKNOWN:  # pragma: no cover
-        native_namespace = impl.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `read_parquet` function in the top-level namespace.
-            native_frame: NativeDataFrame = native_namespace.read_parquet(
-                source=source, **kwargs
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `read_parquet` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame, eager_only=True)
-    msg = (
-        f"Expected eager backend, found {impl}.\n\n"
-        f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
-    )
-    raise ValueError(msg)
+    if not is_eager_allowed(impl) and impl is not Implementation.UNKNOWN:
+        msg = (
+            f"Expected eager backend, found {impl}.\n\n"
+            f"Hint: use nw.scan_parquet(source={source}, backend={backend})"
+        )
+        raise ValueError(msg)
+    read = _io_method(backend, "read_parquet", version=Version.MAIN)
+    frame = read(normalize_source(source), **kwargs)
+    result: DataFrame[Any] = frame.to_narwhals()
+    return result
 
 
 def scan_parquet(
@@ -871,21 +809,8 @@ def scan_parquet(
         |  b: [[4,5]]      |
         └──────────────────┘
     """
-    impl = Implementation.from_backend(backend)
-    if impl is Implementation.UNKNOWN:  # pragma: no cover
-        native_namespace = impl.to_native_namespace()
-        try:
-            # implementation is UNKNOWN, Narwhals extension using this feature should
-            # implement `scan_parquet` function in the top-level namespace.
-            native_frame: NativeDataFrame | NativeLazyFrame = (
-                native_namespace.scan_parquet(source=source, **kwargs)
-            )
-        except AttributeError as e:
-            msg = "Unknown namespace is expected to implement `scan_parquet` function."
-            raise AttributeError(msg) from e
-        return from_native(native_frame).lazy()
-    ns = Version.MAIN.namespace.from_backend(impl).compliant
-    frame = ns.scan_parquet(normalize_source(source), **kwargs)
+    scan = _io_method(backend, "scan_parquet", version=Version.MAIN)
+    frame = scan(normalize_source(source), **kwargs)
     result: LazyFrame[Any] = frame.to_narwhals().lazy()
     return result
 
