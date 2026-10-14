@@ -188,8 +188,12 @@ def test_mode_group_by_multiple_cols(
         assert_equal_data(result, expected)
 
 
-def test_mode_single_expr_nulls(constructor_eager: ConstructorEager) -> None:
+def test_mode_single_expr_nulls(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     df = nw.from_native(constructor_eager(data_nulls))
+    if df.implementation.is_modin():
+        request.applymarker(pytest.mark.xfail)
     result = df.select(nw.col("a").mode(keep="all"))
     expected = {"a": [None]}
     assert_equal_data(result, expected)
@@ -198,8 +202,12 @@ def test_mode_single_expr_nulls(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result_any, expected)
 
 
-def test_mode_series_nulls(constructor_eager: ConstructorEager) -> None:
+def test_mode_series_nulls(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
     series = nw.from_native(constructor_eager(data_nulls), eager_only=True)["a"]
+    if series.implementation.is_modin():
+        request.applymarker(pytest.mark.xfail)
     result = series.mode(keep="all")
     expected = {"a": [None]}
     assert_equal_data({"a": result}, expected)

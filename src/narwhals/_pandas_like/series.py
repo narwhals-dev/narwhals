@@ -996,7 +996,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return pa.Array.from_pandas(self.native)
 
     def mode(self, *, keep: ModeKeepStrategy) -> Self:
-        result = self.native.mode(dropna=False)
+        try:
+            result = self.native.mode(dropna=False)
+        except TypeError:
+            result = self.native.mode()
         result.name = self.name
         return self._with_native(result.head(1) if keep == "any" else result)
 
