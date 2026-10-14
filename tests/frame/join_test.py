@@ -945,3 +945,58 @@ def test_join_on_strings(constructor: Constructor) -> None:
     result = df_l.join(df_r, on="a").sort("a")
     expected = {"a": ["one", "two", "two"], "b": [5, 6, 6]}
     assert_equal_data(result, expected)
+
+
+@pytest.mark.parametrize(
+    ("how", "expected"),
+    [
+        ("inner", {"a": [1, None], "x": [1, 2], "y": [10, 20]}),
+        ("left", {"a": [1, None, 2], "x": [1, 2, 3], "y": [10, 20, None]}),
+        ("semi", {"a": [1, None], "x": [1, 2]}),
+        ("anti", {"a": [2], "x": [3]}),
+    ],
+)
+def test_join_nulls_equal(
+    constructor: Constructor, how: JoinStrategy, expected: dict[str, list[Any]]
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
+        pytest.skip()  # `nulls_equal` needs a newer polars
+    df_left = from_native_lazy(constructor({"a": [1, None, 2], "x": [1, 2, 3]}))
+    df_right = from_native_lazy(constructor({"a": [1, None, 3], "y": [10, 20, 30]}))
+    result = df_left.join(df_right, on="a", how=how, nulls_equal=True).sort(
+        "x", nulls_last=True
+    )
+    assert_equal_data(result, expected)
+
+
+def test_join_nulls_equal_full(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
+        pytest.skip()  # `nulls_equal` needs a newer polars
+    df_left = from_native_lazy(constructor({"a": [1, None, 2], "x": [1, 2, 3]}))
+    df_right = from_native_lazy(constructor({"a": [1, None, 3], "y": [10, 20, 30]}))
+    result = (
+        df_left.join(df_right, on="a", how="full", nulls_equal=True)
+        .select("a", "x", "a_right", "y")
+        .sort("x", nulls_last=True)
+    )
+    expected = {
+        "a": [1, None, 2, None],
+        "x": [1, 2, 3, None],
+        "a_right": [1, None, None, 3],
+        "y": [10, 20, None, 30],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_join_nulls_equal_left_right_on(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < (1, 0):
+        pytest.skip()  # `nulls_equal` needs a newer polars
+    df_left = from_native_lazy(constructor({"a": [1, None, 2], "x": [1, 2, 3]}))
+    df_right = from_native_lazy(constructor({"b": [1, None, 3], "y": [10, 20, 30]}))
+    result = (
+        df_left.join(df_right, left_on="a", right_on="b", how="inner", nulls_equal=True)
+        .select("a", "x", "y")
+        .sort("x")
+    )
+    expected = {"a": [1, None], "x": [1, 2], "y": [10, 20]}
+    assert_equal_data(result, expected)
