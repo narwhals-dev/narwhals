@@ -291,8 +291,10 @@ def test_offset_by_tz_aware_ibis(by: str, context: Any) -> None:  # pragma: no c
     con = ibis.duckdb.connect()
     tbl = con.create_table(
         "offset_by_tz",
-        pl.LazyFrame({"a": [datetime(2020, 10, 25)]}).with_columns(
-            pl.col("a").dt.replace_time_zone("Europe/Amsterdam")
+        ibis.memtable(
+            pl.LazyFrame({"a": [datetime(2020, 10, 25)]}).with_columns(
+                pl.col("a").dt.replace_time_zone("Europe/Amsterdam")
+            )
         ),
     )
     df = nw.from_native(tbl)
