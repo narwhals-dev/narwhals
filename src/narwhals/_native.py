@@ -109,7 +109,7 @@ from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast
 
 from narwhals.dependencies import (
     IMPORT_HOOKS,
-    _get_module,
+    _get_imported_module,
     get_cudf,
     get_modin,
     get_pandas,
@@ -415,7 +415,7 @@ def is_native_pandas(obj: Any) -> TypeIs[NativePandas]:
     return (
         (pd := get_pandas()) is not None and isinstance(obj, (pd.DataFrame, pd.Series))
     ) or any(
-        (mod := _get_module(module_name)) is not None
+        (mod := _get_imported_module(module_name)) is not None
         and isinstance(obj, (mod.pandas.DataFrame, mod.pandas.Series))
         for module_name in IMPORT_HOOKS
     )

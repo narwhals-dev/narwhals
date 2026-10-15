@@ -1,6 +1,6 @@
 # pandas / Polars / etc. : if a user passes a dataframe from one of these
 # libraries, it means they must already have imported the given module.
-# So, we can just check sys.modules.
+# So, we can just check sys.modules (once the module has finished importing).
 from __future__ import annotations
 
 import sys
@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 from narwhals._exceptions import issue_warning
 
 if TYPE_CHECKING:
+    from types import ModuleType
     from typing import TypeGuard
 
     import cudf
@@ -46,96 +47,99 @@ if TYPE_CHECKING:
 IMPORT_HOOKS = frozenset(["fireducks"])
 
 
-def _get_module(name: str) -> Any:
-    """Get module `name` (if it has finished importing - else return None)."""
-    module = sys.modules.get(name, None)
-    # A module is added to `sys.modules` before its body runs, so while another
-    # thread is importing it, it is there but still missing its attributes.
-    if getattr(getattr(module, "__spec__", None), "_initializing", False) is True:
+def _get_imported_module(name: str, /) -> ModuleType | None:
+    """Get module `name` if it has finished importing, else return None."""
+    module = sys.modules.get(name)
+    # A module enters `sys.modules` before its body runs, so another thread can see it
+    # half-built (#4067). Same check CPython's import system makes, see
+    # `importlib._bootstrap._find_and_load`.
+    if module is not None and getattr(
+        getattr(module, "__spec__", None), "_initializing", False
+    ):
         return None
     return module
 
 
 def get_polars() -> Any:
     """Get Polars module (if already imported - else return None)."""
-    return _get_module("polars")
+    return _get_imported_module("polars")
 
 
 def get_pandas() -> Any:
     """Get pandas module (if already imported - else return None)."""
-    return _get_module("pandas")
+    return _get_imported_module("pandas")
 
 
 def get_modin() -> Any:  # pragma: no cover
     """Get modin.pandas module (if already imported - else return None)."""
-    return _get_module("modin.pandas")
+    return _get_imported_module("modin.pandas")
 
 
 def get_cudf() -> Any:
     """Get cudf module (if already imported - else return None)."""
-    return _get_module("cudf")
+    return _get_imported_module("cudf")
 
 
 def get_cupy() -> Any:
     """Get cupy module (if already imported - else return None)."""
-    return _get_module("cupy")
+    return _get_imported_module("cupy")
 
 
 def get_pyarrow() -> Any:  # pragma: no cover
     """Get pyarrow module (if already imported - else return None)."""
-    return _get_module("pyarrow")
+    return _get_imported_module("pyarrow")
 
 
 def get_numpy() -> Any:
     """Get numpy module (if already imported - else return None)."""
-    return _get_module("numpy")
+    return _get_imported_module("numpy")
 
 
 def get_dask() -> Any:  # pragma: no cover
     """Get dask (if already imported - else return None)."""
-    return _get_module("dask")
+    return _get_imported_module("dask")
 
 
 def get_dask_dataframe() -> Any:
     """Get dask.dataframe module (if already imported - else return None)."""
-    return _get_module("dask.dataframe")
+    return _get_imported_module("dask.dataframe")
 
 
 def get_duckdb() -> Any:
     """Get duckdb module (if already imported - else return None)."""
-    return _get_module("duckdb")
+    return _get_imported_module("duckdb")
 
 
 def get_ibis() -> Any:
     """Get ibis module (if already imported - else return None)."""
-    return _get_module("ibis")
+    return _get_imported_module("ibis")
 
 
 def get_dask_expr() -> Any:  # pragma: no cover
     """Get dask_expr module (if already imported - else return None)."""
     if (dd := get_dask_dataframe()) is not None and hasattr(dd, "dask_expr"):
         return dd.dask_expr
-    return _get_module("dask_expr")
+    return _get_imported_module("dask_expr")
 
 
 def get_pyspark() -> Any:  # pragma: no cover
     """Get pyspark module (if already imported - else return None)."""
-    return _get_module("pyspark")
+    return _get_imported_module("pyspark")
 
 
 def get_pyspark_sql() -> Any:
     """Get pyspark.sql module (if already imported - else return None)."""
-    return _get_module("pyspark.sql")
+    return _get_imported_module("pyspark.sql")
 
 
 def get_pyspark_connect() -> Any:
     """Get pyspark.sql.connect module (if already imported - else return None)."""
-    return _get_module("pyspark.sql.connect")
+    return _get_imported_module("pyspark.sql.connect")
 
 
 def get_sqlframe() -> Any:
     """Get sqlframe module (if already imported - else return None)."""
-    return _get_module("sqlframe")
+    return _get_imported_module("sqlframe")
 
 
 def _warn_if_narwhals_df_or_lf(frame: Any, /) -> None:
@@ -167,7 +171,7 @@ def _warn_if_narwhals_series(ser: Any, /) -> None:
 def _is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
     """Check whether `df` is a pandas DataFrame without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(df, pd.DataFrame)) or any(
-        (mod := _get_module(module_name)) is not None
+        (mod := _get_imported_module(module_name)) is not None
         and isinstance(df, mod.pandas.DataFrame)
         for module_name in IMPORT_HOOKS
     )
@@ -186,7 +190,7 @@ def is_pandas_dataframe(df: Any) -> TypeIs[pd.DataFrame]:
 def _is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
     """Check whether `ser` is a pandas Series without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(ser, pd.Series)) or any(
-        (mod := _get_module(module_name)) is not None
+        (mod := _get_imported_module(module_name)) is not None
         and isinstance(ser, mod.pandas.Series)
         for module_name in IMPORT_HOOKS
     )
@@ -205,7 +209,7 @@ def is_pandas_series(ser: Any) -> TypeIs[pd.Series[Any]]:
 def is_pandas_index(index: Any) -> TypeIs[pd.Index[Any]]:
     """Check whether `index` is a pandas Index without importing pandas."""
     return ((pd := get_pandas()) is not None and isinstance(index, pd.Index)) or any(
-        (mod := _get_module(module_name)) is not None
+        (mod := _get_imported_module(module_name)) is not None
         and isinstance(index, mod.pandas.Index)
         for module_name in IMPORT_HOOKS
     )
