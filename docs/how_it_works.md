@@ -426,7 +426,10 @@ Narwhals triggers a broadcast in these situations:
 
 - In `select` when some values preserve length and others don't, e.g.
   `df.select('a', nw.col('b').mean())`.
-- In `with_columns`, all new columns get broadcasted to the length of the dataframe.
+- In `with_columns`, scalar-like new columns get broadcasted to the length of the
+  dataframe. For an eager dataframe with no rows and no columns, the new series
+  determine the result length, and scalar-like values broadcast to that length.
+  If all new values are scalar-like, the result has one row.
 - In n-ary operations between expressions, such as `nw.col('a') + nw.col('a').mean()`.
 
 Each backend is then responsible for doing its own broadcasting, as defined in each
