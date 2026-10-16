@@ -43,3 +43,24 @@ def test_arg_max_series_no_valid_values(
     else:
         series = df.with_columns(a=nw.when(nw.col("a") < 0).then(nw.col("a")))["a"]
     assert series.arg_max() is None
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [([None, 3.0, 3.0, None], 1), ([None, -3.0, 2.0, None], 2)],
+    ids=["ties_between_nulls", "signed_between_nulls"],
+)
+def test_arg_max_series_skips_nulls(
+    constructor_eager: ConstructorEager,
+    values: list[float | None],
+    expected: int,
+    request: pytest.FixtureRequest,
+) -> None:
+    if "modin" in str(constructor_eager):
+        # TODO(unassigned): bug in modin?
+        return
+    if "cudf" in str(constructor_eager):
+        # not implemented yet
+        request.applymarker(pytest.mark.xfail)
+    series = nw.from_native(constructor_eager({"a": values}), eager_only=True)["a"]
+    assert series.arg_max() == expected
