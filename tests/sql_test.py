@@ -22,7 +22,9 @@ def test_sql() -> None:
         )
     )
     # DuckDB 2.0 qualifies table names with the catalog.
-    table_name = "memory.main.assets" if DUCKDB_VERSION >= (2,) else "main.assets"
+    table_name = (
+        "memory.main.assets" if DUCKDB_VERSION >= PkgVersion("2") else "main.assets"
+    )
     expected = f"""SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM {table_name}"""  # noqa: S608
     assert result.to_sql() == expected
     expected = (
