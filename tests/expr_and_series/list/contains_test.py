@@ -265,10 +265,6 @@ def test_contains_inner_dtypes_expr(
             backend in str(constructor) for backend in ("pandas", "modin", "dask")
         ):
             pytest.skip(reason="pandas<3 turns NaN into null when casting to `List`")
-    if "sqlframe" in str(constructor) and isinstance(x, float) and math.isinf(x):
-        # https://github.com/eakmanrq/sqlframe/issues/648
-        reason = "SQLFrame writes `inf` into SQL unquoted, which DuckDB can't parse."
-        request.applymarker(pytest.mark.xfail(reason=reason))
     data = {"a": [[x, None], [y], [x, y], [], None]}
     list_ = nw.col("a").cast(nw.List(dtype))
     result = nw.from_native(constructor(data)).select(

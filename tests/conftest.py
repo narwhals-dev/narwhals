@@ -273,11 +273,13 @@ def _ibis_backend() -> IbisDuckDBBackend:  # pragma: no cover
 def ibis_lazy_constructor(obj: Data) -> ibis.Table:  # pragma: no cover
     pytest.importorskip("ibis")
     pytest.importorskip("polars")
+    import ibis
     import polars as pl
 
     ldf = pl.LazyFrame(obj)
     table_name = str(uuid.uuid4())
-    return _ibis_backend().create_table(table_name, ldf)
+    # Wrapping in `memtable` sidesteps ibis-project/ibis#12124 (sqlglot>=30.18).
+    return _ibis_backend().create_table(table_name, ibis.memtable(ldf))
 
 
 EAGER_CONSTRUCTORS: dict[str, ConstructorEager] = {
