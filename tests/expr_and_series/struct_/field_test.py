@@ -15,7 +15,7 @@ def test_get_field_expr(request: pytest.FixtureRequest, constructor: Constructor
 
     if any(backend in str(constructor) for backend in ("dask", "modin")):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("2.2.0"):
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("2.2"):
         pytest.skip()
     data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
 
@@ -53,7 +53,7 @@ def test_get_field_series(
 
     if any(backend in str(constructor_eager) for backend in ("modin",)):
         request.applymarker(pytest.mark.xfail)
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.2.0"):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("2.2"):
         pytest.skip()
     data = {"user": [{"id": "0", "name": "john"}, {"id": "1", "name": "jane"}]}
     expected = {"id": ["0", "1"], "name": ["john", "jane"]}

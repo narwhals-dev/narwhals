@@ -38,7 +38,7 @@ def test_concat_str(
     expected: list[str],
     request: pytest.FixtureRequest,
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.0.0"):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         # nth only available after 1.0
         request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor(data))

@@ -62,7 +62,7 @@ def test_log_dtype_pandas() -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.0.0"), reason="nullable types require pandas2+"
+    PANDAS_VERSION < PkgVersion("2"), reason="nullable types require pandas2+"
 )
 def test_log_dtype_pandas_nullable() -> None:
     pytest.importorskip("pandas")
@@ -77,7 +77,7 @@ def test_log_dtype_pandas_nullable() -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.1.0"), reason="nullable types require pandas2+"
+    PANDAS_VERSION < PkgVersion("2.1"), reason="nullable types require pandas2+"
 )
 def test_log_dtype_pandas_pyarrow() -> None:
     pytest.importorskip("pandas")

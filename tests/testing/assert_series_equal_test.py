@@ -280,7 +280,7 @@ def test_list_like(
 
     if (
         "pyarrow_table" in str(constructor_eager)
-        and PYARROW_VERSION < PkgVersion("14.0")
+        and PYARROW_VERSION < PkgVersion("14")
         and dtype == nw.Array
     ):  # pragma: no cover
         reason = (

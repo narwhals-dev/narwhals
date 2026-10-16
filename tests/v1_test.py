@@ -308,7 +308,7 @@ def test_hist_v1() -> None:
 
 @pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.0"), reason="requires interchange protocol"
+    PANDAS_VERSION < PkgVersion("2"), reason="requires interchange protocol"
 )
 def test_is_ordered_categorical_interchange_protocol() -> None:
     pytest.importorskip("pandas")

@@ -22,7 +22,7 @@ def test_interchange_to_pandas() -> None:
 def test_interchange_ibis_to_pandas(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    if PANDAS_VERSION < PkgVersion("1.5.0"):
+    if PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip()
 
     pytest.importorskip("ibis")

@@ -159,7 +159,7 @@ def test_datetime(constructor: Constructor, request: pytest.FixtureRequest) -> N
         or "ibis" in str(constructor)
         # https://github.com/pola-rs/polars/issues/23767
         # TODO(FBruzzesi): Manage polars version
-        or ("polars" in str(constructor) and POLARS_VERSION >= PkgVersion("1.32.0"))
+        or ("polars" in str(constructor) and POLARS_VERSION >= PkgVersion("1.32"))
     ):
         request.applymarker(pytest.mark.xfail)
     if ("pyarrow" in str(constructor) and is_windows()) or (

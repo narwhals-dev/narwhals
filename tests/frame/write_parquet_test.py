@@ -15,7 +15,7 @@ pytest.importorskip("pyarrow")
 data = {"a": [1, 2, 3]}
 
 
-@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2.0.0"), reason="too old for pyarrow")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="too old for pyarrow")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 def test_write_parquet(
     constructor_eager: ConstructorEager, tmpdir: pytest.TempdirFactory

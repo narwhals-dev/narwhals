@@ -96,7 +96,7 @@ def test_allh_all(constructor: Constructor) -> None:
 
 
 def test_allh_nth(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.0"):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip()
     data = {"a": [False, False, True], "b": [False, True, True]}
     df = nw.from_native(constructor(data))

@@ -104,7 +104,7 @@ def test_lazy_cum_min_ordered_by_nulls(
     if (
         "pyarrow" in str(constructor)
         and is_windows()
-        and PYARROW_VERSION < PkgVersion("22.0")
+        and PYARROW_VERSION < PkgVersion("22")
     ):
         # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)

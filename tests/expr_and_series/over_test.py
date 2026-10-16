@@ -377,7 +377,7 @@ def test_over_cum_reverse(
     if (
         "pandas_nullable" in str(constructor_eager)
         and attr in {"cum_max", "cum_min"}
-        and PANDAS_VERSION < PkgVersion("3.0")
+        and PANDAS_VERSION < PkgVersion("3")
     ):
         # TODO(FBruzzesi): convert to pytest.skip() if the fix does not make it into
         # `pandas=2.3.4`. Otherwise update version boundary

@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
-NOT_INSTALLED = PkgVersion("0.0.0")
+NOT_INSTALLED = PkgVersion("0")
 """Sentinel version for backends which are not installed."""
 
 

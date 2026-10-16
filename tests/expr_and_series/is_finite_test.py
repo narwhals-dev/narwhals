@@ -72,7 +72,7 @@ def test_is_finite_integer_column(constructor: Constructor) -> None:
 
 @pytest.mark.parametrize("data", [[1, 2, None], [1.0, 2.0, None]])
 def test_is_finite_column_with_null(constructor: Constructor, data: list[float]) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.0.0"):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip("need newer polars version")
     df = nw.from_native(constructor({"a": data}))
     result = df.select(nw.col("a").is_finite())

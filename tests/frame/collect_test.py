@@ -147,7 +147,7 @@ def test_collect_to_invalid_backend(
 def test_collect_with_kwargs(constructor: Constructor) -> None:
     pl_kwargs = (
         {"optimizations": get_polars().QueryOptFlags(predicate_pushdown=False)}
-        if POLARS_VERSION > PkgVersion("1.29.0")
+        if POLARS_VERSION > PkgVersion("1.29")
         else {"no_optimization": True}
     )
     collect_kwargs: dict[nw.Implementation, Any] = {

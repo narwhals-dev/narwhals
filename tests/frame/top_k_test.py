@@ -17,7 +17,7 @@ from tests.utils import (
 
 
 def test_top_k(constructor: Constructor) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.0"):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         # old polars versions do not sort nulls last
         pytest.skip()
     if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):

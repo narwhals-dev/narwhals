@@ -236,7 +236,7 @@ def test_to_datetime_tz_aware(
     )
     if (
         "polars" in str(constructor)
-        and POLARS_VERSION >= PkgVersion("1.33.0")
+        and POLARS_VERSION >= PkgVersion("1.33")
         and format is None
     ):
         # Polars 1.33.0+ raises an error when parsing timezone-aware datetimes without specifying the timezone
@@ -366,7 +366,7 @@ def test_to_datetime_invalid_raises(
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.2.0"), reason="too old for pyarrow types"
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
 )
 def test_to_datetime_pd_preserves_pyarrow_backend_dtype() -> None:
     # Remark that pandas doesn't have a numpy-nullable datetime dtype, so

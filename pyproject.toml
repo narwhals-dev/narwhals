@@ -76,6 +76,7 @@ tests = [
   "pytest-randomly",
   "pytest-xdist",
   "hypothesis>=6.0.0",
+  "packaging>=21.3",
 ]
 # NOTE: `plugins` is deliberately NOT included within `tests`.
 # `test-plugin` is a workspace member, so pulling it into `tests` makes the group unresolvable

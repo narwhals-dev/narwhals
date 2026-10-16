@@ -10,6 +10,7 @@ import narwhals as nw
 from tests.utils import (
     CUDF_VERSION,
     DASK_VERSION,
+    NOT_INSTALLED,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -115,7 +116,7 @@ def test_date_lit(constructor: Constructor, request: pytest.FixtureRequest) -> N
     # https://github.com/dask/dask/issues/11637
     if "dask" in str(constructor) or (
         # https://github.com/rapidsai/cudf/pull/18832
-        "cudf" in str(constructor) and CUDF_VERSION >= PkgVersion("25.8.0")
+        "cudf" in str(constructor) and CUDF_VERSION >= PkgVersion("25.8")
     ):
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor):
@@ -196,7 +197,7 @@ def test_nested_structures(
         request.applymarker(pytest.mark.xfail(reason=reason, raises=NotImplementedError))
 
     if any(x in str(constructor) for x in ("pandas", "modin")) and (
-        PYARROW_VERSION == PkgVersion("0.0.0") or PANDAS_VERSION < PkgVersion("2.0")
+        PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2")
     ):  # pragma: no cover
         reason = "Requires pyarrow and pandas 2.0+"
         pytest.skip(reason=reason)
@@ -204,7 +205,7 @@ def test_nested_structures(
     if (
         "polars" in str(constructor)
         and isinstance(value, dict)
-        and POLARS_VERSION < PkgVersion("1.10.0")
+        and POLARS_VERSION < PkgVersion("1.10")
     ):  # pragma: no cover
         reason = "polars<1.10 does not support dict to struct in lit"
         pytest.skip(reason=reason)

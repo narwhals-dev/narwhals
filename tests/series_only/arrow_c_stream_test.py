@@ -26,7 +26,7 @@ def _poison(*_: Any) -> NoReturn:
     POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
 )
 @pytest.mark.skipif(
-    PYARROW_VERSION < PkgVersion("16.0.0"), reason="too old for pycapsule in PyArrow"
+    PYARROW_VERSION < PkgVersion("16"), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test() -> None:
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
@@ -39,7 +39,7 @@ def test_arrow_c_stream_test() -> None:
     POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
 )
 @pytest.mark.skipif(
-    PYARROW_VERSION < PkgVersion("16.0.0"), reason="too old for pycapsule in PyArrow"
+    PYARROW_VERSION < PkgVersion("16"), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     # "poison" the dunder method to make sure it actually got called above
@@ -53,7 +53,7 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
 )
 @pytest.mark.skipif(
-    PYARROW_VERSION < PkgVersion("16.0.0"), reason="too old for pycapsule in PyArrow"
+    PYARROW_VERSION < PkgVersion("16"), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works

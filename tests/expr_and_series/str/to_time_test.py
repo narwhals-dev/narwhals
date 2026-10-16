@@ -8,6 +8,7 @@ from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -31,12 +32,12 @@ def requires_time_support(
     version, and pyarrow availability when testing Time dtype support.
     """
     if constructor.__name__.startswith(("pandas", "modin")):
-        if PANDAS_VERSION < PkgVersion("2.2.0"):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip(
                 "pandas < 2.2.0 has no pyarrow dtype support (and therefore does not support the Time dtype)"
             )
 
-        if PYARROW_VERSION == PkgVersion("0.0.0"):
+        if PYARROW_VERSION == NOT_INSTALLED:
             pytest.skip("pandas requires pyarrow for the Time dtype")
 
     if "pyspark" in str(constructor) or "dask" in str(constructor):

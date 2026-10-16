@@ -21,7 +21,7 @@ import pandas as pd
     )
 )
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.2.0"), reason="pyarrow dtype not available"
+    PANDAS_VERSION < PkgVersion("2.2"), reason="pyarrow dtype not available"
 )
 @pytest.mark.slow
 def test_total_minutes(timedeltas: timedelta) -> None:
@@ -51,7 +51,7 @@ def test_total_minutes(timedeltas: timedelta) -> None:
     )
 )
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.2.0"), reason="pyarrow dtype not available"
+    PANDAS_VERSION < PkgVersion("2.2"), reason="pyarrow dtype not available"
 )
 @pytest.mark.slow
 def test_total_minutes_polars(timedeltas: timedelta) -> None:

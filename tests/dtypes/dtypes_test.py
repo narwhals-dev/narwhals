@@ -11,6 +11,7 @@ from packaging.version import Version as PkgVersion
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, PerformanceWarning
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -498,7 +499,7 @@ def test_cast_decimal_to_native(
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="Unsupported dtype"))
 
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.0.0"):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip(reason="too old to convert to decimal")
 
     data = {"a": [1.1, 2.2, 3.3]}
@@ -506,7 +507,7 @@ def test_cast_decimal_to_native(
     df = nw.from_native(constructor(data))
 
     if df.implementation.is_pandas_like() and (
-        PYARROW_VERSION == PkgVersion("0.0.0") or PANDAS_VERSION < PkgVersion("2.2")
+        PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2.2")
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 

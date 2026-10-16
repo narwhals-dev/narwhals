@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
     from narwhals.dtypes import DType
 
-polars_lt_v1 = POLARS_VERSION < PkgVersion("1.0.0")
+polars_lt_v1 = POLARS_VERSION < PkgVersion("1")
 skip_reason = "replace_strict only available after 1.0"
 pl_skip_reason = "replace_strict only available after 1.0"
 

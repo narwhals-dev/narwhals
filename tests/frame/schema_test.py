@@ -97,7 +97,7 @@ def test_actual_object(
     assert result == {"a": nw.Object}
 
 
-@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2.0.0"), reason="too old")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="too old")
 def test_dtypes() -> None:
     pytest.importorskip("polars")
     pytest.importorskip("pyarrow")
@@ -264,7 +264,7 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.2.0"), reason="too old for pyarrow types"
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
 )
 def test_nested_dtypes() -> None:
     pytest.importorskip("duckdb")
@@ -333,7 +333,7 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.2.0"), reason="too old for pyarrow types"
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
 )
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
@@ -683,7 +683,7 @@ def test_schema_from_empty_mapping() -> None:
 
 
 @pytest.mark.skipif(
-    POLARS_VERSION < PkgVersion("1.6.0"),
+    POLARS_VERSION < PkgVersion("1.6"),
     reason="https://github.com/pola-rs/polars/pull/18308",
 )
 def test_schema_from_to_roundtrip() -> None:

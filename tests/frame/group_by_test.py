@@ -665,7 +665,7 @@ def test_group_by_no_preserve_dtype(
     if (
         "polars" in str(constructor_eager)
         and isinstance(low, Decimal)
-        and POLARS_VERSION < PkgVersion("1.21.0")
+        and POLARS_VERSION < PkgVersion("1.21")
     ):
         pytest.skip("Decimal support in group_by for polars didn't stabilize until 1.0.0")
     if any(x == request.node.callspec.id for x in ("cudf-time", "cudf-bytes")):
@@ -727,7 +727,7 @@ def test_group_by_agg_first(
     request.applymarker(
         pytest.mark.xfail(
             "pyarrow_table" in str(constructor_eager)
-            and (PYARROW_VERSION < PkgVersion("14.0")),
+            and (PYARROW_VERSION < PkgVersion("14")),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )
@@ -770,7 +770,7 @@ def test_group_by_agg_last(
     request.applymarker(
         pytest.mark.xfail(
             "pyarrow_table" in str(constructor_eager)
-            and (PYARROW_VERSION < PkgVersion("14.0")),
+            and (PYARROW_VERSION < PkgVersion("14")),
             reason="https://github.com/apache/arrow/issues/36709",
             raises=NotImplementedError,
         )

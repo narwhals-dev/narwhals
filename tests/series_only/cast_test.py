@@ -71,7 +71,7 @@ def test_cast_date_datetime_pyarrow() -> None:
 
 
 @pytest.mark.skipif(
-    PANDAS_VERSION < PkgVersion("2.0.0"), reason="pyarrow dtype not available"
+    PANDAS_VERSION < PkgVersion("2"), reason="pyarrow dtype not available"
 )
 def test_cast_date_datetime_pandas() -> None:
     pytest.importorskip("pandas")

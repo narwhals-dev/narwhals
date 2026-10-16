@@ -299,7 +299,7 @@ def test_str_replace_null_value_series(
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
-    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.37.0"):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.37"):
         request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
     df = nw.from_native(
         constructor_eager({"a": ["abc", "def"], "b": ["X", None]}), eager_only=True
@@ -322,7 +322,7 @@ def test_str_replace_null_value_expr(
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
-    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37.0"):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.37"):
         request.applymarker(pytest.mark.xfail(reason="old polars propagates null"))
     df = nw.from_native(constructor({"a": ["abc", "def"], "b": ["X", None]}))
     result_df = df.select(

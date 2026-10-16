@@ -107,7 +107,7 @@ def test_interchange_schema_ibis(
     tbl = ibis.read_parquet(filepath)
     df = nw_v1.from_native(tbl, eager_or_interchange_only=True)
     result = df.schema
-    if IBIS_VERSION > PkgVersion("6.0.0"):
+    if IBIS_VERSION > PkgVersion("6"):
         expected = {
             "a": nw_v1.Int64,
             "b": nw_v1.Int32,

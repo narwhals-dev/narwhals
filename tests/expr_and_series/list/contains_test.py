@@ -128,7 +128,7 @@ def test_contains_invalid_item_raises(
     item: NonNestedLiteral,
 ) -> None:
     if "polars" in str(constructor) and (
-        (isinstance(item, float) and POLARS_VERSION < PkgVersion("1.28.0"))
+        (isinstance(item, float) and POLARS_VERSION < PkgVersion("1.28"))
         or (isinstance(item, datetime) and POLARS_VERSION < PkgVersion("2"))
     ):
         request.applymarker(pytest.mark.xfail(reason="old polars coerces the item"))

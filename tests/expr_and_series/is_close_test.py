@@ -20,6 +20,7 @@ from tests.conftest import (
     pandas_constructor,
 )
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
     PYARROW_VERSION,
     Constructor,
@@ -267,7 +268,7 @@ def test_issue_3474_series_decimal(constructor_eager: ConstructorEager) -> None:
     frame = nw.from_native(constructor_eager({"a": [0, 1, 2]}))
 
     if frame.implementation.is_pandas_like() and (
-        PYARROW_VERSION == PkgVersion("0.0.0") or PANDAS_VERSION < PkgVersion("2.2")
+        PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2.2")
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
@@ -289,7 +290,7 @@ def test_issue_3474_expr_decimal(
     frame = nw.from_native(constructor({"a": [0, 1, 2]}))
 
     if frame.implementation.is_pandas_like() and (
-        PYARROW_VERSION == PkgVersion("0.0.0") or PANDAS_VERSION < PkgVersion("2.2")
+        PYARROW_VERSION == NOT_INSTALLED or PANDAS_VERSION < PkgVersion("2.2")
     ):
         pytest.skip(reason="pyarrow is required to convert to decimal dtype")
 
