@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError, ShapeError
@@ -39,7 +40,7 @@ def test_explode_single_col(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -91,7 +92,7 @@ def test_explode_multiple_cols(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -112,7 +113,7 @@ def test_explode_shape_error(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -135,7 +136,7 @@ def test_explode_invalid_operation_error(
     if any(x in str(constructor) for x in ("pyarrow_table", "dask")):
         request.applymarker(pytest.mark.xfail)
 
-    if "polars" in str(constructor) and POLARS_VERSION < (0, 20, 6):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("0.20.6"):
         pytest.skip()
 
     with pytest.raises(

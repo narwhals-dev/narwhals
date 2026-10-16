@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION
@@ -9,7 +10,7 @@ from tests.utils import DUCKDB_VERSION
 def test_sql() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("sqlparse")
-    if DUCKDB_VERSION < (1, 3):
+    if DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     from narwhals.sql import table
 
@@ -21,7 +22,9 @@ def test_sql() -> None:
         )
     )
     # DuckDB 2.0 qualifies table names with the catalog.
-    table_name = "memory.main.assets" if DUCKDB_VERSION >= (2,) else "main.assets"
+    table_name = (
+        "memory.main.assets" if DUCKDB_VERSION >= PkgVersion("2") else "main.assets"
+    )
     expected = f"""SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM {table_name}"""  # noqa: S608
     assert result.to_sql() == expected
     expected = (
@@ -36,7 +39,7 @@ def test_sql() -> None:
 
 def test_sql_table_schema_pairs() -> None:
     pytest.importorskip("duckdb")
-    if DUCKDB_VERSION < (1, 3):
+    if DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     from narwhals.sql import table
 

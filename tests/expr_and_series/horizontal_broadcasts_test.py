@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, assert_equal_data
 
 
 def test_sumh_broadcasting(constructor: Constructor) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [1, 2, 3], "b": [4, 5, 6], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data))
@@ -80,7 +81,7 @@ def test_scalar_operand_broadcasting(constructor: Constructor, name: str) -> Non
         "all_agg_first",
         "any_agg_first",
     }
-    if aggregates and "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if aggregates and "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip("aggregations broadcast via window functions, DuckDB>=1.3 only")
     expr, expected = SCALAR_OPERAND_CASES[name]
     data = {"a": [1, None, 3], "b": [4, 5, None], "i": [0, 1, 2]}
