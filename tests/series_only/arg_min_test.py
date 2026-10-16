@@ -25,3 +25,21 @@ def test_arg_min_series(
     series = nw.maybe_set_index(series, index=[1, 0, 9])  # type: ignore[arg-type]
     result = series.arg_min()
     assert_equal_data({col: [result]}, {col: [expected]})
+
+
+@pytest.mark.parametrize("empty", [False, True], ids=["all_null", "empty"])
+def test_arg_min_series_no_valid_values(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, *, empty: bool
+) -> None:
+    if "modin" in str(constructor_eager):
+        # TODO(unassigned): bug in modin?
+        return
+    if "cudf" in str(constructor_eager):
+        # not implemented yet
+        request.applymarker(pytest.mark.xfail)
+    df = nw.from_native(constructor_eager({"a": [1.0, 2.0]}), eager_only=True)
+    if empty:
+        series = df.filter(nw.col("a") < 0)["a"]
+    else:
+        series = df.with_columns(a=nw.when(nw.col("a") < 0).then(nw.col("a")))["a"]
+    assert series.arg_min() is None

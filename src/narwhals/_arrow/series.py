@@ -361,12 +361,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def max(self, *, _return_py_scalar: bool = True) -> Any:
         return maybe_extract_py_scalar(pc.max(self.native), _return_py_scalar)
 
-    def arg_min(self, *, _return_py_scalar: bool = True) -> int:
-        index_min = pc.index(self.native, pc.min(self.native))
+    def arg_min(self, *, _return_py_scalar: bool = True) -> int | None:
+        min_value = pc.min(self.native)
+        if not min_value.is_valid:
+            return maybe_extract_py_scalar(lit(None, pa.int64()), _return_py_scalar)
+        index_min = pc.index(self.native, min_value)
         return maybe_extract_py_scalar(index_min, _return_py_scalar)
 
-    def arg_max(self, *, _return_py_scalar: bool = True) -> int:
-        index_max = pc.index(self.native, pc.max(self.native))
+    def arg_max(self, *, _return_py_scalar: bool = True) -> int | None:
+        max_value = pc.max(self.native)
+        if not max_value.is_valid:
+            return maybe_extract_py_scalar(lit(None, pa.int64()), _return_py_scalar)
+        index_max = pc.index(self.native, max_value)
         return maybe_extract_py_scalar(index_max, _return_py_scalar)
 
     def sum(self, *, _return_py_scalar: bool = True) -> float:
