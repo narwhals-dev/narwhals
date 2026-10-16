@@ -255,10 +255,10 @@ if TYPE_CHECKING:
         ser_impl = ser.implementation
 
         # [True Negative]
-        any_df.lazy(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_df.lazy(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_ldf.collect(df_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
-        any_ldf.collect(ser_impl)  # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_df.lazy(df_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_df.lazy(ser_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(df_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
+        any_ldf.collect(ser_impl)  # type: ignore[arg-type] # pyright: ignore[reportArgumentType] # pyrefly: ignore[bad-argument-type]
 
         assert_type(df_impl, _ModinImpl)
         assert_type(ser_impl, _ModinImpl)
@@ -280,9 +280,10 @@ if TYPE_CHECKING:
         assert_type(ldf_impl, _LazyAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         assert_type(ser_impl, _EagerAllowedImpl)  # pyright: ignore[reportAssertTypeFailure] # pyrefly: ignore[assert-type]
         # Fallback, matches the first overload `_PolarsImpl`
-        assert_type(df_impl, _PolarsImpl)
-        assert_type(ldf_impl, _PolarsImpl)
-        assert_type(ser_impl, _PolarsImpl)
+        # pyrefly>=1.4 applies overload step 5 (`Any` argument -> `Any` result) instead
+        assert_type(df_impl, _PolarsImpl)  # pyrefly: ignore[assert-type]
+        assert_type(ldf_impl, _PolarsImpl)  # pyrefly: ignore[assert-type]
+        assert_type(ser_impl, _PolarsImpl)  # pyrefly: ignore[assert-type]
 
     def test_bound_typing() -> None:
         df_impl = bound_df.implementation

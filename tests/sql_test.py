@@ -21,14 +21,16 @@ def test_sql() -> None:
             "symbol", order_by="date"
         )
     )
-    expected = """SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM main.assets"""
+    # DuckDB 2.0 qualifies table names with the catalog.
+    table_name = "memory.main.assets" if DUCKDB_VERSION >= (2,) else "main.assets"
+    expected = f"""SELECT date, price, symbol, (price / lag(price, 1) OVER (PARTITION BY symbol ORDER BY date ASC NULLS FIRST)) AS "returns" FROM {table_name}"""  # noqa: S608
     assert result.to_sql() == expected
     expected = (
         "SELECT date, price,\n"
         "             symbol,\n"
         "             (price / lag(price, 1) OVER (PARTITION BY symbol\n"
         '                                          ORDER BY date ASC NULLS FIRST)) AS "returns"\n'
-        "FROM main.assets"
+        f"FROM {table_name}"
     )
     assert result.to_sql(pretty=True) == expected
 
