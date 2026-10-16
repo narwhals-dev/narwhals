@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -100,7 +101,7 @@ def test_var_ddof_group_by(
 
 @pytest.mark.parametrize("ddof", [0, 1, 2, 4, 10])
 def test_var_ddof_over(constructor: Constructor, ddof: int) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="`over` requires DuckDB 1.3.0")
     df = nw.from_native(constructor(data_ddof))
     result = df.with_columns(nw.col("a").var(ddof=ddof).over("g")).sort("i").select("a")
