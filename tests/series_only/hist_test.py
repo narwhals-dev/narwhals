@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ComputeError
@@ -320,7 +321,7 @@ def test_hist_non_monotonic(constructor_eager: ConstructorEager) -> None:
     ),
 )
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 27),
+    POLARS_VERSION < PkgVersion("1.27"),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @param_library
@@ -372,7 +373,7 @@ def test_hist_bin_hypotheis(
     bin_count=st.integers(min_value=1, max_value=20),
 )
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 27),
+    POLARS_VERSION < PkgVersion("1.27"),
     reason="polars cannot be used for compatibility checks since narwhals aims to mimic polars>=1.27 behavior",
 )
 @pytest.mark.filterwarnings("ignore:invalid value encountered in cast:RuntimeWarning")
@@ -403,7 +404,7 @@ def test_hist_count_hypothesis(
         result = df["values"].hist(bin_count=bin_count, include_breakpoint=True)
     except pl.exceptions.PanicException:  # pragma: no cover
         # panic occurs from specific float inputs on Polars 1.15
-        if (1, 14) < POLARS_VERSION < (1, 16):
+        if PkgVersion("1.14") <= POLARS_VERSION < PkgVersion("1.16"):
             request.applymarker(pytest.mark.xfail)
         raise
 

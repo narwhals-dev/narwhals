@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation
@@ -84,8 +85,8 @@ def test_lazy(
     if (
         "pandas_constructor" in str(constructor_eager)
         and impl.is_duckdb()
-        and PANDAS_VERSION >= (3,)
-        and DUCKDB_VERSION < (1, 4, 4)
+        and PANDAS_VERSION >= PkgVersion("3")
+        and DUCKDB_VERSION < PkgVersion("1.4.4")
     ):  # pragma: no cover
         # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)

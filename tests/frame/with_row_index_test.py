@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -38,9 +39,9 @@ def test_with_row_index_eager(constructor_eager: ConstructorEager) -> None:
 def test_with_row_index_lazy(
     constructor: Constructor, order_by: str | Sequence[str], expected_index: list[int]
 ) -> None:
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
 
     result = (
@@ -76,9 +77,9 @@ def test_with_row_index_lazy_meaner_examples(
     constructor: Constructor, order_by: list[str], expected_index: list[int]
 ) -> None:
     # https://github.com/narwhals-dev/narwhals/issues/3289
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": ["A", "B", "A"], "b": [1, 2, 3], "c": [9, 2, 4]}
     df = nw.from_native(constructor(data))
@@ -106,9 +107,9 @@ def test_with_row_index_order_by_w_null(
 ) -> None:
     if "dask" in str(constructor):
         request.applymarker(pytest.mark.xfail(reason="not implemented in dask"))
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     df = nw.from_native(constructor({"c": ["dog", "cat", None], "n": [1, 2, 3]}))

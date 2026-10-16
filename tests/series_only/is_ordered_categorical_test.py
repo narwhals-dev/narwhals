@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation, Version
@@ -33,7 +34,7 @@ def test_is_ordered_categorical_polars() -> None:
     import polars as pl
 
     s = pl.Series(["a", "b"], dtype=pl.Categorical)
-    if POLARS_VERSION < (1, 32):  # pragma: no cover
+    if POLARS_VERSION < PkgVersion("1.32"):  # pragma: no cover
         assert nw.is_ordered_categorical(nw.from_native(s, series_only=True))
     else:
         # Post 1.32 there's no physical ordering for categoricals anymore.
@@ -41,7 +42,7 @@ def test_is_ordered_categorical_polars() -> None:
 
     cat_dtype = (
         pl.Categorical(ordering="lexical")  # type: ignore[call-arg]
-        if POLARS_VERSION < (1, 32)
+        if POLARS_VERSION < PkgVersion("1.32")
         else pl.Categorical()
     )
     s = pl.Series(["a", "b"], dtype=cat_dtype)
@@ -81,7 +82,8 @@ def test_is_definitely_not_ordered_categorical(
 
 # The `ordered` flag on dictionary types was not preserved before pyarrow 25.0.0.
 @pytest.mark.xfail(
-    PYARROW_VERSION < (25,), reason="https://github.com/apache/arrow/issues/41017"
+    PYARROW_VERSION < PkgVersion("25"),
+    reason="https://github.com/apache/arrow/issues/41017",
 )
 def test_is_ordered_categorical_pyarrow() -> None:
     pytest.importorskip("pyarrow")

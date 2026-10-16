@@ -5,6 +5,7 @@ from datetime import timedelta
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION
@@ -19,7 +20,9 @@ import pandas as pd
         max_value=timedelta(days=3, minutes=90, seconds=60),
     )
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="pyarrow dtype not available"
+)
 @pytest.mark.slow
 def test_total_minutes(timedeltas: timedelta) -> None:
     pytest.importorskip("pyarrow")
@@ -47,7 +50,9 @@ def test_total_minutes(timedeltas: timedelta) -> None:
         max_value=timedelta(days=3, minutes=90, seconds=60),
     )
 )
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="pyarrow dtype not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="pyarrow dtype not available"
+)
 @pytest.mark.slow
 def test_total_minutes_polars(timedeltas: timedelta) -> None:
     pytest.importorskip("polars")

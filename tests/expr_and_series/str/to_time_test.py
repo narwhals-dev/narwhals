@@ -4,9 +4,11 @@ from datetime import time
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
+    NOT_INSTALLED,
     PANDAS_VERSION,
     POLARS_VERSION,
     PYARROW_VERSION,
@@ -30,12 +32,12 @@ def requires_time_support(
     version, and pyarrow availability when testing Time dtype support.
     """
     if constructor.__name__.startswith(("pandas", "modin")):
-        if PANDAS_VERSION < (2, 2, 0):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip(
                 "pandas < 2.2.0 has no pyarrow dtype support (and therefore does not support the Time dtype)"
             )
 
-        if PYARROW_VERSION == (0, 0, 0):
+        if PYARROW_VERSION == NOT_INSTALLED:
             pytest.skip("pandas requires pyarrow for the Time dtype")
 
     if "pyspark" in str(constructor) or "dask" in str(constructor):
@@ -87,7 +89,7 @@ def test_to_time_infer_fmt(
 
     if (
         "polars" in str(constructor)
-        and POLARS_VERSION < (1, 30)
+        and POLARS_VERSION < PkgVersion("1.30")
         and data["a"][0].count(":") < 2
     ):  # pragma: no cover
         request.applymarker(
@@ -118,7 +120,7 @@ def test_to_time_series_infer_fmt(
 
     if (
         "polars" in str(constructor_eager)
-        and POLARS_VERSION < (1, 30)
+        and POLARS_VERSION < PkgVersion("1.30")
         and data["a"][0].count(":") < 2
     ):  # pragma: no cover
         request.applymarker(

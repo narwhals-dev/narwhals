@@ -103,7 +103,7 @@ jobs:
       - name: Create venv
         run: uv venv --python ${{ matrix.python-version }}
       - name: install-reqs
-        run: uv pip install -e . --group tests --group plugins
+        run: uv pip install -e ".[sql]" --group tests --group plugins
       - name: install polars pre-release
         run: |
           uv pip uninstall polars

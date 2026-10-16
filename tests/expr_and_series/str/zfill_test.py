@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -64,7 +65,7 @@ def test_str_zfill(
     if (
         "width_0" not in request.node.callspec.id
         and uses_pyarrow_backend(constructor)
-        and PANDAS_VERSION < (3,)
+        and PANDAS_VERSION < PkgVersion("3")
     ):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
@@ -72,7 +73,7 @@ def test_str_zfill(
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 5):
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("1.5"):
         reason = "different zfill behavior"
         pytest.skip(reason=reason)
 
@@ -93,7 +94,7 @@ def test_str_zfill_series(
     if (
         "width_0" not in request.node.callspec.id
         and uses_pyarrow_backend(constructor_eager)
-        and PANDAS_VERSION < (3,)
+        and PANDAS_VERSION < PkgVersion("3")
     ):
         reason = (
             "pandas with pyarrow backend doesn't support str.zfill, see "
@@ -101,7 +102,7 @@ def test_str_zfill_series(
         )
         request.applymarker(pytest.mark.xfail(reason=reason))
 
-    if "pandas" in str(constructor_eager) and PANDAS_VERSION < (1, 5):
+    if "pandas" in str(constructor_eager) and PANDAS_VERSION < PkgVersion("1.5"):
         reason = "different zfill behavior"
         pytest.skip(reason=reason)
 

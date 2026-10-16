@@ -6,6 +6,7 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import HealthCheck, given, settings
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -65,7 +66,7 @@ def test_rolling_var_expr(
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # TODO(FBruzzesi): Dask is raising the following error:
         # NotImplementedError: Partition size is less than overlapping window size.
         # Try using ``df.repartition`` to increase the partition size.
@@ -84,7 +85,7 @@ def test_rolling_var_expr(
 def test_rolling_var_series(
     constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip()
 
     name = kwargs_and_expected["name"]
@@ -100,7 +101,7 @@ def test_rolling_var_series(
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @pytest.mark.slow
-@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
+@pytest.mark.skipif(POLARS_VERSION < PkgVersion("1"), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
@@ -133,7 +134,7 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @pytest.mark.slow
-@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
+@pytest.mark.skipif(POLARS_VERSION < PkgVersion("1"), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> None:  # noqa: FBT001
@@ -198,8 +199,8 @@ def test_rolling_var_expr_lazy_ungrouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if "modin" in str(constructor):
@@ -263,8 +264,8 @@ def test_rolling_var_expr_lazy_grouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):

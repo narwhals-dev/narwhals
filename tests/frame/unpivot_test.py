@@ -4,6 +4,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
@@ -117,7 +118,7 @@ def test_unpivot_mixed_types(
     expected_dtypes: list[DType],
 ) -> None:
     if "cudf" in str(constructor) or (
-        "pyarrow_table" in str(constructor) and PYARROW_VERSION < (14, 0, 0)
+        "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("14")
     ):
         request.applymarker(pytest.mark.xfail)
 
