@@ -281,7 +281,7 @@ def test_maybe_convert_dtypes_polars() -> None:
     assert result is df
 
 
-def test_get_trivial_version_with_uninstalled_module() -> None:
+def test_get_module_version_not_installed() -> None:
     result = get_module_version("non_existent_module")
     assert result == NOT_INSTALLED
 
@@ -296,7 +296,7 @@ def test_get_trivial_version_with_uninstalled_module() -> None:
         ("22.0.0.dev241", "22.0.0"),
     ],
 )
-def test_get_module_version_strips_pre_release(
+def test_get_module_version_strips_suffixes(
     monkeypatch: pytest.MonkeyPatch, version: str, expected: str
 ) -> None:
     monkeypatch.setitem(sys.modules, "fake_module", SimpleNamespace(__version__=version))

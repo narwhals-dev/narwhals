@@ -36,10 +36,7 @@ NOT_INSTALLED = PkgVersion("0")
 def get_module_version(module_name: str) -> PkgVersion:
     """Return the installed version of `module_name`, or `NOT_INSTALLED`.
 
-    Pre-release and dev suffixes are stripped (e.g. `"3.0.0rc1"` -> `3.0.0`,
-    `"1.4.0-dev123"` -> `1.4.0`), so that a pre-release compares like the
-    release it leads up to. This matches the previous behaviour of
-    `narwhals._utils.parse_version`.
+    Only the release segment is kept, so `3.0.0rc1` passes `>= 3.0` gates.
     """
     try:
         version = __import__(module_name).__version__
