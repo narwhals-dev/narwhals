@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from narwhals._polars.series import PolarsSeries
     from narwhals._typing import NoDefault
     from narwhals._utils import Version
-    from narwhals.typing import IntoDType, ModeKeepStrategy
+    from narwhals.typing import FillNullStrategy, IntoDType, ModeKeepStrategy
 
 
 class PolarsExpr:
@@ -115,6 +115,23 @@ class PolarsExpr:
     def clip_upper(self, upper_bound: PolarsExpr) -> Self:
         upper_native = extract_native(upper_bound)
         return self._with_native(self.native.clip(None, upper_native))
+
+    def fill_null(
+        self,
+        value: PolarsExpr | None,
+        strategy: FillNullStrategy | None,
+        limit: int | None,
+    ) -> Self:
+        if (
+            BACKEND_VERSION < (1, 25)
+            and value is not None
+            and self._metadata.is_scalar_like
+            and not value._metadata.is_scalar_like
+        ):
+            # Polars<1.25 keeps the scalar receiver's length instead of broadcasting it.
+            return self._with_native(pl.coalesce(self.native, value.native))
+        native_value = extract_native(value)
+        return self._with_native(self.native.fill_null(native_value, strategy, limit))
 
     def ewm_mean(
         self,
@@ -384,7 +401,6 @@ class PolarsExpr:
     diff: Method[Self]
     drop_nulls: Method[Self]
     exp: Method[Self]
-    fill_null: Method[Self]
     fill_nan: Method[Self]
     floor: Method[Self]
     gather_every: Method[Self]
