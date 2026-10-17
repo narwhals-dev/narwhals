@@ -29,14 +29,8 @@ def test_arg_max_series(
 
 @pytest.mark.parametrize("empty", [False, True], ids=["all_null", "empty"])
 def test_arg_max_series_no_valid_values(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest, *, empty: bool
+    constructor_eager: ConstructorEager, *, empty: bool
 ) -> None:
-    if "modin" in str(constructor_eager):
-        # TODO(unassigned): bug in modin?
-        return
-    if "cudf" in str(constructor_eager):
-        # not implemented yet
-        request.applymarker(pytest.mark.xfail)
     df = nw.from_native(constructor_eager({"a": [1.0, 2.0]}), eager_only=True)
     if empty:
         series = df.filter(nw.col("a") < 0)["a"]
@@ -51,16 +45,7 @@ def test_arg_max_series_no_valid_values(
     ids=["ties_between_nulls", "signed_between_nulls"],
 )
 def test_arg_max_series_skips_nulls(
-    constructor_eager: ConstructorEager,
-    values: list[float | None],
-    expected: int,
-    request: pytest.FixtureRequest,
+    constructor_eager: ConstructorEager, values: list[float | None], expected: int
 ) -> None:
-    if "modin" in str(constructor_eager):
-        # TODO(unassigned): bug in modin?
-        return
-    if "cudf" in str(constructor_eager):
-        # not implemented yet
-        request.applymarker(pytest.mark.xfail)
     series = nw.from_native(constructor_eager({"a": values}), eager_only=True)["a"]
     assert series.arg_max() == expected
