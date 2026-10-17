@@ -38,7 +38,7 @@ def test_numeric_reduction_keeps_dtype_when_all_null(
     ):
         reason = "Return an untyped `pd.NA`. `sum` returns a typed zero."
         request.applymarker(pytest.mark.xfail(reason=reason))
-    if reduction in {"skew", "kurtosis"} and "ibis" in str(constructor):
+    if "ibis" in str(constructor) and reduction in {"skew", "kurtosis"}:
         reason = "Ibis does not implement them."
         request.applymarker(pytest.mark.xfail(reason=reason))
 
