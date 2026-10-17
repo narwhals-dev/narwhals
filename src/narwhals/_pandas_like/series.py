@@ -21,6 +21,7 @@ from narwhals._pandas_like.utils import (
     import_array_module,
     is_dtype_pyarrow,
     is_pandas_or_modin,
+    mod_null_on_zero,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -520,10 +521,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_binary_right(operator.pow, other)
 
     def __mod__(self, other: Any) -> Self:
-        return self._with_binary(operator.mod, other)
+        return self._with_binary(mod_null_on_zero, other)
 
     def __rmod__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.mod, other)
+        return self._with_binary_right(mod_null_on_zero, other)
 
     # Unary
 
