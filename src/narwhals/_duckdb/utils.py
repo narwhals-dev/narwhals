@@ -418,6 +418,7 @@ def _floordiv(dividend: Expression, divisor: Expression) -> Expression:
 
 
 _BINARY_OPS: Mapping[str, Callable[[Expression, Expression], Expression]] = {
+    "divide": operator.truediv,
     "floordiv": _floordiv,
     "and": operator.and_,
 }
