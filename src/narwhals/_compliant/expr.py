@@ -322,7 +322,12 @@ class EagerExpr(
         )
 
     def _reuse_series(
-        self, method_name: str, *, returns_scalar: bool = False, **kwargs: Any
+        self,
+        method_name: str,
+        *,
+        returns_scalar: bool = False,
+        scalar_dtype: IntoDType | None = None,
+        **kwargs: Any,
     ) -> Self:
         """Reuse Series implementation for expression.
 
@@ -333,12 +338,16 @@ class EagerExpr(
             method_name: name of method.
             returns_scalar: whether the Series version returns a scalar. In this case,
                 the expression version should return a 1-row Series.
+            scalar_dtype: dtype to materialise that 1-row Series with. Needed when the
+                Series version may return a bare `None`, which carries no type of its
+                own and would otherwise be inferred as a string column.
             kwargs: keyword arguments to pass to function.
         """
         func = partial(
             self._reuse_series_inner,
             method_name=method_name,
             returns_scalar=returns_scalar,
+            scalar_dtype=scalar_dtype,
             **kwargs,
         )
         return self._from_callable(
@@ -365,6 +374,7 @@ class EagerExpr(
         *,
         method_name: str,
         returns_scalar: bool,
+        scalar_dtype: IntoDType | None = None,
         **kwargs: Any,
     ) -> Sequence[EagerSeriesT]:
         kwargs = {
@@ -379,7 +389,9 @@ class EagerExpr(
             **kwargs,
         )
         out: Sequence[EagerSeriesT] = [
-            series._from_scalar(method(series)) if returns_scalar else method(series)
+            series._from_scalar(method(series), dtype=scalar_dtype)
+            if returns_scalar
+            else method(series)
             for series in self(df)
         ]
         aliases, names = self._evaluate_aliases(df), (s.name for s in out)
@@ -551,10 +563,16 @@ class EagerExpr(
         return self._reuse_series("var", returns_scalar=True, ddof=ddof)
 
     def skew(self) -> Self:
-        return self._reuse_series("skew", returns_scalar=True)
+        # `skew` returns a bare `None` when there is no value to compute from, so the
+        # result dtype has to be stated rather than inferred. See #4044.
+        return self._reuse_series(
+            "skew", returns_scalar=True, scalar_dtype=self._version.dtypes.Float64()
+        )
 
     def kurtosis(self) -> Self:
-        return self._reuse_series("kurtosis", returns_scalar=True)
+        return self._reuse_series(
+            "kurtosis", returns_scalar=True, scalar_dtype=self._version.dtypes.Float64()
+        )
 
     def any(self) -> Self:
         return self._reuse_series("any", returns_scalar=True)

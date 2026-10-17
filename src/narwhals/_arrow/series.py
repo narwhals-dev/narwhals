@@ -180,14 +180,14 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
             native = chunked_array([data])
         return cls.from_native(native, context=context, name=name)
 
-    def _from_scalar(self, value: Any) -> Self:
+    def _from_scalar(self, value: Any, *, dtype: IntoDType | None = None) -> Self:
         if isinstance(value, pa.Scalar):
             if isinstance(value, pa.ExtensionScalar) and self._backend_version < (24,):
                 # `pa.array` accepts extension scalars only from pyarrow 24.
-                return super()._from_scalar(value.as_py())
+                return super()._from_scalar(value.as_py(), dtype=dtype)
             # `as_py` drops the type, so nulls become `pa.null()` and narrow types widen.
             return self._with_native(pa.array([value]))
-        return super()._from_scalar(value)
+        return super()._from_scalar(value, dtype=dtype)
 
     @staticmethod
     def _is_native(obj: ChunkedArrayAny | Any) -> TypeIs[ChunkedArrayAny]:
