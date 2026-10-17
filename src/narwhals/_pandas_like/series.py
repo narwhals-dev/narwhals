@@ -418,6 +418,8 @@ class PandasLikeSeries(EagerSeries[Any]):
             try:
                 return func()
             except ValueError:
+                if self.native.count():
+                    raise
                 return None
         # NOTE: pandas<3 returns -1 (and warns) for all-NaN float and object input.
         return func() if self.native.count() else None  # pragma: no cover

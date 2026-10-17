@@ -49,3 +49,14 @@ def test_arg_min_series_skips_nulls(
 ) -> None:
     series = nw.from_native(constructor_eager({"a": values}), eager_only=True)["a"]
     assert series.arg_min() == expected
+
+
+@pytest.mark.parametrize("method", ["arg_min", "arg_max"])
+def test_arg_extremum_preserves_comparison_errors(method: str) -> None:
+    pd = pytest.importorskip("pandas")
+    np = pytest.importorskip("numpy")
+    native = pd.Series([np.array([1, 2]), np.array([3, 4])], dtype=object)
+    series = nw.from_native(native, series_only=True)
+
+    with pytest.raises(ValueError, match="truth value of an array"):
+        getattr(series, method)()
