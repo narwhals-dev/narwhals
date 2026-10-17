@@ -11,7 +11,14 @@ from narwhals.exceptions import ShapeError
 from tests.utils import POLARS_VERSION, Constructor, ConstructorEager, assert_equal_data
 
 data = {"a": [1, 1, 2, 2, 3], "b": [1, 2, 3, 3, 4]}
-data_nulls = {"a": [None, None, 2.0]}
+data_nulls = {
+    "null_mode": [None, None, 2.0],
+    "value_mode": [2.0, 2.0, None],
+    "tied": [None, 2.0, 3.0],
+    "bool_null_mode": [None, None, True],
+    "bool_value_mode": [True, True, None],
+    "bool_no_nulls": [True, True, False],
+}
 data_group = {
     "grp": ["g1", "g1", "g1", "g1", "g2", "g2", "g2"],
     "vals_unimodal": [2, 1, 1, 3, 3, 3, 4],
@@ -188,31 +195,43 @@ def test_mode_group_by_multiple_cols(
         assert_equal_data(result, expected)
 
 
-def test_mode_single_expr_nulls(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
-) -> None:
-    df = nw.from_native(constructor_eager(data_nulls))
-    if df.implementation.is_modin():
-        # Modin drops nulls upstream in mode(dropna=False)
-        request.applymarker(pytest.mark.xfail)
-    result = df.select(nw.col("a").mode(keep="all"))
-    expected = {"a": [None]}
-    assert_equal_data(result, expected)
-
-    result_any = df.select(nw.col("a").mode(keep="any"))
-    assert_equal_data(result_any, expected)
-
-
+@pytest.mark.parametrize(
+    ("column", "expected"),
+    [("null_mode", [None]), ("value_mode", [2.0]), ("tied", [2.0, 3.0, None])],
+)
 def test_mode_series_nulls(
-    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+    constructor_eager: ConstructorEager, column: str, expected: list[float | None]
 ) -> None:
-    series = nw.from_native(constructor_eager(data_nulls), eager_only=True)["a"]
-    if series.implementation.is_modin():
-        # Modin drops nulls upstream in mode(dropna=False)
-        request.applymarker(pytest.mark.xfail)
-    result = series.mode(keep="all")
-    expected = {"a": [None]}
-    assert_equal_data({"a": result}, expected)
+    series = nw.from_native(constructor_eager(data_nulls), eager_only=True)[column]
+    result = series.mode(keep="all").sort(nulls_last=True)
+    assert_equal_data({column: result}, {column: expected})
 
-    result_any = series.mode(keep="any")
-    assert_equal_data({"a": [result_any]}, expected)
+
+@pytest.mark.parametrize(
+    ("column", "expected"),
+    [("bool_null_mode", None), ("bool_value_mode", True), ("bool_no_nulls", True)],
+)
+def test_mode_series_nulls_boolean(
+    constructor_eager: ConstructorEager, column: str, *, expected: bool | None
+) -> None:
+    # pandas' nullable booleans take a separate path (pandas-dev/pandas#70487).
+    series = nw.from_native(constructor_eager(data_nulls), eager_only=True)[column]
+    assert_equal_data({column: series.mode(keep="all")}, {column: [expected]})
+
+
+@pytest.mark.parametrize(
+    ("column", "expected"), [("null_mode", None), ("value_mode", 2.0)]
+)
+def test_mode_expr_keep_any_nulls(
+    constructor: Constructor,
+    column: str,
+    expected: float | None,
+    request: pytest.FixtureRequest,
+) -> None:
+    sql_backends = ("duckdb", "sqlframe", "ibis", "pyspark")
+    if column == "null_mode" and any(x in str(constructor) for x in sql_backends):
+        reason = "SQL `mode` aggregates skip nulls."
+        request.applymarker(pytest.mark.xfail(reason=reason))
+    df = nw.from_native(constructor(data_nulls))
+    result = df.select(nw.col(column).mode(keep="any")).lazy().collect()
+    assert_equal_data(result, {column: [expected]})
