@@ -22,9 +22,6 @@ docs/this.md
 docs/api-completeness/*.md
 !docs/api-completeness/index.md
 
-# Lock files
-*.lock
-
 # Environments
 .venv
 

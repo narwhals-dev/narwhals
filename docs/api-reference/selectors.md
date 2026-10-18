@@ -16,6 +16,7 @@ set operations are supported:
         - by_dtype
         - categorical
         - datetime
+        - enum
         - matches
         - numeric
         - string

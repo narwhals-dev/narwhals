@@ -1,23 +1,23 @@
 # Reference: https://packaging.python.org/en/latest/guides/writing-pyproject-toml
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.11.0,<0.13.0"]
+build-backend = "uv_build"
 
 [project]
 name = "narwhals"
-version = "2.21.2"
+version = "2.27.1"
 dependencies = []
 requires-python = ">=3.10"
 authors = [
   { name = "Marco Gorelli", email = "hello_narwhals@proton.me" },
 ]
-license = {file = "LICENSE.md"}
+license = "MIT"
+license-files = ["LICENSE.md"]
 description = "Extremely lightweight compatibility layer between dataframe libraries"
 readme = "README.md"
 keywords = ["dataframes", "interoperability", "pandas", "polars", "pyarrow", "dask", "modin", "cudf"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -41,66 +41,83 @@ Repository = "https://github.com/narwhals-dev/narwhals"
 # `modin.pandas.__version__`. The latter is the one that we make
 # API decisions based on, so that's the one we track internally.
 # We have yet to determine the minimum Modin version we support
-# https://github.com/narwhals-dev/narwhals/issues/817 
-pandas = ["pandas>=1.1.3"]
-modin = ["modin"]
-cudf = ["cudf-cu12>=24.10.0"]
+# https://github.com/narwhals-dev/narwhals/issues/817
+pandas = ["pandas>=1.3.4"]
+modin = ["modin>=0.22.0"]
+cudf = ["cudf-cu12>=24.10.0; sys_platform == 'linux'"]
 pyarrow = ["pyarrow>=13.0.0"]
 pyspark = ["pyspark>=3.5.0"]
 pyspark-connect = ["pyspark[connect]>=3.5.0"]
 polars = ["polars>=0.20.4"]
 dask = ["dask[dataframe]>=2024.8"]
 duckdb = ["duckdb>=1.1"]
-ibis = ["ibis-framework>=6.0.0", "rich", "packaging", "pyarrow_hotfix"]
+ibis = [
+    "ibis-framework>=6.0.0",
+    "packaging>=21.3",  # runtime import at ibis/backends/duckdb and others
+    "pyarrow_hotfix>=0.7",  # runtime import anytime pyarrow is imported
+  ]
 sqlframe = ["sqlframe>=3.22.0,!=3.39.3"]
-sql = ["duckdb>=1.1", "sqlparse"]
+sql = ["narwhals[duckdb]", "sqlparse>=0.5.5"]
 
 [dependency-groups]
 core = [
-  "narwhals[duckdb,pandas,polars,pyarrow,sqlframe,sql]"
-] 
+  "pandas>=1.3.4",
+  "duckdb>=1.5",
+  "narwhals[duckdb,polars,pyarrow,sqlframe,sql]"
+]
+plugins = [
+  "test-plugin",
+]
 tests = [
   "covdefaults",
-  "pytest",
+  "pytest>=9.0.3",
   "pytest-cov",
   "pytest-env",
   "pytest-randomly",
   "pytest-xdist",
-  "hypothesis",
+  "hypothesis>=6.0.0",
+  "packaging>=21.3",
 ]
-extra = [  # heavier dependencies we don't necessarily need in every testing job
+# NOTE: `plugins` is deliberately NOT included within `tests`.
+# `test-plugin` is a workspace member, so pulling it into `tests` makes the group unresolvable
+# outside the workspace (e.g. `pip install --group tests` from an unpacked sdist,
+# as hit by downstream packagers). `tests/plugins_test.py` uses `importorskip`,
+# so it skips gracefully when the plugin is absent.
+# CI jobs that measure `tests/` coverage add `--group plugins` explicitly.
+# See https://github.com/narwhals-dev/narwhals/pull/3664 and https://github.com/narwhals-dev/narwhals/pull/3665
+
+sklearn = [
   "scikit-learn",
 ]
-typing = [  # keep some of these pinned and bump periodically so there's fewer surprises for contributors
-  "duckdb",
-  "hypothesis",
-  "pytest",
-  "pandas-stubs==2.3.0.250703",
-  "typing_extensions",
-  "mypy==2.1.0",
-  "pyrefly==1.0.0",
+typing = [
+  # Type checkers
+  "mypy",
+  "pyrefly",
   "pyright",
-  "pyarrow-stubs==19.2",
-  "narwhals[dask]",
-  "sqlframe",
-  "polars",
-  "uv",
-  "narwhals[ibis]",
+  # Dependencies
+  "hypothesis>=6.0.0",
+  "pytest>=9.0.3",
+  "pandas-stubs>=2.3.0.250703",
+  "pyarrow-stubs>=19.2",
+  "rich>=12.4.4",  # type import to resolve ibis
+  "typing-extensions>=4.15.0",
+  "narwhals[dask,duckdb,ibis,pandas,polars,pyarrow,sql,sqlframe]",
+  {include-group = "plugins"},
 ]
 docs = [
-  "black",  # required by mkdocstrings_handlers
-  "jinja2",
-  "markdown-exec[ansi]",
-  "mkdocs-autorefs",
+  "jinja2>=3.1.6",
+  "markdown-exec[ansi]>=1.12.1",
+  "mkdocs-autorefs>=1.4.4",
   "mkdocstrings-python>=2.0.3",
-  "narwhals[duckdb,pandas,pyarrow,polars,sql,sqlframe]",
+  "pandas>=1.3.4",
+  "narwhals[duckdb,pyarrow,polars,sql,sqlframe]",
+  "ruff",
   "zensical>=0.0.38"
 ]
 dev = [
-  "pre-commit",
+  "prek",
   "ruff",
   {include-group = "tests"},
-  {include-group = "typing"},
 ]
 dev-core = [
   {include-group = "dev"},
@@ -113,17 +130,115 @@ core-tests = [
 local-dev = [
   {include-group = "dev"},
   {include-group = "core"},
-  {include-group = "docs"}
+  {include-group = "docs"},
+  {include-group = "plugins"},
 ]
 
-[tool.hatch.build.targets.sdist]
-include = [
-  "src/narwhals/*",
-  "tests/*",
+extreme-minimum-versions = [
+  "setuptools",
+  "tzdata",
+  "pandas==1.3.4",
+  "polars==0.20.4",
+  "numpy==1.21.4",
+  "pyarrow==13.0.0",
+  "pyarrow-stubs<17",
+  "scipy==1.7.3",
+  "scikit-learn==1.1.0",
+  "duckdb==1.1",
+  {include-group = "tests"},
 ]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/narwhals"]
+extreme-pretty-old-versions = [
+  "setuptools",
+  "tzdata",
+  "pandas==1.4.1",
+  "polars==0.20.4",
+  "numpy==1.22.0",
+  "pyarrow==14.0.0",
+  "pyarrow-stubs<17",
+  "scipy==1.8.0",
+  "scikit-learn==1.1.0",
+  "duckdb==1.2",
+  {include-group = "tests"},
+]
+
+extreme-not-so-old-versions = [
+  "setuptools",
+  "tzdata",
+  "pandas==2.0.3",
+  "polars==0.20.8",
+  "numpy==1.24.4",
+  "pyarrow==15.0.0",
+  "pyarrow-stubs<17",
+  "scipy==1.8.0",
+  "scikit-learn==1.3.0",
+  "duckdb==1.3",
+  "dask[dataframe]==2024.10",
+  {include-group = "tests"},
+]
+
+min-pyspark-version = [
+  "pyspark==3.5.0",
+  {include-group = "core-tests"},
+]
+
+[tool.uv.build-backend]
+# The `src/narwhals` module, pyproject.toml, README and LICENSE are shipped by
+# default. We only need to add `tests/` to the sdist; `/**` recurses into
+# subdirectories (a bare `*` would not, dropping e.g. `tests/data/`).
+# See: https://docs.astral.sh/uv/reference/settings/#build-backend_source-exclude
+# > Glob expressions which files and directories to additionally include in the source distribution.
+source-include = ["tests/**"]
+
+[tool.uv]
+# NOTE: When updating these conflicts, every entry in a single inner list is
+# treated as mutually exclusive with every other entry in the same list.
+# See https://docs.astral.sh/uv/reference/settings/#conflicts.
+conflicts = [
+  # TODO: Remove these conflict when Modin and/or CuDF will support pandas v3.0+
+  # In the meanwhile, this is needed to run tests with pandas v3.0+
+  [
+    { extra = "cudf" },
+    { extra = "modin" },
+    { extra = "pandas" },
+  ],
+  # The `extreme-*` groups pin mutually incompatible pyarrow/pandas/numpy
+  # versions, and all pin `pyarrow-stubs<17` while `typing` pins ==19.2. `cudf`
+  # is here because old pandas/numpy forces cudf-cu12==24.10.x, whose
+  # nvidia-stub build backend fails on non-linux platforms during lock.
+  [
+    { extra = "cudf" },
+    { group = "typing" },
+    { group = "extreme-minimum-versions" },
+    { group = "extreme-not-so-old-versions" },
+    { group = "extreme-pretty-old-versions" },
+  ],
+  # `dask[dataframe]>=2024.8` transitively requires pyarrow>=16 / pandas>=2,
+  # and `modin>=0.22` pins pandas==1.5.3, both incompatible with the older two
+  # `extreme-*` groups. `extreme-not-so-old-versions` is omitted: it already
+  # pins dask==2024.10 and pandas==2.0.3, which are compatible.
+  [
+    { extra = "cudf" },
+    { extra = "dask" },
+    { extra = "modin" },
+    { group = "extreme-minimum-versions" },
+    { group = "extreme-pretty-old-versions" },
+  ],
+  # `core` resolves modern pandas/duckdb/polars/etc., conflicting with every
+  # `extreme-*` group's old version pins.
+  [
+    { group = "core" },
+    { group = "extreme-minimum-versions" },
+    { group = "extreme-not-so-old-versions" },
+    { group = "extreme-pretty-old-versions" },
+  ],
+]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+test-plugin = { workspace = true }
 
 [tool.ruff]
 line-length = 90
@@ -159,6 +274,7 @@ ignore = [
   "A004",    # builtin-import-shadowing
   "ARG002",  # unused-method-argument
   "ANN401",  # any-type
+  "CPY001",  # missing-copyright-notice
   "COM812",  # missing-trailing-comma
   "D100",    # undocumented-public-module
   "D101",    # undocumented-public-class
@@ -186,10 +302,10 @@ builtins-ignorelist = ["format"]
 
 [tool.ruff.lint.pep8-naming]
 extend-ignore-names = [
-  "Series", 
-  "DataFrame", 
-  "_Window", 
-  "F", 
+  "Series",
+  "DataFrame",
+  "_Window",
+  "F",
   "_F",
 ]
 
@@ -202,15 +318,17 @@ extend-ignore-names = [
   "PLR0911", # too-many-return-statements
 ]
 "tests/*" = [
-  "S101", 
+  "S101",
   "C901",    # complex-structure
   "PLR0912", # too-many-branches
   "PLR0916", # too-many-boolean-expressions
+  "PLR0917", # too-many-positional-arguments
+  "SIM300",  # yoda-conditions (flips `PANDAS_VERSION < PkgVersion("2.2")`)
 ]
+
 "tpch/tests/*" = ["S101"]
-"utils/*" = ["S311", "T201"]
-"utils/bump_version.py" = ["S603", "S607"]
 "tpch/execute/*" = ["T201"]
+"tpch/queries/*" = ["PLR0917"]
 "tpch/notebooks/*" = [
   "ANN001",
   "ANN201",
@@ -220,6 +338,8 @@ extend-ignore-names = [
   "T203",
   "TRY003",
 ]
+"utils/*" = ["S311", "T201"]
+"utils/bump_version.py" = ["S603", "S607"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -245,7 +365,7 @@ filterwarnings = [
   'ignore:.*defaulting to pandas implementation:Warning:modin',
   'ignore:.*implementation has mismatches with pandas:Warning:modin',
   'ignore:.*You are using pyarrow version',
-  
+
   # Deprecation raised by DuckDB
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:sqlframe',
   'ignore:.*fetch_arrow_table\(\) is deprecated:DeprecationWarning:ibis',
@@ -275,6 +395,14 @@ filterwarnings = [
   # raised internally by pandas
   "ignore:.*np.find_common_type is deprecated:DeprecationWarning:pandas",
 
+  # pandas[pyarrow] raises it but we don't control pandas
+  "ignore:.*Specifying null_placement in RankOptions is deprecated as of 25.0.0. Specify null_placement per sort_key instead.*:FutureWarning",
+
+  # numpy>=2.5 deprecates generic-unit timedeltas; pandas (>=2.3) trips this from
+  # `pd.Timedelta(...)`. The warning is attributed to the caller's module (e.g. test
+  # code), so it cannot be scoped to `pandas`; keep it unscoped for this exact message.
+  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning",
+
   # Warning raised when calling PandasLikeNamespace.from_arrow with old pyarrow
   "ignore:.*is_sparse is deprecated and will be removed in a future version.*:DeprecationWarning:pyarrow",
 
@@ -282,7 +410,8 @@ filterwarnings = [
   "ignore:.*The behavior of DataFrame concatenation with empty or all-NA entries is deprecated:FutureWarning",
 
   # raised internally by Dask
-  "ignore:.*'generic' unit for NumPy timedelta is deprecated.*:DeprecationWarning:dask",
+  "ignore:.*Downcasting behavior in Series and DataFrame methods 'where', 'mask', and 'clip' is deprecated.*:FutureWarning:dask",
+  "ignore:.*inplace keyword .* is deprecated*:Warning:dask",
 
   # raise internally by polars
   "ignore:.*interchange protocol is deprecated.*:DeprecationWarning"
@@ -331,13 +460,15 @@ exclude_also = [
   'if ".*" in str\(constructor',
   'pytest.skip\(',
   'assert_never\(',
-  'PANDAS_VERSION < \('
+  'PANDAS_VERSION < \(',  # src: tuple comparisons
+  'PANDAS_VERSION < PkgVersion\(',  # tests: packaging.version.Version comparisons
 ]
 
 [tool.mypy]
-files = ["src/narwhals", "tests", "test-plugin"]
+files = ["src", "tests", "packages/test-plugin"]
 pretty = true
 strict = true
+allow_redefinition = true  # https://mypy.readthedocs.io/en/stable/command_line.html#cmdoption-mypy-allow-redefinition
 
 [[tool.mypy.overrides]]
 module = [
@@ -381,7 +512,7 @@ reportMissingModuleSource = "none"
 reportPrivateImportUsage = "none"
 reportUnusedExpression = "none"    # handled by (https://docs.astral.sh/ruff/rules/unused-variable/)
 typeCheckingMode = "basic"
-include = ["src/narwhals", "tests", "test-plugin"]
+include = ["src", "tests", "packages/test-plugin"]
 ignore = [
   "../.venv/",
   "../../../**/Lib",      # stdlib

@@ -9,15 +9,17 @@ import pyarrow.compute as pc
 from narwhals._arrow.series import ArrowSeries
 from narwhals._arrow.utils import (
     arange,
+    chunked_array,
     concat_tables,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     repeat,
+    sort_indices,
+    sortable_table,
 )
 from narwhals._compliant import EagerDataFrame
 from narwhals._utils import (
     Implementation,
-    Version,
     check_column_names_are_unique,
     convert_str_slice_to_int_slice,
     generate_temporary_column_name,
@@ -43,10 +45,7 @@ if TYPE_CHECKING:
     from narwhals._arrow.expr import ArrowExpr
     from narwhals._arrow.group_by import ArrowGroupBy
     from narwhals._arrow.namespace import ArrowNamespace
-    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
-        ChunkedArrayAny,
-        Order,
-    )
+    from narwhals._arrow.typing import ChunkedArrayAny, NullPlacement, Order  # type: ignore[attr-defined]
     from narwhals._compliant.typing import CompliantDataFrameAny, CompliantLazyFrameAny
     from narwhals._spark_like.utils import SparkSession
     from narwhals._translate import IntoArrowTable
@@ -54,6 +53,7 @@ if TYPE_CHECKING:
     from narwhals._utils import Version, _LimitedContext
     from narwhals.dtypes import DType
     from narwhals.typing import (
+        IntoDType,
         IntoSchema,
         JoinStrategy,
         SizedMultiIndexSelector,
@@ -122,12 +122,12 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         if not schema and not data:
             return cls.from_native(pa.table({}), context=context)
         if not schema:
-            return cls.from_native(pa.table(data), context=context)  # type: ignore[arg-type]
+            return cls.from_native(pa.table(data), context=context)
         if not any(dtype is None for dtype in schema.values()):
             from narwhals.schema import Schema
 
@@ -140,18 +140,18 @@ class ArrowDataFrame(
         if context._implementation._backend_version() < (14,):
             msg = "Passing `None` dtype in `from_dict` requires PyArrow>=14"
             raise NotImplementedError(msg)
-        res = pa.table(
-            {
-                name: pa.chunked_array(  # type: ignore[misc]
-                    [data[name] if data else []],
-                    type=narwhals_to_native_dtype(nw_dtype, version=context._version)
-                    if nw_dtype is not None
-                    else None,
-                )
-                for name, nw_dtype in schema.items()
-            }
-        )
-        return cls.from_native(pa.table(res), context=context)
+        version = context._version
+        # NOTE: stubs don't allow `ChunkedArray` values, but `pa.table` accepts them
+        arrays: Mapping[str, Any] = {
+            name: chunked_array(
+                [data[name] if data else []],
+                narwhals_to_native_dtype(nw_dtype, version=version)
+                if nw_dtype is not None
+                else None,
+            )
+            for name, nw_dtype in schema.items()
+        }
+        return cls.from_native(pa.table(arrays), context=context)
 
     @classmethod
     def from_dicts(
@@ -160,7 +160,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -193,7 +193,7 @@ class ArrowDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self:
         from narwhals.schema import Schema
 
@@ -486,12 +486,11 @@ class ArrowDataFrame(
                 for key, is_descending in zip(by, descending, strict=True)
             ]
 
-        null_placement = "at_end" if nulls_last else "at_start"
-
-        return self._with_native(
-            self.native.sort_by(sorting, null_placement=null_placement),
-            validate_column_names=False,
-        )
+        null_placement: NullPlacement = "at_end" if nulls_last else "at_start"
+        # NOTE: sort on `sortable_table`, take from the original, so that
+        # dictionary-encoded (categorical) keys keep their encoding in the output.
+        indices = sort_indices(sortable_table(self.native, by), sorting, null_placement)
+        return self._with_native(self.native.take(indices), validate_column_names=False)
 
     def top_k(self, k: int, *, by: Iterable[str], reverse: bool | Sequence[bool]) -> Self:
         if isinstance(reverse, bool):
@@ -502,10 +501,10 @@ class ArrowDataFrame(
                 (key, "ascending" if is_ascending else "descending")
                 for key, is_ascending in zip(by, reverse, strict=True)
             ]
-        return self._with_native(
-            self.native.take(pc.select_k_unstable(self.native, k, sorting)),  # type: ignore[call-overload]
-            validate_column_names=False,
-        )
+        keys = [name for name, _ in sorting]
+        table = sortable_table(self.native, keys)
+        indices = pc.select_k_unstable(table, k, sorting)  # type: ignore[call-overload]
+        return self._with_native(self.native.take(indices), validate_column_names=False)
 
     def to_pandas(self) -> pd.DataFrame:
         return self.native.to_pandas()
@@ -543,7 +542,8 @@ class ArrowDataFrame(
                 plx._series.from_iterable(data, context=self, name=name)
             )
             return self.select(row_index, plx.all())
-        indices = pc.sort_indices(self.native, [(by, "ascending") for by in order_by])
+        sorting: list[tuple[str, Order]] = [(name, "ascending") for name in order_by]
+        indices = sort_indices(sortable_table(self.native, order_by), sorting, "at_start")
         if self._backend_version < (20,):
             new_col = data.take(pc.sort_indices(indices))
         else:
@@ -639,8 +639,6 @@ class ArrowDataFrame(
         self, backend: _EagerAllowedImpl | None, **kwargs: Any
     ) -> CompliantDataFrameAny:
         if backend is Implementation.PYARROW or backend is None:
-            from narwhals._arrow.dataframe import ArrowDataFrame
-
             return ArrowDataFrame(
                 self.native, version=self._version, validate_column_names=False
             )
@@ -700,6 +698,24 @@ class ArrowDataFrame(
             names = [mapping.get(c, c) for c in self.columns]
         return self._with_native(self.native.rename_columns(names))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        # NOTE: Not `pa.Table.cast`, which re-validates every field and raises on
+        # unrelated non-nullable ones holding nulls, nor `set_column` per column, which
+        # is O(n_cast * n_columns). Field metadata is dropped on cast columns as it can
+        # be type-specific (e.g. polars' Enum categories).
+        native = self.native
+        schema = native.schema
+        fields, columns = list(schema), list(native.columns)
+        for name, dtype in dtypes.items():
+            index = schema.get_field_index(name)
+            target_dtype = narwhals_to_native_dtype(dtype, self._version)
+            fields[index] = pa.field(name, target_dtype, nullable=fields[index].nullable)
+            columns[index] = pc.cast(columns[index], target_dtype)
+        result = pa.Table.from_arrays(columns, schema=pa.schema(fields))
+        return self._with_native(
+            result.replace_schema_metadata(schema.metadata), validate_column_names=False
+        )
+
     def write_parquet(self, file: str | Path | BytesIO) -> None:
         import pyarrow.parquet as pp
 
@@ -732,10 +748,12 @@ class ArrowDataFrame(
             .aggregate([(col_token, "min"), (col_token, "max")])
         )
         native = pa.chunked_array(
-            pc.and_(
-                pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
-                pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
-            )
+            [
+                pc.and_(
+                    pc.is_in(row_index, keep_idx[f"{col_token}_min"]),
+                    pc.is_in(row_index, keep_idx[f"{col_token}_max"]),
+                )
+            ]
         )
         return ArrowSeries.from_native(native, context=self)
 
@@ -796,23 +814,15 @@ class ArrowDataFrame(
     def to_arrow(self) -> pa.Table:
         return self.native
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         import numpy as np  # ignore-banned-import
 
-        num_rows = len(self)
-        if n is None and fraction is not None:
-            n = int(num_rows * fraction)
         rng = np.random.default_rng(seed=seed)
-        idx = np.arange(num_rows)
-        mask = rng.choice(idx, size=n, replace=with_replacement)
-        return self._with_native(self.native.take(mask), validate_column_names=False)
+        indices = rng.choice(np.arange(n), size=n, replace=with_replacement)
+        return self._with_native(
+            self.native.take(pa.array(indices, type=pa.uint64())),
+            validate_column_names=False,
+        )
 
     def unpivot(
         self,

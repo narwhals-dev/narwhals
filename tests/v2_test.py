@@ -8,11 +8,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 import narwhals.stable.v2 as nw_v2
 from narwhals._utils import Implementation
-from narwhals.exceptions import NarwhalsUnstableWarning, ShapeError
+from narwhals.exceptions import InvalidOperationError, NarwhalsUnstableWarning, ShapeError
 from narwhals.utils import Version
 from tests.utils import (
     PANDAS_VERSION,
@@ -26,12 +27,15 @@ from tests.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from typing import TypeVar
 
     from typing_extensions import assert_type
 
     from narwhals._typing import EagerAllowed
-    from narwhals.stable.v2.typing import IntoDataFrameT
+    from narwhals.stable.v2.typing import FrameT as StableFrameT, IntoDataFrameT
     from narwhals.typing import IntoDType, _1DArray, _2DArray
+
+    FrameT = TypeVar("FrameT", nw_v2.Series[Any], nw_v2.DataFrame[Any])
 
 
 def test_toplevel() -> None:
@@ -47,6 +51,7 @@ def test_toplevel() -> None:
         mean=nw_v2.mean("a"),
         median=nw_v2.median("a"),
         corr=nw_v2.corr("a", "a"),
+        cov=nw_v2.cov("a", "a"),
         sum=nw_v2.sum("a"),
         sum_h=nw_v2.sum_horizontal("a"),
         min_h=nw_v2.min_horizontal("a"),
@@ -67,6 +72,7 @@ def test_toplevel() -> None:
         "mean": [2.0, 2.0, 2.0],
         "median": [2.0, 2.0, 2.0],
         "corr": [1, 1, 1],
+        "cov": [1, 1, 1],
         "sum": [6, 6, 6],
         "sum_h": [1, 2, 3],
         "min_h": [1, 2, 3],
@@ -108,13 +114,31 @@ def test_when_then() -> None:
     assert isinstance(result, nw_v2.DataFrame)
 
 
+def test_when_then_otherwise_stable_expr() -> None:
+    # `Then.otherwise` and chained `Then.when` must stay the stable `Expr` subclass
+    a = nw_v2.col("a")
+    otherwise = nw_v2.when(a.is_null()).then(nw_v2.lit(0)).otherwise(a)
+    otherwise_alias = otherwise.alias("a")
+    then = nw_v2.when(a > 1).then("b").when(a > 2).then("c")
+    then_alias = then.alias("d")
+
+    if TYPE_CHECKING:
+        assert_type(otherwise, nw_v2.Expr)
+        assert_type(otherwise_alias, nw_v2.Expr)
+        assert_type(then, nw_v2.Then)
+        assert_type(then_alias, nw_v2.Then)
+
+    for expr in (otherwise, otherwise_alias, then, then_alias):
+        assert isinstance(expr, nw_v2.Expr)
+
+
 def test_constructors() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
     import numpy as np
     import pandas as pd
 
-    if PANDAS_VERSION < (2, 2):
+    if PANDAS_VERSION < PkgVersion("2.2"):
         pytest.skip()
     assert nw_v2.new_series("a", [1, 2, 3], backend="pandas").to_list() == [1, 2, 3]
     arr: np.ndarray[tuple[int, int], Any] = np.array([[1, 2], [3, 4]])  # pyright: ignore[reportAssignmentType]
@@ -195,9 +219,35 @@ def test_concat() -> None:
     result = nw_v2.concat([df, df], how="vertical")
     expected = {"a": [1, 2, 3, 1, 2, 3]}
     assert_equal_data(result, expected)
-    assert isinstance(result, nw_v2.DataFrame)
     if TYPE_CHECKING:
+        # Check the inferred return type before isinstance narrows it.
         assert_type(result, nw_v2.DataFrame[Any])
+    assert isinstance(result, nw_v2.DataFrame)
+
+    def identity(x: FrameT) -> FrameT:
+        return x
+
+    identity(nw_v2.concat([df], how="horizontal"))
+
+    def concat_generic(frame: StableFrameT) -> StableFrameT:
+        return nw_v2.concat([frame, frame])
+
+    def concat_sequence(frames: Sequence[StableFrameT]) -> StableFrameT:
+        return nw_v2.concat(frames)
+
+    assert_equal_data(concat_generic(df), expected)
+    assert_equal_data(concat_sequence([df, df]), expected)
+    lazy_result = concat_generic(df.lazy())
+    if TYPE_CHECKING:
+        assert_type(concat_generic(df), nw_v2.DataFrame[Any])
+        assert_type(lazy_result, nw_v2.LazyFrame[Any])
+        assert_type(nw_v2.concat([df.lazy()]), nw_v2.LazyFrame[Any])
+        # Mixing eager and lazy must stay a type error. `warn_unused_ignores` (via
+        # `strict`) makes this self-verifying: the ignore goes unused if it regresses.
+        nw_v2.concat([df, df.lazy()])  # type: ignore[type-var]
+    assert isinstance(lazy_result, nw_v2.LazyFrame)
+    assert_equal_data(lazy_result.collect(), expected)
+    assert_equal_data(concat_sequence([df.lazy(), df.lazy()]).collect(), expected)
 
 
 def test_to_dict_as_series() -> None:
@@ -409,7 +459,7 @@ def test_dataframe_from_arrow(eager_backend: EagerAllowed) -> None:
         assert isinstance(supports_arrow_c_stream.to_native(), pa.Table)
     else:
         assert not isinstance(supports_arrow_c_stream.to_native(), pa.Table)
-    if PYARROW_VERSION < (14,):  # pragma: no cover
+    if PYARROW_VERSION < PkgVersion("14"):  # pragma: no cover
         ...
     else:
         result = nw_v2.DataFrame.from_arrow(
@@ -518,7 +568,7 @@ def test_mode_series(constructor_eager: ConstructorEager) -> None:
 
 
 def test_mode_different_lengths(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
     df = nw_v2.from_native(constructor_eager({"a": [1, 1, 2], "b": [4, 5, 6]}))
     with pytest.raises(ShapeError):
@@ -558,3 +608,97 @@ def test_first_last() -> None:
     result = df.select(b=nw_v2.col("a").first(), c=nw_v2.col("a").last())
     expected = {"b": [0], "c": [-1]}
     assert_equal_data(result, expected)
+
+
+def test_schema_from_generator() -> None:
+    schema = nw_v2.Schema(
+        (name, dtype()) for name, dtype in (("a", nw_v2.Int64), ("b", nw_v2.String))
+    )
+    assert schema == nw_v2.Schema({"a": nw_v2.Int64(), "b": nw_v2.String()})
+    assert schema._version is Version.V2
+
+
+def test_get_categories_v2(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    expected = {"a": ["one", "two"]}
+    df = nw_v2.from_native(constructor_eager(data), eager_only=True)
+
+    # This must not warn, neither from Narwhals nor from Polars.
+    result = df.select(nw_v2.col("a").cast(nw_v2.Categorical).cat.get_categories())
+    result_series = df["a"].cast(nw_v2.Categorical).cat.get_categories()
+
+    assert_equal_data(result.sort("a"), expected)
+    assert_equal_data({"a": result_series.sort()}, expected)
+
+
+def test_get_categories_lazy_v2(constructor_eager: ConstructorEager) -> None:
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0.0"
+    ):
+        pytest.skip()
+
+    data = {"a": ["one", "two", "two", None]}
+    lf = nw_v2.from_native(constructor_eager(data)).lazy()
+    expr = nw_v2.col("a").cast(nw_v2.Categorical).cat.get_categories()
+    msg = "Length-changing expressions are not supported for use in LazyFrame"
+    with pytest.raises(InvalidOperationError, match=msg):
+        lf.select(expr).collect()
+
+    assert_equal_data(lf.select(expr.min()), {"a": ["one"]})
+
+
+def test_get_categories_enum_polars_v2() -> None:
+    # `Enum.get_categories` always returns the *declared* categories, in
+    # declared order, regardless of which ones are actually present in the
+    # data (matching Polars' own `cat.get_categories` behavior for `Enum`).
+    pytest.importorskip("polars")
+    import polars as pl
+
+    s_native = pl.Series("a", ["Panda", "Polar"], dtype=pl.Enum(["Polar", "Panda", "X"]))
+    result = nw_v2.from_native(s_native, series_only=True).cat.get_categories()
+    assert result.dtype == nw_v2.String
+    assert result.to_list() == ["Polar", "Panda", "X"]
+
+    df_native = pl.DataFrame(
+        {"a": ["Panda", "Polar"]}, schema={"a": pl.Enum(["Polar", "Panda"])}
+    )
+    df = nw_v2.from_native(df_native, eager_only=True)
+    result = df.select(nw_v2.col("a").cat.get_categories())
+    assert_equal_data(result, {"a": ["Polar", "Panda"]})
+
+
+def test_selectors_are_stable_v2() -> None:
+    # Selectors built from `narwhals.stable.v2.selectors` must behave like `v2`
+    # expressions, not like main-namespace ones.
+    selector = nw_v2.selectors.numeric()
+    assert isinstance(selector, nw_v2.Expr)
+    assert isinstance(selector | nw_v2.selectors.string(), nw_v2.Expr)
+    assert isinstance(selector + 1, nw_v2.Expr)
+
+    # Only `stable.v2` warns that `any_value` is unstable.
+    with pytest.warns(NarwhalsUnstableWarning):
+        nw_v2.selectors.numeric().any_value()
+
+
+def test_selectors_all_stableified_v2() -> None:
+    args: dict[str, tuple[Any, ...]] = {
+        "all": (),
+        "boolean": (),
+        "by_dtype": (nw_v2.Int64,),
+        "categorical": (),
+        "datetime": (),
+        "enum": (),
+        "matches": ("^a$",),
+        "numeric": (),
+        "string": (),
+    }
+    # Fail if a new selector is added but not covered here.
+    assert set(args) == set(nw_v2.selectors.__all__)
+
+    for name, arg in args.items():
+        assert isinstance(getattr(nw_v2.selectors, name)(*arg), nw_v2.Expr), name

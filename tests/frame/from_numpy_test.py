@@ -56,3 +56,26 @@ def test_from_numpy_non_eager() -> None:
 def test_from_numpy_not2d(eager_backend: EagerAllowed) -> None:
     with pytest.raises(ValueError, match="`from_numpy` only accepts 2D numpy arrays"):
         nw.DataFrame.from_numpy(np.array([0]), backend=eager_backend)  # pyright: ignore[reportArgumentType]
+
+
+@pytest.mark.parametrize("schema", [None, ["x", "y", "z"]])
+def test_from_numpy_square(eager_backend: EagerAllowed, schema: list[str] | None) -> None:
+    # See https://github.com/narwhals-dev/narwhals/issues/3716:
+    # Fortran-contiguous square array (as returned by polars' `to_numpy`) used to be
+    # silently transposed on the polars backend, since polars infers column
+    # orientation when the schema length matches both axes.
+    rows = [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
+    columns = [f"column_{i}" for i in range(3)] if schema is None else schema
+    expected = {name: values for name, *values in zip(columns, *rows, strict=True)}
+
+    square_arr = np.asfortranarray(rows)
+    result = nw.DataFrame.from_numpy(square_arr, backend=eager_backend, schema=schema)
+    assert_equal_data(result, expected)
+
+
+def test_from_numpy_square_roundtrip(eager_backend: EagerAllowed) -> None:
+    schema = ["a", "b", "c"]
+    square_arr = np.asfortranarray([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    df = nw.DataFrame.from_numpy(square_arr, backend=eager_backend, schema=schema)
+    result = nw.DataFrame.from_numpy(df.to_numpy(), backend=eager_backend, schema=schema)
+    assert_equal_data(result, {"a": [0, 3, 6], "b": [1, 4, 7], "c": [2, 5, 8]})

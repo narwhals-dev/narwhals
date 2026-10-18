@@ -126,8 +126,9 @@ class DaskLazyGroupBy(DepthTrackingGroupBy["DaskLazyFrame", "DaskExpr", Aggregat
             output_names, aliases = evaluate_output_names_and_aliases(
                 expr, self.compliant, exclude
             )
-            last_node = next(expr._metadata.op_nodes_reversed())
-            if len(list(expr._metadata.op_nodes_reversed())) == 1:
+            nodes = list(expr._metadata.op_nodes_reversed())
+            last_node = nodes[0]
+            if len(nodes) == 1:
                 # e.g. `agg(nw.len())`
                 column = self._keys[0]
                 agg_fn = self._remap_expr_name(last_node.name)

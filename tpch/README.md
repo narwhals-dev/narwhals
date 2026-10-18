@@ -42,7 +42,7 @@ Note that this action is required only the first time you want to run the TPCH q
     Adding a dash at the end will prevent that.
 
 * To run a given query for all the backends:
-    
+
     ```bash
     pytest -k "q1-pandas[pyarrow]"
     ```

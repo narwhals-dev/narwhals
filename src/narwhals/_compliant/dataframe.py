@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     from narwhals.exceptions import ColumnNotFoundError
     from narwhals.typing import (
         AsofJoinStrategy,
-        IntoSchema,
+        IntoDType,
         JoinStrategy,
         MultiColSelector,
         MultiIndexSelector,
@@ -151,6 +151,12 @@ class CompliantFrame(
         suffix: str,
     ) -> Self: ...
     def rename(self, mapping: Mapping[str, str]) -> Self: ...
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        ns = self.__narwhals_namespace__()
+        return self.with_columns(
+            *(ns.col(name).cast(dtype) for name, dtype in dtypes.items())
+        )
+
     def select(self, *exprs: CompliantExprT_contra) -> Self: ...
     def simple_select(self, *column_names: str) -> Self:
         """`select` where all args are column names."""
@@ -195,7 +201,7 @@ class CompliantDataFrame(
         /,
         *,
         context: CompliantNamespaceAny,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self: ...
     @classmethod
     def from_dicts(
@@ -204,7 +210,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Mapping[str, DType | None] | None,
+        schema: Mapping[str, IntoDType | None] | None,
     ) -> Self: ...
     @classmethod
     def from_numpy(
@@ -213,7 +219,7 @@ class CompliantDataFrame(
         /,
         *,
         context: _LimitedContext,
-        schema: IntoSchema | Sequence[str] | None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None,
     ) -> Self: ...
     def __array__(self, dtype: Any, *, copy: bool | None) -> _2DArray: ...
     def __getitem__(
@@ -259,14 +265,7 @@ class CompliantDataFrame(
     def rows(
         self, *, named: bool
     ) -> Sequence[tuple[Any, ...]] | Sequence[Mapping[str, Any]]: ...
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self: ...
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self: ...
     def to_arrow(self) -> pa.Table: ...
     def to_pandas(self) -> pd.DataFrame: ...
     def to_polars(self) -> pl.DataFrame: ...

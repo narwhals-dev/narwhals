@@ -4,6 +4,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION
@@ -69,7 +70,9 @@ def test_cast_date_datetime_pyarrow() -> None:
     assert result == expected
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="pyarrow dtype not available")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2"), reason="pyarrow dtype not available"
+)
 def test_cast_date_datetime_pandas() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
@@ -130,3 +133,14 @@ def test_cast_to_enum_vmain(
 
     df_nw = df_nw.select(col_a.cast(nw.Enum(["a", "b"])))
     assert df_nw.collect_schema() == {"a": nw.Enum(["a", "b"])}
+
+
+def test_cast_to_enum_pyarrow_unsupported() -> None:
+    pytest.importorskip("pyarrow")
+    import pyarrow as pa
+
+    df_nw = nw.from_native(pa.table({"a": ["a", "b"]}))
+    with pytest.raises(
+        NotImplementedError, match="Converting to Enum dtype is not supported for PyArrow"
+    ):
+        df_nw.select(nw.col("a").cast(nw.Enum(["a", "b"])))

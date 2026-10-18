@@ -8,7 +8,12 @@ import ibis
 import ibis.expr.types as ir
 
 from narwhals._ibis.expr import IbisExpr
-from narwhals._ibis.utils import evaluate_exprs, lit, native_to_narwhals_dtype
+from narwhals._ibis.utils import (
+    evaluate_exprs,
+    lit,
+    narwhals_to_native_dtype,
+    native_to_narwhals_dtype,
+)
 from narwhals._sql.dataframe import SQLLazyFrame
 from narwhals._utils import (
     Implementation,
@@ -41,7 +46,12 @@ if TYPE_CHECKING:
     from narwhals.dataframe import LazyFrame
     from narwhals.dtypes import DType
     from narwhals.stable.v1 import DataFrame as DataFrameV1
-    from narwhals.typing import AsofJoinStrategy, JoinStrategy, UniqueKeepStrategy
+    from narwhals.typing import (
+        AsofJoinStrategy,
+        IntoDType,
+        JoinStrategy,
+        UniqueKeepStrategy,
+    )
 
     JoinPredicates: TypeAlias = "Sequence[ir.BooleanColumn] | Sequence[str]"
 
@@ -181,6 +191,13 @@ class IbisLazyFrame(
         new_columns_map = dict(evaluate_exprs(self, *exprs))
         return self._with_native(self.native.mutate(**new_columns_map))
 
+    def cast(self, dtypes: Mapping[str, IntoDType]) -> Self:
+        native_dtypes = {
+            name: narwhals_to_native_dtype(dtype, self._version)
+            for name, dtype in dtypes.items()
+        }
+        return self._with_native(self.native.cast(native_dtypes))
+
     def filter(self, predicate: IbisExpr) -> Self:
         # `[0]` is safe as the predicate's expression only returns a single column
         mask = cast("ir.BooleanValue", predicate(self)[0])
@@ -315,10 +332,7 @@ class IbisLazyFrame(
         ]
 
     def collect_schema(self) -> dict[str, DType]:
-        return {
-            name: native_to_narwhals_dtype(dtype, self._version)
-            for name, dtype in self.native.schema().fields.items()
-        }
+        return self.schema
 
     def unique(
         self,
@@ -411,8 +425,16 @@ class IbisLazyFrame(
         return self._with_native(unpivoted.select(*final_columns))
 
     def with_row_index(self, name: str, order_by: Sequence[str]) -> Self:
+        if not order_by:
+            msg = "Must pass `order_by` to `with_row_index` for Ibis"
+            raise TypeError(msg)
+        sort_cols = (
+            list(IbisExpr._sort(*order_by, descending=False, nulls_last=False))
+            if order_by
+            else None
+        )
         to_select = [
-            ibis.row_number().over(ibis.window(order_by=order_by)).name(name),
+            ibis.row_number().over(ibis.window(order_by=sort_cols)).name(name),
             ibis.selectors.all(),
         ]
         return self._with_native(self.native.select(*to_select))

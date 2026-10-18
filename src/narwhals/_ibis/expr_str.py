@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 import ibis
@@ -20,6 +21,14 @@ IntoStringValue: TypeAlias = "str | ir.StringValue"
 
 
 class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
+    def strip_chars_start(self, characters: str) -> IbisExpr:
+        pattern = rf"^[{re.escape(characters)}]+"
+        return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
+
+    def strip_chars_end(self, characters: str) -> IbisExpr:
+        pattern = rf"[{re.escape(characters)}]+$"
+        return self.compliant._with_callable(lambda expr: expr.re_replace(pattern, ""))
+
     def strip_chars(self, characters: str | None) -> IbisExpr:
         if characters is not None:
             msg = "Ibis does not support `characters` argument in `str.strip_chars`"
@@ -46,7 +55,7 @@ class IbisExprStringNamespace(SQLExprStringNamespace["IbisExpr"]):
     def replace_all(self, value: IbisExpr, pattern: str, *, literal: bool) -> IbisExpr:
         fn = self._replace_all_literal if literal else self._replace_all
         return self.compliant._with_elementwise(
-            lambda expr, value: fn(pattern, value)(expr), value=value
+            lambda expr, value: fn(pattern, value)(expr), expression_args={"value": value}
         )
 
     def _to_datetime(self, format: str) -> Callable[..., ir.TimestampValue]:

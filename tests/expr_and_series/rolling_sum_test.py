@@ -6,6 +6,7 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import given
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -74,8 +75,8 @@ def test_rolling_sum_expr_lazy_ungrouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
     if "modin" in str(constructor):
@@ -121,11 +122,11 @@ def test_rolling_sum_expr_lazy_grouped(
     *,
     center: bool,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 10)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip()
-    if "pandas" in str(constructor) and PANDAS_VERSION < (1, 2):
+    if "pandas" in str(constructor) and PANDAS_VERSION < PkgVersion("1.2"):
         pytest.skip()
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):
         request.applymarker(pytest.mark.xfail)
@@ -298,3 +299,12 @@ def test_rolling_sum_hypothesis(center: bool, values: list[float]) -> None:  # n
     )
     expected_dict = nw.from_native(expected, eager_only=True).to_dict(as_series=False)
     assert_equal_data(result, expected_dict)
+
+
+def test_rolling_sum_window_longer_than_series(
+    constructor_eager: ConstructorEager,
+) -> None:
+    # A window larger than the series must yield nulls, not crash.
+    df = nw.from_native(constructor_eager({"a": [1]}), eager_only=True)
+    result = {"a": df["a"].rolling_sum(window_size=2)}
+    assert_equal_data(result, {"a": [None]})

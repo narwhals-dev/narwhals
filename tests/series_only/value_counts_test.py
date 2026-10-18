@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, ConstructorEager, assert_equal_data
@@ -18,10 +19,9 @@ def test_value_counts(
     normalize: Any,
     name: str | None,
 ) -> None:
-    if "pandas_nullable_constructor" in str(constructor_eager) and PANDAS_VERSION < (
-        2,
-        2,
-    ):
+    if "pandas_nullable_constructor" in str(
+        constructor_eager
+    ) and PANDAS_VERSION < PkgVersion("2.2"):
         # bug in old pandas
         request.applymarker(pytest.mark.xfail)
 
@@ -29,7 +29,7 @@ def test_value_counts(
     expected_index = [4, 1, 6]
 
     if normalize:
-        expected_count = [v / len(data) for v in expected_count]  # type: ignore[misc]
+        expected_count = [v / len(data) for v in expected_count]
 
     expected_name = name or ("proportion" if normalize else "count")
     expected = {"a": expected_index, expected_name: expected_count}

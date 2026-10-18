@@ -4,6 +4,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -14,6 +15,7 @@ from tests.utils import (
     ConstructorEager,
     assert_equal_data,
     is_windows,
+    skip_if_no_categorical_ordering,
 )
 
 rank_methods = ["average", "min", "max", "dense", "ordinal"]
@@ -73,7 +75,7 @@ def test_rank_expr(
         pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor_eager)
-        and PANDAS_VERSION < (2, 1)
+        and PANDAS_VERSION < PkgVersion("2.1")
         and isinstance(data["a"][0], int)
     ):
         pytest.skip()
@@ -110,7 +112,7 @@ def test_rank_series(
         pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor_eager)
-        and PANDAS_VERSION < (2, 1)
+        and PANDAS_VERSION < PkgVersion("2.1")
         and isinstance(data["a"][0], int)
     ):
         pytest.skip()
@@ -132,7 +134,7 @@ def test_rank_series(
         assert_equal_data(result, expected_data)
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 1), reason="too old for nullable")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2.1"), reason="too old for nullable")
 def test_rank_series_pandas_namesless() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -162,9 +164,9 @@ def test_rank_expr_in_over_context(
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"):
         pytest.skip(reason="bug in old version")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="too old version")
 
     df = nw.from_native(constructor(data_float))
@@ -208,12 +210,12 @@ def test_lazy_rank_expr(
         pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor)
-        and PANDAS_VERSION < (2, 1)
+        and PANDAS_VERSION < PkgVersion("2.1")
         and isinstance(data["a"][0], int)
     ):
         pytest.skip()
 
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     if "dask" in str(constructor):
@@ -253,12 +255,12 @@ def test_lazy_rank_expr_desc(
         pytest.skip()
     if (
         "pandas_pyarrow" in str(constructor)
-        and PANDAS_VERSION < (2, 1)
+        and PANDAS_VERSION < PkgVersion("2.1")
         and isinstance(data["a"][0], int)
     ):
         pytest.skip()
 
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     if "dask" in str(constructor):
@@ -305,9 +307,9 @@ def test_rank_expr_in_over_desc(
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
 
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"):
         pytest.skip(reason="bug in old version")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="too old version")
 
     df = nw.from_native(constructor(data_float))
@@ -333,11 +335,11 @@ def test_rank_with_order_by(
     if "dask" in str(constructor):
         # `rank` is not implemented in Dask
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"):
         pytest.skip(reason="bug in old version")
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip(reason="too old")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="too old version")
 
     context = (
@@ -389,11 +391,11 @@ def test_rank_with_order_by_and_partition_by(
         # pyarrow only supports aggregations in `over(partition_by=...)`
         # cudf: https://github.com/rapidsai/cudf/issues/18159
         request.applymarker(pytest.mark.xfail)
-    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < (2, 1):
+    if "pandas_pyarrow" in str(constructor) and PANDAS_VERSION < PkgVersion("2.1"):
         pytest.skip(reason="bug in old version")
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip(reason="too old")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="too old version")
 
     df = nw.from_native(
@@ -423,3 +425,17 @@ def test_rank_with_order_by_and_partition_by(
             "c": [2, 1, 3, 1, 2, 3],
         }
         assert_equal_data(result, expected)
+
+
+def test_rank_categorical(constructor: Constructor) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3841
+    skip_if_no_categorical_ordering(constructor)
+
+    data = {"c": ["dog", "cat", "cat", "bird", "dog"], "i": [1, 2, 3, 4, 5]}
+    df = nw.from_native(constructor(data))
+    result = (
+        df.with_columns(r=nw.col("c").cast(nw.Categorical()).rank("dense"))
+        .sort("i")
+        .select("i", "r")
+    )
+    assert_equal_data(result, {"i": [1, 2, 3, 4, 5], "r": [3, 2, 2, 1, 3]})

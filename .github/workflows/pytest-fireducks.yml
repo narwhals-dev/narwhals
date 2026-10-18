@@ -1,0 +1,37 @@
+name: PyTest FireDucks
+
+on:
+  pull_request:
+    paths:
+      - src/**
+      - tests/**
+      - .github/workflows/pytest-fireducks.yml
+      - pyproject.toml
+      - uv.lock
+  workflow_call:
+
+env:
+  PY_COLORS: 1
+  UV_LOCKED: 0
+  UV_NO_DEV: 1
+
+permissions:
+  contents: read
+
+jobs:
+  pytest-fireducks:
+    if: github.head_ref != 'bump-version'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          python-version: "3.13"
+          enable-cache: "true"
+          cache-suffix: fireducks-3.13
+          cache-dependency-glob: "pyproject.toml"
+      - name: Run pytest
+        run: make run-ci DEPS="--group core-tests --extra pandas" RUN_ONLY="--with fireducks --with 'pandas>2.2.0'" CMD="python -m fireducks.pandas --hook-import-module -m pytest tests/fireducks_test.py"

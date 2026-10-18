@@ -19,13 +19,30 @@ class SparkLikeExprListNamespace(
     def len(self) -> SparkLikeExpr:
         return self.compliant._with_elementwise(self.compliant._F.array_size)
 
-    def unique(self) -> SparkLikeExpr:
+    def unique(self, *, maintain_order: bool) -> SparkLikeExpr:
+        if maintain_order and self.compliant._implementation.is_sqlframe():
+            msg = "`maintain_order=True` is not supported for the SQLFrame backend."
+            raise NotImplementedError(msg)
+        # NOTE: `maintain_order` is unused as PySpark `array_distinct` always maintains the order
         return self.compliant._with_elementwise(self.compliant._F.array_distinct)
 
     def contains(self, item: NonNestedLiteral) -> SparkLikeExpr:
         def func(expr: Column) -> Column:
             F = self.compliant._F
-            return F.array_contains(expr, F.lit(item))
+            if item is None:
+                if self.compliant._implementation.is_sqlframe():
+                    # SQLFrame has no `exists`.
+                    return F.array_size(expr) > F.array_size(F.array_compact(expr))
+                # `array_intersect(expr, array(NULL))` is faster on integer lists, but
+                # Spark type-checks it even in a dead `typeof` branch, and it rejects
+                # non-orderable inner types (map, variant).
+                return F.exists(expr, lambda x: x.isNull())  # pragma: no cover
+            # Spark returns null instead of false when there is no match and the list
+            # holds a null element.
+            return F.coalesce(
+                F.array_contains(expr, F.lit(item)),
+                F.when(expr.isNotNull(), F.lit(False)),
+            )
 
         return self.compliant._with_elementwise(func)
 

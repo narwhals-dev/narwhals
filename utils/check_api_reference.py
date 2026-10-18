@@ -11,8 +11,6 @@ from pathlib import Path
 from types import MethodType, ModuleType
 from typing import TYPE_CHECKING, Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
 import polars as pl
 
 import narwhals as nw

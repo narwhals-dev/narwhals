@@ -1,0 +1,183 @@
+from __future__ import annotations
+
+import pytest
+from packaging.version import Version as PkgVersion
+
+import narwhals as nw
+from tests.utils import (
+    DUCKDB_VERSION,
+    POLARS_VERSION,
+    Constructor,
+    ConstructorEager,
+    assert_equal_data,
+    skip_if_no_windowed_corr_cov,
+)
+
+data = {"a": [1, 3, 3], "b": [1, 2, 3], "c": [1, None, 1]}
+
+
+def test_cov_expr(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        a_b_sample=nw.cov("a", "b"),
+        a_b_population=nw.cov("a", "b", ddof=0),
+        a_b_ddof_2=nw.cov("a", "b", ddof=2),
+        a_c_sample=nw.cov("a", "c"),
+        a_c_population=nw.cov("a", "c", ddof=0),
+        a_c_ddof_2=nw.cov("a", "c", ddof=2),
+    )
+    expected = {
+        "a_b_sample": [1.0],
+        "a_b_population": [0.6666666666666666],
+        "a_b_ddof_2": [2.0],
+        "a_c_sample": [0.0],
+        "a_c_population": [0.0],
+        "a_c_ddof_2": [None],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_cov_expr_inputs(constructor: Constructor) -> None:
+    df = nw.from_native(constructor(data))
+    result = df.select(
+        nw.cov(nw.col("a").alias("left"), nw.col("b").alias("right")),
+        expr=nw.cov(nw.col("a") * nw.col("b"), nw.col("b") - 0.5),
+    )
+    expected = {"left": [1.0], "expr": [4.0]}
+    assert_equal_data(result, expected)
+
+
+def test_cov_single_valid_pair_population(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, None], "b": [2, None]}))
+    result = df.select(cov=nw.cov("a", "b", ddof=0))
+    expected = {"cov": [0.0]}
+    assert_equal_data(result, expected)
+
+
+def test_cov_invalid_denominator(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 3], "b": [1, 2]}))
+    result = df.select(
+        cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)
+    )
+    expected = {"cov_den_zero": [None], "cov_den_neg": [None]}
+    assert_equal_data(result, expected)
+    if result.implementation.is_pyarrow():
+        assert result.schema == {
+            "cov_den_zero": nw.Float64(),
+            "cov_den_neg": nw.Float64(),
+        }
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
+        return
+
+    result = df.with_columns(
+        cov_den_zero=nw.cov("a", "b", ddof=2), cov_den_neg=nw.cov("a", "b", ddof=3)
+    ).select("cov_den_zero", "cov_den_neg")
+    expected = {"cov_den_zero": [None, None], "cov_den_neg": [None, None]}
+    assert_equal_data(result, expected)
+
+
+def test_cov_over(constructor: Constructor) -> None:
+    skip_if_no_windowed_corr_cov(constructor)
+
+    df = nw.from_native(
+        constructor(
+            {
+                "i": [0, 1, 2, 3, 4],
+                "g": [1, 1, 1, 2, 2],
+                "a": [1, 3, 3, 2, 4],
+                "b": [1, 2, 3, 1, 5],
+            }
+        )
+    )
+    result = (
+        df.with_columns(
+            sample=nw.cov("a", "b").over("g"),
+            population=nw.cov("a", "b", ddof=0).over("g"),
+        )
+        .sort("i")
+        .select("sample", "population")
+    )
+    expected = {
+        "sample": [1.0, 1.0, 1.0, 4.0, 4.0],
+        "population": [2 / 3, 2 / 3, 2 / 3, 2.0, 2.0],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_cov_series_foreign_index() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3864
+    # A `Series` with an index unrelated to `df`'s own must be aligned
+    # positionally (left-hand-rule), not by pandas' automatic label join.
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df = nw.from_native(
+        pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30]}), eager_only=True
+    )
+    foreign = nw.from_native(
+        pd.Series([3, 1, 2], index=[5, 6, 7], name="a"), series_only=True
+    )
+    result = df.select(nw.cov(foreign, nw.col("b")))
+    expected = {"a": [-5.0]}
+    assert_equal_data(result, expected)
+
+
+@pytest.mark.filterwarnings("ignore:Mean of empty slice:RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:Degrees of freedom <= 0:RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:invalid value encountered:RuntimeWarning")
+@pytest.mark.filterwarnings("ignore:divide by zero encountered:RuntimeWarning")
+def test_cov_single_pair_ddof1(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1.0], "b": [2.0]}))
+    result = df.select(nw.cov("a", "b", ddof=1).alias("cov"))
+    assert_equal_data(result, {"cov": [None]})
+
+
+def test_cov_over_single_row_group(constructor: Constructor) -> None:
+    skip_if_no_windowed_corr_cov(constructor)
+    df = nw.from_native(
+        constructor(
+            {"i": [0, 1, 2], "g": [1, 1, 2], "a": [1.0, 3.0, 2.0], "b": [1.0, 2.0, 1.0]}
+        )
+    )
+    result = df.with_columns(sample=nw.cov("a", "b").over("g")).sort("i").select("sample")
+    assert_equal_data(result, {"sample": [1.0, 1.0, None]})
+
+
+def test_cov_series(constructor_eager: ConstructorEager) -> None:
+    df = nw.from_native(constructor_eager(data), eager_only=True)
+    result = df.select(
+        a_b_sample=nw.cov(df["a"], df["b"]),
+        a_b_population=nw.cov(df["a"], df["b"], ddof=0),
+        a_b_ddof_2=nw.cov(df["a"], df["b"], ddof=2),
+        a_c_sample=nw.cov(df["a"], df["c"]),
+    )
+    expected = {
+        "a_b_sample": [1.0],
+        "a_b_population": [0.6666666666666666],
+        "a_b_ddof_2": [2.0],
+        "a_c_sample": [0.0],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_cov_numerical_stability(
+    constructor: Constructor, request: pytest.FixtureRequest
+) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.11"):
+        request.applymarker(pytest.mark.xfail(reason="single-pass variance"))
+    df = nw.from_native(
+        constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})
+    )
+    result = df.select(nw.cov("a", "b").round(2))
+    assert_equal_data(result, {"a": [2.5]})
+
+
+@pytest.mark.filterwarnings("ignore:Found complex group-by:UserWarning")
+def test_cov_group_by(constructor: Constructor, request: pytest.FixtureRequest) -> None:
+    if "pyarrow_table" in str(constructor) or "dask" in str(constructor):
+        request.applymarker(pytest.mark.xfail(reason="non-elementary agg"))
+    df = nw.from_native(
+        constructor({"g": [1, 1, 2], "a": [1.0, 2.0, 3.0], "b": [1.0, 2.0, 3.0]})
+    )
+    result = df.group_by("g").agg(nw.cov("a", "b").alias("cov")).sort("g")
+    assert_equal_data(result, {"g": [1, 2], "cov": [0.5, None]})

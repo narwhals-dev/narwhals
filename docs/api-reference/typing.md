@@ -25,6 +25,9 @@ Narwhals comes fully statically typed. In addition to `nw.DataFrame`, `nw.Expr`,
         - IntoSchema
         - SizeUnit
         - TimeUnit
+        - FileSource
+        - NormalizedPath
+        - NormalizedSource
         - AsofJoinStrategy
         - ClosedInterval
         - ConcatMethod
@@ -69,7 +72,7 @@ reveal_type(func_2(df))
 
 Running `mypy` on it gives:
 ```console
-$ mypy t.py 
+$ mypy t.py
 t.py:13: note: Revealed type is "polars.dataframe.frame.DataFrame"
 t.py:21: note: Revealed type is "Any"
 Success: no issues found in 1 source file

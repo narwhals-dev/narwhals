@@ -128,7 +128,7 @@ def test_namespace_from_numpy_polars() -> None:
     import polars as pl
 
     arr: _2DArray = cast("_2DArray", np.array([[5, 2, 0, 1], [1, 4, 7, 8], [1, 2, 3, 9]]))
-    columns = "a", "b", "c"
+    columns = ["a", "b", "c", "d"]
     frame = Namespace.from_backend("polars").compliant.from_numpy(arr, columns).native
     if TYPE_CHECKING:
         assert_type(frame, pl.DataFrame)

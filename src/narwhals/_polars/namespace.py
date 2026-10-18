@@ -1,19 +1,28 @@
 from __future__ import annotations
 
-import operator
 from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import polars as pl
 
 from narwhals._polars.expr import PolarsExpr
 from narwhals._polars.series import PolarsSeries
-from narwhals._polars.utils import extract_args_kwargs, narwhals_to_native_dtype
-from narwhals._utils import Implementation, requires
+from narwhals._polars.utils import (
+    BACKEND_VERSION,
+    extract_args_kwargs,
+    narwhals_to_native_dtype,
+)
+from narwhals._utils import (
+    Implementation,
+    Version,
+    is_file_like,
+    isinstance_or_issubclass,
+    requires,
+)
 from narwhals.dependencies import is_numpy_array_2d
 from narwhals.dtypes import DType
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Mapping, Sequence
     from datetime import timezone
 
     from typing_extensions import TypeIs
@@ -21,8 +30,14 @@ if TYPE_CHECKING:
     from narwhals._compliant import CompliantSelectorNamespace
     from narwhals._polars.dataframe import Method, PolarsDataFrame, PolarsLazyFrame
     from narwhals._polars.typing import FrameT
-    from narwhals._utils import Version, _LimitedContext
-    from narwhals.typing import Into1DArray, IntoDType, IntoSchema, TimeUnit, _2DArray
+    from narwhals._utils import _LimitedContext
+    from narwhals.typing import (
+        Into1DArray,
+        IntoDType,
+        NormalizedSource,
+        TimeUnit,
+        _2DArray,
+    )
 
 
 class PolarsNamespace:
@@ -98,18 +113,50 @@ class PolarsNamespace:
 
     @overload
     def from_numpy(
-        self, data: _2DArray, /, schema: IntoSchema | Sequence[str] | None
+        self, data: _2DArray, /, schema: Mapping[str, IntoDType] | Sequence[str] | None
     ) -> PolarsDataFrame: ...
 
     def from_numpy(
         self,
         data: Into1DArray | _2DArray,
         /,
-        schema: IntoSchema | Sequence[str] | None = None,
+        schema: Mapping[str, IntoDType] | Sequence[str] | None = None,
     ) -> PolarsDataFrame | PolarsSeries:
         if is_numpy_array_2d(data):
             return self._dataframe.from_numpy(data, schema=schema, context=self)
         return self._series.from_numpy(data, context=self)  # pragma: no cover
+
+    def _read_eagerly(self, source: NormalizedSource, /) -> bool:
+        """`pl.scan_*` only accepts a file-like object from `1.7.0` onwards."""
+        return is_file_like(source) and self._backend_version < (1, 7)
+
+    def read_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> PolarsDataFrame:
+        native = pl.read_csv(source, separator=separator, **kwds)
+        return self._dataframe.from_native(native, context=self)
+
+    def scan_csv(
+        self, source: NormalizedSource, *, separator: str = ",", **kwds: Any
+    ) -> PolarsLazyFrame:
+        native = (
+            pl.read_csv(source, separator=separator, **kwds).lazy()
+            if self._read_eagerly(source)
+            else pl.scan_csv(source, separator=separator, **kwds)
+        )
+        return self._lazyframe.from_native(native, context=self)
+
+    def read_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsDataFrame:
+        native = pl.read_parquet(cast("Any", source), **kwds)
+        return self._dataframe.from_native(native, context=self)
+
+    def scan_parquet(self, source: NormalizedSource, **kwds: Any) -> PolarsLazyFrame:
+        native = (
+            pl.read_parquet(cast("Any", source), **kwds).lazy()
+            if self._read_eagerly(source)
+            else pl.scan_parquet(cast("Any", source), **kwds)
+        )
+        return self._lazyframe.from_native(native, context=self)
 
     @requires.backend_version(
         (1, 0, 0), "Please use `col` for columns selection instead."
@@ -121,6 +168,12 @@ class PolarsNamespace:
         if self._backend_version < (0, 20, 5):
             return self._expr(pl.count().alias("len"), self._version)
         return self._expr(pl.len(), self._version)
+
+    def cov(self, a: PolarsExpr, b: PolarsExpr, *, ddof: int) -> PolarsExpr:
+        native = pl.cov(a.native, b.native, ddof=ddof)
+        n_samples = (a.native.is_not_null() & b.native.is_not_null()).sum()
+        result = pl.when(n_samples > pl.lit(ddof)).then(native)
+        return self._expr(result, self._version)
 
     def all_horizontal(self, *exprs: PolarsExpr, ignore_nulls: bool) -> PolarsExpr:
         it = (expr.fill_null(True) for expr in exprs) if ignore_nulls else iter(exprs)
@@ -136,7 +189,12 @@ class PolarsNamespace:
         *,
         how: Literal["vertical", "horizontal", "diagonal"],
     ) -> PolarsDataFrame | PolarsLazyFrame:
-        result = pl.concat((item.native for item in items), how=how)
+        _how = (
+            "horizontal_extend"
+            if how == "horizontal" and self._backend_version >= (1, 42, 1)
+            else how
+        )
+        result = pl.concat((item.native for item in items), how=_how)
         if isinstance(result, pl.DataFrame):
             return self._dataframe(result, version=self._version)
         return self._lazyframe.from_native(result, context=self)
@@ -178,19 +236,20 @@ class PolarsNamespace:
                 )
                 result = pl.when(~null_mask_result).then(output_expr)
             else:
+                # NOTE: Cast after `when` so a boolean literal is broadcast first:
+                # casting a scalar boolean literal renders `"1"` on old Polars.
                 init_value, *values = [
-                    pl.when(nm).then(pl.lit("")).otherwise(expr.cast(pl.String()))
+                    pl.when(~nm).then(expr).cast(pl.String()).fill_null(pl.lit(""))
                     for expr, nm in zip(pl_exprs, null_mask, strict=True)
                 ]
-                separators = [
-                    pl.when(~nm).then(sep).otherwise(pl.lit("")) for nm in null_mask[:-1]
-                ]
-
-                result = pl.fold(  # type: ignore[assignment]
-                    acc=init_value,
-                    function=operator.add,
-                    exprs=[s + v for s, v in zip(separators, values, strict=True)],
-                )
+                result, seen = init_value, ~null_mask[0]
+                for nm, value in zip(null_mask[1:], values, strict=True):
+                    not_null = ~nm
+                    sep_or_empty = (
+                        pl.when(seen & not_null).then(sep).otherwise(pl.lit(""))
+                    )
+                    result = result + sep_or_empty + value
+                    seen = seen | not_null
 
             return self._expr(result, version=self._version)
 
@@ -202,6 +261,18 @@ class PolarsNamespace:
     def struct(self, *exprs: PolarsExpr) -> PolarsExpr:
         pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
         return self._expr(pl.struct(pl_exprs), version=self._version)
+
+    def list(self, *exprs: PolarsExpr) -> PolarsExpr:
+        pl_exprs: list[pl.Expr] = [expr._native_expr for expr in exprs]
+
+        if self._backend_version < (1, 43):  # pragma: no cover
+            length = pl.count() if self._backend_version < (0, 20, 5) else pl.len()
+            to_concat = [e.implode().over(pl.int_range(length)) for e in pl_exprs]
+            expr = pl.concat_list(to_concat)
+        else:
+            expr = pl.list(pl_exprs)
+
+        return self._expr(expr, version=self._version)
 
     def when_then(
         self, when: PolarsExpr, then: PolarsExpr, otherwise: PolarsExpr | None = None
@@ -231,6 +302,14 @@ class PolarsNamespace:
         )
 
 
+# NOTE: Polars accepts the bare `pl.Enum` class (as opposed to an instantiated `pl.Enum([...])`)
+# in `by_dtype` from 0.20.6 onwards, so selecting "any enum" is not expressible on older versions.
+_ENUM_SELECTOR_UNSUPPORTED = (
+    "Selecting `Enum` columns is only supported for 'polars>=0.20.6', "
+    f"found version {BACKEND_VERSION}."
+)
+
+
 class PolarsSelectorNamespace:
     _implementation = Implementation.POLARS
 
@@ -238,13 +317,25 @@ class PolarsSelectorNamespace:
         self._version = context._version
 
     def by_dtype(self, dtypes: Iterable[IntoDType]) -> PolarsExpr:
-        native_dtypes = [
-            narwhals_to_native_dtype(dtype, self._version).__class__
-            if isinstance(dtype, type) and issubclass(dtype, DType)
-            else narwhals_to_native_dtype(dtype, self._version)
-            for dtype in dtypes
-        ]
+        native_dtypes = [self._to_native_dtype(dtype) for dtype in dtypes]
         return PolarsExpr(pl.selectors.by_dtype(native_dtypes), version=self._version)
+
+    def _to_native_dtype(self, dtype: IntoDType) -> pl.DataType | type[pl.DataType]:
+        # `Enum` can only be turned into a concrete `pl.Enum` instance when its
+        # categories are known. They aren't when the bare `Enum` class is passed,
+        # nor in `stable.v1` (where categories are never tracked). In those cases
+        # we match on the `pl.Enum` class, which selects any enum column.
+        version = self._version
+        dtypes = version.dtypes
+        if isinstance_or_issubclass(dtype, dtypes.Enum):
+            if version is not Version.V1 and isinstance(dtype, dtypes.Enum):
+                return narwhals_to_native_dtype(dtype, version)
+            if BACKEND_VERSION < (0, 20, 6):
+                raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
+            return pl.Enum
+        if isinstance(dtype, type) and issubclass(dtype, DType):
+            return narwhals_to_native_dtype(dtype, version).__class__
+        return narwhals_to_native_dtype(dtype, version)
 
     def matches(self, pattern: str) -> PolarsExpr:
         return PolarsExpr(pl.selectors.matches(pattern=pattern), version=self._version)
@@ -260,6 +351,16 @@ class PolarsSelectorNamespace:
 
     def categorical(self) -> PolarsExpr:
         return PolarsExpr(pl.selectors.categorical(), version=self._version)
+
+    def enum(self) -> PolarsExpr:
+        if BACKEND_VERSION < (0, 20, 6):
+            raise NotImplementedError(_ENUM_SELECTOR_UNSUPPORTED)
+        expr = (
+            pl.selectors.by_dtype(pl.Enum)
+            if BACKEND_VERSION < (1, 32)
+            else pl.selectors.enum()  # Added in v1.32.0 (pola-rs/polars#23351)
+        )
+        return PolarsExpr(expr, version=self._version)
 
     def all(self) -> PolarsExpr:
         return PolarsExpr(pl.selectors.all(), version=self._version)

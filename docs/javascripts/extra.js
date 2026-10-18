@@ -8,10 +8,10 @@
 
 function cleanupClipboardText(targetSelector) {
     const targetElement = document.querySelector(targetSelector);
-  
+
     // exclude "Generic Prompt" and "Generic Output" spans from copy
     const excludedClasses = ["gp", "go"];
-  
+
     const clipboardText = Array.from(targetElement.childNodes)
       .filter(
         (node) =>
@@ -23,7 +23,7 @@ function cleanupClipboardText(targetSelector) {
       .filter((s) => s !== "");
     return clipboardText.join("").trim();
   }
-  
+
   // Sets copy text to attributes lazily using an Intersection Observer.
   function setCopyText() {
     // The `data-clipboard-text` attribute allows for customized content in the copy
@@ -33,11 +33,11 @@ function cleanupClipboardText(targetSelector) {
     const elements = document.querySelectorAll(
       'button[data-clipboard-target$="code"]',
     );
-  
+
     if (elements.length === 0) {
       return;
     }
-  
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         // target in the viewport that have not been patched
@@ -51,12 +51,12 @@ function cleanupClipboardText(targetSelector) {
         }
       });
     });
-  
+
     elements.forEach((elt) => {
       observer.observe(elt);
     });
   }
-  
+
   // Using the document$ observable is particularly important if you are using instant loading since
   // it will not result in a page refresh in the browser
   // See `How to integrate with third-party JavaScript libraries` guideline:
@@ -64,4 +64,3 @@ function cleanupClipboardText(targetSelector) {
   document$.subscribe(function () {
     setCopyText();
   });
-  

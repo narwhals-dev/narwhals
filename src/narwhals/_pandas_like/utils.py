@@ -3,7 +3,7 @@ from __future__ import annotations
 import functools
 import operator
 import re
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Literal, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,7 @@ from narwhals._utils import (
     parse_version,
     requires,
 )
+from narwhals.dependencies import is_pandas_like_series
 from narwhals.exceptions import ShapeError
 
 if TYPE_CHECKING:
@@ -181,8 +182,10 @@ def set_index(
     if implementation is Implementation.PANDAS and (
         (1, 5) <= implementation._backend_version() < (3,)
     ):  # pragma: no cover
-        return obj.set_axis(index, axis=0, copy=False)
-    return obj.set_axis(index, axis=0)  # pragma: no cover
+        result = obj.set_axis(index, axis=0, copy=False)  # type: ignore[call-arg]
+    else:
+        result = obj.set_axis(index, axis=0)
+    return result  # pyright: ignore[reportReturnType]
 
 
 def rename(
@@ -192,10 +195,10 @@ def rename(
     if implementation is Implementation.PANDAS and (
         implementation._backend_version() < (3,)
     ):  # pragma: no cover
-        result = obj.rename(*args, **kwargs, copy=False, inplace=False)
+        result = obj.rename(*args, **kwargs, copy=False, inplace=False)  # type: ignore[call-overload]
     else:
         result = obj.rename(*args, **kwargs)
-    return cast("NativeNDFrameT", result)  # type: ignore[redundant-cast]
+    return result  # pyright: ignore[reportReturnType]
 
 
 @functools.lru_cache(maxsize=16)
@@ -237,6 +240,8 @@ def non_object_native_to_narwhals_dtype(native_dtype: Any, version: Version) -> 
         return dtypes.Float64()
     if dtype in {"float32", "Float32"}:
         return dtypes.Float32()
+    if dtype == "float16":
+        return dtypes.Float16()
     if is_dtype_non_pyarrow_string(native_dtype):
         return dtypes.String()
     if dtype in {"bool", "boolean"}:
@@ -397,6 +402,13 @@ NW_TO_PD_DTYPES_BACKEND: Mapping[type[DType], Mapping[DTypeBackend, str | type[A
         "pyarrow": "Float32[pyarrow]",
         "numpy_nullable": "Float32",
         None: "float32",
+    },
+    dtypes.Float16: {
+        # pandas has no nullable (extension) `Float16`, so `numpy_nullable` falls
+        # back to the NumPy `float16` (nulls become `NaN`).
+        "pyarrow": "Float16[pyarrow]",
+        "numpy_nullable": "float16",
+        None: "float16",
     },
     dtypes.Int64: {"pyarrow": "Int64[pyarrow]", "numpy_nullable": "Int64", None: "int64"},
     dtypes.Int32: {"pyarrow": "Int32[pyarrow]", "numpy_nullable": "Int32", None: "int32"},
@@ -598,7 +610,9 @@ _TIMESTAMP_DATE_FACTOR: Mapping[TimeUnit, int] = {
 
 
 def calculate_timestamp_date(s: NativeSeriesT, time_unit: TimeUnit) -> NativeSeriesT:
-    return s * SECONDS_PER_DAY * _TIMESTAMP_DATE_FACTOR[time_unit]
+    # NOTE: `pyright>=1.1.412` infers `pd.Series[Any] * int` as `Any` (nested `Any` now
+    # triggers overload materialization, https://github.com/microsoft/pyright/pull/11601)
+    return s * SECONDS_PER_DAY * _TIMESTAMP_DATE_FACTOR[time_unit]  # pyright: ignore[reportReturnType]
 
 
 def select_columns_by_name(
@@ -611,7 +625,9 @@ def select_columns_by_name(
     Prefer this over `df.loc[:, column_names]` as it's
     generally more performant.
     """
-    if len(column_names) == df.shape[1] and (df.columns == column_names).all():
+    if len(column_names) == df.shape[1] and all(
+        x == y for x, y in zip(df.columns, column_names, strict=True)
+    ):
         return df
     if (df.columns.dtype.kind == "b") or (
         implementation is Implementation.PANDAS
@@ -687,11 +703,44 @@ def broadcast_series_to_index(
 
         # NOTE: Ignore typing because `pandas-stubs` are wrong
         # TODO(FBruzzesi): Should we pass the `copy=False` flag?
-        pa_array = pd.array(repeat(value, len(index)), dtype=native.dtype)  # type: ignore[arg-type]
+        pa_array = pd.array(repeat(value, len(index)), dtype=native.dtype)  # type: ignore[call-overload]
 
         return series_class(pa_array, index=index, name=native.name)
 
     return series_class(value, index=index, dtype=native.dtype, name=native.name)
+
+
+def _is_native_series(obj: object) -> TypeIs[pd.Series[Any]]:
+    # Narrows modin and cuDF to `pd.Series` too, matching how `_pandas_like` types them.
+    return is_pandas_like_series(obj)
+
+
+def floordiv_null_on_zero(
+    dividend: pd.Series[Any] | float, divisor: pd.Series[Any] | float
+) -> pd.Series[Any]:
+    """Floor-divide, with null wherever `divisor` is zero.
+
+    Natively, integer division by zero gives `inf` (numpy-backed), `0` (nullable)
+    or raises (pyarrow-backed).
+    """
+    if _is_native_series(divisor):
+        is_nonzero = divisor != 0
+        if is_nonzero.all():
+            return dividend // divisor
+        # A literal `1` upcasts a numpy bool divisor to object, and a nullable
+        # boolean one rejects it.
+        safe_divisor = divisor.where(is_nonzero, divisor.dtype.type(1))
+        return (dividend // safe_divisor).where(is_nonzero)
+    assert _is_native_series(dividend)  # noqa: S101
+    try:
+        divisor_is_zero = bool(divisor == 0)
+    except (TypeError, ValueError):  # `pd.NA == 0` and `array == 0` are ambiguous
+        divisor_is_zero = False
+    if divisor_is_zero:
+        all_false = type(dividend)(False, index=dividend.index)
+        # Every value gets masked, so this division only sets the result dtype.
+        return (dividend // type(divisor)(1)).where(all_false)
+    return dividend // divisor
 
 
 def binary_string_sum_fallback(  # pragma: no cover
@@ -705,7 +754,7 @@ def binary_string_sum_fallback(  # pragma: no cover
     if left_dtype_str == "large_string[pyarrow]" and isinstance(right, str):
         import pyarrow as pa  # ignore-banned-import
 
-        return left + pa.scalar(right, type=pa.large_string())
+        return left + pa.scalar(right, type=pa.large_string())  # pyright: ignore[reportOperatorIssue]
     if isinstance(right, pdx.Series):
         right_dtype = right.dtype
         if left_dtype_str == "object":

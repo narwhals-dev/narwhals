@@ -3,14 +3,14 @@ description: Report to help us reproduce the bug
 title: "[Bug]: "
 
 body:
-- type: markdown 
+- type: markdown
   attributes:
     value: >
         ## Thanks for taking the time to fill out this report
-- type: markdown 
+- type: markdown
   attributes:
     value: >
-       ### Before submitting a bug, please make sure it has not been reported in the 
+       ### Before submitting a bug, please make sure it has not been reported in the
        [list of issues](https://github.com/narwhals-dev/narwhals/issues).
 - type: textarea
   attributes:
@@ -25,7 +25,7 @@ body:
     description: |
        Please add a minimal code example to reproduce the bug.
   validations:
-       required: true 
+       required: true
 - type: textarea
   attributes:
     label: Expected results
@@ -39,7 +39,7 @@ body:
   attributes:
     label: Actual results
     description: |
-      Please paste or describe the results you observe instead of the expected results. 
+      Please paste or describe the results you observe instead of the expected results.
   validations:
     required: true
 - type: textarea

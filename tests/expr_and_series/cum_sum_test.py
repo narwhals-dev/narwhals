@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -15,6 +16,36 @@ from tests.utils import (
 
 data = {"arg entina": [1, 2, None, 4]}
 expected = {"cum_sum": [1, 3, None, 7], "reverse_cum_sum": [7, 6, None, 4]}
+
+
+def skip_or_xfail_window(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    /,
+    *,
+    grouped: bool,
+    reverse: bool,
+) -> None:
+    """Skip or xfail backends that cannot run `cum_sum().over(...)`."""
+    id_ = str(constructor)
+    if ("polars" in id_ and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in id_ and DUCKDB_VERSION < PkgVersion("1.3")
+    ):  # pragma: no cover
+        reason = "`polars<1.9` and `duckdb<1.3` are too old for `over(order_by=...)`"
+        pytest.skip(reason=reason)
+    if grouped:
+        if "pyarrow_table" in id_:
+            reason = "no grouped window functions"
+            request.applymarker(pytest.mark.xfail(reason=reason))
+        if "dask" in id_:
+            reason = "https://github.com/dask/dask/issues/11806"
+            request.applymarker(pytest.mark.xfail(reason=reason))
+        if "cudf" in id_:
+            reason = "https://github.com/rapidsai/cudf/issues/18159"
+            request.applymarker(pytest.mark.xfail(reason=reason))
+    elif reverse and "dask" in id_:
+        reason = "https://github.com/dask/dask/issues/11802"
+        request.applymarker(pytest.mark.xfail(reason=reason))
 
 
 @pytest.mark.parametrize("reverse", [True, False])
@@ -36,19 +67,7 @@ def test_lazy_cum_sum_grouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
-        # grouped window functions not yet supported
-        request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
-        # https://github.com/dask/dask/issues/11806
-        request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
-    ):
-        pytest.skip(reason="too old version")
-    if "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/18159
-        request.applymarker(pytest.mark.xfail)
+    skip_or_xfail_window(constructor, request, grouped=True, reverse=reverse)
 
     df = nw.from_native(
         constructor(
@@ -83,23 +102,15 @@ def test_lazy_cum_sum_ordered_by_nulls(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "pyarrow_table" in str(constructor):
-        # grouped window functions not yet supported
-        request.applymarker(pytest.mark.xfail)
-    if "dask" in str(constructor):
-        # https://github.com/dask/dask/issues/11806
-        request.applymarker(pytest.mark.xfail)
+    skip_or_xfail_window(constructor, request, grouped=True, reverse=reverse)
     if "pandas_nullable" in str(constructor) and not reverse:
         # https://github.com/pandas-dev/pandas/issues/62473
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if (
+        "pyarrow" in str(constructor)
+        and is_windows()
+        and PYARROW_VERSION < PkgVersion("22")
     ):
-        pytest.skip(reason="too old version")
-    if "cudf" in str(constructor):
-        # https://github.com/rapidsai/cudf/issues/18159
-        request.applymarker(pytest.mark.xfail)
-    if "pyarrow" in str(constructor) and is_windows() and PYARROW_VERSION < (22, 0):
         # https://github.com/pandas-dev/pandas/issues/62477
         request.applymarker(pytest.mark.xfail)
 
@@ -135,13 +146,7 @@ def test_lazy_cum_sum_ungrouped(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
-    if "dask" in str(constructor) and reverse:
-        # https://github.com/dask/dask/issues/11802
-        request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
-    ):
-        pytest.skip(reason="too old version")
+    skip_or_xfail_window(constructor, request, grouped=False, reverse=reverse)
 
     df = nw.from_native(
         constructor({"arg entina": [2, 3, 1], "ban gkok": [0, 2, 1], "i ran": [1, 2, 0]})
@@ -164,13 +169,10 @@ def test_lazy_cum_sum_ungrouped_ordered_by_nulls(
     reverse: bool,
     expected_a: list[int],
 ) -> None:
+    skip_or_xfail_window(constructor, request, grouped=False, reverse=reverse)
     if "dask" in str(constructor):
         # https://github.com/dask/dask/issues/11806
         request.applymarker(pytest.mark.xfail)
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
-    ):
-        pytest.skip(reason="too old version")
 
     df = nw.from_native(
         constructor(
@@ -201,8 +203,48 @@ def test_cum_sum_series(constructor_eager: ConstructorEager) -> None:
     assert_equal_data(result, expected)
 
 
+@pytest.mark.parametrize(
+    ("dtype", "value"),
+    [
+        (nw.Int8, 100),
+        (nw.UInt8, 200),
+        (nw.Int16, 20_000),
+        (nw.UInt16, 60_000),
+        (nw.Int32, 2**31 - 1),
+        (nw.UInt32, 2**32 - 1),
+    ],
+)
+@pytest.mark.parametrize("reverse", [False, True])
+def test_cum_sum_does_not_overflow(
+    constructor: Constructor,
+    request: pytest.FixtureRequest,
+    dtype: type[nw.dtypes.IntegerType],
+    value: int,
+    *,
+    reverse: bool,
+) -> None:
+    skip_or_xfail_window(constructor, request, grouped=False, reverse=reverse)
+    if dtype.is_unsigned_integer() and any(
+        x in str(constructor) for x in ("spark", "sqlframe")
+    ):
+        reason = "Spark has no unsigned integer types"
+        pytest.skip(reason=reason)
+    if "polars" in str(constructor) and dtype in {nw.Int32, nw.UInt32}:
+        reason = (
+            "Polars keeps 32-bit integers as they are and wraps on overflow: "
+            "https://github.com/pola-rs/polars/issues/17340"
+        )
+        request.applymarker(pytest.mark.xfail(reason=reason))
+
+    df = nw.from_native(constructor({"a": [value] * 3, "i": [0, 1, 2]}))
+    expr = nw.col("a").cast(dtype).cum_sum(reverse=reverse).over(order_by="i")
+    result = df.select(expr, "i").sort("i")
+    expected = [3 * value, 2 * value, value] if reverse else [value, 2 * value, 3 * value]
+    assert_equal_data(result.select("a"), {"a": expected})
+
+
 def test_shift_cum_sum(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip()
     data = {"arg entina": [1, 2, 3, 4, 5], "i": list(range(5))}
     df = nw.from_native(constructor_eager(data), eager_only=True)

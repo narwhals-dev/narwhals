@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 pytest.importorskip("pandas", minversion="1.5.0")
 import pandas as pd
 
 import narwhals.stable.v1 as nw_v1
-from tests.utils import DUCKDB_VERSION, PANDAS_VERSION
+from tests.utils import DUCKDB_VERSION, PANDAS_VERSION, interchange_frame
 
 data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 
@@ -14,14 +15,14 @@ data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0], "z": ["x", "y", "z"]}
 @pytest.mark.filterwarnings("ignore:.*Interchange Protocol:DeprecationWarning")
 def test_interchange_to_pandas() -> None:
     df_raw = pd.DataFrame(data)
-    df = nw_v1.from_native(df_raw.__dataframe__(), eager_or_interchange_only=True)
+    df = nw_v1.from_native(interchange_frame(df_raw), eager_or_interchange_only=True)
     assert df.to_pandas().equals(df_raw)
 
 
 def test_interchange_ibis_to_pandas(
     tmpdir: pytest.TempdirFactory, request: pytest.FixtureRequest
 ) -> None:  # pragma: no cover
-    if PANDAS_VERSION < (1, 5, 0):
+    if PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip()
 
     pytest.importorskip("ibis")
@@ -46,7 +47,7 @@ def test_interchange_duckdb_to_pandas(request: pytest.FixtureRequest) -> None:
     pytest.importorskip("duckdb")
     import duckdb
 
-    if PANDAS_VERSION >= (3,) and DUCKDB_VERSION < (1, 4, 4):
+    if PANDAS_VERSION >= PkgVersion("3") and DUCKDB_VERSION < PkgVersion("1.4.4"):
         # https://github.com/duckdb/duckdb/issues/18297
         request.applymarker(pytest.mark.xfail)
 

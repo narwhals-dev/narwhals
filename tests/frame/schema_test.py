@@ -3,9 +3,10 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, time, timedelta, timezone
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import PerformanceWarning
@@ -96,7 +97,7 @@ def test_actual_object(
     assert result == {"a": nw.Object}
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 0, 0), reason="too old")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="too old")
 def test_dtypes() -> None:
     pytest.importorskip("polars")
     pytest.importorskip("pyarrow")
@@ -189,7 +190,7 @@ def test_dtypes() -> None:
     df_from_pd = nw.from_native(df_pl.to_pandas(), eager_only=True)
 
     pure_pd_expected = {**expected, "n": nw.Datetime, "s": nw.Object, "u": nw.Object}
-    if POLARS_VERSION < (1, 41):  # pragma: no cover
+    if POLARS_VERSION < PkgVersion("1.41"):  # pragma: no cover
         pure_pd_expected = {**pure_pd_expected, "r": nw.Categorical}
 
     assert df_from_pd.schema == df_from_pd.collect_schema() == pure_pd_expected
@@ -262,7 +263,9 @@ def test_validate_not_duplicated_columns_duckdb() -> None:
         nw.from_native(rel, eager_only=False).lazy().collect()
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
+)
 def test_nested_dtypes() -> None:
     pytest.importorskip("duckdb")
     pytest.importorskip("polars")
@@ -329,7 +332,9 @@ def test_nested_dtypes_ibis() -> None:  # pragma: no cover
     }
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2, 2, 0), reason="too old for pyarrow types")
+@pytest.mark.skipif(
+    PANDAS_VERSION < PkgVersion("2.2"), reason="too old for pyarrow types"
+)
 def test_nested_dtypes_dask() -> None:
     pytest.importorskip("dask")
     pytest.importorskip("polars")
@@ -408,7 +413,7 @@ def test_schema_to_pandas(
     if (
         dtype_backend == "pyarrow"
         or (isinstance(dtype_backend, list) and "pyarrow" in dtype_backend)
-    ) and PANDAS_VERSION < (1, 5):
+    ) and PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip()
     pytest.importorskip("pyarrow")
     pytest.importorskip("pandas")
@@ -464,7 +469,7 @@ def time_unit() -> TimeUnit:
 
     https://pandas.pydata.org/docs/dev/whatsnew/v3.0.0.html#datetime-resolution-inference
     """
-    return "us" if PANDAS_VERSION >= (3,) else "ns"
+    return "us" if PANDAS_VERSION >= PkgVersion("3") else "ns"
 
 
 def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
@@ -472,7 +477,7 @@ def _polars_schema() -> Sequence[type[pl.Schema | dict[str, pl.DataType]]]:
     if find_spec("polars"):
         import polars as pl
 
-        if POLARS_VERSION >= (1,):
+        if POLARS_VERSION >= PkgVersion("1"):
             return (pl.Schema, dict)
     return (dict,)  # pragma: no cover
 
@@ -581,14 +586,14 @@ def origin_pandas_like(
         "d": [5.3, 4.99],
         "e": [datetime(2006, 1, 1), datetime(2001, 9, 3)],
     }
-    return constructor_pandas_like(data).dtypes.to_dict()
+    return cast("IntoPandasSchema", constructor_pandas_like(data).dtypes.to_dict())
 
 
 @pytest.fixture
 def origin_pandas_like_pyarrow(
     constructor_pandas_like: ConstructorPandasLike,
 ) -> IntoPandasSchema:
-    if PANDAS_VERSION < (1, 5):
+    if PANDAS_VERSION < PkgVersion("1.5"):
         pytest.skip(reason="pandas too old for `pyarrow`")
     name_pandas_like = {"pandas_pyarrow_constructor", "modin_pyarrow_constructor"}
     if constructor_pandas_like.__name__ not in name_pandas_like:
@@ -603,10 +608,8 @@ def origin_pandas_like_pyarrow(
         "g": [time(10, 1, 1), time(14, 1, 1)],
     }
     df_pd = constructor_pandas_like(data)
-    df_nw = nw.from_native(df_pd).with_columns(
-        nw.col("f").cast(nw.Date()), nw.col("g").cast(nw.Time())
-    )
-    return df_nw.to_native().dtypes.to_dict()
+    df_nw = nw.from_native(df_pd).cast({"f": nw.Date(), "g": nw.Time()})
+    return cast("IntoPandasSchema", df_nw.to_native().dtypes.to_dict())
 
 
 def test_schema_from_polars(
@@ -680,7 +683,8 @@ def test_schema_from_empty_mapping() -> None:
 
 
 @pytest.mark.skipif(
-    POLARS_VERSION < (1, 6, 0), reason="https://github.com/pola-rs/polars/pull/18308"
+    POLARS_VERSION < PkgVersion("1.6"),
+    reason="https://github.com/pola-rs/polars/pull/18308",
 )
 def test_schema_from_to_roundtrip() -> None:
     pytest.importorskip("polars")
@@ -707,3 +711,23 @@ def test_schema_from_to_roundtrip() -> None:
     assert nw_schema_1 == nw_schema_2
     assert nw_schema_2 == nw_schema_3
     assert py_schema_1 == py_schema_2
+
+
+def test_schema_uninstantiated_dtypes() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3257
+    schema = nw.Schema({"a": nw.Int64, "b": nw.String(), "c": nw.Datetime})
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String(), "c": nw.Datetime()})
+    assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_tuples_uninstantiated_dtypes() -> None:
+    schema = nw.Schema([("a", nw.Int64), ("b", nw.String())])
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})
+    assert all(isinstance(dtype, nw.dtypes.DType) for dtype in schema.dtypes())
+
+
+def test_schema_from_generator() -> None:
+    schema = nw.Schema(
+        (name, dtype()) for name, dtype in [("a", nw.Int64), ("b", nw.String)]
+    )
+    assert schema == nw.Schema({"a": nw.Int64(), "b": nw.String()})

@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals._utils import Implementation
@@ -39,6 +40,51 @@ def test_concat_horizontal(constructor_eager: ConstructorEager) -> None:
         nw.concat([df_left.lazy()], how="horizontal")
 
 
+def test_concat_horizontal_mismatched(
+    constructor_eager: ConstructorEager, request: pytest.FixtureRequest
+) -> None:
+    if "pyarrow_table" in str(constructor_eager):
+        # TODO(unassigned): support mismatched lengths for pyarrow https://github.com/narwhals-dev/narwhals/issues/3730.
+        request.applymarker(pytest.mark.xfail)
+
+    data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
+    df_left = nw.from_native(constructor_eager(data), eager_only=True)
+
+    data_right = {"c": [6, 12], "d": [0, -4]}
+    df_right = nw.from_native(constructor_eager(data_right), eager_only=True)
+
+    result = nw.concat([df_left, df_right], how="horizontal")
+    expected = {
+        "a": [1, 3, 2],
+        "b": [4, 4, 6],
+        "z": [7.0, 8.0, 9.0],
+        "c": [6, 12, None],
+        "d": [0, -4, None],
+    }
+    assert_equal_data(result, expected)
+
+
+def test_concat_horizontal_pandas_left_hand_rule() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3864
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    df_left = nw.from_native(
+        pd.DataFrame({"a": [1, 2, 3]}, index=[10, 20, 30]), eager_only=True
+    )
+    df_right = nw.from_native(
+        pd.DataFrame({"b": [4, 5, 6]}, index=[0, 1, 2]), eager_only=True
+    )
+
+    result = nw.concat([df_left, df_right], how="horizontal")
+
+    # the index of the left-most argument is preserved, and the other
+    # argument is aligned to it positionally, rather than by label.
+    assert result.to_native().index.tolist() == [10, 20, 30]
+    expected = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    assert_equal_data(result, expected)
+
+
 def test_concat_vertical(constructor: Constructor) -> None:
     data = {"a": [1, 3, 2], "b": [4, 4, 6], "z": [7.0, 8.0, 9.0]}
     df_left = (
@@ -57,7 +103,7 @@ def test_concat_vertical(constructor: Constructor) -> None:
 
     with pytest.raises(
         (Exception, TypeError),
-        match=r"unable to vstack|inputs should all have the same schema",
+        match=r"unable to vstack|column name mismatch|inputs should all have the same schema",
     ):
         nw.concat([df_left, df_right.rename({"d": "i"})], how="vertical").collect()
     with pytest.raises(
@@ -110,6 +156,22 @@ def test_concat_diagonal_bigger(constructor: Constructor) -> None:
     assert_equal_data(result, expected)
 
 
+def test_concat_diagonal_duckdb_own_connection() -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3997
+    pytest.importorskip("duckdb")
+    import duckdb
+
+    con = duckdb.connect()
+    con.execute("create table t as select * from (values (1, 'a'), (2, 'b')) v(a, b)")
+    df_1 = nw.from_native(con.table("t").select("a, b"))
+    df_2 = nw.from_native(con.table("t").select("a"))
+    result = nw.concat([df_1, df_1], how="vertical").sort("a", "b")
+    assert_equal_data(result, {"a": [1, 1, 2, 2], "b": ["a", "a", "b", "b"]})
+
+    result = nw.concat([df_1, df_2], how="diagonal").sort("a", "b", nulls_last=True)
+    assert_equal_data(result, {"a": [1, 1, 2, 2], "b": ["a", None, "b", None]})
+
+
 def test_concat_diagonal_invalid(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
@@ -129,7 +191,7 @@ def test_concat_diagonal_invalid(
         )
     )
     context: Any
-    if impl.is_polars() and POLARS_VERSION < (1, 18):  # pragma: no cover
+    if impl.is_polars() and POLARS_VERSION < PkgVersion("1.18"):  # pragma: no cover
         context = pytest.raises(
             NarwhalsError,
             match=re.compile(r"(int.+datetime)|(datetime.+int)", re.IGNORECASE),

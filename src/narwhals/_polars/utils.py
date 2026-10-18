@@ -52,20 +52,38 @@ BACKEND_VERSION = Implementation.POLARS._backend_version()
 SERIES_ACCEPTS_PD_INDEX: Final[bool] = BACKEND_VERSION >= (0, 20, 7)
 """`pl.Series(values: pd.Index)` fixed in https://github.com/pola-rs/polars/pull/14087"""
 
+RESPECT_JOIN_NULL_SEMI_ANTI: Final[bool] = BACKEND_VERSION >= (0, 20, 22)
+"""Polars < 0.20.22 treats `null == null` as a match in semi/anti joins.
+
+Dropping rows with null keys on the right removes these spurious matches,
+which is always valid since narwhals treats nulls as non-matching.
+
+Fixed in https://github.com/pola-rs/polars/pull/15696
+"""
+
 SERIES_RESPECTS_DTYPE: Final[bool] = BACKEND_VERSION >= (0, 20, 26)
 """`pl.Series(dtype=...)` fixed in https://github.com/pola-rs/polars/pull/15962
 
 Includes `SERIES_ACCEPTS_PD_INDEX`.
 """
 
-HAS_INT_128 = BACKEND_VERSION >= (1, 18, 0)
+HAS_INT_128: Final[bool] = BACKEND_VERSION >= (1, 18, 0)
 """https://github.com/pola-rs/polars/pull/20232"""
 
 FROM_DICTS_ACCEPTS_MAPPINGS: Final[bool] = BACKEND_VERSION >= (1, 30, 0)
 """`pl.from_dicts(data: Iterable[Mapping[str, Any]])` since https://github.com/pola-rs/polars/pull/22638"""
 
-HAS_UINT_128 = BACKEND_VERSION >= (1, 34, 0)
+HAS_UINT_128: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
 """https://github.com/pola-rs/polars/pull/24346"""
+
+HAS_FLOAT_16: Final[bool] = BACKEND_VERSION >= (1, 36, 0)
+"""https://github.com/pola-rs/polars/pull/25185"""
+
+BINARY_ADD_UPCASTS_DECIMAL_TO_FLOAT: Final[bool] = BACKEND_VERSION >= (1, 34, 0)
+"""Polars >= 1.34 upcasts `Decimal + float` to `Float64` (matching `int`/`Float32` promotion).
+
+https://github.com/pola-rs/polars/pull/24594
+"""
 
 
 @overload
@@ -93,7 +111,7 @@ def extract_args_kwargs(
     return it_args, {k: extract_native(v) for k, v in kwds.items()}
 
 
-@lru_cache(maxsize=16)
+@lru_cache(maxsize=128)
 def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     dtype: pl.DataType, version: Version
 ) -> DType:
@@ -102,6 +120,8 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Float64()
     if dtype == pl.Float32:
         return dtypes.Float32()
+    if HAS_FLOAT_16 and dtype == pl.Float16:
+        return dtypes.Float16()
     if HAS_INT_128 and dtype == pl.Int128:
         return dtypes.Int128()
     if dtype == pl.Int64:
@@ -128,7 +148,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
         return dtypes.Boolean()
     if dtype == pl.Object:
         return dtypes.Object()
-    if dtype == pl.Categorical:
+    if isinstance(dtype, pl.Categorical):
         return dtypes.Categorical()
     if isinstance(dtype, pl.Enum):
         if version is Version.V1:
@@ -150,7 +170,7 @@ def native_to_narwhals_dtype(  # noqa: C901, PLR0912
     if isinstance(dtype, pl.List):
         return dtypes.List(native_to_narwhals_dtype(dtype.inner, version))
     if isinstance(dtype, pl.Array):
-        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size
+        outer_shape = dtype.width if BACKEND_VERSION < (0, 20, 30) else dtype.size  # type: ignore[attr-defined]
         return dtypes.Array(native_to_narwhals_dtype(dtype.inner, version), outer_shape)
     if isinstance(dtype, pl.Decimal):
         return dtypes.Decimal(dtype.precision, dtype.scale)
@@ -168,7 +188,8 @@ def _version_dependent_dtypes() -> dict[type[DType], pl.DataType]:
     if not HAS_INT_128:  # pragma: no cover
         return {}
     nw_to_pl: dict[type[DType], pl.DataType] = {dtypes.Int128: pl.Int128()}
-    return nw_to_pl | {dtypes.UInt128: pl.UInt128()} if HAS_UINT_128 else nw_to_pl
+    nw_to_pl = nw_to_pl | {dtypes.UInt128: pl.UInt128()} if HAS_UINT_128 else nw_to_pl
+    return nw_to_pl | {dtypes.Float16: pl.Float16()} if HAS_FLOAT_16 else nw_to_pl
 
 
 NW_TO_PL_DTYPES: Mapping[type[DType], pl.DataType] = {
@@ -322,14 +343,18 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     @abc.abstractmethod
     def zfill(self, width: int) -> CompliantT: ...
 
+    @abc.abstractmethod
+    def slice(self, offset: int, length: int | None) -> CompliantT: ...
+
     len_chars: Method[CompliantT]
     replace: Method[CompliantT]
     replace_all: Method[CompliantT]
     strip_chars: Method[CompliantT]
+    strip_chars_start: Method[CompliantT]
+    strip_chars_end: Method[CompliantT]
     starts_with: Method[CompliantT]
     ends_with: Method[CompliantT]
     contains: Method[CompliantT]
-    slice: Method[CompliantT]
     split: Method[CompliantT]
     to_date: Method[CompliantT]
     to_datetime: Method[CompliantT]
@@ -340,9 +365,24 @@ class PolarsStringNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     pad_end: Method[CompliantT]
 
 
+def native_get_categories(native: pl.Series) -> pl.Series:
+    # NOTE: Polars deprecated `cat.get_categories` in v1.44 and removed it
+    # in v2.0, so we use the workaround they suggest.
+    # See https://github.com/narwhals-dev/narwhals/issues/3895.
+    #
+    # For `Enum`, the declared categories are already unique, ordered, and
+    # null-free, so we can return `dtype.categories` directly.
+    dtype = native.dtype
+    if isinstance(dtype, pl.Enum):
+        return dtype.categories
+    return native.drop_nulls().unique(maintain_order=True).cast(pl.String)
+
+
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):
     _accessor: ClassVar[Accessor] = "cat"
-    get_categories: Method[CompliantT]
+
+    @abc.abstractmethod
+    def get_categories(self) -> CompliantT: ...
 
 
 class PolarsListNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

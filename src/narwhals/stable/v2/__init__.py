@@ -33,6 +33,7 @@ from narwhals.dtypes import (
     Duration,
     Enum,
     Field,
+    Float16,
     Float32,
     Float64,
     Int8,
@@ -54,12 +55,14 @@ from narwhals.dtypes import (
 )
 from narwhals.exceptions import NarwhalsUnstableWarning
 from narwhals.expr import Expr as NwExpr
-from narwhals.functions import _new_series_impl, concat, show_versions
+from narwhals.functions import _new_series_impl, show_versions
 from narwhals.schema import Schema as NwSchema
+from narwhals.selectors import Selector as NwSelector
 from narwhals.series import Series as NwSeries
 from narwhals.stable.v2 import dependencies, dtypes, selectors
 from narwhals.stable.v2.typing import (
     DataFrameT,
+    FrameT,
     IntoDataFrameT,
     IntoFrame,
     IntoLazyFrameT,
@@ -91,11 +94,13 @@ if TYPE_CHECKING:
         IntoBackend,
         LazyAllowed,
         Pandas,
+        PluginName,
         Polars,
     )
     from narwhals.dataframe import MultiColSelector, MultiIndexSelector
-    from narwhals.stable.v2.dtypes import DType
     from narwhals.typing import (
+        ConcatMethod,
+        FileSource,
         IntoDType,
         IntoExpr,
         IntoSchema,
@@ -125,7 +130,10 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
 
     @classmethod
     def from_arrow(
-        cls, native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
+        cls,
+        native_frame: IntoArrowTable,
+        *,
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         result = super().from_arrow(native_frame, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -134,9 +142,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dict(
         cls,
         data: Mapping[str, Any],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackend[EagerAllowed] | None = None,
+        backend: IntoBackend[EagerAllowed | PluginName] | None = None,
     ) -> DataFrame[Any]:
         result = super().from_dict(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -145,9 +153,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_dicts(
         cls,
         data: Sequence[Mapping[str, Any]],
-        schema: IntoSchema | Mapping[str, DType | None] | None = None,
+        schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         result = super().from_dicts(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -156,9 +164,9 @@ class DataFrame(NwDataFrame[IntoDataFrameT]):
     def from_numpy(
         cls,
         data: _2DArray,
-        schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+        schema: IntoSchema | Sequence[str] | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> DataFrame[Any]:
         result = super().from_numpy(data, schema, backend=backend)
         return cast("DataFrame[Any]", result)
@@ -282,7 +290,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_numpy(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -294,7 +302,7 @@ class Series(NwSeries[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         result = super().from_iterable(name, values, dtype, backend=backend)
         return cast("Series[Any]", result)
@@ -329,6 +337,8 @@ class Series(NwSeries[IntoSeriesT]):
 
 
 class Expr(NwExpr):
+    _version = Version.V2
+
     def any_value(self, *, ignore_nulls: bool = False) -> Self:
         msg = (
             "`Expr.any_value` is being called from the stable API although considered "
@@ -348,14 +358,13 @@ class Expr(NwExpr):
         return self._append_node(ExprNode(ExprKind.ORDERABLE_AGGREGATION, "last"))
 
 
+class Selector(NwSelector, Expr):
+    def _to_expr(self) -> Expr:
+        return Expr(*self._nodes)
+
+
 class Schema(NwSchema):
     _version = Version.V2
-
-    @inherit_doc(NwSchema)
-    def __init__(
-        self, schema: Mapping[str, DType] | Iterable[tuple[str, DType]] | None = None
-    ) -> None:
-        super().__init__(schema)
 
 
 @overload
@@ -737,6 +746,8 @@ def sum(*columns: str) -> Expr:
 def sum_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Sum all values horizontally across columns.
 
+    Null values are ignored. If a row has no non-null elements, the result is zero.
+
     Warning:
         Unlike Polars, we support horizontal sum over numeric columns only.
 
@@ -782,6 +793,8 @@ def any_horizontal(*exprs: IntoExpr | Iterable[IntoExpr], ignore_nulls: bool) ->
 def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Compute the mean of all values horizontally across columns.
 
+    Null values are ignored.
+
     Arguments:
         exprs: Name(s) of the columns to use in the aggregation function. Accepts
             expression input.
@@ -791,6 +804,8 @@ def mean_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the minimum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `min_horizontal` over numeric columns only.
@@ -804,6 +819,8 @@ def min_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
 
 def max_horizontal(*exprs: IntoExpr | Iterable[IntoExpr]) -> Expr:
     """Get the maximum value horizontally across columns.
+
+    Null values are ignored. If a row has no non-null elements, the result is null.
 
     Notes:
         We support `max_horizontal` over numeric columns only.
@@ -826,6 +843,18 @@ def corr(
         method: Correlation method ('pearson' or 'spearman')
     """
     return _stableify(nw.corr(a, b, method=method))
+
+
+def cov(a: IntoExpr, b: IntoExpr, *, ddof: int = 1) -> Expr:
+    """Compute the covariance between two columns.
+
+    Arguments:
+        a: Column name or Expression
+        b: Column name or Expression
+        ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
+            where N represents the number of elements. By default ddof is 1.
+    """
+    return _stableify(nw.cov(a, b, ddof=ddof))
 
 
 def concat_str(
@@ -888,7 +917,12 @@ class When(nw_f.When):
         return Then._from_chain(new_chain)
 
 
-class Then(nw_f.Then, Expr): ...
+class Then(nw_f.Then, Expr):
+    def when(self, *predicates: IntoExpr | Iterable[IntoExpr]) -> When:
+        return When(*predicates, chain=self._chain)
+
+    def otherwise(self, otherwise_value: IntoExpr | NonNestedLiteral) -> Expr:
+        return _stableify(super().otherwise(otherwise_value))
 
 
 def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
@@ -911,12 +945,36 @@ def when(*predicates: IntoExpr | Iterable[IntoExpr]) -> When:
     return When.from_when(nw_f.when(*predicates))
 
 
+def concat(items: Iterable[FrameT], *, how: ConcatMethod = "vertical") -> FrameT:
+    """Concatenate multiple DataFrames, LazyFrames into a single entity.
+
+    Arguments:
+        items: DataFrames, LazyFrames to concatenate.
+        how: concatenating strategy
+
+            - vertical: Concatenate vertically. Column names must match.
+            - horizontal: Concatenate horizontally. If lengths don't match, then
+                missing rows are filled with null values. This is only supported
+                when all inputs are (eager) DataFrames.
+            - diagonal: Finds a union between the column schemas and fills missing column
+                values with null.
+
+    Raises:
+        TypeError: The items to concatenate should either all be eager, or all lazy
+    """
+    # `pyrefly` rejects the union `_stableify` returns while `FrameT` is still
+    # unsolved; `mypy` solves per-constraint and calls the cast redundant, hence
+    # the ignore. CI cannot catch removal of either, because `pyrefly check` only
+    # covers `tests`. Verify with: `pyrefly check src/narwhals/stable/v2/__init__.py`
+    return cast("FrameT", _stableify(nw_f.concat(items, how=how)))  # type: ignore[redundant-cast]
+
+
 def new_series(
     name: str,
     values: Any,
     dtype: IntoDType | None = None,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> Series[Any]:
     """Instantiate Narwhals Series from iterable (e.g. list or array).
 
@@ -938,7 +996,7 @@ def new_series(
 
 
 def from_arrow(
-    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed]
+    native_frame: IntoArrowTable, *, backend: IntoBackend[EagerAllowed | PluginName]
 ) -> DataFrame[Any]:
     """Construct a DataFrame from an object which supports the PyCapsule Interface.
 
@@ -958,14 +1016,14 @@ def from_arrow(
 
 def from_dict(
     data: Mapping[str, Any],
-    schema: Mapping[str, DType] | Schema | None = None,
+    schema: IntoSchema | Mapping[str, IntoDType | None] | None = None,
     *,
-    backend: IntoBackend[EagerAllowed] | None = None,
+    backend: IntoBackend[EagerAllowed | PluginName] | None = None,
 ) -> DataFrame[Any]:
     """Instantiate DataFrame from dictionary.
 
     Indexes (if present, for pandas-like backends) are aligned following
-    the [left-hand-rule](../concepts/pandas_index.md/).
+    the [left-hand-rule](../concepts/pandas_index.md).
 
     Notes:
         For pandas-like dataframes, conversion to schema is applied after dataframe
@@ -973,10 +1031,11 @@ def from_dict(
 
     Arguments:
         data: Dictionary to create DataFrame from.
-        schema: The DataFrame schema as Schema or dict of {name: type}. If not
-            specified, the schema will be inferred by the native library. If
-            any `dtype` is `None`, the data type for that column will be inferred
-            by the native library.
+        schema: The DataFrame schema as Schema, dict of {name: type}, or a
+            iterable of (name, type) tuples.
+            If not specified, the schema will be inferred by the native library.
+            If any `dtype` is `None`, the data type for that column will be
+            inferred by the native library.
         backend: specifies which eager backend instantiate to. Only
             necessary if inputs are not Narwhals Series.
 
@@ -995,9 +1054,9 @@ from_dicts: Final = DataFrame.from_dicts
 
 def from_numpy(
     data: _2DArray,
-    schema: Mapping[str, DType] | Schema | Sequence[str] | None = None,
+    schema: IntoSchema | Sequence[str] | None = None,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
 ) -> DataFrame[Any]:
     """Construct a DataFrame from a NumPy ndarray.
 
@@ -1009,7 +1068,8 @@ def from_numpy(
 
     Arguments:
         data: Two-dimensional data represented as a NumPy ndarray.
-        schema: The DataFrame schema as Schema, dict of {name: type}, or a sequence of str.
+        schema: The DataFrame schema as Schema, dict of {name: type}, an iterable
+            of (name, type) tuples, or a sequence of str.
         backend: specifies which eager backend instantiate to.
 
             `backend` can be specified in various ways
@@ -1023,16 +1083,18 @@ def from_numpy(
 
 
 def read_csv(
-    source: str,
+    source: FileSource,
     *,
-    backend: IntoBackend[EagerAllowed],
+    backend: IntoBackend[EagerAllowed | PluginName],
     separator: str = ",",
     **kwargs: Any,
 ) -> DataFrame[Any]:
     """Read a CSV file into a DataFrame.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1051,7 +1113,11 @@ def read_csv(
 
 
 def scan_csv(
-    source: str, *, backend: IntoBackend[Backend], separator: str = ",", **kwargs: Any
+    source: FileSource,
+    *,
+    backend: IntoBackend[Backend | PluginName],
+    separator: str = ",",
+    **kwargs: Any,
 ) -> LazyFrame[Any]:
     """Lazily read from a CSV file.
 
@@ -1059,7 +1125,9 @@ def scan_csv(
     a csv file eagerly and then converts the resulting dataframe to a lazyframe.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.StringIO` /
+            `io.BytesIO`. See [`FileSource`][narwhals.typing.FileSource] for which
+            backends accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1078,12 +1146,14 @@ def scan_csv(
 
 
 def read_parquet(
-    source: str, *, backend: IntoBackend[EagerAllowed], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[EagerAllowed | PluginName], **kwargs: Any
 ) -> DataFrame[Any]:
     """Read into a DataFrame from a parquet file.
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1099,7 +1169,7 @@ def read_parquet(
 
 
 def scan_parquet(
-    source: str, *, backend: IntoBackend[Backend], **kwargs: Any
+    source: FileSource, *, backend: IntoBackend[Backend | PluginName], **kwargs: Any
 ) -> LazyFrame[Any]:
     """Lazily read from a parquet file.
 
@@ -1119,7 +1189,9 @@ def scan_parquet(
         ```
 
     Arguments:
-        source: Path to a file.
+        source: Path to a file, or a file-like object such as `io.BytesIO`.
+            See [`FileSource`][narwhals.typing.FileSource] for which backends
+            accept a file-like object.
         backend: The eager backend for DataFrame creation.
             `backend` can be specified in various ways
 
@@ -1163,6 +1235,7 @@ __all__ = [
     "Enum",
     "Expr",
     "Field",
+    "Float16",
     "Float32",
     "Float64",
     "Implementation",
@@ -1193,8 +1266,8 @@ __all__ = [
     "concat",
     "concat_str",
     "corr",
+    "cov",
     "dependencies",
-    "dtypes",
     "dtypes",
     "exceptions",
     "exclude",
@@ -1228,7 +1301,6 @@ __all__ = [
     "read_parquet",
     "scan_csv",
     "scan_parquet",
-    "selectors",
     "selectors",
     "show_versions",
     "struct",

@@ -5,16 +5,17 @@ from contextlib import AbstractContextManager, nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.testing import assert_series_equal
 from tests.utils import PANDAS_VERSION, POLARS_VERSION, PYARROW_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from typing import TypeAlias
 
-    from narwhals.typing import IntoSchema, IntoSeriesT
+    from narwhals.typing import IntoDType, IntoSeriesT
     from tests.conftest import Data
     from tests.utils import ConstructorEager
 
@@ -35,21 +36,20 @@ def test_self_equal(
     request: pytest.FixtureRequest,
     constructor_eager: ConstructorEager,
     testing_data: Data,
-    testing_schema: IntoSchema,
+    testing_schema: Mapping[str, IntoDType],
 ) -> None:
     """Test that a series is equal to itself, including nested dtypes with nulls."""
     if "cudf" in str(constructor_eager):
         # TODO(FBruzzesi): Investigate which conversion is failing aside from nested dtypes
         request.applymarker(pytest.mark.xfail)
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        15,
-        0,
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0"
     ):  # pragma: no cover
         reason = (
             "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "
@@ -155,7 +155,7 @@ def test_check_order(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2) and dtype.is_nested():  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2") and dtype.is_nested():  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -273,14 +273,14 @@ def test_list_like(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
 
     if (
         "pyarrow_table" in str(constructor_eager)
-        and PYARROW_VERSION < (14, 0)
+        and PYARROW_VERSION < PkgVersion("14")
         and dtype == nw.Array
     ):  # pragma: no cover
         reason = (
@@ -333,7 +333,7 @@ def test_struct(
         request.applymarker(pytest.mark.xfail(reason=reason))
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):  # pragma: no cover
+        if PANDAS_VERSION < PkgVersion("2.2"):  # pragma: no cover
             reason = "Pandas too old for nested dtypes"
             pytest.skip(reason=reason)
         pytest.importorskip("pyarrow")
@@ -382,7 +382,7 @@ def test_categorical_as_str(
 ) -> None:
     if (
         "polars" in str(constructor_eager)
-        and POLARS_VERSION >= (1, 32)
+        and POLARS_VERSION >= PkgVersion("1.32")
         and not categorical_as_str
     ):
         # https://github.com/pola-rs/polars/pull/23016 removed StringCache, it still
@@ -393,9 +393,8 @@ def test_categorical_as_str(
         # pyarrow dictionary dtype compares values, not the encoding.
         request.applymarker(pytest.mark.xfail)
 
-    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < (
-        15,
-        0,
+    if "pyarrow_table" in str(constructor_eager) and PYARROW_VERSION < PkgVersion(
+        "15.0"
     ):  # pragma: no cover
         reason = (
             "pyarrow.lib.ArrowNotImplementedError: Unsupported cast from string to "

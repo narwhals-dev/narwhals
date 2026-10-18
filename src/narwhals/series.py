@@ -11,6 +11,7 @@ from narwhals._utils import (
     Implementation,
     Version,
     _Implementation,
+    _resolve_sample_size,
     _validate_rolling_arguments,
     ensure_type,
     generate_repr,
@@ -44,7 +45,7 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
     from narwhals._compliant import CompliantSeries
-    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault
+    from narwhals._typing import EagerAllowed, IntoBackend, NoDefault, PluginName
     from narwhals.dataframe import DataFrame, MultiIndexSelector
     from narwhals.dtypes import DType
     from narwhals.typing import (
@@ -120,7 +121,7 @@ class Series(Generic[IntoSeriesT]):
         values: _1DArray,
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         """Construct a Series from a NumPy ndarray.
 
@@ -185,7 +186,7 @@ class Series(Generic[IntoSeriesT]):
         values: Iterable[Any],
         dtype: IntoDType | None = None,
         *,
-        backend: IntoBackend[EagerAllowed],
+        backend: IntoBackend[EagerAllowed | PluginName],
     ) -> Series[Any]:
         """Construct a Series from an iterable.
 
@@ -680,6 +681,8 @@ class Series(Generic[IntoSeriesT]):
     def mean(self) -> float:
         """Reduce this Series to the mean value.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import pandas as pd
             >>> import narwhals as nw
@@ -692,6 +695,8 @@ class Series(Generic[IntoSeriesT]):
 
     def median(self) -> float:
         """Reduce this Series to the median value.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Notes:
             Results might slightly differ across backends due to differences in the underlying algorithms used to compute the median.
@@ -709,6 +714,8 @@ class Series(Generic[IntoSeriesT]):
     def skew(self) -> float | None:
         """Calculate the sample skewness of the Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -725,6 +732,8 @@ class Series(Generic[IntoSeriesT]):
 
     def kurtosis(self) -> float | None:
         """Compute the kurtosis (Fisher's definition) without bias correction.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Kurtosis is the fourth central moment divided by the square of the variance.
         The Fisher's definition is used where 3.0 is subtracted from the result to give 0.0 for a normal distribution.
@@ -755,7 +764,7 @@ class Series(Generic[IntoSeriesT]):
     def any(self) -> bool:
         """Return whether any of the values in the Series are True.
 
-        If there are no non-null elements, the result is `False`.
+        Null values are ignored. If there are no non-null elements, the result is `False`.
 
         Notes:
             Only works on Series of data type Boolean.
@@ -773,7 +782,7 @@ class Series(Generic[IntoSeriesT]):
     def all(self) -> bool:
         """Return whether all values in the Series are True.
 
-        If there are no non-null elements, the result is `True`.
+        Null values are ignored. If there are no non-null elements, the result is `True`.
 
         Examples:
             >>> import pyarrow as pa
@@ -788,6 +797,8 @@ class Series(Generic[IntoSeriesT]):
     def min(self) -> Any:
         """Get the minimal value in this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -800,6 +811,8 @@ class Series(Generic[IntoSeriesT]):
 
     def max(self) -> Any:
         """Get the maximum value in this Series.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pandas as pd
@@ -814,6 +827,8 @@ class Series(Generic[IntoSeriesT]):
     def arg_min(self) -> int:
         """Returns the index of the minimum value.
 
+        Null values are ignored.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -826,6 +841,8 @@ class Series(Generic[IntoSeriesT]):
 
     def arg_max(self) -> int:
         """Returns the index of the maximum value.
+
+        Null values are ignored.
 
         Examples:
             >>> import polars as pl
@@ -840,7 +857,7 @@ class Series(Generic[IntoSeriesT]):
     def sum(self) -> float:
         """Reduce this Series to the sum value.
 
-        If there are no non-null elements, the result is zero.
+        Null values are ignored. If there are no non-null elements, the result is zero.
 
         Examples:
             >>> import pyarrow as pa
@@ -855,9 +872,12 @@ class Series(Generic[IntoSeriesT]):
     def std(self, *, ddof: int = 1) -> float:
         """Get the standard deviation of this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null.
 
         Examples:
             >>> import polars as pl
@@ -872,9 +892,12 @@ class Series(Generic[IntoSeriesT]):
     def var(self, *, ddof: int = 1) -> float:
         """Get the variance of this Series.
 
+        Null values are ignored. If there are no non-null elements, the result is null.
+
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of elements.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null.
 
         Examples:
             >>> import pyarrow as pa
@@ -955,6 +978,10 @@ class Series(Generic[IntoSeriesT]):
         Returns:
             A scalar value or `None` if the Series is empty.
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -973,6 +1000,15 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             other: Sequence of primitive type.
+
+        Warning:
+            Backends disagree on how to compare values against a Series of a
+            different dtype: `polars>=2.0` raises an `InvalidOperationError` unless
+            the operands can be coerced losslessly (so looking for floats in an
+            integer Series raises), whereas every other backend coerces silently.
+            Cast one of the operands if you need this to behave the same everywhere.
+            See [Polars' upgrade guide](https://docs.pola.rs/releases/upgrade/2/#make-coercion-casts-for-is_in-strict-instead-of-lossy)
+            for details.
 
         Examples:
             >>> import pyarrow as pa
@@ -1019,7 +1055,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1207,9 +1243,12 @@ class Series(Generic[IntoSeriesT]):
                4
             ]
         """
+        size = _resolve_sample_size(
+            n=n, fraction=fraction, height=len(self), with_replacement=with_replacement
+        )
         return self._with_compliant(
             self._compliant_series.sample(
-                n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+                n=size, with_replacement=with_replacement, seed=seed
             )
         )
 
@@ -1402,7 +1441,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1428,7 +1467,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -1458,10 +1497,13 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             - pandas handles null values differently from other libraries.
-              See [null_handling](../concepts/null_handling.md/)
+              See [null_handling](../concepts/null_handling.md)
               for reference.
             - For pandas Series of `object` dtype, `fill_null` will not automatically change the
               Series' dtype as pandas used to do. Explicitly call `cast` if you want the dtype to change.
+            - `fill_null(strategy='forward')` corresponds to Polars `forward_fill` and pandas
+              `ffill`; likewise, `fill_null(strategy='backward')` corresponds to Polars
+              `backward_fill` and pandas `bfill`.
 
         Examples:
             >>> import pandas as pd
@@ -1509,7 +1551,7 @@ class Series(Generic[IntoSeriesT]):
         Notes:
             This function only fills `'NaN'` values, not null ones, except for pandas
             which doesn't distinguish between them.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import polars as pl
@@ -1575,6 +1617,8 @@ class Series(Generic[IntoSeriesT]):
 
     def n_unique(self) -> int:
         """Count the number of unique values.
+
+        Null values count as a distinct value.
 
         Examples:
             >>> import polars as pl
@@ -1855,7 +1899,7 @@ class Series(Generic[IntoSeriesT]):
 
         Notes:
             pandas handles null values differently from Polars and PyArrow.
-            See [null_handling](../concepts/null_handling.md/) for reference.
+            See [null_handling](../concepts/null_handling.md) for reference.
 
         Examples:
             >>> import pyarrow as pa
@@ -1974,6 +2018,8 @@ class Series(Generic[IntoSeriesT]):
         self, quantile: float, interpolation: RollingInterpolationMethod
     ) -> float:
         """Get quantile value of the series.
+
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Note:
             pandas and Polars may have implementation differences for a given interpolation method.
@@ -2628,6 +2674,36 @@ class Series(Generic[IntoSeriesT]):
         yield from self._compliant_series.__iter__()
 
     def __contains__(self, other: Any) -> bool:
+        """Check whether `other` is present in the Series.
+
+        Arguments:
+            other: Value to look for. `None` matches null values.
+
+        Returns:
+            Whether the value was found.
+
+        Warning:
+            Backends disagree on how to compare values against a Series of a
+            different dtype: `polars>=2.0` raises an `InvalidOperationError` unless
+            the operands can be coerced losslessly (so looking for floats in an
+            integer Series raises), whereas every other backend coerces silently.
+            Cast one of the operands if you need this to behave the same everywhere.
+            See [Polars' upgrade guide](https://docs.pola.rs/releases/upgrade/2/#make-coercion-casts-for-is_in-strict-instead-of-lossy)
+            for details.
+
+        Examples:
+            >>> import pyarrow as pa
+            >>> import narwhals as nw
+            >>>
+            >>> s_native = pa.chunked_array([[1, 2, None]])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> 2 in s
+            True
+            >>> None in s
+            True
+            >>> 3 in s
+            False
+        """
         return self._compliant_series.__contains__(other)
 
     def rank(self, method: RankMethod = "average", *, descending: bool = False) -> Self:

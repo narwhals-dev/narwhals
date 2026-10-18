@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from narwhals._utils import Implementation, parse_version
-from narwhals.dependencies import get_pandas
+from narwhals._utils import Implementation
+from narwhals.dependencies import get_numpy, get_pandas
 from narwhals.translate import from_native
 
 if TYPE_CHECKING:
@@ -28,22 +29,31 @@ if TYPE_CHECKING:
     from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
-def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
+NOT_INSTALLED = PkgVersion("0")
+"""Sentinel version for backends which are not installed."""
+
+
+def get_module_version(module_name: str) -> PkgVersion:
+    """Return the installed version of `module_name`, or `NOT_INSTALLED`.
+
+    Only the release segment is kept, so `3.0.0rc1` passes `>= 3.0` gates.
+    """
     try:
-        return parse_version(__import__(module_name).__version__)
+        version = __import__(module_name).__version__
     except ImportError:
-        return (0, 0, 0)
+        return NOT_INSTALLED
+    return PkgVersion(PkgVersion(version).base_version)
 
 
-IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
-NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
-PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
-DUCKDB_VERSION: tuple[int, ...] = get_module_version_as_tuple("duckdb")
-POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
-DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
-PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
-PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
-CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
+IBIS_VERSION = get_module_version("ibis")
+NUMPY_VERSION = get_module_version("numpy")
+PANDAS_VERSION = get_module_version("pandas")
+DUCKDB_VERSION = get_module_version("duckdb")
+POLARS_VERSION = get_module_version("polars")
+DASK_VERSION = get_module_version("dask")
+PYARROW_VERSION = get_module_version("pyarrow")
+PYSPARK_VERSION = get_module_version("pyspark")
+CUDF_VERSION = get_module_version("cudf")
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
@@ -80,6 +90,37 @@ def _to_comparable_list(column_values: Any) -> Any:
     return list(column_values)
 
 
+def skip_if_no_categorical_ordering(
+    constructor: Constructor | ConstructorEager, /
+) -> None:
+    """Skip if the backend cannot order a `Categorical` column by its values.
+
+    - `pyspark`, `duckdb` and `ibis` have no categorical dtype.
+    - `dask` encodes the categories per partition, so ordering them by value would
+      need a compute.
+    - `polars<1.32` orders by the physical encoding instead of by value
+      (https://github.com/pola-rs/polars/pull/23779).
+    - `pyarrow<15` cannot cast `string` to `dictionary`, so the column cannot even be
+      created.
+    """
+    id_ = str(constructor)
+    if any(x in id_ for x in ("pyspark", "duckdb", "ibis", "dask")):
+        pytest.skip(reason="no `Categorical` dtype")
+    if "polars" in id_ and POLARS_VERSION < PkgVersion("1.32"):
+        pytest.skip(reason="orders `Categorical` by physical encoding")
+    if "pyarrow_table" in id_ and PYARROW_VERSION < PkgVersion("15"):
+        pytest.skip(reason="cannot cast `string` to `dictionary`")
+
+
+def skip_if_no_windowed_corr_cov(constructor: Constructor, /) -> None:
+    """Skip unless the backend supports `corr`/`cov` with `over`."""
+    id_ = str(constructor)
+    if not any(x in id_ for x in ("duckdb", "pyspark", "sqlframe")):
+        pytest.skip(reason="no windowed `corr`/`cov`")
+    if "duckdb" in id_ and DUCKDB_VERSION < PkgVersion("1.3"):
+        pytest.skip(reason="`over` requires DuckDB 1.3.0")
+
+
 def is_pd_na(value: Any) -> bool:
     return (pd := get_pandas()) is not None and pd.isna(value)
 
@@ -106,20 +147,18 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
 
         if os.environ.get("NARWHALS_POLARS_GPU", None):  # pragma: no cover
             kwargs[Implementation.POLARS].update({"engine": "gpu"})
-        if os.environ.get("NARWHALS_POLARS_NEW_STREAMING", None):  # pragma: no cover
-            kwargs[Implementation.POLARS].update({"engine": "streaming"})
+        if engine := os.environ.get("NARWHALS_POLARS_ENGINE"):  # pragma: no cover
+            kwargs[Implementation.POLARS].update({"engine": engine})
 
         result = result.collect(**kwargs.get(result.implementation, {}))
 
-    if hasattr(result, "columns"):
-        for idx, (col, key) in enumerate(
-            zip(result.columns, list(expected.keys()), strict=True)
-        ):
-            assert col == key, f"Expected column name {key} at index {idx}, found {col}"
-    result = {key: _to_comparable_list(result[key]) for key in expected}
-    assert list(result.keys()) == list(expected.keys()), (
-        f"Result keys {result.keys()}, expected keys: {expected.keys()}"
+    result_keys = (
+        list(result.columns) if hasattr(result, "columns") else list(result.keys())
     )
+    assert result_keys == list(expected.keys()), (
+        f"Result keys {result_keys}, expected keys: {list(expected.keys())}"
+    )
+    result = {key: _to_comparable_list(result[key]) for key in expected}
 
     for key, expected_value in expected.items():
         result_value = result[key]
@@ -157,7 +196,12 @@ def assert_equal_data(result: Any, expected: Mapping[str, Any]) -> None:
             else:
                 are_equivalent_values = lhs == rhs
 
-            assert are_equivalent_values, (
+            if (np := get_numpy()) is not None and isinstance(
+                are_equivalent_values, np.bool_
+            ):
+                are_equivalent_values = bool(are_equivalent_values)
+
+            assert are_equivalent_values is True, (
                 f"Mismatch at index {i}, key {key}: {lhs} != {rhs}\nExpected: {expected}\nGot: {result}"
             )
 
@@ -186,22 +230,22 @@ def sqlframe_session() -> DuckDBSession:
 
 def pyspark_session() -> SparkSession:  # pragma: no cover
     if is_spark_connect := os.environ.get("SPARK_CONNECT", None):
-        from pyspark.sql.connect.session import SparkSession
+        from pyspark.sql.connect.session import SparkSession as _SparkSession
     else:
-        from pyspark.sql import SparkSession
-    builder = cast("SparkSession.Builder", SparkSession.builder).appName("unit-tests")
+        from pyspark.sql import SparkSession as _SparkSession
+    builder = _SparkSession.builder.appName("unit-tests")
     builder = (
         builder.remote(f"sc://localhost:{os.environ.get('SPARK_PORT', '15002')}")
         if is_spark_connect
         else builder.master("local[1]").config("spark.ui.enabled", "false")
     )
-    return (
-        # Don't remove pyrefly-ignore, needed in CI when pyspark is installed.
-        builder.config("spark.default.parallelism", "1")  # pyrefly: ignore[bad-return]
+    ret = (
+        builder.config("spark.default.parallelism", "1")
         .config("spark.sql.shuffle.partitions", "2")
         .config("spark.sql.session.timeZone", "UTC")
         .getOrCreate()
     )
+    return cast("SparkSession", ret)
 
 
 def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
@@ -214,6 +258,15 @@ def maybe_get_modin_df(df_pandas: pd.DataFrame) -> Any:  # pragma: no cover
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=UserWarning)
             return mpd.DataFrame(df_pandas.to_dict(orient="list"))
+
+
+def interchange_frame(df: pd.DataFrame) -> Any:
+    """Return the interchange object of a pandas DataFrame.
+
+    `pandas-stubs` no longer declares `DataFrame.__dataframe__`, as the
+    interchange protocol is deprecated since pandas 3.0.
+    """
+    return df.__dataframe__()  # type: ignore[operator]
 
 
 def is_windows() -> bool:
@@ -261,7 +314,9 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     if "duckdb" in request_id:
         return "us"
     pandas_like = ID_PANDAS_LIKE - ID_CUDF
-    if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
+    if PANDAS_VERSION < PkgVersion("2") and any(
+        name in request_id for name in pandas_like
+    ):
         return "ns"
     return time_unit
 
@@ -276,3 +331,8 @@ def xfail_if_pyspark_connect(  # pragma: no cover
 ) -> None:
     if is_pyspark_connect(constructor):
         request.applymarker(pytest.mark.xfail(reason=reason))
+
+
+def any_integer_like_floats(values: list[Any]) -> bool:
+    """Return True if any value is a float that represents an integer (e.g. 1.0, 2.0)."""
+    return any(isinstance(v, float) and v.is_integer() for v in values)

@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
-from typing import TYPE_CHECKING
+from datetime import date, datetime, time, timedelta, timezone
+from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
+from narwhals.exceptions import UnsupportedDTypeError
 from tests.utils import (
     PANDAS_VERSION,
+    POLARS_VERSION,
     PYARROW_VERSION,
     Constructor,
     ConstructorEager,
@@ -66,8 +69,8 @@ MODIN_XFAIL_COLUMNS = {"o", "k"}
 
 @pytest.mark.filterwarnings("ignore:casting period[M] values to int64:FutureWarning")
 def test_cast(constructor: Constructor) -> None:
-    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION <= (
-        15,
+    if "pyarrow_table_constructor" in str(constructor) and PYARROW_VERSION < PkgVersion(
+        "15"
     ):  # pragma: no cover
         pytest.skip()
 
@@ -124,9 +127,9 @@ def test_cast(constructor: Constructor) -> None:
 def test_cast_series(
     constructor_eager: ConstructorEager, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table_constructor" in str(constructor_eager) and PYARROW_VERSION <= (
-        15,
-    ):  # pragma: no cover
+    if "pyarrow_table_constructor" in str(
+        constructor_eager
+    ) and PYARROW_VERSION < PkgVersion("15"):  # pragma: no cover
         request.applymarker(pytest.mark.xfail)
 
     df = (
@@ -165,6 +168,30 @@ def test_cast_series(
             assert ltype == rtype, f"types differ for column {key}: {ltype}!={rtype}"
 
 
+# Backends with no half-precision (16-bit) floating point type: casting to `Float16`
+# raises for these instead of silently widening.
+FLOAT16_UNSUPPORTED = ("duckdb", "pyspark", "sqlframe")
+
+
+def test_cast_to_float16(constructor: Constructor) -> None:
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.36"):
+        pytest.skip("Polars added `Float16` in 1.36.0")
+    if "pyarrow" in str(constructor) and PYARROW_VERSION < PkgVersion("16"):
+        # PyArrow added casting to/from half-float in 16.0
+        pytest.skip("PyArrow added casting to/from half-float in 16.0")
+
+    data = {"a": [1.0, 2.0, 3.0]}
+    df = nw.from_native(constructor(data))
+
+    if any(backend in str(constructor) for backend in FLOAT16_UNSUPPORTED):
+        with pytest.raises((NotImplementedError, UnsupportedDTypeError)):
+            df.select(nw.col("a").cast(nw.Float16)).lazy().collect()
+    else:
+        result = df.select(nw.col("a").cast(nw.Float16))
+        assert result.collect_schema()["a"] == nw.Float16
+        assert_equal_data(result, data)
+
+
 def test_cast_string() -> None:
     pytest.importorskip("pandas")
     import pandas as pd
@@ -176,12 +203,42 @@ def test_cast_string() -> None:
     assert str(result.dtype) in {"string", "object", "dtype('O')"}
 
 
+@pytest.mark.parametrize(
+    "values",
+    [
+        pytest.param(["x", None], id="string"),
+        pytest.param([1, None], id="int"),
+        pytest.param([1.5, None], id="float"),
+        pytest.param([True, None], id="bool"),
+        pytest.param([datetime(2020, 1, 1), None], id="datetime"),
+        pytest.param([date(2020, 1, 1), None], id="date"),
+    ],
+)
+def test_cast_string_keeps_nulls(constructor: Constructor, values: list[Any]) -> None:
+    # Asserting on nullness rather than on the rendering: backends disagree on how
+    # they format a bool or a float, but not on whether the result is null.
+    df = nw.from_native(constructor({"a": values}))
+    result = df.select(nw.col("a").cast(nw.String()).is_null().alias("n"))
+    assert_equal_data(result, {"n": [False, True]})
+
+
+def test_cast_string_null_literal(constructor: Constructor) -> None:
+    df = nw.from_native(constructor({"a": [1, 2]}))
+    result = df.with_columns(b=nw.lit(None, dtype=nw.String()))
+    assert_equal_data(result, {"a": [1, 2], "b": [None, None]})
+
+
+def test_cast_string_keeps_nulls_series(constructor_eager: ConstructorEager) -> None:
+    s = nw.from_native(constructor_eager({"a": ["x", None]}), eager_only=True)["a"]
+    assert s.cast(nw.String()).is_null().to_list() == [False, True]
+
+
 def test_cast_raises_for_unknown_dtype(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
     if "duckdb" in str(constructor):
         request.applymarker(pytest.mark.xfail)
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("15"):
         # Unsupported cast from string to dictionary using function cast_dictionary
         request.applymarker(pytest.mark.xfail)
 
@@ -271,7 +328,7 @@ def test_cast_struct(request: pytest.FixtureRequest, constructor: Constructor) -
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -310,7 +367,7 @@ def test_raise_if_polars_dtype(constructor: Constructor) -> None:
 
 def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -325,7 +382,7 @@ def test_cast_time(request: pytest.FixtureRequest, constructor: Constructor) -> 
 
 def test_cast_binary(request: pytest.FixtureRequest, constructor: Constructor) -> None:
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -395,7 +452,7 @@ def test_cast_typing_invalid() -> None:
         df.select(a.cast(nw.Array(nw.List, 2)))  # type: ignore[arg-type]
 
 
-@pytest.mark.skipif(PANDAS_VERSION < (2,), reason="too old for pyarrow")
+@pytest.mark.skipif(PANDAS_VERSION < PkgVersion("2"), reason="too old for pyarrow")
 def test_pandas_pyarrow_dtypes() -> None:
     pytest.importorskip("pandas")
     pytest.importorskip("pyarrow")
@@ -425,4 +482,7 @@ def test_cast_object_pandas() -> None:
 
     s = nw.from_native(pd.DataFrame({"a": [2, 3, None]}, dtype=object))["a"]
     assert s[0] == 2
-    assert s.cast(nw.String)[0] == "2"
+    result = s.cast(nw.String)
+    assert result[0] == "2"
+    # Before pandas 3, `astype(str)` rendered this as the string `"None"`.
+    assert result.is_null().to_list() == [False, False, True]

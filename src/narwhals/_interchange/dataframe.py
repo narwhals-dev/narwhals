@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from typing import TYPE_CHECKING, Any, NoReturn
 
-from narwhals._utils import Version, parse_version
+from narwhals._utils import Version, _hasattr_static, parse_version
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -57,6 +57,8 @@ def map_interchange_dtype_to_narwhals_dtype(  # noqa: C901, PLR0911, PLR0912
             return dtypes.Float64()
         if interchange_dtype[1] == 32:
             return dtypes.Float32()
+        if interchange_dtype[1] == 16:
+            return dtypes.Float16()
         msg = "Invalid bit width for FLOAT"  # pragma: no cover
         raise AssertionError(msg)
     if interchange_dtype[0] == DtypeKind.BOOL:
@@ -156,4 +158,4 @@ class InterchangeFrame:
 
 
 def supports_dataframe_interchange(obj: Any) -> TypeIs[DataFrameLike]:
-    return hasattr(obj, "__dataframe__")
+    return _hasattr_static(obj, "__dataframe__")

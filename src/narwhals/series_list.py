@@ -37,10 +37,18 @@ class SeriesListNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.list.len()
         )
 
-    def unique(self) -> SeriesT:
+    def unique(self, *, maintain_order: bool = False) -> SeriesT:
         """Get the unique/distinct values in the list.
 
-        Null values are included in the result. The order of unique values is not guaranteed.
+        Null values are included in the result.
+
+        Arguments:
+            maintain_order: Keep the same order as the input data.
+
+        Notes:
+            `maintain_order=True` is not supported by all backends: backends whose
+            native distinct operation does not preserve order (e.g. DuckDB, Ibis)
+            raise `NotImplementedError`.
 
         Examples:
             >>> import polars as pl
@@ -58,7 +66,9 @@ class SeriesListNamespace(Generic[SeriesT]):
             ]
         """
         return self._narwhals_series._with_compliant(
-            self._narwhals_series._compliant_series.list.unique()
+            self._narwhals_series._compliant_series.list.unique(
+                maintain_order=maintain_order
+            )
         )
 
     def contains(self, item: NonNestedLiteral) -> SeriesT:
@@ -121,6 +131,8 @@ class SeriesListNamespace(Generic[SeriesT]):
     def min(self) -> SeriesT:
         """Compute the min value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -140,6 +152,8 @@ class SeriesListNamespace(Generic[SeriesT]):
 
     def max(self) -> SeriesT:
         """Compute the max value of the lists in the array.
+
+        Null values within each list are ignored.
 
         Examples:
             >>> import pyarrow as pa
@@ -162,6 +176,8 @@ class SeriesListNamespace(Generic[SeriesT]):
     def mean(self) -> SeriesT:
         """Compute the mean value of the lists in the array.
 
+        Null values within each list are ignored.
+
         Examples:
             >>> import polars as pl
             >>> import narwhals as nw
@@ -181,6 +197,8 @@ class SeriesListNamespace(Generic[SeriesT]):
 
     def median(self) -> SeriesT:
         """Compute the median value of the lists in the array.
+
+        Null values within each list are ignored.
 
         Examples:
             >>> import pyarrow as pa
@@ -202,6 +220,8 @@ class SeriesListNamespace(Generic[SeriesT]):
 
     def sum(self) -> SeriesT:
         """Compute the sum value of the lists in the array.
+
+        Null values within each list are ignored. If a list has no non-null elements, the result is zero.
 
         Examples:
             >>> import polars as pl

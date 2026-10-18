@@ -12,11 +12,15 @@ from narwhals._pandas_like.series_str import PandasLikeSeriesStringNamespace
 from narwhals._pandas_like.series_struct import PandasLikeSeriesStructNamespace
 from narwhals._pandas_like.utils import (
     NUMPY_VERSION,
+    PANDAS_VERSION,
     align_and_extract_native,
     binary_string_sum_fallback,
     broadcast_series_to_index,
+    floordiv_null_on_zero,
     get_dtype_backend,
     import_array_module,
+    is_dtype_pyarrow,
+    is_pandas_or_modin,
     narwhals_to_native_dtype,
     native_to_narwhals_dtype,
     object_native_to_narwhals_dtype,
@@ -87,6 +91,7 @@ PANDAS_TO_NUMPY_DTYPE_NO_MISSING = {
     "float64[pyarrow]": "float64",
     "Float32": "float32",
     "float32[pyarrow]": "float32",
+    "halffloat[pyarrow]": "float16",
 }
 PANDAS_TO_NUMPY_DTYPE_MISSING = {
     "Int64": "float64",
@@ -109,6 +114,7 @@ PANDAS_TO_NUMPY_DTYPE_MISSING = {
     "float64[pyarrow]": "float64",
     "Float32": "float32",
     "float32[pyarrow]": "float32",
+    "halffloat[pyarrow]": "float16",
 }
 
 
@@ -322,7 +328,20 @@ class PandasLikeSeries(EagerSeries[Any]):
             implementation=self._implementation,
             version=self._version,
         )
-        return self._with_native(self.native.astype(pd_dtype), preserve_broadcast=True)
+        result = self.native.astype(pd_dtype)
+        if (
+            pd_dtype is str
+            and is_pandas_or_modin(self._implementation)
+            and PANDAS_VERSION < (3,)
+            and (null_mask := self.native.isna()).any()
+        ):
+            # NOTE: pandas<3.0.0, `astype(str)` renders nulls as `'None'` / `'nan'`
+            # instead of keeping them null. Newer versions cast to a string dtype which
+            # preserves them, and cuDF's string conversions keep the null mask,
+            # so in neither case is there anything to restore.
+            # NOTE: `astype` already returned a new object, so mask it in place.
+            result.mask(null_mask, None, inplace=True)  # noqa: PD002
+        return self._with_native(result, preserve_broadcast=True)
 
     def item(self, index: int | None = None) -> Any:
         # cuDF doesn't have Series.item().
@@ -369,7 +388,16 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(res).alias(ser.name)
 
     def is_in(self, other: Any) -> Self:
-        return self._with_native(self.native.isin(other))
+        ser = self.native
+        res = ser.isin(other)
+        dtype_backend = get_dtype_backend(ser.dtype, self._implementation)
+        if dtype_backend is not None:
+            res = res.convert_dtypes(dtype_backend=dtype_backend)
+            if self._implementation.is_pandas() and self._backend_version < (3, 0):
+                res.mask(ser.isna(), inplace=True)  # noqa: PD002
+            else:
+                res = res.mask(ser.isna())
+        return self._with_native(res)
 
     def arg_true(self) -> Self:
         ser = self.native
@@ -486,10 +514,10 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_binary_right(operator.truediv, other)
 
     def __floordiv__(self, other: Any) -> Self:
-        return self._with_binary(operator.floordiv, other)
+        return self._with_binary(floordiv_null_on_zero, other)
 
     def __rfloordiv__(self, other: Any) -> Self:
-        return self._with_binary_right(operator.floordiv, other)
+        return self._with_binary_right(floordiv_null_on_zero, other)
 
     def __pow__(self, other: Any) -> Self:
         return self._with_binary(operator.pow, other)
@@ -555,8 +583,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         if len(ser_not_null) == 2:
             return 0.0
         m = ser_not_null - ser_not_null.mean()
-        m2 = (m**2).mean()
-        m3 = (m**3).mean()
+        m_squared = m * m
+        m2 = m_squared.mean()
+        m3 = (m_squared * m).mean()
         return m3 / (m2**1.5) if m2 != 0 else float("nan")
 
     def kurtosis(self) -> float | None:
@@ -566,8 +595,9 @@ class PandasLikeSeries(EagerSeries[Any]):
         if len(ser_not_null) == 1:
             return float("nan")
         m = ser_not_null - ser_not_null.mean()
-        m2 = (m**2).mean()
-        m4 = (m**4).mean()
+        m_squared = m * m
+        m2 = m_squared.mean()
+        m4 = (m_squared * m_squared).mean()
         return m4 / (m2**2) - 3.0 if m2 != 0 else float("nan")
 
     def len(self) -> int:
@@ -645,28 +675,28 @@ class PandasLikeSeries(EagerSeries[Any]):
     def n_unique(self) -> int:
         return self.native.nunique(dropna=False)
 
-    def sample(
-        self,
-        n: int | None,
-        *,
-        fraction: float | None,
-        with_replacement: bool,
-        seed: int | None,
-    ) -> Self:
+    def sample(self, n: int, *, with_replacement: bool, seed: int | None) -> Self:
         return self._with_native(
-            self.native.sample(
-                n=n, frac=fraction, replace=with_replacement, random_state=seed
-            )
+            self.native.sample(n=n, replace=with_replacement, random_state=seed)
         )
 
     def abs(self) -> Self:
         return self._with_native(self.native.abs())
 
     def cum_sum(self, *, reverse: bool) -> Self:
+        native = self.native
+        dtype = native.dtype
+        # pyarrow-backed accumulation keeps the input width and raises on overflow.
+        if (
+            is_dtype_pyarrow(dtype)
+            and dtype.kind in "iu"
+            and dtype.pyarrow_dtype.bit_width < 64
+        ):
+            native = native.astype("int64[pyarrow]")
         result = (
-            self.native.cumsum(skipna=True)
+            native.cumsum(skipna=True)
             if not reverse
-            else self.native[::-1].cumsum(skipna=True)[::-1]
+            else native[::-1].cumsum(skipna=True)[::-1]
         )
         return self._with_native(result)
 
@@ -762,18 +792,24 @@ class PandasLikeSeries(EagerSeries[Any]):
         # the default is meant to be None, but pandas doesn't allow it?
         # https://numpy.org/doc/stable/reference/generated/numpy.ndarray.__array__.html
         dtypes = self._version.dtypes
-        if isinstance(self.dtype, dtypes.Datetime) and self.dtype.time_zone is not None:
+        self_dtype = self.dtype
+        if isinstance(self_dtype, dtypes.Datetime) and self_dtype.time_zone is not None:
             s = self.dt.convert_time_zone("UTC").dt.replace_time_zone(None).native
         else:
             s = self.native
 
-        has_missing = s.isna().any()
         kwargs: dict[Any, Any] = {"copy": copy or self._implementation.is_cudf()}
-        if has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_MISSING:
-            kwargs.update({"na_value": float("nan")})
-            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[str(s.dtype)]
-        if not has_missing and str(s.dtype) in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
-            dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[str(s.dtype)]
+        dtype_str = str(s.dtype)
+        if (
+            dtype_str in PANDAS_TO_NUMPY_DTYPE_MISSING
+            or dtype_str in PANDAS_TO_NUMPY_DTYPE_NO_MISSING
+        ):
+            has_missing = s.isna().any()
+            if has_missing and dtype_str in PANDAS_TO_NUMPY_DTYPE_MISSING:
+                kwargs.update({"na_value": float("nan")})
+                dtype = dtype or PANDAS_TO_NUMPY_DTYPE_MISSING[dtype_str]
+            if not has_missing and dtype_str in PANDAS_TO_NUMPY_DTYPE_NO_MISSING:
+                dtype = dtype or PANDAS_TO_NUMPY_DTYPE_NO_MISSING[dtype_str]
         return s.to_numpy(dtype=dtype, **kwargs)
 
     def to_pandas(self) -> pd.Series[Any]:
@@ -975,7 +1011,7 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = (
             not_na_series.cumsum()
             if not reverse
-            else len(self) - not_na_series.cumsum() + not_na_series - 1
+            else not_na_series.sum() - not_na_series.cumsum() + not_na_series
         )
         return self._with_native(result)
 
@@ -1045,8 +1081,18 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self.native.isna().any() if other is None else (self.native == other).any()
 
     def is_finite(self) -> Self:
-        s = self.native
-        return self._with_native((s > float("-inf")) & (s < float("inf")))
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow.compute as pc
+
+            result_native = self._apply_pyarrow_compute_func(
+                native,
+                pc.is_finite,  # type: ignore[arg-type]
+            )
+        else:
+            array_func = self._array_funcs.isfinite
+            result_native = self._apply_array_func(native, array_func)
+        return self._with_native(result_native)
 
     def rank(self, method: RankMethod, *, descending: bool) -> Self:
         pd_method = "first" if method == "ordinal" else method
@@ -1134,7 +1180,21 @@ class PandasLikeSeries(EagerSeries[Any]):
         return self._with_native(result_native)
 
     def sqrt(self) -> Self:
-        return self._with_native(self.native.pow(0.5))
+        native = self.native
+        if self.is_native_dtype_pyarrow(native.dtype):
+            import pyarrow as pa  # ignore-banned-import()
+            import pyarrow.compute as pc
+
+            def pc_sqrt(ca: ChunkedArrayAny) -> ChunkedArrayAny:
+                result = pc.sqrt(pc.cast(ca, pa.float64()))
+                null = pa.scalar(None, pa.float64())
+                return pc.if_else(pc.is_nan(result), null, result)
+
+            result_native = self._apply_pyarrow_compute_func(native, pc_sqrt)
+        else:
+            array_func = self._array_funcs.sqrt
+            result_native = self._apply_array_func(native, array_func)
+        return self._with_native(result_native)
 
     def sin(self) -> Self:
         native = self.native
@@ -1297,7 +1357,12 @@ class _PandasHist(EagerSeriesHist["pd.Series[Any]", "list[float]"]):
         count = categories.value_counts(dropna=True, sort=False).reindex(
             categories.cat.categories, fill_value=0
         )
-        count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        impl = self._series._implementation
+        if impl.is_pandas() and impl._backend_version() < (3, 0):  # pragma: no cover
+            # NOTE: Keep `inplace=True` to avoid making a redundant copy.
+            count.reset_index(drop=True, inplace=True)  # noqa: PD002
+        else:
+            count = count.reset_index(drop=True)
         if self._breakpoint:
             return {"breakpoint": bins[1:], "count": count}
         return {"count": count}

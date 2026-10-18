@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Generic
 
+from narwhals._utils import (
+    parse_str_strip_chars,
+    validate_pad_arguments,
+    validate_str_non_negative,
+)
 from narwhals.dependencies import is_narwhals_series
 from narwhals.typing import SeriesT
 
@@ -110,11 +115,69 @@ class SeriesStringNamespace(Generic[SeriesT]):
             self._narwhals_series._compliant_series.str.strip_chars(characters)
         )
 
+    def strip_chars_start(self, characters: str | None = None) -> SeriesT:
+        r"""Remove leading characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the start of the string. If set
+                to None (default), all leading whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([" apple ", "\nmango"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.strip_chars_start().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                    "apple "
+                    "mango"
+            ]
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._narwhals_series
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.strip_chars_start(characters)
+        )
+
+    def strip_chars_end(self, characters: str | None = None) -> SeriesT:
+        r"""Remove trailing characters.
+
+        Arguments:
+            characters: The set of characters to be removed. All combinations of this
+                set of characters will be stripped from the end of the string. If set
+                to None (default), all trailing whitespace is removed instead.
+
+        Examples:
+            >>> import polars as pl
+            >>> import narwhals as nw
+            >>> s_native = pl.Series([" apple ", "mango\n"])
+            >>> s = nw.from_native(s_native, series_only=True)
+            >>> s.str.strip_chars_end().to_native()  # doctest: +NORMALIZE_WHITESPACE
+            shape: (2,)
+            Series: '' [str]
+            [
+                    " apple"
+                    "mango"
+            ]
+        """
+        if (characters := parse_str_strip_chars(characters)) == "":
+            return self._narwhals_series
+        return self._narwhals_series._with_compliant(
+            self._narwhals_series._compliant_series.str.strip_chars_end(characters)
+        )
+
     def starts_with(self, prefix: str | SeriesT) -> SeriesT:
         r"""Check if string values start with a substring.
 
         Arguments:
             prefix: prefix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -138,6 +201,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             suffix: suffix substring
+
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
 
         Examples:
             >>> import pandas as pd
@@ -169,6 +236,10 @@ class SeriesStringNamespace(Generic[SeriesT]):
             Passing a Series as `pattern` is only supported by Polars. Other backends
             will raise a `TypeError`.
 
+        Notes:
+            Null values are preserved, unless `self` is backed by a non-nullable pandas Series
+            (which does not support missing values). See [boolean columns](../concepts/boolean.md) for reference.
+
         Examples:
             >>> import pyarrow as pa
             >>> import narwhals as nw
@@ -195,8 +266,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
         Arguments:
             offset: Start index. Negative indexing is supported.
-            length: Length of the slice. If set to `None` (default), the slice is taken to the
-                end of the string.
+            length: Length of the slice. Must be non-negative. If set to `None` (default),
+                the slice is taken to the end of the string.
+
+        Raises:
+            ValueError: If `length` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -209,6 +283,8 @@ class SeriesStringNamespace(Generic[SeriesT]):
             2     ya
             dtype: str
         """
+        if length is not None:
+            validate_str_non_negative("slice", "length", length)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.slice(
                 offset=offset, length=length
@@ -302,9 +378,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Transform string to uppercase variant.
 
         Notes:
-            The PyArrow backend will convert 'ß' to 'ẞ' instead of 'SS'.
-            For more info see: https://github.com/apache/arrow/issues/34599
-            There may be other unicode-edge-case-related variations across implementations.
+            Polars, and pandas with Python-backed strings, use full Unicode case
+            mapping ('ß' becomes 'SS'). PyArrow, DuckDB, and pandas with
+            PyArrow-backed strings (the pandas 3 default when PyArrow is installed)
+            use simple mapping ('ß' becomes 'ẞ').
+            Full mapping can change string length, so `str.len_chars` or `str.slice` can
+            disagree across backends after casing.
+            See [narwhals#3982](https://github.com/narwhals-dev/narwhals/issues/3982).
 
         Examples:
             >>> import pandas as pd
@@ -322,6 +402,15 @@ class SeriesStringNamespace(Generic[SeriesT]):
 
     def to_lowercase(self) -> SeriesT:
         r"""Transform string to lowercase variant.
+
+        Notes:
+            Polars, and pandas with Python-backed strings, use full Unicode case
+            mapping ('İ' becomes 'i̇', two code points). PyArrow, DuckDB, and pandas
+            with PyArrow-backed strings (the pandas 3 default when PyArrow is
+            installed) use simple mapping ('İ' becomes 'i').
+            Full mapping can change string length, so `str.len_chars` or `str.slice` can
+            disagree across backends after casing.
+            See [narwhals#3982](https://github.com/narwhals-dev/narwhals/issues/3982).
 
         Examples:
             >>> import pandas as pd
@@ -474,7 +563,11 @@ class SeriesStringNamespace(Generic[SeriesT]):
         r"""Pad strings with zeros on the left.
 
         Arguments:
-            width: The target width of the string. If the string is shorter than this width, it will be padded with zeros on the left.
+            width: The target width of the string. If the string is shorter than this
+                width, it will be padded with zeros on the left. Must be non-negative.
+
+        Raises:
+            ValueError: If `width` is negative.
 
         Examples:
             >>> import pandas as pd
@@ -488,6 +581,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
             3    123456
             dtype: str
         """
+        validate_str_non_negative("zfill", "width", width)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.zfill(width)
         )
@@ -498,7 +592,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
         >>> import pandas as pd
@@ -516,6 +616,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        validate_pad_arguments("pad_start", length, fill_char)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_start(
                 length=length, fill_char=fill_char
@@ -528,7 +629,13 @@ class SeriesStringNamespace(Generic[SeriesT]):
         Arguments:
             length: Pad the string until it reaches this length. Strings with
                 length equal to or greater than this value are returned as-is.
-            fill_char: The character to pad the string with.
+                Must be non-negative.
+            fill_char: The character to pad the string with. Must be exactly one
+                character.
+
+        Raises:
+            ValueError: If `fill_char` is not a single character, or if `length`
+                is negative.
 
         Examples:
         >>> import pandas as pd
@@ -546,6 +653,7 @@ class SeriesStringNamespace(Generic[SeriesT]):
         |Name: a, dtype: str|
         └───────────────────┘
         """
+        validate_pad_arguments("pad_end", length, fill_char)
         return self._narwhals_series._with_compliant(
             self._narwhals_series._compliant_series.str.pad_end(
                 length=length, fill_char=fill_char

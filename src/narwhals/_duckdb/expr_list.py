@@ -21,7 +21,11 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(lambda expr: F("len", expr))
 
     @requires.backend_version((1, 3))  # bugged before 1.3
-    def unique(self) -> DuckDBExpr:
+    def unique(self, *, maintain_order: bool) -> DuckDBExpr:
+        if maintain_order:
+            msg = "`maintain_order=True` is not supported for the DuckDB backend."
+            raise NotImplementedError(msg)
+
         def func(expr: Expression) -> Expression:
             expr_distinct = F("list_distinct", expr)
             return when(
@@ -32,6 +36,12 @@ class DuckDBExprListNamespace(
         return self.compliant._with_elementwise(func)
 
     def contains(self, item: NonNestedLiteral) -> DuckDBExpr:
+        if item is None:
+            # Unlike `array_position(expr, NULL)`, this is cheap for nested inner types
+            # too, and works on every DuckDB version.
+            return self.compliant._with_elementwise(
+                lambda expr: F("len", expr) > F("list_count", expr)
+            )
         return self.compliant._with_elementwise(
             lambda expr: F("list_contains", expr, lit(item))
         )

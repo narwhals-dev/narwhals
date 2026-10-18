@@ -11,7 +11,7 @@ from narwhals._utils import Implementation, Version, extend_bool, isinstance_or_
 from narwhals.exceptions import ColumnNotFoundError
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
     from typing import TypeAlias
 
     from duckdb import DuckDBPyRelation
@@ -200,11 +200,15 @@ def native_to_narwhals_dtype(
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
-    result = rel.query(
-        "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
-    ).fetchone()
-    assert result is not None  # noqa: S101
-    return result[0]  # type: ignore[no-any-return]
+    result = (
+        rel.query(
+            "duckdb_settings()",
+            "select value from duckdb_settings() where name = 'TimeZone'",
+        )
+        .limit(1)
+        .fetchall()
+    )
+    return result[0][0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
@@ -262,7 +266,7 @@ TIME_UNIT_TO_TIMESTAMP: Mapping[TimeUnit, duckdb_dtypes.DuckDBPyType] = {
     "us": duckdb_dtypes.TIMESTAMP,
     "ns": duckdb_dtypes.TIMESTAMP_NS,
 }
-UNSUPPORTED_DTYPES = dtypes.Categorical
+UNSUPPORTED_DTYPES = (dtypes.Categorical, dtypes.Float16)
 
 
 def narwhals_to_native_dtype(  # noqa: PLR0912, C901
@@ -400,12 +404,29 @@ def catch_duckdb_exception(
     return exception
 
 
-_BINARY_OPS = {"floordiv": operator.floordiv, "and": operator.and_}
+def _floordiv(dividend: Expression, divisor: Expression) -> Expression:
+    # DuckDB's `//` truncates integers and is true division on floats.
+    quotient = dividend // divisor
+    # `floor` would turn integers into DOUBLE.
+    truncated = F("trunc", quotient)
+    # `typeof` folds at bind time, so DuckDB only evaluates the arm for this dtype.
+    is_float = F("typeof", quotient).isin(lit("FLOAT"), lit("DOUBLE"))
+    is_negative_inexact = when(is_float, quotient < truncated).otherwise(
+        (dividend % divisor != lit(0)) & ((dividend < lit(0)) != (divisor < lit(0)))
+    )
+    return when(is_negative_inexact, truncated - lit(1)).otherwise(truncated)
+
+
+_BINARY_OPS: Mapping[str, Callable[[Expression, Expression], Expression]] = {
+    "divide": operator.truediv,
+    "floordiv": _floordiv,
+    "and": operator.and_,
+}
 
 
 def function(name: str, *args: Expression) -> Expression:
     if name in _BINARY_OPS:
-        return _BINARY_OPS[name](*args)  # type: ignore[no-any-return]
+        return _BINARY_OPS[name](*args)
     if name in {"isnull", "isnotnull"}:
         return getattr(args[0], name)()  # type: ignore[no-any-return]
     if name == "count_distinct":

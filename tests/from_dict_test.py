@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -10,7 +11,10 @@ from narwhals.utils import Implementation
 from tests.utils import PYARROW_VERSION, Constructor, assert_equal_data
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from narwhals._typing import EagerAllowed, Polars
+    from narwhals.typing import IntoDType
 
 
 def test_from_dict(eager_backend: EagerAllowed) -> None:
@@ -33,6 +37,43 @@ def test_from_dict_schema(eager_backend: EagerAllowed) -> None:
             schema=schema,
         )
         assert result.collect_schema() == schema
+
+
+def test_from_dict_schema_uninstantiated_dtypes(eager_backend: EagerAllowed) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3257
+    schema: Mapping[str, IntoDType] = {"c": nw.Int16, "d": nw.Float32()}
+    result = nw.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == {"c": nw.Int16(), "d": nw.Float32()}
+    # uniform dict literals (all uninstantiated, as in the original issue) need no annotation
+    result = nw.from_dict({"c": [1, 2]}, backend=eager_backend, schema={"c": nw.Int16})
+    assert result.collect_schema() == {"c": nw.Int16()}
+
+
+def test_from_dict_schema_pairs(eager_backend: EagerAllowed) -> None:
+    # https://github.com/narwhals-dev/narwhals/issues/3257
+    expected = {"c": nw.Int16(), "d": nw.Float32()}
+    result = nw.from_dict(
+        {"c": [1, 2], "d": [5, 6]},
+        backend=eager_backend,
+        schema=(("c", nw.Int16), ("d", nw.Float32())),
+    )
+    assert result.collect_schema() == expected
+    result = nw.DataFrame.from_dict(
+        {"c": [1, 2], "d": [5, 6]},
+        backend=eager_backend,
+        schema=(("c", nw.Int16), ("d", nw.Float32())),
+    )
+    assert result.collect_schema() == expected
+
+
+def test_from_dict_schema_generator(eager_backend: EagerAllowed) -> None:
+    schema = ((name, dtype()) for name, dtype in (("c", nw.Int16), ("d", nw.Float32)))
+    result = nw.from_dict(
+        {"c": [1, 2], "d": [5, 6]}, backend=eager_backend, schema=schema
+    )
+    assert result.collect_schema() == {"c": nw.Int16(), "d": nw.Float32()}
 
 
 @pytest.mark.parametrize("backend", [Implementation.POLARS, "polars"])
@@ -90,7 +131,7 @@ def test_from_dict_empty_with_schema(eager_backend: EagerAllowed) -> None:
 
 
 def test_from_dict_dtype_none(eager_backend: EagerAllowed) -> None:
-    if str(eager_backend) == "pyarrow" and PYARROW_VERSION < (14,):
+    if str(eager_backend) == "pyarrow" and PYARROW_VERSION < PkgVersion("14"):
         pytest.skip()
     schema = {"a": nw.String(), "b": None}
     data = {"a": ["a", "b"], "b": [1, 2]}

@@ -1,9 +1,7 @@
-ci:
-  autoupdate_schedule: monthly
 repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
-  rev: 'v0.15.12'
+  rev: 'v0.16.10'
   hooks:
     # Run the formatter.
     - id: ruff-format
@@ -14,20 +12,29 @@ repos:
       name: check-docstrings
       alias: check-docstrings
       entry: python utils/check_docstrings.py
+- repo: https://github.com/astral-sh/uv-pre-commit
+  rev: "0.12.23"
+  hooks:
+    - id: uv-lock
 - repo: https://github.com/codespell-project/codespell
-  rev: 'v2.4.2'
+  rev: 'v2.4.3'
   hooks:
     - id: codespell
       files: \.(py|rst|md)$
       args: [--ignore-words-list=ser]
       exclude: ^docs/api-completeness.md$
+- repo: https://github.com/zizmorcore/zizmor-pre-commit
+  rev: 'v1.30.1'
+  hooks:
+    - id: zizmor
+      args: [--no-progress, --fix]
 - repo: https://github.com/adhtruong/mirrors-typos
   # Use mirror to avoid autoupdate issue: https://github.com/crate-ci/typos/issues/390
-  rev: 'v1.46.0'
+  rev: 'v1.50.3'
   hooks:
     - id: typos
 -   repo: https://github.com/pycqa/flake8
-    rev: '7.3.0'
+    rev: '7.4.1'
     hooks:
     -   id: flake8
         # TODO(unassigned): replace with ruff once https://github.com/astral-sh/ruff/issues/458 is addressed.
@@ -57,26 +64,27 @@ repos:
         additional_dependencies: [darglint==1.8.1, flake8-typing-imports==1.17.0]
 - repo: local
   hooks:
+    # `language: python` runs in an isolated venv.
+    # The scripts that need `narwhals` add `src/` to `sys.path` themselves.
     - id: check-api-reference
       name: check-api-reference
       pass_filenames: false
-      entry: python -m utils.check_api_reference
-      language: python
-      additional_dependencies: [polars]
+      entry: uv run --extra polars utils/check_api_reference.py
+      language: system
     - id: sort-api-reference
       name: sort-api-reference
       pass_filenames: false
-      entry: python -m utils.sort_api_reference
-      language: python
+      entry: uv run utils/sort_api_reference.py
+      language: system
     - id: check-slotted-classes
       name: check-slotted-classes
       pass_filenames: false
-      entry: python -m utils.check_slotted_classes
-      language: python
+      entry: uv run utils/check_slotted_classes.py
+      language: system
     - id: imports-are-banned
       name: import are banned (use `get_pandas` instead of `import pandas`)
-      entry: python utils/import_check.py
-      language: python
+      entry: uv run utils/import_check.py
+      language: system
       files: ^src/narwhals/
       exclude: ^src/narwhals/dependencies\.py
     - id: self-self
@@ -109,13 +117,6 @@ repos:
       entry: pull_request_target
       language: pygrep
       files: ^\.github/workflows/
-- repo: https://github.com/adamchainz/blacken-docs
-  rev: "1.20.0"  # replace with latest tag on GitHub
-  hooks:
-  -   id: blacken-docs
-      args: [--skip-errors]
-      additional_dependencies:
-      - black==22.12.0
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v6.0.0
   hooks:
@@ -123,7 +124,13 @@ repos:
       exclude: |
         (?x)
           ^(tests/utils\.py)
-          |^(test_plugin/)
+          |^(packages/test_plugin/)
   -   id: no-commit-to-branch
   -   id: end-of-file-fixer
       exclude: .svg$
+  -   id: trailing-whitespace
+      exclude: |
+        (?x)^(
+            tests/data/.*\.csv|
+            .*\.svg
+        )$

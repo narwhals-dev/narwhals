@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, cast
 
@@ -8,32 +9,37 @@ import pyarrow.compute as pc
 
 from narwhals._compliant import EagerSeriesNamespace
 from narwhals._utils import Implementation, Version, isinstance_or_issubclass
+from narwhals.exceptions import ColumnNotFoundError, InvalidOperationError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Mapping
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
     from typing import Literal, TypeAlias
 
     from typing_extensions import TypeIs
 
     from narwhals._arrow.series import ArrowSeries
-    from narwhals._arrow.typing import (
+    from narwhals._arrow.typing import (  # type: ignore[attr-defined]
         ArrayAny,
         ArrayOrScalar,
         ArrayOrScalarT1,
         ArrayOrScalarT2,
         ChunkedArrayAny,
+        DictionaryArrayAny,
         Incomplete,
         NativeIntervalUnit,
+        NullPlacement,
+        Order,
         PromoteOptions,
         ScalarAny,
     )
     from narwhals._duration import IntervalUnit
     from narwhals.dtypes import DType
-    from narwhals.typing import IntoDType, PythonLiteral
+    from narwhals.typing import IntoDType, NonNestedLiteral, PythonLiteral
 
     # NOTE: stubs don't allow for `ChunkedArray[StructArray]`
     # Intended to represent the `.chunks` property storing `list[pa.StructArray]`
     ChunkedArrayStructArray: TypeAlias = ChunkedArrayAny
+    ListArrayAny: TypeAlias = "pa.ListArray[Any] | pa.LargeListArray[Any]"
 
     def is_timestamp(t: Any) -> TypeIs[pa.TimestampType[Any, Any]]: ...
     def is_duration(t: Any) -> TypeIs[pa.DurationType[Any]]: ...
@@ -49,10 +55,11 @@ if TYPE_CHECKING:
         options: Any = None,
         memory_pool: Any = None,
     ) -> ChunkedArrayStructArray: ...
+
 else:
     from pyarrow.compute import extract_regex
     from pyarrow.types import (
-        is_dictionary,  # noqa: F401
+        is_dictionary,
         is_duration,
         is_fixed_size_list,
         is_large_list,
@@ -91,14 +98,43 @@ def is_array_or_scalar(obj: Any) -> TypeIs[ArrayOrScalar]:
     return isinstance(obj, (pa.ChunkedArray, pa.Array, pa.Scalar))
 
 
+def arange(start: int, end: int, step: int) -> ArrayAny:
+    if BACKEND_VERSION < (21,):
+        import numpy as np  # ignore-banned-import
+
+        return pa.array(np.arange(start, end, step))
+    # NOTE: Added in https://github.com/apache/arrow/pull/46778
+    return pa.arange(start, end, step)  # type: ignore[attr-defined]
+
+
+def build_list_array(arrays: list[pa.Array[Any]]) -> pa.ChunkedArray[Any]:
+    # This works by using concat_arrays to vertically stack the arrays.
+    # Then we use take to grab the data by index and to horizontally
+    # pack the arrays.
+    n = len(arrays[0])
+    num_cols = len(arrays)
+    i = arange(0, n, 1)
+    j = arange(0, num_cols, 1)
+    k = arange(0, n * num_cols, 1)
+    row_idx = cast("pa.Int64Array", pc.divide(k, lit(num_cols)))
+    col_idx = cast("pa.Int64Array", pc.subtract(k, pc.multiply(row_idx, lit(num_cols))))
+    i_rep = pc.take(i, row_idx)
+    j_tile = pc.take(j, col_idx)
+    indices = cast("pa.Int64Array", pc.add(pc.multiply(j_tile, lit(n)), i_rep))
+    interleaved = pc.take(pa.concat_arrays(arrays), indices)
+    offsets = cast("pa.Int64Array", arange(0, n * num_cols + 1, num_cols))
+    # Typing suggests only allow Int32Array is valid for offsets, but Int64Array is fine.
+    return pa.chunked_array([pa.ListArray.from_arrays(offsets, interleaved)])  # type: ignore[call-overload]
+
+
 def chunked_array(
     arr: ArrayOrScalar | list[Iterable[Any]], dtype: pa.DataType | None = None, /
 ) -> ChunkedArrayAny:
     if isinstance(arr, pa.ChunkedArray):
         return arr
-    if isinstance(arr, list):
-        return pa.chunked_array(arr, dtype)
-    return pa.chunked_array([arr], dtype)
+    # NOTE: stubs only overload on *concrete* types, so a dynamic `pa.DataType` never matches
+    ca: Incomplete = pa.chunked_array
+    return ca(arr, dtype) if isinstance(arr, list) else ca([arr], dtype)
 
 
 def nulls_like(n: int, series: ArrowSeries) -> ArrayAny:
@@ -155,6 +191,8 @@ def native_non_extension_to_narwhals_dtype(dtype: pa.DataType, version: Version)
         return dtypes.Float64()
     if pa.types.is_float32(dtype):
         return dtypes.Float32()
+    if pa.types.is_float16(dtype):
+        return dtypes.Float16()
     # bug in coverage? it shows `31->exit` (where `31` is currently the line number of
     # the next line), even though both when the if condition is true and false are covered
     if (  # pragma: no cover
@@ -200,6 +238,7 @@ dtypes = Version.MAIN.dtypes
 NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.Float64: pa.float64(),
     dtypes.Float32: pa.float32(),
+    dtypes.Float16: pa.float16(),
     dtypes.Binary: pa.binary(),
     dtypes.String: pa.string(),
     dtypes.Boolean: pa.bool_(),
@@ -215,7 +254,7 @@ NW_TO_PA_DTYPES: Mapping[type[DType], pa.DataType] = {
     dtypes.UInt32: pa.uint32(),
     dtypes.UInt64: pa.uint64(),
 }
-UNSUPPORTED_DTYPES = (dtypes.Object,)
+UNSUPPORTED_DTYPES = (dtypes.Object, dtypes.Enum)
 
 
 def narwhals_to_native_dtype(dtype: IntoDType, version: Version) -> pa.DataType:
@@ -490,15 +529,6 @@ def concat_tables(
 class ArrowSeriesNamespace(EagerSeriesNamespace["ArrowSeries", "ChunkedArrayAny"]): ...
 
 
-def arange(start: int, end: int, step: int) -> ArrayAny:
-    if BACKEND_VERSION < (21,):
-        import numpy as np  # ignore-banned-import
-
-        return pa.array(np.arange(start, end, step))
-    # NOTE: Added in https://github.com/apache/arrow/pull/46778
-    return pa.arange(start, end, step)  # type: ignore[attr-defined]
-
-
 def list_agg(
     array: ChunkedArrayAny,
     func: Literal["min", "max", "mean", "approximate_median", "sum"],
@@ -509,7 +539,7 @@ def list_agg(
         if func == "sum"
         else ("values", func)
     )
-    agg = pa.array(
+    agg = (
         pa.Table.from_arrays(
             [pc.list_flatten(array), pc.list_parent_indices(array)],
             names=["values", "offsets"],
@@ -518,8 +548,9 @@ def list_agg(
         .aggregate([aggregation])
         .sort_by("offsets")
         .column(f"values_{func}")
+        .combine_chunks()
     )
-    non_empty_mask = pa.array(pc.not_equal(pc.list_value_length(array), lit(0)))
+    non_empty_mask = pc.not_equal(pc.list_value_length(array.combine_chunks()), lit(0))
     if func == "sum":
         # Make sure sum of empty list is 0.
         base_array = pc.if_else(non_empty_mask.is_null(), None, 0)
@@ -528,12 +559,146 @@ def list_agg(
     return pa.chunked_array(
         [
             pc.replace_with_mask(
-                base_array,
-                non_empty_mask.fill_null(False),  # type: ignore[arg-type]
-                agg,
+                base_array, cast("pa.BooleanArray", non_empty_mask.fill_null(False)), agg
             )
         ]
     )
+
+
+_LIST_BLOCK_VALUES = 1 << 21
+_LIST_MIN_BLOCK_VALUES = _LIST_BLOCK_VALUES >> 4
+
+
+def list_contains(array: ChunkedArrayAny, item: NonNestedLiteral) -> ChunkedArrayAny:
+    """Whether each list holds `item`, or a null element if `item` is None.
+
+    A running count of matches over the flattened values changes within a list iff the
+    list holds a match. That keeps this linear, where a group-by per list would sort.
+    """
+    list_type = cast("pa.ListType[Any] | pa.LargeListType[Any]", array.type)
+    try:
+        # Probe a single null, so that a mismatched `item` raises even without rows.
+        # Not an empty array: pyarrow skips its timezone check on those.
+        _item_matches(pa.nulls(1, list_type.value_type), item)
+    except (pa.ArrowInvalid, pa.ArrowNotImplementedError, pa.ArrowTypeError) as exc:
+        msg = (
+            f"Unable to compare item of type {type(item)} with list of type {list_type}."
+        )
+        raise InvalidOperationError(msg) from exc
+    blocks = [_list_block_contains(block, item) for block in _list_blocks(array)]
+    return pa.chunked_array(blocks, pa.bool_())
+
+
+def _item_matches(values: ArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    if item is None:
+        return pc.is_null(values)
+    if isinstance(item, float) and math.isnan(item):
+        return pc.is_nan(values)  # NaN matches NaN, as in Polars.
+    return pc.equal(values, lit(item))
+
+
+def _list_blocks(array: ChunkedArrayAny) -> Iterator[ListArrayAny]:
+    """Split `array` into runs of whole lists, of up to about `_LIST_BLOCK_VALUES` values.
+
+    That keeps the intermediates in cache. Large chunks are sliced without copying, and
+    chunks under `_LIST_MIN_BLOCK_VALUES` values are combined until a run reaches it, to
+    amortise the ~35us of pyarrow calls per block. Combining every chunk could overflow
+    32-bit list offsets.
+    """
+    run: list[ListArrayAny] = []
+    run_values = 0
+    for chunk in cast("list[ListArrayAny]", array.chunks):
+        if not len(chunk):
+            continue
+        n_values = chunk.offsets[-1].as_py() - chunk.offsets[0].as_py()
+        is_small = n_values < _LIST_MIN_BLOCK_VALUES
+        if run and (not is_small or run_values >= _LIST_MIN_BLOCK_VALUES):
+            yield pa.concat_arrays(run) if len(run) > 1 else run[0]
+            run, run_values = [], 0
+        if is_small:
+            run.append(chunk)
+            run_values += n_values
+        else:
+            step = max(1, len(chunk) * _LIST_BLOCK_VALUES // n_values)
+            yield from (chunk.slice(start, step) for start in range(0, len(chunk), step))
+    if run:
+        yield pa.concat_arrays(run) if len(run) > 1 else run[0]
+
+
+def _list_block_contains(block: ListArrayAny, item: NonNestedLiteral) -> pa.BooleanArray:
+    offsets = block.offsets
+    first = offsets[0].as_py()
+    values = block.values.slice(first, offsets[-1].as_py() - first)
+    # A plain `int` would widen int32 offsets to int64, which is slower to `take`.
+    offsets = pc.subtract(offsets, lit(first, offsets.type))  # type: ignore[arg-type]
+    ends, starts = offsets.slice(1), offsets.slice(0, len(block))
+
+    matches = _item_matches(values, item)
+
+    # Counting modulo 2^k stays exact within lists shorter than 2^k, so the narrowest
+    # type that fits the longest list is enough.
+    longest = pc.max(pc.subtract(ends, starts)).as_py()
+    count_type = next(
+        t
+        for t in (pa.uint8(), pa.uint16(), pa.uint32(), pa.uint64())
+        if longest < 1 << t.bit_width
+    )
+    # `matches_before[i]` counts the matches before flattened position `i`.
+    matches = pa.concat_arrays([pa.array([False]), matches.fill_null(False)])
+    matches_before = pc.cumulative_sum(matches.cast(count_type))
+    contains = pc.not_equal(matches_before.take(ends), matches_before.take(starts))
+    return (
+        contains
+        if block.null_count == 0
+        else pc.if_else(block.is_valid(), contains, None)
+    )
+
+
+def sortable(array: ChunkedArrayAny, /) -> ChunkedArrayAny:
+    """Return an array which orders like `array`, but with a type `pyarrow` can sort.
+
+    `pyarrow` has no ordering kernels for `dictionary` types
+    (https://github.com/apache/arrow/issues/29887), so replace the dictionary indices
+    with the rank of the value they point at. Ranking the (typically small) dictionary
+    is much cheaper than decoding every row, and gives the lexicographic order which
+    `polars` and `pandas` use for (unordered) categoricals.
+    """
+    if not is_dictionary(array.type):
+        return array
+    # NOTE: stubs type the chunks as `Array`, which is missing `DictionaryArray` members
+    chunks = cast("list[DictionaryArrayAny]", array.unify_dictionaries().chunks)
+    if not chunks:
+        return chunked_array([[]], pa.uint64())
+    dictionary = chunks[0].dictionary
+    ranks = pc.rank(dictionary, sort_keys="ascending", tiebreaker="min")
+    if dictionary.null_count:
+        # NOTE: a null *value* must stay null, `rank` would give it a (largest) rank.
+        ranks = pc.if_else(pc.is_null(dictionary), lit(None, ranks.type), ranks)
+    return pa.chunked_array([ranks.take(chunk.indices) for chunk in chunks])
+
+
+def sortable_table(table: pa.Table, keys: Iterable[str], /) -> pa.Table:
+    """Replace every `dictionary`-typed column named in `keys` with `sortable` ranks."""
+    for name in keys:
+        index = table.schema.get_field_index(name)
+        if index == -1:  # pragma: no cover
+            msg = f"Column '{name}' not found in table."
+            raise ColumnNotFoundError(msg)
+        if is_dictionary(table.field(index).type):
+            table = table.set_column(index, name, sortable(table.column(index)))
+    return table
+
+
+def sort_indices(
+    table: pa.Table, sorting: Sequence[tuple[str, Order]], null_placement: NullPlacement
+) -> pa.UInt64Array:
+    """`pc.sort_indices`, hiding how `null_placement` must be passed per version."""
+    if BACKEND_VERSION < (25,):  # pragma: no cover
+        return pc.sort_indices(table, sort_keys=sorting, null_placement=null_placement)
+    # `null_placement` in `SortOptions` is deprecated since 25.0.0;
+    # it must be specified per sort key instead.
+    keyed = [(name, order, null_placement) for name, order in sorting]
+    return pc.sort_indices(table, sort_keys=keyed)  # type: ignore[arg-type]
 
 
 def list_sort(
@@ -553,14 +718,13 @@ def list_sort(
     exploded = pa.Table.from_arrays(
         [pc.list_flatten(array), pc.list_parent_indices(array)], names=[v, idx]
     )
-    sorted_indices = pc.sort_indices(
-        exploded,
-        sort_keys=[(idx, "ascending"), (v, sort_direction)],
-        null_placement=nulls_position,
+    sorted_indices = sort_indices(
+        exploded, [(idx, "ascending"), (v, sort_direction)], nulls_position
     )
+
     offsets = not_sorted_part.column(v).combine_chunks().offsets  # type: ignore[attr-defined]
     sorted_imploded = pa.ListArray.from_arrays(
-        offsets, pa.array(exploded.take(sorted_indices).column(v))
+        offsets, exploded.take(sorted_indices).column(v).combine_chunks()
     )
     imploded_by_idx = pa.Table.from_arrays(
         [not_sorted_part.column(idx), sorted_imploded], names=[idx, v]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from functools import partial
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,20 @@ if TYPE_CHECKING:
 
 
 class SparkLikeExprStringNamespace(SQLExprStringNamespace["SparkLikeExpr"]):
+    def _strip_chars(self, characters: str, *, start: bool) -> SparkLikeExpr:
+        escaped = re.escape(characters)
+        pattern = rf"^[{escaped}]+" if start else rf"[{escaped}]+$"
+        F = self.compliant._F
+        return self.compliant._with_elementwise(
+            lambda expr: F.regexp_replace(expr, pattern, "")
+        )
+
+    def strip_chars_start(self, characters: str) -> SparkLikeExpr:
+        return self._strip_chars(characters, start=True)
+
+    def strip_chars_end(self, characters: str) -> SparkLikeExpr:
+        return self._strip_chars(characters, start=False)
+
     def to_datetime(self, format: str | None) -> SparkLikeExpr:
         F = self.compliant._F
         if not format:

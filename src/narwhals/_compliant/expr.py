@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from itertools import islice
 from operator import methodcaller
 from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol
 
@@ -13,7 +14,6 @@ from narwhals._compliant.any_namespace import (
     StructNamespace,
 )
 from narwhals._compliant.column import CompliantColumn
-from narwhals._compliant.namespace import CompliantNamespace
 from narwhals._compliant.typing import (
     AliasName,
     AliasNames,
@@ -27,7 +27,12 @@ from narwhals._compliant.typing import (
     LazyExprT,
     NativeExprT,
 )
-from narwhals._utils import _StoresCompliant, not_implemented, qualified_type_name
+from narwhals._utils import (
+    _resolve_sample_size,
+    _StoresCompliant,
+    not_implemented,
+    qualified_type_name,
+)
 from narwhals.dependencies import is_numpy_array, is_numpy_scalar
 from narwhals.exceptions import MultiOutputExpressionError
 
@@ -38,7 +43,7 @@ if TYPE_CHECKING:
 
     from narwhals._compliant.namespace import CompliantNamespace, EagerNamespace
     from narwhals._compliant.series import CompliantSeries
-    from narwhals._compliant.typing import AliasNames, EvalNames, EvalSeries
+    from narwhals._compliant.typing import EvalNames, EvalSeries
     from narwhals._expression_parsing import ExprMetadata
     from narwhals._typing import NoDefault
     from narwhals._utils import Implementation, Version, _LimitedContext
@@ -121,6 +126,12 @@ class CompliantExpr(
         context: _LimitedContext,
     ) -> Self: ...
     def broadcast(self) -> Self: ...
+    def _is_close_float_promote(self) -> Self:
+        # Default float promotion for `is_close`: equivalent to `self + 0.0`, letting
+        # each backend pick its float type (broadcast mirrors the node-evaluation path).
+        # Polars overrides this to align old versions (see `PolarsExpr`).
+        plx = self.__narwhals_namespace__()
+        return self + plx.lit(0.0, None).broadcast()
 
     # NOTE: `polars`
     def alias(self, name: str) -> Self: ...
@@ -219,7 +230,7 @@ class DepthTrackingExpr(
         Elementary expressions are the only ones supported properly in
         pandas, PyArrow, and Dask.
         """
-        return len(list(self._metadata.op_nodes_reversed())) <= 2
+        return len(list(islice(self._metadata.op_nodes_reversed(), 3))) <= 2
 
 
 class EagerExpr(
@@ -641,8 +652,30 @@ class EagerExpr(
         with_replacement: bool,
         seed: int | None,
     ) -> Self:
-        return self._reuse_series(
-            "sample", n=n, fraction=fraction, with_replacement=with_replacement, seed=seed
+        # `n`/`fraction` are resolved per output series here, rather than in the public
+        # layer, because height is only known at evaluation time.
+        _resolve_sample_size_from_height = partial(
+            _resolve_sample_size,
+            n=n,
+            fraction=fraction,
+            with_replacement=with_replacement,
+        )
+
+        def func(df: EagerDataFrameT) -> Sequence[EagerSeriesT]:
+            return [
+                series.sample(
+                    n=_resolve_sample_size_from_height(height=series.len()),
+                    with_replacement=with_replacement,
+                    seed=seed,
+                )
+                for series in self(df)
+            ]
+
+        return self._from_callable(
+            func,
+            evaluate_output_names=self._evaluate_output_names,
+            alias_output_names=self._alias_output_names,
+            context=self,
         )
 
     def alias(self, name: str) -> Self:
@@ -1025,8 +1058,10 @@ class EagerExprListNamespace(
     def len(self) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "len")
 
-    def unique(self) -> EagerExprT:
-        return self.compliant._reuse_series_namespace("list", "unique")
+    def unique(self, *, maintain_order: bool) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "list", "unique", maintain_order=maintain_order
+        )
 
     def contains(self, item: NonNestedLiteral) -> EagerExprT:
         return self.compliant._reuse_series_namespace("list", "contains", item=item)
@@ -1132,6 +1167,16 @@ class EagerExprStringNamespace(
     def strip_chars(self, characters: str | None) -> EagerExprT:
         return self.compliant._reuse_series_namespace(
             "str", "strip_chars", characters=characters
+        )
+
+    def strip_chars_start(self, characters: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "strip_chars_start", characters=characters
+        )
+
+    def strip_chars_end(self, characters: str) -> EagerExprT:
+        return self.compliant._reuse_series_namespace(
+            "str", "strip_chars_end", characters=characters
         )
 
     def starts_with(self, prefix: EagerExprT) -> EagerExprT:
