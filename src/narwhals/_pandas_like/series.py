@@ -406,11 +406,23 @@ class PandasLikeSeries(EagerSeries[Any]):
         result = ser.__class__(data, name=ser.name, index=ser.index).loc[ser]
         return self._with_native(result)
 
-    def arg_min(self) -> int:
-        return self.native.argmin()
+    def arg_min(self) -> int | None:
+        return self._arg_extremum(self.native.argmin)
 
-    def arg_max(self) -> int:
-        return self.native.argmax()
+    def arg_max(self) -> int | None:
+        return self._arg_extremum(self.native.argmax)
+
+    def _arg_extremum(self, func: Callable[[], int]) -> int | None:
+        if self._implementation.is_pandas() and self._backend_version >= (3,):
+            # pandas>=3 raises for empty and all-null input on every dtype.
+            try:
+                return func()
+            except ValueError:
+                if self.native.count():
+                    raise
+                return None
+        # NOTE: pandas<3 returns -1 (and warns) for all-NaN float and object input.
+        return func() if self.native.count() else None  # pragma: no cover
 
     # Binary comparisons
 
