@@ -279,9 +279,12 @@ class CompliantSelector(
 
             def series(df: FrameT) -> Sequence[SeriesOrExprT]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
-                by_name = dict(zip(lhs_names, self(df), strict=True))
-                by_name.update(zip(rhs_names, other(df), strict=True))
-                return [by_name[name] for name in df.columns if name in by_name]
+                selected = {*lhs_names, *rhs_names}
+                return [
+                    ser
+                    for ser, name in self.selectors._iter_columns_names(df)
+                    if name in selected
+                ]
 
             def names(df: FrameT) -> Sequence[str]:
                 lhs_names, rhs_names = _eval_lhs_rhs(df, self, other)
