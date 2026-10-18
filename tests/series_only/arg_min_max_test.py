@@ -32,8 +32,8 @@ def test_arg_min_max_series(
     request: pytest.FixtureRequest,
 ) -> None:
     if "cudf" in str(constructor_eager):
-        # not implemented yet
-        request.applymarker(pytest.mark.xfail)
+        reason = "not implemented"
+        request.applymarker(pytest.mark.xfail(reason=reason))
     series = nw.from_native(constructor_eager(data), eager_only=True)[col]
     series = nw.maybe_set_index(series, index=[1, 0, 9, 4])  # type: ignore[arg-type]
     assert_equal_data({col: [series.arg_min()]}, {col: [expected_min]})
