@@ -53,9 +53,7 @@ class DuckDBExprStringNamespace(SQLExprStringNamespace["DuckDBExpr"]):
         from narwhals._duckdb.utils import lambda_expr
 
         def _to_titlecase(expr: Expression) -> Expression:
-            extract_expr = F(
-                "regexp_extract_all", F("lower", expr), lit(r"[a-z]*[^a-z]*")
-            )
+            extract_expr = F("regexp_extract_all", F("lower", expr), lit(r"\p{L}*\P{L}*"))
             elem = col("_")
             capitalize = lambda_expr(
                 elem,
