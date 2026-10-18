@@ -58,5 +58,7 @@ def test_arg_extremum_preserves_comparison_errors(method: str) -> None:
     native = pd.Series([np.array([1, 2]), np.array([3, 4])], dtype=object)
     series = nw.from_native(native, series_only=True)
 
-    with pytest.raises(ValueError, match="truth value of an array"):
+    # pandas<2.1 raises `TypeError` for this dtype, newer pandas `ValueError`.
+    msg = "truth value of an array|not allowed for this dtype"
+    with pytest.raises((TypeError, ValueError), match=msg):
         getattr(series, method)()
