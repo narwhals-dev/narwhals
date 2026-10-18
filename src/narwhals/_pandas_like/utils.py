@@ -379,7 +379,6 @@ def iter_dtype_backends(
     return (get_dtype_backend(dtype, implementation) for dtype in dtypes)
 
 
-@functools.lru_cache(maxsize=16)
 def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 

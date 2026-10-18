@@ -275,6 +275,22 @@ def test_pandas_fixed_offset_1302() -> None:
         pass
 
 
+def test_unhashable_categorical_dtype_4089() -> None:
+    pytest.importorskip("pandas")
+    import pandas as pd
+
+    from narwhals._pandas_like.utils import native_to_narwhals_dtype
+    from narwhals._utils import Implementation, Version
+
+    # Mimics cuDF's `CategoricalDtype`, which defines `__eq__` but not `__hash__`.
+    class UnhashableCategoricalDtype(pd.CategoricalDtype):
+        __hash__ = None  # type: ignore[assignment]
+
+    dtype = UnhashableCategoricalDtype(["a", "b"])
+    result = native_to_narwhals_dtype(dtype, Version.MAIN, Implementation.PANDAS)
+    assert result == nw.Categorical
+
+
 def from_native_collect_schema(native: IntoFrame) -> nw.Schema:
     return nw.from_native(native).collect_schema()
 
