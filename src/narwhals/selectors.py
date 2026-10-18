@@ -56,6 +56,21 @@ class Selector(Expr):
             ExprNode(ExprKind.ELEMENTWISE, "__and__", exprs=(other,), str_as_lit=True)
         )
 
+    def __sub__(self, other: Any) -> Expr:  # type: ignore[override]
+        if isinstance(other, Selector):
+            return self._append_node(
+                ExprNode(
+                    ExprKind.ELEMENTWISE,
+                    "__sub__",
+                    exprs=(other,),
+                    str_as_lit=True,
+                    allow_multi_output=True,
+                )
+            )
+        return self._to_expr()._append_node(
+            ExprNode(ExprKind.ELEMENTWISE, "__sub__", exprs=(other,), str_as_lit=True)
+        )
+
     def __rsub__(self, other: Any) -> NoReturn:
         raise NotImplementedError
 
