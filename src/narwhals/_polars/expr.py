@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 import polars as pl
+from polars.selectors import is_selector
 
 from narwhals._polars.utils import (
     BACKEND_VERSION,
@@ -282,7 +283,11 @@ class PolarsExpr:
         return self._with_native(self.native.__and__(extract_native(other)))
 
     def __or__(self, other: PolarsExpr) -> Self:
-        return self._with_native(self.native.__or__(extract_native(other)))
+        native = self.native.__or__(extract_native(other))
+        if BACKEND_VERSION < (1,) and is_selector(native):  # pragma: no cover
+            # Polars < 1.0 orders selector unions left to right instead of by schema.
+            native = pl.selectors.all() & native
+        return self._with_native(native)
 
     def __add__(self, other: Any) -> Self:
         return self._with_native(self.native.__add__(extract_native(other)))
