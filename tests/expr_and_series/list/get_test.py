@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import PANDAS_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -19,7 +20,7 @@ def test_get_expr(
         request.applymarker(pytest.mark.xfail)
 
     if any(backend in str(constructor) for backend in ("pandas", "dask")):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -41,7 +42,7 @@ def test_get_series(
         request.applymarker(pytest.mark.xfail)
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -66,7 +67,7 @@ def test_get_expr_negative_index(constructor: Constructor) -> None:
     index = -1
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -83,7 +84,7 @@ def test_get_series_negative_index(constructor_eager: ConstructorEager) -> None:
     index = -1
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -100,7 +101,7 @@ def test_get_expr_non_int_index(constructor: Constructor) -> None:
     index = "index"
 
     if "pandas" in str(constructor):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 
@@ -117,7 +118,7 @@ def test_get_series_non_int_index(constructor_eager: ConstructorEager) -> None:
     index = "index"
 
     if "pandas" in str(constructor_eager):
-        if PANDAS_VERSION < (2, 2):
+        if PANDAS_VERSION < PkgVersion("2.2"):
             pytest.skip()
         pytest.importorskip("pyarrow")
 

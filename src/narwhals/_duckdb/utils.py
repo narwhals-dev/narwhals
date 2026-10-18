@@ -200,11 +200,15 @@ def native_to_narwhals_dtype(
 
 
 def fetch_rel_time_zone(rel: duckdb.DuckDBPyRelation) -> str:
-    result = rel.query(
-        "duckdb_settings()", "select value from duckdb_settings() where name = 'TimeZone'"
-    ).fetchone()
-    assert result is not None  # noqa: S101
-    return result[0]  # type: ignore[no-any-return]
+    result = (
+        rel.query(
+            "duckdb_settings()",
+            "select value from duckdb_settings() where name = 'TimeZone'",
+        )
+        .limit(1)
+        .fetchall()
+    )
+    return result[0][0]  # type: ignore[no-any-return]
 
 
 @lru_cache(maxsize=16)
@@ -414,6 +418,7 @@ def _floordiv(dividend: Expression, divisor: Expression) -> Expression:
 
 
 _BINARY_OPS: Mapping[str, Callable[[Expression, Expression], Expression]] = {
+    "divide": operator.truediv,
     "floordiv": _floordiv,
     "and": operator.and_,
 }

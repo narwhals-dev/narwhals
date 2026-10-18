@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import DUCKDB_VERSION, Constructor, ConstructorEager, assert_equal_data
@@ -44,7 +45,7 @@ def test_skew_expr(
     if "ibis" in str(constructor):
         # https://github.com/ibis-project/ibis/issues/11176
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
 
     if "pyspark" in str(constructor) and int(request.node.callspec.id[-1]) == 0:

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION
@@ -131,7 +132,7 @@ def test_expr_aggregation_keeps_dtype(
     *,
     empty: bool,
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip(reason="`over(order_by=...)` requires Polars 1.10")
     name = str(constructor_eager)
     if any(x in name for x in ("pandas", "modin", "cudf")) and (
