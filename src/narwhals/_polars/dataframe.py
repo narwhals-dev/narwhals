@@ -31,7 +31,7 @@ from narwhals._utils import (
     requires,
 )
 from narwhals.dependencies import is_numpy_array_1d
-from narwhals.exceptions import ColumnNotFoundError
+from narwhals.exceptions import ColumnNotFoundError, ShapeError
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
@@ -442,6 +442,23 @@ class PolarsDataFrame(PolarsBaseFrame[pl.DataFrame]):
 
     def __len__(self) -> int:
         return len(self.native)
+
+    def with_columns(self, *exprs: PolarsExpr) -> Self:
+        result: Self = self.__getattr__("with_columns")(*exprs)
+        if exprs and self._backend_version < (2,) and self.native.shape == (0, 0):
+            # Polars < 2 lets a zero-width frame take the height of its new columns.
+            # Polars 2 keeps height 0: scalar-like columns stay empty, longer ones raise.
+            non_scalar = self.select(
+                *(expr for expr in exprs if not expr._metadata.is_scalar_like)
+            ).native
+            if non_scalar.width and non_scalar.height:
+                msg = (
+                    f"Series '{non_scalar.columns[0]}' has length {non_scalar.height}, "
+                    "which doesn't match the DataFrame height of 0"
+                )
+                raise ShapeError(msg)
+            return result.head(0)
+        return result
 
     def __getattr__(self, attr: str) -> Any:
         if attr not in INHERITED_METHODS:  # pragma: no cover
