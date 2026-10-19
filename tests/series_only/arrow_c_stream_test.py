@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, NoReturn
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import POLARS_VERSION, PYARROW_VERSION
@@ -22,7 +23,10 @@ def _poison(*_: Any) -> NoReturn:
 
 
 @pytest.mark.skipif(
-    PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+    POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
+)
+@pytest.mark.skipif(
+    PYARROW_VERSION < PkgVersion("16"), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test() -> None:
     s = nw.from_native(pl.Series([1, 2, 3]), series_only=True)
@@ -32,7 +36,10 @@ def test_arrow_c_stream_test() -> None:
 
 
 @pytest.mark.skipif(
-    PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+    POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
+)
+@pytest.mark.skipif(
+    PYARROW_VERSION < PkgVersion("16"), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
     # "poison" the dunder method to make sure it actually got called above
@@ -42,9 +49,11 @@ def test_arrow_c_stream_test_invalid(monkeypatch: pytest.MonkeyPatch) -> None:
         pa.chunked_array(s)
 
 
-@pytest.mark.skipif(POLARS_VERSION < (1, 3), reason="too old for pycapsule in Polars")
 @pytest.mark.skipif(
-    PYARROW_VERSION < (16, 0, 0), reason="too old for pycapsule in PyArrow"
+    POLARS_VERSION < PkgVersion("1.3"), reason="too old for pycapsule in Polars"
+)
+@pytest.mark.skipif(
+    PYARROW_VERSION < PkgVersion("16"), reason="too old for pycapsule in PyArrow"
 )
 def test_arrow_c_stream_test_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # Check that fallback to PyArrow works

@@ -181,8 +181,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return cls.from_native(native, context=context, name=name)
 
     def _from_scalar(self, value: Any) -> Self:
-        if hasattr(value, "as_py"):
-            value = value.as_py()
+        if isinstance(value, pa.Scalar):
+            if isinstance(value, pa.ExtensionScalar) and self._backend_version < (24,):
+                # `pa.array` accepts extension scalars only from pyarrow 24.
+                return super()._from_scalar(value.as_py())
+            # `as_py` drops the type, so nulls become `pa.null()` and narrow types widen.
+            return self._with_native(pa.array([value]))
         return super()._from_scalar(value)
 
     @staticmethod
@@ -331,12 +335,12 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
         return self._with_native(self.native.filter(other_native))
 
     def first(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
-        result = self.native[0] if len(self.native) else None
+        result = self.native[0] if len(self.native) else nulls_like(1, self)[0]
         return maybe_extract_py_scalar(result, _return_py_scalar)
 
     def last(self, *, _return_py_scalar: bool = True) -> PythonLiteral:
         ca = self.native
-        result = ca[height - 1] if (height := len(ca)) else None
+        result = ca[height - 1] if (height := len(ca)) else nulls_like(1, self)[0]
         return maybe_extract_py_scalar(result, _return_py_scalar)
 
     def mean(self, *, _return_py_scalar: bool = True) -> float:
@@ -357,13 +361,18 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def max(self, *, _return_py_scalar: bool = True) -> Any:
         return maybe_extract_py_scalar(pc.max(self.native), _return_py_scalar)
 
-    def arg_min(self, *, _return_py_scalar: bool = True) -> int:
-        index_min = pc.index(self.native, pc.min(self.native))
-        return maybe_extract_py_scalar(index_min, _return_py_scalar)
+    def arg_min(self, *, _return_py_scalar: bool = True) -> int | None:
+        return self._arg_extremum(pc.min, _return_py_scalar=_return_py_scalar)
 
-    def arg_max(self, *, _return_py_scalar: bool = True) -> int:
-        index_max = pc.index(self.native, pc.max(self.native))
-        return maybe_extract_py_scalar(index_max, _return_py_scalar)
+    def arg_max(self, *, _return_py_scalar: bool = True) -> int | None:
+        return self._arg_extremum(pc.max, _return_py_scalar=_return_py_scalar)
+
+    def _arg_extremum(
+        self, func: Callable[[ChunkedArrayAny], ScalarAny], *, _return_py_scalar: bool
+    ) -> int | None:
+        value = func(self.native)
+        result = pc.index(self.native, value) if value.is_valid else lit(None, pa.int64())
+        return maybe_extract_py_scalar(result, _return_py_scalar)
 
     def sum(self, *, _return_py_scalar: bool = True) -> float:
         return maybe_extract_py_scalar(
@@ -405,7 +414,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def skew(self, *, _return_py_scalar: bool = True) -> float | None:
         ser_not_null = self.native.drop_null()
         if len(ser_not_null) == 0:
-            return None
+            return maybe_extract_py_scalar(lit(None, pa.float64()), _return_py_scalar)
         if len(ser_not_null) == 1:
             return float("nan")
         if len(ser_not_null) == 2:
@@ -419,7 +428,7 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def kurtosis(self, *, _return_py_scalar: bool = True) -> float | None:
         ser_not_null = self.native.drop_null()
         if len(ser_not_null) == 0:
-            return None
+            return maybe_extract_py_scalar(lit(None, pa.float64()), _return_py_scalar)
         if len(ser_not_null) == 1:
             return float("nan")
         m = pc.subtract(ser_not_null, pc.mean(ser_not_null))
@@ -1102,7 +1111,8 @@ class ArrowSeries(EagerSeries["ChunkedArrayAny"]):
     def any_value(
         self, *, ignore_nulls: bool, _return_py_scalar: bool = True
     ) -> PythonLiteral:
-        return self.drop_nulls().first() if ignore_nulls else self.first()
+        ser = self.drop_nulls() if ignore_nulls else self
+        return ser.first(_return_py_scalar=_return_py_scalar)
 
     @property
     def dt(self) -> ArrowSeriesDateTimeNamespace:

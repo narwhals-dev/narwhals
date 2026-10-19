@@ -375,7 +375,7 @@ def native_get_categories(native: pl.Series) -> pl.Series:
     dtype = native.dtype
     if isinstance(dtype, pl.Enum):
         return dtype.categories
-    return native.unique(maintain_order=True).drop_nulls().cast(pl.String)
+    return native.drop_nulls().unique(maintain_order=True).cast(pl.String)
 
 
 class PolarsCatNamespace(PolarsAnyNamespace[CompliantT, NativeT_co]):

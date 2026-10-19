@@ -466,7 +466,8 @@ class Expr:
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                where N represents the number of non-null elements. By default ddof is 1.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -490,7 +491,8 @@ class Expr:
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                     where N represents the number of non-null elements. By default ddof is 1.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null. By default ddof is 1.
 
         Examples:
             >>> import pandas as pd
@@ -2552,10 +2554,10 @@ class Expr:
             |------------------|
             |  pyarrow.Table   |
             |  a: int64        |
-            |  b: null         |
+            |  b: string       |
             |  ----            |
             |  a: [[1]]        |
-            |  b: [1 nulls]    |
+            |  b: [[null]]     |
             └──────────────────┘
 
             >>> df.group_by("a").agg(nw.col("b").any_value(ignore_nulls=True))

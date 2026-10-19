@@ -6,6 +6,7 @@ from typing import Any
 import hypothesis.strategies as st
 import pytest
 from hypothesis import HealthCheck, given, settings
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -65,7 +66,7 @@ def test_rolling_var_expr(
     kwargs = kwargs_and_expected["kwargs"]
     expected = kwargs_and_expected["expected"]
 
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         # TODO(FBruzzesi): Dask is raising the following error:
         # NotImplementedError: Partition size is less than overlapping window size.
         # Try using ``df.repartition`` to increase the partition size.
@@ -84,7 +85,7 @@ def test_rolling_var_expr(
 def test_rolling_var_series(
     constructor_eager: ConstructorEager, kwargs_and_expected: dict[str, Any]
 ) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip(reason="`rolling_var` requires Polars 1.0")
 
     name = kwargs_and_expected["name"]
@@ -98,7 +99,7 @@ def test_rolling_var_series(
 
 
 def test_rolling_var_series_with_nulls(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip(reason="`rolling_var` requires Polars 1.0")
     data = {"a": [1.0, None, 2.0, None, 4.0]}
     df = nw.from_native(constructor_eager(data), eager_only=True)
@@ -110,7 +111,7 @@ def test_rolling_var_series_with_nulls(constructor_eager: ConstructorEager) -> N
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @pytest.mark.slow
-@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
+@pytest.mark.skipif(POLARS_VERSION < PkgVersion("1"), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # noqa: FBT001
@@ -143,7 +144,7 @@ def test_rolling_var_hypothesis(center: bool, values: list[float]) -> None:  # n
 @given(center=st.booleans(), values=st.lists(st.floats(-10, 10), min_size=5, max_size=10))
 @settings(suppress_health_check=[HealthCheck.too_slow])
 @pytest.mark.slow
-@pytest.mark.skipif(POLARS_VERSION < (1,), reason="different null behavior")
+@pytest.mark.skipif(POLARS_VERSION < PkgVersion("1"), reason="different null behavior")
 @pytest.mark.filterwarnings("ignore:.*is_sparse is deprecated:DeprecationWarning")
 @pytest.mark.filterwarnings("ignore:.*:narwhals.exceptions.NarwhalsUnstableWarning")
 def test_rolling_var_hypothesis_polars(center: bool, values: list[float]) -> None:  # noqa: FBT001
@@ -209,11 +210,13 @@ def test_rolling_var_expr_lazy_ungrouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
-    if "polars" in str(constructor) and POLARS_VERSION == (1, 24, 0) and window_size == 2:
+    if "polars" in str(constructor) and (
+        POLARS_VERSION == PkgVersion("1.24") and window_size == 2
+    ):
         # Windows following a null return NaN.
         reason = "https://github.com/pola-rs/polars/issues/21758"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -278,8 +281,8 @@ def test_rolling_var_expr_lazy_grouped(
     center: bool,
     ddof: int,
 ) -> None:
-    if ("polars" in str(constructor) and POLARS_VERSION < (1, 9)) or (
-        "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)
+    if ("polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")) or (
+        "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")
     ):
         pytest.skip(reason="`over(order_by=...)` requires Polars 1.9 and DuckDB 1.3")
     if any(x in str(constructor) for x in ("dask", "pyarrow_table")):

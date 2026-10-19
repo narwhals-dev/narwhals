@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -53,10 +54,10 @@ def test_fill_null_scalar_receiver(
 
 
 def test_fill_null_w_aggregate(constructor: Constructor) -> None:
-    if "dask" in str(constructor) and DASK_VERSION < (2024, 12):
+    if "dask" in str(constructor) and DASK_VERSION < PkgVersion("2024.12"):
         # Bug in old version of Dask.
         pytest.skip()
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [0.5, None, 2.0, 3.0, 4.5], "b": ["xx", "yy", "zz", None, "yy"]}
     df = nw.from_native(constructor(data))
@@ -117,8 +118,8 @@ def test_fill_null_exceptions(constructor: Constructor) -> None:
 def test_fill_null_strategies_with_limit_as_none(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 9)
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")) or (
+        "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")
     ):
         pytest.skip(reason="`order_by` requires Polars 1.9, `strategy` DuckDB 1.3")
 
@@ -204,8 +205,8 @@ def test_fill_null_strategies_with_limit_as_none(
 def test_fill_null_limits(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 9)
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")) or (
+        "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")
     ):
         pytest.skip(reason="`order_by` requires Polars 1.9, `strategy` DuckDB 1.3")
 
@@ -410,8 +411,8 @@ def test_fill_null_strategies_with_partition_by(
     if any(x in str(constructor) for x in ("pyarrow_table", "dask", "ibis")):
         request.applymarker(pytest.mark.xfail)
 
-    if ("duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3)) or (
-        "polars" in str(constructor) and POLARS_VERSION < (1, 9)
+    if ("duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3")) or (
+        "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9")
     ):
         pytest.skip(reason="`order_by` requires Polars 1.9, `strategy` DuckDB 1.3")
     if "modin" in str(constructor):
@@ -473,7 +474,7 @@ def test_fill_null_expr_limits(
 ) -> None:
     if (
         "polars" in str(constructor_eager)
-        and POLARS_VERSION < (1, 3)
+        and POLARS_VERSION < PkgVersion("1.3")
         and all(v is None for v in values)
     ):
         pytest.skip(reason="panics, https://github.com/pola-rs/polars/pull/17861")

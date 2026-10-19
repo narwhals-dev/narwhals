@@ -283,6 +283,9 @@ def native_categorical_to_narwhals_dtype(
     native_dtype: pd.CategoricalDtype, version: Version, implementation: Implementation
 ) -> DType:
     dtypes = version.dtypes
+    if implementation is Implementation.MODIN:
+        # Modin's lazy categorical dtype reports `ordered=False` until `categories` is materialized.
+        native_dtype.categories  # noqa: B018
     if version is Version.V1:
         return dtypes.Categorical()
     if native_dtype.ordered:
@@ -379,7 +382,6 @@ def iter_dtype_backends(
     return (get_dtype_backend(dtype, implementation) for dtype in dtypes)
 
 
-@functools.lru_cache(maxsize=16)
 def is_dtype_pyarrow(dtype: Any) -> TypeIs[pd.ArrowDtype]:
     return hasattr(pd, "ArrowDtype") and isinstance(dtype, pd.ArrowDtype)
 

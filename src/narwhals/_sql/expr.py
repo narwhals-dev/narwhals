@@ -459,45 +459,49 @@ class SQLExpr(LazyExpr[SQLLazyFrameT, NativeExprT], Protocol[SQLLazyFrameT, Nati
         return self._with_callable(lambda expr: self._function("mean", expr))
 
     def std(self, *, ddof: int) -> Self:
-        def func(expr: NativeExprT) -> NativeExprT:
-            if ddof == 0:
-                return self._function("stddev_pop", expr)
-            if ddof == 1:
-                return self._function("stddev_samp", expr)
-            n_samples = self._function("count", expr)
-            return self._function(
-                "multiply",
-                self._function("stddev_samp", expr),
-                self._function(
-                    "sqrt",
-                    self._function(
-                        "divide",
-                        self._function("subtract", n_samples, self._lit(1)),
-                        self._function("subtract", n_samples, self._lit(ddof)),
-                    ),
-                ),
-            )
-
-        return self._with_callable(func)
+        return self._var_or_std("stddev", ddof=ddof)
 
     def var(self, *, ddof: int) -> Self:
-        def func(expr: NativeExprT) -> NativeExprT:
-            if ddof == 0:
-                return self._function("var_pop", expr)
-            if ddof == 1:
-                return self._function("var_samp", expr)
-            n_samples = self._function("count", expr)
-            return self._function(
-                "multiply",
-                self._function("var_samp", expr),
-                self._function(
-                    "divide",
-                    self._function("subtract", n_samples, self._lit(1)),
-                    self._function("subtract", n_samples, self._lit(ddof)),
-                ),
-            )
+        return self._var_or_std("var", ddof=ddof)
 
-        return self._with_callable(func)
+    def _var_or_std(self, kind: Literal["var", "stddev"], *, ddof: int) -> Self:
+        F = self._function
+
+        def aggregate(
+            expr: NativeExprT, wrap: Callable[[NativeExprT], NativeExprT]
+        ) -> NativeExprT:
+            # `wrap` adds the window frame to each aggregate in a window context and
+            # is the identity otherwise. A compound expression can't be wrapped as a
+            # single window function, so each aggregate is wrapped individually.
+            if ddof == 0:
+                return wrap(F(f"{kind}_pop", expr))
+            sample = wrap(F(f"{kind}_samp", expr))
+            if ddof == 1:
+                return sample
+            n_samples = wrap(F("count", expr))
+            factor = F(
+                "divide",
+                F("subtract", n_samples, self._lit(1)),
+                F("subtract", n_samples, self._lit(ddof)),
+            )
+            if kind == "stddev":
+                factor = F("sqrt", factor)
+            return self._when(n_samples > self._lit(ddof), F("multiply", sample, factor))
+
+        def func(expr: NativeExprT) -> NativeExprT:
+            return aggregate(expr, lambda agg: agg)
+
+        def window_f(
+            df: SQLLazyFrameT, inputs: WindowInputs[NativeExprT]
+        ) -> Sequence[NativeExprT]:
+            assert not inputs.order_by  # noqa: S101
+
+            def wrap(agg: NativeExprT) -> NativeExprT:
+                return self._window_expression(agg, inputs.partition_by)
+
+            return [aggregate(expr, wrap) for expr in self(df)]
+
+        return self._with_callable(func, window_f)
 
     def median(self) -> Self:
         return self._with_callable(lambda expr: self._function("median", expr))

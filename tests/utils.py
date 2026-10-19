@@ -10,9 +10,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
-from narwhals._utils import Implementation, parse_version
+from narwhals._utils import Implementation
 from narwhals.dependencies import get_numpy, get_pandas
 from narwhals.translate import from_native
 
@@ -28,22 +29,31 @@ if TYPE_CHECKING:
     from narwhals.typing import Frame, IntoDataFrame, TimeUnit
 
 
-def get_module_version_as_tuple(module_name: str) -> tuple[int, ...]:
+NOT_INSTALLED = PkgVersion("0")
+"""Sentinel version for backends which are not installed."""
+
+
+def get_module_version(module_name: str) -> PkgVersion:
+    """Return the installed version of `module_name`, or `NOT_INSTALLED`.
+
+    Only the release segment is kept, so `3.0.0rc1` passes `>= 3.0` gates.
+    """
     try:
-        return parse_version(__import__(module_name).__version__)
+        version = __import__(module_name).__version__
     except ImportError:
-        return (0, 0, 0)
+        return NOT_INSTALLED
+    return PkgVersion(PkgVersion(version).base_version)
 
 
-IBIS_VERSION: tuple[int, ...] = get_module_version_as_tuple("ibis")
-NUMPY_VERSION: tuple[int, ...] = get_module_version_as_tuple("numpy")
-PANDAS_VERSION: tuple[int, ...] = get_module_version_as_tuple("pandas")
-DUCKDB_VERSION: tuple[int, ...] = get_module_version_as_tuple("duckdb")
-POLARS_VERSION: tuple[int, ...] = get_module_version_as_tuple("polars")
-DASK_VERSION: tuple[int, ...] = get_module_version_as_tuple("dask")
-PYARROW_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyarrow")
-PYSPARK_VERSION: tuple[int, ...] = get_module_version_as_tuple("pyspark")
-CUDF_VERSION: tuple[int, ...] = get_module_version_as_tuple("cudf")
+IBIS_VERSION = get_module_version("ibis")
+NUMPY_VERSION = get_module_version("numpy")
+PANDAS_VERSION = get_module_version("pandas")
+DUCKDB_VERSION = get_module_version("duckdb")
+POLARS_VERSION = get_module_version("polars")
+DASK_VERSION = get_module_version("dask")
+PYARROW_VERSION = get_module_version("pyarrow")
+PYSPARK_VERSION = get_module_version("pyspark")
+CUDF_VERSION = get_module_version("cudf")
 
 Constructor: TypeAlias = Callable[[Any], "NativeLazyFrame | IntoDataFrame"]
 ConstructorEager: TypeAlias = Callable[[Any], "IntoDataFrame"]
@@ -96,9 +106,9 @@ def skip_if_no_categorical_ordering(
     id_ = str(constructor)
     if any(x in id_ for x in ("pyspark", "duckdb", "ibis", "dask")):
         pytest.skip(reason="no `Categorical` dtype")
-    if "polars" in id_ and POLARS_VERSION < (1, 32):
+    if "polars" in id_ and POLARS_VERSION < PkgVersion("1.32"):
         pytest.skip(reason="orders `Categorical` by physical encoding")
-    if "pyarrow_table" in id_ and PYARROW_VERSION < (15,):
+    if "pyarrow_table" in id_ and PYARROW_VERSION < PkgVersion("15"):
         pytest.skip(reason="cannot cast `string` to `dictionary`")
 
 
@@ -107,7 +117,7 @@ def skip_if_no_windowed_corr_cov(constructor: Constructor, /) -> None:
     id_ = str(constructor)
     if not any(x in id_ for x in ("duckdb", "pyspark", "sqlframe")):
         pytest.skip(reason="no windowed `corr`/`cov`")
-    if "duckdb" in id_ and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in id_ and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip(reason="`over` requires DuckDB 1.3.0")
 
 
@@ -304,7 +314,9 @@ def time_unit_compat(time_unit: TimeUnit, request: pytest.FixtureRequest, /) -> 
     if "duckdb" in request_id:
         return "us"
     pandas_like = ID_PANDAS_LIKE - ID_CUDF
-    if PANDAS_VERSION < (2,) and any(name in request_id for name in pandas_like):
+    if PANDAS_VERSION < PkgVersion("2") and any(
+        name in request_id for name in pandas_like
+    ):
         return "ns"
     return time_unit
 

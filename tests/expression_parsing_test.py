@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import InvalidOperationError
@@ -54,9 +55,9 @@ from tests.utils import DUCKDB_VERSION, POLARS_VERSION, Constructor, assert_equa
 def test_over_pushdown(
     constructor: Constructor, expr: nw.Expr, expected: list[float]
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 9):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.9"):
         pytest.skip(reason="`order_by` requires Polars 1.9")
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data)).lazy()
@@ -76,7 +77,7 @@ def test_per_group_broadcasting(
     if "dask" in str(constructor):
         # sigh...
         request.applymarker(pytest.mark.xfail)
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         pytest.skip()
     data = {"a": [-1, 2, 3], "b": [1, 1, 2], "i": [0, 1, 2]}
     df = nw.from_native(constructor(data)).lazy()
@@ -108,7 +109,7 @@ def test_per_group_broadcasting(
     ],
 )
 def test_invalid_operations(constructor: Constructor, expr: nw.Expr) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1,):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1"):
         pytest.skip(reason="too old for `over` without `partition_by`")
     df = nw.from_native(
         constructor({"a": [-1, 2, 3], "b": [1, 1, 1], "c": [2, 2, 2], "i": [0, 1, 2]})

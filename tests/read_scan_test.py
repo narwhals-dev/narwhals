@@ -6,6 +6,7 @@ from io import BytesIO, StringIO
 from typing import TYPE_CHECKING, Any, Literal
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -36,7 +37,7 @@ IOSourceKind: TypeAlias = Literal["str", "Path", "PathLike"]
 
 data: Mapping[str, Any] = {"a": [1, 2, 3], "b": [4.5, 6.7, 8.9], "z": ["x", "y", "w"]}
 skipif_pandas_lt_1_5 = pytest.mark.skipif(
-    PANDAS_VERSION < (1, 5), reason="too old for pyarrow"
+    PANDAS_VERSION < PkgVersion("1.5"), reason="too old for pyarrow"
 )
 lazy_core_backend = pytest.mark.parametrize("backend", ["duckdb", "ibis", "sqlframe"])
 spark_like_backend = pytest.mark.parametrize("backend", ["pyspark", "sqlframe"])
@@ -347,7 +348,7 @@ def test_scan_parquet_file_like_duckdb() -> None:
     pytest.importorskip("fsspec")
     context = (
         pytest.raises(NotImplementedError, match=r"duckdb>=1\.5\.4")
-        if DUCKDB_VERSION < (1, 5, 4)
+        if DUCKDB_VERSION < PkgVersion("1.5.4")
         else does_not_raise()
     )
     with context:

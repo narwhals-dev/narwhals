@@ -5,6 +5,7 @@ from contextlib import nullcontext as does_not_raise
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
@@ -43,7 +44,7 @@ def test_mode_series_keep_any(constructor_eager: ConstructorEager) -> None:
 
 
 def test_mode_different_lengths_keep_all(constructor_eager: ConstructorEager) -> None:
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 10):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.10"):
         pytest.skip(reason="older Polars does not raise `ShapeError`")
     df = nw.from_native(constructor_eager(data))
     with pytest.raises(ShapeError):
@@ -131,7 +132,7 @@ def test_mode_group_by_multimodal(
         request.applymarker(pytest.mark.xfail)
     if (
         "polars" in str(constructor)
-        and (1, 18) <= POLARS_VERSION < (1, 19)
+        and PkgVersion("1.18") <= POLARS_VERSION < PkgVersion("1.19")
         and mode_col == "vals_multimodal_str"
     ):
         pytest.skip(reason="panics, https://github.com/pola-rs/polars/issues/20448")

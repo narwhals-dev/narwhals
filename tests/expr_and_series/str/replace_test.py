@@ -4,6 +4,7 @@ from contextlib import nullcontext
 from typing import Any
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -245,7 +246,7 @@ def test_str_replace_value_edge_series_scalar(
     if (
         "backslash_literal" in request.node.callspec.id
         and "pandas_constructor" in str(constructor_eager)
-        and PANDAS_VERSION < (2,)
+        and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip(reason="single-character pattern treated as literal")
     if any(x in str(constructor_eager) for x in ("pandas", "modin", "cudf", "pyarrow")):
@@ -278,7 +279,7 @@ def test_str_replace_value_edge_expr_scalar(
     if (
         "backslash_literal" in request.node.callspec.id
         and "pandas_constructor" in str(constructor)
-        and PANDAS_VERSION < (2,)
+        and PANDAS_VERSION < PkgVersion("2")
     ):
         pytest.skip(reason="single-character pattern treated as literal")
     if any(x in str(constructor) for x in ("pandas", "modin", "cudf", "pyarrow", "dask")):
@@ -298,7 +299,7 @@ def test_str_replace_null_value_series(
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
-    if "polars" in str(constructor_eager) and POLARS_VERSION < (1, 35):
+    if "polars" in str(constructor_eager) and POLARS_VERSION < PkgVersion("1.35"):
         # Older Polars propagates the null (<1.25) or raises.
         reason = "https://github.com/pola-rs/polars/pull/24768"
         request.applymarker(pytest.mark.xfail(reason=reason))
@@ -323,7 +324,7 @@ def test_str_replace_null_value_expr(
         request.applymarker(
             pytest.mark.xfail(reason="only str replacement values", raises=TypeError)
         )
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 35):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.35"):
         # Older Polars propagates the null (<1.25) or raises.
         reason = "https://github.com/pola-rs/polars/pull/24768"
         request.applymarker(pytest.mark.xfail(reason=reason))

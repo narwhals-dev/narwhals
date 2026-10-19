@@ -824,10 +824,10 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.max()
 
-    def arg_min(self) -> int:
+    def arg_min(self) -> int | None:
         """Returns the index of the minimum value.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import pyarrow as pa
@@ -839,10 +839,10 @@ class Series(Generic[IntoSeriesT]):
         """
         return self._compliant_series.arg_min()
 
-    def arg_max(self) -> int:
+    def arg_max(self) -> int | None:
         """Returns the index of the maximum value.
 
-        Null values are ignored.
+        Null values are ignored. If there are no non-null elements, the result is null.
 
         Examples:
             >>> import polars as pl
@@ -876,7 +876,8 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of non-null elements.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null.
 
         Examples:
             >>> import polars as pl
@@ -895,7 +896,8 @@ class Series(Generic[IntoSeriesT]):
 
         Arguments:
             ddof: "Delta Degrees of Freedom": the divisor used in the calculation is N - ddof,
-                    where N represents the number of non-null elements.
+                where N represents the number of non-null elements. If N <= ddof, the result
+                is null.
 
         Examples:
             >>> import pyarrow as pa

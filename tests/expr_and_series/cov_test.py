@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from tests.utils import (
@@ -56,7 +57,9 @@ def test_cov_single_valid_pair_population(constructor: Constructor) -> None:
 def test_cov_invalid_denominator(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and (1, 9) <= POLARS_VERSION < (1, 11):
+    if "polars" in str(constructor) and (
+        PkgVersion("1.9") <= POLARS_VERSION < PkgVersion("1.11")
+    ):
         # `pl.cov` inside an elementwise expression is not broadcast by `with_columns`,
         # and the workaround needs the 1.11 `cov` (null for an all-null input).
         reason = "https://github.com/pola-rs/polars/pull/20241"
@@ -72,7 +75,7 @@ def test_cov_invalid_denominator(
             "cov_den_zero": nw.Float64(),
             "cov_den_neg": nw.Float64(),
         }
-    if "duckdb" in str(constructor) and DUCKDB_VERSION < (1, 3):
+    if "duckdb" in str(constructor) and DUCKDB_VERSION < PkgVersion("1.3"):
         return
 
     result = df.with_columns(
@@ -169,7 +172,7 @@ def test_cov_series(constructor_eager: ConstructorEager) -> None:
 def test_cov_numerical_stability(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "polars" in str(constructor) and POLARS_VERSION < (1, 11, 0):
+    if "polars" in str(constructor) and POLARS_VERSION < PkgVersion("1.11"):
         request.applymarker(pytest.mark.xfail(reason="single-pass variance"))
     df = nw.from_native(
         constructor({"a": [1e9 + 1, 1e9 + 2, 1e9 + 3], "b": [1e9 + 2, 1e9 + 4, 1e9 + 7]})

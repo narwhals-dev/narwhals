@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ShapeError
@@ -21,9 +22,9 @@ LENGTH_CHANGING: dict[str, nw.Expr] = {
 #   >= 1.10       raises
 # `POLARS_ENGINE_AFFINITY=streaming` makes 1.25 to 1.43 broadcast, until eager was
 # pinned to the in-memory engine in 1.44 (pola-rs/polars#28800).
-POLARS_EAGER_RAISES = POLARS_VERSION >= (1, 10)
+POLARS_EAGER_RAISES = POLARS_VERSION >= PkgVersion("1.10")
 # `when/then` reached the in-memory engine's check only in 1.29.
-POLARS_WHEN_RAISES = POLARS_VERSION >= (1, 29)
+POLARS_WHEN_RAISES = POLARS_VERSION >= PkgVersion("1.29")
 
 
 @pytest.mark.parametrize(

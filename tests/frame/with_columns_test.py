@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from packaging.version import Version as PkgVersion
 
 import narwhals as nw
 from narwhals.exceptions import ColumnNotFoundError, ShapeError
@@ -65,7 +66,7 @@ def test_with_columns_order_single_row(constructor: Constructor) -> None:
 def test_with_columns_dtypes_single_row(
     constructor: Constructor, request: pytest.FixtureRequest
 ) -> None:
-    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < (15,):
+    if "pyarrow_table" in str(constructor) and PYARROW_VERSION < PkgVersion("15"):
         pytest.skip()
     if (
         ("pyspark" in str(constructor))
