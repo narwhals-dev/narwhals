@@ -456,7 +456,7 @@ class PolarsExprStringNamespace(
         if BACKEND_VERSION < (1, 35):
             native_result = (
                 native_expr.str.to_lowercase()
-                .str.extract_all(r"[a-z]*[^a-z]*")
+                .str.extract_all(r"\p{L}*\P{L}*")
                 .list.eval(pl.element().str.to_titlecase())
                 .list.join("")
             )
